@@ -23,6 +23,13 @@ object Tokens extends CompacomTokens {
         case Some(')') => Some(RPAREN)
         case Some(':') if peek() == Some('=') => consume(); Some(DEFINE_AS)
         case Some(':') => Some(OF_TYPE)
+        case Some('-') if peek() == Some('-') => 
+          consume()
+          while (peek() match {
+            case Some(c) if c != '\n' => consume(); true
+            case _ => false
+          }) {}
+          None
         case Some(x) if x.isWhitespace => None
         case Some(x) if x.isLetter =>
           val lexeme = new StringBuilder

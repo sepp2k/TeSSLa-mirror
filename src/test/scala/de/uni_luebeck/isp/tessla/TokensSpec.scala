@@ -68,6 +68,17 @@ class TokensSpec extends FlatSpec with Matchers {
     }
   }
   
+  it should "ignore comments" in {
+    val tokens = Tokens.tokenize(Source.fromString("42 -- this is a comment @\n 23"));
+    var idx = -1
+    for (token <- List(LIT_INT(42), LIT_INT(23), EOF)) {
+      tokens.moveNext()
+      tokens.current should be (token)
+      tokens.idx should be > idx
+      idx = tokens.idx
+    }
+  }
+  
   it should "detect invalid tokens" in {
     val tokens = Tokens.tokenize(Source.fromString("@"));
     var idx = -1
