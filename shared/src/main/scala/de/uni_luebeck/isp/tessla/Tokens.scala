@@ -16,6 +16,13 @@ object Tokens extends CompacomTokens {
   case object RPAREN extends Token(")")
   
   class TesslaTokenizer(s: Source) extends AbstractTokenizer(s) {
+    
+    // these are needed because isLetter is not working in scalaJS
+    private def isLetterOrDigit(c: Character) = isLetter(c) || isDigit(c)
+    private def isDigit(c: Character) = c >= '0' && c <= '9'
+    private def isLetter(c: Character) = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+   
+    
     def defaultTokenParser: Option[Token] = {
       consume() match {
         case Some(',') => Some(COMMA)
@@ -31,11 +38,11 @@ object Tokens extends CompacomTokens {
           }) {}
           None
         case Some(x) if x.isWhitespace => None
-        case Some(x) if x.isLetter =>
+        case Some(x) if isLetter(x) =>
           val lexeme = new StringBuilder
           lexeme += x
           while (peek() match {
-            case Some(x) if x.isLetterOrDigit => consume(); lexeme += x; true
+            case Some(x) if isLetterOrDigit(x) => consume(); lexeme += x; true
             case _ => false
           }) {}
           lexeme.result() match {
@@ -43,11 +50,11 @@ object Tokens extends CompacomTokens {
             case "out" => Some(OUT)
             case id => Some(ID(id))
           }
-        case Some(x) if x.isDigit =>
+        case Some(x) if isDigit(x) =>
           val lexeme = new StringBuilder
           lexeme += x
           while (peek() match {
-            case Some(x) if x.isLetterOrDigit => consume(); lexeme += x; true
+            case Some(x) if isDigit(x) => consume(); lexeme += x; true
             case _ => false
           }) {}
           return Some(LIT_INT(lexeme.result().toInt))
