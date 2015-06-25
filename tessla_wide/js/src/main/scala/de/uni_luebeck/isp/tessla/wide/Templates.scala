@@ -34,29 +34,22 @@ object Templates {
   .cm-operator {color: #00a; }
   .tessla-error {
     background: #faa;
-    border: 1px solid #faa;
-    margin: -1px;
   }
-  .error-bookmark {
-    display: inline-block;
-    position: relative;
-    width: 0px;
-    height: 0px;
-    overflow: visible;
+  .CodeMirror-lint-tooltip {
+    z-index: 1100;
   }
-  .error-bookmark div {
-    position: absolute;
-    top: 0;
-    left: 0;
-    margin-top: 5px;
-    background: #faa;
-    border: 1px solid black;
+  #parse-result {
+    font-family: monospace;
   }
 </style>
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-6"><textarea id="tessla-editor"></textarea></div>
     <div class="col-md-6"><textarea id="target-editor"></textarea></div>
+  </div>
+  <div class="row">
+    <div class="col-md-12" id="parse-result">
+    </div>
   </div>
 </div>
   

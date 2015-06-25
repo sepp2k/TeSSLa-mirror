@@ -22,6 +22,10 @@ object ServerMain extends App with SimpleRoutingApp {
 							<link rel="stylesheet" type="text/css" href="/webjars/codemirror/5.3/lib/codemirror.css"></link>
 							<script type="text/javascript" src="/webjars/codemirror/5.3/lib/codemirror.js"></script>
 							<script type="text/javascript" src="/webjars/codemirror/5.3/addon/mode/simple.js"></script>
+							<script type="text/javascript" src="/webjars/codemirror/5.3/addon/hint/show-hint.js"></script>
+							<link rel="stylesheet" type="text/css" href="/webjars/codemirror/5.3/addon/hint/show-hint.css"></link>
+							<script type="text/javascript" src="/webjars/codemirror/5.3/addon/lint/lint.js"></script>
+							<link rel="stylesheet" type="text/css" href="/webjars/codemirror/5.3/addon/lint/lint.css"></link>
 							<script type="text/javascript" src="/webjars/codemirror/5.3/mode/clike/clike.js"></script>
 							<script type="text/javascript" src="/webjars/codemirror/5.3/mode/xml/xml.js"></script>
 						</head>

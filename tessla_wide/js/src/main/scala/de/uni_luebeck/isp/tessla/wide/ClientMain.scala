@@ -10,7 +10,6 @@ import de.uni_luebeck.isp.tessla.Parser._
 import scala.io.Source
 import codemirror._
 
-
 object ClientMain extends JSApp {
   var tesslaEditor: codemirror.CodeMirror = null
   var sourceEditor: codemirror.CodeMirror = null
@@ -57,6 +56,17 @@ object ClientMain extends JSApp {
     var opts = new Options()
     opts.mode = "tessla"
     opts.lineNumbers = true
+    
+    opts.extraKeys = js.Dictionary("Ctrl-Space" -> ((cm: CodeMirror) => {
+      cm.showHint()
+    }))
+    
+    opts.lint = true
+    opts.gutters = js.Array("CodeMirror-lint-markers")
+    
+    CodeMirror.registerHelper("lint", "tessla", lint _)
+    CodeMirror.registerHelper("hint", "tessla", hint _)
+    
     tesslaEditor = CodeMirror.fromTextArea(textArea, opts)
     
     textArea = jQuery("#target-editor").get(0) match {
@@ -68,44 +78,44 @@ object ClientMain extends JSApp {
     opts.lineNumbers = true
     sourceEditor = CodeMirror.fromTextArea(textArea, opts)
     
-    tesslaEditor.on("changes", (changeObject: js.Dynamic) => {
-      for (mark <- errorMarks) {
-        mark.clear()
-      }
-      errorMarks = List()
-      val changeGen = tesslaEditor.changeGeneration(true)
-      dom.window.setTimeout(() => performUpdate(changeGen), 600.0)
-    })
-    
   }
   
-  def performUpdate(changeGen: Integer) {
-    if (changeGen == tesslaEditor.changeGeneration(true)) {
-      
-      
-      parseAll(spec(), Source.fromString(tesslaEditor.getValue())) match {
-        case Success(_, _, _, _) => {}
-        case failure @ Failure(pos, _, _, _) =>
-          val failureStart = Place(pos.from.line - 1, pos.from.column - 1)
-          val failureEnd = Place(pos.to.line - 1, pos.to.column - 1)
-          
-          val bookmark = jQuery("""<div class="error-bookmark"><div></div></div>""")
-          
-          bookmark.find("div").append(failure.message.split(": ", 2)(1))
-          
-          errorMarks = List(
-            tesslaEditor.setBookmark(
-              failureStart, js.Dynamic.literal(
-                widget = bookmark.get(0))))
-            
-          if (pos.from != pos.to) {
-            errorMarks ++= List(
-              tesslaEditor.markText(
-                failureStart, failureEnd, js.Dynamic.literal(
-                  className = "tessla-error", title = failure.message)))
-          }
-      }
+  def lint(content: String, options: js.Dynamic, cm: CodeMirror) : js.Array[js.Dynamic] = {
+    if (content.length() == 0) {
+      return js.Array()
     }
+    parseAll(spec(), Source.fromString(content)) match {
+      case Success(_, result, _, _) => 
+        val parseResult = jQuery("#parse-result")
+        parseResult.empty()
+        parseResult.append(result.toString)
+        
+        js.Array()
+      case failure @ Failure(pos, _, _, _) =>
+        val failureStart = Place(pos.from.line - 1, pos.from.column - 1)
+        val failureEnd = Place(pos.to.line - 1, pos.to.column - 1)
+
+        js.Array(
+          js.Dynamic.literal(
+            message = failure.message.split(": ", 2)(1),
+            severity = "error",
+            from = failureStart.asInstanceOf,
+            to = failureEnd.asInstanceOf
+          )
+        )
+    }
+  }
+  
+  def hint(cm: CodeMirror, options: js.Dynamic) : Completions = {
+    val prefix = cm.getRange(Place(0, 0), cm.getCursor())
+    val result = parseAll(spec(), Source.fromString(prefix))
+    println(prefix)
+    println(result.completions)
+    
+    val completions = for (comp <- result.completions.to[js.Array])
+      yield js.Dynamic.literal(text = comp +" "): js.Any
+        
+    Completions(cm.getCursor(), cm.getCursor(), completions)
   }
   
   def main(): Unit = {
