@@ -4,6 +4,8 @@ syntax: glob
 .project
 .settings/
 target/
+.history
+*~
 
 # eclipse does stupid things so we ignore this too
 *.class

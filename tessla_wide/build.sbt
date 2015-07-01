@@ -27,7 +27,8 @@ lazy val tessla_wide = (crossProject in file(".")).settings(
     "io.spray"            %%  "spray-caching" % sprayV,
     "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
     "org.webjars" % "bootstrap" % "3.3.5",
-    "org.webjars" % "codemirror" % "5.3"
+    "org.webjars" % "codemirror" % "5.3",
+    "org.rogach" %% "scallop" % "0.9.+"
   ),
   resourceGenerators in Compile <+=
     (resourceManaged in Compile, fullOptJS in Compile in "tessla_wideJS") map {(target, source) =>
