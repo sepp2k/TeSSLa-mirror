@@ -14,24 +14,21 @@ object MacroResolution {
     /**
      * Substitutes parameter names by terms according to a given binding.
      */
-    private def substParam(binding: Map[String, Term], t: Term): Term =
+    private def substParam(binding: Map[String, TreeTerm], t: TreeTerm): TreeTerm =
       t match {
-        case UnresolvedTerm(name, typ) if binding contains name => binding(name)
-        case App(fn: Function, arguments: List[Term], namedArguments: List[Def], typ: Type) => {
-          val substNamedArgs = namedArguments.map {
-            case Def(name: String, definition: Term) => Def(name, substParam(binding: Map[String, Term], definition))
+        case TreeTerm(UnresolvedTerm(name, typ)) if binding contains name => binding(name)
+        case TreeTerm(App(fn, arguments: List[TreeTerm], namedArguments, typ)) => {
+          val substNamedArgs: List[Def] = namedArguments.map {
+            case Def(name, definition) => Def(name, substParam(binding, definition))
           }
           val substArgs = arguments.map { arg => substParam(binding, arg) }
-          App(fn, substArgs, substNamedArgs, typ)
+          TreeTerm(App(fn, substArgs, substNamedArgs, typ))
         }
         case _ => t
       }
 
-    def apply(formalArgs: List[Term]): Term = substParam(macroDef.args.zip(formalArgs).toMap, macroDef.definition)
+    def apply(formalArgs: List[TreeTerm]): TreeTerm = substParam(macroDef.args.zip(formalArgs).toMap: Map[String, TreeTerm], macroDef.definition)
   }
-
-//  implicit def toApplMacroDef(m: MacroDef): ApplMacroDef =
-//    m match { case MacroDef(_, args, definition) => new ApplMacroDef(args, definition) }
 
   /**
    * Extracts, applies and removes macro definitions from and to a given
@@ -75,15 +72,15 @@ object MacroResolution {
    * Performs the substitution defined by a set of given macros on a given term.
    * The macro definitions are not processed or applied to themselves.
    */
-  def substituteMacros(macros: Map[(String, Int), MacroDef], in: Term): Term = in match {
-    case App(UnresolvedFunction(name), args, List(), typ) if (macros contains (name, args.length)) => { macros(name, args.length)(args) }
-    case App(f, args, nargs, typ) => {
+  def substituteMacros(macros: Map[(String, Int), MacroDef], in: TreeTerm): TreeTerm = in match {
+    case TreeTerm(App(UnresolvedFunction(name), args: List[TreeTerm], List(), typ)) if (macros contains (name, args.length)) => { macros(name, args.length)(args) }
+    case TreeTerm(App(f, args: List[TreeTerm], nargs, typ)) => {
       val substArgs = args.map { arg => substituteMacros(macros, arg) }
       val substNArgs = nargs.map { case Def(name, definition) => Def(name, substituteMacros(macros, definition)) }
-      App(f, substArgs, substNArgs, typ)
+      TreeTerm(App(f, substArgs, substNArgs, typ))
     }
-    case TypeAscr(term: Term, typ: Type) => TypeAscr(substituteMacros(macros, term), typ)
-    case _                               => in
+    case TreeTerm(TypeAscr(term: TreeTerm, typ: Type)) => TreeTerm(TypeAscr(substituteMacros(macros, term), typ))
+    case _ => in
   }
 
   /**
@@ -118,11 +115,11 @@ object MacroResolution {
         MacroDef(currentMacro.name, currentMacro.args, updateReduce(inuse, currentMacro, currentMacro.definition))
       }
 
-      private def updateReduce(inuse: List[MacroKey], currentMacro: MacroDef, t: Term): Term =
+      private def updateReduce(inuse: List[MacroKey], currentMacro: MacroDef, t: TreeTerm): TreeTerm =
         t match {
-          case UnresolvedTerm(name, typ) if (inuse contains (name, 0)) =>
+          case TreeTerm(UnresolvedTerm(name, typ)) if (inuse contains (name, 0)) =>
             throw new Exception("Definition of macro " + currentMacro.name + " is cyclic.")
-          case UnresolvedTerm(name, typ) if (!currentMacro.args.contains(name)) => {
+          case TreeTerm(UnresolvedTerm(name, typ)) if (!currentMacro.args.contains(name)) => {
             if (processed contains (name, 0)) {
               processed(name, 0).definition
             } else if (unprocessed contains (name, 0)) {
@@ -133,8 +130,8 @@ object MacroResolution {
               update.definition
             } else t
           }
-          case TypeAscr(term, typ) => TypeAscr(updateReduce(inuse, currentMacro, term), typ)
-          case App(fn, arguments, namedArguments, typ) => {
+          case TreeTerm(TypeAscr(term, typ)) => TreeTerm(TypeAscr(updateReduce(inuse, currentMacro, term), typ))
+          case TreeTerm(App(fn, arguments: List[TreeTerm], namedArguments, typ)) => {
             // TODO: Concurrency/Race Conditions?
             val reducedArgs = arguments.map { arg => updateReduce(inuse, currentMacro, arg) }
             val reducedNArgs = namedArguments.map { case Def(name, definition) => Def(name, updateReduce(inuse, currentMacro, definition)) }
@@ -154,10 +151,10 @@ object MacroResolution {
                   unprocessed -= ((m.name, m.args.length))
                   update(reducedArgs)
                 } else {
-                  App(fn, reducedArgs, reducedNArgs, typ)
+                  TreeTerm(App(fn, reducedArgs, reducedNArgs, typ))
                 }
               }
-              case _ => App(fn, reducedArgs, reducedNArgs, typ)
+              case _ => TreeTerm(App(fn, reducedArgs, reducedNArgs, typ))
             }
           }
           case _ => t
