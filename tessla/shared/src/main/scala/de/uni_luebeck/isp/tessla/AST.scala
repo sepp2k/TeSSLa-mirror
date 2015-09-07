@@ -38,7 +38,7 @@ object AST {
       arguments: List[SubTerm] = List(),
       namedArguments: List[Def] = List(),
       override val typ: Type = ToBeInferred
-  ) extends Term(typ)
+  ) extends Term[SubTerm](typ)
   
   case class TypeAscr[SubTerm](term: SubTerm, override val typ: Type) extends Term[SubTerm](typ) 
 }
