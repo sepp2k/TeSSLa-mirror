@@ -26,7 +26,7 @@ object ASTText {
   
   implicit class StatementText(s: Statement) {
     def toText = s match {
-      case d:Def => "define " + d.name + " := " + d.definition
+      case d:Def => "define " + d.name + " := " + d.definition.toText
       case md: MacroDef => "define " + md.name + "(" + md.args.mkString(", ") + ")" + " := " + md.definition.toText
       case o: Out =>  "out " + o.name
     }

@@ -31,13 +31,14 @@ object MacroResolution {
         case _ => t
       }
 
-    def apply(formalArgs: List[TreeTerm]): TreeTerm = substParam(macroDef.args.zip(formalArgs).toMap: Map[String, TreeTerm], macroDef.definition)
+    def apply(formalArgs: List[TreeTerm]): TreeTerm =
+      substParam(macroDef.args.zip(formalArgs).toMap: Map[String, TreeTerm], macroDef.definition)
   }
 
   /**
    * Extracts, applies and removes macro definitions from and to a given
-   * specification. Returns either a processed specification with all macros 
-   * applied or a macro error carrying one of the macro definitions causing failure. 
+   * specification. Returns either a processed specification with all macros
+   * applied or a macro error carrying one of the macro definitions causing failure.
    */
   def resolveMacros(in: Spec): Either[MacroError, Spec] = extractMacros(in) match {
     case Left(e) => Left(e)
@@ -80,7 +81,10 @@ object MacroResolution {
    * The macro definitions are not processed or applied to themselves.
    */
   def substituteMacros(macros: Map[(String, Int), MacroDef], in: TreeTerm): TreeTerm = in match {
-    case TreeTerm(App(UnresolvedFunction(name), args: List[TreeTerm], List(), typ)) if (macros contains (name, args.length)) => { macros(name, args.length)(args) }
+    case TreeTerm(App(UnresolvedFunction(name), args: List[TreeTerm], List(), typ)) if (macros contains (name, args.length)) => {
+      val substArgs = args.map { arg => substituteMacros(macros, arg) }
+      macros(name, args.length)(substArgs)
+    }
     case TreeTerm(App(f, args: List[TreeTerm], nargs, typ)) => {
       val substArgs = args.map { arg => substituteMacros(macros, arg) }
       val substNArgs = nargs.map { case Def(name, definition) => Def(name, substituteMacros(macros, definition)) }
