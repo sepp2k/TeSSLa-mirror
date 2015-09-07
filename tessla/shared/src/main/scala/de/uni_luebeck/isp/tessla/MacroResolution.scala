@@ -7,6 +7,10 @@ import de.uni_luebeck.isp.tessla.AST._
  * @author Normann Decker <decker@isp.uni-luebeck.de>
  */
 object MacroResolution {
+
+  sealed class MacroError(val macroDef: MacroDef) extends Exception
+  case class CyclicDefinitionError(override val macroDef: MacroDef) extends MacroError(macroDef)
+
   /**
    * Allows for conveniently instantiating a macro definition.
    */
@@ -32,17 +36,20 @@ object MacroResolution {
 
   /**
    * Extracts, applies and removes macro definitions from and to a given
-   * specification.
+   * specification. Returns either a processed specification with all macros 
+   * applied or a macro error carrying one of the macro definitions causing failure. 
    */
-  def resolveMacros(in: Spec): Spec = {
-    val macros = extractMacros(in)
-    val statements = in.statements.filter { s =>
-      s match {
-        case MacroDef(_, _, _) => false
-        case _                 => true
+  def resolveMacros(in: Spec): Either[MacroError, Spec] = extractMacros(in) match {
+    case Left(e) => Left(e)
+    case Right(macros) => {
+      val statements = in.statements.filter { s =>
+        s match {
+          case MacroDef(_, _, _) => false
+          case _                 => true
+        }
       }
+      Right(substituteMacros(macros, Spec(statements)))
     }
-    substituteMacros(macros, Spec(statements))
   }
 
   /**
@@ -87,7 +94,7 @@ object MacroResolution {
    * Extracts macro definitions from specification and resolves mutual calls.
    * Throws an exception if any subset of definitions is cyclic.
    */
-  def extractMacros(s: Spec): Map[(String, Int), MacroDef] = {
+  def extractMacros(s: Spec): Either[MacroError, Map[(String, Int), MacroDef]] = {
 
     type MacroKey = (String, Int)
     type MacroMap = Map[MacroKey, MacroDef]
@@ -118,7 +125,7 @@ object MacroResolution {
       private def updateReduce(inuse: List[MacroKey], currentMacro: MacroDef, t: TreeTerm): TreeTerm =
         t match {
           case TreeTerm(UnresolvedTerm(name, typ)) if (inuse contains (name, 0)) =>
-            throw new Exception("Definition of macro " + currentMacro.name + " is cyclic.")
+            throw new CyclicDefinitionError(currentMacro)
           case TreeTerm(UnresolvedTerm(name, typ)) if (!currentMacro.args.contains(name)) => {
             if (processed contains (name, 0)) {
               processed(name, 0).definition
@@ -139,14 +146,12 @@ object MacroResolution {
             fn match {
               case UnresolvedFunction(name) => {
                 if (inuse contains (name, arguments.length)) {
-                  throw new Exception("Definition of macro " + currentMacro.name + " is cyclic.")
+                  throw new CyclicDefinitionError(currentMacro)
                 } else if (processed contains (name, arguments.length)) {
                   processed(name, arguments.length)(reducedArgs)
                 } else if (unprocessed contains (name, arguments.length)) {
                   val m = unprocessed(name, arguments.length)
-                  println("unprocessed m=" + m)
                   val update = updateReduce((m.name, m.args.length) :: inuse, m)
-                  println("processed m=" + update)
                   processed += ((m.name, m.args.length) -> update)
                   unprocessed -= ((m.name, m.args.length))
                   update(reducedArgs)
@@ -165,6 +170,10 @@ object MacroResolution {
       case MacroDef(name, args, definition) => ((name, args.length) -> MacroDef(name, args, definition))
     }.toMap
 
-    new MacroProcessor(macros).processedMacros
+    try {
+      Right(new MacroProcessor(macros).processedMacros)
+    } catch {
+      case e: MacroError => Left(e)
+    }
   }
 }
