@@ -6,9 +6,10 @@ import org.scalajs.jquery.jQuery
 import org.scalajs.dom.raw.HTMLTextAreaElement
 import org.scalajs.dom
 import org.scalajs.dom.raw.BeforeUnloadEvent
-import de.uni_luebeck.isp.tessla.Parser._
+import de.uni_luebeck.isp.tessla.Parser.{ Success => ParseSuccess, Failure => ParseFailure, _ }
 import de.uni_luebeck.isp.tessla.MacroResolution._
 import de.uni_luebeck.isp.tessla.ASTText._
+import scala.util.{ Success, Failure }
 import scala.io.Source
 import codemirror._
 
@@ -79,21 +80,21 @@ object ClientMain extends JSApp {
       return js.Array()
     }
     parseAll(spec(), Source.fromString(content)) match {
-      case Success(_, result, _, _) =>
+      case ParseSuccess(_, result, _, _) =>
         val parseResult = jQuery("#parse-result")
         parseResult.empty()
         parseResult.append(result.toString)
         parseResult.append("<br />\n")
         parseResult.append(resolveMacros(result) match {
-          case Left(CyclicDefinitionError(macroDef)) => "Cyclic macro definition in macro " + macroDef.name
-          case Left(e)                               => e.toString()
-          case Right(spec) =>
+          case Failure(CyclicDefinitionError(macroDef)) => "Cyclic macro definition in macro " + macroDef.name
+          case Failure(e)                               => e.toString()
+          case Success(spec) =>
             "After macro resolution: <br />\n" +
               spec.statements.map { _.toText }.mkString("<br />\n")
         })
 
         js.Array()
-      case failure@Failure(pos, _, _, _) =>
+      case failure@ParseFailure(pos, _, _, _) =>
         val failureStart = Place(pos.from.line - 1, pos.from.column - 1)
         val failureEnd = Place(pos.to.line - 1, pos.to.column - 1)
 
