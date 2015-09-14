@@ -6,10 +6,11 @@ import de.uni_luebeck.isp.tessla.Tokens._
 
 object Parser extends Parsers {
   val tokens = Tokens
+  override val tokenizer = Tokenizer
   
   case class Ctx(var definedNames: Set[String] = Set(), var macroArguments: Set[String] = Set()) {
-    def completions = definedNames | macroArguments
-    def typeCompletions = Set("int", "bool")
+    def completions = (definedNames | macroArguments).map(x => x : Suggestion)
+    def typeCompletions = Set("int" : Suggestion, "bool" : Suggestion)
     def inMacro = !macroArguments.isEmpty
   }
   
@@ -44,7 +45,7 @@ object Parser extends Parsers {
   
   def namedTermOrApp(ctx: Ctx): Parser[Term[TreeTerm]] = updateLoc(
       matchTokenAlt(Set("defined name", "function name") | (if (ctx.inMacro) Set("macro argument") else Set()), ctx.completions) {
-        case WithLocation(_, ID(name)) => functionCall(ctx, name) | success(UnresolvedTerm(name)) } ~^ identity)
+        case WithLocation(_, ID(name)) => functionCall(ctx, name) | success(UnresolvedTerm(name)) } ~^ identity _)
    
   def functionCall(ctx: Ctx, name: String): Parser[App[TreeTerm]] =
     token(LPAREN) ~> (rep1sep(functionArg(ctx), token(COMMA)) ^^ buildApp(name)) <~ token(RPAREN)
