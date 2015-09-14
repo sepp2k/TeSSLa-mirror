@@ -1,10 +1,11 @@
 package de.uni_luebeck.isp.tessla
 
 import org.scalatest._
-import de.uni_luebeck.isp.tessla.Parser._
+import de.uni_luebeck.isp.tessla.Parser.{Success => ParseSuccess, _}
 import de.uni_luebeck.isp.tessla.AST._
 import de.uni_luebeck.isp.tessla.MacroResolution._
 import scala.io.Source
+import scala.util.{Success => UtilSuccess}
 
 /**
  * @author Normann Decker <decker@isp.uni-luebeck.de>
@@ -17,13 +18,13 @@ class MacroResolutionTest extends FlatSpec with Matchers {
   def result(specification: String) = {
     val parseResult = parseAll(spec(), Source.fromString(specification))
     parseResult match {
-      case Success(_, spec, _, _) => resolveMacros(spec)
+      case ParseSuccess(_, spec, _, _) => resolveMacros(spec)
       case _                      => ???
     }
   }
   def parseOnly(specification: String) = 
     parseAll(spec(), Source.fromString(specification)) match {
-    case Success(_, spec, _, _) => spec
+    case ParseSuccess(_, spec, _, _) => spec
     case _                      => ???
   }
 
@@ -39,7 +40,7 @@ class MacroResolutionTest extends FlatSpec with Matchers {
     """
 
     result(specification) should matchPattern {
-      case Right(Spec(List(
+      case UtilSuccess(Spec(List(
         Def("foo", TreeTerm(UnresolvedTerm("bar", ToBeInferred))),
         Def("bar", TreeTerm(App(UnresolvedFunction(foo),
           List(TreeTerm(UnresolvedTerm(arg1, ToBeInferred)), TreeTerm(UnresolvedTerm("arg2", ToBeInferred))),
@@ -58,7 +59,7 @@ class MacroResolutionTest extends FlatSpec with Matchers {
     """
 
     result(specification) should matchPattern {
-      case Right(ast) if ast equals parseOnly ("""define s := foo(foo(bar(1), 2), arg2)""") =>
+      case UtilSuccess(ast) if ast equals parseOnly ("""define s := foo(foo(bar(1), 2), arg2)""") =>
     }
   }
 
