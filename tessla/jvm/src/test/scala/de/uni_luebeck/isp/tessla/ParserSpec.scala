@@ -25,7 +25,7 @@ class ParserSpec extends FlatSpec with Matchers {
     result should matchPattern {
       case Success(_, Spec(List(
           Def("foo", TreeTerm(App(UnresolvedFunction("bar"),
-              List(), List(Def("arg", TreeTerm(UnresolvedTerm("baz", ToBeInferred)))), ToBeInferred))))), _, _) =>}
+              List(), List(NamedArg("arg", TreeTerm(UnresolvedTerm("baz", ToBeInferred)))), ToBeInferred))))), _, _) =>}
   }
   
   it should "parse a definition including a type ascription" in {

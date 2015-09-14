@@ -30,13 +30,16 @@ object AST {
   
   sealed case class TreeTerm(term: Term[TreeTerm])
   
+  
+  sealed case class NamedArg[+SubTerm](name: String, arg: SubTerm) extends Locatable
+  
   case class UnresolvedTerm(name: String, override val typ: Type = ToBeInferred) extends Term[Nothing](typ)
   case class Const(const: Constant, override val typ: Type = ToBeInferred) extends Term[Nothing](typ)
   case class Ref(name: String, override val typ: Type = ToBeInferred) extends Term[Nothing](typ)
   case class App[SubTerm](
       fn: Function,
       arguments: List[SubTerm] = List(),
-      namedArguments: List[Def] = List(),
+      namedArguments: List[NamedArg[SubTerm]] = List(),
       override val typ: Type = ToBeInferred
   ) extends Term[SubTerm](typ)
   

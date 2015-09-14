@@ -51,7 +51,7 @@ object Parser extends Parsers {
     token(LPAREN) ~> (rep1sep(functionArg(ctx), token(COMMA)) ^^ buildApp(name)) <~ token(RPAREN)
     
   private def buildApp(name: String)(args: List[Either[Def, Term[TreeTerm]]]): App[TreeTerm] = {
-    App(UnresolvedFunction(name), args.collect({case Right(t) => TreeTerm(t)}), args.collect({case Left(t) => t}))    
+    App(UnresolvedFunction(name), args.collect({case Right(t) => TreeTerm(t)}), args.collect({case Left(Def(name, t)) => NamedArg(name, t)}))    
   }
   
   def functionArg(ctx: Ctx): Parser[Either[Def, Term[TreeTerm]]] = term(ctx) ~^ (lhs => lhs match {

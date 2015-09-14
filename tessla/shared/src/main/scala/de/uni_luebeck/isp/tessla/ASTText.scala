@@ -31,13 +31,17 @@ object ASTText {
       case o: Out =>  "out " + o.name
     }
   }
+  
+  implicit class NamedArgText(n: NamedArg[TreeTerm]) {
+    def toText = n.name + " := " + n.arg.toText
+  }
 
   implicit class TreeTermText(t: TreeTerm) {
     def toText: String = t match {
       case TreeTerm(x@UnresolvedTerm(_, _))            => x.toText
       case TreeTerm(Const(x@UnresolvedConstant(_), _)) => x.toText
       case TreeTerm(Const(x@IntegralConstant(_), _))   => x.toText
-      case TreeTerm(x@App(UnresolvedFunction(f), args: List[TreeTerm], nargs: List[Def], _)) =>
+      case TreeTerm(x@App(UnresolvedFunction(f), args: List[TreeTerm], nargs: List[NamedArg[TreeTerm]], _)) =>
         f + "(" + nargs.map { _.toText }.mkString(args.map { _.toText }.mkString(", "), ", ", "") + ")"
       case TreeTerm(x@TypeAscr(_, _)) => x.toText
       case x                          => x.toString
