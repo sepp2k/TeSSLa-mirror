@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Parser._
 import de.uni_luebeck.isp.tessla.AST._
-import scala.util.{Try, Failure}
+import scala.util.{ Try, Failure }
 import de.uni_luebeck.isp.tessla.Compiler.Tree
 import de.uni_luebeck.isp.tessla.Compiler.UnexpectedCompilerState
 
@@ -10,11 +10,11 @@ import de.uni_luebeck.isp.tessla.Compiler.UnexpectedCompilerState
  * @author Normann Decker <decker@isp.uni-luebeck.de>
  */
 object MacroResolution extends Compiler.Pass {
-  
+
   def applyPass(compiler: Compiler, state: Compiler.State): Try[Compiler.State] = {
     state match {
       case Tree(spec) => resolveMacros(spec) map Tree
-      case _ => Failure[Compiler.State](UnexpectedCompilerState)
+      case _          => Failure[Compiler.State](UnexpectedCompilerState)
     }
   }
 
@@ -30,14 +30,7 @@ object MacroResolution extends Compiler.Pass {
     private def substParam(binding: Map[String, TreeTerm], t: TreeTerm): TreeTerm =
       t match {
         case TreeTerm(UnresolvedTerm(name, typ)) if binding contains name => binding(name)
-        case TreeTerm(App(fn, arguments, namedArguments, typ)) => {
-          val substNamedArgs: List[NamedArg[TreeTerm]] = namedArguments.map {
-            case NamedArg(name, definition) => NamedArg(name, substParam(binding, definition))
-          }
-          val substArgs = arguments.map { arg => substParam(binding, arg) }
-          TreeTerm(App(fn, substArgs, substNamedArgs, typ))
-        }
-        case _ => t
+        case TreeTerm(term) => TreeTerm(term.map { substParam(binding,_) })
       }
 
     def apply(formalArgs: List[TreeTerm]): TreeTerm =
@@ -87,13 +80,7 @@ object MacroResolution extends Compiler.Pass {
       val substArgs = args.map { arg => substituteMacros(macros, arg) }
       macros(name, args.length)(substArgs)
     }
-    case TreeTerm(App(f, args: List[TreeTerm], nargs, typ)) => {
-      val substArgs = args.map { arg => substituteMacros(macros, arg) }
-      val substNArgs = nargs.map { case NamedArg(name, definition) => NamedArg(name, substituteMacros(macros, definition)) }
-      TreeTerm(App(f, substArgs, substNArgs, typ))
-    }
-    case TreeTerm(TypeAscr(term: TreeTerm, typ: Type)) => TreeTerm(TypeAscr(substituteMacros(macros, term), typ))
-    case _ => in
+    case TreeTerm(t) => TreeTerm(t.map { substituteMacros(macros, _) })
   }
 
   /**
@@ -112,9 +99,9 @@ object MacroResolution extends Compiler.Pass {
      */
 
     var unprocessed = s.statements.collect {
-        case MacroDef(name, args, definition) => ((name, args.length) -> MacroDef(name, args, definition))
-      }.toMap
-      
+      case MacroDef(name, args, definition) => ((name, args.length) -> MacroDef(name, args, definition))
+    }.toMap
+
     var processed: MacroMap = Map()
 
     def updateReduceMacroDef(inuse: List[MacroKey], currentMacro: MacroDef): MacroDef = {
@@ -125,20 +112,23 @@ object MacroResolution extends Compiler.Pass {
       t match {
         case TreeTerm(UnresolvedTerm(name, typ)) if (inuse contains (name, 0)) =>
           throw new CyclicDefinitionError(currentMacro)
-        case TreeTerm(UnresolvedTerm(name, typ)) if (!currentMacro.args.contains(name)) => {
+        case TreeTerm(loc@UnresolvedTerm(name, typ)) if (!currentMacro.args.contains(name)) => {
           if (processed contains (name, 0)) {
+//TODO: copy meta information: TreeTerm(processed(name, 0).definition match {case TreeTerm(x) => x from loc})
+// or replace:
             processed(name, 0).definition
           } else if (unprocessed contains (name, 0)) {
             val m = unprocessed(name, 0)
             val update = updateReduceMacroDef((m.name, m.args.length) :: inuse, m)
             processed += ((m.name, m.args.length) -> update)
             unprocessed -= ((m.name, m.args.length))
+//TODO: copy meta information: 
+//            TreeTerm(update.definition match {case TreeTerm(x) => x from loc})
+// or replace:
             update.definition
           } else t
         }
-        case TreeTerm(TypeAscr(term, typ)) => TreeTerm(TypeAscr(updateReduceTerm(inuse, currentMacro, term), typ))
-        case TreeTerm(App(fn, arguments: List[TreeTerm], namedArguments, typ)) => {
-          // TODO: Concurrency/Race Conditions?
+        case TreeTerm(loc@App(fn, arguments: List[TreeTerm], namedArguments, typ)) => {
           val reducedArgs = arguments.map { arg => updateReduceTerm(inuse, currentMacro, arg) }
           val reducedNArgs = namedArguments.map { case NamedArg(name, definition) => NamedArg(name, updateReduceTerm(inuse, currentMacro, definition)) }
 
@@ -147,21 +137,31 @@ object MacroResolution extends Compiler.Pass {
               if (inuse contains (name, arguments.length)) {
                 throw new CyclicDefinitionError(currentMacro)
               } else if (processed contains (name, arguments.length)) {
+//TODO: copy meta information: 
+//            TreeTerm((processed(name, arguments.length)(reducedArgs)) match {case TreeTerm(x) => x from loc})
+                //easier would be: (processed(name, arguments.length)(reducedArgs)) from loc  // implement TreeTerm.from
+                // but loc has different type!
+// or replace:
                 processed(name, arguments.length)(reducedArgs)
               } else if (unprocessed contains (name, arguments.length)) {
                 val m = unprocessed(name, arguments.length)
                 val update = updateReduceMacroDef((m.name, m.args.length) :: inuse, m)
                 processed += ((m.name, m.args.length) -> update)
                 unprocessed -= ((m.name, m.args.length))
+//TODO: copy meta information: 
+//            TreeTerm((update(reducedArgs)) match {case TreeTerm(x) => x from loc})
+// or replace:
                 update(reducedArgs)
               } else {
+                //TODO: copy meta information
                 TreeTerm(App(fn, reducedArgs, reducedNArgs, typ))
               }
             }
+            //TODO: copy meta information
             case _ => TreeTerm(App(fn, reducedArgs, reducedNArgs, typ))
           }
         }
-        case _ => t
+        case TreeTerm(term) => TreeTerm(term.map { updateReduceTerm(inuse,currentMacro,_) })
       }
 
     Try {
