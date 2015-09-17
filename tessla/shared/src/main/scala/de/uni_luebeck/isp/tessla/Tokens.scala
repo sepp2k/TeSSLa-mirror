@@ -10,6 +10,7 @@ object Tokens extends SimpleTokens {
   case object DEFINE extends Token("define")
   case object OUT extends Token("out")
   case object OF_TYPE extends Token(":")
+  case object PERCENT extends Token("%")
   case object DEFINE_AS extends Token(":=")
   case object COMMA extends Token(",")
   case object LPAREN extends Token("(")
@@ -22,6 +23,6 @@ object Tokenizer extends SimpleTokenizer {
   import tokens._
 
   override val keywords = List(DEFINE, OUT)
-  override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN)
+  override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT)
   override val comments = List("--" -> "\n")
 }

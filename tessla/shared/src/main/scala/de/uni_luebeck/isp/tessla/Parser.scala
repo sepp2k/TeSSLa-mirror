@@ -3,8 +3,24 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.compacom._
 import de.uni_luebeck.isp.tessla.AST._
 import de.uni_luebeck.isp.tessla.Tokens._
+import de.uni_luebeck.isp.tessla.Compiler.Pass
+import scala.util.Try
 
-object Parser extends Parsers {
+object Parser extends Parsers with Pass {
+  case class ParserError(val parserFailure: Failure) extends Exception {
+    override def toString = "ParserError(" + parserFailure + ")"
+  }
+
+  def applyPass(compiler: Compiler, state: Compiler.State): Try[Compiler.State] = {
+    state match {
+      case Compiler.Source(source) => parseAll(spec(), source) match {
+        case Success(_, spec, _, _) => scala.util.Success(Compiler.Tree(spec))
+        case fail: Failure => scala.util.Failure(ParserError(fail))
+      }
+      case _ => scala.util.Failure[Compiler.State](Compiler.UnexpectedCompilerState)
+    }
+  }
+  
   val tokens = Tokens
   override val tokenizer = Tokenizer
   
@@ -61,5 +77,7 @@ object Parser extends Parsers {
   def out(ctx: Ctx): Parser[Out] = updateLoc(
     (token(OUT) ~> matchToken("output name", Set("<value-name>")) {case WithLocation(_, ID(name)) => Out(name)}))
     
-  def typ(ctx: Ctx): Parser[Type] = updateLoc(matchToken("type name", ctx.typeCompletions) {case WithLocation(_, ID(name)) => UnresolvedPrimitiveType(name)})
+  def typ(ctx: Ctx): Parser[Type] = streamType(ctx) | updateLoc(matchToken("type name", ctx.typeCompletions) {case WithLocation(_, ID(name)) => UnresolvedPrimitiveType(name)})
+
+  def streamType(ctx: Ctx): Parser[Type] = token(PERCENT) ~> typ(ctx) ^^ (t => StreamType(t))
 }

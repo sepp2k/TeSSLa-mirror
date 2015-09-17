@@ -2,12 +2,21 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Parser._
 import de.uni_luebeck.isp.tessla.AST._
-import scala.util.Try
+import scala.util.{Try, Failure}
+import de.uni_luebeck.isp.tessla.Compiler.Tree
+import de.uni_luebeck.isp.tessla.Compiler.UnexpectedCompilerState
 
 /**
  * @author Normann Decker <decker@isp.uni-luebeck.de>
  */
-object MacroResolution {
+object MacroResolution extends Compiler.Pass {
+  
+  def applyPass(compiler: Compiler, state: Compiler.State): Try[Compiler.State] = {
+    state match {
+      case Tree(spec) => resolveMacros(spec) map Tree
+      case _ => Failure[Compiler.State](UnexpectedCompilerState)
+    }
+  }
 
   case class CyclicDefinitionError(val macroDef: MacroDef) extends Exception
 
