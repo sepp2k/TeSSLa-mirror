@@ -30,7 +30,7 @@ object MacroResolution extends Compiler.Pass {
     private def substParam(binding: Map[String, TreeTerm], t: TreeTerm): TreeTerm =
       t match {
         case TreeTerm(UnresolvedTerm(name, typ)) if binding contains name => binding(name)
-        case TreeTerm(term) => TreeTerm(term.map { substParam(binding,_) })
+        case TreeTerm(term) => TreeTerm(term.map { substParam(binding, _) })
       }
 
     def apply(formalArgs: List[TreeTerm]): TreeTerm =
@@ -114,17 +114,12 @@ object MacroResolution extends Compiler.Pass {
           throw new CyclicDefinitionError(currentMacro)
         case TreeTerm(loc@UnresolvedTerm(name, typ)) if (!currentMacro.args.contains(name)) => {
           if (processed contains (name, 0)) {
-//TODO: copy meta information: TreeTerm(processed(name, 0).definition match {case TreeTerm(x) => x from loc})
-// or replace:
             processed(name, 0).definition
           } else if (unprocessed contains (name, 0)) {
             val m = unprocessed(name, 0)
             val update = updateReduceMacroDef((m.name, m.args.length) :: inuse, m)
             processed += ((m.name, m.args.length) -> update)
             unprocessed -= ((m.name, m.args.length))
-//TODO: copy meta information: 
-//            TreeTerm(update.definition match {case TreeTerm(x) => x from loc})
-// or replace:
             update.definition
           } else t
         }
@@ -137,31 +132,21 @@ object MacroResolution extends Compiler.Pass {
               if (inuse contains (name, arguments.length)) {
                 throw new CyclicDefinitionError(currentMacro)
               } else if (processed contains (name, arguments.length)) {
-//TODO: copy meta information: 
-//            TreeTerm((processed(name, arguments.length)(reducedArgs)) match {case TreeTerm(x) => x from loc})
-                //easier would be: (processed(name, arguments.length)(reducedArgs)) from loc  // implement TreeTerm.from
-                // but loc has different type!
-// or replace:
                 processed(name, arguments.length)(reducedArgs)
               } else if (unprocessed contains (name, arguments.length)) {
                 val m = unprocessed(name, arguments.length)
                 val update = updateReduceMacroDef((m.name, m.args.length) :: inuse, m)
                 processed += ((m.name, m.args.length) -> update)
                 unprocessed -= ((m.name, m.args.length))
-//TODO: copy meta information: 
-//            TreeTerm((update(reducedArgs)) match {case TreeTerm(x) => x from loc})
-// or replace:
                 update(reducedArgs)
               } else {
-                //TODO: copy meta information
                 TreeTerm(App(fn, reducedArgs, reducedNArgs, typ))
               }
             }
-            //TODO: copy meta information
             case _ => TreeTerm(App(fn, reducedArgs, reducedNArgs, typ))
           }
         }
-        case TreeTerm(term) => TreeTerm(term.map { updateReduceTerm(inuse,currentMacro,_) })
+        case TreeTerm(term) => TreeTerm(term.map { updateReduceTerm(inuse, currentMacro, _) })
       }
 
     Try {
