@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.compacom.Location
 
 object AST {
@@ -12,15 +13,28 @@ object AST {
 
   abstract class Function extends Locatable
   case class UnresolvedFunction(name: String) extends Function
+  case class ArithmeticFunction(op: ArithmeticOp) extends Function
+  case class ArithmeticStreamFunction(op: ArithmeticOp) extends Function
+  case object ConstantStreamFunction extends Function
 
-  abstract class Constant extends Locatable
-  case class UnresolvedConstant(name: String) extends Constant
+  abstract class ArithmeticOp
+  case object Add extends ArithmeticOp
+  case object Sub extends ArithmeticOp
+  case object Mul extends ArithmeticOp
+  
+  abstract class Constant extends Function
   case class IntegralConstant(value: Integer) extends Constant
+  abstract class InputConstant extends Constant
 
-  abstract class Type extends Locatable
+  abstract class Type extends Locatable {
+    def map(f: Type => Type): Type = this
+  }
   case object ToBeInferred extends Type
   case class UnresolvedPrimitiveType(name: String) extends Type
   case class StreamType(elType: Type) extends Type
+  case class IntType(bits: Int, signed: Boolean) extends Type
+  case object UnitType extends Type
+  case object BoolType extends Type
 
   case class Spec(statements: List[Statement]) extends Locatable
 
@@ -32,6 +46,7 @@ object AST {
   abstract sealed class Term[+SubTerm](val typ: Type) extends Locatable {
     def foreach[U](f: SubTerm => U) {}
     def map[U](f: SubTerm => U): Term[U]
+    def changeType(typ: Type): Term[SubTerm]
   }
 
   abstract class LeafTerm(override val typ: Type) extends Term[Nothing](typ) {
@@ -42,9 +57,12 @@ object AST {
 
   sealed case class NamedArg[+SubTerm](name: String, arg: SubTerm) extends Locatable
 
-  case class UnresolvedTerm(name: String, override val typ: Type = ToBeInferred) extends LeafTerm(typ)
-  case class Const(const: Constant, override val typ: Type = ToBeInferred) extends LeafTerm(typ)
-  case class Ref(name: String, override val typ: Type = ToBeInferred) extends LeafTerm(typ)
+  case class UnresolvedTerm(name: String, override val typ: Type = ToBeInferred) extends LeafTerm(typ) {
+    def changeType(typ: Type) = this.copy(typ = typ) from this
+  }
+  case class Ref(name: String, override val typ: Type = ToBeInferred) extends LeafTerm(typ) {
+    def changeType(typ: Type) = this.copy(typ = typ) from this
+  }
   case class App[SubTerm](
       fn: Function,
       arguments: List[SubTerm] = List(),
@@ -57,6 +75,7 @@ object AST {
     override def map[U](f: SubTerm => U): App[U] = {
       App(fn, arguments map f, namedArguments map { case NamedArg(name, x) => NamedArg(name, f(x)) }, typ)
     }
+    def changeType(typ: Type) = this.copy(typ = typ) from this
   }
 
   case class TypeAscr[SubTerm](term: SubTerm, override val typ: Type) extends Term[SubTerm](typ) {
@@ -66,5 +85,6 @@ object AST {
     override def map[U](f: SubTerm => U): TypeAscr[U] = {
       TypeAscr(f(term), typ)
     }
+    def changeType(typ: Type) = this.copy(typ = typ) from this
   }
 }

@@ -11,9 +11,5 @@ object CompilerApp extends App {
   }
   val compiler = new Compiler(debug = true)
   val result = compiler.compile(Compiler.Source(source))
-
-  result.get match {
-    case Compiler.Graph(g) =>
-      println(g.uses)
-  }
+  result.get
 }

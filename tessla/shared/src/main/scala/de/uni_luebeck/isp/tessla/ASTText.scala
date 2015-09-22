@@ -12,10 +12,6 @@ object ASTText {
     def toText = fn.name
   }
 
-  implicit class UnresolvedConstantText(c: UnresolvedConstant) {
-    def toText = c.name
-  }
-
   implicit class IntegralConstantText(c: IntegralConstant) {
     def toText = c.value.toString
   }
@@ -39,8 +35,8 @@ object ASTText {
   implicit class TreeTermText(t: TreeTerm) {
     def toText: String = t match {
       case TreeTerm(x@UnresolvedTerm(_, _))            => x.toText
-      case TreeTerm(Const(x@UnresolvedConstant(_), _)) => x.toText
-      case TreeTerm(Const(x@IntegralConstant(_), _))   => x.toText
+      case TreeTerm(App(x@UnresolvedFunction(_), a, b, _)) if a.isEmpty && b.isEmpty => x.toText
+      case TreeTerm(App(x@IntegralConstant(_), _, _, _))   => x.toText
       case TreeTerm(x@App(UnresolvedFunction(f), args: List[TreeTerm], nargs: List[NamedArg[TreeTerm]], _)) =>
         f + "(" + nargs.map { _.toText }.mkString(args.map { _.toText }.mkString(", "), ", ", "") + ")"
       case TreeTerm(x@TypeAscr(_, _)) => x.toText

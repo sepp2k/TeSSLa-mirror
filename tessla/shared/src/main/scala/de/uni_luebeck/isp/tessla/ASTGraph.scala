@@ -2,13 +2,16 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.AST._
 import de.uni_luebeck.isp.tessla.Compiler.{UnexpectedCompilerState, Tree, State}
+import scala.StringBuilder
 import scala.collection.mutable
 
 import ASTGraph._
 import scala.util.{Success, Failure, Try}
 
 object ASTGraph extends Compiler.Pass {
-  sealed case class NodeId(id: Int)
+  final case class NodeId(id: Int) {
+    override def toString = "#" + id
+  }
   type GraphTerm = Term[NodeId]
   sealed abstract class Root
   case class DefRoot(name: String) extends Root
@@ -42,7 +45,7 @@ case class ASTGraph(
     }
   }
 
-  private def useSet(node: NodeId): mutable.Set[NodeId] = {
+  def useSet(node: NodeId): mutable.Set[NodeId] = {
     uses.getOrElseUpdate(node, new mutable.HashSet)
   }
 
@@ -108,5 +111,23 @@ case class ASTGraph(
   override def clone(): ASTGraph = {
     new ASTGraph(nodes = nodes.clone, roots = roots.clone)
   }
-  
+
+  override def toString: String = {
+    val builder = new StringBuilder()
+    builder ++= "digraph {\n"
+
+    for (id <- nodeIds) {
+      // TODO escape string
+      val idNr = id.id
+      val label = id + ": " + node(id).toString
+      builder ++= s"""  n$idNr [label = "$label" shape = box];\n"""
+      for (targetId <- node(id)) {
+        val targetIdNr = targetId.id
+        builder ++= s"""  n$idNr -> n$targetIdNr\n"""
+      }
+    }
+
+    builder ++= "}"
+    builder.toString
+  }
 }

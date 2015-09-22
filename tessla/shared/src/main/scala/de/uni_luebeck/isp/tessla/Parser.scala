@@ -57,7 +57,7 @@ object Parser extends Parsers with Pass {
       
   def baseTerm(ctx: Ctx): Parser[Term[TreeTerm]] = namedTermOrApp(ctx) | integralTerm(ctx) | (token(LPAREN) ~> term(ctx) <~ token(RPAREN))
   
-  def integralTerm(ctx: Ctx): Parser[Const] = matchToken("integer", Set()) {case WithLocation(_, LIT_INT(x)) => Const(IntegralConstant(x))}
+  def integralTerm(ctx: Ctx): Parser[App[TreeTerm]] = matchToken("integer", Set()) {case WithLocation(_, LIT_INT(x)) => App(IntegralConstant(x))}
   
   def namedTermOrApp(ctx: Ctx): Parser[Term[TreeTerm]] = updateLoc(
       matchTokenAlt(Set("defined name", "function name") | (if (ctx.inMacro) Set("macro argument") else Set()), ctx.completions) {

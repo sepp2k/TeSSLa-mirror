@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.AST.UnresolvedTerm
+import de.uni_luebeck.isp.tessla.AST.{UnresolvedFunction, App, UnresolvedTerm}
 import de.uni_luebeck.isp.tessla.ASTGraph.DefRoot
 import de.uni_luebeck.isp.tessla.Compiler.{Graph, UnexpectedCompilerState, State}
 
@@ -17,7 +17,9 @@ object ResolveLocalRefs extends Compiler.Pass {
       graph.node(id) match {
         case UnresolvedTerm(name, _) if graph.roots.contains(DefRoot(name)) =>
           graph.replaceNodeRefs(id, graph.roots(DefRoot(name)))
-        case _ => {}
+        case UnresolvedTerm(name, typ) =>
+          graph.updateNode(id, App(UnresolvedFunction(name), typ=typ))
+        case _ =>
       }
     }
 
