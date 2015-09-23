@@ -16,11 +16,16 @@ lazy val tessla = (crossProject in file(".")).settings(
   organization := "de.uni_luebeck.isp",
   resolvers += releases,
   resolvers += snapshots,
-  libraryDependencies += "de.uni_luebeck.isp" %%% "compacom" % "0.2.0-SNAPSHOT",
+  libraryDependencies ++= Seq(
+    "de.uni_luebeck.isp" %%% "compacom" % "0.2.0-SNAPSHOT",
+    "org.json4s" %% "json4s-native" % "3.3.0.RC6"
+  ),
   scalacOptions ++= Seq("-feature", "-deprecation", "-target:jvm-1.7")
 ).jvmSettings(
-  libraryDependencies += "junit" % "junit" % "4.11"  % "test",
-  libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test"
+  libraryDependencies ++= Seq(
+    "junit" % "junit" % "4.11"  % "test",
+    "org.scalatest" %% "scalatest" % "2.2.4" % "test"
+  )
 )
 
 lazy val tesslaJS = tessla.js
