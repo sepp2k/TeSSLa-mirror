@@ -30,6 +30,7 @@ object AST {
     def map(f: Type => Type): Type = this
   }
   case object ToBeInferred extends Type
+  case class TypeVar(nr: Int) extends Type
   case class UnresolvedPrimitiveType(name: String) extends Type
   case class StreamType(elType: Type) extends Type
   case class IntType(bits: Int, signed: Boolean) extends Type
