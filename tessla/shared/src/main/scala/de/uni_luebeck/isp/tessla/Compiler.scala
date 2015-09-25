@@ -30,11 +30,7 @@ object Compiler {
     ResolveLocalRefs,
     TypeChecker,
     ModuleMapping)
-  val defaultProviders: Set[Provider] = Set(
-    Functions.ConstantStream,
-    Functions.IfFunction,
-    Functions.UndefConstant
-  )
+  val defaultProviders: Set[Provider] = Functions.resolvers(32)
 }
 
 class Compiler(

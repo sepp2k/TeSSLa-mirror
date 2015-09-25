@@ -36,6 +36,7 @@ object AST {
   case class IntType(bits: Int, signed: Boolean) extends Type
   case object UnitType extends Type
   case object BoolType extends Type
+  case object StringType extends Type
 
   case class Spec(statements: List[Statement]) extends Locatable
 

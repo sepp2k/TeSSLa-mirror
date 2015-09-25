@@ -107,7 +107,7 @@ object TypeChecker extends Compiler.Pass {
   }
 
   def typeReplaceBindings(map: Map[Int, TypeSet], a: Type): TypeSet = a match {
-    case TypeVar(nr) => map.getOrElse(nr, Set())
+    case TypeVar(nr) => map.getOrElse(nr, Set(ToBeInferred))
     case StreamType(elType) => typeReplaceBindings(map, elType) map StreamType
     case x => Set(x)
   }
@@ -242,7 +242,7 @@ class TypeChecker(
           constraints(id) = Set(typ)
         case App(IntegralConstant(_), Seq(), Seq(), _) =>
           // TODO move this into a separate pass that handles literals with type ascriptions
-          constraints(id) = Set(IntType(32, true))
+          constraints(id) = Set(IntType(32, false))
         case _ => {}
       }
       dirty += id
