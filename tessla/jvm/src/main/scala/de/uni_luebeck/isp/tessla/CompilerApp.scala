@@ -1,7 +1,9 @@
 package de.uni_luebeck.isp.tessla
 
 import scala.io.Source
-
+import de.uni_luebeck.isp.tessla.Compiler._
+import de.uni_luebeck.isp.tessla.modules2.Module
+import org.json4s.native.JsonMethods._
 
 object CompilerApp extends App {
   val source = if (args.length > 0) {
@@ -11,5 +13,10 @@ object CompilerApp extends App {
   }
   val compiler = new Compiler(debug = true)
   val result = compiler.compile(Compiler.Source(source))
-  result.get
+
+  println("##############")
+  result.get match {
+    case ModuleList(list) => println(pretty(render(Module.json(list))))
+  }
+//  println("#############")
 }
