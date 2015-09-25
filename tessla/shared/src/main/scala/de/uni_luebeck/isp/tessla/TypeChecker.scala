@@ -311,7 +311,8 @@ class TypeChecker(
   def processResults() {
     for (id <- graph.nodeIds) {
       graph.node(id) match {
-        case x@(TypeAscr(_, _) | App(UnresolvedFunction(_), _, _, _)) =>
+        case x@(TypeAscr(_, _) | App(UnresolvedFunction(_), _, _, _)
+             | App(IntegralConstant(_), _, _, _)) => // TODO change when fixing integer literals
           val cs = constraint(id)
           if (cs.isEmpty) {
             throw new TypeError("no valid type for " + id)
