@@ -79,7 +79,7 @@ object TypeChecker extends Compiler.Pass {
 
   def typeRemoveVars(a: Type): Type = a match {
     case TypeVar(nr) => ToBeInferred
-    case StreamType(elType) => typeRemoveVars(elType)
+    case StreamType(elType) => StreamType(typeRemoveVars(elType))
     case x => x
   }
 
@@ -181,6 +181,7 @@ object TypeChecker extends Compiler.Pass {
         return sig.invalid
       }
       val updated = typeMeet(sig, sigWithoutVals)
+      println(updated)
 
       val collected = typeCollectBindings(signature, sig)
       println(collected)

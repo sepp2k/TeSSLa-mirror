@@ -4,7 +4,6 @@ import de.uni_luebeck.isp.tessla.AST.Spec
 import de.uni_luebeck.isp.tessla.modules2.Module
 import scala.util.{Failure, Success, Try}
 import Compiler._
-import de.uni_luebeck.isp.tessla.modules2.ModuleMapping
 
 object Compiler {
   abstract class State(val obj: Object)
@@ -28,8 +27,7 @@ object Compiler {
     MacroResolution,
     ASTGraph,
     ResolveLocalRefs,
-    TypeChecker,
-    ModuleMapping)
+    TypeChecker)
   val defaultProviders: Set[Provider] = Functions.resolvers(32)
 }
 

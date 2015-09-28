@@ -17,6 +17,7 @@ object CompilerApp extends App {
   println("##############")
   result.get match {
     case ModuleList(list) => println(pretty(render(Module.json(list))))
+    case _ => {}
   }
 //  println("#############")
 }
