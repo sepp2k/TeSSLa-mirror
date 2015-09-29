@@ -1,4 +1,4 @@
-package de.uni_luebeck.isp.tessla.modules2
+package de.uni_luebeck.isp.tessla.modules
 
 import de.uni_luebeck.isp.tessla.AST._
 import de.uni_luebeck.isp.tessla.ASTGraph

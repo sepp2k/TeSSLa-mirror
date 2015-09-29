@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.AST.Spec
-import de.uni_luebeck.isp.tessla.modules2.Module
+import de.uni_luebeck.isp.tessla.modules.Module
 import scala.util.{Failure, Success, Try}
 import Compiler._
 
