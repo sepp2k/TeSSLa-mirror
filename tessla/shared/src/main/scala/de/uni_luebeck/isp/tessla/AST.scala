@@ -24,6 +24,7 @@ object AST {
   
   abstract class Constant extends Function
   case class IntegralConstant(value: Integer) extends Constant
+  case class StringConstant(value: String) extends Constant
   abstract class InputConstant extends Constant
 
   abstract class Type extends Locatable {

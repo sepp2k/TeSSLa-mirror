@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import scala.io.Source
 import de.uni_luebeck.isp.tessla.Compiler._
-import de.uni_luebeck.isp.tessla.modules2.Module
+import de.uni_luebeck.isp.tessla.modules.Module
 import org.json4s.native.JsonMethods._
 
 object CompilerApp extends App {
