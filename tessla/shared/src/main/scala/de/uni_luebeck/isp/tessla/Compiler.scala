@@ -2,6 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.AST.Spec
 import de.uni_luebeck.isp.tessla.modules2.Module
+import de.uni_luebeck.isp.tessla.modules2.ModuleMapping
 import scala.util.{Failure, Success, Try}
 import Compiler._
 
@@ -27,7 +28,8 @@ object Compiler {
     MacroResolution,
     ASTGraph,
     ResolveLocalRefs,
-    TypeChecker)
+    TypeChecker,
+    ModuleMapping)
   val defaultProviders: Set[Provider] = Functions.resolvers(32)
 }
 

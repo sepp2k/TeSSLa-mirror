@@ -29,7 +29,7 @@ object Functions {
 
     //IfThenFunction
     new SimpleFunctionResolver(
-      "ifthen", simpleSignature(StreamType(BoolType), StreamType(TypeVar(1)), StreamType(TypeVar(1)))) {
+      "if", simpleSignature(StreamType(BoolType), StreamType(TypeVar(1)), StreamType(TypeVar(1)))) {
       override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("ifthen"))
     })
 }
