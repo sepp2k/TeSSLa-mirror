@@ -28,7 +28,8 @@ object Compiler {
     MacroResolution,
     ASTGraph,
     ResolveLocalRefs,
-    TypeChecker)
+    TypeChecker,
+    ModuleMapping)
   val defaultProviders: Set[Provider] = Functions.resolvers(32)
 }
 
