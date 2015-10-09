@@ -60,7 +60,7 @@ class TokensSpec extends FlatSpec with Matchers {
   it should "tokenize integer literals" in {
     val tokens = Tokenizer.tokenize(Source.fromString("123 456"));
     var idx = -1
-    for (token <- List(LIT_INT(123), LIT_INT(456), EOF)) {
+    for (token <- List(INT(123), INT(456), EOF)) {
       tokens.moveNext()
       tokens.current should be (token)
       //tokens.idx should be > idx
@@ -71,7 +71,7 @@ class TokensSpec extends FlatSpec with Matchers {
   it should "ignore comments" in {
     val tokens = Tokenizer.tokenize(Source.fromString("42 -- this is a comment @\n 23"));
     var idx = -1
-    for (token <- List(LIT_INT(42), LIT_INT(23), EOF)) {
+    for (token <- List(INT(42), INT(23), EOF)) {
       tokens.moveNext()
       tokens.current should be (token)
       //tokens.idx should be > idx

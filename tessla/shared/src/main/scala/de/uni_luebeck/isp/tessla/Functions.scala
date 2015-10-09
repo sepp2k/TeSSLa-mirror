@@ -38,10 +38,6 @@ object Functions {
       override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("monitor1"))
     },
     new SimpleFunctionResolver(
-      "monitor", simpleSignature(StringType, StreamType(BoolType), StreamType(BoolType))) {
-      override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("monitor2"))
-    },
-    new SimpleFunctionResolver(
       "synchronize", simpleSignature(StreamType(TypeVar(1)), StreamType(TypeVar(2)), IntType(32, false), StreamType(BoolType))) {
       override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("monitor2"))
     },

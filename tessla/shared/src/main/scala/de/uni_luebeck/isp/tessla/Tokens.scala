@@ -6,7 +6,8 @@ import scala.collection.mutable.Queue
 
 object Tokens extends SimpleTokens {
   //case class LIT_INT(value: Int) extends Token(value.toString())
-  val LIT_INT = INT
+  //val LIT_INT = INT
+  //val LIT_STRING = STRING
   case object DEFINE extends Token("define")
   case object OUT extends Token("out")
   case object OF_TYPE extends Token(":")

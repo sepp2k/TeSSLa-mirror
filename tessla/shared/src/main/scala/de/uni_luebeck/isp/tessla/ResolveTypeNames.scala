@@ -47,6 +47,7 @@ object ResolveTypeNames extends Compiler.Pass {
         case "int" => IntType(32, true)
         case "uint" => IntType(32, false)
         case "bool" => BoolType
+        case "string" => StringType
         case "event" => UnitType
         case _ => throw UnknownTypeNameError(name)
       }

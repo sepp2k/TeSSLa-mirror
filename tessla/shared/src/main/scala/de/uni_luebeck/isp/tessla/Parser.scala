@@ -55,9 +55,11 @@ object Parser extends Parsers with Pass {
   
   def term(ctx: Ctx): Parser[Term[TreeTerm]] = baseTerm(ctx) ~^ (lhs => (token(OF_TYPE) ~> typ(ctx) ^^ (rhs => TypeAscr(TreeTerm(lhs), rhs))) | success(lhs))
       
-  def baseTerm(ctx: Ctx): Parser[Term[TreeTerm]] = namedTermOrApp(ctx) | integralTerm(ctx) | (token(LPAREN) ~> term(ctx) <~ token(RPAREN))
+  def baseTerm(ctx: Ctx): Parser[Term[TreeTerm]] = namedTermOrApp(ctx) | integralTerm(ctx) | stringTerm(ctx) | (token(LPAREN) ~> term(ctx) <~ token(RPAREN))
   
-  def integralTerm(ctx: Ctx): Parser[App[TreeTerm]] = matchToken("integer", Set()) {case WithLocation(_, LIT_INT(x)) => App(IntegralConstant(x))}
+  def integralTerm(ctx: Ctx): Parser[App[TreeTerm]] = matchToken("integer", Set()) {case WithLocation(_, INT(x)) => App(IntegralConstant(x))}
+
+  def stringTerm(ctx: Ctx): Parser[App[TreeTerm]] = matchToken("string", Set()) {case WithLocation(_, STRING(x)) => App(StringConstant(x))}
   
   def namedTermOrApp(ctx: Ctx): Parser[Term[TreeTerm]] = updateLoc(
       matchTokenAlt(Set("defined name", "function name") | (if (ctx.inMacro) Set("macro argument") else Set()), ctx.completions) {
