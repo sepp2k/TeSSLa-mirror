@@ -244,6 +244,9 @@ class TypeChecker(
         case App(IntegralConstant(_), Seq(), Seq(), _) =>
           // TODO move this into a separate pass that handles literals with type ascriptions
           constraints(id) = Set(IntType(32, false))
+        case App(StringConstant(_), Seq(), Seq(), _) =>
+          // TODO move this into a separate pass that handles literals with type ascriptions
+          constraints(id) = Set(StringType)
         case _ => {}
       }
       dirty += id

@@ -34,7 +34,7 @@ object Functions {
     },
     //Monitor
     new SimpleFunctionResolver(
-      "monitor", simpleSignature(StringType, StreamType(BoolType), StreamType(BoolType))) {
+      "monitor", simpleSignature(StreamType(StringType), StreamType(BoolType), StreamType(BoolType))) {
       override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("monitor1"))
     },
     new SimpleFunctionResolver(
