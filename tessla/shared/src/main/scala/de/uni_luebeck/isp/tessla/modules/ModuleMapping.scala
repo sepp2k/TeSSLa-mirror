@@ -38,7 +38,8 @@ object ModuleMapping extends Compiler.Pass {
     val modules = nodes.clone().mapValues {
       graphTerm =>
         graphTerm match {
-          case App(IntegralConstant(value), args, nargs, typ) => ConstantNode(value)
+          case App(IntegralConstant(value), args, nargs, typ) => IntegerConstantNode(value)
+          case App(StringConstant(value), args, nargs, typ) => StringConstantNode(value)
           case App(UnresolvedFunction("if"), args: List[NodeId], nargs, typ) => {
             // assert args.length = 3
             val control = ToBeDereferenced(args(0))
@@ -47,6 +48,56 @@ object ModuleMapping extends Compiler.Pass {
             IfThenElseNode(control, trueNode, falseNode)
           }
           case App(UnresolvedFunction("constant"), args, nargs, typ) => ToBeDereferenced(args(0))
+          case App(UnresolvedFunction("add"), args: List[NodeId], nargs, typ) => {
+            val first = ToBeDereferenced(args(0))
+            val second = ToBeDereferenced(args(1))
+            AddNode(first, second)
+          }
+          case App(UnresolvedFunction("sub"), args: List[NodeId], nargs, typ) => {
+            val first = ToBeDereferenced(args(0))
+            val second = ToBeDereferenced(args(1))
+            SubNode(first, second)
+          }
+          case App(UnresolvedFunction("multiply"), args: List[NodeId], nargs, typ) => {
+            val first = ToBeDereferenced(args(0))
+            val second = ToBeDereferenced(args(1))
+            MultiplyNode(first, second)
+          }
+          case App(UnresolvedFunction("shift"), args: List[NodeId], nargs, typ) => {
+            val first = ToBeDereferenced(args(0))
+            val second = ToBeDereferenced(args(1))
+            ShiftNode(first, second)
+          }
+          case App(UnresolvedFunction("geq"), args: List[NodeId], nargs, typ) => {
+            val first = ToBeDereferenced(args(0))
+            val second = ToBeDereferenced(args(1))
+            GeqNode(first, second)
+          }
+          case App(UnresolvedFunction("and"), args: List[NodeId], nargs, typ) => {
+            val first = ToBeDereferenced(args(0))
+            val second = ToBeDereferenced(args(1))
+            AndNode(first, second)
+          }
+          case App(UnresolvedFunction("or"), args: List[NodeId], nargs, typ) => {
+            val first = ToBeDereferenced(args(0))
+            val second = ToBeDereferenced(args(1))
+            OrNode(first, second)
+          }
+          case App(UnresolvedFunction("not"), args: List[NodeId], nargs, typ) => {
+            val first = ToBeDereferenced(args(0))
+            NotNode(first)
+          }
+          case App(UnresolvedFunction("implies"), args: List[NodeId], nargs, typ) => {
+            val first = ToBeDereferenced(args(0))
+            val second = ToBeDereferenced(args(1))
+            ImpliesNode(first, second)
+          }
+          case App(UnresolvedFunction("lessThan"), args: List[NodeId], nargs, typ) => {
+            val first = ToBeDereferenced(args(0))
+            val second = ToBeDereferenced(args(1))
+            LessThanNode(first, second)
+          }
+          case App(UnresolvedFunction("monitor"), args, nargs, typ) => MonitorNode(args.map { nodeId => ToBeDereferenced(nodeId) })
           case App(UnresolvedFunction(name), args, nargs, typ) => GenericModule(name, args.map { nodeId => ToBeDereferenced(nodeId) })
           case _ => GenericModule()
         }

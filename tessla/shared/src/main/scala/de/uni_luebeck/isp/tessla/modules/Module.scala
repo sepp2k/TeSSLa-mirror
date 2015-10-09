@@ -52,9 +52,30 @@ case class GenericModule(val name: String = "", var inputs: List[Module] = List(
   }
 }
 
-case class ConstantNode(val value: Int) extends Module {
+case class MonitorNode(var inputs: List[Module] = List()) extends Module {
+  val typeString = "dataFlowGraph.node.operation.MonitorNode"
+  val outputWidth = -1
+
+  override def specificMembers(id: Map[Module, Int]): JObject = {
+    "inputs" -> inputs.map(id)
+  }
+
+  override def map(f: Module => Module): MonitorNode = {
+    inputs = inputs.map(f)
+    this
+  }
+}
+
+case class IntegerConstantNode(val value: Int) extends Module {
   val typeString = "dataFlowGraph.node.input.ConstantNode"
   val outputWidth = 32
+
+  override def specificMembers(id: Map[Module, Int]): JObject = { ("value" -> value) }
+}
+
+case class StringConstantNode(val value: String) extends Module {
+  val typeString = "dataFlowGraph.node.input.ConstantNode"
+  val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = { ("value" -> value) }
 }
@@ -130,6 +151,146 @@ case class AndNode(var operandA: Module, var operandB: Module) extends Module {
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
     ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+  }
+
+  override def map(f: Module => Module): AndNode = {
+    operandA = f(operandA)
+    operandB = f(operandB)
+    this
+  }
+}
+
+case class OrNode(var operandA: Module, var operandB: Module) extends Module {
+  val typeString = "dataFlowGraph.node.operation.OrNode"
+  val outputWidth = -1
+
+  override def specificMembers(id: Map[Module, Int]): JObject = {
+    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+  }
+
+  override def map(f: Module => Module): OrNode = {
+    operandA = f(operandA)
+    operandB = f(operandB)
+    this
+  }
+}
+
+case class NotNode(var operandA: Module) extends Module {
+  val typeString = "dataFlowGraph.node.operation.NotNode"
+  val outputWidth = -1
+
+  override def specificMembers(id: Map[Module, Int]): JObject = {
+    "operandA" -> id(operandA)
+  }
+
+  override def map(f: Module => Module): NotNode = {
+    operandA = f(operandA)
+    this
+  }
+}
+
+case class ImpliesNode(var operandA: Module, var operandB: Module) extends Module {
+  val typeString = "dataFlowGraph.node.operation.ImpliesNode"
+  val outputWidth = -1
+
+  override def specificMembers(id: Map[Module, Int]): JObject = {
+    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+  }
+
+  override def map(f: Module => Module): ImpliesNode = {
+    operandA = f(operandA)
+    operandB = f(operandB)
+    this
+  }
+}
+
+case class GeqNode(var operandA: Module, var operandB: Module) extends Module {
+  val typeString = "dataFlowGraph.node.operation.GeqNode"
+  val outputWidth = -1
+
+  override def specificMembers(id: Map[Module, Int]): JObject = {
+    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+  }
+
+  override def map(f: Module => Module): GeqNode = {
+    operandA = f(operandA)
+    operandB = f(operandB)
+    this
+  }
+}
+
+case class LessThanNode(var operandA: Module, var operandB: Module) extends Module {
+  val typeString = "dataFlowGraph.node.operation.LessThanNode"
+  val outputWidth = -1
+
+  override def specificMembers(id: Map[Module, Int]): JObject = {
+    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+  }
+
+  override def map(f: Module => Module): LessThanNode = {
+    operandA = f(operandA)
+    operandB = f(operandB)
+    this
+  }
+}
+
+case class AddNode(var operandA: Module, var operandB: Module) extends Module {
+  val typeString = "dataFlowGraph.node.operation.AddNode"
+  val outputWidth = -1
+
+  override def specificMembers(id: Map[Module, Int]): JObject = {
+    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+  }
+
+  override def map(f: Module => Module): AddNode = {
+    operandA = f(operandA)
+    operandB = f(operandB)
+    this
+  }
+}
+
+case class SubNode(var operandA: Module, var operandB: Module) extends Module {
+  val typeString = "dataFlowGraph.node.operation.SubNode"
+  val outputWidth = -1
+
+  override def specificMembers(id: Map[Module, Int]): JObject = {
+    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+  }
+
+  override def map(f: Module => Module): SubNode = {
+    operandA = f(operandA)
+    operandB = f(operandB)
+    this
+  }
+}
+
+case class MultiplyNode(var operandA: Module, var operandB: Module) extends Module {
+  val typeString = "dataFlowGraph.node.operation.MultiplyNode"
+  val outputWidth = -1
+
+  override def specificMembers(id: Map[Module, Int]): JObject = {
+    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+  }
+
+  override def map(f: Module => Module): MultiplyNode = {
+    operandA = f(operandA)
+    operandB = f(operandB)
+    this
+  }
+}
+
+case class ShiftNode(var operandA: Module, var operandB: Module) extends Module {
+  val typeString = "dataFlowGraph.node.operation.ShiftNode"
+  val outputWidth = -1
+
+  override def specificMembers(id: Map[Module, Int]): JObject = {
+    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+  }
+
+  override def map(f: Module => Module): ShiftNode = {
+    operandA = f(operandA)
+    operandB = f(operandB)
+    this
   }
 }
 

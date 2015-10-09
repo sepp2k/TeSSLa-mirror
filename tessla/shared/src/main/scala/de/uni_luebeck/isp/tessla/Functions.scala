@@ -23,9 +23,21 @@ object Functions {
     new SimpleFunctionResolver(
       "sub", simpleSignature(StreamType(IntType(32, false)), StreamType(IntType(32, false)), StreamType(IntType(32, false)))),
 
+    //MultiplyFunction
+    new SimpleFunctionResolver(
+      "multiply", simpleSignature(StreamType(IntType(32, false)), StreamType(IntType(32, false)), StreamType(IntType(32, false)))),
+
+    //ShiftFunction
+    new SimpleFunctionResolver(
+      "shift", simpleSignature(StreamType(IntType(32, false)), StreamType(IntType(32, false)), StreamType(IntType(32, false)))),
+
     //GEQComparator
     new SimpleFunctionResolver(
       "geq", simpleSignature(StreamType(IntType(32, false)), StreamType(IntType(32, false)), StreamType(BoolType))),
+
+    //LessThanComparator
+    new SimpleFunctionResolver(
+      "lessThan", simpleSignature(StreamType(IntType(32, false)), StreamType(IntType(32, false)), StreamType(BoolType))),
 
     //IfThenFunction
     new SimpleFunctionResolver(
@@ -37,9 +49,14 @@ object Functions {
       "monitor", simpleSignature(StreamType(StringType), StreamType(BoolType), StreamType(BoolType))) {
       override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("monitor1"))
     },
+    //Monitor
+    new SimpleFunctionResolver(
+      "monitor", simpleSignature(StreamType(StringType), StreamType(BoolType),StreamType(BoolType), StreamType(BoolType))) {
+      override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("monitor2"))
+    },
     new SimpleFunctionResolver(
       "synchronize", simpleSignature(StreamType(TypeVar(1)), StreamType(TypeVar(2)), IntType(32, false), StreamType(BoolType))) {
-      override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("monitor2"))
+      override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("synchronize"))
     },
     new SimpleFunctionResolver("not", simpleSignature(StreamType(BoolType), StreamType(BoolType))),
     new SimpleFunctionResolver("and", simpleSignature(StreamType(BoolType), StreamType(BoolType), StreamType(BoolType))),
