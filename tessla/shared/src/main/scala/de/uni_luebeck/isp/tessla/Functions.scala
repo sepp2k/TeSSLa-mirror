@@ -37,7 +37,7 @@ object Functions {
 
     //LessThanComparator
     new SimpleFunctionResolver(
-      "lessThan", simpleSignature(StreamType(IntType(32, false)), StreamType(IntType(32, false)), StreamType(BoolType))),
+      "lessthan", simpleSignature(StreamType(IntType(32, false)), StreamType(IntType(32, false)), StreamType(BoolType))),
 
     //IfThenFunction
     new SimpleFunctionResolver(
@@ -46,12 +46,12 @@ object Functions {
     },
     //Monitor
     new SimpleFunctionResolver(
-      "monitor", simpleSignature(StreamType(StringType), StreamType(BoolType), StreamType(BoolType))) {
+      "monitor", simpleSignature(StringType, StreamType(BoolType), StreamType(BoolType))) {
       override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("monitor1"))
     },
     //Monitor
     new SimpleFunctionResolver(
-      "monitor", simpleSignature(StreamType(StringType), StreamType(BoolType),StreamType(BoolType), StreamType(BoolType))) {
+      "monitor", simpleSignature(StringType, StreamType(BoolType),StreamType(BoolType), StreamType(BoolType))) {
       override def provideFunction(fn: FunctionSignature) = Some(UnresolvedFunction("monitor2"))
     },
     new SimpleFunctionResolver(

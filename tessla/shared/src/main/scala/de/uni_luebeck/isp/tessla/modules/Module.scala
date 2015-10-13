@@ -52,15 +52,21 @@ case class GenericModule(val name: String = "", var inputs: List[Module] = List(
   }
 }
 
-case class MonitorNode(var inputs: List[Module] = List()) extends Module {
+case class MonitorNode(var property: Module, var inputs: List[Module] = List()) extends Module {
   val typeString = "dataFlowGraph.node.operation.MonitorNode"
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    "inputs" -> inputs.map(id)
+    // TODO fix this and make it better
+    val s = property match {
+      case StringConstantNode(x) => x
+      case _ => ""
+    }
+    ("inputs" -> inputs.map(id)) ~ ("property" -> s)
   }
 
   override def map(f: Module => Module): MonitorNode = {
+    property = f(property)
     inputs = inputs.map(f)
     this
   }
@@ -73,7 +79,7 @@ case class IntegerConstantNode(val value: Int) extends Module {
   override def specificMembers(id: Map[Module, Int]): JObject = { ("value" -> value) }
 }
 
-case class StringConstantNode(val value: String) extends Module {
+case class StringConstantNode(value: String) extends Module {
   val typeString = "dataFlowGraph.node.input.ConstantNode"
   val outputWidth = -1
 
