@@ -16,6 +16,7 @@ object Tokens extends SimpleTokens {
   case object COMMA extends Token(",")
   case object LPAREN extends Token("(")
   case object RPAREN extends Token(")")
+  case object MONITOR extends Token("monitor")
 }
 
 
@@ -23,7 +24,7 @@ object Tokenizer extends SimpleTokenizer {
   override val tokens = Tokens
   import tokens._
 
-  override val keywords = List(DEFINE, OUT)
+  override val keywords = List(DEFINE, OUT, MONITOR)
   override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT)
   override val comments = List("--" -> "\n")
 }

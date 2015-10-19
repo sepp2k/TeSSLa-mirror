@@ -97,8 +97,8 @@ object ModuleMapping extends Compiler.Pass {
             val second = ToBeDereferenced(args(1))
             LessThanNode(first, second)
           }
-          case App(UnresolvedFunction("monitor"), args, nargs, typ) => MonitorNode(ToBeDereferenced(args.head), args.tail.map ( nodeId => ToBeDereferenced(nodeId)))
           case App(UnresolvedFunction(name), args, nargs, typ) => GenericModule(name, args.map { nodeId => ToBeDereferenced(nodeId) })
+          case Monitor(salt, args, nargs, typ) => MonitorNode(salt, args.map ( nodeId => ToBeDereferenced(nodeId)))
           case _ => GenericModule()
         }
     }

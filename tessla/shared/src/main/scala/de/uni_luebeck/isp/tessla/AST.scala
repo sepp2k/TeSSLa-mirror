@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.compacom.Location
+import scala.language.higherKinds
 
 object AST {
   abstract class Locatable {
@@ -66,18 +66,42 @@ object AST {
   case class Ref(name: String, override val typ: Type = ToBeInferred) extends LeafTerm(typ) {
     def changeType(typ: Type) = this.copy(typ = typ) from this
   }
-  case class App[SubTerm](
-      fn: Function,
+
+  abstract class ArgumentTaker[SubTerm, Self[U] <: Term[U]](
       arguments: List[SubTerm] = List(),
       namedArguments: List[NamedArg[SubTerm]] = List(),
-      override val typ: Type = ToBeInferred) extends Term[SubTerm](typ) {
+      override val typ: Type) extends Term[SubTerm](typ) {
     override def foreach[U](f: SubTerm => U): Unit = {
       for (term <- arguments) { f(term) }
       for (NamedArg(_, term) <- namedArguments) { f(term) }
     }
-    override def map[U](f: SubTerm => U): App[U] = {
-      App(fn, arguments map f, namedArguments map { case NamedArg(name, x) => NamedArg(name, f(x)) }, typ)
+    def cpy[U](arguments: List[U], namedArguments: List[NamedArg[U]], typ: Type): Self[U]
+    override def map[U](f: SubTerm => U): Self[U] = {
+      cpy(arguments map f, namedArguments map { case NamedArg(name, x) => NamedArg(name, f(x)) }, typ)
     }
+  }
+
+  case class Monitor[SubTerm](
+      salt: String,
+      arguments: List[SubTerm] = List(),
+      namedArguments: List[NamedArg[SubTerm]] = List(),
+      override val typ: Type = BoolType) extends ArgumentTaker[SubTerm, Monitor](arguments, namedArguments, typ) {
+
+    override def changeType(typ: Type): Term[SubTerm] = this.copy(typ = typ) from this
+
+    override def cpy[U](arguments: List[U], namedArguments: List[NamedArg[U]], typ: Type): Monitor[U] =
+      Monitor(salt, arguments, namedArguments, typ)
+  }
+
+  case class App[SubTerm](
+      fn: Function,
+      arguments: List[SubTerm] = List(),
+      namedArguments: List[NamedArg[SubTerm]] = List(),
+      override val typ: Type = ToBeInferred) extends ArgumentTaker[SubTerm, App](arguments, namedArguments, typ) {
+
+    override def cpy[U](arguments: List[U], namedArguments: List[NamedArg[U]], typ: Type): App[U] =
+      App(fn, arguments, namedArguments, typ)
+
     def changeType(typ: Type) = this.copy(typ = typ) from this
   }
 
