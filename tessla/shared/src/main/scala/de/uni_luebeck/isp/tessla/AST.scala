@@ -81,6 +81,8 @@ object AST {
     }
   }
 
+  //TODO: Should take a StringConstant rather than a String (salt). 
+  // It might be specified by a variable or even composed by others. -- Normann 
   case class Monitor[SubTerm](
       salt: String,
       arguments: List[SubTerm] = List(),

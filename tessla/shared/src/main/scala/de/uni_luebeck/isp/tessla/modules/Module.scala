@@ -309,7 +309,7 @@ case class OutputNode(var inputNode: Module) extends Module {
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    "inputNode" -> refMap(id(inputNode))
+    "predecessor" -> refMap(id(inputNode))
   }
 
   override def map(f: Module => Module) = {
