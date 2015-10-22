@@ -181,10 +181,10 @@ object TypeChecker extends Compiler.Pass {
         return sig.invalid
       }
       val updated = typeMeet(sig, sigWithoutVals)
-      println(updated)
+      //println(updated)
 
       val collected = typeCollectBindings(signature, sig)
-      println(collected)
+      //println(collected)
 
       val updatedSignature = typeReplaceBindings(collected, signature)
 

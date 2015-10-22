@@ -30,7 +30,8 @@ object ASTGraph extends Compiler.Pass {
 
 case class ASTGraph(
   private var nodes: mutable.Map[NodeId, GraphTerm] = new mutable.HashMap,
-  var roots: mutable.Map[Root, NodeId] = new mutable.HashMap) extends mutable.Cloneable[ASTGraph] {
+  var roots: mutable.Map[Root, NodeId] = new mutable.HashMap,
+  var outputs: mutable.Set[String] = new mutable.HashSet) extends mutable.Cloneable[ASTGraph] {
   private var nextNodeId =
     (nodes.keys ++ Seq(NodeId(0))) maxBy {case NodeId(x) => x}
 
@@ -87,7 +88,7 @@ case class ASTGraph(
         case MacroDef(_, _, _) =>
           throw new RuntimeException("Macro definitions must be expanded before")
         case Out(name) =>
-          // TODO how to handle these?
+          outputs.add(name)
       }
     }
   }

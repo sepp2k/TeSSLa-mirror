@@ -33,7 +33,7 @@ object ModuleMapping extends Compiler.Pass {
       val typeString: String = "toBeDereferenced"
     }
 
-    val ASTGraph(nodes, roots) = astGraph
+    val ASTGraph(nodes, roots, _) = astGraph
 
     val modules = nodes.clone().mapValues {
       graphTerm =>
@@ -106,6 +106,7 @@ object ModuleMapping extends Compiler.Pass {
     var mutModuleMap = mutable.Map[NodeId, Module]()
     modules.foreach(p => mutModuleMap += p)
 
+    // TODO fix multiple constants
     def deref(module: Module, map: mutable.Map[NodeId, Module]): Module = module match {
       case ToBeDereferenced(id) => {
         val derefModule = deref(map(id), map)
@@ -118,7 +119,7 @@ object ModuleMapping extends Compiler.Pass {
     mutModuleMap.map {
       case (nodeId, module) =>
         deref(module, mutModuleMap)
-    }.toList
+    }.toList ++ astGraph.outputs.map(name => OutputNode(mutModuleMap(astGraph.roots(DefRoot(name)))))
 
   }
 

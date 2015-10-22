@@ -36,14 +36,19 @@ abstract class Module {
 
   def map(f: Module => Module): Module = this
 
+  def refMap(id: Int): JObject = {
+    "@ref" -> id
+  }
 }
+
+
 
 case class GenericModule(val name: String = "", var inputs: List[Module] = List()) extends Module {
   val typeString = "GenericModule"
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("inputs" -> inputs.map(id)) ~ ("name" -> name)
+    ("predecessor" -> inputs.map(x => refMap(id(x)))) ~ ("name" -> name)
   }
 
   override def map(f: Module => Module): GenericModule = {
@@ -54,10 +59,10 @@ case class GenericModule(val name: String = "", var inputs: List[Module] = List(
 
 case class MonitorNode(var property: String, var inputs: List[Module] = List()) extends Module {
   val typeString = "dataFlowGraph.node.operation.MonitorNode"
-  val outputWidth = -1
+  val outputWidth = 1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("inputs" -> inputs.map(id)) ~ ("property" -> property)
+    ("predecessors" -> inputs.map(x => refMap(id(x)))) ~ ("property" -> property)
   }
 
   override def map(f: Module => Module): MonitorNode = {
@@ -90,7 +95,7 @@ case class EqualNode(var operandA: Module, var operandB: Module) extends Module 
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+    ("operandA" -> refMap(id(operandA))) ~ ("operandB" -> refMap(id(operandB)))
   }
   override def map(f: Module => Module) = {
     operandA = f(operandA)
@@ -104,7 +109,7 @@ case class ItThenNode(var control: Module, var trueNode: Module) extends Module 
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("control" -> id(control)) ~ ("trueNode" -> id(trueNode))
+    ("control" -> refMap(id(control))) ~ ("trueNode" -> refMap(id(trueNode)))
   }
 
   override def map(f: Module => Module) = {
@@ -115,11 +120,11 @@ case class ItThenNode(var control: Module, var trueNode: Module) extends Module 
 }
 
 case class IfThenElseNode(var control: Module, var trueNode: Module, var falseNode: Module) extends Module {
-  val typeString = "dataFlowGraph.node.operation.IfThenNode"
+  val typeString = "dataFlowGraph.node.operation.IfThenElseNode"
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("control" -> id(control)) ~ ("trueNode" -> id(trueNode)) ~ ("falseNode" -> id(falseNode))
+    ("control" -> refMap(id(control))) ~ ("trueNode" -> refMap(id(trueNode))) ~ ("falseNode" -> refMap(id(falseNode)))
   }
 
   override def map(f: Module => Module): IfThenElseNode = {
@@ -150,7 +155,7 @@ case class AndNode(var operandA: Module, var operandB: Module) extends Module {
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+    ("operandA" -> refMap(id(operandA))) ~ ("operandB" -> refMap(id(operandB)))
   }
 
   override def map(f: Module => Module): AndNode = {
@@ -165,7 +170,7 @@ case class OrNode(var operandA: Module, var operandB: Module) extends Module {
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+    ("operandA" -> refMap(id(operandA))) ~ ("operandB" -> refMap(id(operandB)))
   }
 
   override def map(f: Module => Module): OrNode = {
@@ -180,7 +185,7 @@ case class NotNode(var operandA: Module) extends Module {
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    "operandA" -> id(operandA)
+    "predecessor" -> refMap(id(operandA))
   }
 
   override def map(f: Module => Module): NotNode = {
@@ -194,7 +199,7 @@ case class ImpliesNode(var operandA: Module, var operandB: Module) extends Modul
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+    ("operandA" -> refMap(id(operandA))) ~ ("operandB" -> refMap(id(operandB)))
   }
 
   override def map(f: Module => Module): ImpliesNode = {
@@ -209,7 +214,7 @@ case class GeqNode(var operandA: Module, var operandB: Module) extends Module {
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+    ("operandA" -> refMap(id(operandA))) ~ ("operandB" -> refMap(id(operandB)))
   }
 
   override def map(f: Module => Module): GeqNode = {
@@ -224,7 +229,7 @@ case class LessThanNode(var operandA: Module, var operandB: Module) extends Modu
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+    ("less" -> refMap(id(operandA))) ~ ("greater" -> refMap(id(operandB)))
   }
 
   override def map(f: Module => Module): LessThanNode = {
@@ -239,7 +244,7 @@ case class AddNode(var operandA: Module, var operandB: Module) extends Module {
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+    ("operandA" -> refMap(id(operandA))) ~ ("operandB" -> refMap(id(operandB)))
   }
 
   override def map(f: Module => Module): AddNode = {
@@ -254,7 +259,7 @@ case class SubNode(var operandA: Module, var operandB: Module) extends Module {
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+    ("operandA" -> refMap(id(operandA))) ~ ("operandB" -> refMap(id(operandB)))
   }
 
   override def map(f: Module => Module): SubNode = {
@@ -269,7 +274,7 @@ case class MultiplyNode(var operandA: Module, var operandB: Module) extends Modu
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+    ("operandA" -> refMap(id(operandA))) ~ ("operandB" -> refMap(id(operandB)))
   }
 
   override def map(f: Module => Module): MultiplyNode = {
@@ -284,7 +289,7 @@ case class ShiftNode(var operandA: Module, var operandB: Module) extends Module 
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("operandA" -> id(operandA)) ~ ("operandB" -> id(operandB))
+    ("operand" -> refMap(id(operandA))) ~ ("shift" -> refMap(id(operandB)))
   }
 
   override def map(f: Module => Module): ShiftNode = {
@@ -304,7 +309,7 @@ case class OutputNode(var inputNode: Module) extends Module {
   val outputWidth = -1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("inputNode" -> id(inputNode))
+    "inputNode" -> refMap(id(inputNode))
   }
 
   override def map(f: Module => Module) = {

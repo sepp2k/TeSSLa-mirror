@@ -11,10 +11,10 @@ object CompilerApp extends App {
   } else {
     Source.stdin.mkString
   }
-  val compiler = new Compiler(debug = true)
+  val compiler = new Compiler(debug = false)
   val result = compiler.compile(Compiler.Source(source))
 
-  println("##############")
+  //println("##############")
   result.get match {
     case ModuleList(list) => println(pretty(render(Module.json(list))))
     case _ => {}
