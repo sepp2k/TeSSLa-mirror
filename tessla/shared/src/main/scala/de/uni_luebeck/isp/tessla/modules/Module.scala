@@ -104,7 +104,7 @@ case class EqualNode(var operandA: Module, var operandB: Module) extends Module 
   }
 }
 
-case class ItThenNode(var control: Module, var trueNode: Module) extends Module {
+case class IfThenNode(var control: Module, var trueNode: Module) extends Module {
   val typeString = "dataFlowGraph.node.operation.IfThenNode"
   val outputWidth = -1
 

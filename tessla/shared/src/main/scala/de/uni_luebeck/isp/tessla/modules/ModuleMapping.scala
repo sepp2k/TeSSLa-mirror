@@ -41,11 +41,15 @@ object ModuleMapping extends Compiler.Pass {
           case App(IntegralConstant(value), args, nargs, typ) => None
           case App(StringConstant(value), args, nargs, typ)   => None
           case App(UnresolvedFunction("if"), args: List[NodeId], nargs, typ) => {
-            // assert args.length = 3
+            // assert args.length = 3 or args.length=2
             val control = ToBeDereferenced(args(0))
             val trueNode = ToBeDereferenced(args(1))
-            val falseNode = ToBeDereferenced(args(2))
-            Some(nodeID -> IfThenElseNode(control, trueNode, falseNode))
+            if (args.length >= 2) {
+              val falseNode = ToBeDereferenced(args(2))
+              Some(nodeID -> IfThenElseNode(control, trueNode, falseNode))
+            } else {
+              Some(nodeID -> IfThenNode(control, trueNode))
+            }
           }
           case App(UnresolvedFunction("constant"), args, nargs, typ) => {
             nodes(args(0)) match {
