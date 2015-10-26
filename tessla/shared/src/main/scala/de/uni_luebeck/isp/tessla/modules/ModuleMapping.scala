@@ -117,8 +117,20 @@ object ModuleMapping extends Compiler.Pass {
               "ApplicationMessageValid",
               "ApplicationMessageValue")
 
+            val inputModuleStringsBranch = Set("BranchToMessageAddress",
+              "BranchToMessageValid")
+
+            val inputModuleStringsData = Set("DataMessageAddress",
+              "DataMessageSize",
+              "DataMessageValid",
+              "DataMessageValue")
+
             if (inputModuleStringsApplication.contains(name)) {
               Some(nodeID -> InputNode("applicationMessage." + name))
+            } else if (inputModuleStringsBranch.contains(name)) {
+              Some(nodeID -> InputNode("branchToMessage." + name))
+            } else if (inputModuleStringsData.contains(name)) {
+              Some(nodeID -> InputNode("dataMessage." + name))
             } else {
               Some(nodeID -> GenericModule(name, args.map { nodeId => ToBeDereferenced(nodeId) }))
             }

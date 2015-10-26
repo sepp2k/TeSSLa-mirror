@@ -67,7 +67,13 @@ object Functions {
       override def names = Set("ApplicationMessageID",
         "ApplicationMessageTSDef",
         "ApplicationMessageValid",
-        "ApplicationMessageValue")
+        "ApplicationMessageValue",
+        "BranchToMessageAddress",
+        "BranchToMessageValid",
+        "DataMessageAddress",
+        "DataMessageSize",
+        "DataMessageValid",
+        "DataMessageValue")
     }
   )
 }
