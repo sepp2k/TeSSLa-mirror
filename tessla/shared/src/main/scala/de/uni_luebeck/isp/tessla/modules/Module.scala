@@ -135,18 +135,8 @@ case class IfThenElseNode(var control: Module, var trueNode: Module, var falseNo
   }
 }
 
-case class ApplicationMessageValue() extends Module {
-  val typeString = "dataFlowGraph.node.input.applicationMessage.ApplicationMessageValue"
-  val outputWidth = 32
-}
-
-case class RegChangeMessageID() extends Module {
-  val typeString = "dataFlowGraph.node.input.regChangeMessage.RegChangeMessageID"
-  val outputWidth = 32
-}
-
-case class RegChangeMessageValue() extends Module {
-  val typeString = "dataFlowGraph.node.input.ConstantNode"
+case class InputNode(name: String) extends Module {
+  val typeString = "dataFlowGraph.node.input." + name
   val outputWidth = 32
 }
 

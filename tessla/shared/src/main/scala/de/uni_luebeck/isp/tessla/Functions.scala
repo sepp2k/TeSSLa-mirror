@@ -61,6 +61,13 @@ object Functions {
     new SimpleFunctionResolver("not", simpleSignature(StreamType(BoolType), StreamType(BoolType))),
     new SimpleFunctionResolver("and", simpleSignature(StreamType(BoolType), StreamType(BoolType), StreamType(BoolType))),
     new SimpleFunctionResolver("or", simpleSignature(StreamType(BoolType), StreamType(BoolType), StreamType(BoolType))),
-    new SimpleFunctionResolver("implies", simpleSignature(StreamType(BoolType), StreamType(BoolType), StreamType(BoolType)))
+    new SimpleFunctionResolver("implies", simpleSignature(StreamType(BoolType), StreamType(BoolType), StreamType(BoolType))),
+
+    new SimpleFunctionResolver("input", simpleSignature(StreamType(IntType(32,false)))) {
+      override def names = Set("ApplicationMessageID",
+        "ApplicationMessageTSDef",
+        "ApplicationMessageValid",
+        "ApplicationMessageValue")
+    }
   )
 }

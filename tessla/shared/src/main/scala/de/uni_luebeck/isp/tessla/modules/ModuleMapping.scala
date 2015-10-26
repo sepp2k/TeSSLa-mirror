@@ -112,7 +112,16 @@ object ModuleMapping extends Compiler.Pass {
             Some(nodeID -> LessThanNode(first, second))
           }
           case App(UnresolvedFunction(name), args, nargs, typ) =>
-            Some(nodeID -> GenericModule(name, args.map { nodeId => ToBeDereferenced(nodeId) }))
+            val inputModuleStringsApplication = Set("ApplicationMessageID",
+              "ApplicationMessageTSDef",
+              "ApplicationMessageValid",
+              "ApplicationMessageValue")
+
+            if (inputModuleStringsApplication.contains(name)) {
+              Some(nodeID -> InputNode("applicationMessage." + name))
+            } else {
+              Some(nodeID -> GenericModule(name, args.map { nodeId => ToBeDereferenced(nodeId) }))
+            }
           case Monitor(salt, args, nargs, typ) =>
             Some(nodeID -> MonitorNode(salt, args.map(nodeId => ToBeDereferenced(nodeId))))
           case _ => Some(nodeID -> GenericModule())
