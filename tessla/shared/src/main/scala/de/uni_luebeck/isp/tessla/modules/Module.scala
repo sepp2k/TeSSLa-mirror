@@ -1,8 +1,10 @@
 package de.uni_luebeck.isp.tessla.modules
 
+import de.uni_luebeck.isp.rltlconv.automata.Moore
 import org.json4s._
 import org.json4s.JsonDSL._
 import scala.collection.mutable
+import de.uni_luebeck.isp.rltlconv.cli.RltlConv
 
 /**
  * @author Normann Decker <decker@isp.uni-luebeck.de>
@@ -57,12 +59,12 @@ case class GenericModule(val name: String = "", var inputs: List[Module] = List(
   }
 }
 
-case class MonitorNode(var property: String, var inputs: List[Module] = List()) extends Module {
+case class MonitorNode(var states: Map[String,String], var transitions: Map[String,Map[String,String]], var inputs: List[Module] = List()) extends Module {
   val typeString = "dataFlowGraph.node.operation.MonitorNode"
   val outputWidth = 1
 
   override def specificMembers(id: Map[Module, Int]): JObject = {
-    ("predecessors" -> inputs.map(x => refMap(id(x)))) ~ ("property" -> property)
+    ("predecessors" -> inputs.map(x => refMap(id(x)))) ~ ("states" -> states) ~ ("transitions" -> transitions)
   }
 
   override def map(f: Module => Module): MonitorNode = {

@@ -1,5 +1,8 @@
 package de.uni_luebeck.isp.tessla.modules
 
+import de.uni_luebeck.isp.rltlconv.automata.Moore
+import de.uni_luebeck.isp.rltlconv.cli.RltlConv
+import de.uni_luebeck.isp.salt_eo.StringLtlBuilder
 import de.uni_luebeck.isp.tessla.AST._
 import de.uni_luebeck.isp.tessla.ASTGraph
 import de.uni_luebeck.isp.tessla.ASTGraph._
@@ -44,7 +47,7 @@ object ModuleMapping extends Compiler.Pass {
             // assert args.length = 3 or args.length=2
             val control = ToBeDereferenced(args(0))
             val trueNode = ToBeDereferenced(args(1))
-            if (args.length >= 2) {
+            if (args.length > 2) {
               val falseNode = ToBeDereferenced(args(2))
               Some(nodeID -> IfThenElseNode(control, trueNode, falseNode))
             } else {
@@ -135,7 +138,19 @@ object ModuleMapping extends Compiler.Pass {
               Some(nodeID -> GenericModule(name, args.map { nodeId => ToBeDereferenced(nodeId) }))
             }
           case Monitor(salt, args, nargs, typ) =>
-            Some(nodeID -> MonitorNode(salt, args.map(nodeId => ToBeDereferenced(nodeId))))
+            // Create Moore machine and build maps
+            val moore = RltlConv.convert("assert " + salt,"--salt","--ltl","--moore","--min").asInstanceOf[Moore].toNamedMoore
+            val stateMap = moore.states.foldLeft(Map[String,String]())((m, s) => m + (s.name -> moore.labels(s).toString))
+            val allTrans = moore.transitions.filter(element => !moore.alphabet.contains(element._1._2.toString)).map(element => (element._1._1,element._2))
+            val trans = (moore.alphabet.foldLeft(List[(String,String,String)]())((l,a) => l ++ allTrans.map(s => (s._1.name,a,s._2.name))) ++
+              moore.transitions.filter(element => moore.alphabet.contains(element._1._2.toString)).toList.map(e => (e._1._1.name,e._1._2.toString,e._2.name))).map(e => (e._1,e._2) -> e._3).toMap
+            val transitionMap = moore.states.foldLeft(Map[String,Map[String,String]]())((m,s) => {
+              val signToNext = trans.filter(element => element._1._1 == s.name).map(element => element._1._2.filterNot("\"".toSet)
+                .replaceAll("&&",",").replaceAll("\\(","\\{").replaceAll("\\)","\\}") -> element._2)
+              m + (s.name -> signToNext)
+            } )
+
+            Some(nodeID -> MonitorNode(stateMap, transitionMap, args.map(nodeId => ToBeDereferenced(nodeId))))
           case _ => Some(nodeID -> GenericModule())
         }
     }
