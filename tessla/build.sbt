@@ -10,6 +10,7 @@ lazy val tessla = (project in file(".")).settings(
   resolvers += releases,
   resolvers += snapshots,
   resolvers += "ISP Private" at "https://sourcecode.isp.uni-luebeck.de/nexus/content/groups/private",
+  resolvers += "ISP Public" at "https://sourcecode.isp.uni-luebeck.de/nexus/content/groups/public",
   resourceDirectory in Compile <<= baseDirectory(_ / "lib"),
   credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials"),
   libraryDependencies ++= Seq(
