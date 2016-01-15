@@ -5,7 +5,7 @@ import util.Try
 /**
   * A compiler pass that simply prints out the input
   */
-object DefualtPrinter extends CompilerPass[Any, Any] {
+object DefualtPrinter extends CompilerPass[Any, Unit] {
 
   //TODO: implement some logic to choose alternative output methods
   //var outputStream = ...
@@ -13,7 +13,7 @@ object DefualtPrinter extends CompilerPass[Any, Any] {
   //def toStdErr = ...
   //def toFile(name: String) = ...
 
-  override def applyPass(in: Any): Try[Any] = {
+  override def applyPass(in: Any): Try[Unit] = {
     Try(println(in))
   }
 }
