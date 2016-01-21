@@ -18,4 +18,8 @@ object TesslaSource {
   def fromFile(name: String): TesslaSource = {
     new TesslaSource(Source.fromFile(name))
   }
+
+  def fromString(str: String): TesslaSource = {
+    new TesslaSource(Source.fromString(str))
+  }
 }
