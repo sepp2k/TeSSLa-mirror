@@ -12,7 +12,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     override def toString = "ParserError(" + parserFailure + ")"
   }
 
-  override def apply(source: TesslaSource) = {
+  override def apply(compiler: Compiler, source: TesslaSource) = {
     Parsers.parseAll(Parsers.spec, source.src) match {
       case Parsers.Success(_, spec, _, _) => Success(spec)
       case fail: Parsers.Failure => Failure(ParserError(fail))
@@ -53,23 +53,21 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
 
     // TODO identifier completion, requires some small compacom enhancements
     def identifier: Parser[Ast.Identifier] = matchToken("identifier", Set("<identifier>")) {
-      case WithLocation(loc, ID(name)) => Ast.Identifier(name, loc)
+      case WithLocation(loc, ID(name)) => Ast.Identifier(name, SourceLoc(loc))
     }
 
     def intLit: Parser[Ast.IntLit] = matchToken("integer", Set("<integer>")) {
-      case WithLocation(loc, INT(value)) => Ast.IntLit(value, loc)
+      case WithLocation(loc, INT(value)) => Ast.IntLit(value, SourceLoc(loc))
     }
 
     def stringLit: Parser[Ast.StringLit] = matchToken("string", Set("<string>")) {
-      case WithLocation(loc, STRING(value)) => Ast.StringLit(value, loc)
+      case WithLocation(loc, STRING(value)) => Ast.StringLit(value, SourceLoc(loc))
     }
 
     def defOrMacroDef: Parser[Ast.Statement] =
-      (DEFINE ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (DEFINE_AS ~> expr)) ^^ {
-        case (((name, None), typeAscr), expr) =>
-          Ast.Def(name, typeAscr, expr)
-        case (((name, Some(args)), typeAscr), expr) =>
-          Ast.MacroDef(name, args, typeAscr, expr)
+      (DEFINE ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (DEFINE_AS ~> expr)) ^^! {
+        case (loc, (((name, args), typeAscr), expr)) =>
+          Ast.Def(name, args getOrElse Seq(), typeAscr, expr, SourceLoc(loc))
       }
 
     def macroArgs: Parser[Seq[Ast.MacroArg]] = LPAREN ~> rep1sep(macroArg, COMMA) <~ RPAREN
@@ -80,9 +78,9 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
 
     def `type`: Parser[Ast.Type] = typeNameOrApp
 
-    def typeNameOrApp: Parser[Ast.Type] = identifier ~ typeAppArgs.? ^^ {
-      case (name, None) => Ast.TypeName(name)
-      case (name, Some(args)) => Ast.TypeApp(name, args)
+    def typeNameOrApp: Parser[Ast.Type] = identifier ~ typeAppArgs.? ^^! {
+      case (_, (name, None)) => Ast.TypeName(name)
+      case (loc, (name, Some(args))) => Ast.TypeApp(name, args, SourceLoc(loc))
     }
 
     def typeAppArgs: Parser[Seq[Ast.Type]] = LT ~> rep1sep(`type`, COMMA) <~ GT
@@ -94,11 +92,13 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
 
     def exprAtomic: Parser[Ast.Expr] = exprGroup | exprNameOrApp | exprLit
 
-    def exprGroup: Parser[Ast.Expr] = LPAREN ~> expr <~ RPAREN
+    def exprGroup: Parser[Ast.Expr] = (LPAREN ~> expr <~ RPAREN) ^^! {
+      case (loc, expr) => Ast.ExprGrouped(expr, SourceLoc(loc))
+    }
 
-    def exprNameOrApp: Parser[Ast.Expr] = identifier ~ exprAppArgs.? ^^ {
-      case (name, None) => Ast.ExprName(name)
-      case (name, Some(args)) => Ast.ExprApp(name, args)
+    def exprNameOrApp: Parser[Ast.Expr] = identifier ~ exprAppArgs.? ^^! {
+      case (_, (name, None)) => Ast.ExprName(name)
+      case (loc, (name, Some(args))) => Ast.ExprApp(name, args, SourceLoc(loc))
     }
 
     def exprLit: Parser[Ast.Expr] = exprIntLit | exprStringLit

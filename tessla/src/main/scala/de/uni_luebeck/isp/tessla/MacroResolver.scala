@@ -1,5 +1,5 @@
 package de.uni_luebeck.isp.tessla
 
-object MacroResolver extends CompilerPass[(StreamDefs, MacroDefs), StreamDefs] {
-  override def apply(defs: (StreamDefs, MacroDefs)) = ???
+object MacroResolver extends CompilerPass[Definitions, Definitions] {
+  override def apply(compiler: Compiler, defs: Definitions) = ???
 }
