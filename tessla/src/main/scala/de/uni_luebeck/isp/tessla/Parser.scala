@@ -8,7 +8,7 @@ import de.uni_luebeck.isp.compacom.{WithLocation, Parsers, SimpleTokens, SimpleT
 import scala.util.{Failure, Success}
 
 object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
-  case class ParserError(val parserFailure: Parsers.Failure) extends Exception {
+  case class ParserError(parserFailure: Parsers.Failure) extends Fatal {
     override def toString = "ParserError(" + parserFailure + ")"
   }
 

@@ -14,7 +14,7 @@ class DefExtractorSpec extends FlatSpec with Matchers {
 
 
   def extract(string: String) = {
-    val compiler = new Compiler
+    val compiler = new Compiler(silent = true)
     val parsed = Parser(compiler, TesslaSource.fromString(string)).get
     (DefExtractor(compiler, parsed).get, compiler.diagnostics)
   }

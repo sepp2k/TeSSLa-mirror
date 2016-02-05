@@ -1,7 +1,57 @@
 package de.uni_luebeck.isp.tessla
 
-class Compiler {
+class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
   var diagnostics: Seq[Diagnostic] = Seq()
 
-  def diagnostic(diagnostic: Diagnostic) { diagnostics :+= diagnostic }
+  var encounteredFatal: Boolean = false
+
+  def diagnostic(diagnostic: Diagnostic) {
+    diagnostic match {
+      case _: GiveUp =>
+        encounteredFatal = true
+        return
+      case _: Fatal =>
+        encounteredFatal = true
+      case _ =>
+    }
+    if (debug) {
+      diagnostic.printStackTrace()
+    } else if (!silent) {
+      // TODO generate nice diagnostic messages
+      println(diagnostic)
+    }
+    diagnostics :+= diagnostic
+  }
+
+  case class StateWrapper[T](state: T) {
+    def apply[U](pass: CompilerPass[T, U]): StateWrapper[U] = {
+      if (debug) {
+        println(s"=== ${pass.passDescription} ===")
+      }
+      val result = pass(Compiler.this, state).get
+      if (debug) {
+        println(result)
+      }
+      if (encounteredFatal) {
+        throw GiveUp()
+      }
+      StateWrapper(result)
+    }
+  }
+
+  // TODO change return type
+  def applyPasses(src: TesslaSource): Option[AnyRef] = {
+    try {
+      val result = (StateWrapper(src)
+        (Parser)
+        (DefExtractor)
+        (MacroResolver)).state
+
+      Some(result)
+    } catch {
+      case x: Diagnostic =>
+        Compiler.this.diagnostic(x)
+        None
+    }
+  }
 }
