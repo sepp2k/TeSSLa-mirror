@@ -1,10 +1,11 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.MacroResolver._
-import org.scalatest.{Matchers, FlatSpec, Inside}
-import Inside._
 import org.scalactic.Equality
-import util.{Try, Failure, Success}
+import org.scalatest.Inside._
+import org.scalatest.{FlatSpec, Inside, Matchers}
+
+import scala.util.Success
 
 class MacroResolverTest extends FlatSpec with Matchers {
 
@@ -62,13 +63,12 @@ class MacroResolverTest extends FlatSpec with Matchers {
 
   implicit object streamDefsEquality extends Equality[Map[String, StreamDef]] {
     override def areEqual(a: Map[String, StreamDef], that: Any): Boolean = that match {
-      case b: Map[String, StreamDef]@unchecked => {
+      case b: Map[String, StreamDef]@unchecked =>
         // Non-variable type argument String is unchecked. However, if the keySets coincide it should be all right anyway.
         (a.keySet == b.keySet) &&
           a.foldLeft(true) {
             case (z, (s, streamDef)) => z && streamDefEquality.areEqual(b(s), streamDef)
           }
-      }
       case _ => false
     }
   }
@@ -224,7 +224,6 @@ class MacroResolverTest extends FlatSpec with Matchers {
       }
     }
   }
-  //TODO: create more test cases based on the following specifications
 
   it should "flatten each macro only once" in {
 
@@ -287,7 +286,7 @@ class MacroResolverTest extends FlatSpec with Matchers {
       }
     }
   }
-/*
+
   "The macro resolution error handling" should "detect cyclic macro definitions" in {
     val testSpec9 =
       """
@@ -298,12 +297,15 @@ class MacroResolverTest extends FlatSpec with Matchers {
         define s := mac1(bla)
       """
     inside(resolve(testSpec9)) {
-      case (_, Seq(CyclicMacroDefinitionError(inMacro: MacroDef, atLocation: NestedLoc))) => {
-        inMacro.streamDef.name shouldBe "mac2"
+      case (Success(Definitions(streamDefs, macroDefs)), diagnostics) => {
+        streamDefs shouldBe empty
+        macroDefs shouldBe empty
+        diagnostics should matchPattern {
+          case Seq(CyclicMacroDefinitionError(MacroDef(_, StreamDef("mac2", _, _)), _)) =>
+        }
       }
     }
   }
-
 
   it should "detect multiple cyclic macro definitions" in {
     val testSpec10 =
@@ -312,28 +314,25 @@ class MacroResolverTest extends FlatSpec with Matchers {
         define mac1(arg1) := f(mac2(arg1))
         define mac2(arg1) := mac1(arg1)
 
-        -- define mac3(arg1) := baz(mac4(x,arg1), mac5(arg1,y))
-        -- define mac4(a1,a2) := bar(a1, mac3(a2))
-        -- define mac5(a1,a2) := foo(mac3(a1), a2)
+        define mac3(arg1) := baz(mac4(x,arg1), mac5(arg1,y))
+        define mac4(a1,a2) := bar(a1, mac3(a2))
+        define mac5(a1,a2) := foo(mac3(a1), a2)
 
         define s1 := mac1(bla)
-        -- define s2 := mac3(blub)
+        define s2 := mac3(blub)
       """
     inside(resolve(testSpec10)) {
-      case (_, errors) => {
-        println(errors)
-        exactly (1, errors) should matchPattern {
+      case (_, diagnostics) => {
+        exactly(1, diagnostics) should matchPattern {
           case CyclicMacroDefinitionError(MacroDef(_, StreamDef("mac2", _, _)), _) =>
         }
-        exactly (1, errors) should matchPattern {
+        exactly(1, diagnostics) should matchPattern {
           case CyclicMacroDefinitionError(MacroDef(_, StreamDef("mac4", _, _)), _) =>
         }
-        exactly (1, errors) should matchPattern {
+        exactly(1, diagnostics) should matchPattern {
           case CyclicMacroDefinitionError(MacroDef(_, StreamDef("mac5", _, _)), _) =>
         }
       }
     }
   }
-*/
 }
-
