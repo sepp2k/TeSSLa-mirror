@@ -1,0 +1,61 @@
+\documentclass{article}
+
+\usepackage{utf8-math}   % use unicode symbols in tex source
+\usepackage[english]{babel}
+\usepackage[textsize=small,
+%            disable, 
+            color={orange!30}, 
+            shadow, 
+            prependcaption]{todonotes}
+\usepackage{stmaryrd}             %\boxempty and ⟦ command
+\usepackage{xspace} % correct spacing after operators
+\usepackage{floatrow}
+%\usepackage{accents} % used for double-hat, double-tilde macro
+\usepackage{amsmath}
+
+\usepackage{enumerate}
+\usepackage{cancel}
+\usepackage{microtype}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+%\usepackage{pgfplots}
+
+\usepackage{thmtools}
+\usepackage{thm-restate}
+
+%\usepackage{hyperref}
+%\usepackage{cleveref}
+
+
+\pagestyle{plain}
+\title{TESSLA---A Temporal Stream-based Specification Language}
+
+
+%% CONIRAS Deliverable style
+\usepackage{fancyhdr}
+\newcommand{\thetitle}{TESSLA---A Temporal Stream-based Specification Language}
+\title{\thetitle}
+\pagestyle{fancy}
+\setlength{\headheight}{15pt}
+\fancyhead[RO]{\thepage}
+\fancyhead[LO]{\thetitle}
+\fancyfoot[C]{}
+
+
+\newtheorem{proposition}{Proposition}
+
+\input{macros}
+
+\begin{document}
+
+\maketitle
+
+\input{sec_intro}
+
+
+% ---- Bibliography ----
+\bibliographystyle{alpha}
+%\bibliography{references-auto-dblp,references-manual}
+
+\end{document}

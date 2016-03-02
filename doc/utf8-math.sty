@@ -1,0 +1,634 @@
+%
+% This package is a branch of utf8-math initiated by Markus Fröb at 
+% Universitat de Barcelona. Since 2011, it is maintained by Daniel Thoma and 
+% Normann Decker at the Institute for Software Engineering and Programming 
+% Languages, Universität zu Lübeck.
+%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{utf8-math}[2010/05/01 Defines standard operators and new Unicode symbols to use directly]
+
+\RequirePackage{ifthen}
+
+\newcommand{\@pti@nbool}[1]{\newboolean{@#1}\DeclareOption{#1}{\setboolean{@#1}{true}}\DeclareOption{no#1}{\setboolean{@#1}{false}}}
+
+\@pti@nbool{textgreek}
+\@pti@nbool{fractions}
+\@pti@nbool{ssscripts}
+\@pti@nbool{numberrange}
+
+\ExecuteOptions{textgreek,fractions,ssscripts,numberrange}
+\ProcessOptions\relax
+
+\RequirePackage[utf8]{inputenc}
+
+%\RequirePackage{ziffer} % dezimalkomma ohne abstand setzen
+
+%\RequirePackage[intlimits,namelimits]{amsmath}
+%\RequirePackage[cmex10]{amsmath} % IEEE
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+
+\RequirePackage{mathrsfs}
+\RequirePackage[Symbol]{upgreek}
+\RequirePackage{bbm}
+
+\let\upGamma=\Gamma
+%\RequirePackage{fixmath}
+
+
+%% Fraktur: \mathfrak{v}
+%% Kalligrafie: \mathcal{v}
+%% schlimm kalligrafisch: \mathscr{v}
+%% griech.: \varrho \varphi \varepsilon \vartheta
+
+\let\oldre\Re
+\let\oldim\Im
+\renewcommand{\Re}{\oldre\mathfrak{e}\,}
+\renewcommand{\Im}{\oldim\mathfrak{m}\,}
+
+%% für zu breite kästen
+\def\clap#1{\hbox to 0pt{\hss#1\hss}}
+\def\mathllap{\mathpalette\mathllapinternal}
+\def\mathrlap{\mathpalette\mathrlapinternal}
+\def\mathclap{\mathpalette\mathclapinternal}
+\def\mathllapinternal#1#2{\llap{$\mathsurround=0pt#1{#2}$}}
+\def\mathrlapinternal#1#2{\rlap{$\mathsurround=0pt#1{#2}$}}
+\def\mathclapinternal#1#2{\clap{$\mathsurround=0pt#1{#2}$}}
+
+%% fix bug in \dddot and \ddddot
+\renewcommand{\dddot}[1]{\dot{\ddot #1}}
+\renewcommand{\ddddot}[1]{\ddot{\ddot #1}}
+
+%% all the good characters
+\DeclareRobustCommand{\m@th@rtext}[2]{\ifmmode #1 \else #2 \fi}
+
+\DeclareRobustCommand{\@unitextgreek}[1]{\m@th@rtext{\expandafter\csname #1\endcsname}{\ifthenelse{\boolean{@textgreek}}{\expandafter\csname text#1\endcsname}{\ensuremath{\expandafter\csname up#1\endcsname}}}}
+
+\DeclareUnicodeCharacter{03B1}{\@unitextgreek{alpha}}
+%\DeclareUnicodeCharacter{03B2}{\@unitextgreek{beta}}
+\DeclareUnicodeCharacter{03B2}{\beta}
+\DeclareUnicodeCharacter{03B3}{\@unitextgreek{gamma}}
+\DeclareUnicodeCharacter{03B4}{\@unitextgreek{delta}}
+%\DeclareUnicodeCharacter{03B5}{\@unitextgreek{epsilon}}
+\DeclareUnicodeCharacter{03B5}{\@unitextgreek{varepsilon}}%ε U+03B5 GREEK SMALL LETTER EPSILON
+\DeclareUnicodeCharacter{03F5}{\@unitextgreek{epsilon}}   %ϵ U+03F5 GREEK LUNATE EPSILON SYMBOL
+\DeclareUnicodeCharacter{03B6}{\@unitextgreek{zeta}}
+\DeclareUnicodeCharacter{03B7}{\@unitextgreek{eta}}
+\DeclareUnicodeCharacter{03B8}{\@unitextgreek{theta}}
+\DeclareUnicodeCharacter{03B9}{\@unitextgreek{iota}}
+\DeclareUnicodeCharacter{03BA}{\@unitextgreek{kappa}}
+\DeclareUnicodeCharacter{03BB}{\@unitextgreek{lambda}}
+\DeclareUnicodeCharacter{03BC}{\@unitextgreek{mu}}
+\DeclareUnicodeCharacter{03BD}{\@unitextgreek{nu}}
+\DeclareUnicodeCharacter{03BE}{\@unitextgreek{xi}}
+\DeclareUnicodeCharacter{03BF}{o}
+\DeclareUnicodeCharacter{03C0}{\@unitextgreek{pi}}
+\DeclareUnicodeCharacter{03C1}{\@unitextgreek{rho}}
+\DeclareUnicodeCharacter{03C2}{\@unitextgreek{varsigma}}
+\DeclareUnicodeCharacter{03C3}{\@unitextgreek{sigma}}
+\DeclareUnicodeCharacter{03C4}{\@unitextgreek{tau}}
+\DeclareUnicodeCharacter{03C5}{\@unitextgreek{upsilon}}
+\DeclareUnicodeCharacter{03C6}{\@unitextgreek{varphi}} % φ U+03C6 GREEK SMALL LETTER PHI
+\DeclareUnicodeCharacter{03C7}{\@unitextgreek{chi}}
+\DeclareUnicodeCharacter{03C8}{\@unitextgreek{psi}}
+\DeclareUnicodeCharacter{03C9}{\@unitextgreek{omega}}
+
+\DeclareUnicodeCharacter{03D5}{\@unitextgreek{phi}} % ϕ U+03D5 GREEK PHI SYMBOL
+
+\DeclareUnicodeCharacter{0391}{A}
+\DeclareUnicodeCharacter{0392}{B}
+\DeclareUnicodeCharacter{0393}{\@unitextgreek{Gamma}} %Γ U+0393 GREEK CAPITAL LETTER GAMMA
+\DeclareUnicodeCharacter{0394}{\@unitextgreek{Delta}}
+\DeclareUnicodeCharacter{0395}{E}
+\DeclareUnicodeCharacter{0396}{Z}
+\DeclareUnicodeCharacter{0397}{H}
+\DeclareUnicodeCharacter{0398}{\@unitextgreek{Theta}}
+\DeclareUnicodeCharacter{0399}{I}
+\DeclareUnicodeCharacter{039A}{K}
+\DeclareUnicodeCharacter{039B}{\@unitextgreek{Lambda}}
+\DeclareUnicodeCharacter{039C}{M}
+\DeclareUnicodeCharacter{039D}{N}
+\DeclareUnicodeCharacter{039E}{\@unitextgreek{Xi}}
+\DeclareUnicodeCharacter{039F}{O}
+\DeclareUnicodeCharacter{03A0}{\@unitextgreek{Pi}}
+\DeclareUnicodeCharacter{03A1}{P}
+\DeclareUnicodeCharacter{03A2}{\@unitextgreek{Sigma}}
+\DeclareUnicodeCharacter{03A3}{\@unitextgreek{Sigma}}
+\DeclareUnicodeCharacter{03A4}{T}
+\DeclareUnicodeCharacter{03A5}{Y}
+\DeclareUnicodeCharacter{03A6}{\@unitextgreek{Phi}} %Φ U+03A6 GREEK CAPITAL LETTER PHI
+\DeclareUnicodeCharacter{03A7}{X}
+\DeclareUnicodeCharacter{03A8}{\@unitextgreek{Psi}}
+\DeclareUnicodeCharacter{03A9}{\@unitextgreek{Omega}}
+
+\DeclareRobustCommand{\@mathtextupper}[1]{\m@th@rtext{^{#1}}{\textsuperscript{#1}}}
+\DeclareRobustCommand{\@mathtextlower}[1]{\m@th@rtext{_{#1}}{\textsubscript{#1}}}
+
+\ifthenelse{\boolean{@ssscripts}}{
+	\DeclareUnicodeCharacter{B9}{\@mathtextupper{1}}
+	\DeclareUnicodeCharacter{B2}{\@mathtextupper{2}}
+	\DeclareUnicodeCharacter{B3}{\@mathtextupper{3}}
+	\DeclareUnicodeCharacter{2070}{\@mathtextupper{0}}
+	\DeclareUnicodeCharacter{2071}{\@mathtextupper{1}}
+	\DeclareUnicodeCharacter{2072}{\@mathtextupper{2}}
+	\DeclareUnicodeCharacter{2073}{\@mathtextupper{3}}
+	\DeclareUnicodeCharacter{2074}{\@mathtextupper{4}}
+	\DeclareUnicodeCharacter{2075}{\@mathtextupper{5}}
+	\DeclareUnicodeCharacter{2076}{\@mathtextupper{6}}
+	\DeclareUnicodeCharacter{2077}{\@mathtextupper{7}}
+	\DeclareUnicodeCharacter{2078}{\@mathtextupper{8}}
+	\DeclareUnicodeCharacter{2079}{\@mathtextupper{9}}
+	\DeclareUnicodeCharacter{207A}{\@mathtextupper{+}}
+	\DeclareUnicodeCharacter{207B}{\@mathtextupper{-}}
+	\DeclareUnicodeCharacter{2080}{\@mathtextlower{0}}
+	\DeclareUnicodeCharacter{2081}{\@mathtextlower{1}}
+	\DeclareUnicodeCharacter{2082}{\@mathtextlower{2}}
+	\DeclareUnicodeCharacter{2083}{\@mathtextlower{3}}
+	\DeclareUnicodeCharacter{2084}{\@mathtextlower{4}}
+	\DeclareUnicodeCharacter{2085}{\@mathtextlower{5}}
+	\DeclareUnicodeCharacter{2086}{\@mathtextlower{6}}
+	\DeclareUnicodeCharacter{2087}{\@mathtextlower{7}}
+	\DeclareUnicodeCharacter{2088}{\@mathtextlower{8}}
+	\DeclareUnicodeCharacter{2089}{\@mathtextlower{9}}
+	\DeclareUnicodeCharacter{208A}{\@mathtextlower{+}}
+	\DeclareUnicodeCharacter{208B}{\@mathtextlower{-}}
+}
+
+\ifthenelse{\boolean{@fractions}}{
+	\DeclareUnicodeCharacter{BC}{\frac{1}{4}}
+	\DeclareUnicodeCharacter{BD}{\frac{1}{2}}
+	\DeclareUnicodeCharacter{BE}{\frac{3}{4}}
+	\DeclareUnicodeCharacter{2153}{\frac{1}{3}}
+	\DeclareUnicodeCharacter{2154}{\frac{2}{3}}
+	\DeclareUnicodeCharacter{2155}{\frac{1}{5}}
+	\DeclareUnicodeCharacter{2156}{\frac{2}{5}}
+	\DeclareUnicodeCharacter{2157}{\frac{3}{5}}
+	\DeclareUnicodeCharacter{2158}{\frac{4}{5}}
+	\DeclareUnicodeCharacter{2159}{\frac{1}{6}}
+	\DeclareUnicodeCharacter{215A}{\frac{5}{6}}
+	\DeclareUnicodeCharacter{215B}{\frac{1}{8}}
+	\DeclareUnicodeCharacter{215C}{\frac{3}{8}}
+	\DeclareUnicodeCharacter{215D}{\frac{5}{8}}
+	\DeclareUnicodeCharacter{215E}{\frac{7}{8}}
+}{}
+
+%%% Mathematical Latin Alphabets
+
+\DeclareUnicodeCharacter{1D400}{\mathbf{A}} % '𝐀' 'MATHEMATICAL BOLD CAPITAL A' (U+1D400)
+\DeclareUnicodeCharacter{1D401}{\mathbf{B}} % '𝐁' 'MATHEMATICAL BOLD CAPITAL B' (U+1D401)
+\DeclareUnicodeCharacter{1D402}{\mathbf{C}} % '𝐂' 'MATHEMATICAL BOLD CAPITAL C' (U+1D402)
+\DeclareUnicodeCharacter{1D403}{\mathbf{D}} % '𝐃' 'MATHEMATICAL BOLD CAPITAL D' (U+1D403)
+\DeclareUnicodeCharacter{1D404}{\mathbf{E}} % '𝐄' 'MATHEMATICAL BOLD CAPITAL E' (U+1D404)
+\DeclareUnicodeCharacter{1D405}{\mathbf{F}} % '𝐅' 'MATHEMATICAL BOLD CAPITAL F' (U+1D405)
+\DeclareUnicodeCharacter{1D406}{\mathbf{G}} % '𝐆' 'MATHEMATICAL BOLD CAPITAL G' (U+1D406)
+\DeclareUnicodeCharacter{1D407}{\mathbf{H}} % '𝐇' 'MATHEMATICAL BOLD CAPITAL H' (U+1D407)
+\DeclareUnicodeCharacter{1D408}{\mathbf{I}} % '𝐈' 'MATHEMATICAL BOLD CAPITAL I' (U+1D408)
+\DeclareUnicodeCharacter{1D409}{\mathbf{J}} % '𝐉' 'MATHEMATICAL BOLD CAPITAL J' (U+1D409)
+\DeclareUnicodeCharacter{1D40A}{\mathbf{K}} % '𝐊' 'MATHEMATICAL BOLD CAPITAL K' (U+1D40A)
+\DeclareUnicodeCharacter{1D40B}{\mathbf{L}} % '𝐋' 'MATHEMATICAL BOLD CAPITAL L' (U+1D40B)
+\DeclareUnicodeCharacter{1D40C}{\mathbf{M}} % '𝐌' 'MATHEMATICAL BOLD CAPITAL M' (U+1D40C)
+\DeclareUnicodeCharacter{1D40D}{\mathbf{N}} % '𝐍' 'MATHEMATICAL BOLD CAPITAL N' (U+1D40D)
+\DeclareUnicodeCharacter{1D40E}{\mathbf{O}} % '𝐎' 'MATHEMATICAL BOLD CAPITAL O' (U+1D40E)
+\DeclareUnicodeCharacter{1D40F}{\mathbf{P}} % '𝐏' 'MATHEMATICAL BOLD CAPITAL P' (U+1D40F)
+\DeclareUnicodeCharacter{1D410}{\mathbf{Q}} % '𝐐' 'MATHEMATICAL BOLD CAPITAL Q' (U+1D410)
+\DeclareUnicodeCharacter{1D411}{\mathbf{R}} % '𝐑' 'MATHEMATICAL BOLD CAPITAL R' (U+1D411)
+\DeclareUnicodeCharacter{1D412}{\mathbf{S}} % '𝐒' 'MATHEMATICAL BOLD CAPITAL S' (U+1D412)
+\DeclareUnicodeCharacter{1D413}{\mathbf{T}} % '𝐓' 'MATHEMATICAL BOLD CAPITAL T' (U+1D413)
+\DeclareUnicodeCharacter{1D414}{\mathbf{U}} % '𝐔' 'MATHEMATICAL BOLD CAPITAL U' (U+1D414)
+\DeclareUnicodeCharacter{1D415}{\mathbf{V}} % '𝐕' 'MATHEMATICAL BOLD CAPITAL V' (U+1D415)
+\DeclareUnicodeCharacter{1D416}{\mathbf{W}} % '𝐖' 'MATHEMATICAL BOLD CAPITAL W' (U+1D416)
+\DeclareUnicodeCharacter{1D417}{\mathbf{X}} % '𝐗' 'MATHEMATICAL BOLD CAPITAL X' (U+1D417)
+\DeclareUnicodeCharacter{1D418}{\mathbf{Y}} % '𝐘' 'MATHEMATICAL BOLD CAPITAL Y' (U+1D418)
+\DeclareUnicodeCharacter{1D419}{\mathbf{Z}} % '𝐙' 'MATHEMATICAL BOLD CAPITAL Z' (U+1D419)
+
+\DeclareUnicodeCharacter{1D41A}{\mathbf{a}} % '𝐚' 'MATHEMATICAL BOLD SMALL A' (U+1D41A)
+\DeclareUnicodeCharacter{1D41B}{\mathbf{b}} % '𝐛' 'MATHEMATICAL BOLD SMALL B' (U+1D41B)
+\DeclareUnicodeCharacter{1D41C}{\mathbf{c}} % '𝐜' 'MATHEMATICAL BOLD SMALL C' (U+1D41C)
+\DeclareUnicodeCharacter{1D41D}{\mathbf{d}} % '𝐝' 'MATHEMATICAL BOLD SMALL D' (U+1D41D)
+\DeclareUnicodeCharacter{1D41E}{\mathbf{e}} % '𝐞' 'MATHEMATICAL BOLD SMALL E' (U+1D41E)
+\DeclareUnicodeCharacter{1D41F}{\mathbf{f}} % '𝐟' 'MATHEMATICAL BOLD SMALL F' (U+1D41F)
+\DeclareUnicodeCharacter{1D420}{\mathbf{g}} % '𝐠' 'MATHEMATICAL BOLD SMALL G' (U+1D420)
+\DeclareUnicodeCharacter{1D421}{\mathbf{h}} % '𝐡' 'MATHEMATICAL BOLD SMALL H' (U+1D421)
+\DeclareUnicodeCharacter{1D422}{\mathbf{I}} % '𝐢' 'MATHEMATICAL BOLD SMALL I' (U+1D422)
+\DeclareUnicodeCharacter{1D423}{\mathbf{j}} % '𝐣' 'MATHEMATICAL BOLD SMALL J' (U+1D423)
+\DeclareUnicodeCharacter{1D424}{\mathbf{k}} % '𝐤' 'MATHEMATICAL BOLD SMALL K' (U+1D424)
+\DeclareUnicodeCharacter{1D425}{\mathbf{l}} % '𝐥' 'MATHEMATICAL BOLD SMALL L' (U+1D425)
+\DeclareUnicodeCharacter{1D426}{\mathbf{m}} % '𝐦' 'MATHEMATICAL BOLD SMALL M' (U+1D426)
+\DeclareUnicodeCharacter{1D427}{\mathbf{n}} % '𝐧' 'MATHEMATICAL BOLD SMALL N' (U+1D427)
+\DeclareUnicodeCharacter{1D428}{\mathbf{o}} % '𝐨' 'MATHEMATICAL BOLD SMALL O' (U+1D428)
+\DeclareUnicodeCharacter{1D429}{\mathbf{p}} % '𝐩' 'MATHEMATICAL BOLD SMALL P' (U+1D429)
+\DeclareUnicodeCharacter{1D42A}{\mathbf{q}} % '𝐪' 'MATHEMATICAL BOLD SMALL Q' (U+1D42A)
+\DeclareUnicodeCharacter{1D42B}{\mathbf{r}} % '𝐫' 'MATHEMATICAL BOLD SMALL R' (U+1D42B)
+\DeclareUnicodeCharacter{1D42C}{\mathbf{s}} % '𝐬' 'MATHEMATICAL BOLD SMALL S' (U+1D42C)
+\DeclareUnicodeCharacter{1D42D}{\mathbf{t}} % '𝐭' 'MATHEMATICAL BOLD SMALL T' (U+1D42D)
+\DeclareUnicodeCharacter{1D42E}{\mathbf{u}} % '𝐮' 'MATHEMATICAL BOLD SMALL U' (U+1D42E)
+\DeclareUnicodeCharacter{1D42F}{\mathbf{v}} % '𝐯' 'MATHEMATICAL BOLD SMALL V' (U+1D42F)
+\DeclareUnicodeCharacter{1D430}{\mathbf{w}} % '𝐰' 'MATHEMATICAL BOLD SMALL W' (U+1D430)
+\DeclareUnicodeCharacter{1D431}{\mathbf{x}} % '𝐱' 'MATHEMATICAL BOLD SMALL X' (U+1D431)
+\DeclareUnicodeCharacter{1D432}{\mathbf{y}} % '𝐲' 'MATHEMATICAL BOLD SMALL Y' (U+1D432)
+\DeclareUnicodeCharacter{1D433}{\mathbf{z}} % '𝐳' 'MATHEMATICAL BOLD SMALL Z' (U+1D433)
+
+\DeclareUnicodeCharacter{1D49C}{\mathscr{A}} % '𝒜' 'MATHEMATICAL SCRIPT CAPITAL A' (U+1D49C)
+\DeclareUnicodeCharacter{212C}{\mathscr{B}} % 'ℬ' 'SCRIPT CAPITAL B' (U+212C)
+\DeclareUnicodeCharacter{1D49E}{\mathscr{C}} % '𝒞' 'MATHEMATICAL SCRIPT CAPITAL C' (U+1D49E)
+\DeclareUnicodeCharacter{1D49F}{\mathscr{D}} % '𝒟' 'MATHEMATICAL SCRIPT CAPITAL D' (U+1D49F)
+\DeclareUnicodeCharacter{2130}{\mathscr{E}} % 'ℰ' 'SCRIPT CAPITAL E' (U+2130)
+\DeclareUnicodeCharacter{2131}{\mathscr{F}} % 'ℱ' 'SCRIPT CAPITAL F' (U+2131)
+\DeclareUnicodeCharacter{1D4A2}{\mathscr{G}} % '𝒢' 'MATHEMATICAL SCRIPT CAPITAL G' (U+1D4A2)
+\DeclareUnicodeCharacter{210B}{\mathscr{H}} % 'ℋ' 'SCRIPT CAPITAL H' (U+210B)
+\DeclareUnicodeCharacter{2110}{\mathscr{I}} % 'ℐ' 'SCRIPT CAPITAL I' (U+2110)
+\DeclareUnicodeCharacter{1D4A5}{\mathscr{J}} % '𝒥' 'MATHEMATICAL SCRIPT CAPITAL J' (U+1D4A5)
+\DeclareUnicodeCharacter{1D4A6}{\mathscr{K}} % '𝒦' 'MATHEMATICAL SCRIPT CAPITAL K' (U+1D4A6)
+\DeclareUnicodeCharacter{2112}{\mathscr{L}} % 'ℒ' 'SCRIPT CAPITAL L' (U+2112)
+\DeclareUnicodeCharacter{2133}{\mathscr{M}} % 'ℳ' 'SCRIPT CAPITAL M' (U+2133)
+\DeclareUnicodeCharacter{1D4A9}{\mathscr{N}} % '𝒩' 'MATHEMATICAL SCRIPT CAPITAL N' (U+1D4A9)
+\DeclareUnicodeCharacter{1D4AA}{\mathscr{O}} % '𝒪' 'MATHEMATICAL SCRIPT CAPITAL O' (U+1D4AA)
+\DeclareUnicodeCharacter{1D4AB}{\mathscr{P}} % '𝒫' 'MATHEMATICAL SCRIPT CAPITAL P' (U+1D4AB)
+\DeclareUnicodeCharacter{1D4AC}{\mathscr{Q}} % '𝒬' 'MATHEMATICAL SCRIPT CAPITAL Q' (U+1D4AC)
+\DeclareUnicodeCharacter{211B}{\mathscr{R}} % 'ℛ' 'SCRIPT CAPITAL R' (U+211B)
+\DeclareUnicodeCharacter{1D4AE}{\mathscr{S}} % '𝒮' 'MATHEMATICAL SCRIPT CAPITAL S' (U+1D4AE)
+\DeclareUnicodeCharacter{1D4AF}{\mathscr{T}} % '𝒯' 'MATHEMATICAL SCRIPT CAPITAL T' (U+1D4AF)
+\DeclareUnicodeCharacter{1D4B0}{\mathscr{U}} % '𝒰' 'MATHEMATICAL SCRIPT CAPITAL U' (U+1D4B0)
+\DeclareUnicodeCharacter{1D4B1}{\mathscr{V}} % '𝒱' 'MATHEMATICAL SCRIPT CAPITAL V' (U+1D4B1)
+\DeclareUnicodeCharacter{1D4B2}{\mathscr{W}} % '𝒲' 'MATHEMATICAL SCRIPT CAPITAL W' (U+1D4B2)
+\DeclareUnicodeCharacter{1D4B3}{\mathscr{X}} % '𝒳' 'MATHEMATICAL SCRIPT CAPITAL X' (U+1D4B3)
+\DeclareUnicodeCharacter{1D4B4}{\mathscr{Y}} % '𝒴' 'MATHEMATICAL SCRIPT CAPITAL Y' (U+1D4B4)
+\DeclareUnicodeCharacter{1D4B5}{\mathscr{Z}} % '𝒵' 'MATHEMATICAL SCRIPT CAPITAL Z' (U+1D4B5)
+
+\DeclareUnicodeCharacter{1D504}{\mathfrak{A}} % '𝔄' 'MATHEMATICAL FRAKTUR CAPITAL A' (U+1D504)
+\DeclareUnicodeCharacter{1D505}{\mathfrak{B}} % '𝔅' 'MATHEMATICAL FRAKTUR CAPITAL B' (U+1D505)
+\DeclareUnicodeCharacter{212D}{\mathfrak{C}} % 'ℭ' 'BLACK-LETTER CAPITAL C' (U+212D)
+\DeclareUnicodeCharacter{1D507}{\mathfrak{D}} % '𝔇' 'MATHEMATICAL FRAKTUR CAPITAL D' (U+1D507)
+\DeclareUnicodeCharacter{1D508}{\mathfrak{E}} % '𝔈' 'MATHEMATICAL FRAKTUR CAPITAL E' (U+1D508)
+\DeclareUnicodeCharacter{1D509}{\mathfrak{F}} % '𝔉' 'MATHEMATICAL FRAKTUR CAPITAL F' (U+1D509)
+\DeclareUnicodeCharacter{1D50A}{\mathfrak{G}} % '𝔊' 'MATHEMATICAL FRAKTUR CAPITAL G' (U+1D50A)
+\DeclareUnicodeCharacter{210C}{\mathfrak{H}} % 'ℌ' 'BLACK-LETTER CAPITAL H' (U+210C)
+\DeclareUnicodeCharacter{2111}{\mathfrak{I}} % 'ℑ' 'BLACK-LETTER CAPITAL I' (U+2111)
+\DeclareUnicodeCharacter{1D50D}{\mathfrak{J}} % '𝔍' 'MATHEMATICAL FRAKTUR CAPITAL J' (U+1D50D)
+\DeclareUnicodeCharacter{1D50E}{\mathfrak{K}} % '𝔎' 'MATHEMATICAL FRAKTUR CAPITAL K' (U+1D50E)
+\DeclareUnicodeCharacter{1D50F}{\mathfrak{L}} % '𝔏' 'MATHEMATICAL FRAKTUR CAPITAL L' (U+1D50F)
+\DeclareUnicodeCharacter{1D510}{\mathfrak{M}} % '𝔐' 'MATHEMATICAL FRAKTUR CAPITAL M' (U+1D510)
+\DeclareUnicodeCharacter{1D511}{\mathfrak{N}} % '𝔑' 'MATHEMATICAL FRAKTUR CAPITAL N' (U+1D511)
+\DeclareUnicodeCharacter{1D512}{\mathfrak{O}} % '𝔒' 'MATHEMATICAL FRAKTUR CAPITAL O' (U+1D512)
+\DeclareUnicodeCharacter{1D513}{\mathfrak{P}} % '𝔓' 'MATHEMATICAL FRAKTUR CAPITAL P' (U+1D513)
+\DeclareUnicodeCharacter{1D514}{\mathfrak{Q}} % '𝔔' 'MATHEMATICAL FRAKTUR CAPITAL Q' (U+1D514)
+\DeclareUnicodeCharacter{211C}{\mathfrak{R}} % 'ℜ' 'BLACK-LETTER CAPITAL R' (U+211C)
+\DeclareUnicodeCharacter{1D516}{\mathfrak{S}} % '𝔖' 'MATHEMATICAL FRAKTUR CAPITAL S' (U+1D516)
+\DeclareUnicodeCharacter{1D517}{\mathfrak{T}} % '𝔗' 'MATHEMATICAL FRAKTUR CAPITAL T' (U+1D517)
+\DeclareUnicodeCharacter{1D518}{\mathfrak{U}} % '𝔘' 'MATHEMATICAL FR\upsetAKTUR CAPITAL U' (U+1D518)
+\DeclareUnicodeCharacter{1D519}{\mathfrak{V}} % '𝔙' 'MATHEMATICAL FRAKTUR CAPITAL V' (U+1D519)
+\DeclareUnicodeCharacter{1D51A}{\mathfrak{W}} % '𝔚' 'MATHEMATICAL FRAKTUR CAPITAL W' (U+1D51A)
+\DeclareUnicodeCharacter{1D51B}{\mathfrak{X}} % '𝔛' 'MATHEMATICAL FRAKTUR CAPITAL X' (U+1D51B)
+\DeclareUnicodeCharacter{1D51C}{\mathfrak{Y}} % '𝔜' 'MATHEMATICAL FRAKTUR CAPITAL Y' (U+1D51C)
+\DeclareUnicodeCharacter{2128}{\mathfrak{Z}} % 'ℨ' 'BLACK-LETTER CAPITAL Z' (U+2128)
+
+\DeclareUnicodeCharacter{1D538}{\mathbb{A}} % '𝔸' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL A' (U+1D538)                  
+\DeclareUnicodeCharacter{1D539}{\mathbb{B}} % '𝔹' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL B' (U+1D539)                  
+\DeclareUnicodeCharacter{2102}{\mathbb{C}} % 'ℂ' 'DOUBLE-STRUCK CAPITAL C' (U+2102)
+\DeclareUnicodeCharacter{1D53B}{\mathbb{D}} % '𝔻' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL D' (U+1D53B)
+\DeclareUnicodeCharacter{1D53C}{\mathbb{E}} % '𝔼' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL E' (U+1D53C)
+\DeclareUnicodeCharacter{1D53D}{\mathbb{F}} % '𝔽' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL F' (U+1D53D)
+\DeclareUnicodeCharacter{1D53E}{\mathbb{G}} % '𝔾' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL G' (U+1D53E)
+\DeclareUnicodeCharacter{210D}{\mathbb{H}} % 'ℍ' 'DOUBLE-STRUCK CAPITAL H' (U+210D)
+\DeclareUnicodeCharacter{1D540}{\mathbb{I}} % '𝕀' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL I' (U+1D540)
+\DeclareUnicodeCharacter{1D541}{\mathbb{J}} % '𝕁' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL J' (U+1D541)
+\DeclareUnicodeCharacter{1D542}{\mathbb{K}} % '𝕂' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL K' (U+1D542)
+\DeclareUnicodeCharacter{1D543}{\mathbb{L}} % '𝕃' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL L' (U+1D543)
+\DeclareUnicodeCharacter{1D544}{\mathbb{M}} % '𝕄' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL M' (U+1D544)
+\DeclareUnicodeCharacter{2115}{\mathbb{N}} % 'ℕ' 'DOUBLE-STRUCK CAPITAL N' (U+2115)
+\DeclareUnicodeCharacter{1D546}{\mathbb{O}} % '𝕆' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL O' (U+1D546)
+\DeclareUnicodeCharacter{2119}{\mathbb{P}} % 'ℙ' 'DOUBLE-STRUCK CAPITAL P' (U+2119)
+\DeclareUnicodeCharacter{211A}{\mathbb{Q}} % 'ℚ' 'DOUBLE-STRUCK CAPITAL Q' (U+211A)
+\DeclareUnicodeCharacter{211D}{\mathbb{R}} % 'ℝ' 'DOUBLE-STRUCK CAPITAL R' (U+211D)
+\DeclareUnicodeCharacter{1D54A}{\mathbb{S}} % '𝕊' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL S' (U+1D54A)
+\DeclareUnicodeCharacter{1D54B}{\mathbb{T}} % '𝕋' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL T' (U+1D54B)
+\DeclareUnicodeCharacter{1D54C}{\mathbb{U}} % '𝕌' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL U' (U+1D54C)
+\DeclareUnicodeCharacter{1D54D}{\mathbb{V}} % '𝕍' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL V' (U+1D54D)
+\DeclareUnicodeCharacter{1D54E}{\mathbb{W}} % '𝕎' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL W' (U+1D54E)
+\DeclareUnicodeCharacter{1D54F}{\mathbb{X}} % '𝕏' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL X' (U+1D54F)
+\DeclareUnicodeCharacter{1D550}{\mathbb{Y}} % '𝕐' 'MATHEMATICAL DOUBLE-STRUCK CAPITAL Y' (U+1D550)
+\DeclareUnicodeCharacter{2124}{\mathbb{Z}} % 'ℤ' 'DOUBLE-STRUCK CAPITAL Z' (U+2124)
+
+\DeclareUnicodeCharacter{1D4D0}{\mathcal{A}} % '𝓐' 'MATHEMATICAL BOLD SCRIPT CAPITAL A' (U+1D4D0)
+\DeclareUnicodeCharacter{1D4D1}{\mathcal{B}} % '𝓑' 'MATHEMATICAL BOLD SCRIPT CAPITAL B' (U+1D4D1)
+\DeclareUnicodeCharacter{1D4D2}{\mathcal{C}} % '𝓒' 'MATHEMATICAL BOLD SCRIPT CAPITAL C' (U+1D4D2)
+\DeclareUnicodeCharacter{1D4D3}{\mathcal{D}} % '𝓓' 'MATHEMATICAL BOLD SCRIPT CAPITAL D' (U+1D4D3)
+\DeclareUnicodeCharacter{1D4D4}{\mathcal{E}} % '𝓔' 'MATHEMATICAL BOLD SCRIPT CAPITAL E' (U+1D4D4)
+\DeclareUnicodeCharacter{1D4D5}{\mathcal{F}} % '𝓕' 'MATHEMATICAL BOLD SCRIPT CAPITAL F' (U+1D4D5)
+\DeclareUnicodeCharacter{1D4D6}{\mathcal{G}} % '𝓖' 'MATHEMATICAL BOLD SCRIPT CAPITAL G' (U+1D4D6)
+\DeclareUnicodeCharacter{1D4D7}{\mathcal{H}} % '𝓗' 'MATHEMATICAL BOLD SCRIPT CAPITAL H' (U+1D4D7)
+\DeclareUnicodeCharacter{1D4D8}{\mathcal{I}} % '𝓘' 'MATHEMATICAL BOLD SCRIPT CAPITAL I' (U+1D4D8)
+\DeclareUnicodeCharacter{1D4D9}{\mathcal{J}} % '𝓙' 'MATHEMATICAL BOLD SCRIPT CAPITAL J' (U+1D4D9)
+\DeclareUnicodeCharacter{1D4DA}{\mathcal{K}} % '𝓚' 'MATHEMATICAL BOLD SCRIPT CAPITAL K' (U+1D4DA)
+\DeclareUnicodeCharacter{1D4DB}{\mathcal{L}} % '𝓛' 'MATHEMATICAL BOLD SCRIPT CAPITAL L' (U+1D4DB)
+\DeclareUnicodeCharacter{1D4DC}{\mathcal{M}} % '𝓜' 'MATHEMATICAL BOLD SCRIPT CAPITAL M' (U+1D4DC)
+\DeclareUnicodeCharacter{1D4DD}{\mathcal{N}} % '𝓝' 'MATHEMATICAL BOLD SCRIPT CAPITAL N' (U+1D4DD)
+\DeclareUnicodeCharacter{1D4DE}{\mathcal{O}} % '𝓞' 'MATHEMATICAL BOLD SCRIPT CAPITAL O' (U+1D4DE)
+\DeclareUnicodeCharacter{1D4DF}{\mathcal{P}} % '𝓟' 'MATHEMATICAL BOLD SCRIPT CAPITAL P' (U+1D4DF)
+\DeclareUnicodeCharacter{1D4E0}{\mathcal{Q}} % '𝓠' 'MATHEMATICAL BOLD SCRIPT CAPITAL Q' (U+1D4E0)
+\DeclareUnicodeCharacter{1D4E1}{\mathcal{R}} % '𝓡' 'MATHEMATICAL BOLD SCRIPT CAPITAL R' (U+1D4E1)
+\DeclareUnicodeCharacter{1D4E2}{\mathcal{S}} % '𝓢' 'MATHEMATICAL BOLD SCRIPT CAPITAL S' (U+1D4E2)
+\DeclareUnicodeCharacter{1D4E3}{\mathcal{T}} % '𝓣' 'MATHEMATICAL BOLD SCRIPT CAPITAL T' (U+1D4E3)
+\DeclareUnicodeCharacter{1D4E4}{\mathcal{U}} % '𝓤' 'MATHEMATICAL BOLD SCRIPT CAPITAL U' (U+1D4E4)
+\DeclareUnicodeCharacter{1D4E5}{\mathcal{V}} % '𝓥' 'MATHEMATICAL BOLD SCRIPT CAPITAL V' (U+1D4E5)
+\DeclareUnicodeCharacter{1D4E6}{\mathcal{W}} % '𝓦' 'MATHEMATICAL BOLD SCRIPT CAPITAL W' (U+1D4E6)
+\DeclareUnicodeCharacter{1D4E7}{\mathcal{X}} % '𝓧' 'MATHEMATICAL BOLD SCRIPT CAPITAL X' (U+1D4E7)
+\DeclareUnicodeCharacter{1D4E8}{\mathcal{Y}} % '𝓨' 'MATHEMATICAL BOLD SCRIPT CAPITAL Y' (U+1D4E8)
+\DeclareUnicodeCharacter{1D4E9}{\mathcal{Z}} % '𝓩' 'MATHEMATICAL BOLD SCRIPT CAPITAL Z' (U+1D4E9
+
+\DeclareUnicodeCharacter{1D4B6}{\mathscr{a}} % '𝒶' 'MATHEMATICAL SCRIPT SMALL A' (U+1D4B6)
+\DeclareUnicodeCharacter{1D4B7}{\mathscr{b}} % '𝒷' 'MATHEMATICAL SCRIPT SMALL B' (U+1D4B7)
+\DeclareUnicodeCharacter{1D4B8}{\mathscr{c}} % '𝒸' 'MATHEMATICAL SCRIPT SMALL C' (U+1D4B8)
+\DeclareUnicodeCharacter{1D4B9}{\mathscr{d}} % '𝒹' 'MATHEMATICAL SCRIPT SMALL D' (U+1D4B9)
+\DeclareUnicodeCharacter{212F}{\mathscr{e}} % 'ℯ' 'SCRIPT SMALL E' (U+212F)
+\DeclareUnicodeCharacter{1D4BB}{\mathscr{f}} % '𝒻' 'MATHEMATICAL SCRIPT SMALL F' (U+1D4BB)
+\DeclareUnicodeCharacter{210A}{\mathscr{g}} % 'ℊ' 'SCRIPT SMALL G' (U+210A)
+\DeclareUnicodeCharacter{1D4BD}{\mathscr{h}} % '𝒽' 'MATHEMATICAL SCRIPT SMALL H' (U+1D4BD)
+\DeclareUnicodeCharacter{1D4BE}{\mathscr{i}} % '𝒾' 'MATHEMATICAL SCRIPT SMALL I' (U+1D4BE)
+\DeclareUnicodeCharacter{1D4BF}{\mathscr{j}} % '𝒿' 'MATHEMATICAL SCRIPT SMALL J' (U+1D4BF)
+\DeclareUnicodeCharacter{1D4C0}{\mathscr{k}} % '𝓀' 'MATHEMATICAL SCRIPT SMALL K' (U+1D4C0)
+\DeclareUnicodeCharacter{2113}{\ell} % 'ℓ' 'SCRIPT SMALL L' (U+2113)
+\DeclareUnicodeCharacter{1D4C2}{\mathscr{m}} % '𝓂' 'MATHEMATICAL SCRIPT SMALL M' (U+1D4C2)
+\DeclareUnicodeCharacter{1D4C3}{\mathscr{n}} % '𝓃' 'MATHEMATICAL SCRIPT SMALL N' (U+1D4C3)
+\DeclareUnicodeCharacter{2134}{\mathscr{o}} % 'ℴ' 'SCRIPT SMALL O' (U+2134)
+\DeclareUnicodeCharacter{1D4C5}{\mathscr{p}} % '𝓅' 'MATHEMATICAL SCRIPT SMALL P' (U+1D4C5)
+\DeclareUnicodeCharacter{1D4C6}{\mathscr{q}} % '𝓆' 'MATHEMATICAL SCRIPT SMALL Q' (U+1D4C6)
+\DeclareUnicodeCharacter{1D4C7}{\mathscr{r}} % '𝓇' 'MATHEMATICAL SCRIPT SMALL R' (U+1D4C7)
+\DeclareUnicodeCharacter{1D4C8}{\mathscr{s}} % '𝓈' 'MATHEMATICAL SCRIPT SMALL S' (U+1D4C8)
+\DeclareUnicodeCharacter{1D4C9}{\mathscr{t}} % '𝓉' 'MATHEMATICAL SCRIPT SMALL T' (U+1D4C9)
+\DeclareUnicodeCharacter{1D4CA}{\mathscr{u}} % '𝓊' 'MATHEMATICAL SCRIPT SMALL U' (U+1D4CA)
+\DeclareUnicodeCharacter{1D4CB}{\mathscr{v}} % '𝓋' 'MATHEMATICAL SCRIPT SMALL V' (U+1D4CB)
+\DeclareUnicodeCharacter{1D4CC}{\mathscr{w}} % '𝓌' 'MATHEMATICAL SCRIPT SMALL W' (U+1D4CC)
+\DeclareUnicodeCharacter{1D4CD}{\mathscr{x}} % '𝓍' 'MATHEMATICAL SCRIPT SMALL X' (U+1D4CD)
+\DeclareUnicodeCharacter{1D4CE}{\mathscr{y}} % '𝓎' 'MATHEMATICAL SCRIPT SMALL Y' (U+1D4CE)
+\DeclareUnicodeCharacter{1D4CF}{\mathscr{z}} % '𝓏' 'MATHEMATICAL SCRIPT SMALL Z' (U+1D4CF)
+\DeclareUnicodeCharacter{1D51E}{\mathfrak{a}} % '𝔞' 'MATHEMATICAL FRAKTUR SMALL A' (U+1D51E)
+\DeclareUnicodeCharacter{1D51F}{\mathfrak{b}} % '𝔟' 'MATHEMATICAL FRAKTUR SMALL B' (U+1D51F)
+\DeclareUnicodeCharacter{1D520}{\mathfrak{c}} % '𝔠' 'MATHEMATICAL FRAKTUR SMALL C' (U+1D520)
+\DeclareUnicodeCharacter{1D521}{\mathfrak{d}} % '𝔡' 'MATHEMATICAL FRAKTUR SMALL D' (U+1D521)
+\DeclareUnicodeCharacter{1D522}{\mathfrak{e}} % '𝔢' 'MATHEMATICAL FRAKTUR SMALL E' (U+1D522)
+\DeclareUnicodeCharacter{1D523}{\mathfrak{f}} % '𝔣' 'MATHEMATICAL FRAKTUR SMALL F' (U+1D523)
+\DeclareUnicodeCharacter{1D524}{\mathfrak{g}} % '𝔤' 'MATHEMATICAL FRAKTUR SMALL G' (U+1D524)
+\DeclareUnicodeCharacter{1D525}{\mathfrak{h}} % '𝔥' 'MATHEMATICAL FRAKTUR SMALL H' (U+1D525)
+\DeclareUnicodeCharacter{1D526}{\mathfrak{i}} % '𝔦' 'MATHEMATICAL FRAKTUR SMALL I' (U+1D526)
+\DeclareUnicodeCharacter{1D527}{\mathfrak{j}} % '𝔧' 'MATHEMATICAL FRAKTUR SMALL J' (U+1D527)
+\DeclareUnicodeCharacter{1D528}{\mathfrak{k}} % '𝔨' 'MATHEMATICAL FRAKTUR SMALL K' (U+1D528)
+\DeclareUnicodeCharacter{1D529}{\mathfrak{l}} % '𝔩' 'MATHEMATICAL FRAKTUR SMALL L' (U+1D529)
+\DeclareUnicodeCharacter{1D52A}{\mathfrak{m}} % '𝔪' 'MATHEMATICAL FRAKTUR SMALL M' (U+1D52A)
+\DeclareUnicodeCharacter{1D52B}{\mathfrak{n}} % '𝔫' 'MATHEMATICAL FRAKTUR SMALL N' (U+1D52B)
+\DeclareUnicodeCharacter{1D52C}{\mathfrak{o}} % '𝔬' 'MATHEMATICAL FRAKTUR SMALL O' (U+1D52C)
+\DeclareUnicodeCharacter{1D52D}{\mathfrak{p}} % '𝔭' 'MATHEMATICAL FRAKTUR SMALL P' (U+1D52D)
+\DeclareUnicodeCharacter{1D52E}{\mathfrak{q}} % '𝔮' 'MATHEMATICAL FRAKTUR SMALL Q' (U+1D52E)
+\DeclareUnicodeCharacter{1D52F}{\mathfrak{r}} % '𝔯' 'MATHEMATICAL FRAKTUR SMALL R' (U+1D52F)
+\DeclareUnicodeCharacter{1D530}{\mathfrak{s}} % '𝔰' 'MATHEMATICAL FRAKTUR SMALL S' (U+1D530)
+\DeclareUnicodeCharacter{1D531}{\mathfrak{t}} % '𝔱' 'MATHEMATICAL FRAKTUR SMALL T' (U+1D531)
+\DeclareUnicodeCharacter{1D532}{\mathfrak{u}} % '𝔲' 'MATHEMATICAL FRAKTUR SMALL U' (U+1D532)
+\DeclareUnicodeCharacter{1D533}{\mathfrak{v}} % '𝔳' 'MATHEMATICAL FRAKTUR SMALL V' (U+1D533)
+\DeclareUnicodeCharacter{1D534}{\mathfrak{w}} % '𝔴' 'MATHEMATICAL FRAKTUR SMALL W' (U+1D534)
+\DeclareUnicodeCharacter{1D535}{\mathfrak{x}} % '𝔵' 'MATHEMATICAL FRAKTUR SMALL X' (U+1D535)
+\DeclareUnicodeCharacter{1D536}{\mathfrak{y}} % '𝔶' 'MATHEMATICAL FRAKTUR SMALL Y' (U+1D536)
+\DeclareUnicodeCharacter{1D537}{\mathfrak{z}} % '𝔷' 'MATHEMATICAL FRAKTUR SMALL Z' (U+1D537)
+
+\DeclareUnicodeCharacter{1D4EA}{\mathcal{a}} % '𝓪' 'MATHEMATICAL BOLD SCRIPT SMALL A' (U+1D4EA)
+\DeclareUnicodeCharacter{1D4EB}{\mathcal{b}} % '𝓫' 'MATHEMATICAL BOLD SCRIPT SMALL B' (U+1D4EB)
+\DeclareUnicodeCharacter{1D4EC}{\mathcal{c}} % '𝓬' 'MATHEMATICAL BOLD SCRIPT SMALL C' (U+1D4EC)
+\DeclareUnicodeCharacter{1D4ED}{\mathcal{d}} % '𝓭' 'MATHEMATICAL BOLD SCRIPT SMALL D' (U+1D4ED)
+\DeclareUnicodeCharacter{1D4EE}{\mathcal{e}} % '𝓮' 'MATHEMATICAL BOLD SCRIPT SMALL E' (U+1D4EE)
+\DeclareUnicodeCharacter{1D4EF}{\mathcal{f}} % '𝓯' 'MATHEMATICAL BOLD SCRIPT SMALL F' (U+1D4EF)
+\DeclareUnicodeCharacter{1D4F0}{\mathcal{g}} % '𝓰' 'MATHEMATICAL BOLD SCRIPT SMALL G' (U+1D4F0)
+\DeclareUnicodeCharacter{1D4F1}{\mathcal{h}} % '𝓱' 'MATHEMATICAL BOLD SCRIPT SMALL H' (U+1D4F1)
+\DeclareUnicodeCharacter{1D4F2}{\mathcal{i}} % '𝓲' 'MATHEMATICAL BOLD SCRIPT SMALL I' (U+1D4F2)
+\DeclareUnicodeCharacter{1D4F3}{\mathcal{j}} % '𝓳' 'MATHEMATICAL BOLD SCRIPT SMALL J' (U+1D4F3)
+\DeclareUnicodeCharacter{1D4F4}{\mathcal{k}} % '𝓴' 'MATHEMATICAL BOLD SCRIPT SMALL K' (U+1D4F4)
+\DeclareUnicodeCharacter{1D4F5}{\mathcal{l}} % '𝓵' 'MATHEMATICAL BOLD SCRIPT SMALL L' (U+1D4F5)
+\DeclareUnicodeCharacter{1D4F6}{\mathcal{m}} % '𝓶' 'MATHEMATICAL BOLD SCRIPT SMALL M' (U+1D4F6)
+\DeclareUnicodeCharacter{1D4F7}{\mathcal{n}} % '𝓷' 'MATHEMATICAL BOLD SCRIPT SMALL N' (U+1D4F7)
+\DeclareUnicodeCharacter{1D4F8}{\mathcal{o}} % '𝓸' 'MATHEMATICAL BOLD SCRIPT SMALL O' (U+1D4F8)
+\DeclareUnicodeCharacter{1D4F9}{\mathcal{p}} % '𝓹' 'MATHEMATICAL BOLD SCRIPT SMALL P' (U+1D4F9)
+\DeclareUnicodeCharacter{1D4FA}{\mathcal{q}} % '𝓺' 'MATHEMATICAL BOLD SCRIPT SMALL Q' (U+1D4FA)
+\DeclareUnicodeCharacter{1D4FB}{\mathcal{r}} % '𝓻' 'MATHEMATICAL BOLD SCRIPT SMALL R' (U+1D4FB)
+\DeclareUnicodeCharacter{1D4FC}{\mathcal{s}} % '𝓼' 'MATHEMATICAL BOLD SCRIPT SMALL S' (U+1D4FC)
+\DeclareUnicodeCharacter{1D4FD}{\mathcal{t}} % '𝓽' 'MATHEMATICAL BOLD SCRIPT SMALL T' (U+1D4FD)
+\DeclareUnicodeCharacter{1D4FE}{\mathcal{u}} % '𝓾' 'MATHEMATICAL BOLD SCRIPT SMALL U' (U+1D4FE)
+\DeclareUnicodeCharacter{1D4FF}{\mathcal{v}} % '𝓿' 'MATHEMATICAL BOLD SCRIPT SMALL V' (U+1D4FF)
+\DeclareUnicodeCharacter{1D500}{\mathcal{w}} % '𝔀' 'MATHEMATICAL BOLD SCRIPT SMALL W' (U+1D500)
+\DeclareUnicodeCharacter{1D501}{\mathcal{x}} % '𝔁' 'MATHEMATICAL BOLD SCRIPT SMALL X' (U+1D501)
+\DeclareUnicodeCharacter{1D502}{\mathcal{y}} % '𝔂' 'MATHEMATICAL BOLD SCRIPT SMALL Y' (U+1D502)
+\DeclareUnicodeCharacter{1D503}{\mathcal{z}} % '𝔃' 'MATHEMATICAL BOLD SCRIPT SMALL Z' (U+1D503)
+
+\DeclareUnicodeCharacter{1D7D8}{\mathbb{0}} % '𝟘' 'MATHEMATICAL DOUBLE-STRUCK DIGIT ZERO' (U+1D7D8)
+\DeclareUnicodeCharacter{1D7D9}{\mathbb{1}} % '𝟙' 'MATHEMATICAL DOUBLE-STRUCK DIGIT ONE' (U+1D7D9)
+\DeclareUnicodeCharacter{1D7DA}{\mathbb{2}} % '𝟚' 'MATHEMATICAL DOUBLE-STRUCK DIGIT TWO' (U+1D7DA)
+\DeclareUnicodeCharacter{1D7DB}{\mathbb{3}} % '𝟛' 'MATHEMATICAL DOUBLE-STRUCK DIGIT THREE' (U+1D7DB)
+\DeclareUnicodeCharacter{1D7DC}{\mathbb{4}} % '𝟜' 'MATHEMATICAL DOUBLE-STRUCK DIGIT FOUR' (U+1D7DC)
+\DeclareUnicodeCharacter{1D7DD}{\mathbb{5}} % '𝟝' 'MATHEMATICAL DOUBLE-STRUCK DIGIT FIVE' (U+1D7DD)
+\DeclareUnicodeCharacter{1D7DE}{\mathbb{6}} % '𝟞' 'MATHEMATICAL DOUBLE-STRUCK DIGIT SIX' (U+1D7DE)
+\DeclareUnicodeCharacter{1D7DF}{\mathbb{7}} % '𝟟' 'MATHEMATICAL DOUBLE-STRUCK DIGIT SEVEN' (U+1D7DF)
+\DeclareUnicodeCharacter{1D7E0}{\mathbb{8}} % '𝟠' 'MATHEMATICAL DOUBLE-STRUCK DIGIT EIGHT' (U+1D7E0)
+\DeclareUnicodeCharacter{1D7E1}{\mathbb{9}} % '𝟡' 'MATHEMATICAL DOUBLE-STRUCK DIGIT NINE' (U+1D7E1)
+
+\DeclareUnicodeCharacter{1D552}{\mathbb{a}} % '𝕒' 'MATHEMATICAL DOUBLE-STRUCK SMALL A' (U+1D552)
+\DeclareUnicodeCharacter{1D553}{\mathbb{b}} % '𝕓' 'MATHEMATICAL DOUBLE-STRUCK SMALL B' (U+1D553)
+\DeclareUnicodeCharacter{1D554}{\mathbb{c}} % '𝕔' 'MATHEMATICAL DOUBLE-STRUCK SMALL C' (U+1D554)
+\DeclareUnicodeCharacter{1D556}{\mathbb{d}} % '𝕖' 'MATHEMATICAL DOUBLE-STRUCK SMALL E' (U+1D556)
+\DeclareUnicodeCharacter{1D555}{\mathbb{e}} % '𝕕' 'MATHEMATICAL DOUBLE-STRUCK SMALL D' (U+1D555)
+\DeclareUnicodeCharacter{1D557}{\mathbb{f}} % '𝕗' 'MATHEMATICAL DOUBLE-STRUCK SMALL F' (U+1D557)
+\DeclareUnicodeCharacter{1D558}{\mathbb{g}} % '𝕘' 'MATHEMATICAL DOUBLE-STRUCK SMALL G' (U+1D558)
+\DeclareUnicodeCharacter{1D559}{\mathbb{h}} % '𝕙' 'MATHEMATICAL DOUBLE-STRUCK SMALL H' (U+1D559)
+\DeclareUnicodeCharacter{1D55A}{\mathbb{i}} % '𝕚' 'MATHEMATICAL DOUBLE-STRUCK SMALL I' (U+1D55A)
+\DeclareUnicodeCharacter{1D55B}{\mathbb{j}} % '𝕛' 'MATHEMATICAL DOUBLE-STRUCK SMALL J' (U+1D55B)
+\DeclareUnicodeCharacter{1D55C}{\mathbb{k}} % '𝕜' 'MATHEMATICAL DOUBLE-STRUCK SMALL K' (U+1D55C)
+\DeclareUnicodeCharacter{1D55D}{\mathbb{l}} % '𝕝' 'MATHEMATICAL DOUBLE-STRUCK SMALL L' (U+1D55D)
+\DeclareUnicodeCharacter{1D55E}{\mathbb{m}} % '𝕞' 'MATHEMATICAL DOUBLE-STRUCK SMALL M' (U+1D55E)
+\DeclareUnicodeCharacter{1D55F}{\mathbb{n}} % '𝕟' 'MATHEMATICAL DOUBLE-STRUCK SMALL N' (U+1D55F)
+\DeclareUnicodeCharacter{1D560}{\mathbb{o}} % '𝕠' 'MATHEMATICAL DOUBLE-STRUCK SMALL O' (U+1D560)
+\DeclareUnicodeCharacter{1D561}{\mathbb{p}} % '𝕡' 'MATHEMATICAL DOUBLE-STRUCK SMALL P' (U+1D561)
+\DeclareUnicodeCharacter{1D562}{\mathbb{q}} % '𝕢' 'MATHEMATICAL DOUBLE-STRUCK SMALL Q' (U+1D562)
+\DeclareUnicodeCharacter{1D563}{\mathbb{r}} % '𝕣' 'MATHEMATICAL DOUBLE-STRUCK SMALL R' (U+1D563)
+\DeclareUnicodeCharacter{1D564}{\mathbb{s}} % '𝕤' 'MATHEMATICAL DOUBLE-STRUCK SMALL S' (U+1D564)
+\DeclareUnicodeCharacter{1D565}{\mathbb{t}} % '𝕥' 'MATHEMATICAL DOUBLE-STRUCK SMALL T' (U+1D565)
+\DeclareUnicodeCharacter{1D566}{\mathbb{u}} % '𝕦' 'MATHEMATICAL DOUBLE-STRUCK SMALL U' (U+1D566)
+\DeclareUnicodeCharacter{1D567}{\mathbb{v}} % '𝕧' 'MATHEMATICAL DOUBLE-STRUCK SMALL V' (U+1D567)
+\DeclareUnicodeCharacter{1D568}{\mathbb{w}} % '𝕨' 'MATHEMATICAL DOUBLE-STRUCK SMALL W' (U+1D568)
+\DeclareUnicodeCharacter{1D569}{\mathbb{x}} % '𝕩' 'MATHEMATICAL DOUBLE-STRUCK SMALL X' (U+1D569)
+\DeclareUnicodeCharacter{1D56A}{\mathbb{y}} % '𝕪' 'MATHEMATICAL DOUBLE-STRUCK SMALL Y' (U+1D56A)
+\DeclareUnicodeCharacter{1D56B}{\mathbb{z}} % '𝕫' 'MATHEMATICAL DOUBLE-STRUCK SMALL Z' (U+1D56B)
+
+%%% Relations
+\DeclareUnicodeCharacter{227C}{\preccurlyeq} % '≼' 'PRECEDES OR EQUAL TO' (U+227C)
+\DeclareUnicodeCharacter{227D}{\succcurlyeq} % '≽' 'SUCCEEDS OR EQUAL TO' (U+227D)
+\DeclareUnicodeCharacter{2282}{\subset} % '⊂' 'SUBSET OF' (U+2282)
+\DeclareUnicodeCharacter{2284}{\not\subset} % '⊄' 'NOT A SUBSET OF' (U+2284)
+\DeclareUnicodeCharacter{2283}{\supset} % '⊃' 'SUPERSET OF' (U+2283)
+\DeclareUnicodeCharacter{2285}{\not\supset} % '⊅' 'NOT A SUPERSET OF' (U+2285)
+\DeclareUnicodeCharacter{2286}{\subseteq} % '⊆' 'SUBSET OF OR EQUAL TO' (U+2286)
+\DeclareUnicodeCharacter{2284}{\not\subseteq} % '⊄' 'NOT A SUBSET OF' (U+2284)
+\DeclareUnicodeCharacter{2287}{\supseteq} % '⊇' 'SUPERSET OF OR EQUAL TO' (U+2287)
+\DeclareUnicodeCharacter{2289}{\not\supseteq} % '⊉' 'NEITHER A SUPERSET OF NOR EQUAL TO' (U+2289)
+\DeclareUnicodeCharacter{228D}{\cupdot} %'⊍' U+228D MULTISET MULTIPLICATION
+\DeclareUnicodeCharacter{228E}{\uplus} %'⊎' U+228E MULTISET UNION
+\DeclareUnicodeCharacter{228F}{\sqsubset} % '⊏' 'SQUARE IMAGE OF' (U+228F)
+\DeclareUnicodeCharacter{2290}{\sqsupset} % '⊐' 'SQUARE ORIGINAL OF' (U+2290)
+\DeclareUnicodeCharacter{22E2}{\not\sqsubset} % '⋢' 'NOT SQUARE IMAGE OF OR EQUAL TO' (U+22E2)
+\DeclareUnicodeCharacter{22E3}{\not\sqsupset} % '⋣' 'NOT SQUARE ORIGINAL OF OR EQUAL TO' (U+22E3)
+\DeclareUnicodeCharacter{2291}{\sqsubseteq} % '⊑' 'SQUARE IMAGE OF OR EQUAL TO' (U+2291)
+\DeclareUnicodeCharacter{2292}{\sqsupseteq} % '⊒' 'SQUARE ORIGINAL OF OR EQUAL TO' (U+2292)
+\DeclareUnicodeCharacter{22E2}{\not\sqsubseteq} % '⋢' 'NOT SQUARE IMAGE OF OR EQUAL TO' (U+22E2)
+\DeclareUnicodeCharacter{22E3}{\not\sqsupseteq} % '⋣' 'NOT SQUARE ORIGINAL OF OR EQUAL TO' (U+22E3)
+\DeclareUnicodeCharacter{2208}{\in} % '∈' 'ELEMENT OF' (U+2208)
+\DeclareUnicodeCharacter{220B}{\ni} % '∋' 'CONTAINS AS MEMBER' (U+220B)
+\DeclareUnicodeCharacter{220C}{\not\ni} % '∌' 'DOES NOT CONTAIN AS MEMBER' (U+220C)
+\DeclareUnicodeCharacter{2209}{\not\in} % '∉' 'NOT AN ELEMENT OF' (U+2209)
+\DeclareUnicodeCharacter{223C}{\sim} % '∼' 'TILDE OPERATOR' (U+223C)
+\DeclareUnicodeCharacter{2241}{\not\sim} % '≁' 'NOT TILDE' (U+2241)
+\DeclareUnicodeCharacter{2243}{\simeq} % '≃' U+2243 ASYMPTOTICALLY EQUAL TO
+\DeclareUnicodeCharacter{2248}{\approx} % '≈' 'ALMOST EQUAL TO' (U+2248)
+\DeclareUnicodeCharacter{2249}{\not\approx} % '≉' 'NOT ALMOST EQUAL TO' (U+2249)
+\DeclareUnicodeCharacter{2264}{\le} % '≤' 'LESS-THAN OR EQUAL TO' (U+2264)
+\DeclareUnicodeCharacter{2270}{\not\le} % '≰' 'NEITHER LESS-THAN NOR EQUAL TO' (U+2270)
+\DeclareUnicodeCharacter{2265}{\ge} % '≥' 'GREATER-THAN OR EQUAL TO' (U+2265)
+\DeclareUnicodeCharacter{2271}{\not\ge} % '≱' 'NEITHER GREATER-THAN NOR EQUAL TO' (U+2271)
+\DeclareUnicodeCharacter{227E}{\precsim} % '≾' U+227E Precedes or equivalent to
+\DeclareUnicodeCharacter{22A7}{\models} % '⊧' 'MODELS' (U+22A7)
+\DeclareUnicodeCharacter{2AAF}{\preceq} % '⪯' U+2AAF PRECEDES ABOVE SINGLE-LINE EQUALS SIGN
+\DeclareUnicodeCharacter{2AB0}{\succeq} % '⪰' 'SUCCEEDS ABOVE SINGLE-LINE EQUALS SIGN' (U+2AB0)
+
+%%% Large Operators
+\DeclareUnicodeCharacter{220F}{\prod} % '∏' 'N-ARY PRODUCT' (U+220F)
+\DeclareUnicodeCharacter{2211}{\sum} % '∑' 'N-ARY SUMMATION' (U+2211)
+\DeclareUnicodeCharacter{22C0}{\bigwedge} % '⋀' 'N-ARY LOGICAL AND' (U+22C0)
+\DeclareUnicodeCharacter{22C1}{\bigvee} % '⋁' 'N-ARY LOGICAL OR' (U+22C1)
+\DeclareUnicodeCharacter{22C2}{\bigcap} %U+22C2 ⋂       e2 8b 82        N-ARY INTERSECTION
+\DeclareUnicodeCharacter{22C3}{\bigcup} %U+22C3 ⋃       e2 8b 83        N-ARY UNION
+\DeclareUnicodeCharacter{2A05}{\bigsqcap} % '⨅' 'N-ARY SQUARE INTERSECTION OPERATOR' (U+2A05)
+\DeclareUnicodeCharacter{2A06}{\bigsqcup} % '⨆' 'N-ARY SQUARE UNION OPERATOR' (U+2A06)
+
+%%%　Braces
+\DeclareUnicodeCharacter{2223}{\mid} % '∣' 'DIVIDES' (U+2223)
+\DeclareUnicodeCharacter{27E6}{\llbracket} % '⟦' 'MATHEMATICAL LEFT WHITE SQUARE BRACKET' (U+27E6)
+\DeclareUnicodeCharacter{27E7}{\rrbracket} % '⟧' 'MATHEMATICAL RIGHT WHITE SQUARE BRACKET' (U+27E7)
+\DeclareUnicodeCharacter{27E8}{\langle} %⟨ U+27E8 MATHEMATICAL LEFT ANGLE BRACKET
+\DeclareUnicodeCharacter{27E9}{\rangle} %⟩ U+27E9 MATHEMATICAL RIGHT ANGLE BRACKET
+\DeclareUnicodeCharacter{FF5B}{\lbrace} % '｛' 'FULLWIDTH LEFT CURLY BRACKET' (U+FF5B)
+\DeclareUnicodeCharacter{FF5C}{\mid} % '｜' 'FULLWIDTH VERTICAL LINE' (U+FF5C)
+\DeclareUnicodeCharacter{FF5D}{\rbrace} % '｝' 'FULLWIDTH RIGHT CURLY BRACKET' (U+FF5D)
+
+%%% Arrows
+\DeclareUnicodeCharacter{2192}{\rightarrow} % '→' 'RIGHTWARDS ARROW' (U+2192)
+\DeclareUnicodeCharacter{27F6}{\longrightarrow} % '⟶' 'LONG RIGHTWARDS ARROW' (U+27F6)
+\DeclareUnicodeCharacter{2190}{\leftarrow} % '←' 'LEFTWARDS ARROW' (U+2190)
+\DeclareUnicodeCharacter{27F5}{\longleftarrow} % '⟵' 'LONG LEFTWARDS ARROW' (U+27F5)
+\DeclareUnicodeCharacter{2194}{\leftrightarrow} % '↔' 'LEFT RIGHT ARROW' (U+2194)
+\DeclareUnicodeCharacter{27F7}{\longleftrightarrow} % '⟷' 'LONG LEFT RIGHT ARROW' (U+27F7)
+\DeclareUnicodeCharacter{21D2}{\Rightarrow} % '⇒' 'RIGHTWARDS DOUBLE ARROW' (U+21D2)
+\DeclareUnicodeCharacter{27F9}{\Longrightarrow} % '⟹' 'LONG RIGHTWARDS DOUBLE ARROW' (U+27F9)
+\DeclareUnicodeCharacter{21D0}{\Leftarrow} % '⇐' 'LEFTWARDS DOUBLE ARROW' (U+21D0)
+\DeclareUnicodeCharacter{27F8}{\Longleftarrow} % '⟸' 'LONG LEFTWARDS DOUBLE ARROW' (U+27F8)
+\DeclareUnicodeCharacter{21D4}{\Leftrightarrow} % '⇔' 'LEFT RIGHT DOUBLE ARROW' (U+21D4)
+\DeclareUnicodeCharacter{27FA}{\Longleftrightarrow} % '⟺' 'LONG LEFT RIGHT DOUBLE ARROW' (U+27FA)
+\DeclareUnicodeCharacter{21A6}{\mapsto} % '↦' 'RIGHTWARDS ARROW FROM BAR' (U+21A6)
+\DeclareUnicodeCharacter{27FC}{\longmapsto} % '⟼' 'LONG RIGHTWARDS ARROW FROM BAR' (U+27FC)
+\DeclareUnicodeCharacter{2191}{\uparrow} % '↑' 'UPWARDS ARROW' (U+2191)
+\DeclareUnicodeCharacter{2193}{\downarrow} % '↓' 'DOWNWARDS ARROW' (U+2193)
+\DeclareUnicodeCharacter{2195}{\updownarrow} % '↕' 'UP DOWN ARROW' (U+2195)
+\DeclareUnicodeCharacter{21D1}{\Uparrow} % '⇑' 'UPWARDS DOUBLE ARROW' (U+21D1)
+\DeclareUnicodeCharacter{21D3}{\Downarrow} % '⇓' 'DOWNWARDS DOUBLE ARROW' (U+21D3)
+\DeclareUnicodeCharacter{21D5}{\Updownarrow} % '⇕' 'UP DOWN DOUBLE ARROW' (U+21D5)
+\DeclareUnicodeCharacter{2197}{\nearrow} % '↗' 'NORTH EAST ARROW' (U+2197)
+\DeclareUnicodeCharacter{2199}{\swarrow} % '↙' 'SOUTH WEST ARROW' (U+2199)
+\DeclareUnicodeCharacter{2198}{\searrow} % '↘' 'SOUTH EAST ARROW' (U+2198)
+\DeclareUnicodeCharacter{2196}{\nwarrow} % '↖' 'NORTH WEST ARROW' (U+2196)
+\DeclareUnicodeCharacter{21BF}{\upharpoonleft} % '↿' 'UPWARDS HARPOON WITH BARB LEFTWARDS' (U+21BF)
+\DeclareUnicodeCharacter{21BE}{\upharpoonright} % '↾' 'UPWARDS HARPOON WITH BARB RIGHTWARDS' (U+21BE)
+\DeclareUnicodeCharacter{21C3}{\downharpoonleft} % '⇃' 'DOWNWARDS HARPOON WITH BARB LEFTWARDS' (U+21C3)
+\DeclareUnicodeCharacter{21C2}{\downharpoonright} % '⇂' 'DOWNWARDS HARPOON WITH BARB RIGHTWARDS' (U+21C2)
+\DeclareUnicodeCharacter{21C0}{\rightharpoonup} % '⇀' 'RIGHTWARDS HARPOON WITH BARB UPWARDS' (U+21C0)
+\DeclareUnicodeCharacter{21C1}{\rightharpoondown} % '⇁' 'RIGHTWARDS HARPOON WITH BARB DOWNWARDS' (U+21C1)
+\DeclareUnicodeCharacter{21BC}{\leftharpoonup} % '↼' 'LEFTWARDS HARPOON WITH BARB UPWARDS' (U+21BC)
+\DeclareUnicodeCharacter{21BD}{\leftharpoondown} % '↽' 'LEFTWARDS HARPOON WITH BARB DOWNWARDS' (U+21BD)
+\DeclareUnicodeCharacter{21CB}{\leftrightharpoons} % '⇋' 'LEFTWARDS HARPOON OVER RIGHTWARDS HARPOON' (U+21CB)
+\DeclareUnicodeCharacter{21CC}{\rightleftharpoons} % '⇌' 'RIGHTWARDS HARPOON OVER LEFTWARDS HARPOON' (U+21CC)
+\DeclareUnicodeCharacter{21C6}{\leftrightarrows} % '⇆' 'LEFTWARDS ARROW OVER RIGHTWARDS ARROW' (U+21C6)
+\DeclareUnicodeCharacter{21AA}{\hookrightarrow} % '↪' 'RIGHTWARDS ARROW WITH HOOK' (U+21AA)
+\DeclareUnicodeCharacter{21A9}{\hookleftarrow} % '↩' 'LEFTWARDS ARROW WITH HOOK' (U+21A9)
+
+%%% Operators
+\DeclareUnicodeCharacter{2293}{\sqcap} % '⊓' SQUARE CAP (U+2293)
+\DeclareUnicodeCharacter{2294}{\sqcup} % '⊔' SQUARE CUP (U+2294)
+
+%%% TODO
+\DeclareUnicodeCharacter{AC}{\neg}        %¬	U+00AC	NOT SIGN
+\DeclareUnicodeCharacter{B0}{^\circ}
+\DeclareUnicodeCharacter{B1}{\pm}
+\DeclareUnicodeCharacter{B5}{\upmu}
+\DeclareUnicodeCharacter{B7}{\cdot}
+\DeclareUnicodeCharacter{D7}{\times}       %× U+00D7 MULTIPLICATION SIGN
+
+\DeclareUnicodeCharacter{1E96}{\overline{h}}
+
+\DeclareUnicodeCharacter{2020}{\dagger}
+\DeclareUnicodeCharacter{2022}{\bullet} % '•' 'BULLET' (U+2022)
+\DeclareUnicodeCharacter{210F}{\hbar}
+\DeclareUnicodeCharacter{2295}{\oplus} % '⊕' Unicode Character 'CIRCLED PLUS' (U+2295)
+
+\DeclareUnicodeCharacter{2139}{\mathi}
+\DeclareUnicodeCharacter{2192}{\to}        %→ U+2192 RIGHTWARDS ARROW
+
+
+\DeclareUnicodeCharacter{2200}{\forall}    %∀ U+2200 FOR ALL
+\DeclareUnicodeCharacter{2202}{\partial}
+\DeclareUnicodeCharacter{2203}{\exists}    %∃ U+2203 THERE EXISTS
+\DeclareUnicodeCharacter{2205}{\emptyset}  %∅ U+2205 EMPTY SET
+\DeclareUnicodeCharacter{2206}{\laplace}
+\DeclareUnicodeCharacter{2207}{\nabla}
+
+\DeclareUnicodeCharacter{2282}{\subset} %⊂ U+2282 SUBSET OF
+
+\DeclareUnicodeCharacter{2286}{\subseteq} %⊆ U+2286 SUBSET OF OR EQUAL TO
+\DeclareUnicodeCharacter{2287}{\supseteq} %⊇ U+2287 SUPERSET OF OR EQUAL TO
+
+\DeclareUnicodeCharacter{2213}{\mp} % '∓'
+\DeclareUnicodeCharacter{2216}{\setminus} % '∖' U+2216 SET MINUS
+\DeclareUnicodeCharacter{2218}{\circ} % ∘ U+2218 RING OPERATOR
+%\DeclareUnicodeCharacter{2219}{\bullet ???} % '∙' 'BULLET OPERATOR' (U+2219)
+\DeclareUnicodeCharacter{221A}{\sqrt}
+\DeclareUnicodeCharacter{221E}{\infty}
+\DeclareUnicodeCharacter{2227}{\land}      %∧	U+2227	LOGICAL AND
+\DeclareUnicodeCharacter{2228}{\lor}       %∨	U+2228	LOGICAL OR
+\DeclareUnicodeCharacter{2229}{\cap}       %∩	U+2229	INTERSECTION
+\DeclareUnicodeCharacter{222A}{\cup}       %∪	U+222A	UNION
+\DeclareUnicodeCharacter{222B}{\int}
+\DeclareUnicodeCharacter{222C}{\iint}
+\DeclareUnicodeCharacter{222D}{\iiint}
+\DeclareUnicodeCharacter{222E}{\oint}
+\DeclareUnicodeCharacter{222F}{\oiint}
+\DeclareUnicodeCharacter{2230}{\oiiint}
+\DeclareUnicodeCharacter{223C}{\sim}
+\DeclareUnicodeCharacter{2248}{\approx}
+\DeclareUnicodeCharacter{2260}{\neq}
+\DeclareUnicodeCharacter{2261}{\equiv} % '≡' U+2261
+\DeclareUnicodeCharacter{2262}{\not\equiv} % '≢' U+2261
+\DeclareUnicodeCharacter{226A}{\ll}
+\DeclareUnicodeCharacter{226B}{\gg}
+\DeclareUnicodeCharacter{2272}{\lesssim}
+\DeclareUnicodeCharacter{2273}{\gtrsim}
+\DeclareUnicodeCharacter{227A}{\prec}
+\DeclareUnicodeCharacter{227B}{\succ}
+\DeclareUnicodeCharacter{22A1}{\boxdot} % '⊡' 'SQUARED DOT OPERATOR' (U+22A1)
+\DeclareUnicodeCharacter{22A4}{\top} % '⊤' 'DOWN TACK' (U+22A4)
+\DeclareUnicodeCharacter{22A5}{\bot} % '⊥' 'UP TACK' (U+22A5)
+\DeclareUnicodeCharacter{22EE}{\vdots} % '⋮' 'VERTICAL ELLIPSIS' (U+22EE)
+
+\DeclareUnicodeCharacter{25A1}{\square} %□ U+25A1 WHITE SQUARE
+
+\DeclareUnicodeCharacter{25B2}{\blacktriangle}
+\DeclareUnicodeCharacter{25B3}{\vartriangle}
+\DeclareUnicodeCharacter{25BC}{\blacktriangledown}
+\DeclareUnicodeCharacter{25BD}{\triangledown}
+
+\DeclareUnicodeCharacter{25B9}{\triangleright} % '▹' 'WHITE RIGHT-POINTING SMALL TRIANGLE' (U+25B9)
+\DeclareUnicodeCharacter{25C3}{\triangleleft} % '◃' 'WHITE LEFT-POINTING SMALL TRIANGLE' (U+25C3)
+
+%\DeclareUnicodeCharacter{25C6}{\blacklozenge} Black Damond
+\DeclareUnicodeCharacter{25CA}{\lozenge} %◊ U+25CA LOZENGE
+\DeclareUnicodeCharacter{29EB}{\blacklozenge} % ⧫ U+29EB BLACK LOZENGE
