@@ -1,0 +1,91 @@
+\section{Semantics}
+
+In this section, the semantics of \tessla is defined. All in all, the functions used in \tessla can be categorized in six different types. Before we start with the semantics of the function we will fix some notation first.
+
+In the following we will use $\mathcal{C}$ and $\mathcal{E}$ for the sets of continuous and event streams, respectively. With $\mathcal{C}[T]$ we refer to the set of continuous streams that only contain elements of the type $T$ (f.e. $\mathcal{C}[\mathbb{B}]$ is the set of continuous boolean streams). We will use $\mathbb{D}$ as the set of all values.
+
+\subsection{Arithmetic Functions}
+
+Arithmetic functions take a certain number of value streams of type integer and return a stream that contains either integer or boolean values. The semantics for the arithmetic functions are defined in the following.
+
+The function $\operatorname{add}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for adding the values of two integer streams is defined as follows:
+
+\[\operatorname{add}(n_1,n_2) = n_3 \text{ with } n_3(t) = n_1(t) + n_2(t)\]
+
+The function $\operatorname{sub}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for subtracting the values of the second integer stream from the value of the first integer stream is defined as follows:
+
+\[\operatorname{sub}(n_1,n_2) = n_3 \text{ with } n_3(t) = n_1(t) - n_2(t)\]
+
+The function $\operatorname{mul}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for multiplying the values of two integer streams is defined as follows:
+
+\[\operatorname{mul}(n_1,n_2) = n_3 \text{ with } n_3(t) = n_1(t) \cdot n_2(t)\]
+
+The function $\operatorname{geq}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{B}]$ for checking if the values of the first integer stream is at least as big as the value of the second integer stream is defined as follows:
+
+\[\operatorname{geq}(n_1,n_2) = b_1 \text{ with } b_1(t) = n_1(t) \geq n_2(t)\]
+
+The function $\operatorname{leq}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{B}]$ for checking if the values of the first integer stream is at least as big as the value of the second integer stream is defined as follows:
+
+\[\operatorname{leq}(n_1,n_2) = b_1 \text{ with } b_1(t) = n_1(t) \leq n_2(t)\]
+
+The function $\operatorname{equals}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{B}]$ for checking if the values of two integer streams are equal is defined as follows:
+
+\[\operatorname{equals}(n_1,n_2) = b_1 \text{ with } b_1(t) = \begin{cases}
+\top & \text{if } n_1(t) = n_2(t) \\
+\bot & \text{else}
+\end{cases}\]
+
+The function $\operatorname{max}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for getting the maximum of the current values of two integer streams is defined as follows:
+
+\[\operatorname{max}(n_1,n_2) = n_3 \text{ with } n_3(t) = \begin{cases}
+n_1(t) & \text{if } n_1(t) > n_2(t) \\
+n_2(t) & \text{else}
+\end{cases}\]
+
+The function $\operatorname{min}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for getting the minimum of the current values of two integer streams is defined as follows:
+
+\[\operatorname{max}(n_1,n_2) = n_3 \text{ with } n_3(t) = \begin{cases}
+n_1(t) & \text{if } n_1(t) < n_2(t) \\
+n_2(t) & \text{else}
+\end{cases}\]
+
+The function $\operatorname{not}: \mathcal{C}[\mathbb{B}] \rightarrow \mathcal{C}[\mathbb{B}]$ for getting the negation of the value of a boolean stream is defined as follows:
+
+\[\operatorname{not}(b_1) = b_2 \text{ with } b_2(t) = \neg b_1(t)\]
+
+The function $\operatorname{or}: \mathcal{C}[\mathbb{B}] \times \mathcal{C}[\mathbb{B}] \rightarrow \mathcal{C}[\mathbb{B}]$ for combining two boolean streams with an or is defined as follows:
+
+\[\operatorname{or}(b_1, b_2) = b_3 \text{ with } b_3(t) = b_1(t) \lor b_2(t)\]
+
+\subsection{Timing Functions}
+
+Timing functions take a certain number of continuous streams and return a continuous or event stream. The semantics for the timing functions are defined in the following.
+
+The function $\operatorname{delay}: \mathcal{C} \times \mathbb{Q} \rightarrow \mathcal{C}$ for delaying the values of the input stream for a certain amount of time is defined as follows:
+
+\[\operatorname{delay}(c_1,q) = c_2 \text{ with } c_2(t) = c_1(t - q)\]
+
+The function $\operatorname{getTimestamp}: \mathcal{C} \rightarrow \mathbb{Q}$ for replacing the values of the input stream with its timestamps is defined as follows:
+
+\[\operatorname{getTimestamp}(c_1) = c_2 \text{ with } c_2(t) = t\]
+
+The function $\operatorname{inPast}: \mathcal{C} \times \mathbb{D} \times \mathbb{Q} \rightarrow \mathcal{C}[\mathbb{B}]$ for checking if a certain value holds in a given time frame in the past is defined as follows:
+
+\[\operatorname{inPast}(c_1, d, q) = b \text{ with } b(t) = \begin{cases}
+\top & \text{if } \exists t - q \leq t' \leq t: c_1(t') = d \\
+\bot & \text{else}
+\end{cases}\]
+
+The function $\operatorname{synchronize}: \mathcal{C} \times \mathcal{C} \times \mathbb{Q} \rightarrow \mathcal{E}$ for checking whether a corresponding event occurs in the second stream for each event in the first stream within a certain time frame is defined as follows:
+
+\[\operatorname{synchronize}(c_1,c_2,q) = e_1 \text{ with } ???\]
+
+\subsection{Aggregations}
+
+
+
+\subsection{Selectors/Filters/Conditionals/Combinators}
+
+\subsection{On}
+
+\subsection{Monitors}
