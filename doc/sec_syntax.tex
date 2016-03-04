@@ -19,7 +19,7 @@ where $n \in N_t$, $f_c \in F_{()t}$ (i.e., constants) and $f \in F_{(t_1…t_m)
 
 We consider three syntactical extensions to the base syntax presented above. The first is an \emph{on} operator, the second are \emph{infix operators} and the third are \emph{named arguments}.
 
-Let us consider the \emph{on} operator first. Therefore, for a set of function symbols $F_{(t_1…t_m)t}$ let $F^s_{(t_1…t_m)t} \subseteq F_{(t_1…t_m)t}$ be the set of function symbols of stateless functions. Hence the \emph{terms} $x$ of a type $t \in T$ including the \emph{on} operator can be defined by the grammar
+In the \emph{on} operator only stateless functions are allowed. Therefore, for a set of function symbols $F_{(t_1…t_m)t}$ let $F^s_{(t_1…t_m)t} \subseteq F_{(t_1…t_m)t}$ be the set of function symbols of stateless functions. Hence the \emph{terms} $x$ of a type $t \in T$ including the \emph{on} operator can be defined by the grammar
 \[\begin{array}{rl}
 x &::= n \mid f_c \mid f(seq) \mid \operatorname{on} f_s(seq_s) \mid x : t\\
 seq &::= x \mid x,seq \\
@@ -28,4 +28,3 @@ seq_s &::= y \mid y,seq_s
 \end{array}\]
 where $f_s \in F^s_{(t_1…t_m)t}$ and the rest is defined as before.
 
-\textcolor{red}{TODO: !infix operators, named arguments!}

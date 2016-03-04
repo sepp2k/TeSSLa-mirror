@@ -2,7 +2,11 @@
 
 In this section, the semantics of \tessla is defined. All in all, the functions used in \tessla can be categorized in six different types. Before we start with the semantics of the function we will fix some notation first.
 
-In the following we will use $\mathcal{C}$ and $\mathcal{E}$ for the sets of continuous and event streams, respectively. With $\mathcal{C}[T]$ we refer to the set of continuous streams that only contain elements of the type $T$ (f.e. $\mathcal{C}[\mathbb{B}]$ is the set of continuous boolean streams). We will use $\mathbb{D}$ as the set of all values.
+In the following we will use $\mathcal{S},\mathcal{C}$ and $\mathcal{E}$ for the sets of all streams, continuous streams and event streams, respectively. With $\mathcal{C}[T]$ we refer to the set of continuous streams that only contain elements of the type $T$ (f.e. $\mathcal{C}[\mathbb{B}]$ is the set of continuous boolean streams). We will use $\mathbb{D}$ as the set of all values.
+
+Furthermore we will use the function $\operatorname{prev}: \mathcal{C} \times \mathbb{Q} \rightarrow \mathcal{C}$ to refer to the value that was on the stream prior to a certain time stamp, which is defined as follows:
+
+\[\operatorname{prev}(c,t) = n \text{ with } \exists t' < t: c(t') = n \land \nexists t' < t'' < t: c(t'')\not= n \]  
 
 \subsection{Arithmetic Functions}
 
@@ -31,8 +35,8 @@ The function $\operatorname{leq}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\ma
 The function $\operatorname{equals}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{B}]$ for checking if the values of two integer streams are equal is defined as follows:
 
 \[\operatorname{equals}(n_1,n_2) = b_1 \text{ with } b_1(t) = \begin{cases}
-\top & \text{if } n_1(t) = n_2(t) \\
-\bot & \text{else}
+\text{true} & \text{if } n_1(t) = n_2(t) \\
+\text{false} & \text{else}
 \end{cases}\]
 
 The function $\operatorname{max}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for getting the maximum of the current values of two integer streams is defined as follows:
@@ -72,20 +76,63 @@ The function $\operatorname{getTimestamp}: \mathcal{C} \rightarrow \mathbb{Q}$ f
 The function $\operatorname{inPast}: \mathcal{C} \times \mathbb{D} \times \mathbb{Q} \rightarrow \mathcal{C}[\mathbb{B}]$ for checking if a certain value holds in a given time frame in the past is defined as follows:
 
 \[\operatorname{inPast}(c_1, d, q) = b \text{ with } b(t) = \begin{cases}
-\top & \text{if } \exists t - q \leq t' \leq t: c_1(t') = d \\
-\bot & \text{else}
+\text{true} & \text{if } \exists t - q \leq t' \leq t: c_1(t') = d \\
+\text{false} & \text{else}
 \end{cases}\]
 
 The function $\operatorname{synchronize}: \mathcal{C} \times \mathcal{C} \times \mathbb{Q} \rightarrow \mathcal{E}$ for checking whether a corresponding event occurs in the second stream for each event in the first stream within a certain time frame is defined as follows:
 
-\[\operatorname{synchronize}(c_1,c_2,q) = e_1 \text{ with } ???\]
+\[\operatorname{synchronize}(c_1,c_2,q) = e_1 \text{ with } e_1(t) = \begin{cases}
+\top & \text{if } c_1(t - q) = x_i \land \forall t-q \leq t' \leq t: c_2(t') \not= y_i \\
+\bot & \text{else}
+\end{cases}\]
+
+\textcolor{red}{$x_i$ bzw. $y_i$. Is there a better way?}
 
 \subsection{Aggregations}
 
+Aggregation functions take a certain number of continuous streams and return an continuous integer stream. The semantics for the aggregation functions are defined in the following. \textcolor{red}{second input / reset still missing!}
 
+The function $\operatorname{maximum}: \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for computing the maximum of all values that occurred on the stream is defined as follows:
+
+\[\operatorname{maximum}(n_1) = n_2 \text{ with } \forall t' < t: n_2(t) \geq n_1(t') \land \exists t' < t: n_2(t) = n_1(t')\]
+
+The function $\operatorname{minimum}: \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for computing the minimum of all values that occurred on the stream is defined as follows:
+
+\[\operatorname{minimum}(n_1) = n_2 \text{ with } \forall t' < t: n_2(t) \leq n_1(t') \land \exists t' < t: n_2(t) = n_1(t')\]
+
+The function $\operatorname{sum}: \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for computing the sum of all values that occurred on the stream is defined as follows:
+
+\[\operatorname{sum}(n_1) = n_2 \text{ with } ???\]
+
+The function $\operatorname{eventCount}: \mathcal{S} \rightarrow \mathcal{C}[\mathbb{N}]$ for computing the number of Events that occurred on the stream is defined as follows:
+
+\[\operatorname{eventCount}(s_1) = n_1 \text{ with } ???\]
 
 \subsection{Selectors/Filters/Conditionals/Combinators}
 
-\subsection{On}
+The function $\operatorname{ifThen}: \mathcal{C}[\mathbb{B}] \times \mathcal{C} \rightarrow \mathcal{C}$ for returning the value of the second input stream if the value of the first stream is true is defined as follows:
+
+\[\operatorname{ifThen}(b_1,c_1) = c_2 \text{ with } c_2(t) = \begin{cases}
+c_1(t) & \text{if } b_1(t) \\
+\operatorname{prev}(c_2,t) & \text{else}
+\end{cases}\]
+
+The function $\operatorname{ifThenElse}: \mathcal{C}[\mathbb{B}] \times \mathcal{C} \times \mathcal{C} \rightarrow \mathcal{C}$ for returning the value of the second input stream if the value of the first stream is true and the value of the third input stream otherwise is defined as follows:
+
+\[\operatorname{ifThenElse}(b_1,c_1,c_2) = c_3 \text{ with } c_3(t) = \begin{cases}
+c_1(t) & \text{if } b_1(t) \\
+c_2(t) & \text{else}
+\end{cases}\]
+
+The function $\operatorname{merge}: \mathcal{C} \times \mathcal{C} \rightarrow \mathcal{C}$ for merging two streams is defined as follows:
+
+\[\operatorname{merge}(c_1,c_2) = c_3 \text{ with } ???\]
 
 \subsection{Monitors}
+
+The monitor function can be used to enable the usage of temporal logics within \tessla. A monitor takes a temporal logic formula and returns an output value that depends on the evaluation status of the given formula at the current point in time. Let TL be a temporal logic, $\varphi \in \operatorname{TL}$ a formula of TL and $\llbracket . , . \rrbracket_{\operatorname{TL}}: \operatorname{TL} \times \mathbb{Q} \rightarrow \mathcal{C}$ be the function that returns the truth value of $\varphi$ at a certain point in time. Then the semantics of the function $\operatorname{monitor}: \operatorname{TL} \rightarrow \mathcal{C}$ is given as follows:
+
+\[\operatorname{monitor}(\varphi) = c_1 \text{ with } c_1(t) = \llbracket \varphi, t \rrbracket_{\operatorname{TL}}\]
+
+\subsection{On}
