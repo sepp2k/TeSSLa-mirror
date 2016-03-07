@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-import util.Try
+import scala.util.Try
 
 trait CompilerPass[I, O] {
   def apply(compiler: Compiler, input: I): Try[O]
