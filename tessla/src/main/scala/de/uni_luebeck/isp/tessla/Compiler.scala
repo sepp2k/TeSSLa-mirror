@@ -45,7 +45,8 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
       val result = (StateWrapper(src)
         (Parser)
         (DefExtractor)
-        (MacroResolver)).state
+        (MacroResolver)
+        (TypeChecker)).state
 
       Some(result)
     } catch {
