@@ -13,6 +13,8 @@ object TypeChecker extends CompilerPass[Definitions, FunctionGraph] {
 
   case class Node(result: TypeVar, fn: ExprTreeFn, args: Map[ArgName, TypeVar], subtree: ExprTree)
 
+  case class State(env: Env, overloads: Map[TypeVar, Set[Function]])
+
 }
 
 class TypeChecker(compiler: Compiler, defs: Definitions) {
@@ -74,4 +76,11 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
   for (sdef <- sdefs.values) {
     handleStreamDef(sdef)
   }
+
+  var state: State = State(Env(Map()),
+    nodes.values.map(node => node.result -> (node.fn match {
+      case TypeAscrFn(t, _) => Set(TypeAscription(t): Function)
+      case NamedFn(name, _) => compiler.lookupFunction(name)
+    })).toMap)
+
 }

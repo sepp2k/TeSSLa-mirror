@@ -55,4 +55,9 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
         None
     }
   }
+
+  def lookupFunction(name: String): Set[Function] = {
+    Function.defaultFunctions.filter(fn => fn.name == name).toSet
+  }
+
 }

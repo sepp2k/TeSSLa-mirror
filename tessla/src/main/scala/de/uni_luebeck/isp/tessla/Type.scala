@@ -19,6 +19,8 @@ object Env {
   def apply(): Env = Env(Map())
 }
 
+case class FunctionSig(ret: Type, args: Seq[(Option[String], Type)])
+
 abstract sealed class Type {
   def unify(env: Env, t: Type): Option[Env]
   def occurs(v: TypeVar): Boolean
