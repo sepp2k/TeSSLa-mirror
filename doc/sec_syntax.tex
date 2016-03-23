@@ -4,27 +4,50 @@ This section describes the syntax of \tessla.
 
 \subsection{Basic Syntax}
 
-As basic syntactic elements of \tessla we consider a set of \emph{types} $T$, \emph{names} $\mathcal{N}$ and \emph{function symbols} $\mathcal{F}$.
-Formally, the latter are two families $\mathcal{N}=(N_t)_{t \in T}$ and $\mathcal{F}=(F_{(t_1…t_m)t_{m+1}})_{t_1…t_{m+1} \in T^+}$ of distinct sets of symbols that correspond to a specific type or signature, respectively.
-We refer to the tuple $Σ=(T,\mathcal{N}, \mathcal{F})$ as a \emph{signature} providing the basic syntactical elements of our specification language.
+The basic syntax of \tessla specification is by the following grammar.
 
-Built from those we define \emph{terms} $x$ of type $t \in T$ and sequences of terms $seq$ by the grammar
-\[\begin{array}{rl}
-x &::= n \mid f_c \mid f(seq) \mid x : t\\
-seq &::= x \mid x,seq
-\end{array}\]
-where $n \in N_t$, $f_c \in F_{()t}$ (i.e., constants) and $f \in F_{(t_1…t_m)t}$.
+\begin{align*}
+  spec \text{ ::= } &\textttbf{define } name[\textttbf{:}\ stype] \textttbf{ := } texpr ｜\\
+                    & \textttbf{out } name ｜ 
+                    spec\ spec\\
+% name \text{ ::= }  & [\textttbf{A}-\textttbf{z}][\textttbf{A}-\textttbf{z0}-\textttbf{9\_}]^*
+  texpr \text{ := } & expr[\textttbf{:}\ type] \\
+  expr \text{ := }  & name \mid literal \mid name\textttbf{(}texpr(\textttbf{, }texpr)^*\textttbf{)}\\
+  type \text{ := } & btype \mid stype \\
+  stype \text{ := } & \textttbf{Signal<}btype\textttbf{>} \mid \textttbf{Events<}btype\textttbf{>}
+\end{align*}
+
+Names are nonempty strings $name∈AB*$ where $A=\{\textttbf{A},…,\textttbf{Z},\textttbf{a},…,\textttbf{z}\} $ are the alphanumeric characters and $B = A∪\{\textttbf{\_}\}$.
+Basic types $btype$ cover typical ones such as \textttbf{Int}, \textttbf{Float}, \textttbf{String} or \textttbf{Bool}.
+Literals $literal$ denote explicit values, of basic types, such as integers $-1,0,1,2,…$, floating point numbers $0.1, -3.141593$ or strings (enclosed in double quotes). 
+Available basic types and literal representation are implementation dependent.
 
 \subsection{Syntactical Extensions}
 
-We consider three syntactical extensions to the base syntax presented above. The first is an \emph{on} operator, the second are \emph{infix operators} and the third are \emph{named arguments}.
+For convenience, we consider three additional syntactical elements: \textttbf{on}\emph{-comprehensions}, \emph{infix notation for binary operators} and \emph{named arguments}.
 
-In the \emph{on} operator only stateless functions are allowed. Therefore, for a set of function symbols $F_{(t_1…t_m)t}$ let $F^s_{(t_1…t_m)t} \subseteq F_{(t_1…t_m)t}$ be the set of function symbols of stateless functions. Hence the \emph{terms} $x$ of a type $t \in T$ including the \emph{on} operator can be defined by the grammar
-\[\begin{array}{rl}
-x &::= n \mid f_c \mid f(seq) \mid \operatorname{on} f_s(seq_s) \mid x : t\\
-seq &::= x \mid x,seq \\
-y &::= n \mid f_c \mid f_s(seq_s) \mid \operatorname{on} f_s(seq_s) \mid y : t \\
-seq_s &::= y \mid y,seq_s
-\end{array}\]
-where $f_s \in F^s_{(t_1…t_m)t}$ and the rest is defined as before.
+\subsubsection{On-comprehension}
+
+Syntax:
+\begin{align*}
+  oncomp   &::= \textttbf{on } triggers [\textttbf{ if } filterExpr] [\textttbf{ yield } valueExpr] \\
+  triggers &::= name(\textttbf{, } name)^*
+\end{align*}
+
+The $triggers$ are a list of names denoting event streams. 
+The filtering Expression $filterExpr$ is an expression of type \textttbf{Signal<Bool>} where every free name either occurs in the trigger list or denotes a signal. 
+Intuitively, the on-comprehension emits an event at those time points $t∈𝕋$ where all of the trigger streams emit an event (i.e., are defined) and the filter signal has value \textttbf{true}.
+If the \textttbf{yield} part is omitted, the events do not carry a value, i.e., the stream is of type \textttbf{Events<Unit>}. 
+Otherwise, the value expression $valueExpr$ defines the value of every event. 
+As for the filer expression, in can only contain free names that either occur in the trigger list or are signals.
+
+All functions used in the filter and value expressions are further required to be stateless.
+
+\subsubsection{Named Arguments}
+
+as expected
+
+\subsubsection{Infix Operators}
+
+as expected
 

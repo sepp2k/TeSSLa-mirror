@@ -12,39 +12,39 @@
 \usepackage{floatrow}
 %\usepackage{accents} % used for double-hat, double-tilde macro
 \usepackage{amsmath}
+\usepackage{amsthm}
 
 \usepackage{enumerate}
 \usepackage{cancel}
 \usepackage{microtype}
 
 \usepackage{tikz}
-\usetikzlibrary{arrows}
+\usetikzlibrary{arrows, matrix, shapes.misc, decorations, decorations.pathreplacing, automata}
+
 %\usepackage{pgfplots}
+\usepackage{tikz-timing}
 
 \usepackage{thmtools}
 \usepackage{thm-restate}
+\usepackage{listings}
+\usepackage[lighttt]{lmodern}
+%\usepackage{lmodern}
 
 %\usepackage{hyperref}
 %\usepackage{cleveref}
 
-
-\pagestyle{plain}
-\title{TESSLA---A Temporal Stream-based Specification Language}
-
-
-%% CONIRAS Deliverable style
 \usepackage{fancyhdr}
+
+
+\title{TESSLA---A Temporal Stream-based Specification Language}
 \newcommand{\thetitle}{TESSLA---A Temporal Stream-based Specification Language}
 \title{\thetitle}
-\pagestyle{fancy}
-\setlength{\headheight}{15pt}
-\fancyhead[RO]{\thepage}
-\fancyhead[LO]{\thetitle}
-\fancyfoot[C]{}
 
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{definition}[theorem]{Definition}
 
-\newtheorem{proposition}{Proposition}
-
+\input{layout}
 \input{macros}
 
 \begin{document}

@@ -1,138 +1,155 @@
 \section{Semantics}
 
-In this section, the semantics of \tessla is defined. All in all, the functions used in \tessla can be categorized in six different types. Before we start with the semantics of the function we will fix some notation first.
+The formal semantics of a \tessla specification is a function mapping a set of input streams to a set of output streams.
 
-In the following we will use $\mathcal{S},\mathcal{C}$ and $\mathcal{E}$ for the sets of all streams, continuous streams and event streams, respectively. With $\mathcal{C}[T]$ we refer to the set of continuous streams that only contain elements of the type $T$ (f.e. $\mathcal{C}[\mathbb{B}]$ is the set of continuous boolean streams). We will use $\mathbb{D}$ as the set of all values.
+The set of output streams consists of all streams that are explicitly defined in the specification.
+The set of input streams is defined implicitly by the set of names (and their type) denoting a stream that occur freely in the specification, i.e., without definition.
 
-Furthermore we will use the function $\operatorname{prev}: \mathcal{C} \times \mathbb{Q} \rightarrow \mathcal{C}$ to refer to the value that was on the stream prior to a certain time stamp, which is defined as follows:
+That way, the semantics of the specification is build from (and depends on) the semantics of the functions used in the specification.
+In the following we describe a set of convenient functions that could be considered as a „standard library“.
 
-\[\operatorname{prev}(c,t) = n \text{ with } \exists t' < t: c(t') = n \land \nexists t' < t'' < t: c(t'')\not= n \]  
+\subsection{Lifted Functions}
 
-\subsection{Arithmetic Functions}
+A function $f: D_1 × … × D_n → D_{n+1}$ on basic types can easily be lifted to a function $\hat{f}: 𝓢_{D_1} × … × 𝓢_{D_n} → 𝓢_{D_{n+1}}$ on signal with $\hat{f}(σ_1,…,σ_n)(t) = f(σ_1(t),…,σ_n(t))$ for all $t∈𝕋$.
+This is possible since signals provide a value at every time point. 
 
-Arithmetic functions take a certain number of value streams of type integer and return a stream that contains either integer or boolean values. The semantics for the arithmetic functions are defined in the following.
+We list some important lifted functions for arithmetics and boolean operations. 
+They are defined as expected in terms of their scalar counterparts as above.
 
-The function $\operatorname{add}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for adding the values of two integer streams is defined as follows:
+\begin{tabular}{lll}
+  Function name, signature & Semantics & Remark\\
+  \hline
+  $\textttbf{add}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{add}(σ_1,σ_2)(t) := σ_1(t) + σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{sub}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{sub}(σ_1,σ_2)(t) := σ_1(t) - σ_2(t)$ & $D∈\{ℤ,ℝ\}$\\
+  $\textttbf{mul}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{mul}(σ_1,σ_2)(t) := σ_1(t) · σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{geq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\textttbf{geq}(σ_1,σ_2)(t) := σ_1(t) ≥ σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{leq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\textttbf{leq}(σ_1,σ_2)(t) := σ_1(t) ≤ σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{eq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\textttbf{eq}(σ_1,σ_2)(t) := σ_1(t) = σ_2(t)$ & any $D$ with equality\\
+  $\textttbf{max}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{max}(σ_1,σ_2)(t) := \max \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{min}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{min}(σ_1,σ_2)(t) := \min \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{and}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{and}(σ_1,σ_2)(t) := σ_1(t) ∧ σ_2(t)$ & \\
+  $\textttbf{or}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{and}(σ_1,σ_2)(t) := σ_1(t) ∨ σ_2(t)$ & \\
+  $\textttbf{implies}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{and}(σ_1,σ_2)(t) := σ_1(t) ⇒ σ_2(t)$ & \\
+  $\textttbf{not}: 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{not}(σ_1)(t) := ¬σ_1(t)$ &
+\end{tabular}
 
-\[\operatorname{add}(n_1,n_2) = n_3 \text{ with } n_3(t) = n_1(t) + n_2(t)\]
-
-The function $\operatorname{sub}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for subtracting the values of the second integer stream from the value of the first integer stream is defined as follows:
-
-\[\operatorname{sub}(n_1,n_2) = n_3 \text{ with } n_3(t) = n_1(t) - n_2(t)\]
-
-The function $\operatorname{mul}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for multiplying the values of two integer streams is defined as follows:
-
-\[\operatorname{mul}(n_1,n_2) = n_3 \text{ with } n_3(t) = n_1(t) \cdot n_2(t)\]
-
-The function $\operatorname{geq}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{B}]$ for checking if the values of the first integer stream is at least as big as the value of the second integer stream is defined as follows:
-
-\[\operatorname{geq}(n_1,n_2) = b_1 \text{ with } b_1(t) = n_1(t) \geq n_2(t)\]
-
-The function $\operatorname{leq}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{B}]$ for checking if the values of the first integer stream is at least as big as the value of the second integer stream is defined as follows:
-
-\[\operatorname{leq}(n_1,n_2) = b_1 \text{ with } b_1(t) = n_1(t) \leq n_2(t)\]
-
-The function $\operatorname{equals}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{B}]$ for checking if the values of two integer streams are equal is defined as follows:
-
-\[\operatorname{equals}(n_1,n_2) = b_1 \text{ with } b_1(t) = \begin{cases}
-\text{true} & \text{if } n_1(t) = n_2(t) \\
-\text{false} & \text{else}
-\end{cases}\]
-
-The function $\operatorname{max}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for getting the maximum of the current values of two integer streams is defined as follows:
-
-\[\operatorname{max}(n_1,n_2) = n_3 \text{ with } n_3(t) = \begin{cases}
-n_1(t) & \text{if } n_1(t) > n_2(t) \\
-n_2(t) & \text{else}
-\end{cases}\]
-
-The function $\operatorname{min}: \mathcal{C}[\mathbb{N}] \times \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for getting the minimum of the current values of two integer streams is defined as follows:
-
-\[\operatorname{max}(n_1,n_2) = n_3 \text{ with } n_3(t) = \begin{cases}
-n_1(t) & \text{if } n_1(t) < n_2(t) \\
-n_2(t) & \text{else}
-\end{cases}\]
-
-The function $\operatorname{not}: \mathcal{C}[\mathbb{B}] \rightarrow \mathcal{C}[\mathbb{B}]$ for getting the negation of the value of a boolean stream is defined as follows:
-
-\[\operatorname{not}(b_1) = b_2 \text{ with } b_2(t) = \neg b_1(t)\]
-
-The function $\operatorname{or}: \mathcal{C}[\mathbb{B}] \times \mathcal{C}[\mathbb{B}] \rightarrow \mathcal{C}[\mathbb{B}]$ for combining two boolean streams with an or is defined as follows:
-
-\[\operatorname{or}(b_1, b_2) = b_3 \text{ with } b_3(t) = b_1(t) \lor b_2(t)\]
 
 \subsection{Timing Functions}
 
-Timing functions take a certain number of continuous streams and return a continuous or event stream. The semantics for the timing functions are defined in the following.
+%Timing functions take a certain number of continuous streams and return a continuous or event stream. The semantics for the timing functions are defined in the following.
 
-The function $\operatorname{delay}: \mathcal{C} \times \mathbb{Q} \rightarrow \mathcal{C}$ for delaying the values of the input stream for a certain amount of time is defined as follows:
+The function $\mathtt{delay}$ shifts a stream by a specific amount of time.
+We define the function for different signatures and any value domain $D$:
+\begin{align*}
+  \mathtt{delay}&: 𝓢_D × 𝕋 × D → 𝓢_D 
+    & \mathtt{delay}(σ,d,v)(t) &:= \begin{cases} 
+         σ(t-d) & \text{if } t-d≥0\\
+         v      & \text{otherwise}
+       \end{cases}\\
+  \mathtt{delay}&: 𝓢_D × 𝕋_{≤0} → 𝓢_D 
+    & \mathtt{delay}(σ,d)(t) &:= σ(t-d) \\
+  \mathtt{delay}&: 𝓔_D × 𝕋 → 𝓔_D 
+      & \mathtt{delay}(η,d)(t) &:= \begin{cases} 
+           σ(t-d) & \text{if } t-d≥0\\
+           ⊥      & \text{otherwise}
+         \end{cases}\\
+\end{align*}
+The function $\mathtt{timestamp}$ provides the time stamp of an event stream element-wise:
+\begin{align*}
+  \mathtt{timestamp}&: 𝓔_D → 𝓔_𝕋 
+    & \mathtt{timestamp}(η)(t) &:= \begin{cases}
+        t & \text{if } t∈E(η)\\
+        ⊥ & \text{otherwise}
+      \end{cases}
+\end{align*}
 
-\[\operatorname{delay}(c_1,q) = c_2 \text{ with } c_2(t) = c_1(t - q)\]
+The function $\mathtt{within}$ serves for checking whether an event occurs within a given (relative) time bound. 
+Further functions $\mathtt{inPast}$ and $\mathtt{inFuture}$ can be derived from $within$:
+\begin{align*}
+  \mathtt{within}&: 𝕋 × 𝕋 × 𝓔_D → 𝓢_𝔹 
+    & \mathtt{within}(d_1,d_2,η)(t) &:= \begin{cases}
+        \mathtt{true} & \text{if } E(η)∩[t+d_1,t+d_2]≠∅\\        
+        \mathtt{false} & \text{otherwise}
+      \end{cases}\\
+  \mathtt{inPast}&: 𝕋_{≥0} × 𝓔_D → 𝓢_𝔹 
+    & \mathtt{inPast}(d,η)(t) &:= within(-d,0,η)(t)\\
+  \mathtt{inFuture}&: 𝕋_{≥0} × 𝓔_D → 𝓢_𝔹 
+    & \mathtt{inFuture}(d,η)(t) &:= within(0,d,η)(t)
+\end{align*}
 
-The function $\operatorname{getTimestamp}: \mathcal{C} \rightarrow \mathbb{Q}$ for replacing the values of the input stream with its timestamps is defined as follows:
+The function $\mathtt{synchronise}$ matches events from two streams within a given time range.
 
-\[\operatorname{getTimestamp}(c_1) = c_2 \text{ with } c_2(t) = t\]
+\begin{align*}
+  \mathtt{synchronise}&: 𝓔_D × 𝓔_D × 𝕋 → 
+\end{align*}
 
-The function $\operatorname{inPast}: \mathcal{C} \times \mathbb{D} \times \mathbb{Q} \rightarrow \mathcal{C}[\mathbb{B}]$ for checking if a certain value holds in a given time frame in the past is defined as follows:
-
-\[\operatorname{inPast}(c_1, d, q) = b \text{ with } b(t) = \begin{cases}
-\text{true} & \text{if } \exists t - q \leq t' \leq t: c_1(t') = d \\
-\text{false} & \text{else}
-\end{cases}\]
-
-The function $\operatorname{synchronize}: \mathcal{C} \times \mathcal{C} \times \mathbb{Q} \rightarrow \mathcal{E}$ for checking whether a corresponding event occurs in the second stream for each event in the first stream within a certain time frame is defined as follows:
-
-\[\operatorname{synchronize}(c_1,c_2,q) = e_1 \text{ with } e_1(t) = \begin{cases}
-\top & \text{if } c_1(t - q) = x_i \land \forall t-q \leq t' \leq t: c_2(t') \not= y_i \\
-\bot & \text{else}
-\end{cases}\]
-
-\textcolor{red}{$x_i$ bzw. $y_i$. Is there a better way?}
 
 \subsection{Aggregations}
 
-Aggregation functions take a certain number of continuous streams and return an continuous integer stream. The semantics for the aggregation functions are defined in the following. \textcolor{red}{second input / reset still missing!}
+For any domain $D$ with linear ordering and addition, respectively, e.g., $ℕ,ℤ,ℝ,ℚ$:
+ 
+\begin{align*}
+  \mathtt{maximum}&: 𝓔_D × D → 𝓢_D
+    & \mathtt{maximum}(η,d)(t) &:= \max (｛d｝∪\{η(t') \mid t'∈E(η), t'≤t\})\\
+  \mathtt{maximum}&: 𝓢_D → 𝓢_D
+    & \mathtt{maximum}(σ)(t) &:= \max \{η(t') \mid t'∈𝕋, t'≤t\} \\
+  \mathtt{minimum}&: 𝓔_D × D → 𝓢_D
+    & \mathtt{minimum}(η,d)(t) &:= \min (｛d｝∪\{η(t') \mid t'∈E(η), t'≤t\})\\
+  \mathtt{minimum}&: 𝓢_D → 𝓢_D
+    & \mathtt{minimum}(σ)(t) &:= \min \{η(t') \mid t'∈𝕋, t'≤t\}\\
+  \mathtt{sum}&: 𝓔_D → 𝓢_D
+    & \mathtt{sum}(η)(t) &:= ∑_{t'∈E(η)｜t'≤t } η(t')\\  
+\end{align*}
 
-The function $\operatorname{maximum}: \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for computing the maximum of all values that occurred on the stream is defined as follows:
+Generic functions $eventCount$ providing the number of occurred events and $mrv$ providing the most recent value of an event stream.
 
-\[\operatorname{maximum}(n_1) = n_2 \text{ with } \forall t' < t: n_2(t) \geq n_1(t') \land \exists t' < t: n_2(t) = n_1(t')\]
-
-The function $\operatorname{minimum}: \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for computing the minimum of all values that occurred on the stream is defined as follows:
-
-\[\operatorname{minimum}(n_1) = n_2 \text{ with } \forall t' < t: n_2(t) \leq n_1(t') \land \exists t' < t: n_2(t) = n_1(t')\]
-
-The function $\operatorname{sum}: \mathcal{C}[\mathbb{N}] \rightarrow \mathcal{C}[\mathbb{N}]$ for computing the sum of all values that occurred on the stream is defined as follows:
-
-\[\operatorname{sum}(n_1) = n_2 \text{ with } ???\]
-
-The function $\operatorname{eventCount}: \mathcal{S} \rightarrow \mathcal{C}[\mathbb{N}]$ for computing the number of Events that occurred on the stream is defined as follows:
-
-\[\operatorname{eventCount}(s_1) = n_1 \text{ with } ???\]
+\begin{align*}
+  \mathtt{eventCount}&: 𝓔_D → 𝓢_D
+    & \mathtt{eventCount}(η)(t) &:= |{t'∈E(η)｜t'≤t } \\
+  \mathtt{mrv}&: 𝓔_D × D → 𝓢_D
+    & \mathtt{mrv}(η,d)(t) &:= \begin{cases}
+         η(\max E(η)∩[0,t]) & \text{if } E(η)∩[0,t]≠∅ \\
+         d & \text{otherwise}
+       \end{cases}
+\end{align*}
 
 \subsection{Selectors/Filters/Conditionals/Combinators}
 
-The function $\operatorname{ifThen}: \mathcal{C}[\mathbb{B}] \times \mathcal{C} \rightarrow \mathcal{C}$ for returning the value of the second input stream if the value of the first stream is true is defined as follows:
-
-\[\operatorname{ifThen}(b_1,c_1) = c_2 \text{ with } c_2(t) = \begin{cases}
-c_1(t) & \text{if } b_1(t) \\
-\operatorname{prev}(c_2,t) & \text{else}
-\end{cases}\]
-
-The function $\operatorname{ifThenElse}: \mathcal{C}[\mathbb{B}] \times \mathcal{C} \times \mathcal{C} \rightarrow \mathcal{C}$ for returning the value of the second input stream if the value of the first stream is true and the value of the third input stream otherwise is defined as follows:
-
-\[\operatorname{ifThenElse}(b_1,c_1,c_2) = c_3 \text{ with } c_3(t) = \begin{cases}
-c_1(t) & \text{if } b_1(t) \\
-c_2(t) & \text{else}
-\end{cases}\]
-
-The function $\operatorname{merge}: \mathcal{C} \times \mathcal{C} \rightarrow \mathcal{C}$ for merging two streams is defined as follows:
-
-\[\operatorname{merge}(c_1,c_2) = c_3 \text{ with } ???\]
+\begin{align*}
+  \mathtt{ifThen}&: 𝓔_{D_1} × 𝓢_{D_2} → 𝓔_{D_2}
+      & \mathtt{ifThen}(η,σ)(t) &:= \begin{cases}
+           σ(t) & \text{if } t∈E(η)\\
+           ⊥ & \text{otherwise}
+         \end{cases}\\
+  \mathtt{ifThenElse}&: 𝓢_𝔹 × 𝓢_D × 𝓢_D → 𝓢_D
+      & \mathtt{ifThenElse}(σ_1,σ_2,σ_3)(t) &:= \begin{cases}
+           σ_2(t) & \text{if } σ_1(t) = \texttt{true}\\
+           σ_3(t) & \text{otherwise}
+         \end{cases}\\
+  \mathtt{merge}&: 𝓔_D × 𝓔_D → 𝓔_D
+      & \mathtt{merge}(η_1,η_2)(t) &:= \begin{cases}
+           η_1(t) & \text{if } t∈E(η_1)\\
+           η_2(t) & \text{if } t∈E(η_2)∖E(η_1)\\
+           ⊥ & \text{otherwise}
+         \end{cases}
+\end{align*}
+Note that \texttt{ifThen} is a restricted form of an on-comprehension.
 
 \subsection{Monitors}
 
-The monitor function can be used to enable the usage of temporal logics within \tessla. A monitor takes a temporal logic formula and returns an output value that depends on the evaluation status of the given formula at the current point in time. Let TL be a temporal logic, $\varphi \in \operatorname{TL}$ a formula of TL and $\llbracket . , . \rrbracket_{\operatorname{TL}}: \operatorname{TL} \times \mathbb{Q} \rightarrow \mathcal{C}$ be the function that returns the truth value of $\varphi$ at a certain point in time. Then the semantics of the function $\operatorname{monitor}: \operatorname{TL} \rightarrow \mathcal{C}$ is given as follows:
-
-\[\operatorname{monitor}(\varphi) = c_1 \text{ with } c_1(t) = \llbracket \varphi, t \rrbracket_{\operatorname{TL}}\]
-
-\subsection{On}
+The monitor function can be used to enable the usage of temporal logics within \tessla. 
+A monitor is defined by a temporal logic formula and returns an output value that depends on the evaluation status of the given formula at the current point in time.
+We assume that the temporal logic is defined over propositional variables from a fixed and finite set $AP=\{p_1,…,p_n\}$, e.g.\ like LTL.
+Further, the semantics is defined on finites words over the alphabet $Σ=2^{AP}$ and admits truth values from some domain $𝕍$ (e.g., $𝔹$).
+We then let, for arbitrary $D$,
+\[
+  \texttt{monitor}: TL × (𝓢_𝔹)^n × 𝓔_D → 𝓔_𝕍
+\]
+with 
+\[
+  \texttt{monitor}(φ, σ_1,…,σ_n,η)(t) := \begin{cases}
+    ⟦w_t⊧φ⟧ & \text{if } t∈E(η) \\
+    ⊥ & \text{otherwise}
+   \end{cases}
+\]
+where $w_t=a_1…a_{|E(η)|}$ with $a_i=\{p_k∈AP \mid σ_k(t_i)=\texttt{true}\}$ for $\{t_1<t_2<…<t_{|E(η)|}\} = E(η)$.

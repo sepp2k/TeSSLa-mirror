@@ -1,0 +1,102 @@
+\pagestyle{fancy}
+\setlength{\headheight}{15pt}
+\fancyhead[RO]{\thepage}
+\fancyhead[LO]{\thetitle}
+\fancyfoot[C]{}
+
+\tikzset{
+  ampersand replacement=\&, % alternative to using fragile frames
+  event/.style = {draw, cross out, inner sep = 1pt,xshift=0.75pt},
+  event label/.style = {font = \tiny, label distance = -2pt}  
+}
+
+
+%\renewcommand{\ttdefault}{pcr}
+
+\newcommand{\lstcomment}[1]{\color{darkgray}\rmfamily\scriptsize#1}
+\lstset{}
+%\lstset{
+%%   basicstyle=\ttfamily\scriptsize,
+%   basicstyle=\ttfamily\small,
+%%   basicstyle=\fontfamily{pcr}\selectfont\small,
+%%   keywordstyle=\bfseries\ttfamily\underbar,%
+%%   keywordstyle=\fontfamily{pcr}\selectfont\bfseries,
+%   keywordstyle=\sffamily\bfseries,
+%   columns=fullflexible,
+%%    columns=flexible,
+%   comment=[l]//,
+%   commentstyle=\color{darkgray}\rmfamily\scriptsize,
+%   emph={square}, 
+%   emphstyle=\color{blue}\textrm,
+%   emph={[2]root,base},
+%   emphstyle={[2]\color{yac}\textrm},
+%   showstringspaces=false,
+%%   flexiblecolumns=false,
+%   tabsize=3,
+%   numbers=left,
+%   numberstyle=\tiny,
+%   numberblanklines=false,
+%   stepnumber=1,
+%   numbersep=3pt,
+%%   xleftmargin=5pt,
+%   %keywords={in, while, foreach, val, var, procedure, proc, fun, function, case, if, then, else, return},
+%   aboveskip=3pt,
+%   belowskip=3pt,
+%%   escapechar=\&
+%   escapeinside={*@}{@*} % useful to put a \label in there
+% }
+
+
+\lstset{
+%  extendedchars=true,
+%  inputencoding=utf8
+  basicstyle=\small\ttfamily,
+%  stringstyle=
+%  keywordsyle={[2]\underbar},
+  commentstyle=\rmfamily\it,
+  extendedchars=true,
+  keepspaces=true, 
+  columns=flexible,
+  frame=tlrb,
+  keywordstyle=\ttfamily\bfseries
+}
+
+\lstdefinestyle{long}{}
+
+\lstdefinestyle{inline}{   
+  basicstyle=\ttfamily\footnotesize,
+  numbers=none,
+  xleftmargin=2em,
+  aboveskip=0.3ex,
+  belowskip=0ex,
+%  belowcaptionskip=0em,
+%  lineskip=0em
+}
+
+\lstdefinelanguage{salt}{
+  keywords={always, next, until, not, and, or, implies, if, then},
+%  keywordstyle=\rmfamily\it,
+  comment=[l]{--}
+}
+
+\lstdefinelanguage{tessla}{
+  keywords={on, if, define, yield, out, trigger, while, window, and, or},
+  keywordstyle=\ttfamily\bfseries,
+  classoffset=1,
+  morekeywords={EStream,VStream,Int,Bool},  
+%  keywordstyle=\ttfamily\bfseries,
+  keywordstyle=\underline,
+  classoffset=0,
+  comment=[l]{--}
+}
+
+\lstdefinelanguage{tessla+salt}{
+  language=tessla,
+%  classoffset=1,
+  morekeywords={always, next, until, not, and, or, implies, if, then},
+%  keywordstyle=\ttfamily\bfseries,
+%  keywordstyle=\underline,
+%  classoffset=0,
+  comment=[l]{--}
+}
+
