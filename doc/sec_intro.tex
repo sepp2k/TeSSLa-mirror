@@ -87,7 +87,7 @@ This is achieved by applying a corresponding function to the input stream and th
 The streams used in \tessla specifications model the essential aspects found in computer programs, namely values (e.g., the value of a program variable), events (e.g., the call of a specific function) and time, both, in a qualitative (ordering) and quantitative (duration) sense.
 
 The timing model is based on time stamps $t∈𝕋$ where we assume $𝕋$ to be isomorphic to the real numbers $ℝ$.
-Although on the technical level time is mosltly quantised in actual systems, real time is a common and intuitive model.
+Although on the technical level time is mostly quantised in actual systems, real time is a common and intuitive model.
 In fact, neither specification nor evaluation based on single steps of, e.g., the a CPU core are reasonable. 
 Time is therefore handled, formally and technically, in terms of intervals.
 In the following, we make the notion of streams precise that prolide the semantical basis of the language.
@@ -95,7 +95,7 @@ We use $𝕋$ to denote the time domain to make an explicit distinction between 
 However, we use common operators and symbols to work with time stamps, such as $+$ (addition), $≤$ (ordering) and $0$ (neutral element of addition), that are defined as expected.
 
 We consider two types of streams.
-Value, e.g., of a program variable or stored at some specific memory address, might change over time but can be assumed to always be present.
+Values, e.g., of a program variable or stored at some specific memory address, might change over time but can be assumed to always be present.
 They are represented by continuous streams that we call \emph{signals}. \todo{adde preliminary definitions somewhere, e.g., appendix: piece-wise constant function, segments, intervals, left/right-closed, change points}
 
 \begin{definition}[Signals]
@@ -126,7 +126,7 @@ In addition to the definition in terms of partial functions, an event stream $η
 \subsection{Defining Streams}
 
 \tessla allows for defining streams through function applications.
-Such functions can be applied to signal, event streams, as well as constant values.
+Such functions can be applied to signal and event streams, as well as constant values.
 For example, addition of two (value) streams can be defined as element-wise addition of the values of two signals \texttt{s1} and \texttt{s2}:
 \begin{lstlisting}[language=tessla]
   define sum := add(in1, in2)
@@ -135,11 +135,11 @@ Here, $\mathtt{add}: 𝓢_ℕ × 𝓢_ℕ → 𝓢_ℕ$ is a function that maps 
 
 The specification above hence describes a rather simple transformation of two input streams into one output stream.
 
-Regarding evaluation it is reasonable, to restrict the functions on streams that can be used in \tessla, depending on their application context.
+Regarding evaluation it is reasonable to restrict the functions on streams that can be used in \tessla, depending on their application context.
 
 \begin{definition}[Causality, state, time invariance]
 Let $A,B$ be sets of signals or event streams.
-A functions $f: A → B$ is considered to \emph{respect weak causality} if there is a constant $k∈𝕋$ such that $f(σ)(t)$ is independent of the values $σ(t')$ for $t'>t+k$:
+A function $f: A → B$ is considered to \emph{respect weak causality} if there is a constant $k∈𝕋$ such that $f(σ)(t)$ is independent of the values $σ(t')$ for $t'>t+k$:
 for all $t∈𝕋$ and all $σ,σ'∈A$ we require that $f(σ)(t) = f(σ')(t)$ if $σ(t')=σ'(t')$ for all $t'<t+k$.
 
 The function $f$ is called \emph{stateless} if for all $t∈𝕋$ and all $σ,σ'∈A$ we have $f(σ)(t) = f(σ')(t)$ if $σ(t) = σ'(t)$.

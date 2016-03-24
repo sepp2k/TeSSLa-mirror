@@ -4,7 +4,7 @@ This section describes the syntax of \tessla.
 
 \subsection{Basic Syntax}
 
-The basic syntax of \tessla specification is by the following grammar.
+The basic syntax of \tessla specifications is given by the following grammar.
 
 \begin{align*}
   spec \text{ ::= } &\textttbf{define } name[\textttbf{:}\ stype] \textttbf{ := } texpr ｜\\
@@ -17,7 +17,7 @@ The basic syntax of \tessla specification is by the following grammar.
   stype \text{ := } & \textttbf{Signal<}btype\textttbf{>} \mid \textttbf{Events<}btype\textttbf{>}
 \end{align*}
 
-Names are nonempty strings $name∈AB*$ where $A=\{\textttbf{A},…,\textttbf{Z},\textttbf{a},…,\textttbf{z}\} $ are the alphanumeric characters and $B = A∪\{\textttbf{\_}\}$.
+Names are nonempty strings $name∈AB^*$ where $A=\{\textttbf{A},…,\textttbf{Z},\textttbf{a},…,\textttbf{z}\} $ are the alphanumeric characters and $B = A∪\{\textttbf{\_}\}$.
 Basic types $btype$ cover typical ones such as \textttbf{Int}, \textttbf{Float}, \textttbf{String} or \textttbf{Bool}.
 Literals $literal$ denote explicit values, of basic types, such as integers $-1,0,1,2,…$, floating point numbers $0.1, -3.141593$ or strings (enclosed in double quotes). 
 Available basic types and literal representation are implementation dependent.
@@ -39,7 +39,7 @@ The filtering Expression $filterExpr$ is an expression of type \textttbf{Signal<
 Intuitively, the on-comprehension emits an event at those time points $t∈𝕋$ where all of the trigger streams emit an event (i.e., are defined) and the filter signal has value \textttbf{true}.
 If the \textttbf{yield} part is omitted, the events do not carry a value, i.e., the stream is of type \textttbf{Events<Unit>}. 
 Otherwise, the value expression $valueExpr$ defines the value of every event. 
-As for the filer expression, in can only contain free names that either occur in the trigger list or are signals.
+As for the filter expression, it can only contain free names that either occur in the trigger list or are signals.
 
 All functions used in the filter and value expressions are further required to be stateless.
 

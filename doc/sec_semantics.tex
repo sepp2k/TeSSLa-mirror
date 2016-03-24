@@ -3,14 +3,14 @@
 The formal semantics of a \tessla specification is a function mapping a set of input streams to a set of output streams.
 
 The set of output streams consists of all streams that are explicitly defined in the specification.
-The set of input streams is defined implicitly by the set of names (and their type) denoting a stream that occur freely in the specification, i.e., without definition.
+The set of input streams is defined implicitly by the set of names (and their type) denoting a stream that occurs freely in the specification, i.e., without definition.
 
 That way, the semantics of the specification is build from (and depends on) the semantics of the functions used in the specification.
 In the following we describe a set of convenient functions that could be considered as a „standard library“.
 
 \subsection{Lifted Functions}
 
-A function $f: D_1 × … × D_n → D_{n+1}$ on basic types can easily be lifted to a function $\hat{f}: 𝓢_{D_1} × … × 𝓢_{D_n} → 𝓢_{D_{n+1}}$ on signal with $\hat{f}(σ_1,…,σ_n)(t) = f(σ_1(t),…,σ_n(t))$ for all $t∈𝕋$.
+A function $f: D_1 × … × D_n → D_{n+1}$ on basic types can easily be lifted to a function $\hat{f}: 𝓢_{D_1} × … × 𝓢_{D_n} → 𝓢_{D_{n+1}}$ on signals with $\hat{f}(σ_1,…,σ_n)(t) = f(σ_1(t),…,σ_n(t))$ for all $t∈𝕋$.
 This is possible since signals provide a value at every time point. 
 
 We list some important lifted functions for arithmetics and boolean operations. 
@@ -28,8 +28,8 @@ They are defined as expected in terms of their scalar counterparts as above.
   $\textttbf{max}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{max}(σ_1,σ_2)(t) := \max \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\textttbf{min}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{min}(σ_1,σ_2)(t) := \min \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\textttbf{and}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{and}(σ_1,σ_2)(t) := σ_1(t) ∧ σ_2(t)$ & \\
-  $\textttbf{or}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{and}(σ_1,σ_2)(t) := σ_1(t) ∨ σ_2(t)$ & \\
-  $\textttbf{implies}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{and}(σ_1,σ_2)(t) := σ_1(t) ⇒ σ_2(t)$ & \\
+  $\textttbf{or}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{or}(σ_1,σ_2)(t) := σ_1(t) ∨ σ_2(t)$ & \\
+  $\textttbf{implies}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{implies}(σ_1,σ_2)(t) := σ_1(t) ⇒ σ_2(t)$ & \\
   $\textttbf{not}: 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{not}(σ_1)(t) := ¬σ_1(t)$ &
 \end{tabular}
 
@@ -72,9 +72,9 @@ Further functions $\mathtt{inPast}$ and $\mathtt{inFuture}$ can be derived from 
         \mathtt{false} & \text{otherwise}
       \end{cases}\\
   \mathtt{inPast}&: 𝕋_{≥0} × 𝓔_D → 𝓢_𝔹 
-    & \mathtt{inPast}(d,η)(t) &:= within(-d,0,η)(t)\\
+    & \mathtt{inPast}(d,η)(t) &:= \mathtt{within}(-d,0,η)(t)\\
   \mathtt{inFuture}&: 𝕋_{≥0} × 𝓔_D → 𝓢_𝔹 
-    & \mathtt{inFuture}(d,η)(t) &:= within(0,d,η)(t)
+    & \mathtt{inFuture}(d,η)(t) &:= \mathtt{within}(0,d,η)(t)
 \end{align*}
 
 \todo[inline,nolist]{TODO
@@ -142,7 +142,7 @@ Note that \texttt{ifThen} is a restricted form of an on-comprehension.
 The monitor function can be used to enable the usage of temporal logics within \tessla. 
 A monitor is defined by a temporal logic formula and returns an output value that depends on the evaluation status of the given formula at the current point in time.
 We assume that the temporal logic is defined over propositional variables from a fixed and finite set $AP=\{p_1,…,p_n\}$, e.g.\ like LTL.
-Further, the semantics is defined on finites words over the alphabet $Σ=2^{AP}$ and admits truth values from some domain $𝕍$ (e.g., $𝔹$).
+Further, the semantics is defined on finite words over the alphabet $Σ=2^{AP}$ and admits truth values from some domain $𝕍$ (e.g., $𝔹$).
 We then let, for arbitrary $D$,
 \[
   \texttt{monitor}: TL × (𝓢_𝔹)^n × 𝓔_D → 𝓔_𝕍
@@ -154,4 +154,4 @@ with
     ⊥ & \text{otherwise}
    \end{cases}
 \]
-where $w_t=a_1…a_{|E(η)|}$ with $a_i=\{p_k∈AP \mid σ_k(t_i)=\texttt{true}\}$ for $\{t_1<t_2<…<t_{|E(η)|}\} = E(η)$.
+where $w=a_1…a_{|E(η)|}$ with $a_i=\{p_k∈AP \mid σ_k(t_i)=\texttt{true}\}$ for $\{t_1<t_2<…<t_{|E(η)|}\} = E(η)$.
