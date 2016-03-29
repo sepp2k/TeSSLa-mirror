@@ -22,15 +22,19 @@ They are defined as expected in terms of their scalar counterparts as above.
   $\textttbf{add}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{add}(σ_1,σ_2)(t) := σ_1(t) + σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\textttbf{sub}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{sub}(σ_1,σ_2)(t) := σ_1(t) - σ_2(t)$ & $D∈\{ℤ,ℝ\}$\\
   $\textttbf{mul}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{mul}(σ_1,σ_2)(t) := σ_1(t) · σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{div}: 𝓢_D × 𝓢_{D'} → 𝓢_D$ & $\textttbf{div}(σ_1,σ_2)(t) := \frac{σ_1(t)}{σ_2(t)}$ & $D∈\{ℕ,ℤ,ℝ\}, D'=D∖｛0｝$\\
   $\textttbf{geq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\textttbf{geq}(σ_1,σ_2)(t) := σ_1(t) ≥ σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\textttbf{leq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\textttbf{leq}(σ_1,σ_2)(t) := σ_1(t) ≤ σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\textttbf{eq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\textttbf{eq}(σ_1,σ_2)(t) := σ_1(t) = σ_2(t)$ & any $D$ with equality\\
   $\textttbf{max}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{max}(σ_1,σ_2)(t) := \max \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\textttbf{min}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{min}(σ_1,σ_2)(t) := \min \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{abs}: 𝓢_D → 𝓢_D$ & $\textttbf{abs}(σ)(t) := |σ(t)|$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{abs}: 𝓔_D → 𝓔_D$ & $\textttbf{abs}(η)(t) := \begin{cases} |η(t)| & \text{if } t∈E(η) \\ ⊥&\text{otherwise} \end{cases}$&\\
   $\textttbf{and}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{and}(σ_1,σ_2)(t) := σ_1(t) ∧ σ_2(t)$ & \\
   $\textttbf{or}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{or}(σ_1,σ_2)(t) := σ_1(t) ∨ σ_2(t)$ & \\
   $\textttbf{implies}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{implies}(σ_1,σ_2)(t) := σ_1(t) ⇒ σ_2(t)$ & \\
-  $\textttbf{not}: 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{not}(σ_1)(t) := ¬σ_1(t)$ &
+  $\textttbf{not}: 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{not}(σ)(t) := ¬σ(t)$ &\\
+  $\textttbf{not}: 𝓔_𝔹 → 𝓔_𝔹$ & $\textttbf{not}(η)(t) := \begin{cases} ¬η(t) & \text{if } t∈E(η) \\ ⊥&\text{otherwise} \end{cases}$&
 \end{tabular}
 
 
@@ -189,6 +193,18 @@ Generic functions $eventCount$ providing the number of occurred events and $mrv$
          d & \text{otherwise}
        \end{cases}
 \end{align*}
+
+We further define the simple moving average on streams of arithmetic type.
+Let $\max_1(M) := ｛\max M｝$ and $\max_{n+1}(M) := ｛\max M｝ ∪ \max_n (M∖(\max M))$ denote the set of the $n$ largest elements of a linearly ordered set $M$. \todo{move to preliminaries} 
+Then, we define the simple moving average $\mathtt{sma}: 𝓔_D × ℕ_{>0} → 𝓔_D$ as
+\[
+   \mathtt{sma}(η,n)(t) := \begin{cases}    
+      \frac{∑_{t'∈ \max_n ｛t''∈E(η)｜t''≤t  ｝} η(t')}{|\max_n ｛t'∈E(η)｜t'≤t ｝|} & \text{if } t∈E(η)\\
+      ⊥ & \text{otherwise}
+    \end{cases}
+\]
+
+
 
 \subsection{Selectors/Filters/Conditionals/Combinators}
 

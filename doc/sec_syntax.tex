@@ -8,7 +8,7 @@ The basic syntax of \tessla specifications is given by the following grammar.
 
 \begin{align*}
   spec \text{ ::= } &\textttbf{define } name[\textttbf{:}\ stype] \textttbf{ := } texpr ｜\\
-                    & \textttbf{out } name ｜ 
+                    & \textttbf{out } texpr ｜ 
                     spec\ spec\\
 % name \text{ ::= }  & [\textttbf{A}-\textttbf{z}][\textttbf{A}-\textttbf{z0}-\textttbf{9\_}]^*
   texpr \text{ := } & expr[\textttbf{:}\ type] \\

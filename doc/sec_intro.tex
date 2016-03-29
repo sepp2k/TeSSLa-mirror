@@ -1,49 +1,49 @@
 \section{Introduction}
 
-Outline
-
-\begin{enumerate}
-  \item purpose, motivation
-  \begin{itemize}
-    \item online processing of data
-    \item monitoring of trace properties, specifically execution traces of programs
-    \item Functional reactive programming as related concept
-  \end{itemize}
-  \item What you describe with a \tessla specification
-  \begin{itemize}    
-    \item input, output streams
-    \item application of functions, composition of function
-    \item 
-  \end{itemize}
-  \item Modelling data in terms of streams
-  \begin{itemize}
-    \item timing model ($ℝ$,$ℕ$,$ℚ$,…), restrictions to streams with discrete set of time stamps (event streams) or peace-wise constant streams (continuous stream)
-    \item continuous streams and event streams    
-   \end{itemize}
-   \item Functions on streams and desired properties (in general)
-   \begin{itemize}
-     \item small examples
-     \item causality, statefulness, time invariance 
-     \item (composition lemmata)
-   \end{itemize}
-   \item \tessla syntax
-   \begin{itemize}
-      \item base grammar with functions and type annotations
-      \item syntactical extensions: infix operators, named arguments, the “on”
-   \end{itemize}
-   \item Types
-   \begin{itemize}
-     \item Generic types
-     \item Coercion 
-   \end{itemize}
-   \item Functional semantics of operators, small examples
-   \item Larger example/case study
-   \begin{itemize}
-     \item producer/consumer, ring buffer, …
-   \end{itemize}
-   
-   
-\end{enumerate}
+%Outline
+%
+%\begin{enumerate}
+%  \item purpose, motivation
+%  \begin{itemize}
+%    \item online processing of data
+%    \item monitoring of trace properties, specifically execution traces of programs
+%    \item Functional reactive programming as related concept
+%  \end{itemize}
+%  \item What you describe with a \tessla specification
+%  \begin{itemize}    
+%    \item input, output streams
+%    \item application of functions, composition of function
+%    \item 
+%  \end{itemize}
+%  \item Modelling data in terms of streams
+%  \begin{itemize}
+%    \item timing model ($ℝ$,$ℕ$,$ℚ$,…), restrictions to streams with discrete set of time stamps (event streams) or peace-wise constant streams (continuous stream)
+%    \item continuous streams and event streams    
+%   \end{itemize}
+%   \item Functions on streams and desired properties (in general)
+%   \begin{itemize}
+%     \item small examples
+%     \item causality, statefulness, time invariance 
+%     \item (composition lemmata)
+%   \end{itemize}
+%   \item \tessla syntax
+%   \begin{itemize}
+%      \item base grammar with functions and type annotations
+%      \item syntactical extensions: infix operators, named arguments, the “on”
+%   \end{itemize}
+%   \item Types
+%   \begin{itemize}
+%     \item Generic types
+%     \item Coercion 
+%   \end{itemize}
+%   \item Functional semantics of operators, small examples
+%   \item Larger example/case study
+%   \begin{itemize}
+%     \item producer/consumer, ring buffer, …
+%   \end{itemize}
+%   
+%   
+%\end{enumerate}
 
 
 Purpose of \tessla.
@@ -91,7 +91,7 @@ The timing model is based on time stamps $t∈𝕋$ where we assume $𝕋$ to be
 Although on the technical level time is mostly quantised in actual systems, real time is a common and intuitive model.
 In fact, neither specification nor evaluation based on single steps of, e.g., the a CPU core are reasonable. 
 Time is therefore handled, formally and technically, in terms of intervals.
-In the following, we make the notion of streams precise that prolide the semantical basis of the language.
+In the following, we make the notion of streams precise that provide the semantic basis of the language.
 We use $𝕋$ to denote the time domain to make an explicit distinction between time stamps and, e.g., real values.
 However, we use common operators and symbols to work with time stamps, such as $+$ (addition), $≤$ (ordering) and $0$ (neutral element of addition), that are defined as expected.
 
@@ -115,7 +115,7 @@ Apart from values that are conveniently modeled to be continuously available, di
 These are modelled by the second type of streams \emph{event streams} that provide values (events) only at specific points in time wheras no information about the time between two consecutive events is available.
 
 \begin{definition}[Event streams]
-  For a set $D$ of data values an \emph{event stream of type $D$} is a partial function $η: 𝕋_{≥0} ⇁ D$ such that the set of domain of definition, the \emph{event points} $E(η) := \{t∈𝕋｜η(t)∈D \text{ defined}\}$, is discrete.
+  For a set $D$ of data values an \emph{event stream of type $D$} is a partial function $η: 𝕋_{≥0} ⇁ D$ such that the domain of definition, called the set of \emph{event points} $E(η) := \{t∈𝕋｜η(t)∈D \text{ defined}\}$, is discrete.
 %
   The set of all event streams $η: 𝕋_{≥0} ⇁D$ is denoted $𝓔_D$.
 \end{definition}
