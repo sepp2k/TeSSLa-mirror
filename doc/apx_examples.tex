@@ -1,0 +1,268 @@
+\section{Examples}
+
+\tessla specification formally describe transformations of input to output streams where the set of input streams is defined implicitly by names occurring freely in the specification. 
+In practice, however, a more specific control over the inputs is desired and therefore implementations may provide specific input functions, that only depend on constants, e.g., strings describing the stream source.
+
+In the following examples we assume input functions
+\begin{align*}
+ \mathtt{function\_calls}&: \mathtt{String} → 𝓔_D\\
+ \mathtt{function\_returns}&: \mathtt{String} → 𝓔_D
+\end{align*}
+Similarly, the representation of time (intervals) is implementation dependent.
+In the example specification we use integer numbers and suffixes (us,ms,s) to indicate appropriate factors. 
+Ideally, an implementation will convert, e.g.,  $1s$, $1ms$ and $1us$, into a representation of 1 second, 1 millisecond and 1 microsecond, respectively.
+
+Double hyphens (\texttt{--}) indicate commentary until line ending.
+
+\subsection{Delay}
+
+Property: Whenever an event \emph{source\_event} occurs, within the next 1.2 seconds the next event \emph{target\_event} must occur.
+A \emph{target\_event} can serve for multiple \emph{source\_event} occurrences.
+
+\subsubsection{Delay using SALT}
+
+\begin{lstlisting}[language=tessla+salt]
+define source_event := function_calls("main.c:open_door")
+define target_event := function_returns("main.c:open_door")
+
+define monitor_output := monitor("always (if p1 then next timed[<= 1200] p2)", sourc_event, target_event)
+
+-- define monitor_output := monitor("always (if {source_event} then next timed[<= 1200] target_event)")
+
+out monitor_output
+\end{lstlisting}
+
+%\subsubsection{Delay with SALT and macros}
+%
+%\begin{lstlisting}
+%define delay_constraint(source, target, bounds) :=
+%    monitor(always (if {source} then next timed[bounds] target))
+%
+%out delay_constraint(on entry open_door, on exit close_door, <= 1200)
+%\end{lstlisting}
+
+\subsubsection{Delay using SALT without real time operators}
+
+\begin{lstlisting}
+define source_event := function_calls("main.c:open_door")
+define target_event := function_returns("main.c:open_door")
+
+define monitor_output := monitor("always (if p1 then p2), source_event, inFuture(1200ms, target_event))
+
+out monitor_output
+\end{lstlisting}
+
+\subsection{Strong Delay and Order}
+
+Property: For every \emph{source\_event} a matching \emph{target\_event} must occur within the next 1.2 seconds.
+Every \emph{target\_event} is associated to at most one \emph{source\_event}.
+
+\begin{lstlisting}
+define source_event := function_calls("main.c:open_door")
+define target_event := function_returns("main.c:open_door")
+
+define event_pairs := synchronize(source_event, target_event, 1200ms)
+define error := timeout(event_pairs)
+
+out error
+\end{lstlisting}
+
+\subsection{Synchronization}
+
+Property: Whenever an event occurs, all other events have to occur also within a range of 1.2 seconds. 
+
+\subsubsection{Synchronization using SALT}
+
+\begin{lstlisting}
+define event_a := instruction_executions("test.c:23")
+define event_b := instruction_executions("test.c:42")
+define event_c := instruction_executions("test.c:1729")
+
+define monitor_output := monitor("
+  always (
+    (if p1 then (next timed[<= 1200] p2 or previous timed[< 1200] p2)) and
+    (if p1 then (next timed[<= 1200] p3 or previous timed[< 1200] p3)) and
+    (if p2 then (next timed[<= 1200] p1 or previous timed[< 1200] p1)) and
+    (if p2 then (next timed[<= 1200] p3 or previous timed[< 1200] p3)) and
+    (if p3 then (next timed[<= 1200] p1 or previous timed[< 1200] p1)) and
+    (if p3 then (next timed[<= 1200] p2 or previous timed[< 1200] p2)))", 
+  event_a, 
+  event_b, 
+  event_c
+)
+
+out monitor_output
+\end{lstlisting}
+
+\subsubsection{Synchronization using SALT without real time operators}
+
+\begin{lstlisting}
+define event_a := on breakpoint test.c:23
+define event_b := on breakpoint test.c:42
+define event_c := on breakpoint test.c:1729
+
+define monitor_output := monitor(
+  "always (
+    (if p1 then p5) and
+    (if p1 then p6) and
+    (if p2 then p4) and
+    (if p2 then p6) and
+    (if p3 then p4) and
+    (if p3 then p5))",
+  event_a,
+  event_b,
+  event_c,
+  within(-1200ms, 1200ms, event_a),
+  within(-1200ms, 1200ms,event_b),
+  within(-1200ms, 1200ms,event_c)
+)
+
+out monitor_output
+\end{lstlisting}
+
+\subsection{Periodic}
+
+Eigenschaft: Es gibt ein periodisch auftretendes Event (period\_event). Jedes mal, wenn period\_event auftritt, 
+muss nach spätestens einer Sekunde ein anderes Event (event) auftreten. Jedes Auftreten von event muss 
+allerdings mindestens 0.7s auseinander liegen.
+
+\subsubsection{Periodic mit SALT}
+
+\begin{lstlisting}
+define periodic_event := on breakpoint test.c:34653
+define event := on breakpoint test.c:242
+
+define monitor_output := monitor(always((if {period_event} then next timed[<= 1000] event) 
+	    and (if {event} then not(next timed[< 700] event))))
+
+out monitor_output
+\end{lstlisting}
+
+\subsubsection{Periodic mit SALT und Macro}
+
+\begin{lstlisting}
+define periodic_event := on breakpoint test.c:34653
+define event := on breakpoint test.c:242
+
+define periodic(period,e,jitter,bound) := 
+    monitor(always((if {period} then next timed[<= jitter] e) 
+	    and (if {e} then not(next timed[< bound] e))))
+
+out periodic(periodic_event,event,1000,700)
+\end{lstlisting}
+
+
+\subsubsection{Periodic mit SALT ohne SALT-Echtzeitoperatoren}
+
+\begin{lstlisting}
+define periodic_event := on breakpoint test.c:34653
+define event := on breakpoint test.c:242
+
+define monitor_output := monitor(always((if {period_event} then {within([<= 1000],event)}) 
+	    and (if {event} then not({within([< 700],event)}))))
+
+out monitor_output
+\end{lstlisting}
+
+\subsection{Use Cases D1-D4}
+
+\subsubsection{Use Case D1 - Simple Saftey Constraint}
+
+Assume an input stream, generated by the application. 
+Only values from the range 0-10 are supposed to occur.
+
+\begin{lstlisting}
+ define error := on changes(APPL_MSG_Value) if APPL_MSG_Value > 10
+ out error
+\end{lstlisting}
+
+\subsubsection{Use Case D2 - Timing Constraints}
+
+Assume an input (event) streams @A@ and @B@.
+
+* D2.1 Avent @B@ must not occur within 500ms after any occurrence of event @A@. (Notice implicit conversion of Int → Time in terms of milliseconds.)
+  
+\begin{lstlisting}
+  define syncedAB := synchronise(A, B, 500)
+  define error21 := when(not(syncedAB.timeout))
+\end{lstlisting}
+
+Alternative:
+\begin{lstlisting}
+  define error21b := A && within([>0 & <500], B)
+\end{lstlisting}
+
+Salt (G(A → ¬X^{<=500} B))
+\begin{lstlisting}
+  define error21c := monitor always if {A} then not next timed [<500ms] {B}
+\end{lstlisting}
+
+* D2.2 In the environment of 500ms around every event A some B must occur
+\begin{lstlisting}
+  define error22 := A && within([>-500 & <500], B)
+\end{lstlisting}
+
+\subsubsection{Use Case D3 - Numerical analysis}
+
+Assume input streams @A@ and @B@
+
+* D3.1 Value excceds limit of 1023
+\begin{lstlisting}
+  define error31 := A > 1023
+\end{lstlisting}
+
+* D3.2 Difference between maximum and minium value exceeds limit of 1023
+\begin{lstlisting}
+  define error32 := max(A) - min(A) > 1023
+\end{lstlisting}
+With resets: @max(A: Stream[T], rst: Stream[Any]): Stream[T]@
+
+
+* D3.3 “Standard deviation” of A exceeds limit of 1023
+Unbiased estimation of standard deviation:
+\begin{lstlisting}
+  define error 33 := count(A) > 1  && sqrt( (sum(A**2) - ( (sum(A)**2)/count(A) )) / (count(A)-1)) ) > 1023
+\end{lstlisting}
+Maximal difference to mean:
+\begin{lstlisting}
+define error33 := (max(A) - mean(A) > 1023) || (mean(A) - min(A) > 1023)
+\end{lstlisting}
+
+* D3.4 Value of A diverges by more than 1023 from moving average of previous 10 values
+\begin{lstlisting}
+define error34 := when(SMA(A, 10) > 1023)
+\end{lstlisting}
+
+h1. Syntax Sugar Beispiele
+
+\subsection{Events}
+
+\begin{lstlisting}
+define someEvent := on entry read_file
+-- desugars to:
+define someEvent := on("entry read_file")
+-- expands to:
+define someEvent := when(IR_EVT_MSG = eventId("entry read_file"))
+--                       ^- HW stream ^- constant value
+\end{lstlisting}
+
+Eine event id kann ein beliebiger Bezeichner sein der eine Stelle im rekonstruierten Codefluss darstellt.
+
+\subsection{Monitore}
+
+\begin{lstlisting}
+define someOtherProperty := ...
+define someProperty := monitor always if {on entry irqHandler} then {someOtherProperty} until {on exit irqHandler}
+-- desugars to:
+define someProperty := monitor("always if X then Y until Z", X := on entry irqHandler, Y := someOtherProperty, Z := on exit irqHandler)
+\end{lstlisting}
+
+\subsection{Parametrisierte Monitor}
+
+Mit <code>foreach X monitor Y</code> kann die eigenschaft Y für jeden wert von X unabhängig überwacht werden. Dies entspricht einem Slicing der Eingabeströme des Monitors anhand von X.
+
+\begin{lstlisting}
+define someProperty := foreach threadId monitor always if {watchdogEvent} then next timed[<5s] {watchdogEvent}
+-- desugars to
+define someProperty := foreachMonitor(threadId, "always if X then next timed[<5s] X", X := watchdogEvent)
+\end{lstlisting}

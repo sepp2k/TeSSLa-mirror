@@ -78,6 +78,7 @@ For example, given an input stream of integral values, a \tessla specification c
 This is achieved by applying a corresponding function to the input stream and thereby defining a new output stream.
 
 \subsection{Stream Model}
+\label{sec:streams}
 
 \begin{figure}
   \input{fig_streams}
@@ -115,13 +116,17 @@ These are modelled by the second type of streams \emph{event streams} that provi
 
 \begin{definition}[Event streams]
   For a set $D$ of data values an \emph{event stream of type $D$} is a partial function $η: 𝕋_{≥0} ⇁ D$ such that the set of domain of definition, the \emph{event points} $E(η) := \{t∈𝕋｜η(t)∈D \text{ defined}\}$, is discrete.
-
-  The set of event streams $η: 𝕋_{≥0} →D \dotrel{∪}｛⊥｝$ is denoted $𝓔_D$.
+%
+  The set of all event streams $η: 𝕋_{≥0} ⇁D$ is denoted $𝓔_D$.
 \end{definition}
+
+For convenience we may write $η(t) = ⊥$ to denote that $η$ is not defined at time point $t∈𝕋∖ E(η)$.
+To model streams of events that do not carry a value we use a designated type \texttt{Unit}.
+Formally, we let $\mathtt{Unit}=｛⊤｝$ be a set with one designated element $⊤$.
 
 The discreteness condition reflects the property of actual systems that time stamps cannot converge because only a bounded number of events can happen within a fixed time period.
 
-In addition to the definition in terms of partial functions, an event stream $η∈𝓔_D$ can be naturally represented as a (possibly infinite) sequence $s_η=(t_0,η(t_0))(t_1,η(t_1))…∈(E(η)×D)^∞$ ordered by time ($t_i<t_{i+1}$ for $0≤i<|s_η|$) and containing all event points ($｛t｜(t,v) \text{ occurs on } s｝= E(η)$).
+In addition to the definition in terms of partial functions, an event stream $η∈𝓔_D$ can be naturally represented as a (possibly infinite) sequence $s_η=(t_0,η(t_0))(t_1,η(t_1))…∈(E(η)×D)^∞$ ordered by time ($t_i<t_{i+1}$ for $0≤i<|s_η|$) and containing all event points (i.e, $｛t｜(t,v) \text{ occurs on } s_η｝= E(η)$).
 
 \subsection{Defining Streams}
 

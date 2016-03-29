@@ -77,14 +77,89 @@ Further functions $\mathtt{inPast}$ and $\mathtt{inFuture}$ can be derived from 
     & \mathtt{inFuture}(d,η)(t) &:= \mathtt{within}(0,d,η)(t)
 \end{align*}
 
-\todo[inline,nolist]{TODO
+\subsection{Synchronisation}
 
-The function $\mathtt{synchronise}$ matches events from two streams within a given time range.
+We define a function $\mathtt{synchronise}$ that matches events from two streams within a given time range.
+ \todo{add example or ref appendix}
+Its formal signature is defined as
+\[
+  \mathtt{synchronise}: 𝓔_{D_1} × 𝓔_{D_2} × 𝕋 → 𝓔_{(D_1+D_2)+(D_1×D_2)}.
+\]
+Recall that $A+B:= (A×｛1｝)∪(B×｛2｝)$\footnote{In programming languages, structures $A+B$ are often represented by a type \texttt{Either<A,B>} with subtypes \texttt{Left<A>} and \texttt{Right<B>} and suitable operations to access the wrapped values of type A and B, respectively (e.g., \texttt{get()}).}.
 
+Since the function takes the temporal relation between the events into account it is most convenient to define its semantics inductively based on the sequence representation.
+For $d∈𝕋_{≥0}$ and sequences $u∈(𝕋_{≥0}×D_1)^∞$ and $u∈(𝕋_{≥0}×D_2)^∞$ we define the sequence $sync(u,v)$ inductively by 
+\[
+sync(u,v) = \begin{cases}
+  ε & \text{if } u=v=ε \\
+  ((a,1,1),t_1+d) · sync(u',v) & \text{if } u=(a,t_1) ·u' \text{ and } \\
+                                   & v=ε \text{ or } v=(b,t_2)·v' \text{ with } t_2>t_1+d\\
+  ((b,2,1),t_2+d) · sync(u,v') & \text{if } v=(b,t_2)·v' \text{ and } \\
+                                   & u=ε \text{ or } u=(a,t_1)·u' \text{ with } t_1>t_2+d\\
+  ((a,b,2),\max｛t_1,t_2｝) · f(u',v') & \text{if } u=(a,t_1)·u' \text{, } v=(b,t_2)·v' \text{ and } |t_1-t_2|≤d
+\end{cases}
+\]
+
+Based on $sync(u,v)$ we define $\mathtt{synchronise}(η_1,η_2,d) := η_3$ where $η_3$ is the event stream defined by the sequence $s_{η_3} = sync(s_{η_1}, s_{η_2})$. 
+As defined in Section~\ref{sec:streams}, the sequences $s_{η_1}$ and $s_{η_2}$ are the sequences representing $η_1$ and $η_2$, respectively.
+
+For convenience we further define some lifted functions to access the structural information.
 \begin{align*}
-  \mathtt{synchronise}&: 𝓔_D × 𝓔_D × 𝕋 → 
+  \mathtt{getLeft}&: 𝓔_{D_1×D_2} → 𝓔_{D_1}
+    & \mathtt{get}(η)(t) &:= \begin{cases}
+        v_1 & \text{if } t∈E(η) \text{ and } η(t) = (v_1,v_2)\\
+        ⊥ & \text{otherwise}
+      \end{cases}\\
+%
+  \mathtt{getRight}&: 𝓔_{D_1×D_2} → 𝓔_{D_2}
+    & \mathtt{get}(η)(t) &:= \begin{cases}
+        v_2 & \text{if } t∈E(η) \text{ and } η(t) = (v_1,v_2)\\
+        ⊥ & \text{otherwise}
+      \end{cases}\\
+%      
+  \mathtt{getLeft}&: 𝓔_{(D_1+D_2)} → 𝓔_{D_1}
+    & \mathtt{get}(η)(t) &:= \begin{cases}
+        v_1 & \text{if } t∈E(η) \text{ and } η(t) = (v_1,1)\\
+        ⊥ & \text{otherwise}
+      \end{cases}\\
+%
+  \mathtt{getRight}&: 𝓔_{(D_1+D_2)} → 𝓔_{D_2}
+    & \mathtt{get}(η)(t) &:= \begin{cases}
+        v_2 & \text{if } t∈E(η) \text{ and } η(t) = (v_2,2)\\
+        ⊥ & \text{otherwise}
+      \end{cases}\\
+%
+  \mathtt{get}&: 𝓔_{D_1+D_2} → 𝓔_{D_1∪D_2}
+    & \mathtt{get}(η)(t) &:= \begin{cases}
+        v & \text{if } t∈E(η) \text{ and } η(t) = (v,i) \text{ for } i∈｛1,2｝\\
+        ⊥ & \text{otherwise}
+      \end{cases}\\
 \end{align*}
-}
+%
+We define a function that indicates whether an event could not be synchronised within the given time bound:
+\begin{align*}
+  \mathtt{timeout}&: 𝓔_{(D_1+D_2)+(D_1×D_2)} → 𝓔_{｛⊤｝}\\
+   \mathtt{timeout}(η)(t) & := \begin{cases}
+            ⊤ & \text{if } t∈E(η) \text{ and } η(t) = (v,i,1)∈(D_1+D_2)×｛1｝\\
+            ⊥ & \text{otherwise}
+          \end{cases}\\
+\end{align*}
+%
+A “flat” synchronisation simply neglects the origin of a value and gives precedence to the values of the first argument.
+\begin{align*}
+  &\mathtt{flatSynchronise}: 𝓔_D × 𝓔_D × 𝕋 → 𝓔_D\\
+  &\mathtt{flatSynchronise}(η_1,η,_2,d)(t) := get(get(\mathtt{synchronise}(η_1,η_2,d)))
+\end{align*}
+%
+If necessary, we can keep the timeout information.
+\begin{align*}
+  &\mathtt{flatSynchronise}: 𝓔_D × 𝓔_D × 𝕋 → 𝓔_{D×𝔹} \\
+  &\mathtt{flatSynchronise}(η_1,η,_2,d)(t) := \begin{cases}
+        (v,\texttt{true}) & \texttt{if } \mathtt{synchronise}(η_1,η,2,d)(t) = (v,i,1) \texttt{ for } i∈｛1,2｝\\
+        (v_1,\texttt{false}) & \texttt{if } \mathtt{synchronise}(η_1,η,2,d)(t) = (v_1,v_2,2) \\
+        ⊥ & \texttt{otherwise}
+        \end{cases}
+\end{align*}
 
 \subsection{Aggregations}
 
@@ -118,6 +193,11 @@ Generic functions $eventCount$ providing the number of occurred events and $mrv$
 \subsection{Selectors/Filters/Conditionals/Combinators}
 
 \begin{align*}
+  \mathtt{changeOf}&: 𝓢_{D} → 𝓔_{｛⊤｝}
+      & \mathtt{changeOf}(σ)(t) &:= \begin{cases}
+           ⊤ & \text{if } t∈Δ(σ)\\
+           ⊥ & \text{otherwise}
+         \end{cases}\\
   \mathtt{ifThen}&: 𝓔_{D_1} × 𝓢_{D_2} → 𝓔_{D_2}
       & \mathtt{ifThen}(η,σ)(t) &:= \begin{cases}
            σ(t) & \text{if } t∈E(η)\\
@@ -154,4 +234,30 @@ with
     ⊥ & \text{otherwise}
    \end{cases}
 \]
-where $w=a_1…a_{|E(η)|}$ with $a_i=\{p_k∈AP \mid σ_k(t_i)=\texttt{true}\}$ for $\{t_1<t_2<…<t_{|E(η)|}\} = E(η)$.
+where $w_t=a_1…a_{m}$ with $a_i=\{p_k∈AP \mid σ_k(t_i)=\texttt{true}\}$ for $\{t_1<t_2<…<t_{|E(η)|}\} = E(η)$ and $t_m≤t<t_{m+1}$.
+
+\idea[inline]{
+For practical convenience we could introduce further notation such as where explicit inputs are optionals and instead of fixed propositions $p_1…p_n$ escaped \tessla expressions can be used. For example,
+
+\texttt{monitor("always (p1 implies eventually not p2)", myFunction(in1, in2), in3)}
+
+could be written as
+
+\texttt{monitor "always ( \{myFunction(in1, in2)\}  implies eventually not \{in3\})"}.
+}
+
+\subsection{On-comprehension}
+
+Let $η_1∈𝓔_{D_1},…,η_n∈𝓔_{D_n}$ be event streams, $σ_{cnd}∈𝓢_𝔹$ a Boolean signal and $σ_{val}∈𝓢_D$ a signal of some type $D$.
+We define the semantics of on-comprehensions as follows.
+
+\begin{align*}
+      ⟦\textttbf{on }η_1,…,η_n  \textttbf{ if } σ_{cnd} \textttbf{ yield } σ_{val}⟧(t) &:= \begin{cases}
+             σ_{val}(t) & \text{if } t∈⋂_{i=1}^n E(η_i)  \text{ and } σ_{cnd}(t)=\mathtt{true}\\
+             ⊥ & \text{otherwise}
+           \end{cases}\\
+\end{align*}
+Omitting the \texttt{yield} part amounts to implicitly take $σ_{val} = σ_⊤$ where $σ_⊤: 𝕋_{≥0} → ｛⊤｝$ is the (unique) signal of type \texttt{Unit}.
+Omitting the conditional (\texttt{if}) part amount to implicitly take $σ_{cnd}=σ_{\mathtt{true}}$ where $σ_\mathtt{true}: 𝕋_{≥0} → ｛\texttt{true}｝$ is the Boolean signal that is always true.
+
+
