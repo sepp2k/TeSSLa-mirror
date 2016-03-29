@@ -88,7 +88,7 @@ Its formal signature is defined as
 Recall that $A+B:= (A×｛1｝)∪(B×｛2｝)$\footnote{In programming languages, structures $A+B$ are often represented by a type \texttt{Either<A,B>} with subtypes \texttt{Left<A>} and \texttt{Right<B>} and suitable operations to access the wrapped values of type A and B, respectively (e.g., \texttt{get()}).}.
 
 Since the function takes the temporal relation between the events into account it is most convenient to define its semantics inductively based on the sequence representation.
-For $d∈𝕋_{≥0}$ and sequences $u∈(𝕋_{≥0}×D_1)^∞$ and $u∈(𝕋_{≥0}×D_2)^∞$ we define the sequence $sync(u,v)$ inductively by 
+For $d∈𝕋_{≥0}$ and sequences $u∈(𝕋_{≥0}×D_1)^∞$ and $v∈(𝕋_{≥0}×D_2)^∞$ we define the sequence $sync(u,v)$ inductively by 
 \[
 sync(u,v) = \begin{cases}
   ε & \text{if } u=v=ε \\
