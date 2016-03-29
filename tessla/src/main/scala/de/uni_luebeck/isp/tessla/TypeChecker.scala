@@ -11,29 +11,79 @@ object TypeChecker extends CompilerPass[Definitions, FunctionGraph] {
     ???
   }
 
-  case class Node(result: TypeVar, fn: ExprTreeFn, args: Map[ArgName, TypeVar], subtree: ExprTree)
-
-  case class State(env: Env, overloads: Map[TypeVar, Set[Function]])
-
 }
 
 class TypeChecker(compiler: Compiler, defs: Definitions) {
-  import TypeChecker._
   /*
-  Plan:
+      Plan:
 
-  implement type checking without overloading in persistent.
-  Use 1-Saturation to resolve overloading.
+      implement type checking without overloading in persistent.
+      Use 1-Saturation to resolve overloading.
 
-  implement coercion by adding overloaded coerce functions "everywhere"
+      implement coercion by adding overloaded coerce functions "everywhere"
 
-  whenever no progress is made, force innermost coerce functions to be id.
-  (for a suitable definition of innermost that makes this deterministic)
+      whenever no progress is made, force innermost coerce functions to be id.
+      (for a suitable definition of innermost that makes this deterministic)
 
-  if no progress is made and no coerce function is left error out
-  (type annotation needed)
+      if no progress is made and no coerce function is left error out
+      (type annotation needed)
 
-  */
+      */
+
+  case class Node(result: TypeVar, fn: ExprTreeFn, args: Map[ArgName, TypeVar], subtree: ExprTree)
+
+  case class State(env: Env, overloads: Map[TypeVar, Set[Function]]) {
+    // TODO also return why an overload was discarded
+    def applyOverload(key: TypeVar, overload: Function): Option[State] = {
+      val sig = overload.signature
+      val node = nodes(key)
+
+      val nameToIndex = mutable.Map[ArgName, Int]()
+
+      for (((name, _), i) <- sig.args.zipWithIndex) {
+        nameToIndex(Pos(i)) = i
+        name match {
+          case Some(n) => nameToIndex(Named(n)) = i
+          case _ => ()
+        }
+      }
+
+      val nodeArgs = mutable.Map[Int, TypeVar]()
+
+      for ((key, value) <- node.args) {
+        if (!nameToIndex.contains(key)) {
+          return None
+        }
+        val index = nameToIndex(key)
+        if (nodeArgs.contains(index)) {
+          return None
+        }
+        nodeArgs(index) = value
+      }
+
+      val sigTypes = Seq(sig.ret) ++ sig.args.map(_._2)
+
+      val nodeTypes = Seq(node.result) ++ sig.args.indices.map(i => {
+        if (!nodeArgs.contains(i)) {
+          return None
+        }
+        nodeArgs(i)
+      })
+
+      // The deep copy below is needed, as multiple invocations of the same
+      // function do not necessarily share the type variables
+
+      val sigType = GenericType("Function", sigTypes).deepCopy
+      val nodeType = GenericType("Function", nodeTypes)
+
+      val unifiedEnv = env.unify(sigType, nodeType) match {
+        case None => return None
+        case Some(e) => e
+      }
+      Some(State(env, overloads.updated(key, Set(overload))))
+    }
+  }
+
 
   val sdefs = defs.streamDefs
 
@@ -82,5 +132,4 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
       case TypeAscrFn(t, _) => Set(TypeAscription(t): Function)
       case NamedFn(name, _) => compiler.lookupFunction(name)
     })).toMap)
-
 }
