@@ -1,3 +1,5 @@
+import com.typesafe.sbt.SbtStartScript
+
 val nexus = "https://sourcecode.isp.uni-luebeck.de/nexus/"
 val snapshots = "Snapshots" at nexus + "content/repositories/snapshots"
 val releases = "Releases" at nexus + "content/repositories/releases"
@@ -22,5 +24,6 @@ lazy val tessla = (project in file(".")).settings(
   libraryDependencies ++= Seq(
     "junit" % "junit" % "4.11"  % "test",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test"
-  )
+  ),
+  seq(SbtStartScript.startScriptForClassesSettings: _*)
 )

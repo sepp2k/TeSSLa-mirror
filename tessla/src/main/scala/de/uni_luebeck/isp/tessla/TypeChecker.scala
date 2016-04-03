@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import scala.collection.mutable
+import scala.util.Success
 
 object TypeChecker extends CompilerPass[Definitions, FunctionGraph] {
   override def apply(compiler: Compiler, defs: Definitions) = {
@@ -8,7 +9,9 @@ object TypeChecker extends CompilerPass[Definitions, FunctionGraph] {
 
     val checker = new TypeChecker(compiler, defs)
 
-    ???
+    checker.typecheck
+
+    Success(checker.functionGraph)
   }
 
 }
@@ -30,14 +33,8 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
 
       */
 
-  case class Node(result: TypeVar, fn: ExprTreeFn, args: Map[ArgName, TypeVar], subtree: ExprTree)
-
-  case class State(env: Env, overloads: Map[TypeVar, Set[Function]]) {
-    // TODO also return why an overload was discarded
-    def applyOverload(key: TypeVar, overload: Function): Option[State] = {
-      val sig = overload.signature
-      val node = nodes(key)
-
+  case class Node(result: TypeVar, fn: ExprTreeFn, args: Map[ArgName, TypeVar], subtree: ExprTree) {
+    def applySignature(sig: FunctionSig): Option[(Seq[Type], Seq[TypeVar])] = {
       val nameToIndex = mutable.Map[ArgName, Int]()
 
       for (((name, _), i) <- sig.args.zipWithIndex) {
@@ -47,10 +44,8 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
           case _ => ()
         }
       }
-
       val nodeArgs = mutable.Map[Int, TypeVar]()
-
-      for ((key, value) <- node.args) {
+      for ((key, value) <- args) {
         if (!nameToIndex.contains(key)) {
           return None
         }
@@ -63,12 +58,29 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
 
       val sigTypes = Seq(sig.ret) ++ sig.args.map(_._2)
 
-      val nodeTypes = Seq(node.result) ++ sig.args.indices.map(i => {
+      val argTypes = sig.args.indices.map(i => {
         if (!nodeArgs.contains(i)) {
           return None
         }
         nodeArgs(i)
       })
+
+      val nodeTypes = Seq(result) ++ argTypes
+
+      Some((sigTypes, nodeTypes))
+    }
+  }
+
+  case class State(env: Env, overloads: Map[TypeVar, Set[Function]]) {
+    // TODO also return why an overload was discarded
+    def applyOverload(key: TypeVar, overload: Function): Option[State] = {
+      val sig = overload.signature
+      val node = nodes(key)
+
+      val (sigTypes, nodeTypes) = node.applySignature(sig) match {
+        case None => return None
+        case Some(v) => v
+      }
 
       // The deep copy below is needed, as multiple invocations of the same
       // function do not necessarily share the type variables
@@ -80,7 +92,63 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
         case None => return None
         case Some(e) => e
       }
-      Some(State(env, overloads.updated(key, Set(overload))))
+      Some(State(unifiedEnv, overloads.updated(key, Set(overload))))
+    }
+
+    def resolveOverload(key: TypeVar): Option[State] = {
+      val states = overloads(key).flatMap(applyOverload(key, _)).toSeq
+
+      states match {
+        case Seq() => None
+        case Seq(first, rest @ _*) => Some(rest.fold(first)(_ meet _))
+      }
+    }
+
+    def meet(other: State): State = {
+      State(
+        env = this.env.meet(other.env),
+        overloads = overloads.keys.map(k =>
+          k -> (this.overloads(k) ++ other.overloads(k))).toMap
+      )
+    }
+
+    // TODO Error reporting
+    def resolve: Option[State] = {
+      var state = this
+      var activeKeys = overloads.keys.toSet
+      var progress = 2
+
+      while (progress > 0 && activeKeys.nonEmpty) {
+        // TODO check for coercions when progress is 0
+        progress -= 1
+        for (key <- activeKeys) {
+          state.resolveOverload(key) match {
+            case Some(s) =>
+              val oldOverloadCount = state.overloads(key).size
+              val newOverloadCount = s.overloads(key).size
+              if (newOverloadCount < oldOverloadCount) {
+                progress = 2
+              }
+              if (newOverloadCount == 1) {
+                activeKeys -= key
+              }
+              state = s
+            case None => return None
+          }
+        }
+      }
+      if (activeKeys.isEmpty) Some(state) else None
+    }
+
+    def debugPrint: Unit = {
+      println(">>>> state")
+      for (key <- overloads.keys) {
+        println("  " + key + " = " + key.substitute(env))
+        for (overload <- overloads(key)) {
+          println("    " + overload)
+        }
+      }
+      println("<<<<")
     }
   }
 
@@ -118,7 +186,7 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
       handleName(expr.fn.asInstanceOf[NamedFn], expr)
     } else {
       val v = new TypeVar
-      nodes(v) = Node(v, expr.fn, expr.args.mapValues(handleSubtree), expr)
+      nodes(v) = Node(v, expr.fn, expr.args.mapValues(handleSubtree).view.force, expr)
       v
     }
   }
@@ -128,8 +196,39 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
   }
 
   var state: State = State(Env(Map()),
-    nodes.values.map(node => node.result -> (node.fn match {
+    nodes.map({case (_, node) => node.result -> (node.fn match {
       case TypeAscrFn(t, _) => Set(TypeAscription(t): Function)
       case NamedFn(name, _) => compiler.lookupFunction(name)
-    })).toMap)
+      case LiteralFn(IntLiteral(v), _) =>
+        Set(ConstantValue(SimpleType("Int"), v): Function)
+      case LiteralFn(StringLiteral(v), _) =>
+        Set(ConstantValue(SimpleType("String"), v): Function)
+    })}).toMap)
+
+  def typecheck: Unit = {
+    state = state.resolve.get
+  }
+
+  def functionGraph: FunctionGraph = {
+    val graph = new FunctionGraph
+    val graphNodes = mutable.Map[TypeVar, graph.NodeId]()
+
+    def process(typeVar: TypeVar): graph.NodeId = {
+      graphNodes.get(typeVar) match {
+        case Some(node) => node
+        case None =>
+          val Seq(overload) = state.overloads(typeVar).toSeq
+          val Some((_, args)) = nodes(typeVar).applySignature(overload.signature)
+          val node = graph.addNode(overload, args.tail map process)
+          graphNodes(typeVar) = node
+          node
+      }
+    }
+
+    for (typeVar <- state.overloads.keys) {
+      process(typeVar)
+    }
+
+    graph
+  }
 }
