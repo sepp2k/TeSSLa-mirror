@@ -110,25 +110,25 @@ As defined in Section~\ref{sec:streams}, the sequences $s_{η_1}$ and $s_{η_2}$
 For convenience we further define some lifted functions to access the structural information.
 \begin{align*}
   \mathtt{getLeft}&: 𝓔_{D_1×D_2} → 𝓔_{D_1}
-    & \mathtt{get}(η)(t) &:= \begin{cases}
+    & \mathtt{getLeft}(η)(t) &:= \begin{cases}
         v_1 & \text{if } t∈E(η) \text{ and } η(t) = (v_1,v_2)\\
         ⊥ & \text{otherwise}
       \end{cases}\\
 %
   \mathtt{getRight}&: 𝓔_{D_1×D_2} → 𝓔_{D_2}
-    & \mathtt{get}(η)(t) &:= \begin{cases}
+    & \mathtt{getRight}(η)(t) &:= \begin{cases}
         v_2 & \text{if } t∈E(η) \text{ and } η(t) = (v_1,v_2)\\
         ⊥ & \text{otherwise}
       \end{cases}\\
 %      
   \mathtt{getLeft}&: 𝓔_{(D_1+D_2)} → 𝓔_{D_1}
-    & \mathtt{get}(η)(t) &:= \begin{cases}
+    & \mathtt{getLeft}(η)(t) &:= \begin{cases}
         v_1 & \text{if } t∈E(η) \text{ and } η(t) = (v_1,1)\\
         ⊥ & \text{otherwise}
       \end{cases}\\
 %
   \mathtt{getRight}&: 𝓔_{(D_1+D_2)} → 𝓔_{D_2}
-    & \mathtt{get}(η)(t) &:= \begin{cases}
+    & \mathtt{getRight}(η)(t) &:= \begin{cases}
         v_2 & \text{if } t∈E(η) \text{ and } η(t) = (v_2,2)\\
         ⊥ & \text{otherwise}
       \end{cases}\\
