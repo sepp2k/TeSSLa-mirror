@@ -1,0 +1,147 @@
+Das Szenario beschreibt einen Ringpuffer einer bestimmten Größe der zusätzlich noch einen Moduswechsel durchführen kann. 
+Der Ringpuffer selber besitzt einen Producer, der Elemente in den Puffer hineinschreiben kann sowie mehrere Consumer, die diese Elemente in der Reihenfolge, in der sie hineingeschrieben wurden, wieder herauslesen und weiterverarbeiten können.
+Ein Moduswechsel schaltet den Modus des Rinpuffers um. Ein Moduswechsel wird durchgeführt, indem zuerst der Producer angehalten wird. Danach wird darauf gewartet, dass alle Consumer ihre aktuellen Aktionen beenden. Nachdem dann angezeigt wurde, dass ein Moduswechsel stattfindet, werden die neuen Consumer gestartet. Darauf folgend wird dann auch der Producer wieder in Betrieb genommen.
+
+Eigenschaften über den Puffer:
+
+Überprüft, ob nicht mehr aus dem Ringpuffer gelesen als hineingeschrieben wird. Sollte mehr gelesen werden, so vergessen Consumer entweder beim Lesen die Elemente zu löschen oder Elemente werden mehrfach hineingeschrieben.
+
+---
+define addElement := function_calls("buffer.c:add")
+define readElement := function_calls("buffer.c:read")
+
+define difference := eventCount(readElement) - eventCount(addElement)
+define error := on readElement if geq(difference,1) 
+
+out error
+---
+
+Überprüft, ob die Consumer die Elemente schnell genug verarbeiten, nachdem sie sie aus dem Puffer gelesen haben. Ein Consumer hat 2 Sekunden Zeit, um nach dem Lesen eines Elementes die Verarbeitung eines Elementes abzuschließen. Es wird von drei Consumern C1, C2 und C3 mit den ThreadIDs 1, 2 und 3 ausgegangen.
+
+---
+define ids := mrv(ownerships())
+define readC1 := on function_calls("consumer.c:read") if equals(ids,1)
+define finishedC1 := on function_calls("consumer.c:finished") if equals(ids,1)
+define readC2 := on function_calls("consumer.c:read") if equals(ids,2)
+define finishedC2 := on function_calls("consumer.c:finished") if equals(ids,1)
+define readC3 := on function_calls("consumer.c:read") if equals(ids,3)
+define finishedC3 := on function_calls("consumer.c:finished") if equals(ids,1)
+
+define errorC1 := timeout(synchronise(readC1,finishedC1,2s))
+define errorC2 := timeout(synchronise(readC2,finishedC2,2s))
+define errorC3 := timeout(synchronise(readC3,finishedC3,2s))
+define error := merge(merge(errorC1,errorC2),errorC3)
+
+out error
+---
+
+Jeder Consumer muss alle 10 Sekunden etwas aus dem Ringpuffer herausnehmen. Damit soll sichergestellt werden, dass jeder Consumer immer mal wieder an der Reihe ist. Es wird von drei Consumern C1, C2 und C3 mit den ThreadIDs 1, 2 und 3 ausgegangen.
+
+---
+define ids := mrv(ownerships())
+define readC1 := on function_calls("consumer.c:read") if equals(ids,1)
+define readC2 := on function_calls("consumer.c:read") if equals(ids,2)
+define readC3 := on function_calls("consumer.c:read") if equals(ids,3)
+
+define errorC1 := not(inFuture(10s,readC1))
+define errorC2 := not(inFuture(10s,readC2))
+define errorC3 := not(inFuture(10s,readC3))
+define error := or(errorC1,or(errorC2,errorC3))
+
+out error
+---
+
+Wenn Consumer C1 10 Elemente aus dem Ringpuffer genommen hat, müssen die Consumer C2 und C3 mindestens 5 Elemente aus dem Ringpuffer genommen haben. Dies stellt eine Fairnesseigenschaft dar. Es wird von drei Consumern C1, C2 und C3 mit den ThreadIDs 1, 2 und 3 ausgegangen.
+
+---
+define ids := mrv(ownerships())
+define readC1 := on function_calls("consumer.c:read") if equals(ids,1)
+define readC2 := on function_calls("consumer.c:read") if equals(ids,2)
+define readC3 := on function_calls("consumer.c:read") if equals(ids,3)
+
+define eventsOfC1 := eventCount(readC1)
+define eventsOfC2 := eventCount(readC2)
+define eventsOfC3 := eventCount(readC3)
+
+define eventsOfC1Equals10 := equals(eventsOfC1,10)
+define C2OrC3LowerThan5 := or(leq(eventsOfC2,4),leq(eventsOfC3,4))
+define error := on readC1 if and(eventsOfC1Equals10,C2OrC3LowerThan5)
+
+out error
+---
+
+Eigenschaften über den Moduswechsel:
+
+Die Reihenfolge der einzelnen Schritte bei einem Moduswechsel darf nicht verändert werden.
+
+---
+define changeMode := function_calls("mode.c:change")
+define stopProducer := function_calls("mode.c:stopProducer")
+define stopConsumer := function_calls("mode.c:stopConsumer")
+define showModusChange := function_calls("mode.c:show")
+define startConsumer := function_calls("mode.c:startConsumer")
+define startProducer := function_calls("mode.c:startProducer")
+
+define monitor_output := monitor("
+  always (
+    p1 implies (
+	  not(p3 or p4 or p5 or p6) until (p2 and next (
+      not(p4 or p5 or p6) until (p3 and next (
+      not(p5 or p6) until (p4 and next (
+      not(p6) until p5))))))))",
+  changeMode,
+  stopProducer,
+  stopConsumer,
+  showModusChange,
+  startConsumer,
+  startProducer
+)
+
+out monitor_output
+---
+
+Zwischen jedem der Schritte während eines Moduswechsels dürfen maximal 0,5 Sekunden liegen.
+
+---
+define changeMode := function_calls("mode.c:change")
+define stopProducer := function_calls("mode.c:stopProducer")
+define stopConsumer := function_calls("mode.c:stopConsumer")
+define showModusChange := function_calls("mode.c:show")
+define startConsumer := function_calls("mode.c:startConsumer")
+define startProducer := function_calls("mode.c:startProducer")
+
+define monitor_output := monitor("
+  always (
+    p1 implies (
+	  next timed[<=500] p2 and
+	  next timed[<=500] p3 and
+	  next timed[<=500] p4 and
+	  next timed[<=500] p5 and
+	  next timed[<=500] p6))",
+  changeMode,
+  stopProducer,
+  stopConsumer,
+  showModusChange,
+  startConsumer,
+  startProducer
+)
+
+out monitor_output
+---
+
+Nachdem die Consumer gestoppt wurden, darf nichts mehr aus dem Ringpuffer gelesen werden, bis diese wieder gestartet wurden.
+
+---
+define bufferRead := function_calls("buffer.c:read")
+define stopConsumer := function_calls("mode.c:stopConsumer")
+define startConsumer := function_calls("mode.c:startConsumer")
+
+define monitor_output := monitor("
+  always(p1 implies (not(p2) until p3))",
+  stopConsumer,
+  bufferRead,
+  startConsumer
+)
+
+out monitor_output
+---
