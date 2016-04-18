@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla
 import java.io.File
 
 import scala.io.Source
+import scala.util.Success
 
 object CompilerApp extends App {
 
@@ -21,10 +22,18 @@ object CompilerApp extends App {
     help("help") text "prints this usage text"
   }
 
-  parser.parse(args, Config()) match {
+  val result = parser.parse(args, Config()) match {
     case Some(config) =>
       val compiler = new Compiler(debug = config.debug)
       compiler.applyPasses(new TesslaSource(config.file))
     case None =>
+  }
+
+  result match {
+    case Some(ModuleGraph(json)) => {
+      import org.json4s.native.JsonMethods._
+      println(pretty(render(json)))
+    }
+    case _ =>
   }
 }

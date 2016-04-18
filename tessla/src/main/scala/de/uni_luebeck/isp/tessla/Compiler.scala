@@ -51,7 +51,7 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
         (MacroResolver)
         (TypeChecker)
         (AscriptionRemover)
-        (Mapper)).state
+        (ModuleMapper)).state
 
       Some(result)
     } catch {
