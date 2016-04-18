@@ -30,7 +30,10 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
       }
       val result = pass(Compiler.this, state).get
       if (debug) {
-        println(result)
+        result match {
+          case t:WithDebugOutput => println(t.debugOutput)
+          case _ => println(result)
+        }
       }
       if (encounteredFatal) {
         throw GiveUp()
@@ -46,7 +49,9 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
         (Parser)
         (DefExtractor)
         (MacroResolver)
-        (TypeChecker)).state
+        (TypeChecker)
+        (AscriptionRemover)
+        (Mapper)).state
 
       Some(result)
     } catch {
