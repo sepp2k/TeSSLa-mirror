@@ -7,10 +7,10 @@ Eigenschaften über den Puffer:
 Überprüft, ob nicht mehr aus dem Ringpuffer gelesen als hineingeschrieben wird. Sollte mehr gelesen werden, so vergessen Consumer entweder beim Lesen die Elemente zu löschen oder Elemente werden mehrfach hineingeschrieben.
 
 ---
-define addElement := function_calls("buffer.c:add")
-define readElement := function_calls("buffer.c:read")
+define writeElement := instruction_executions("main.c:49")
+define processElement := function_calls("main.c:process_data")
 
-define difference := eventCount(readElement) - eventCount(addElement)
+define difference := eventCount(processElement) - eventCount(writeElement)
 define error := on readElement if geq(difference,1) 
 
 out error
@@ -20,79 +20,79 @@ out error
 
 ---
 define ids := mrv(ownerships())
-define readC1 := on function_calls("consumer.c:read") if equals(ids,1)
-define finishedC1 := on function_calls("consumer.c:finished") if equals(ids,1)
-define readC2 := on function_calls("consumer.c:read") if equals(ids,2)
-define finishedC2 := on function_calls("consumer.c:finished") if equals(ids,1)
-define readC3 := on function_calls("consumer.c:read") if equals(ids,3)
-define finishedC3 := on function_calls("consumer.c:finished") if equals(ids,1)
+define startProcessC1 := on function_calls("main.c:process_data") if equals(ids,1)
+define endProcessC1 := on function_returns("main.c:process_data") if equals(ids,1)
+define startProcessC2 := on function_calls("main.c:process_data") if equals(ids,2)
+define endProcessC2 := on function_returns("main.c:process_data") if equals(ids,2)
+define startProcessC3 := on function_calls("main.c:process_data") if equals(ids,3)
+define endProcessC3 := on function_returns("main.c:process_data") if equals(ids,3)
 
-define errorC1 := timeout(synchronise(readC1,finishedC1,2s))
-define errorC2 := timeout(synchronise(readC2,finishedC2,2s))
-define errorC3 := timeout(synchronise(readC3,finishedC3,2s))
+define errorC1 := on startProcessC1 if not(inFuture(endProcessC1,2s))
+define errorC2 := on startProcessC2 if not(inFuture(endProcessC2,2s))
+define errorC3 := on startProcessC3 if not(inFuture(endProcessC3,2s))
 define error := merge(merge(errorC1,errorC2),errorC3)
 
 out error
 ---
 
-Jeder Consumer muss alle 10 Sekunden etwas aus dem Ringpuffer herausnehmen. Damit soll sichergestellt werden, dass jeder Consumer immer mal wieder an der Reihe ist. Es wird von drei Consumern C1, C2 und C3 mit den ThreadIDs 1, 2 und 3 ausgegangen.
+Wenn ein Consumer versucht ein Element aus dem Ringpuffer zu lesen, soll nicht zu oft ein anderer Consumer das Element vorher aus dem Puffer herausnehmen. Der Versuch ein Element zu lesen soll mehr als doppelt so oft erfolgreich sein wie er ein Misserfolg ist. Ansonsten würde ein Consumer zu viel Rechenzeit mit dem Versuch verbringen, ein Element zu lesen, ohne es wirklich zu tun. Es wird von drei Consumern C1, C2 und C3 mit den ThreadIDs 1, 2 und 3 ausgegangen.
 
 ---
 define ids := mrv(ownerships())
-define readC1 := on function_calls("consumer.c:read") if equals(ids,1)
-define readC2 := on function_calls("consumer.c:read") if equals(ids,2)
-define readC3 := on function_calls("consumer.c:read") if equals(ids,3)
+define tryC1 := on instruction_executions("main.c:71") if equals(ids,1)
+define readC1 := on instruction_executions("main.c:73") if equals(ids,1)
+define tryC2 := on instruction_executions("main.c:71") if equals(ids,2)
+define readC2 := on instruction_executions("main.c:73") if equals(ids,2)
+define tryC3 := on instruction_executions("main.c:71") if equals(ids,3)
+define readC3 := on instruction_executions("main.c:73") if equals(ids,3)
 
-define errorC1 := not(inFuture(10s,readC1))
-define errorC2 := not(inFuture(10s,readC2))
-define errorC3 := not(inFuture(10s,readC3))
+define errorC1 := leq(eventCount(readC1),mul(eventCount(tryC1),2))
+define errorC2 := leq(eventCount(readC2),mul(eventCount(tryC2),2))
+define errorC3 := leq(eventCount(readC3),mul(eventCount(tryC3),2))
 define error := or(errorC1,or(errorC2,errorC3))
 
 out error
 ---
 
-Wenn Consumer C1 10 Elemente aus dem Ringpuffer genommen hat, müssen die Consumer C2 und C3 mindestens 5 Elemente aus dem Ringpuffer genommen haben. Dies stellt eine Fairnesseigenschaft dar. Es wird von drei Consumern C1, C2 und C3 mit den ThreadIDs 1, 2 und 3 ausgegangen.
+Consumer C1 darf maximal doppelt so viele Elemente aus dem Ringpuffer genommen haben wie die Consumer C2 oder C3. Dies stellt eine Fairnesseigenschaft dar. Es wird von drei Consumern C1, C2 und C3 mit den ThreadIDs 1, 2 und 3 ausgegangen.
 
 ---
 define ids := mrv(ownerships())
-define readC1 := on function_calls("consumer.c:read") if equals(ids,1)
-define readC2 := on function_calls("consumer.c:read") if equals(ids,2)
-define readC3 := on function_calls("consumer.c:read") if equals(ids,3)
+define readC1 := on instruction_executions("main.c:73") if equals(ids,1)
+define readC2 := on instruction_executions("main.c:73") if equals(ids,2)
+define readC3 := on instruction_executions("main.c:73") if equals(ids,3)
 
 define eventsOfC1 := eventCount(readC1)
 define eventsOfC2 := eventCount(readC2)
 define eventsOfC3 := eventCount(readC3)
 
-define eventsOfC1Equals10 := equals(eventsOfC1,10)
-define C2OrC3LowerThan5 := or(leq(eventsOfC2,4),leq(eventsOfC3,4))
-define error := on readC1 if and(eventsOfC1Equals10,C2OrC3LowerThan5)
+define readNotEnoughEventsC2 := geq(eventsOfC1,mul(eventsOfC2,2))
+define readNotEnoughEventsC3 := geq(eventsOfC1,mul(eventsOfC3,2))
+define error := on readC1 if or(readNotEnoughEventsC2,readNotEnoughEventsC3)
 
 out error
 ---
 
 Eigenschaften über den Moduswechsel:
 
-Die Reihenfolge der einzelnen Schritte bei einem Moduswechsel darf nicht verändert werden.
+Die Reihenfolge der einzelnen Schritte bei einem Moduswechsel von dem Operation-Modus zum Maintenance-Modus und wieder zurück zum Operation-Modus darf nicht verändert werden. Dies prüft, ob die Schritte für eine Wartung korrekt durchgeführt wurden.
 
 ---
-define changeMode := function_calls("mode.c:change")
-define stopProducer := function_calls("mode.c:stopProducer")
-define stopConsumer := function_calls("mode.c:stopConsumer")
-define showModusChange := function_calls("mode.c:show")
-define startConsumer := function_calls("mode.c:startConsumer")
-define startProducer := function_calls("mode.c:startProducer")
+define changeMode := instruction_executions("main.c:182")
+define stopProducer := function_calls("main.c:stopProducer")
+define stopConsumer := function_calls("main.c:stopConsumer")
+define startConsumer := function_calls("main.c:startConsumer")
+define startProducer := function_calls("main.c:startProducer")
 
 define monitor_output := monitor("
   always (
     p1 implies (
-	  not(p3 or p4 or p5 or p6) until (p2 and next (
-      not(p4 or p5 or p6) until (p3 and next (
-      not(p5 or p6) until (p4 and next (
-      not(p6) until p5))))))))",
+	  not(p3 or p4 or p5) until (p2 and next (
+      not(p4 or p5) until (p3 and next (
+      not(p5) until p4))))))",
   changeMode,
   stopProducer,
   stopConsumer,
-  showModusChange,
   startConsumer,
   startProducer
 )
@@ -100,33 +100,19 @@ define monitor_output := monitor("
 out monitor_output
 ---
 
-Zwischen jedem der Schritte während eines Moduswechsels dürfen maximal 0,5 Sekunden liegen.
+Ein Moduswechsel von einem Modus in einen anderen darf maximal 1 Sekunde dauern.
 
 ---
-define changeMode := function_calls("mode.c:change")
-define stopProducer := function_calls("mode.c:stopProducer")
-define stopConsumer := function_calls("mode.c:stopConsumer")
-define showModusChange := function_calls("mode.c:show")
-define startConsumer := function_calls("mode.c:startConsumer")
-define startProducer := function_calls("mode.c:startProducer")
+define startChangeToMaintenance := instruction_executions("main.c:182")
+define endChangeToMaintenance := instruction_executions("main.c:192")
+define startChangeToOperation := instruction_executions("main.c:176")
+define endChangeToOperation := instruction_executions("main.c:179")
 
-define monitor_output := monitor("
-  always (
-    p1 implies (
-	  next timed[<=500] p2 and
-	  next timed[<=500] p3 and
-	  next timed[<=500] p4 and
-	  next timed[<=500] p5 and
-	  next timed[<=500] p6))",
-  changeMode,
-  stopProducer,
-  stopConsumer,
-  showModusChange,
-  startConsumer,
-  startProducer
-)
+define errorChangeToMaintenance := on startChangeToMaintenance if not(inFuture(1s,endChangeToMaintenance))
+out errorChangeToMaintenance
 
-out monitor_output
+define errorChangeToOperation := on startChangeToOperation if not(inFuture(1s,endChangeToOperation))
+out errorChangeToOperation
 ---
 
 Nachdem die Consumer gestoppt wurden, darf nichts mehr aus dem Ringpuffer gelesen werden, bis diese wieder gestartet wurden.
