@@ -24,7 +24,7 @@ object AscriptionRemover extends CompilerPass[FunctionGraph, FunctionGraph] {
     nodes.keys.foreach(bypassTypeAscr)
 
     //TypeAscriptions are now not referenced anymore and can thus be removed
-    nodes.retain{case (id,node) => !id.node.function.isInstanceOf[TypeAscription]}
+    nodes.retain{case (id,node) => !id.node.function.isInstanceOf[TypeAscription[_]]}
 
     input
   }
