@@ -5,54 +5,58 @@ import org.json4s.JsonDSL._
 import scala.util.Try
 
 object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
+
+  case class UnfoldedLiteralError(function: Function) extends Fatal
+  case class GenericModuleWarning(function: Function) extends Diagnostic
+
   override def apply(compiler: Compiler, graph: FunctionGraph) = Try {
     import graph.{Node, NodeId}
 
-    val nodes: List[((NodeId, Node), Int)] = graph.nodes.toList.zipWithIndex
-    val ref: Map[NodeId, JObject] = nodes.map { case ((nodeId, node), idx) => (nodeId, ("@ref" -> idx):JObject) }.toMap
+    val idx: Map[NodeId, Int] = graph.nodes.keys.zipWithIndex.toMap
+    val ref: Map[NodeId, JObject] = idx.mapValues(i => ("@ref" -> i))
 
-    def toJObject(elem: ((NodeId, Node), Int)): JObject = {
-      val node = elem._1._2
+    def toJObject(nodeId: NodeId): Option[JObject] = {
+      val node = nodeId.node
 
-      def simpleFunToJObject(name: String, signature: FunctionSig): (String, JObject) = (name, signature) match {
-        case ("add", FunctionSig(SimpleType("Int"), Seq((None, SimpleType("Int")), (None, SimpleType("Int"))))) => {
-          //TODO: constant folding!
-          ("dataFlowGraph.node.operation.AddNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+      val moduleAndMembers: Option[(String, JObject)] = node.function match {
+        case ConstantValue(_,_) => None
+        /*case TypeAscription(_) => {
+          compiler.diagnostic(GenericModuleWarning(node.function))
+          None
+        }*/
+        case SimpleFunction(_, FunctionSig(SimpleType(_), _)) => {
+          compiler.diagnostic(UnfoldedLiteralError(node.function))
+          None
         }
-        case ("add", FunctionSig(
-        GenericType("Signal", Seq(SimpleType("Int"))),
-        Seq((None, GenericType("Signal", Seq(SimpleType("Int")))),
-        (None, GenericType("Signal", Seq(SimpleType("Int"))))))) => {
-          ("dataFlowGraph.node.operation.AddNode",
-            ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+        case SimpleFunction("add", FunctionSig(GenericType("Signal", Seq(SimpleType("Int"))),
+        Seq((None, GenericType("Signal", Seq(SimpleType("Int")))), (None, GenericType("Signal", Seq(SimpleType("Int")))))))
+        => {
+          Some("dataFlowGraph.node.operation.AddNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         }
-        case ("sub", FunctionSig(SimpleType("Int"), Seq((None, SimpleType("Int")), (None, SimpleType("Int"))))) => {
-          //TODO: constant folding!
-          ("dataFlowGraph.node.operation.SubNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+        case SimpleFunction("sub", FunctionSig(GenericType("Signal", Seq(SimpleType("Int"))),
+        Seq((None, GenericType("Signal", Seq(SimpleType("Int")))), (None, GenericType("Signal", Seq(SimpleType("Int")))))))
+        => {
+          Some("dataFlowGraph.node.operation.SubNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         }
-        case ("constantSignal", FunctionSig(GenericType("Signal", retTypeArgs: Seq[Type]), typeArgs: Seq[(Option[String], Type)])) => {
-          ("dataFlowGraph.node.operation.ConstantNode", "value" -> ref(node.args(0)))
+        case SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", retTypeArgs: Seq[Type]), typeArgs: Seq[(Option[String], Type)])) => {
+          try {
+            Some("dataFlowGraph.node.operation.ConstantNode", ("value" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString):JObject)
+          } catch {
+            case e:ClassCastException =>
+              compiler.diagnostic(UnfoldedLiteralError(node.function))
+              None
+          }
         }
-        case (n,_) => ("GenericModule", ("predecessors" -> node.args.map(ref(_))) ~ ("name" -> n))
+        case SimpleFunction(n,_) =>
+          compiler.diagnostic(GenericModuleWarning(node.function))
+          Some("GenericModule", ("predecessors" -> node.args.map(ref(_))) ~ ("name" -> n))
       }
 
-      val (typeString: String, specificMembers: JObject) = node.function match {
-        case SimpleFunction(name, signature) => simpleFunToJObject(name, signature)
-        case ConstantValue(t: Type, value:Any) => {
-          //("dataFlowGraph.node.input.ConstantNode", "value" -> value.toString)
-          ("dataFlowGraph.node.input.ValueNode", ("value" -> value.toString):JObject)
-        }
-        case TypeAscription(t: Type) => ???
+      moduleAndMembers.map{
+        case (typeString, members) => ((("@id" -> idx(nodeId)) ~ ("@type" -> typeString)) ~ ("outputWidth" -> -1) ~ members)
       }
-
-      ((("@id" -> elem._2) ~ ("@type" -> typeString))
-        ~ ("outputWidth" -> -1)
-        ~ specificMembers)
     }
 
-
-    ModuleGraph(("@type" -> "java.util.Collections$UnmodifiableSet") ~
-      ("@items" -> nodes.map(toJObject)))
-
+    ModuleGraph(("@type" -> "java.util.Collections$UnmodifiableSet") ~ ("@items" -> graph.nodes.keys.flatMap(toJObject)))
   }
 }
