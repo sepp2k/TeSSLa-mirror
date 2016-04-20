@@ -19,22 +19,23 @@ They are defined as expected in terms of their scalar counterparts as above.
 \begin{tabular}{lll}
   Function name, signature & Semantics & Remark\\
   \hline
-  $\textttbf{add}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{add}(σ_1,σ_2)(t) := σ_1(t) + σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
-  $\textttbf{sub}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{sub}(σ_1,σ_2)(t) := σ_1(t) - σ_2(t)$ & $D∈\{ℤ,ℝ\}$\\
-  $\textttbf{mul}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{mul}(σ_1,σ_2)(t) := σ_1(t) · σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
-  $\textttbf{div}: 𝓢_D × 𝓢_{D'} → 𝓢_D$ & $\textttbf{div}(σ_1,σ_2)(t) := \frac{σ_1(t)}{σ_2(t)}$ & $D∈\{ℕ,ℤ,ℝ\}, D'=D∖｛0｝$\\
-  $\textttbf{geq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\textttbf{geq}(σ_1,σ_2)(t) := σ_1(t) ≥ σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
-  $\textttbf{leq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\textttbf{leq}(σ_1,σ_2)(t) := σ_1(t) ≤ σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
-  $\textttbf{eq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\textttbf{eq}(σ_1,σ_2)(t) := σ_1(t) = σ_2(t)$ & any $D$ with equality\\
-  $\textttbf{max}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{max}(σ_1,σ_2)(t) := \max \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
-  $\textttbf{min}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\textttbf{min}(σ_1,σ_2)(t) := \min \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
-  $\textttbf{abs}: 𝓢_D → 𝓢_D$ & $\textttbf{abs}(σ)(t) := |σ(t)|$ & $D∈\{ℕ,ℤ,ℝ\}$\\
-  $\textttbf{abs}: 𝓔_D → 𝓔_D$ & $\textttbf{abs}(η)(t) := \begin{cases} |η(t)| & \text{if } t∈E(η) \\ ⊥&\text{otherwise} \end{cases}$&\\
-  $\textttbf{and}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{and}(σ_1,σ_2)(t) := σ_1(t) ∧ σ_2(t)$ & \\
-  $\textttbf{or}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{or}(σ_1,σ_2)(t) := σ_1(t) ∨ σ_2(t)$ & \\
-  $\textttbf{implies}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{implies}(σ_1,σ_2)(t) := σ_1(t) ⇒ σ_2(t)$ & \\
-  $\textttbf{not}: 𝓢_𝔹 → 𝓢_𝔹$ & $\textttbf{not}(σ)(t) := ¬σ(t)$ &\\
-  $\textttbf{not}: 𝓔_𝔹 → 𝓔_𝔹$ & $\textttbf{not}(η)(t) := \begin{cases} ¬η(t) & \text{if } t∈E(η) \\ ⊥&\text{otherwise} \end{cases}$&
+  $\textttbf{add}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\texttt{add}(σ_1,σ_2)(t) := σ_1(t) + σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\texttt{sub}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\texttt{sub}(σ_1,σ_2)(t) := σ_1(t) - σ_2(t)$ & $D∈\{ℤ,ℝ\}$\\
+  $\textttbf{mul}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\texttt{mul}(σ_1,σ_2)(t) := σ_1(t) · σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{div}: 𝓢_D × 𝓢_{D'} → 𝓢_D$ & $\texttt{div}(σ_1,σ_2)(t) := \frac{σ_1(t)}{σ_2(t)}$ & $D∈\{ℕ,ℤ,ℝ\}, D'=D∖｛0｝$\\
+  $\textttbf{ge}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\texttt{ge}(σ_1,σ_2)(t) := σ_1(t) > σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\texttt{geq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\texttt{geq}(σ_1,σ_2)(t) := σ_1(t) ≥ σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\texttt{leq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\texttt{leq}(σ_1,σ_2)(t) := σ_1(t) ≤ σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\texttt{eq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\texttt{eq}(σ_1,σ_2)(t) := σ_1(t) = σ_2(t)$ & any $D$ with equality\\
+  $\textttbf{max}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\texttt{max}(σ_1,σ_2)(t) := \max \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\texttt{min}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\texttt{min}(σ_1,σ_2)(t) := \min \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\texttt{abs}: 𝓢_D → 𝓢_D$ & $\texttt{abs}(σ)(t) := |σ(t)|$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\texttt{abs}: 𝓔_D → 𝓔_D$ & $\texttt{abs}(η)(t) := \begin{cases} |η(t)| & \text{if } t∈E(η) \\ ⊥&\text{otherwise} \end{cases}$&\\
+  $\textttbf{and}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\texttt{and}(σ_1,σ_2)(t) := σ_1(t) ∧ σ_2(t)$ & \\
+  $\texttt{or}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\texttt{or}(σ_1,σ_2)(t) := σ_1(t) ∨ σ_2(t)$ & \\
+  $\texttt{implies}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\texttt{implies}(σ_1,σ_2)(t) := σ_1(t) ⇒ σ_2(t)$ & \\
+  $\textttbf{not}: 𝓢_𝔹 → 𝓢_𝔹$ & $\texttt{not}(σ)(t) := ¬σ(t)$ &\\
+  $\texttt{not}: 𝓔_𝔹 → 𝓔_𝔹$ & $\texttt{not}(η)(t) := \begin{cases} ¬η(t) & \text{if } t∈E(η) \\ ⊥&\text{otherwise} \end{cases}$&
 \end{tabular}
 
 
@@ -52,15 +53,25 @@ We define the function for different signatures and any value domain $D$:
        \end{cases}\\
   \mathtt{delay}&: 𝓢_D × 𝕋_{≤0} → 𝓢_D 
     & \mathtt{delay}(σ,d)(t) &:= σ(t-d) \\
-  \mathtt{delay}&: 𝓔_D × 𝕋 → 𝓔_D 
+  \textttbf{delay}&: 𝓔_D × 𝕋 → 𝓔_D 
       & \mathtt{delay}(η,d)(t) &:= \begin{cases} 
            σ(t-d) & \text{if } t-d≥0\\
            ⊥      & \text{otherwise}
          \end{cases}\\
 \end{align*}
+Discrete timporal shifts of event streams can be expressed by the functions
+\begin{align*}
+  \textttbf{delay}&: 𝓔_D → 𝓔_D\\
+  \texttt{delay}&: 𝓔_D × ℕ_{>0} → 𝓔_D
+\end{align*}
+defined in terms of the sequence representation $s_η$ of event streams $η∈𝓔_D$. 
+For $s_η = (t_0,η(t_0))(t_1,η(t_1))(t_2,η(t_2))…$ we define $\texttt{delay}(s_η) := (t_1,η(t_0))(t_2,η(t_1))…$. 
+Notice that in case $|s_η|<2$ then $\texttt{delay}(s_η)=ε$ is empty.
+A positive natural argument abbrevates iterated application, i.e., $\texttt{delay}(η,n) := \texttt{delay}^n(η)$.
+
 The function $\mathtt{timestamp}$ provides the time stamp of an event stream element-wise:
 \begin{align*}
-  \mathtt{timestamp}&: 𝓔_D → 𝓔_𝕋 
+  \textttbf{timestamp}&: 𝓔_D → 𝓔_𝕋 
     & \mathtt{timestamp}(η)(t) &:= \begin{cases}
         t & \text{if } t∈E(η)\\
         ⊥ & \text{otherwise}
@@ -70,7 +81,7 @@ The function $\mathtt{timestamp}$ provides the time stamp of an event stream ele
 The function $\mathtt{within}$ serves for checking whether an event occurs within a given (relative) time bound. 
 Further functions $\mathtt{inPast}$ and $\mathtt{inFuture}$ can be derived from $within$:
 \begin{align*}
-  \mathtt{within}&: 𝕋 × 𝕋 × 𝓔_D → 𝓢_𝔹 
+  \textttbf{within}&: 𝕋 × 𝕋 × 𝓔_D → 𝓢_𝔹 
     & \mathtt{within}(d_1,d_2,η)(t) &:= \begin{cases}
         \mathtt{true} & \text{if } E(η)∩[t+d_1,t+d_2]≠∅\\        
         \mathtt{false} & \text{otherwise}
@@ -87,7 +98,7 @@ We define a function $\mathtt{synchronise}$ that matches events from two streams
  \todo{add example or ref appendix}
 Its formal signature is defined as
 \[
-  \mathtt{synchronise}: 𝓔_{D_1} × 𝓔_{D_2} × 𝕋 → 𝓔_{(D_1+D_2)+(D_1×D_2)}.
+  \textttbf{synchronise}: 𝓔_{D_1} × 𝓔_{D_2} × 𝕋 → 𝓔_{(D_1+D_2)+(D_1×D_2)}.
 \]
 Recall that $A+B:= (A×｛1｝)∪(B×｛2｝)$\footnote{In programming languages, structures $A+B$ are often represented by a type \texttt{Either<A,B>} with subtypes \texttt{Left<A>} and \texttt{Right<B>} and suitable operations to access the wrapped values of type A and B, respectively (e.g., \texttt{get()}).}.
 
@@ -172,22 +183,22 @@ For any domain $D$ with linear ordering and addition, respectively, e.g., $ℕ,�
 \begin{align*}
   \mathtt{maximum}&: 𝓔_D × D → 𝓢_D
     & \mathtt{maximum}(η,d)(t) &:= \max (｛d｝∪\{η(t') \mid t'∈E(η), t'≤t\})\\
-  \mathtt{maximum}&: 𝓢_D → 𝓢_D
+  \textttbf{maximum}&: 𝓢_D → 𝓢_D
     & \mathtt{maximum}(σ)(t) &:= \max \{η(t') \mid t'∈𝕋, t'≤t\} \\
   \mathtt{minimum}&: 𝓔_D × D → 𝓢_D
     & \mathtt{minimum}(η,d)(t) &:= \min (｛d｝∪\{η(t') \mid t'∈E(η), t'≤t\})\\
   \mathtt{minimum}&: 𝓢_D → 𝓢_D
     & \mathtt{minimum}(σ)(t) &:= \min \{η(t') \mid t'∈𝕋, t'≤t\}\\
-  \mathtt{sum}&: 𝓔_D → 𝓢_D
+  \textttbf{sum}&: 𝓔_D → 𝓢_D
     & \mathtt{sum}(η)(t) &:= ∑_{t'∈E(η)｜t'≤t } η(t')\\  
 \end{align*}
 
 Generic functions $eventCount$ providing the number of occurred events and $mrv$ providing the most recent value of an event stream.
 
 \begin{align*}
-  \mathtt{eventCount}&: 𝓔_D → 𝓢_D
+  \textttbf{eventCount}&: 𝓔_D → 𝓢_D
     & \mathtt{eventCount}(η)(t) &:= |{t'∈E(η)｜t'≤t } \\
-  \mathtt{mrv}&: 𝓔_D × D → 𝓢_D
+  \textttbf{mrv}&: 𝓔_D × D → 𝓢_D
     & \mathtt{mrv}(η,d)(t) &:= \begin{cases}
          η(\max E(η)∩[0,t]) & \text{if } E(η)∩[0,t]≠∅ \\
          d & \text{otherwise}
@@ -198,25 +209,47 @@ We further define the simple moving average on streams of arithmetic type.
 Let $\max_1(M) := ｛\max M｝$ and $\max_{n+1}(M) := ｛\max M｝ ∪ \max_n (M∖(\max M))$ denote the set of the $n$ largest elements of a linearly ordered set $M$. \todo{move to preliminaries} 
 Then, we define the simple moving average $\mathtt{sma}: 𝓔_D × ℕ_{>0} → 𝓔_D$ as
 \[
-   \mathtt{sma}(η,n)(t) := \begin{cases}    
+   \mathtt{sma}(η,n)(t) := \begin{cases}
       \frac{∑_{t'∈ \max_n ｛t''∈E(η)｜t''≤t  ｝} η(t')}{|\max_n ｛t'∈E(η)｜t'≤t ｝|} & \text{if } t∈E(η)\\
       ⊥ & \text{otherwise}
     \end{cases}
 \]
-
-
+Notice that for a fixed $n$ we have that 
+\begin{lstlisting}[language=tessla,mathescape]
+define std_mean_avg := sma(in1, $n$)
+out std_mean_avg
+\end{lstlisting}
+is equivalent to
+\begin{lstlisting}[language=tessla,mathescape]
+define x$_1$ = in1
+define x$_2$ = delay(x$_1$)
+define x$_3$ = delay(x$_2$)
+...
+define x$_n$ = delay(x$(n-1)$)
+define sum = add(x$_1$,add($...$add(x$_{n-1}$, x$_n$)$...$))
+define std_mean_avg := on x$_n$ yield ifThenElse(sum>0, sum/$n$, 0)
+out std_mean_avg
+\end{lstlisting}
 
 \subsection{Selectors/Filters/Conditionals/Combinators}
 
 \begin{align*}
-  \mathtt{changeOf}&: 𝓢_{D} → 𝓔_{｛⊤｝}
+  \textttbf{changeOf}&: 𝓢_{D} → 𝓔_{｛⊤｝}
       & \mathtt{changeOf}(σ)(t) &:= \begin{cases}
            ⊤ & \text{if } t∈Δ(σ)\\
            ⊥ & \text{otherwise}
          \end{cases}\\
-  \mathtt{ifThen}&: 𝓔_{D_1} × 𝓢_{D_2} → 𝓔_{D_2}
+  \textttbf{ifThen}&: 𝓔_{D_1} × 𝓢_{D_2} → 𝓔_{D_2}
       & \mathtt{ifThen}(η,σ)(t) &:= \begin{cases}
            σ(t) & \text{if } t∈E(η)\\
+           ⊥ & \text{otherwise}
+         \end{cases}\\
+  \mathtt{sample}&: 𝓢_{D_1} × 𝓔_{D_2} → 𝓔_{D_1}
+      & \mathtt{sample}(σ,η) &:= \mathtt{ifThen}(η,σ)\\
+  \textttbf{filter}&: 𝓔_D × 𝓢_𝔹 → 𝓔_D
+      & \mathtt{filter}(η,σ)(t) &:= \begin{cases}
+           η(t) & \text{if } t∈E(η) \\[-0.75ex]
+                 & \text{and } σ(t) = \texttt{true}\\
            ⊥ & \text{otherwise}
          \end{cases}\\
   \mathtt{ifThenElse}&: 𝓢_𝔹 × 𝓢_D × 𝓢_D → 𝓢_D
@@ -225,13 +258,23 @@ Then, we define the simple moving average $\mathtt{sma}: 𝓔_D × ℕ_{>0} → 
            σ_3(t) & \text{otherwise}
          \end{cases}\\
   \mathtt{merge}&: 𝓔_D × 𝓔_D → 𝓔_D
-      & \mathtt{merge}(η_1,η_2)(t) &:= \begin{cases}
+      & \mathtt{occurAny}(η_1,η_2)(t) &:= \begin{cases}
            η_1(t) & \text{if } t∈E(η_1)\\
            η_2(t) & \text{if } t∈E(η_2)∖E(η_1)\\
            ⊥ & \text{otherwise}
+         \end{cases}\\
+   \textttbf{occurAny}&: 𝓔_{D_1} × 𝓔_{D_2} → 𝓔_{｛⊤｝}
+        & \mathtt{occurAny}(η_1,η_2)(t) &:= \begin{cases}
+             ⊤ & \text{if } t∈E(η_1)∪E(η_2)\\
+             ⊥ & \text{otherwise}
+           \end{cases}\\
+  \textttbf{occurAll}&: 𝓔_{D_1} × 𝓔_{D_2} → 𝓔_{｛⊤｝}
+      & \mathtt{occurAll}(η_1,η_2)(t) &:= \begin{cases}
+           ⊤ & \text{if } t∈E(η_1)∩E(η_2)\\
+           ⊥ & \text{otherwise}
          \end{cases}
 \end{align*}
-Note that \texttt{ifThen} is a restricted form of an on-comprehension.
+Notice that \texttt{merge} gives precedence to the first argument and that \texttt{ifThen} is a restricted form of an on-comprehension.
 
 \subsection{Monitors}
 
@@ -241,7 +284,7 @@ We assume that the temporal logic is defined over propositional variables from a
 Further, the semantics is defined on finite words over the alphabet $Σ=2^{AP}$ and admits truth values from some domain $𝕍$ (e.g., $𝔹$).
 We then let, for arbitrary $D$,
 \[
-  \texttt{monitor}: TL × (𝓢_𝔹)^n × 𝓔_D → 𝓔_𝕍
+  \textttbf{monitor}: TL × (𝓢_𝔹)^n × 𝓔_D → 𝓔_𝕍
 \]
 with 
 \[
@@ -275,5 +318,3 @@ We define the semantics of on-comprehensions as follows.
 \end{align*}
 Omitting the \texttt{yield} part amounts to implicitly take $σ_{val} = σ_⊤$ where $σ_⊤: 𝕋_{≥0} → ｛⊤｝$ is the (unique) signal of type \texttt{Unit}.
 Omitting the conditional (\texttt{if}) part amount to implicitly take $σ_{cnd}=σ_{\mathtt{true}}$ where $σ_\mathtt{true}: 𝕋_{≥0} → ｛\texttt{true}｝$ is the Boolean signal that is always true.
-
-

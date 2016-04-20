@@ -87,12 +87,14 @@ This is achieved by applying a corresponding function to the input stream and th
 
 The streams used in \tessla specifications model the essential aspects found in computer programs, namely values (e.g., the value of a program variable), events (e.g., the call of a specific function) and time, both, in a qualitative (ordering) and quantitative (duration) sense.
 
-The timing model is based on time stamps $t∈𝕋$ where we assume $𝕋$ to be isomorphic to the real numbers $ℝ$.
+The timing model is based on time stamps $t∈𝕋$ where we assume $𝕋$ to be isomorphic to the real numbers $ℝ$.\footnote{Notice that we deliberately choose \emph{the continuum} as a model of real time as is common in philosophy, physics and engineering. For our purposes of specifying timing property, however, also a weaker notion of density would clearly suffice, such as the rational numbers $ℚ$.}
 Although on the technical level time is mostly quantised in actual systems, real time is a common and intuitive model.
 In fact, neither specification nor evaluation based on single steps of, e.g., the a CPU core are reasonable. 
 Time is therefore handled, formally and technically, in terms of intervals.
 In the following, we make the notion of streams precise that provide the semantic basis of the language.
 We use $𝕋$ to denote the time domain to make an explicit distinction between time stamps and, e.g., real values.
+This avoids confusion and inconsistencies since the representation of time values is implementation dependent.
+For example, the values may be scaled according to the processing clock speed and therefore adding or comparing a value $t∈𝕋$ with some real value $r∈ℝ$ is not well defined unless considering a specific execution platform with fixed parameters.
 However, we use common operators and symbols to work with time stamps, such as $+$ (addition), $≤$ (ordering) and $0$ (neutral element of addition), that are defined as expected.
 
 We consider two types of streams.
