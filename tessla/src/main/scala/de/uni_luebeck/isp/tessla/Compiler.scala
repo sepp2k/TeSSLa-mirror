@@ -51,6 +51,7 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
         (MacroResolver)
         (TypeChecker)
         (AscriptionRemover)
+        (SaltConverter)
         (ConstantFolder)
         (ModuleMapper)).state
 

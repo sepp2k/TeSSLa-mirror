@@ -11,9 +11,21 @@ define writeElement := instruction_executions("main.c:49")
 define processElement := function_calls("main.c:process_data")
 
 define difference := eventCount(processElement) - eventCount(writeElement)
-define error := on readElement if geq(difference,1) 
+define error := on processElement if geq(difference,1) 
 
 out error
+---
+
+Überprüft, dass der Ringpuffer nicht überläuft. Dafür werden die Anzahlen der in der Puffer geschriebenen und aus dem Puffer gelesenen Elemente verglichen. Wir gehen hier von einer Puffergröße von 5 aus.
+
+---
+define writeElement := instruction_executions("main.c:49")
+define processElement := function_calls("main.c:process_data")
+
+define difference := eventCount(writeElement) - eventCount(processElement)
+define bufferOverflow := on writeElement if geq(difference,6)
+
+out bufferOverflow
 ---
 
 Überprüft, ob die Consumer die Elemente schnell genug verarbeiten, nachdem sie sie aus dem Puffer gelesen haben. Ein Consumer hat 2 Sekunden Zeit, um nach dem Lesen eines Elementes die Verarbeitung eines Elementes abzuschließen. Es wird von drei Consumern C1, C2 und C3 mit den ThreadIDs 1, 2 und 3 ausgegangen.
@@ -108,24 +120,26 @@ define endChangeToMaintenance := instruction_executions("main.c:192")
 define startChangeToOperation := instruction_executions("main.c:176")
 define endChangeToOperation := instruction_executions("main.c:179")
 
-define errorChangeToMaintenance := on startChangeToMaintenance if not(inFuture(1s,endChangeToMaintenance))
+define errorChangeToMaintenance := on startChangeToMaintenance if not(inFuture(endChangeToMaintenance,1s))
 out errorChangeToMaintenance
 
-define errorChangeToOperation := on startChangeToOperation if not(inFuture(1s,endChangeToOperation))
+define errorChangeToOperation := on startChangeToOperation if not(inFuture(endChangeToOperation,1s))
 out errorChangeToOperation
 ---
 
-Nachdem die Consumer gestoppt wurden, darf nichts mehr aus dem Ringpuffer gelesen werden, bis diese wieder gestartet wurden.
+Nachdem die Consumer gestoppt wurden, darf der "Readpointer", der auf das nächste, zu lesende Element des Ringpuffers zeigt, nicht mehr verändert werden, bis die Consumer wieder gestartet wurden. Ansonsten würde ein Consumer etwas lesen, obwohl er angehalten sein sollte.
 
 ---
-define bufferRead := function_calls("buffer.c:read")
-define stopConsumer := function_calls("mode.c:stopConsumer")
-define startConsumer := function_calls("mode.c:startConsumer")
+define readPointerValues := variable_values("main.c:read_idx")
+define stopConsumer := function_calls("main.c:stopConsumer")
+define startConsumer := function_calls("main.c:startConsumer")
+
+define readPointerChanged := on changeOf(readPointerValues)
 
 define monitor_output := monitor("
   always(p1 implies (not(p2) until p3))",
   stopConsumer,
-  bufferRead,
+  readPointerChanged,
   startConsumer
 )
 
