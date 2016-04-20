@@ -31,23 +31,55 @@ case class ConstantValue[T](`type`: Type, value: T) extends Function {
 
 object Function {
 
-  private val a = new TypeVar
+  import de.uni_luebeck.isp.tessla.util.SimpleFunctionDSL._
+
+  private val a,b = new TypeVar
 
   val defaultFunctions = Seq(
-    SimpleFunction("add", FunctionSig(
+    /**** Literal functions (should come with semantics) ****/
+    /*SimpleFunction("add", FunctionSig(
       SimpleType("Int"),
       Seq((None, SimpleType("Int")), (None, SimpleType("Int")))
     )).withSemantics{
       args:Seq[Any] => args(0).asInstanceOf[BigInt] + args(1).asInstanceOf[BigInt]
-    },
-    SimpleFunction("add", FunctionSig(GenericType("Signal", Seq(SimpleType("Int"))), Seq(
-      (None, GenericType("Signal", Seq(SimpleType("Int")))), (None, GenericType("Signal", Seq(SimpleType("Int"))))))),
-    SimpleFunction("sub", FunctionSig(
+    },*/
+    (Func("add") from "Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] + args(1).asInstanceOf[BigInt]},
+    (Func("sub").from("Int") × "Int" → "Int") withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] - args(1).asInstanceOf[BigInt]},
+
+    /*SimpleFunction("sub", FunctionSig(
       SimpleType("Int"),
       Seq((None, SimpleType("Int")), (None, SimpleType("Int")))
     )).withSemantics{
       args => args(0).asInstanceOf[BigInt] - args(1).asInstanceOf[BigInt]
-    },
-    SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a))))
+    },*/
+
+    /**** Input/Constant functions ****/
+    SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a)))),
+    SimpleFunction("instruction_executions", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
+    SimpleFunction("function_calls", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
+
+
+    /**** Stream operators ****/
+    SimpleFunction("add", FunctionSig(
+      GenericType("Signal", Seq(SimpleType("Int"))),
+      Seq((None, GenericType("Signal", Seq(SimpleType("Int")))), (None, GenericType("Signal", Seq(SimpleType("Int"))))))),
+    SimpleFunction("sub", FunctionSig(
+      GenericType("Signal", Seq(SimpleType("Int"))),
+      Seq((None, GenericType("Signal", Seq(SimpleType("Int")))), (None, GenericType("Signal", Seq(SimpleType("Int"))))))),
+    SimpleFunction("eventCount", FunctionSig(
+      GenericType("Signal", Seq(SimpleType("Int"))),
+      Seq((None, GenericType("Events", Seq(a)))))),
+
+    Func ("occursAll") from Events(a) and Events(b) to Events("Unit")
+
+
   )
 }
+
+/*
+define writeElement := instruction_executions("main.c:49")
+define processElement := function_calls("main.c:process_data")
+
+define difference := eventCount(processElement) - eventCount(writeElement)
+define error := on readElement if geq(difference,1)
+*/

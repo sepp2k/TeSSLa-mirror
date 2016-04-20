@@ -7,6 +7,7 @@ import scala.util.Try
 object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
 
   case class UnfoldedLiteralError(function: Function) extends Fatal
+
   case class GenericModuleWarning(function: Function) extends Diagnostic
 
   override def apply(compiler: Compiler, graph: FunctionGraph) = Try {
@@ -19,7 +20,7 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
       val node = nodeId.node
 
       val moduleAndMembers: Option[(String, JObject)] = node.function match {
-        case ConstantValue(_,_) => None
+        case ConstantValue(_, _) => None
         /*case TypeAscription(_) => {
           compiler.diagnostic(GenericModuleWarning(node.function))
           None
@@ -38,21 +39,46 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
         => {
           Some("dataFlowGraph.node.operation.SubNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         }
-        case SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", retTypeArgs: Seq[Type]), typeArgs: Seq[(Option[String], Type)])) => {
-          try {
-            Some("dataFlowGraph.node.operation.ConstantNode", ("value" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString):JObject)
-          } catch {
-            case e:ClassCastException =>
-              compiler.diagnostic(UnfoldedLiteralError(node.function))
-              None
-          }
+        case SimpleFunction("constantSignal", _) => try {
+          Some("dataFlowGraph.node.operation.ConstantNode", ("value" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString): JObject)
+        } catch {
+          case e: ClassCastException =>
+            compiler.diagnostic(UnfoldedLiteralError(node.function))
+            None
         }
-        case SimpleFunction(n,_) =>
+        case SimpleFunction("instruction_executions", _) => try {
+          Some("dataFlowGraph.node.operation.input.InstructionExecutions",
+                JObject("argument" -> JString(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
+          )
+        } catch {
+          case e: ClassCastException =>
+            compiler.diagnostic(UnfoldedLiteralError(node.function))
+            None
+        }
+        case SimpleFunction("function_calls", _) => try {
+          Some("dataFlowGraph.node.operation.input.FunctionCalls",
+            JObject("argument" -> JString(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
+          )
+        } catch {
+          case e: ClassCastException =>
+            compiler.diagnostic(UnfoldedLiteralError(node.function))
+            None
+        }
+
+        case SimpleFunction(n, _) => {
           compiler.diagnostic(GenericModuleWarning(node.function))
-          Some("GenericModule", ("predecessors" -> node.args.map(ref(_))) ~ ("name" -> n))
+          Some("GenericModule",
+            ("inputs" ->
+              node.args.map { nodeId => nodeId.node.function match {
+                case ConstantValue(_, value) => JString(value.toString)
+                case _ => ref(nodeId)
+              }
+              }
+              ) ~ ("name" -> n))
+        }
       }
 
-      moduleAndMembers.map{
+      moduleAndMembers.map {
         case (typeString, members) => ((("@id" -> idx(nodeId)) ~ ("@type" -> typeString)) ~ ("outputWidth" -> -1) ~ members)
       }
     }
