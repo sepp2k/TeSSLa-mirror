@@ -25,8 +25,11 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           compiler.diagnostic(GenericModuleWarning(node.function))
           None
         }*/
-        case StateMachineFunction(name, signature, stateMap, transitionMap) => {
-          Some("dataFlowGraph.node.operation.MonitorNode", ("predecessors" -> node.args.map(x => ref(x))) ~ ("states" -> stateMap) ~ ("transitions" -> transitionMap))
+        case StateMachineFunction(name, signature, start, stateMap, transitionList) => {
+          val refs = node.args.map(x => ref(x))
+          val refTransitions = transitionList.map(t => (t._1,t._2.map(x => refs(x-1)),t._3))
+          val jsonTransitions = seq2jvalue(refTransitions.map(t => ("current" -> t._1) ~ ("active" -> t._2) ~ ("next" -> t._3)))
+          Some("dataFlowGraph.node.operation.MonitorNode", ("predecessors" -> refs) ~ ("start" -> start) ~ ("states" -> stateMap) ~ ("transitions" -> jsonTransitions))
         }
         case SimpleFunction(_, FunctionSig(SimpleType(_), _)) => {
           compiler.diagnostic(UnfoldedLiteralError(node.function))
