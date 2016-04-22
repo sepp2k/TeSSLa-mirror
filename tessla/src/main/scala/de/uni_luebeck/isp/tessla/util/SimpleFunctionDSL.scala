@@ -20,12 +20,18 @@ object SimpleFunctionDSL {
     }
   }
 
+  object Sequence {
+    def apply(innerType: Type) = {
+      GenericType("Seq", Seq(innerType))
+    }
+  }
+
   implicit def toType(s: String): SimpleType = SimpleType(s)
 
   class FunctionBuilder(var name: String, var args: Seq[(Option[String], Type)]) {
 
     def to(returnType: Type): SimpleFunction = {
-      SimpleFunction(name, FunctionSig(returnType, args))
+      SimpleFunction(name, FunctionSig(returnType, args.reverse))
     }
 
     def →(returnType: Type): SimpleFunction = to(returnType)
