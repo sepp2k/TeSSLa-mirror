@@ -47,16 +47,7 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
             None
         }
         case SimpleFunction("instruction_executions", _) => try {
-          Some("dataFlowGraph.node.operation.input.InstructionExecutions",
-                JObject("argument" -> JString(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
-          )
-        } catch {
-          case e: ClassCastException =>
-            compiler.diagnostic(UnfoldedLiteralError(node.function))
-            None
-        }
-        case SimpleFunction("function_calls", _) => try {
-          Some("dataFlowGraph.node.operation.input.FunctionCalls",
+          Some("dataFlowGraph.node.input.InstructionExecutionsNode",
             JObject("argument" -> JString(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
           )
         } catch {
@@ -64,7 +55,27 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
             compiler.diagnostic(UnfoldedLiteralError(node.function))
             None
         }
+        case SimpleFunction("function_calls", _) => try {
+          Some("dataFlowGraph.node.input.FunctionCallsNode",
+            JObject("argument" -> JString(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
+          )
+        } catch {
+          case e: ClassCastException =>
+            compiler.diagnostic(UnfoldedLiteralError(node.function))
+            None
+        }
+        case SimpleFunction("eventCount", _) =>
+          Some("dataFlowGraph.node.operation.EventCountNode", JObject("input" -> ref(node.args(0))))
+        case SimpleFunction("not", _) =>
+          Some("dataFlowGraph.node.operation.NotNode", JObject("predecessor" -> ref(node.args(0))))
+        case SimpleFunction("gt", _) =>
+          Some("dataFlowGraph.node.operation.GTNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
 
+
+        case SimpleFunction("filter", _) =>
+          Some("dataFlowGraph.node.operation.FilterNode",
+            JObject("inputEvents" -> ref(node.args(0))) ~ ("conditionSignal" -> ref(node.args(1)))
+          )
         case SimpleFunction(n, _) => {
           compiler.diagnostic(GenericModuleWarning(node.function))
           Some("GenericModule",
@@ -73,8 +84,7 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
                 case ConstantValue(_, value) => JString(value.toString)
                 case _ => ref(nodeId)
               }
-              }
-              ) ~ ("name" -> n))
+              }) ~ ("name" -> n))
         }
       }
 

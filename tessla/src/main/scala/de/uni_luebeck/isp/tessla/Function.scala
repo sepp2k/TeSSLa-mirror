@@ -41,21 +41,8 @@ object Function {
 
   val defaultFunctions = Seq(
     /**** Literal functions (should come with semantics) ****/
-    /*SimpleFunction("add", FunctionSig(
-      SimpleType("Int"),
-      Seq((None, SimpleType("Int")), (None, SimpleType("Int")))
-    )).withSemantics{
-      args:Seq[Any] => args(0).asInstanceOf[BigInt] + args(1).asInstanceOf[BigInt]
-    },*/
-    (Func("add") from "Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] + args(1).asInstanceOf[BigInt]},
-    (Func("sub").from("Int") × "Int" → "Int") withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] - args(1).asInstanceOf[BigInt]},
-
-    /*SimpleFunction("sub", FunctionSig(
-      SimpleType("Int"),
-      Seq((None, SimpleType("Int")), (None, SimpleType("Int")))
-    )).withSemantics{
-      args => args(0).asInstanceOf[BigInt] - args(1).asInstanceOf[BigInt]
-    },*/
+    Func("add").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] + args(1).asInstanceOf[BigInt]},
+    Func("sub").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] - args(1).asInstanceOf[BigInt]},
 
     /**** Input/Constant functions ****/
     SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a)))),
@@ -64,18 +51,16 @@ object Function {
 
 
     /**** Stream operators ****/
-    SimpleFunction("add", FunctionSig(
-      GenericType("Signal", Seq(SimpleType("Int"))),
-      Seq((None, GenericType("Signal", Seq(SimpleType("Int")))), (None, GenericType("Signal", Seq(SimpleType("Int"))))))),
-    SimpleFunction("sub", FunctionSig(
-      GenericType("Signal", Seq(SimpleType("Int"))),
-      Seq((None, GenericType("Signal", Seq(SimpleType("Int")))), (None, GenericType("Signal", Seq(SimpleType("Int"))))))),
-    SimpleFunction("eventCount", FunctionSig(
-      GenericType("Signal", Seq(SimpleType("Int"))),
-      Seq((None, GenericType("Events", Seq(a)))))),
-
-    Func ("occursAll") from Events(a) and Events(b) to Events("Unit")
-
+    Func ("sub").        from (Signal("Int")) × Signal("Int") → Signal("Int"),
+    Func ("add").        from (Signal("Int")) × Signal("Int") → Signal("Int"),
+    Func ("gt").         from (Signal("Int")) × Signal("Int") → Signal("Boolean"),
+    Func ("not").         from (Signal("Boolean"))            → Signal("Boolean"),
+    Func ("eventCount").from (Events(a))                      → Signal("Int"),
+    Func ("occursAll").  from (Events(a)) × Events(b)         → Events("Unit"),
+    Func ("occursAny").  from (Events(a)) × Events(b)         → Events("Unit"),
+    Func ("filter").     from (Events(a)) × Signal("Boolean") → Events(a),
+    Func ("ifThen").     from (Events(a)) × Signal(b)         → Events(b),
+    Func ("monitor") from ("String") and Sequence(Signal("Boolean")) to Signal("Bool3")
 
   )
 }

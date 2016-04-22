@@ -1,0 +1,21 @@
+--
+-- Macros
+--
+define onIf(trig, cond) := filter(trig, cond: Signal<Boolean>)
+define geq(x,y) := not(lt(x,y))
+define lt(x,y) := gt(y,x)
+
+
+--
+-- Inputs
+--
+define writeElement: Events<Unit> := instruction_executions("main.c:49")
+define processElement: Events<Unit> := function_calls("main.c:process_data")
+
+--
+-- Spec
+--
+define difference := sub(eventCount(processElement), eventCount(writeElement))
+--define error := on processElement if geq(difference,1) 
+define error := onIf(processElement, geq(difference,constantSignal(1)))
+
