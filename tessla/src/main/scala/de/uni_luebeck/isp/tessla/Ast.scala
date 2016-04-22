@@ -8,6 +8,9 @@ object Ast {
   case class Identifier(name: String, loc: SourceLoc)
   case class IntLit(value: BigInt, loc: SourceLoc)
   case class StringLit(value: String, loc: SourceLoc)
+  case class BoolLit(value: Boolean, loc: SourceLoc)
+  case class FloatLit(value: BigDecimal, loc: SourceLoc)
+
 
   abstract class Statement
   case class Def(
@@ -26,6 +29,8 @@ object Ast {
   case class ExprTypeAscr(expr: Expr, `type`: Type) extends Expr
   case class ExprIntLit(value: IntLit) extends Expr
   case class ExprStringLit(value: StringLit) extends Expr
+  case class ExprBoolLit(value: BoolLit) extends Expr
+  case class ExprFloatLit(value: FloatLit) extends Expr
 
   abstract class AppArg
   case class PosArg(expr: Expr) extends AppArg

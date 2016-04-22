@@ -18,6 +18,8 @@ case class LiteralFn(value: LiteralValue, loc: NestedLoc) extends ExprTreeFn
 abstract class LiteralValue
 case class IntLiteral(value: BigInt) extends LiteralValue
 case class StringLiteral(value: String) extends LiteralValue
+case class BoolLiteral(value: Boolean) extends LiteralValue
+case class FloatLiteral(value: BigDecimal) extends LiteralValue
 
 case class Definitions(
   streamDefs: Map[String, StreamDef],

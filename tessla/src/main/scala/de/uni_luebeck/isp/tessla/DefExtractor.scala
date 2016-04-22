@@ -115,6 +115,12 @@ object DefExtractor extends CompilerPass[Ast.Spec, Definitions] {
             case Ast.ExprStringLit(value) =>
               val fn = LiteralFn(StringLiteral(value.value), value.loc)
               ExprTree(fn, Map(), value.loc)
+            case Ast.ExprBoolLit(value) =>
+              val fn = LiteralFn(BoolLiteral(value.value), value.loc)
+              ExprTree(fn, Map(), value.loc)
+            case Ast.ExprFloatLit(value) =>
+              val fn = LiteralFn(FloatLiteral(value.value), value.loc)
+              ExprTree(fn, Map(), value.loc)
           }
         }
 

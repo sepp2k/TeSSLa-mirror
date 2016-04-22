@@ -56,8 +56,19 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case WithLocation(loc, ID(name)) => Ast.Identifier(name, SourceLoc(loc))
     }
 
+    def boolLit: Parser[Ast.BoolLit] = matchToken("boolean", Set("<boolean>")) {
+      case WithLocation(loc, ID("true")) => {
+        Ast.BoolLit(true, SourceLoc(loc))
+      }
+      case WithLocation(loc, ID("false")) => Ast.BoolLit(false, SourceLoc(loc))
+    }
+
     def intLit: Parser[Ast.IntLit] = matchToken("integer", Set("<integer>")) {
-      case WithLocation(loc, INT(value)) => Ast.IntLit(value, SourceLoc(loc))
+      case WithLocation(loc, INT(value)) => Ast.IntLit(BigInt(value), SourceLoc(loc))
+    }
+
+    def floatLit: Parser[Ast.FloatLit] = matchToken("float", Set("<float>")) {
+      case WithLocation(loc, FLOAT(value)) => Ast.FloatLit(BigDecimal(value), SourceLoc(loc))
     }
 
     def stringLit: Parser[Ast.StringLit] = matchToken("string", Set("<string>")) {
@@ -90,7 +101,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case (expr, Some(typeAscr)) => Ast.ExprTypeAscr(expr, typeAscr)
     }
 
-    def exprAtomic: Parser[Ast.Expr] = exprGroup | exprNameOrApp | exprLit
+    def exprAtomic: Parser[Ast.Expr] = exprLit | exprGroup | exprNameOrApp
 
     def exprGroup: Parser[Ast.Expr] = (LPAREN ~> expr <~ RPAREN) ^^! {
       case (loc, expr) => Ast.ExprGrouped(expr, SourceLoc(loc))
@@ -101,7 +112,11 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case (loc, (name, Some(args))) => Ast.ExprApp(name, args, SourceLoc(loc))
     }
 
-    def exprLit: Parser[Ast.Expr] = exprIntLit | exprStringLit
+    def exprLit: Parser[Ast.Expr] = exprIntLit | exprStringLit | exprBoolLit | exprFloatLit
+
+    def exprFloatLit: Parser[Ast.Expr] = floatLit ^^ Ast.ExprFloatLit
+
+    def exprBoolLit: Parser[Ast.Expr] = boolLit ^^ Ast.ExprBoolLit
 
     def exprIntLit: Parser[Ast.Expr] = intLit ^^ Ast.ExprIntLit
 
