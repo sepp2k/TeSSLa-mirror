@@ -60,7 +60,9 @@ object Function {
     Func ("occursAny").  from (Events(a)) × Events(b)         → Events("Unit"),
     Func ("filter").     from (Events(a)) × Signal("Boolean") → Events(a),
     Func ("ifThen").     from (Events(a)) × Signal(b)         → Events(b),
+    Func ("inPast").     from ("Int") × Events(b)         → Signal("Boolean"),
     Func ("monitor") from ("String") and Sequence(Signal("Boolean")) to Signal("Bool3")
+
 
   )
 }

@@ -15,7 +15,10 @@ define processElement: Events<Unit> := function_calls("main.c:process_data")
 --
 -- Spec
 --
-define difference := sub(eventCount(processElement), eventCount(writeElement))
---define error := on processElement if geq(difference,1) 
-define error := onIf(processElement, geq(difference,constantSignal(1)))
+define diffProcWrite := sub(eventCount(processElement), eventCount(writeElement))
+--define error := on processElement if geq(diffProcWrite,1) 
+define doubleProcessing := onIf(processElement, geq(diffProcWrite,constantSignal(1)))
+
+define diffWriteProc := sub(eventCount(writeElement), eventCount(processElement))
+define bufferOverflow := onIf(writeElement, geq(diffWriteProc,constantSignal(6)))
 

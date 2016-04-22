@@ -76,7 +76,12 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           Some("dataFlowGraph.node.operation.NotNode", JObject("predecessor" -> ref(node.args(0))))
         case SimpleFunction("gt", _) =>
           Some("dataFlowGraph.node.operation.GTNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
-
+        case SimpleFunction("occursAll", _) =>
+          Some("dataFlowGraph.node.operation.OccursAllNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+        case SimpleFunction("inPast", _) =>
+          Some("dataFlowGraph.node.operation.InPastMode", ("delay" -> ref(node.args(0))) ~ ("input" -> ref(node.args(1))))
+        case SimpleFunction("ifThen", _) =>
+          Some("dataFlowGraph.node.operation.ifThenMode", ("control" -> ref(node.args(0))) ~ ("trueNode" -> ref(node.args(1))))
 
         case SimpleFunction("filter", _) =>
           Some("dataFlowGraph.node.operation.FilterNode",
