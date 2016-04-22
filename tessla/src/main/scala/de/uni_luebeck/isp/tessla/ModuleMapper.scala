@@ -70,8 +70,17 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
             compiler.diagnostic(UnfoldedLiteralError(node.function))
             None
         }
+        case SimpleFunction("input_vector_timestamps", _) =>
+          Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("timestamp")))
+
+        case SimpleFunction("timestamps", _) =>
+          Some("dataFlowGraph.node.operation.TimestampNode", JObject("predecessor" -> ref(node.args(0))))
         case SimpleFunction("eventCount", _) =>
-          Some("dataFlowGraph.node.operation.EventCountNode", JObject("input" -> ref(node.args(0))))
+          Some("dataFlowGraph.node.operation.EventCountNode", JObject("predecessor" -> ref(node.args(0))))
+        case SimpleFunction("mrv", _) =>
+          Some("dataFlowGraph.node.operation.MostRecentValueNode",
+            JObject("predecessor" -> ref(node.args(0))) ~ ("initialValue" -> JString(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString))
+          )
         case SimpleFunction("not", _) =>
           Some("dataFlowGraph.node.operation.NotNode", JObject("predecessor" -> ref(node.args(0))))
         case SimpleFunction("gt", _) =>
@@ -79,14 +88,16 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
         case SimpleFunction("occursAll", _) =>
           Some("dataFlowGraph.node.operation.OccursAllNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         case SimpleFunction("inPast", _) =>
-          Some("dataFlowGraph.node.operation.InPastMode", ("delay" -> ref(node.args(0))) ~ ("input" -> ref(node.args(1))))
+          Some("dataFlowGraph.node.operation.InPastNode", ("delay" -> ref(node.args(0))) ~ ("input" -> ref(node.args(1))))
         case SimpleFunction("ifThen", _) =>
-          Some("dataFlowGraph.node.operation.ifThenMode", ("control" -> ref(node.args(0))) ~ ("trueNode" -> ref(node.args(1))))
+          Some("dataFlowGraph.node.operation.ifThenNode", ("control" -> ref(node.args(0))) ~ ("trueNode" -> ref(node.args(1))))
 
         case SimpleFunction("filter", _) =>
           Some("dataFlowGraph.node.operation.FilterNode",
             JObject("inputEvents" -> ref(node.args(0))) ~ ("conditionSignal" -> ref(node.args(1)))
           )
+
+
         case SimpleFunction(n, _) => {
           compiler.diagnostic(GenericModuleWarning(node.function))
           Some("GenericModule",

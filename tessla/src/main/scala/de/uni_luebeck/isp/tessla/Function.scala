@@ -48,6 +48,7 @@ object Function {
     SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a)))),
     SimpleFunction("instruction_executions", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
     SimpleFunction("function_calls", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
+    Func("input_vector_timestamps") from "String" to Events("Int"), // TODO: will be Events("Time"), input is ignored
 
 
     /**** Stream operators ****/
@@ -60,10 +61,10 @@ object Function {
     Func ("occursAny").  from (Events(a)) × Events(b)         → Events("Unit"),
     Func ("filter").     from (Events(a)) × Signal("Boolean") → Events(a),
     Func ("ifThen").     from (Events(a)) × Signal(b)         → Events(b),
-    Func ("inPast").     from ("Int") × Events(b)         → Signal("Boolean"),
-    Func ("monitor") from ("String") and Sequence(Signal("Boolean")) to Signal("Bool3")
-
-
+    Func ("inPast").     from ("Int") × Events(b)         → Signal("Boolean"), //Todo: will be from "Time"
+    Func ("monitor") from ("String") and Sequence(Signal("Boolean")) to Signal("Bool3"),
+    Func ("mrv").     from (Events(a)) × a                    → Signal(a),
+    Func ("timestamps").     from (Events(a))                  → Events("Int") //Todo: will be Events("Time")
   )
 }
 
