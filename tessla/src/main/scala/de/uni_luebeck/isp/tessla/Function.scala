@@ -21,7 +21,7 @@ case class SimpleFunction(name: String, signature: FunctionSig) extends Function
   
 case class MonitorFunction(name: String, signature: FunctionSig) extends Function
 
-case class StateMachineFunction(name: String, signature: FunctionSig, stateMap: Map[String,String], transitionMap: Map[String,Map[String,String]]) extends Function
+case class StateMachineFunction(name: String, signature: FunctionSig, start:String, stateMap: Map[String,String], transitionList: List[(String,Set[Int],String)]) extends Function
 
 case class TypeAscription[T](`type`: Type) extends Function {
   val name = "type: " + `type`.toString
