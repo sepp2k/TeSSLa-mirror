@@ -22,15 +22,27 @@ class FunctionGraph extends WithDebugOutput {
     * @return DOT graph representation as String
     */
   override def debugOutput: String = {
-    val builder = new StringBuilder()
-    builder ++= "digraph {\n"
 
     val number = nodes.keys.zipWithIndex.toMap
+
+    def mkString(n: Node) = {
+
+      n.function match {
+        case SimpleFunction(name, FunctionSig(ret, args)) => s"${name}: ${args.mkString("×")} → $ret"
+        case f: TypeAscription[_] => s"of Type ${f.`type`}"
+        case MonitorFunction(name, FunctionSig(ret, args)) => s"Monitor ${name}: ${args.mkString("×")} → $ret"
+        case f: StateMachineFunction => s"Monitor ${f.name}: ${f.signature.args.mkString("×")} → ${f.signature.ret}ret"
+        case ConstantValue(t, v) => s"$v: $t"
+      }
+    }
+
+    val builder = new StringBuilder()
+    builder ++= "digraph {\n"
 
     for (id <- nodes.keys) {
       // TODO escape string
       val idNr = number(id)
-      val label = number(id) + ": " + id.node.toString
+      val label = "#" + number(id) + " " + mkString(id.node)
       builder ++= s"""  n$idNr [label = "$label" shape = box];\n"""
       for (targetId <- id.node.args) {
         val targetIdNr = number(targetId)

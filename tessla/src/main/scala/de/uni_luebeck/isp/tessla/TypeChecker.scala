@@ -1,17 +1,24 @@
 package de.uni_luebeck.isp.tessla
 
-import scala.collection.mutable
-import scala.util.Success
+import de.uni_luebeck.isp.tessla.TypeChecker.{TypeMatchError, UnknownFunctionError}
+
+import scala.collection.{Set, mutable}
+import scala.util.{Try, Success}
 
 object TypeChecker extends CompilerPass[Definitions, FunctionGraph] {
-  override def apply(compiler: Compiler, defs: Definitions) = {
-    assert(defs.macroDefs.isEmpty, "macros still present during typecheck")
+
+  case class UnknownFunctionError(name: String, atLocation: NestedLoc) extends Fatal
+  //Preliminary TypeMatchError:
+  case class TypeMatchError(conflicts: Set[Function], atLocation: NestedLoc) extends Fatal
+
+  override def apply(compiler: Compiler, defs: Definitions) = Try {
+    assert(defs.macroDefs.isEmpty, "macros still present during type check")
 
     val checker = new TypeChecker(compiler, defs)
 
     checker.typecheck
 
-    Success(checker.functionGraph)
+    checker.functionGraph
   }
 
 }
@@ -47,10 +54,12 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
       val nodeArgs = mutable.Map[Int, TypeVar]()
       for ((key, value) <- args) {
         if (!nameToIndex.contains(key)) {
+          // argument name does not exist in signature
           return None
         }
         val index = nameToIndex(key)
         if (nodeArgs.contains(index)) {
+          // multiple arguments provided for same formal parameter in signature
           return None
         }
         nodeArgs(index) = value
@@ -96,10 +105,26 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
     }
 
     def resolveOverload(key: TypeVar): Option[State] = {
+
       val states = overloads(key).flatMap(applyOverload(key, _)).toSeq
 
       states match {
-        case Seq() => None
+        case Seq() => {
+          //Todo: Make failed unification attempt available.
+          // The following code works in debug mode but not after normal compilation - fix this.
+          /*val conflicts = overloads(key).flatMap{ol =>
+            nodes(key).applySignature(ol.signature).map {
+              case (sigT,nodeT) =>
+                println(nodeT)
+                (sigT,nodeT).map(env(_)))
+            }
+          }
+         compiler.diagnostic(TypeMatchError(conflicts, nodes(key).subtree.loc))
+         */
+          //Preliminary diagnostic:
+          compiler.diagnostic(TypeMatchError(overloads(key), nodes(key).subtree.loc))
+          None
+        }
         case Seq(first, rest @ _*) => Some(rest.fold(first)(_ meet _))
       }
     }
@@ -133,7 +158,8 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
                 activeKeys -= key
               }
               state = s
-            case None => return None
+            case None =>
+              return None
           }
         }
       }
@@ -198,11 +224,21 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
   var state: State = State(Env(Map()),
     nodes.map({case (_, node) => node.result -> (node.fn match {
       case TypeAscrFn(t, _) => Set(TypeAscription(t): Function)
-      case NamedFn(name, _) => compiler.lookupFunction(name)
+      case NamedFn(name, _) => {
+        val functions = compiler.lookupFunction(name)
+        if (functions.isEmpty) {
+          compiler.diagnostic (UnknownFunctionError (name, node.subtree.loc) )
+        }
+        functions
+      }
       case LiteralFn(IntLiteral(v), _) =>
         Set(ConstantValue(SimpleType("Int"), v): Function)
       case LiteralFn(StringLiteral(v), _) =>
         Set(ConstantValue(SimpleType("String"), v): Function)
+      case LiteralFn(BoolLiteral(v), _) =>
+        Set(ConstantValue(SimpleType("Boolean"), v): Function)
+      case LiteralFn(FloatLiteral(v), _) =>
+        Set(ConstantValue(SimpleType("Float"), v): Function)
     })}).toMap)
 
   def typecheck: Unit = {
