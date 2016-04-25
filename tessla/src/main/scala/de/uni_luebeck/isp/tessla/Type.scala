@@ -19,7 +19,7 @@ case class Env(map: Map[TypeVar, Type]) {
     var currentMeets = Map[(Type, Type), Type]()
     Env(vars flatMap { v =>
       val myV = map.getOrElse(v, v)
-      val otherV = map.getOrElse(v, v)
+      val otherV = other.map.getOrElse(v, v)
       val (newV, newMeets) = myV.meet(otherV, currentMeets)
       currentMeets = newMeets
       if (newV == v) None else Some(v -> newV)
