@@ -68,6 +68,8 @@ case class SimpleType(name: String) extends Type {
   def occurs(v: TypeVar): Boolean = false
   def substitute(env: Env) = this
   def vars = Set()
+
+  override def toString = name
 }
 
 case class GenericType(name: String, args: Seq[Type]) extends Type {
@@ -108,6 +110,7 @@ case class GenericType(name: String, args: Seq[Type]) extends Type {
     }
   }
 
+  override def toString = name + "<" + args.map(_.toString).mkString(", ") + ">"
 }
 
 // This is not a case class as all TypeVars are distinct!
