@@ -1,0 +1,79 @@
+--
+-- General macros
+--
+define onIf(trig, cond) := filter(trig, cond: Signal<Boolean>)
+define onYield(trig, value) := ifThen(trig,value)
+define on(trig, cond, value) := onYield(onIf(trig, cond: Signal<Boolean>), value)
+
+define sample(s, e) := ifThen(e, s)
+
+define geq(x,y) := not(lt(x,y)): Signal<Boolean>
+define lt(x,y) := gt(y,x): Signal<Boolean>
+define leq(x,y) := not(gt(x:Signal<Int>,y:Signal<Int>):Signal<Boolean>): Signal<Boolean>
+define ne(x,y) := not(eq(x,y): Signal<Boolean>): Signal<Boolean>
+
+define onTrue(x) := onIf(changeOf(x, false), x)
+
+--
+-- Coniras specific definitions
+--
+
+define now: Signal<Int> := mrv(input_vector_timestamps,0)
+define inPast(time, event) := leq(
+                                     sub(
+                                         now: Signal<Int>,
+                                         mrv(timestamps(event): Events<Int>, 0: Int):Signal<Int>
+                                     ): Signal<Int>,
+                                     constantSignal(time): Signal<Int>
+                                 ): Signal<Boolean>
+
+-- HW implementation would be more reasonable since signals are represented in
+-- terms of update events anyway!
+define changeOf(s, initial) := onIf(anyEvent, ne(s, mrv(delay(sample(s, anyEvent)), initial))) --assuming that x is 0 initially
+
+--
+-- Inputs
+--
+
+define ids := mrv(input_vector_ownerships, 0)
+
+define startC1 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(1)), constantSignal(true))
+define startC2 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(2)), constantSignal(true))
+define startC3 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(3)), constantSignal(true))
+define endC1 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(1)), constantSignal(false))
+define endC2 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(2)), constantSignal(false))
+define endC3 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(3)), constantSignal(false))
+
+
+--
+-- Spec
+--
+
+------ inFuture is not implemented! ------------
+--define errorC1 := onIf(startC1, not(inFuture(endC1,2s)))
+--define errorC2 := onIf(startC2, not(inFuture(endC2,2s)))
+--define errorC3 := onIf(startC3, not(inFuture(endC3,2s)))
+------
+
+-- not as accurate alternative --
+define errorC1 := onIf(endC1, not(inPast(2000: Int, startC1): Signal<Boolean>): Signal<Boolean>): Events<Unit>
+define errorC2 := onIf(endC2, not(inPast(2000: Int, startC2): Signal<Boolean>): Signal<Boolean>): Events<Unit>
+define errorC3 := onIf(endC3, not(inPast(2000: Int, startC3): Signal<Boolean>): Signal<Boolean>): Events<Unit>
+
+define error := merge(merge(errorC1,errorC2),errorC3)
+
+-- more accurate alternative (not semantically equivalent,
+-- yet operationally equivalent in the Coniras system)
+define runningC1 := mrv(merge(startC1, endC1): Events<Boolean>, false): Signal<Boolean>
+define timeOutC1 := on(anyEvent, and(runningC1,not(inPast(2000, startC1): Signal<Boolean>): Signal<Boolean>): Signal<Boolean>, constantSignal(true): Signal<Boolean>): Events<Boolean>
+define earlyErrorC1 := onTrue(mrv(merge(timeOutC1, neg(startC1): Events<Boolean>): Events<Boolean>, false): Signal<Boolean>): Events<Unit>
+
+define runningC2 := mrv(merge(startC2, endC2): Events<Boolean>, false): Signal<Boolean>
+define timeOutC2 := on(anyEvent, and(runningC2,not(inPast(2000, startC2): Signal<Boolean>): Signal<Boolean>): Signal<Boolean>, constantSignal(true): Signal<Boolean>): Events<Boolean>
+define earlyErrorC2 := onTrue(mrv(merge(timeOutC2, neg(startC2): Events<Boolean>): Events<Boolean>, false): Signal<Boolean>): Events<Unit>
+
+define runningC3 := mrv(merge(startC3, endC3): Events<Boolean>, false): Signal<Boolean>
+define timeOutC3 := on(anyEvent, and(runningC3,not(inPast(2000, startC3): Signal<Boolean>): Signal<Boolean>): Signal<Boolean>, constantSignal(true): Signal<Boolean>): Events<Boolean>
+define earlyErrorC3 := onTrue(mrv(merge(timeOutC3, neg(startC3): Events<Boolean>): Events<Boolean>, false): Signal<Boolean>): Events<Unit>
+
+define earlyError := merge(merge(earlyErrorC1,earlyErrorC2),earlyErrorC3)
