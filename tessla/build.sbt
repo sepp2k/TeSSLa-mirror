@@ -17,7 +17,7 @@ lazy val tessla = (project in file(".")).settings(
   libraryDependencies ++= Seq(
     "de.uni_luebeck.isp" %% "compacom" % "0.2.0-3-SNAPSHOT",
     "org.json4s" %% "json4s-native" % "3.3.0.RC6",
-	  "de.uni_luebeck.isp" %% "rltlconv" % "0.1.0",
+	"de.uni_luebeck.isp" %% "rltlconv" % "0.2.0-3-SNAPSHOT",
     "com.github.scopt" %% "scopt" % "3.3.0",
     "org.json4s" %% "json4s-native" % "3.3.0.RC6"
   ),
