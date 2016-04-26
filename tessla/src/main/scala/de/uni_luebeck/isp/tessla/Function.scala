@@ -62,7 +62,7 @@ object Function {
     Func ("filter").     from (Events(a)) × Signal("Boolean") → Events(a),
     Func ("ifThen").     from (Events(a)) × Signal(b)         → Events(b),
     Func ("inPast").     from ("Int") × Events(b)         → Signal("Boolean"), //Todo: will be from "Time"
-    Func ("monitor") from ("String") and Sequence(Signal("Boolean")) to Signal("Bool3"),
+    Func ("monitor"). from ("String") and Signal("Boolean") to Signal("Bool3"),
     Func ("mrv").     from (Events(a)) × a                    → Signal(a),
     Func ("timestamps").     from (Events(a))                  → Events("Int") //Todo: will be Events("Time")
   )

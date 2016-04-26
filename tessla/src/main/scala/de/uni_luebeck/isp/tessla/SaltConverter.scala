@@ -9,8 +9,8 @@ object SaltConverter extends CompilerPass[FunctionGraph, FunctionGraph] {
     import graph.{Node,nodes}
     nodes.keySet.foreach { id =>  
       val node = nodes(id)
-      node.function match {
-        case (f : MonitorFunction) => {
+      val f = node.function
+      if (f.name.equals("monitor")) {
           val moore = RltlConv.convert("assert " + node.args.head.node.function.asInstanceOf[ConstantValue[_]].value,"--salt","--ltl","--moore","--min").asInstanceOf[Moore].toNamedMoore
           val alphabet = moore.alphabet.map(s => "\"" + s + "\"")
           val stateMap = moore.states.foldLeft(Map[String,String]())((m, s) => m + (s.name -> moore.labels(s).toString))
@@ -27,8 +27,6 @@ object SaltConverter extends CompilerPass[FunctionGraph, FunctionGraph] {
           val transitionList = (alphabet.foldLeft(List[(String,Set[Int],String)]())((l,a) => l ++ allTrans.map(s => (s._1.name,alphIntSetMap(a),s._2.name))) ++
             moore.transitions.filter(element => alphabet.contains(element._1._2.toString)).toList.map(e => (e._1._1.name,alphIntSetMap(e._1._2.toString),e._2.name))).map(e => (e._1,e._2,e._3))
           nodes.update(id, Node(id,StateMachineFunction(f.name,f.signature,moore.start.toString(),stateMap,transitionList),node.args.tail))
-        }
-        case _ =>
       }
     }
     graph
