@@ -63,8 +63,13 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
     }
   }
 
-  def lookupFunction(name: String): Set[Function] = {
-    Function.defaultFunctions.filter(fn => fn.name == name).toSet
+  def lookupFunction(name: String, numberArguments: Int): Set[Function] = {
+    if(name.equals("monitor")) {
+      val parameters = Seq((None, SimpleType("String"))) ++ Seq.fill(numberArguments - 1)((None,GenericType("Signal", Seq(SimpleType("Boolean")))))
+      Set(MonitorFunction("monitor",FunctionSig((SimpleType("Bool3")), parameters)))
+    } else {
+      Function.defaultFunctions.filter(fn => fn.name == name).toSet
+    }
   }
 
 }

@@ -35,7 +35,7 @@ case class ConstantValue[T](`type`: Type, value: T) extends Function {
 
 object Function {
 
-  import de.uni_luebeck.isp.tessla.util.SimpleFunctionDSL._
+  import de.uni_luebeck.isp.tessla.util.SimpleFunctionDSL._ 
 
   private val a,b = new TypeVar
 
@@ -70,7 +70,6 @@ object Function {
     Func ("filter").     from (Events(a)) × Signal("Boolean") → Events(a),
     Func ("ifThen").     from (Events(a)) × Signal(b)         → Events(b),
     Func ("inPast").     from ("Int") × Events(b)             → Signal("Boolean"), //Todo: will be from "Time"
-    Func ("monitor"). from ("String") and Sequence(Signal("Boolean")) to Signal("Bool3"),
     Func ("mrv").     from (Events(a)) × a                    → Signal(a),
     Func ("timestamps").     from (Events(a))                 → Events("Int"), //Todo: will be Events("Time")
     Func ("delay").     from (Events(a))                      → Events(a)

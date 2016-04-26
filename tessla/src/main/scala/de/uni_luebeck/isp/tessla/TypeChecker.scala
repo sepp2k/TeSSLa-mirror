@@ -225,7 +225,7 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
     nodes.map({case (_, node) => node.result -> (node.fn match {
       case TypeAscrFn(t, _) => Set(TypeAscription(t): Function)
       case NamedFn(name, _) => {
-        val functions = compiler.lookupFunction(name)
+        val functions = compiler.lookupFunction(name,node.args.size)
         if (functions.isEmpty) {
           compiler.diagnostic (UnknownFunctionError (name, node.subtree.loc) )
         }
