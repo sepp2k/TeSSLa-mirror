@@ -1,7 +1,5 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.util.SimpleFunctionDSL.Func
-
 // TODO This is preliminary
 
 abstract class Function {
@@ -46,7 +44,7 @@ object Function {
     Func("add").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] + args(1).asInstanceOf[BigInt]},
     Func("sub").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] - args(1).asInstanceOf[BigInt]},
 
-      /**** Input/Constant functions ****/
+    /**** Input/Constant functions ****/
     SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a)))),
     SimpleFunction("instruction_executions", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
     SimpleFunction("function_calls", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
@@ -72,7 +70,7 @@ object Function {
     Func ("filter").     from (Events(a)) × Signal("Boolean") → Events(a),
     Func ("ifThen").     from (Events(a)) × Signal(b)         → Events(b),
     Func ("inPast").     from ("Int") × Events(b)             → Signal("Boolean"), //Todo: will be from "Time"
-    Func ("monitor") from ("String") and Sequence(Signal("Boolean")) to Signal("Bool3"),
+    Func ("monitor"). from ("String") and Sequence(Signal("Boolean")) to Signal("Bool3"),
     Func ("mrv").     from (Events(a)) × a                    → Signal(a),
     Func ("timestamps").     from (Events(a))                 → Events("Int"), //Todo: will be Events("Time")
     Func ("delay").     from (Events(a))                      → Events(a)
