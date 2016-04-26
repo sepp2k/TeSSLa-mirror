@@ -55,7 +55,16 @@ object SimpleFunctionDSL {
 
   case class Func(name: String) {
     def from(`type`: Type): FunctionBuilder = {
-      new FunctionBuilder(name, Seq((None, `type`)))
+      val argType = `type` match {
+          // Todo: Make type checker aware of Unit being equivalent to the empty sequence of types
+        case SimpleType("Unit") => Seq()
+        case _ => Seq((None, `type`))
+      }
+      new FunctionBuilder(name, argType)
+    }
+
+    def from(): FunctionBuilder = {
+      new FunctionBuilder(name, Seq())
     }
 
     def :=(`type`: Type): FunctionBuilder = {

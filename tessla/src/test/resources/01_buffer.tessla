@@ -21,3 +21,4 @@ define doubleProcessing := onIf(processElement, geq(diffProcWrite,constantSignal
 
 define diffWriteProc := sub(eventCount(writeElement), eventCount(processElement))
 define bufferOverflow := onIf(writeElement, geq(diffWriteProc,constantSignal(6)))
+

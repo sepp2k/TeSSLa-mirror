@@ -28,7 +28,7 @@ class FunctionGraph extends WithDebugOutput {
     def mkString(n: Node) = {
 
       n.function match {
-        case SimpleFunction(name, FunctionSig(ret, args)) => s"${name}: ${args.mkString("×")} → $ret"
+        case SimpleFunction(name, FunctionSig(ret, args)) => s"${name}: (${args.mkString("×")}) → $ret"
         case f: TypeAscription[_] => s"of Type ${f.`type`}"
         case MonitorFunction(name, FunctionSig(ret, args)) => s"Monitor ${name}: ${args.mkString("×")} → $ret"
         case f: StateMachineFunction => s"Monitor ${f.name}: ${f.signature.args.mkString("×")} → ${f.signature.ret}ret"

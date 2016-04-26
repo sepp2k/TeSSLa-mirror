@@ -70,8 +70,22 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
             compiler.diagnostic(UnfoldedLiteralError(node.function))
             None
         }
+        case SimpleFunction("function_returns", _) => try {
+          Some("dataFlowGraph.node.input.FunctionReturnsNode",
+            JObject("argument" -> JString(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
+          )
+        } catch {
+          case e: ClassCastException =>
+            compiler.diagnostic(UnfoldedLiteralError(node.function))
+            None
+        }
         case SimpleFunction("input_vector_timestamps", _) =>
           Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("timestamp")))
+        case SimpleFunction("input_vector_ownerships", _) =>
+          Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("ownership")))
+        case SimpleFunction("anyEvent", _) =>
+          Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("valid")))
+
 
         case SimpleFunction("timestamps", _) =>
           Some("dataFlowGraph.node.operation.TimestampNode", JObject("predecessor" -> ref(node.args(0))))
@@ -83,14 +97,28 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           )
         case SimpleFunction("not", _) =>
           Some("dataFlowGraph.node.operation.NotNode", JObject("predecessor" -> ref(node.args(0))))
+
+        case SimpleFunction("and", _) =>
+          Some("dataFlowGraph.node.operation.AndNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+        case SimpleFunction("or", _) =>
+          Some("dataFlowGraph.node.operation.OrNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+
+        case SimpleFunction("neg", _) =>
+          Some("dataFlowGraph.node.operation.NegNode", JObject("predecessor" -> ref(node.args(0))))
         case SimpleFunction("gt", _) =>
           Some("dataFlowGraph.node.operation.GTNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+        case SimpleFunction("eq", _) =>
+          Some("dataFlowGraph.node.operation.EQNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         case SimpleFunction("occursAll", _) =>
           Some("dataFlowGraph.node.operation.OccursAllNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+        case SimpleFunction("merge", _) =>
+          Some("dataFlowGraph.node.operation.MergeNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         case SimpleFunction("inPast", _) =>
           Some("dataFlowGraph.node.operation.InPastNode", ("delay" -> ref(node.args(0))) ~ ("input" -> ref(node.args(1))))
         case SimpleFunction("ifThen", _) =>
-          Some("dataFlowGraph.node.operation.ifThenNode", ("control" -> ref(node.args(0))) ~ ("trueNode" -> ref(node.args(1))))
+          Some("dataFlowGraph.node.operation.IfThenNode", ("control" -> ref(node.args(0))) ~ ("trueNode" -> ref(node.args(1))))
+        case SimpleFunction("delay", _) =>
+          Some("dataFlowGraph.node.operation.DelayNode", ("predecessor" -> ref(node.args(0))): JObject)
 
         case SimpleFunction("filter", _) =>
           Some("dataFlowGraph.node.operation.FilterNode",

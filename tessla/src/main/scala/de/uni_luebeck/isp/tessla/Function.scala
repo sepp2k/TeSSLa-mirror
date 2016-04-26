@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.util.SimpleFunctionDSL.Func
+
 // TODO This is preliminary
 
 abstract class Function {
@@ -44,27 +46,36 @@ object Function {
     Func("add").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] + args(1).asInstanceOf[BigInt]},
     Func("sub").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] - args(1).asInstanceOf[BigInt]},
 
-    /**** Input/Constant functions ****/
+      /**** Input/Constant functions ****/
     SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a)))),
     SimpleFunction("instruction_executions", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
     SimpleFunction("function_calls", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
-    Func("input_vector_timestamps") from "String" to Events("Int"), // TODO: will be Events("Time"), input is ignored
+    SimpleFunction("function_returns", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
+    Func("input_vector_timestamps") from () to Events("Int"), // TODO: will be Events("Time")
+    Func("input_vector_ownerships") from () to Events("Int"),
+    Func("anyEvent") from () to Events("Unit"),
 
 
     /**** Stream operators ****/
     Func ("sub").        from (Signal("Int")) × Signal("Int") → Signal("Int"),
     Func ("add").        from (Signal("Int")) × Signal("Int") → Signal("Int"),
     Func ("gt").         from (Signal("Int")) × Signal("Int") → Signal("Boolean"),
-    Func ("not").         from (Signal("Boolean"))            → Signal("Boolean"),
-    Func ("eventCount").from (Events(a))                      → Signal("Int"),
+    Func ("eq").         from (Signal(a))     × Signal(a)     → Signal("Boolean"),
+    Func ("not").        from (Signal("Boolean"))             → Signal("Boolean"),
+    Func ("and").        from (Signal("Boolean")) × Signal("Boolean") → Signal("Boolean"),
+    Func ("or").        from (Signal("Boolean")) × Signal("Boolean") → Signal("Boolean"),
+    Func ("neg").        from (Events("Boolean"))             → Events("Boolean"),
+    Func ("eventCount"). from (Events(a))                     → Signal("Int"),
     Func ("occursAll").  from (Events(a)) × Events(b)         → Events("Unit"),
     Func ("occursAny").  from (Events(a)) × Events(b)         → Events("Unit"),
+    Func ("merge").      from (Events(a)) × Events(a)         → Events(a),
     Func ("filter").     from (Events(a)) × Signal("Boolean") → Events(a),
     Func ("ifThen").     from (Events(a)) × Signal(b)         → Events(b),
-    Func ("inPast").     from ("Int") × Events(b)         → Signal("Boolean"), //Todo: will be from "Time"
+    Func ("inPast").     from ("Int") × Events(b)             → Signal("Boolean"), //Todo: will be from "Time"
     Func ("monitor") from ("String") and Sequence(Signal("Boolean")) to Signal("Bool3"),
     Func ("mrv").     from (Events(a)) × a                    → Signal(a),
-    Func ("timestamps").     from (Events(a))                  → Events("Int") //Todo: will be Events("Time")
+    Func ("timestamps").     from (Events(a))                 → Events("Int"), //Todo: will be Events("Time")
+    Func ("delay").     from (Events(a))                      → Events(a)
   )
 }
 
