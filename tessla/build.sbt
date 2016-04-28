@@ -5,6 +5,7 @@ val snapshots = "Snapshots" at nexus + "content/repositories/snapshots"
 val releases = "Releases" at nexus + "content/repositories/releases"
 
 lazy val tessla = (project in file(".")).settings(
+  offline := true,
   name := "tessla",
   version := "0.2.0-SNAPSHOT",
   scalaVersion := "2.11.7",

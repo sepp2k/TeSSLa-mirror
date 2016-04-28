@@ -70,6 +70,15 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
             compiler.diagnostic(UnfoldedLiteralError(node.function))
             None
         }
+        case SimpleFunction("variable_values", _) => try {
+          Some("dataFlowGraph.node.input.VariableValueNode",
+            JObject("argument" -> JString(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
+          )
+        } catch {
+          case e: ClassCastException =>
+            compiler.diagnostic(UnfoldedLiteralError(node.function))
+            None
+        }
         case SimpleFunction("function_returns", _) => try {
           Some("dataFlowGraph.node.input.FunctionReturnsNode",
             JObject("argument" -> JString(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
@@ -111,6 +120,8 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           Some("dataFlowGraph.node.operation.EQNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         case SimpleFunction("occursAll", _) =>
           Some("dataFlowGraph.node.operation.OccursAllNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+        case SimpleFunction("occursAny", _) =>
+          Some("dataFlowGraph.node.operation.OccursAllNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         case SimpleFunction("merge", _) =>
           Some("dataFlowGraph.node.operation.MergeNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         case SimpleFunction("inPast", _) =>
@@ -124,7 +135,8 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           Some("dataFlowGraph.node.operation.FilterNode",
             JObject("inputEvents" -> ref(node.args(0))) ~ ("conditionSignal" -> ref(node.args(1)))
           )
-
+        case SimpleFunction("changeOf", _) =>
+          Some("dataFlowGraph.node.operation.ChangeOfNode", ("predecessor" -> ref(node.args(0))): JObject)
 
         case SimpleFunction(n, _) => {
           compiler.diagnostic(GenericModuleWarning(node.function))

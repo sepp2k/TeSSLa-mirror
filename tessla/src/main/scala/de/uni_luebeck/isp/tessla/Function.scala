@@ -49,8 +49,9 @@ object Function {
     SimpleFunction("instruction_executions", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
     SimpleFunction("function_calls", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
     SimpleFunction("function_returns", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
-    Func("input_vector_timestamps") from () to Events("Int"), // TODO: will be Events("Time")
-    Func("input_vector_ownerships") from () to Events("Int"),
+    Func("variable_values"). from ("String") → Signal(a),
+    Func("input_vector_timestamps"). from () to Events("Int"), // TODO: will be Events("Time")
+    Func("input_vector_ownerships"). from () to Events("Int"),
     Func("anyEvent") from () to Events("Unit"),
 
 
@@ -72,7 +73,9 @@ object Function {
     Func ("inPast").     from ("Int") × Events(b)             → Signal("Boolean"), //Todo: will be from "Time"
     Func ("mrv").     from (Events(a)) × a                    → Signal(a),
     Func ("timestamps").     from (Events(a))                 → Events("Int"), //Todo: will be Events("Time")
-    Func ("delay").     from (Events(a))                      → Events(a)
+    Func ("delay").     from (Events(a))                      → Events(a),
+    Func ("changeOf").     from (Signal(a))                      → Events(a)
+
   )
 }
 

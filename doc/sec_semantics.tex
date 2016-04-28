@@ -284,7 +284,8 @@ We assume that the temporal logic is defined over propositional variables from a
 Further, the semantics is defined on finite words over the alphabet $Σ=2^{AP}$ and admits truth values from some domain $𝕍$ (e.g., $𝔹$).
 We then let, for arbitrary $D$,
 \[
-  \textttbf{monitor}: TL × (𝓢_𝔹)^n × 𝓔_D → 𝓔_𝕍
+%  \textttbf{monitor}: TL × (𝓢_𝔹)^n × 𝓔_D → 𝓔_𝕍
+  \textttbf{monitor}: TL × (𝓢_𝔹∪𝓔_⊥)^n  → 𝓔_𝕍
 \]
 with 
 \[

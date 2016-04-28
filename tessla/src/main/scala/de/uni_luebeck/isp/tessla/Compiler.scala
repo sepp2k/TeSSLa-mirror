@@ -31,7 +31,7 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
       val result = pass(Compiler.this, state).get
       if (debug) {
         result match {
-          case t:WithDebugOutput => println(t.debugOutput)
+          case t: WithDebugOutput => println(t.debugOutput)
           case _ => println(result)
         }
       }
@@ -46,14 +46,14 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
   def applyPasses(src: TesslaSource): Option[AnyRef] = {
     try {
       val result = (StateWrapper(src)
-        (Parser)
-        (DefExtractor)
-        (MacroResolver)
-        (TypeChecker)
-        (AscriptionRemover)
-        (SaltConverter)
-        (ConstantFolder)
-        (ModuleMapper)).state
+      (Parser)
+      (DefExtractor)
+      (MacroResolver)
+      (TypeChecker)
+      (AscriptionRemover)
+      (SaltConverter)
+      (ConstantFolder)
+      (ModuleMapper)).state
 
       Some(result)
     } catch {
@@ -64,12 +64,19 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
   }
 
   def lookupFunction(name: String, numberArguments: Int): Set[Function] = {
-    if(name.equals("monitor")) {
-      val a = new TypeVar
-      val seqElement = GenericType("Signal", Seq(SimpleType("Boolean")))
-      val sequence = ({for(i <- 1 until numberArguments - 1) yield {(Some("p" + i),seqElement)}}.toSeq)
-      val parameters = Seq((Some("property"), SimpleType("String"))) ++ sequence ++ Seq((Some("clock"),GenericType("Events",Seq(SimpleType("Unit")))))
-      Set(MonitorFunction("monitor",FunctionSig((SimpleType("Bool3")), parameters)))
+    if (name.equals("monitor")) {
+
+      import de.uni_luebeck.isp.tessla.util.SimpleFunctionDSL.{Events, Signal, toType}
+
+      val sequence = {
+        for (i <- 1 until numberArguments - 1) yield {
+          (Some("p" + i), Signal("Boolean"))
+        }
+      }.toSeq
+      val parameters = Seq((Some("property"), SimpleType("String"))) ++ sequence ++ Seq((Some("clock"), GenericType("Events", Seq(SimpleType("Unit")))))
+
+      Set(MonitorFunction("monitor", FunctionSig((Events("Bool3")), parameters)))
+
     } else {
       Function.defaultFunctions.filter(fn => fn.name == name).toSet
     }
