@@ -93,7 +93,7 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
         case SimpleFunction("input_vector_ownerships", _) =>
           Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("ownership")))
         case SimpleFunction("anyEvent", _) =>
-          Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("valid")))
+          Some("dataFlowGraph.node.input.MessageValidNode", JObject("argument" -> JString("valid")))
 
 
         case SimpleFunction("timestamps", _) =>
