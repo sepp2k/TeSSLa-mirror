@@ -29,7 +29,11 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           val refs = node.args.map(x => ref(x))
           val refTransitions = transitionList.map(t => (t._1,t._2.map(x => refs(x-1)),t._3))
           val jsonTransitions = seq2jvalue(refTransitions.map(t => ("current" -> t._1) ~ ("active" -> t._2) ~ ("next" -> t._3)))
-          Some("dataFlowGraph.node.operation.MonitorNode", ("predecessors" -> refs) ~ ("start" -> start) ~ ("states" -> stateMap) ~ ("transitions" -> jsonTransitions))
+          val stateList = stateMap.toList
+          val firstElement = stateList.filter(x => x._1.equals(start.toString())).head
+          val sortedStateList = List(firstElement) ++ stateList.filter(x => !x._1.equals(start.toString()))
+          val jsonStates = seq2jvalue(sortedStateList.map(s => ("name" -> s._1) ~ ("output" -> s._2)))
+          Some("dataFlowGraph.node.operation.MonitorNode", ("predecessors" -> refs) ~ ("states" -> jsonStates) ~ ("transitions" -> jsonTransitions))
         }
         case SimpleFunction(_, FunctionSig(SimpleType(_), _)) => {
           compiler.diagnostic(UnfoldedLiteralError(node.function))
