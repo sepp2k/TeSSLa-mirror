@@ -191,7 +191,7 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
           Some("TesslaServer.Node.Timing.Delay",
             ("operands" -> Seq(idx(node.args(0))))
             ~ ("options" ->
-                ("amount" -> node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString)
+                ("amount" -> Integer.parseInt(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString))
               )
           )
         case SimpleFunction("within", _) => // TODO switch int to time
