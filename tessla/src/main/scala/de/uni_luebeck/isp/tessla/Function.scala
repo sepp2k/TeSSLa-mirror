@@ -41,41 +41,76 @@ object Function {
 
   val defaultFunctions = Seq(
     /**** Literal functions (should come with semantics) ****/
-    Func("add").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] + args(1).asInstanceOf[BigInt]},
-    Func("sub").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] - args(1).asInstanceOf[BigInt]},
+    // Func("add").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] + args(1).asInstanceOf[BigInt]},
+    // Func("sub").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] - args(1).asInstanceOf[BigInt]},
 
     /**** Input/Constant functions ****/
-    SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a)))),
-    SimpleFunction("instruction_executions", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
-    SimpleFunction("function_calls", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
-    SimpleFunction("function_returns", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
-    Func("variable_values"). from ("String") → Signal(a),
-    Func("input_vector_timestamps"). from () to Events("Int"), // TODO: will be Events("Time")
-    Func("input_vector_ownerships"). from () to Events("Int"),
-    Func("anyEvent") from () to Events("Unit"),
+    // SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a)))),
+    // SimpleFunction("instruction_executions", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
+    //SimpleFunction("function_calls", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
+    // SimpleFunction("function_returns", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
+    SimpleFunction("literal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a)))),
+    Func("instruction_executions"). from("String")  → Events("Unit"),// TODO
+    Func("function_returns").       from("String")  → Events("Unit"),// TODO
+    Func("function_calls").         from("String")  → Events("Unit"),// TODO
+    Func("variable_values").        from("String")  → Signal(a),// TODO
+    // Func("input_vector_timestamps"). from () to Events("Int"), // TODO: will be Events("Time")
+    // Func("input_vector_ownerships"). from () to Events("Int"),
+    // Func("anyEvent") from () to Events("Unit"),
 
+    /**** Lifted ****/
+    Func ("abs").        from (Signal("Int"))                             → Signal("Int"),
+    Func ("abs").        from (Events("Int"))                             → Events("Int"),
+    Func ("add").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
+    Func ("and").        from (Signal("Boolean"))   × Signal("Boolean")   → Signal("Boolean"),
+    Func ("div").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
+    Func ("eq").         from (Signal(a))           × Signal(a)           → Signal("Boolean"),
+    Func ("geq").        from (Signal("Int"))       × Signal("Int")       → Signal("Boolean"),
+    Func ("gt").         from (Signal("Int"))       × Signal("Int")       → Signal("Boolean"), //TODO
+    Func ("implies").    from (Signal("Boolean"))   × Signal("Boolean")   → Signal("Boolean"),
+    Func ("leq").        from (Signal("Int"))       × Signal("Int")       → Signal("Boolean"),
+    Func ("lt").         from (Signal("Int"))       × Signal("Int")       → Signal("Boolean"), // TODO
+    Func ("max").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
+    Func ("min").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
+    Func ("mul").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
+    Func ("neg").        from (Signal("Int"))                             → Signal("Int"), // TODO
+    Func ("not").        from (Signal("Boolean"))                         → Signal("Boolean"),
+    Func ("not").        from (Events("Boolean"))                         → Events("Boolean"),
+    Func ("or").         from (Signal("Boolean"))   × Signal("Boolean")   → Signal("Boolean"),
+    Func ("sub").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
 
-    /**** Stream operators ****/
-    Func ("sub").        from (Signal("Int")) × Signal("Int") → Signal("Int"),
-    Func ("add").        from (Signal("Int")) × Signal("Int") → Signal("Int"),
-    Func ("gt").         from (Signal("Int")) × Signal("Int") → Signal("Boolean"),
-    Func ("eq").         from (Signal(a))     × Signal(a)     → Signal("Boolean"),
-    Func ("not").        from (Signal("Boolean"))             → Signal("Boolean"),
-    Func ("and").        from (Signal("Boolean")) × Signal("Boolean") → Signal("Boolean"),
-    Func ("or").        from (Signal("Boolean")) × Signal("Boolean") → Signal("Boolean"),
-    Func ("neg").        from (Events("Boolean"))             → Events("Boolean"),
-    Func ("eventCount"). from (Events(a))                     → Signal("Int"),
-    Func ("occursAll").  from (Events(a)) × Events(b)         → Events("Unit"),
-    Func ("occursAny").  from (Events(a)) × Events(b)         → Events("Unit"),
-    Func ("merge").      from (Events(a)) × Events(a)         → Events(a),
-    Func ("filter").     from (Events(a)) × Signal("Boolean") → Events(a),
-    Func ("ifThen").     from (Events(a)) × Signal(b)         → Events(b),
-    Func ("inPast").     from ("Int") × Events(b)             → Signal("Boolean"), //Todo: will be from "Time"
-    Func ("mrv").     from (Events(a)) × a                    → Signal(a),
-    Func ("timestamps").     from (Events(a))                 → Events("Int"), //Todo: will be Events("Time")
-    Func ("delay").     from (Events(a))                      → Events(a),
-    Func ("changeOf").     from (Signal(a))                      → Events(a)
+    /**** Filter ****/
+    Func ("merge").      from (Events(a))           × Events(a)           → Events(a),  //Todo
+    Func ("filter").     from (Events(a))           × Signal("Boolean")   → Events(a),  //Todo
+    Func ("ifThen").     from (Events(a))           × Signal(b)           → Events(b),  //Todo
+    Func ("ifThenElse"). from (Signal("Boolean"))   × Signal(a) × Signal(a) → Signal(a),  //Todo
+    Func ("changeOf").   from (Signal(a))                                 → Events(a),  //Todo
+    Func ("sample").     from (Signal(a))           × Events(b)           → Events(a),  //Todo
+    Func ("occurAll").   from (Events(a))           × Events(b)           → Events("Unit"), //Todo
+    Func ("occurAny").   from (Events(a))           × Events(b)           → Events("Unit"), //Todo
 
+    /**** Aggregation ****/
+    Func ("maximum").    from (Signal("Int"))                             → Signal("Int"),
+    Func ("maximum").    from (Events("Int"))       × "Int"               → Signal("Int"),
+    Func ("minimum").    from (Signal("Int"))                             → Signal("Int"),
+    Func ("minimum").    from (Events("Int"))       × "Int"               → Signal("Int"),
+    Func ("sum").        from (Events("Int"))                             → Signal("Int"),
+    Func ("eventCount"). from (Events(a))                                 → Signal("Int"),  //Todo
+    Func ("mrv").        from (Events(a))           × a                   → Signal(a),  //Todo
+    Func ("sma").        from (Events("Int"))       × "Int"               → Events("Int"),  //Todo
+
+    /**** Timing ****/
+    Func ("timestamps"). from (Events(a))                                 → Events("Int"),
+    Func ("delay").      from (Signal(a))           × "Int" × a           → Signal(a), //Todo
+    Func ("delay").      from (Signal(a))           × "Int"               → Signal(a), //Todo
+    Func ("delay").      from (Events(a))           × "Int"               → Events(a),   //TODO (by time or count)
+    Func ("delay").      from (Events(a))                                 → Events(a),   //Todo
+    Func ("within").     from ("Int")               × "Int" × Events(a)   → Signal("Boolean"),  //Todo
+    Func ("inPast").     from ("Int")               × Events(a)           → Signal("Boolean"),  //Todo
+    Func ("inFuture").   from ("Int")               × Events(a)           → Signal("Boolean")  //Todo
+
+    /**** TODO Synchronization ****/
+    // Func ("synchronise").from (Events(a))           × Events(b) × "Int"   → //Todo
   )
 }
 

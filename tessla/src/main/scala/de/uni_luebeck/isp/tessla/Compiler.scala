@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
+class Compiler(val debug: Boolean = false, val software: Boolean = false,  silent: Boolean = false) {
   var diagnostics: Seq[Diagnostic] = Seq()
 
   var encounteredFatal: Boolean = false
@@ -45,7 +45,7 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
   // TODO change return type
   def applyPasses(src: TesslaSource): Option[AnyRef] = {
     try {
-      val result = (StateWrapper(src)
+      val result  = (StateWrapper(src)
       (Parser)
       (DefExtractor)
       (MacroResolver)
@@ -53,7 +53,7 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
       (AscriptionRemover)
       (SaltConverter)
       (ConstantFolder)
-      (ModuleMapper)).state
+      (SoftwareMapper)).state // TODO somehow use software switch
 
       Some(result)
     } catch {
