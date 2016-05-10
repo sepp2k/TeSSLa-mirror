@@ -66,28 +66,28 @@ object Function {
     Func ("div").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
     Func ("eq").         from (Signal(a))           × Signal(a)           → Signal("Boolean"),
     Func ("geq").        from (Signal("Int"))       × Signal("Int")       → Signal("Boolean"),
-    Func ("gt").         from (Signal("Int"))       × Signal("Int")       → Signal("Boolean"), //TODO
+    Func ("gt").         from (Signal("Int"))       × Signal("Int")       → Signal("Boolean"),
     Func ("implies").    from (Signal("Boolean"))   × Signal("Boolean")   → Signal("Boolean"),
     Func ("leq").        from (Signal("Int"))       × Signal("Int")       → Signal("Boolean"),
-    Func ("lt").         from (Signal("Int"))       × Signal("Int")       → Signal("Boolean"), // TODO
+    Func ("lt").         from (Signal("Int"))       × Signal("Int")       → Signal("Boolean"),
     Func ("max").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
     Func ("min").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
     Func ("mul").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
-    Func ("neg").        from (Signal("Int"))                             → Signal("Int"), // TODO
+    Func ("neg").        from (Signal("Int"))                             → Signal("Int"),
     Func ("not").        from (Signal("Boolean"))                         → Signal("Boolean"),
     Func ("not").        from (Events("Boolean"))                         → Events("Boolean"),
     Func ("or").         from (Signal("Boolean"))   × Signal("Boolean")   → Signal("Boolean"),
     Func ("sub").        from (Signal("Int"))       × Signal("Int")       → Signal("Int"),
 
     /**** Filter ****/
-    Func ("merge").      from (Events(a))           × Events(a)           → Events(a),  //Todo
-    Func ("filter").     from (Events(a))           × Signal("Boolean")   → Events(a),  //Todo
-    Func ("ifThen").     from (Events(a))           × Signal(b)           → Events(b),  //Todo
-    Func ("ifThenElse"). from (Signal("Boolean"))   × Signal(a) × Signal(a) → Signal(a),  //Todo
-    Func ("changeOf").   from (Signal(a))                                 → Events(a),  //Todo
-    Func ("sample").     from (Signal(a))           × Events(b)           → Events(a),  //Todo
-    Func ("occurAll").   from (Events(a))           × Events(b)           → Events("Unit"), //Todo
-    Func ("occurAny").   from (Events(a))           × Events(b)           → Events("Unit"), //Todo
+    Func ("merge").      from (Events(a))           × Events(a)           → Events(a),
+    Func ("filter").     from (Events(a))           × Signal("Boolean")   → Events(a),
+    Func ("ifThen").     from (Events(a))           × Signal(b)           → Events(b),
+    Func ("ifThenElse"). from (Signal("Boolean"))   × Signal(a) × Signal(a) → Signal(a),
+    Func ("changeOf").   from (Signal(a))                                 → Events(a),
+    Func ("sample").     from (Signal(a))           × Events(b)           → Events(a),
+    Func ("occurAll").   from (Events(a))           × Events(b)           → Events("Unit"),
+    Func ("occurAny").   from (Events(a))           × Events(b)           → Events("Unit"),
 
     /**** Aggregation ****/
     Func ("maximum").    from (Signal("Int"))                             → Signal("Int"),
@@ -95,12 +95,12 @@ object Function {
     Func ("minimum").    from (Signal("Int"))                             → Signal("Int"),
     Func ("minimum").    from (Events("Int"))       × "Int"               → Signal("Int"),
     Func ("sum").        from (Events("Int"))                             → Signal("Int"),
-    Func ("eventCount"). from (Events(a))                                 → Signal("Int"),  //Todo
+    Func ("eventCount"). from (Events(a))                                 → Signal("Int"),
     Func ("mrv").        from (Events(a))           × a                   → Signal(a),  //Todo
     Func ("sma").        from (Events("Int"))       × "Int"               → Events("Int"),  //Todo
 
     /**** Timing ****/
-    Func ("timestamps"). from (Events(a))                                 → Events("Int"),
+    Func ("timestamps"). from (Events(a))                                 → Events("Int"),//Todo
     Func ("delay").      from (Signal(a))           × "Int" × a           → Signal(a), //Todo
     Func ("delay").      from (Signal(a))           × "Int"               → Signal(a), //Todo
     Func ("delay").      from (Events(a))           × "Int"               → Events(a),   //TODO (by time or count)

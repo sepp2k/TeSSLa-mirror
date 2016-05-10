@@ -54,17 +54,17 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
         case SimpleFunction("function_returns", _) =>
           Some("TesslaServer.Source.FunctionReturns",
             "options" ->
-              ("function_name" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)
+              ("function" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)
           )
         case SimpleFunction("function_calls", _) =>
           Some("TesslaServer.Source.FunctionCalls",
             "options" ->
-              ("function_name" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)
+              ("function" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)
           )
         case SimpleFunction("variable_values", _) =>
           Some("TesslaServer.Source.VariableValues",
             "options" ->
-              ("variable_name" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)
+              ("variable" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)
           )
 
         /**** Lifted ****/
