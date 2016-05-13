@@ -74,8 +74,9 @@ object Function {
     Func ("mrv").     from (Events(a)) × a                    → Signal(a),
     Func ("timestamps").     from (Events(a))                 → Events("Int"), //Todo: will be Events("Time")
     Func ("delay").     from (Events(a))                      → Events(a),
-    Func ("changeOf").     from (Signal(a))                      → Events(a)
-
+    Func ("changeOf").     from (Signal(a))                      → Events(a),
+    Func ("tracePointID"). from () to Events("Unit")
+    
   )
 }
 

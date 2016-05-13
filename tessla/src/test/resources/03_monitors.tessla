@@ -6,15 +6,18 @@ define prop(e1,e2) := mrv(merge(ifThen(e1, constantSignal(true)), ifThen(e2, con
 --
 -- Input
 --
-define readPointerAddr := variable_values("main.c:read_idx")
-define stopConsumer := function_calls("main.c:stopConsumers")
-define startConsumer := function_calls("main.c:startConsumers")
+--define readPointerAddr := variable_values("main.c:read_idx")
+define readPointerChanged := tracePointID
+--define stopConsumer := function_calls("main.c:stopConsumers")
+define stopConsumer := tracePointID
+--define startConsumer := function_calls("main.c:startConsumers")
+define startConsumer := tracePointID
 
 
 --
 -- Spec
 --
-define readPointerChanged := changeOf(readPointerAddr)
+--define readPointerChanged := changeOf(readPointerAddr)
 define clk := occursAny(occursAny(stopConsumer, readPointerChanged), startConsumer)
 define stop := prop(stopConsumer, clk)
 define start := prop(startConsumer, clk)

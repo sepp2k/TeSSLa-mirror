@@ -98,6 +98,8 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("ownership")))
         case SimpleFunction("anyEvent", _) =>
           Some("dataFlowGraph.node.input.MessageValidNode", JObject("argument" -> JString("valid")))
+        case SimpleFunction("tracePointID", _) =>
+          Some("dataFlowGraph.node.input.instructionReconstructionMessage.InstructionReconstructionID", JObject("argument" -> JString("tracepoint")))
 
 
         case SimpleFunction("timestamps", _) =>
@@ -119,9 +121,9 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
         case SimpleFunction("neg", _) =>
           Some("dataFlowGraph.node.operation.NegNode", JObject("predecessor" -> ref(node.args(0))))
         case SimpleFunction("gt", _) =>
-          Some("dataFlowGraph.node.operation.GTNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+          Some("dataFlowGraph.node.operation.GreaterThanNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         case SimpleFunction("eq", _) =>
-          Some("dataFlowGraph.node.operation.EQNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
+          Some("dataFlowGraph.node.operation.EqualNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         case SimpleFunction("occursAll", _) =>
           Some("dataFlowGraph.node.operation.OccursAllNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         case SimpleFunction("occursAny", _) =>

@@ -37,12 +37,24 @@ define changeOf(s, initial) := onIf(anyEvent, ne(s, mrv(delay(sample(s, anyEvent
 
 define ids := mrv(input_vector_ownerships, 0)
 
-define startC1 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(1)), constantSignal(true))
-define startC2 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(2)), constantSignal(true))
-define startC3 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(3)), constantSignal(true))
-define endC1 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(1)), constantSignal(false))
-define endC2 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(2)), constantSignal(false))
-define endC3 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(3)), constantSignal(false))
+--define startC1 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(1)), --constantSignal(true))
+define startC1 := on(tracePointID, eq(ids, constantSignal(1)), constantSignal(true))
+--define startC2 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(2)), --constantSignal(true))
+define startC2 := on(tracePointID, eq(ids, constantSignal(2)), constantSignal(true))
+--define startC3 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(3)), --constantSignal(true))
+define startC3 := on(tracePointID, eq(ids, constantSignal(3)), constantSignal(true))
+--define endC1 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(1)), --constantSignal(false))
+define endC1 := on(tracePointID, eq(ids, constantSignal(1)), constantSignal(false))
+--define endC2 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(2)), --constantSignal(false))
+define endC2 := on(tracePointID, eq(ids, constantSignal(2)), constantSignal(false))
+--define endC3 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(3)), --constantSignal(false))
+define endC3 := on(tracePointID, eq(ids, constantSignal(3)), constantSignal(false))
+
+
+
+
+
+
 
 
 --
