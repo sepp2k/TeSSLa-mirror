@@ -61,15 +61,18 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
             "options" ->
               ("function" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)
           )
-        case SimpleFunction("variable_values", _) =>
+        case SimpleFunction("variable_values", _) => // TODO types
           Some("TesslaServer.Source.VariableValues",
             "options" ->
               ("variable" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)
           )
 
         /**** Lifted ****/
-        case SimpleFunction("abs", _) => // TODO more types
-          Some("TesslaServer.Node.Lifted.Abs",
+        case SimpleFunction("eventAbs", _) =>
+          Some("TesslaServer.Node.Lifted.EventAbs",
+            "operands" -> Seq(idx(node.args(0))))
+        case SimpleFunction("signalAbs", _) =>
+          Some("TesslaServer.Node.Lifted.SignalAbs",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("add", _) =>
           Some("TesslaServer.Node.Lifted.Add",
@@ -110,8 +113,11 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
         case SimpleFunction("neg", _) =>
           Some("TesslaServer.Node.Lifted.Neg",
             "operands" -> Seq(idx(node.args(0))))
-        case SimpleFunction("not", _) => // TODO more types
-          Some("TesslaServer.Node.Lifted.Not",
+        case SimpleFunction("eventNot", _) =>
+          Some("TesslaServer.Node.Lifted.EventNot",
+            "operands" -> Seq(idx(node.args(0))))
+        case SimpleFunction("signalNot", _) =>
+          Some("TesslaServer.Node.Lifted.SignalNot",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("or", _) =>
           Some("TesslaServer.Node.Lifted.Or",
@@ -147,21 +153,26 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
 
         /**** Aggregation ****/
-        case SimpleFunction("maximum", _) => //TODO more types
-          Some("TesslaServer.Node.Aggregation.Maximum",
+        case SimpleFunction("signalMaximum", _) =>
+          Some("TesslaServer.Node.Aggregation.SignalMaximum",
+            "operands" -> Seq(idx(node.args(0))))
+        case SimpleFunction("eventMaximum", _) =>
+          Some("TesslaServer.Node.Aggregation.EventMaximum",
             ("operands" -> Seq(idx(node.args(0))))
               ~ ("options" -> ("default" -> Integer.parseInt(
               node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString)
             ))
           )
-        case SimpleFunction("minimum", _) => {//TODO more types
-          Some("TesslaServer.Node.Aggregation.Minimum",
+        case SimpleFunction("signalMinimum", _) =>
+          Some("TesslaServer.Node.Aggregation.SignalMinimum",
+            "operands" -> Seq(idx(node.args(0))))
+        case SimpleFunction("eventMinimum", _) =>
+          Some("TesslaServer.Node.Aggregation.EventMinimum",
             ("operands" -> Seq(idx(node.args(0))))
               ~ ("options" -> ("default" -> Integer.parseInt(
               node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString)
               ))
           )
-        }
         case SimpleFunction("sum", _) =>
           Some("TesslaServer.Node.Aggregation.Sum",
             "operands" -> Seq(idx(node.args(0))))
@@ -187,31 +198,48 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
         case SimpleFunction("timestamps", _) =>
           Some("TesslaServer.Node.Timing.Timestamps",
             "operands" -> Seq(idx(node.args(0))))
-        case SimpleFunction("delay", _) => //TODO more types
-          Some("TesslaServer.Node.Timing.Delay",
+        case SimpleFunction("delayEventByTime", _) =>
+          Some("TesslaServer.Node.Timing.DelayEventByTime",
             ("operands" -> Seq(idx(node.args(0))))
             ~ ("options" ->
                 ("amount" -> Integer.parseInt(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString))
               )
           )
-        case SimpleFunction("within", _) => // TODO switch int to time
+        case SimpleFunction("delayEventByCount", _) =>
+          Some("TesslaServer.Node.Timing.DelayEventByCount",
+            ("operands" -> Seq(idx(node.args(0))))
+              ~ ("options" ->
+              ("count" -> Integer.parseInt(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString))
+              )
+          )
+        case SimpleFunction("delaySignalByTime", _) => //TODO more types
+          Some("TesslaServer.Node.Timing.DelaySignalByTime",
+            ("operands" -> Seq(idx(node.args(0))))
+              ~ ("options" ->
+                (
+                  ("amount" -> Integer.parseInt(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString))
+                  ~ ("default" -> Integer.parseInt(node.args(2).node.function.asInstanceOf[ConstantValue[_]].value.toString))
+                )
+              )
+          )
+        /*case SimpleFunction("within", _) => // TODO switch int to time
           Some("TesslaServer.Node.Timing.Within",
             ("operands" -> Seq(ref(node.args(2))))
             ~ ("before" -> Integer.parseInt(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
             ~ ("after" -> Integer.parseInt(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString))
-          )
+          )*/
         case SimpleFunction("inPast", _) => // TODO switch int to time
           Some("TesslaServer.Node.Timing.InPast",
-            ("operands" -> Seq(ref(node.args(1))))
+            ("operands" -> Seq(idx(node.args(1))))
             ~ ("options" ->
                 ("amount" -> Integer.parseInt(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)))
           )
-        case SimpleFunction("inFuture", _) => // TODO switch int to time
+        /*case SimpleFunction("inFuture", _) => // TODO switch int to time
           Some("TesslaServer.Node.Timing.InFuture",
             ("operands" -> Seq(ref(node.args(1))))
               ~ ("options" ->
               ("amount" -> Integer.parseInt(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)))
-          )
+          )*/
         /**** Error ****/
         case SimpleFunction(n, _) => {
           compiler.diagnostic(GenericModuleWarning(node.function))
