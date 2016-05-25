@@ -27,14 +27,22 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
           None
         }*/
         case StateMachineFunction(name, signature, start, stateMap, transitionList) =>
-          val refs = node.args.map(x => ref(x))
+          val refs = node.args.map(x => idx(x))
+          val clock = refs.last
           val refTransitions = transitionList.map(t => (t._1,t._2.map(x => refs(x-1)),t._3))
           val jsonTransitions = seq2jvalue(refTransitions.map(t => ("current" -> t._1) ~ ("active" -> t._2) ~ ("next" -> t._3)))
           val stateList = stateMap.toList
           val firstElement = stateList.filter(x => x._1.equals(start.toString)).head
           val sortedStateList = List(firstElement) ++ stateList.filter(x => !x._1.equals(start.toString))
           val jsonStates = seq2jvalue(sortedStateList.map(s => ("name" -> s._1) ~ ("output" -> s._2)))
-          Some("node.monitors.Monitor", ("predecessors" -> refs) ~ ("states" -> jsonStates) ~ ("transitions" -> jsonTransitions))
+          Some("TesslaServer.Node.Monitors.Monitor",
+            ("operands" -> refs) ~
+              ("options" ->
+                ("clock" -> clock) ~
+                  ("states" -> jsonStates) ~
+                  ("transitions" -> jsonTransitions)
+              )
+          )
         case SimpleFunction(_, FunctionSig(SimpleType(_), _)) =>
           compiler.diagnostic(UnfoldedLiteralError(node.function))
           None
@@ -244,7 +252,7 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
         case SimpleFunction(n, _) => {
           compiler.diagnostic(GenericModuleWarning(node.function))
           Some("GenericModule",
-            ("inputs" ->
+            ("operands" ->
               node.args.map { nodeId => nodeId.node.function match {
                 case ConstantValue(_, value) => JString(value.toString)
                 case _ => ref(nodeId)
