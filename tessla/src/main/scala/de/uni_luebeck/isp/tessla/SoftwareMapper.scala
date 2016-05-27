@@ -40,6 +40,7 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
               ("options" ->
                 ("clock" -> clock) ~
                   ("states" -> jsonStates) ~
+                  ("current_state" -> start) ~
                   ("transitions" -> jsonTransitions)
               )
           )
