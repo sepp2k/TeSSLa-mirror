@@ -125,13 +125,13 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
           compiler.diagnostic(TypeMatchError(overloads(key), nodes(key).subtree.loc))
           None
         }
-        case Seq(first, rest @ _*) => Some(rest.fold(first)(_ meet _))
+        case Seq(first, rest @ _*) => Some(rest.fold(first)(_ join _))
       }
     }
 
-    def meet(other: State): State = {
+    def join(other: State): State = {
       State(
-        env = this.env.meet(other.env),
+        env = this.env.join(other.env),
         overloads = overloads.keys.map(k =>
           k -> (this.overloads(k) ++ other.overloads(k))).toMap
       )
