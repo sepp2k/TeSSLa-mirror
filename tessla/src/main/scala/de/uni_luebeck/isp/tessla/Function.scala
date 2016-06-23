@@ -73,12 +73,14 @@ object Function {
     Func ("merge").      from (Events(a)) × Events(a)         → Events(a),
     Func ("filter").     from (Events(a)) × Signal("Boolean") → Events(a),
     Func ("ifThen").     from (Events(a)) × Signal(b)         → Events(b),
+    Func ("ifThenElse"). from (Signal("Boolean")) × Signal(a) × Signal(a) → Signal(a),
     Func ("inPast").     from ("Int") × Events(b)             → Signal("Boolean"), //Todo: will be from "Time"
     Func ("mrv").     from (Events(a)) × a                    → Signal(a),
     Func ("timestamps").     from (Events(a))                 → Events("Int"), //Todo: will be Events("Time")
     Func ("delay").     from (Events(a))                      → Events(a),
-    Func ("changeOf").     from (Signal(a))                      → Events(a),
-    Func ("tracePointID"). from ("Int") to Events("Unit")
+    Func ("changeOf").     from (Signal(a))                   → Events(a),
+    Func ("tracePointID"). from () to Events("Int"),
+    Func ("on").     from (Events(a))                   → Events("Unit")
     
   )
 }

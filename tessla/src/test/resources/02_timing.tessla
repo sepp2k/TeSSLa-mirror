@@ -1,9 +1,9 @@
 --
 -- General macros
 --
-define onIf(trig, cond) := filter(trig, cond: Signal<Boolean>)
+define onIf(trig, cond) := filter(on(trig), cond: Signal<Boolean>)
 define onYield(trig, value) := ifThen(trig,value)
-define on(trig, cond, value) := onYield(onIf(trig, cond: Signal<Boolean>), value)
+define on(trig, cond, value) := onYield(filter(trig, cond: Signal<Boolean>), value)
 
 define sample(s, e) := ifThen(e, s)
 
@@ -12,7 +12,7 @@ define lt(x,y) := gt(y,x): Signal<Boolean>
 define leq(x,y) := not(gt(x:Signal<Int>,y:Signal<Int>):Signal<Boolean>): Signal<Boolean>
 define ne(x,y) := not(eq(x,y): Signal<Boolean>): Signal<Boolean>
 
-define onTrue(x) := onIf(changeOf(x, false), x)
+define onTrue(x) := onIf(changeOf(x), x)
 
 --
 -- Coniras specific definitions

@@ -1,18 +1,19 @@
 --
 -- Macros
 --
-define onIf(trig, cond) := filter(trig, cond: Signal<Boolean>)
+define onIf(trig, cond) := filter(on(trig), cond: Signal<Boolean>)
 define geq(x,y) := not(lt(x,y))
 define lt(x,y) := gt(y,x)
 
+define tracePoint(x) := filter(tracePointID, eq(mrv(tracePointID, 0), constantSignal(x)))
 
 --
 -- Inputs
 --
 --define writeElement: Events<Unit> := instruction_executions("main.c:49")
-define writeElement: Events<Unit> := tracePointID
+define writeElement: Events<Unit> := tracePoint(2)
 --define processElement: Events<Unit> := function_calls("main.c:process_data")
-define processElement: Events<Unit> := tracePointID
+define processElement: Events<Unit> := tracePoint(13)
 
 --
 -- Spec

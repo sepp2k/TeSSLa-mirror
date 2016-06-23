@@ -50,7 +50,11 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           Some("dataFlowGraph.node.operation.SubNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         }
         case SimpleFunction("constantSignal", _) => try {
-          Some("dataFlowGraph.node.operation.ConstantNode", ("value" -> node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString): JObject)
+          val valStr = node.args(0).node.function.asInstanceOf[ConstantValue[_]].value match {
+            case b: Boolean => if (b) "1" else "0"
+            case v => v.toString
+          }
+          Some("dataFlowGraph.node.operation.ConstantNode", ("value" -> valStr): JObject)
         } catch {
           case e: ClassCastException =>
             compiler.diagnostic(UnfoldedLiteralError(node.function))
@@ -124,7 +128,7 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           Some("dataFlowGraph.node.operation.OrNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
 
         case SimpleFunction("neg", _) =>
-          Some("dataFlowGraph.node.operation.NegNode", JObject("predecessor" -> ref(node.args(0))))
+          Some("dataFlowGraph.node.operation.NotNode", JObject("predecessor" -> ref(node.args(0))))
         case SimpleFunction("gt", _) =>
           Some("dataFlowGraph.node.operation.GreaterThanNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         case SimpleFunction("eq", _) =>
@@ -138,7 +142,9 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
         case SimpleFunction("inPast", _) =>
           Some("dataFlowGraph.node.operation.InPastNode", ("delay" -> ref(node.args(0))) ~ ("input" -> ref(node.args(1))))
         case SimpleFunction("ifThen", _) =>
-          Some("dataFlowGraph.node.operation.IfThenNode", ("control" -> ref(node.args(0))) ~ ("trueNode" -> ref(node.args(1))))
+          Some("dataFlowGraph.node.operation.IfThenNode", ("condition" -> ref(node.args(0))) ~ ("trueCase" -> ref(node.args(1))))
+        case SimpleFunction("ifThenElse", _) =>
+          Some("dataFlowGraph.node.operation.IfThenElseNode", ("condition" -> ref(node.args(0))) ~ ("trueCase" -> ref(node.args(1))) ~ ("falseCase" -> ref(node.args(2))))
         case SimpleFunction("delay", _) =>
           Some("dataFlowGraph.node.operation.DelayNode", ("predecessor" -> ref(node.args(0))): JObject)
 
@@ -159,6 +165,9 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
               }
               }) ~ ("name" -> n))
         }
+
+        case SimpleFunction("on", _) =>
+          Some("dataFlowGraph.node.operation.OccursAllNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(0))))
       }
 
       moduleAndMembers.map {
