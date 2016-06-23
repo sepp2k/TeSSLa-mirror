@@ -14,13 +14,13 @@ case class Env(map: Map[TypeVar, Type]) {
   def unify(a: Type, b: Type) =
     a.substitute(this).unify(this, b.substitute(this))
 
-  def meet(other: Env): Env = {
+  def join(other: Env): Env = {
     val vars = map.keySet ++ other.map.keySet
     var currentMeets = Map[(Type, Type), Type]()
     Env(vars flatMap { v =>
       val myV = map.getOrElse(v, v)
       val otherV = other.map.getOrElse(v, v)
-      val (newV, newMeets) = myV.meet(otherV, currentMeets)
+      val (newV, newMeets) = myV.join(otherV, currentMeets)
       currentMeets = newMeets
       if (newV == v) None else Some(v -> newV)
     } toMap)
@@ -40,7 +40,7 @@ abstract sealed class Type {
   def substitute(env: Env): Type
   def vars: Set[TypeVar]
 
-  def meet(other: Type, meets: Map[(Type, Type), Type]): (Type, Map[(Type, Type), Type]) = {
+  def join(other: Type, meets: Map[(Type, Type), Type]): (Type, Map[(Type, Type), Type]) = {
     if (this == other) {
       (this, meets)
     } else {
@@ -90,7 +90,7 @@ case class GenericType(name: String, args: Seq[Type]) extends Type {
   def substitute(env: Env) = this.copy(args = args.map(_.substitute(env)))
   def vars = args.flatMap(_.vars).toSet
 
-  override def meet(other: Type, meets: Map[(Type, Type), Type]) = {
+  override def join(other: Type, meets: Map[(Type, Type), Type]) = {
     other match {
       case GenericType(otherName, otherArgs)
         if otherName == name && args.length == otherArgs.length =>
@@ -98,7 +98,7 @@ case class GenericType(name: String, args: Seq[Type]) extends Type {
         var currentMeets = meets
         val newArgs = (args zip otherArgs) map {
           case (arg, otherArg) =>
-            arg.meet(otherArg, currentMeets) match {
+            arg.join(otherArg, currentMeets) match {
               case (newArg, newMeets) =>
                 currentMeets = newMeets
                 newArg
@@ -106,7 +106,7 @@ case class GenericType(name: String, args: Seq[Type]) extends Type {
         }
 
         (GenericType(name, newArgs), currentMeets)
-      case _ => super.meet(other, meets)
+      case _ => super.join(other, meets)
     }
   }
 
