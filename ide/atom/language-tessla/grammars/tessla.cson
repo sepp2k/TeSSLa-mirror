@@ -1,0 +1,47 @@
+'scopeName': 'source.tessla'
+'name': 'tessla'
+'fileTypes': ['tessla']
+'patterns': [
+  {
+      'match': '\\b(define)\\s+(\\w+)\\s*\\(.*\\)\\s*:='
+      'captures':
+          '1':
+              'name': 'keyword.control.tessla'
+          '2':
+              'name': 'entity.name.function.macro.tessla'
+      'name': 'meta.definition.macro.tessla'
+  }
+  {
+    'begin': '--'
+    'beginCaptures':
+      '0':
+        'name': 'punctuation.definition.comment.tessla'
+    'end': '$\\n?'
+    'name': 'comment.line.double-dash.tessla'
+  }
+  {
+  'match': '\\b(Signal|Events)\\b'
+  'name': 'entity.name.type.generic.tessla'
+  }
+  {
+  'match': '\\b(Boolean|Int|Float|String|Unit)\\b'
+  'name': 'entity.name.type.simple.tessla'
+  }
+  {
+    'match' : '\\b((define)|(out)|(on)|(if)|(yield))\\b'
+    'name' : 'keyword.control.tessla'
+  }
+  {
+      'match': '\\b(([0-9]+\\.?[0-9]*)|(\\.[0-9]+))\\b'
+      'name': 'constant.numeric.tessla'
+  }
+  {
+    'begin': '"'
+    'end' : '"'
+    'name': 'string.quoted.double.untitled'
+  }
+  {
+      'match': '\\b(true|false)\\b'
+      'name': 'constant.language.tessla'
+  }
+]
