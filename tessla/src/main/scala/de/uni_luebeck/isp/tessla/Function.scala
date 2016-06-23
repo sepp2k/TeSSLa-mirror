@@ -43,6 +43,8 @@ object Function {
     /**** Literal functions (should come with semantics) ****/
     Func("add").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] + args(1).asInstanceOf[BigInt]},
     Func("sub").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] - args(1).asInstanceOf[BigInt]},
+    Func("mul").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] * args(1).asInstanceOf[BigInt]},
+    Func("div").from ("Int") × "Int" → "Int" withSemantics {args:Seq[Any] => args(0).asInstanceOf[BigInt] / args(1).asInstanceOf[BigInt]},
 
     /**** Input/Constant functions ****/
     SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a)))),
@@ -65,6 +67,7 @@ object Function {
     Func ("or").        from (Signal("Boolean")) × Signal("Boolean") → Signal("Boolean"),
     Func ("neg").        from (Events("Boolean"))             → Events("Boolean"),
     Func ("eventCount"). from (Events(a))                     → Signal("Int"),
+    Func ("eventCount"). from (Events(a)) × Events(b)         → Signal("Int"), // with reset
     Func ("occursAll").  from (Events(a)) × Events(b)         → Events("Unit"),
     Func ("occursAny").  from (Events(a)) × Events(b)         → Events("Unit"),
     Func ("merge").      from (Events(a)) × Events(a)         → Events(a),
@@ -75,7 +78,7 @@ object Function {
     Func ("timestamps").     from (Events(a))                 → Events("Int"), //Todo: will be Events("Time")
     Func ("delay").     from (Events(a))                      → Events(a),
     Func ("changeOf").     from (Signal(a))                      → Events(a),
-    Func ("tracePointID"). from () to Events("Unit")
+    Func ("tracePointID"). from ("Int") to Events("Unit")
     
   )
 }

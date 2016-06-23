@@ -104,8 +104,13 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
 
         case SimpleFunction("timestamps", _) =>
           Some("dataFlowGraph.node.operation.TimestampNode", JObject("predecessor" -> ref(node.args(0))))
-        case SimpleFunction("eventCount", _) =>
+
+
+        case SimpleFunction("eventCount", FunctionSig(_, Seq(_))) =>
           Some("dataFlowGraph.node.operation.EventCountNode", JObject("predecessor" -> ref(node.args(0))))
+        case SimpleFunction("eventCount", FunctionSig(_, Seq(_,_))) =>
+        Some("dataFlowGraph.node.operation.EventCountResetNode", JObject("predecessor" -> ref(node.args(0))) ~ ("reset" -> ref(node.args(1))))
+
         case SimpleFunction("mrv", _) =>
           Some("dataFlowGraph.node.operation.MostRecentValueNode",
             JObject("predecessor" -> ref(node.args(0))) ~ ("initialValue" -> JString(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString))
