@@ -63,11 +63,11 @@ Beschreibe das Szenario.
 
 \section{Eigenschaften}
 
-Wir haben drei unterschiedliche Eigenschaften spezifiziert, die mögliche Fehler des Ringpuffers beschreiben. Dazu gehört eine Eigenschaft über die Größe des Puffers, eine Echtzeiteigenschaft sowie eine temporallogische Eigenschaft.
+Für dieses Test-Szenario wurden drei unterschiedliche Eigenschaften spezifiziert, die mögliche Fehler des Ringpuffers beschreiben. Dazu gehört eine Eigenschaft über die Größe des Puffers, eine Echtzeiteigenschaft sowie eine temporallogische Eigenschaft.
 
 \subsection{Größe des Puffers}
 
-Diese Eigenschaft prüft, ob die Größe des Puffers, die mit 5 angegeben war, nicht überschritten wird.
+Diese Eigenschaft beschreibt, dass die Größe des Puffers, die mit 5 angegeben war, nicht 5 überschreitet. Ansonsten gibt es einen Überlauf der Puffers und Daten gehen verloren.
 
 \begin{lstlisting}[language=tessla+salt]
 --
@@ -95,6 +95,10 @@ define doubleProcessing := onIf(processElement, geq(diffProcWrite,constantSignal
 define diffWriteProc := sub(eventCount(writeElement), eventCount(processElement))
 define bufferOverflow := onIf(writeElement, geq(diffWriteProc,constantSignal(6)))
 \end{lstlisting}
+
+\subsection{Verarbeitungszeit}
+
+Diese Eigenschaft beschreibt, dass die Verarbeitungszeit eines Consumers für ein Element nicht mehr als zwei Sekunden beträgt. Ansonsten braucht der Consumer zu lang.
 
 \begin{lstlisting}[language=tessla+salt]
 --
@@ -183,6 +187,10 @@ define earlyErrorC3 := onTrue(mrv(merge(timeOutC3, neg(startC3): Events<Boolean>
 define earlyError := merge(merge(earlyErrorC1,earlyErrorC2),earlyErrorC3)
 
 \end{lstlisting}
+
+\subsection{Anhalten der Consumer}
+
+Diese Eigenschaft beschreibt das korrekte Verhalte eines Moduswechsels. Sobald die Consumer angehalten wurden, darf der Lesepointer für den Ringbuffer von den Consumern nicht verändert werden, bis diese wieder gestartet wurden. Ansonsten würde die Consumer aus dem Ringbuffer lesen, obwohl sie angehalten sind.
 
 \begin{lstlisting}[language=tessla+salt]
 --
