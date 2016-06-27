@@ -1,0 +1,24 @@
+\begin{tikzpicture}[node distance = 3.5cm, on grid = true, auto]
+
+\node[rectangle, draw](cpu){CPU};
+\node[rectangle, draw, right of = cpu](reconstruction){Reconstruction};
+
+\node[rectangle, draw, below of = cpu, node distance = 2cm](analysis){Analysis};
+\node[rectangle, draw, below of = reconstruction, node distance = 2cm](compiler){\tessla compiler};
+\node[left of = analysis, node distance = 3.5cm](c){};
+\node[below of = compiler, node distance = 2cm](prop){};
+\node[rectangle, draw, right of = reconstruction](fpga){FPGA};
+\node[rectangle, draw, below of = fpga, node distance = 2cm](report){Report};
+
+\draw[-stealth]
+(cpu) edge node[above]{JTAG} (reconstruction)	
+(analysis) edge node[above]{TPs} (compiler)
+(c) edge node[align = center]{C code, \\ binaries, \\ debug symbols} (analysis)
+(analysis) edge node[above left]{TPs} (reconstruction)
+(prop) edge node[align = center, left]{\tessla \\ property} (compiler)
+(compiler) edge node[above left]{monitor} (fpga)
+(reconstruction) edge node[align = center]{event- \\ streams} (fpga)
+(fpga) edge node[align = center]{monitor \\ output} (report)
+;
+
+\end{tikzpicture}
