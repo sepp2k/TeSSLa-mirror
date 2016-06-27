@@ -91,7 +91,7 @@ object Function {
     Func("input_vector_RegChangeMessageValue"). from () to Events("Int"),
     Func("input_vector_RegChangeMessageID"). from () to Events("Int"),
     Func("input_vector_ir_ids"). from () to Events("Int"),
-    Func("input_vector_timestamps"). from () to Events("Unit")
+    Func("input_vector_timestamps"). from () to Events("Int")
     //    Func("anyEvent") from () to Events("Unit"),
     
   )

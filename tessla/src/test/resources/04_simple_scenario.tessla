@@ -1,11 +1,11 @@
 
 define onTrue(x) := filter(changeOf(x), x)
 
-define tracePoint(x) := filter(tracePointID, eq(mrv(tracePointID, 0), constantSignal(x)))
+define exec(x) := filter(on(input_vector_ir_ids), eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
 
-define callQS := tracePoint(17) -- call to quick_sort()
-define repeat := tracePoint(45) -- start new iteration round
+define callQS := exec(17) -- call to quick_sort()
+define repeat := exec(45) -- start new iteration round
 
--- We implemented quicksort, so we shouldn't need more n*(n-1)/2 recursive calls.
+-- We implemented quicksort, so we shouldn't need more n*(n-1)/2 recursive calls (n=20).
 define calls := eventCount(callQS, repeat)
 define error := onTrue(gt(calls, constantSignal(div(mul(20,19),2))))
