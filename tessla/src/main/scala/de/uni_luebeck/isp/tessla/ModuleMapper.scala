@@ -13,6 +13,30 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
   override def apply(compiler: Compiler, graph: FunctionGraph) = Try {
     import graph.{Node, NodeId}
 
+    /*** Coniras platform specific implementation of particular functions ***/
+
+    //timestamps(e) := ifThen(e, input_vector_timestamp)
+    // => if timestamps function is used, create a node for timestamps that can be references in the mapping
+    val timestampsNode = graph.nodes.values.find{ _ match {
+        case Node(_, SimpleFunction("timestamps", _), _) => true
+        case _ => false
+    }}
+    val inputVectorTimestampNodeID = if (!timestampsNode.isEmpty) {
+
+      val existingNode = graph.nodes.values.find{ _ match {
+        case Node(_, SimpleFunction("input_vector_timestamps", _), _) => true
+        case _ => false
+      }}
+      existingNode match {
+        case None => Some(graph.addNode(
+          // function signature will be ignored
+          SimpleFunction("input_vector_timestamps", FunctionSig(new TypeVar, Seq())),
+          Seq()
+        ): NodeId)
+        case Some(node) => Some(node.id)
+      }
+    } else None
+
     val idx: Map[NodeId, Int] = graph.nodes.keys.zipWithIndex.toMap
     val ref: Map[NodeId, JObject] = idx.mapValues(i => ("@ref" -> i))
 
@@ -60,7 +84,7 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
             compiler.diagnostic(UnfoldedLiteralError(node.function))
             None
         }
-        case SimpleFunction("instruction_executions", _) => try {
+        case SimpleFunction("executions", _) => try {
           Some("dataFlowGraph.node.input.InstructionExecutionsNode",
             JObject("argument" -> JString(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
           )
@@ -96,24 +120,28 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
             compiler.diagnostic(UnfoldedLiteralError(node.function))
             None
         }
-        case SimpleFunction("input_vector_timestamps", _) =>
-          Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("timestamp")))
-        case SimpleFunction("input_vector_ownerships", _) =>
-          Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("ownership")))
-        case SimpleFunction("anyEvent", _) =>
-          Some("dataFlowGraph.node.input.MessageValidNode", JObject("argument" -> JString("valid")))
-        case SimpleFunction("tracePointID", _) =>
-          Some("dataFlowGraph.node.input.instructionReconstructionMessage.InstructionReconstructionID", JObject("argument" -> JString("tracepoint")))
+
+//        case SimpleFunction("input_vector_ownerships", _) =>
+//          Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("ownership")))
+//        case SimpleFunction("anyEvent", _) =>
+//          Some("dataFlowGraph.node.input.MessageValidNode", JObject("argument" -> JString("valid")))
+//        case SimpleFunction("tracePointID", _) =>
+//          Some("dataFlowGraph.node.input.instructionReconstructionMessage.InstructionReconstructionID", JObject())
 
 
+        case SimpleFunction("input_vector_timestamps", _) => Some("dataFlowGraph.node.input.MessageTimeStampNode", JObject())
         case SimpleFunction("timestamps", _) =>
-          Some("dataFlowGraph.node.operation.TimestampNode", JObject("predecessor" -> ref(node.args(0))))
+          //Some("dataFlowGraph.node.operation.TimestampNode", JObject("predecessor" -> ref(node.args(0))))
+          // timestamps(e) := ifThen(e, input_vector_timestamp)
+          Some("dataFlowGraph.node.operation.IfThenNode", ("condition" -> ref(node.args(0))) ~ ("trueCase" -> ref(inputVectorTimestampNodeID.get)))
 
+        case SimpleFunction("input_vector_ir_ids", _) => Some("dataFlowGraph.node.input.instructionReconstructionMessage.InstructionReconstructionID", JObject())
+        //case SimpleFunction("executions", _) =>
 
         case SimpleFunction("eventCount", FunctionSig(_, Seq(_))) =>
           Some("dataFlowGraph.node.operation.EventCountNode", JObject("predecessor" -> ref(node.args(0))))
         case SimpleFunction("eventCount", FunctionSig(_, Seq(_,_))) =>
-        Some("dataFlowGraph.node.operation.EventCountResetNode", JObject("predecessor" -> ref(node.args(0))) ~ ("reset" -> ref(node.args(1))))
+        Some("dataFlowGraph.node.operation.EventCountNode", JObject("predecessor" -> ref(node.args(0))) ~ ("reset" -> ref(node.args(1))))
 
         case SimpleFunction("mrv", _) =>
           Some("dataFlowGraph.node.operation.MostRecentValueNode",
@@ -155,19 +183,19 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
         case SimpleFunction("changeOf", _) =>
           Some("dataFlowGraph.node.operation.ChangeOfNode", ("predecessor" -> ref(node.args(0))): JObject)
 
+        case SimpleFunction("on", _) =>
+          Some("dataFlowGraph.node.operation.OccursAllNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(0))))
+
         case SimpleFunction(n, _) => {
-          compiler.diagnostic(GenericModuleWarning(node.function))
+            compiler.diagnostic(GenericModuleWarning(node.function))
           Some("GenericModule",
-            ("inputs" ->
-              node.args.map { nodeId => nodeId.node.function match {
+          ("inputs" ->
+          node.args.map { nodeId => nodeId.node.function match {
                 case ConstantValue(_, value) => JString(value.toString)
                 case _ => ref(nodeId)
               }
               }) ~ ("name" -> n))
         }
-
-        case SimpleFunction("on", _) =>
-          Some("dataFlowGraph.node.operation.OccursAllNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(0))))
       }
 
       moduleAndMembers.map {

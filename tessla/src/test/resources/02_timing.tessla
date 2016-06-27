@@ -3,7 +3,7 @@
 --
 define onIf(trig, cond) := filter(on(trig), cond: Signal<Boolean>)
 define onYield(trig, value) := ifThen(trig,value)
-define on(trig, cond, value) := onYield(filter(trig, cond: Signal<Boolean>), value)
+define onIfYield(trig, cond, v) := onYield(filter(trig, cond: Signal<Boolean>), v) -- TODO: compiler issue if called just "on"
 
 define sample(s, e) := ifThen(e, s)
 
@@ -17,7 +17,6 @@ define onTrue(x) := onIf(changeOf(x), x)
 --
 -- Coniras specific definitions
 --
-
 define now: Signal<Int> := mrv(input_vector_timestamps,0)
 define inPast(time, event) := leq(
                                      sub(
@@ -27,28 +26,27 @@ define inPast(time, event) := leq(
                                      constantSignal(time): Signal<Int>
                                  ): Signal<Boolean>
 
--- HW implementation would be more reasonable since signals are represented in
--- terms of update events anyway!
-define changeOf(s, initial) := onIf(anyEvent, ne(s, mrv(delay(sample(s, anyEvent)), initial))) --assuming that x is 0 initially
+define owner_valid := filter(input_vector_RegChangeMessageID, eq(mrv(input_vector_RegChangeMessageID, 1), constantSignal(0)))
+define threadID := mrv(ifThen(owner_valid, mrv(input_vector_RegChangeMessageValue, 0)), 0)
+
+define executions(x) := filter(on(input_vector_ir_ids), eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
 
 --
 -- Inputs
 --
 
-define ids := mrv(input_vector_ownerships, 0)
-
---define startC1 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(1)), --constantSignal(true))
-define startC1 := on(tracePointID, eq(ids, constantSignal(1)), constantSignal(true))
---define startC2 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(2)), --constantSignal(true))
-define startC2 := on(tracePointID, eq(ids, constantSignal(2)), constantSignal(true))
---define startC3 := on(function_calls("main.c:process_data"), eq(ids, constantSignal(3)), --constantSignal(true))
-define startC3 := on(tracePointID, eq(ids, constantSignal(3)), constantSignal(true))
---define endC1 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(1)), --constantSignal(false))
-define endC1 := on(tracePointID, eq(ids, constantSignal(1)), constantSignal(false))
---define endC2 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(2)), --constantSignal(false))
-define endC2 := on(tracePointID, eq(ids, constantSignal(2)), constantSignal(false))
---define endC3 := on(function_returns("main.c:process_data"), eq(ids, constantSignal(3)), --constantSignal(false))
-define endC3 := on(tracePointID, eq(ids, constantSignal(3)), constantSignal(false))
+--define startC1 := onIfYield(function_calls("main.c:process_data"), eq(threadID, constantSignal(1)), --constantSignal(true))
+define startC1 := onIfYield(executions(1), eq(threadID, constantSignal(1)), constantSignal(true))
+--define startC2 := onIfYield(function_calls("main.c:process_data"), eq(threadID, constantSignal(2)), --constantSignal(true))
+define startC2 := onIfYield(executions(1), eq(threadID, constantSignal(2)), constantSignal(true))
+--define startC3 := onIfYield(function_calls("main.c:process_data"), eq(threadID, constantSignal(3)), --constantSignal(true))
+define startC3 := onIfYield(executions(1), eq(threadID, constantSignal(3)), constantSignal(true))
+--define endC1 := onIfYield(function_returns("main.c:process_data"), eq(threadID, constantSignal(1)), --constantSignal(false))
+define endC1 := onIfYield(executions(1), eq(threadID, constantSignal(1)), constantSignal(false))
+--define endC2 := onIfYield(function_returns("main.c:process_data"), eq(threadID, constantSignal(2)), --constantSignal(false))
+define endC2 := onIfYield(executions(1), eq(threadID, constantSignal(2)), constantSignal(false))
+--define endC3 := onIfYield(function_returns("main.c:process_data"), eq(threadID, constantSignal(3)), --constantSignal(false))
+define endC3 := onIfYield(executions(1), eq(threadID, constantSignal(3)), constantSignal(false))
 
 
 
@@ -76,16 +74,17 @@ define error := merge(merge(errorC1,errorC2),errorC3)
 
 -- more accurate alternative (not semantically equivalent,
 -- yet operationally equivalent in the Coniras system)
-define runningC1 := mrv(merge(startC1, endC1): Events<Boolean>, false): Signal<Boolean>
-define timeOutC1 := on(anyEvent, and(runningC1,not(inPast(2000, startC1): Signal<Boolean>): Signal<Boolean>): Signal<Boolean>, constantSignal(true): Signal<Boolean>): Events<Boolean>
-define earlyErrorC1 := onTrue(mrv(merge(timeOutC1, neg(startC1): Events<Boolean>): Events<Boolean>, false): Signal<Boolean>): Events<Unit>
+-- need to define anyEvent, though
+--define runningC1 := mrv(merge(startC1, endC1): Events<Boolean>, false): Signal<Boolean>
+--define timeOutC1 := onIfYield(anyEvent, and(runningC1,not(inPast(2000, startC1): Signal<Boolean>): Signal<Boolean>): Signal<Boolean>, constantSignal(true): Signal<Boolean>): Events<Boolean>
+--define earlyErrorC1 := onTrue(mrv(merge(timeOutC1, neg(startC1): Events<Boolean>): Events<Boolean>, false): Signal<Boolean>): Events<Unit>
 
-define runningC2 := mrv(merge(startC2, endC2): Events<Boolean>, false): Signal<Boolean>
-define timeOutC2 := on(anyEvent, and(runningC2,not(inPast(2000, startC2): Signal<Boolean>): Signal<Boolean>): Signal<Boolean>, constantSignal(true): Signal<Boolean>): Events<Boolean>
-define earlyErrorC2 := onTrue(mrv(merge(timeOutC2, neg(startC2): Events<Boolean>): Events<Boolean>, false): Signal<Boolean>): Events<Unit>
+--define runningC2 := mrv(merge(startC2, endC2): Events<Boolean>, false): Signal<Boolean>
+--define timeOutC2 := onIfYield(anyEvent, and(runningC2,not(inPast(2000, startC2): Signal<Boolean>): Signal<Boolean>): Signal<Boolean>, constantSignal(true): Signal<Boolean>): Events<Boolean>
+--define earlyErrorC2 := onTrue(mrv(merge(timeOutC2, neg(startC2): Events<Boolean>): Events<Boolean>, false): Signal<Boolean>): Events<Unit>
 
-define runningC3 := mrv(merge(startC3, endC3): Events<Boolean>, false): Signal<Boolean>
-define timeOutC3 := on(anyEvent, and(runningC3,not(inPast(2000, startC3): Signal<Boolean>): Signal<Boolean>): Signal<Boolean>, constantSignal(true): Signal<Boolean>): Events<Boolean>
-define earlyErrorC3 := onTrue(mrv(merge(timeOutC3, neg(startC3): Events<Boolean>): Events<Boolean>, false): Signal<Boolean>): Events<Unit>
+--define runningC3 := mrv(merge(startC3, endC3): Events<Boolean>, false): Signal<Boolean>
+--define timeOutC3 := onIfYield(anyEvent, and(runningC3,not(inPast(2000, startC3): Signal<Boolean>): Signal<Boolean>): Signal<Boolean>, constantSignal(true): Signal<Boolean>): Events<Boolean>
+--define earlyErrorC3 := onTrue(mrv(merge(timeOutC3, neg(startC3): Events<Boolean>): Events<Boolean>, false): Signal<Boolean>): Events<Unit>
 
-define earlyError := merge(merge(earlyErrorC1,earlyErrorC2),earlyErrorC3)
+--define earlyError := merge(merge(earlyErrorC1,earlyErrorC2),earlyErrorC3)

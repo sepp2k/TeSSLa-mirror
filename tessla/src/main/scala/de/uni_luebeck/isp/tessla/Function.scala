@@ -48,14 +48,15 @@ object Function {
 
     /**** Input/Constant functions ****/
     SimpleFunction("constantSignal", FunctionSig(GenericType("Signal", Seq(a)), Seq((None, a)))),
-    SimpleFunction("instruction_executions", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
-    SimpleFunction("function_calls", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
-    SimpleFunction("function_returns", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
-    Func("variable_values"). from ("String") → Signal(a),
-    Func("input_vector_timestamps"). from () to Events("Int"), // TODO: will be Events("Time")
-    Func("input_vector_ownerships"). from () to Events("Int"),
-    Func("anyEvent") from () to Events("Unit"),
 
+    // TODO: will be from "instruction reference" to Events("execution data"),
+    // (now from "trace point ID" to "ownership ID")
+    Func ("executions"). from ("Int") to Events("Unit"),
+
+    //SimpleFunction("instruction_executions", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
+    //SimpleFunction("function_calls", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
+    //SimpleFunction("function_returns", FunctionSig(GenericType("Events", Seq(SimpleType("Unit"))), Seq((None, SimpleType("String"))))),
+    Func("variable_values"). from ("String") → Signal(a),
 
     /**** Stream operators ****/
     Func ("sub").        from (Signal("Int")) × Signal("Int") → Signal("Int"),
@@ -79,16 +80,19 @@ object Function {
     Func ("timestamps").     from (Events(a))                 → Events("Int"), //Todo: will be Events("Time")
     Func ("delay").     from (Events(a))                      → Events(a),
     Func ("changeOf").     from (Signal(a))                   → Events(a),
-    Func ("tracePointID"). from () to Events("Int"),
-    Func ("on").     from (Events(a))                   → Events("Unit")
+    Func ("on").     from (Events(a))                   → Events("Unit"),
+
+
+    /** Coniras platform specific functions **/
+
+    // Func ("tracePointID"). from () to Events("Int"), // TODO: replace by instruction_executions
+    // Func ("tracePointExecuterID"). from () to Events("Int") // TODO: replace by instruction_executers
+    //    Func("input_vector_timestamps"). from () to Events("Int"), // TODO: will be Events("Time")
+    Func("input_vector_RegChangeMessageValue"). from () to Events("Int"),
+    Func("input_vector_RegChangeMessageID"). from () to Events("Int"),
+    Func("input_vector_ir_ids"). from () to Events("Int"),
+    Func("input_vector_timestamps"). from () to Events("Unit")
+    //    Func("anyEvent") from () to Events("Unit"),
     
   )
 }
-
-/*
-define writeElement := instruction_executions("main.c:49")
-define processElement := function_calls("main.c:process_data")
-
-define difference := eventCount(processElement) - eventCount(writeElement)
-define error := on readElement if geq(difference,1)
-*/
