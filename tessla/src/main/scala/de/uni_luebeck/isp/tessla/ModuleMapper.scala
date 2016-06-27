@@ -138,6 +138,9 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
         case SimpleFunction("input_vector_ir_ids", _) => Some("dataFlowGraph.node.input.instructionReconstructionMessage.InstructionReconstructionID", JObject())
         //case SimpleFunction("executions", _) =>
 
+        case SimpleFunction("input_vector_RegChangeMessageValue", _) => Some("dataFlowGraph.node.input.regChangeMessage.RegChangeMessageValue", JObject())
+        case SimpleFunction("input_vector_RegChangeMessageID", _) => Some("dataFlowGraph.node.input.regChangeMessage.RegChangeMessageID", JObject())
+
         case SimpleFunction("eventCount", FunctionSig(_, Seq(_))) =>
           Some("dataFlowGraph.node.operation.EventCountNode", JObject("predecessor" -> ref(node.args(0))))
         case SimpleFunction("eventCount", FunctionSig(_, Seq(_,_))) =>
