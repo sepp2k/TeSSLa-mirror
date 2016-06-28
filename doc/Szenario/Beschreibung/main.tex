@@ -3,9 +3,9 @@
 \usepackage{utf8-math}   % use unicode symbols in tex source
 \usepackage[ngerman]{babel}
 \usepackage[textsize=small,
-%            disable, 
-color={orange!30}, 
-shadow, 
+%            disable,
+color={orange!30},
+shadow,
 prependcaption]{todonotes}
 \usepackage{stmaryrd}             %\boxempty and ⟦ command
 \usepackage{xspace} % correct spacing after operators
@@ -57,27 +57,34 @@ prependcaption]{todonotes}
 
 \maketitle
 
-In diesem Dokument werden die Testszenarien protokolliert, die zum Testen der Integration der Teilsysteme verwendet wurden. Das erste Testszenario besteht aus einem einfachen Sortieralgorithmus und das zweite aus einem Producer / Consumer-Setting mit einem Ringpuffer, welches mehrere Threads verwendet.
+In diesem Dokument werden die Testszenarien protokolliert, die zum Testen der Integration der Teilsysteme verwendet wurden. Das erste Testszenario besteht aus einem einfachen Sortieralgorithmus und das zweite aus einem Produzent-Konsument-Kreislauf, in welchem mehrere Threads über einen Ringpuffer kommunizieren.
 
 \section{Sortieralgorithmus}
 
 \subsection{Beschreibung des Szenarios}
 
-Als erstes Testszenario wurde ein Quicksort implementiert, der ein festes Array sortiert. Dieser Quicksort wird viele male aufgerufen. Das gesamte Testszenario läuft in einem einzigen Thread und ist damit mit Absicht sehr einfach gehalten, um die generelle Funktion des Gesamtsystems zu testen.
+Im ersten Testszenario wird ein festes Array mittele Quicksort sortiert. Der Sortiervorgang wird viele Male wiederholt. Das Testszenario ist mit Absicht sehr einfach gehalten, um die generelle Funktion des Gesamtsystems zu testen.
+Insbesondere verwendet das Programm keinerlei Bibliotheken.
 
 \subsection{Eigenschaft}
 
-Die Eigenschaft, die für dieses Szenario spezifiziert wurde, beschreibt ein typisches Verhalten eines Quicksort-Algorithmus. Ein solcher Algorithmus sollte nach maximal $\frac{n \cdot (n - 1)}{2}$ rekursiven Aufrufen fertig sein, wobei $n$ die Länge des Arrays ist, das sortiert werden soll. Deswegen beschreibt diese Eigenschaft, dass es bei jeder Iteration maximal diese Anzahl an Aufrufen geben darf, bis die nächste Iteration gestartet wird.
+Die Eigenschaft, die für dieses Szenario spezifiziert wurde, beschreibt eine typisches Erwartung an den Quicksort-Algorithmus: Er sollte nach maximal $\frac{n \cdot (n - 1)}{2}$ rekursiven Aufrufen terminieren, wobei $n$ die Länge des Arrays ist, das sortiert werden soll. Die folgende Eigenschaft beschreibt, dass es bei jeder Wiederholung maximal diese Anzahl an Aufrufen geben darf, bis die nächste Wiederholung gestartet wird.
 
 \begin{lstlisting}[language=tessla+salt]
-define onTrue(x) := filter(changeOf(x), x)
+--
+-- Macros
+--
+define onTrue(x) := onIf(changeOf(x), x)
 
-define exec(x) := filter(on(input_vector_ir_ids), 
-  eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
-
+--
+-- Inputs
+--
 define callQS := exec(17) -- call to quick_sort()
 define repeat := exec(45) -- start new iteration round
 
+--
+-- Spec
+--
 define callCount := eventCount(callQS, repeat)
 define error := onTrue(gt(callCount, constantSignal(div(mul(20,19),2))))
 \end{lstlisting}
@@ -86,95 +93,70 @@ define error := onTrue(gt(callCount, constantSignal(div(mul(20,19),2))))
 
 \subsection{Beschreibung des Szenarios}
 
-Als zweites Testszenario wurde ein Ringpuffer der Größe 5 betrachtet, in den Elemente geschrieben und aus dem Elemente herausgelesen und verarbeitet werden können. Es gibt genau einen Producer, der Elemente in den Ringpuffer hineinschreiben kann. Außerdem gibt es eine beliebige Anzahl an Consumern, die Elemente aus dem Ringpuffer herauslesen und auf eine beliebige Art verarbeiten. Sowohl der Producer als auch die Consumer sind im zugehörigen C-Programm Threads und laufen damit parallel zueinander. Der Ringpuffer besteht aus Speicherstellen. Des Weiteren können der Producer und die Consumer angehalten und wieder gestartet werden.
+Als zweites Testszenario wurde ein Ringpuffer fester Größe (5) betrachtet, in den Elemente geschrieben und aus dem Elemente gelesen und verarbeitet werden. Es gibt genau einen Thread, der als Produzent agiert und Elemente in den Ringpuffer hineinschreiben kann.
+Weiterhin gibt es eine (potenziell beliebige) Anzahl an Konsumenten, die Elemente aus dem Ringpuffer lesen und verarbeiten. Die Konsumenten sind ebenfalls als (gleichartige) Threads implementiert und laufen damit parallel zum Produzenten und zueinander.
+Der Ringpuffer ist im Haldenspeicher abgelegt und wird über Zeiger referenziert.
+Des Weiteren können der Produzent und die Konsumenten durch externe Kontrolleingaben angehalten und wieder gestartet werden.
 
 \subsection{Eigenschaften}
 
-Für dieses Test-Szenario wurden drei unterschiedliche Eigenschaften spezifiziert, die mögliche Fehler des Ringpuffers beschreiben. Dazu gehört eine Eigenschaft über die Größe des Puffers, eine Echtzeiteigenschaft sowie eine temporallogische Eigenschaft.
+Für dieses Testszenario wurden drei unterschiedliche Eigenschaften spezifiziert, die mögliche Fehler bei der Verwendung des Ringpuffers oder bei der Verarbeitung der Daten beschreiben. Eine Eigenschaft bezieht sich auf die Größe des Puffers, eine auf Echtzeitanforderungen der Verarbeitung sowie eine temporale Eigenschaft über die Kontrolle der Threads.
 
 \subsubsection{Größe des Puffers}
 
 Diese Eigenschaft beschreibt zwei mögliche, ähnliche Fehlerfälle dieses Szenarios. Zum Einen,
-dass nicht mehr Elemente verarbeitet werden dürfen, als in den Ringpuffer geschrieben wurden. 
-Zum Anderen wird auch beschrieben, dass die Größe des Puffers, die mit 5 angegeben war, 5 nicht überschreitet. Ansonsten gibt es einen Überlauf des Puffers und Daten gehen verloren.
+dürfen nicht mehr Elemente verarbeitet werden, als in den Ringpuffer geschrieben wurden.
+Zum Anderen wird darf die Menge der geschriebenen, aber noch nicht verarbeiteten Elemente die Größe des Puffers nicht überschreiten, da sonst der Puffer überläuft oder, in diesem Szenario, Daten unverarbeitet verworfen (überschrieben) werden.
 
 \begin{lstlisting}[language=tessla+salt]
 --
--- Macros
---
-define onIf(trig, cond) := filter(on(trig), cond)
-define geq(x,y) := not(lt(x,y))
-define lt(x,y) := gt(y,x)
-define exec(x) := filter(on(input_vector_ir_ids), 
-  eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
-
---
 -- Inputs
 --
-define writeElement := exec(2)
-define processElement := exec(13)
+define writeElement := exec(2)    -- write to buffer (pointer)
+define processElement := exec(13) -- call to process_data() routine
 
 --
 -- Spec
 --
-define diffProcWrite := sub(eventCount(processElement), 
+define diffProcWrite := sub(eventCount(processElement),
   eventCount(writeElement))
-define doubleProcessing := onIf(processElement, 
+define doubleProcessing := onIf(processElement,
   geq(diffProcWrite,constantSignal(1)))
 
-define diffWriteProc := sub(eventCount(writeElement), 
+define diffWriteProc := sub(eventCount(writeElement),
   eventCount(processElement))
-define bufferOverflow := onIf(writeElement, 
+define bufferOverflow := onIf(writeElement,
   geq(diffWriteProc,constantSignal(6)))
 \end{lstlisting}
 
+Diese die folgenden Spezifikationen verwendet eine Präfixnotation für das \texttt{on-if-yield}-Konstrukt, da Infixnotation im Prototypen des Compilers bisher nicht realisiert wurde.
+
 \subsubsection{Verarbeitungszeit}
 
-Diese Eigenschaft beschreibt, dass die Verarbeitungszeit eines Consumers für ein Element nicht mehr als zwei Sekunden beträgt. Ansonsten braucht der Consumer zu lang. Dafür wird die Zeit zwischen dem Aufruf der Verarbeitungsmethode und dessen Rückgabe betrachtet. Es wird davon ausgegangen, dass es genau drei Consumer gibt.
+Diese Eigenschaft beschreibt, dass die Verarbeitungszeit eines Konsumenten für ein Element nicht mehr als zwei Sekunden beträgt.
+Dafür wird die Zeit zwischen dem Aufruf der Verarbeitungsmethode und dessen Rückgabe betrachtet. Es wird zunächst davon ausgegangen, dass es höchstens drei Konsumenten gibt.
 
 \begin{lstlisting}[language=tessla+salt]
 --
 -- Macros
 --
-define onIf(trig, cond) := filter(on(trig), cond)
-define onYield(trig, value) := ifThen(trig,value)
-define onIfYield(trig, cond, v) := onYield(filter(trig, cond), v)
-
 define sample(s, e) := ifThen(e, s)
-
-define geq(x,y) := not(lt(x,y))
-define lt(x,y) := gt(y,x)
-define leq(x,y) := not(gt(x,y))
-define ne(x,y) := not(eq(x,y))
-
 define onTrue(x) := onIf(changeOf(x), x)
-
-define now := mrv(input_vector_timestamps,0)
-define inPast(time, event) := leq(sub(now,mrv(timestamps(event), 0)),
-  constantSignal(time))
-
-define owner_valid := filter(input_vector_RegChangeMessageID, 
-  eq(mrv(input_vector_RegChangeMessageID, 1), constantSignal(0)))
-define threadID := mrv(ifThen(owner_valid, 
-  mrv(input_vector_RegChangeMessageValue, 0)), 0)
-
-define exec(x) := filter(on(input_vector_ir_ids), 
-  eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
 
 --
 -- Inputs
 --
-define startC1 := onIfYield(exec(1), 
+define startC1 := onIfYield(exec(1),
   eq(threadID, constantSignal(1)), constantSignal(true))
-define startC2 := onIfYield(exec(1), 
+define startC2 := onIfYield(exec(1),
   eq(threadID, constantSignal(2)), constantSignal(true))
-define startC3 := onIfYield(exec(1), 
+define startC3 := onIfYield(exec(1),
   eq(threadID, constantSignal(3)), constantSignal(true))
-define endC1 := onIfYield(exec(1), 
+define endC1 := onIfYield(exec(1),
   eq(threadID, constantSignal(1)), constantSignal(false))
-define endC2 := onIfYield(exec(1), 
+define endC2 := onIfYield(exec(1),
   eq(threadID, constantSignal(2)), constantSignal(false))
-define endC3 := onIfYield(exec(1), 
+define endC3 := onIfYield(exec(1),
   eq(threadID, constantSignal(3)), constantSignal(false))
 
 --
@@ -189,16 +171,15 @@ define error := merge(merge(errorC1,errorC2),errorC3)
 
 \subsubsection{Anhalten der Consumer}
 
-Diese Eigenschaft beschreibt das korrekte Verhalten, wenn die Consumer angehalten und danach wieder gestartet werden. Sobald die Consumer angehalten wurden, darf der Lesezeiger für den Ringpuffer von den Consumern nicht verändert werden, bis diese wieder gestartet wurden. Ansonsten würde die Consumer aus dem Ringpuffer lesen, obwohl sie angehalten wurden.
+Diese Eigenschaft beschreibt das korrekte Verhalten, wenn die Konsumenten angehalten und danach wieder gestartet werden.
+Sobald die Konsumenten angehalten wurden, darf der Lesezeiger für den Ringpuffer nicht verändert werden, bis diese wieder gestartet wurden. Ansonsten würden die Konsumenten aus dem Ringpuffer lesen, obwohl sie angehalten wurden.
 
 \begin{lstlisting}[language=tessla+salt]
 --
 -- Macros
 --
-define prop(e1,e2) := mrv(merge(ifThen(e1, constantSignal(true)), 
+define prop(e1,e2) := mrv(merge(ifThen(e1, constantSignal(true)),
   ifThen(e2, constantSignal(false))), false)
-define exec(x) := filter(on(input_vector_ir_ids), 
-  eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
 
 --
 -- Input
@@ -210,7 +191,7 @@ define startConsumer := exec(3)
 --
 -- Spec
 --
-define clk := occursAny(occursAny(stopConsumer, readPointerChanged), 
+define clk := occursAny(occursAny(stopConsumer, readPointerChanged),
   startConsumer)
 define stop := prop(stopConsumer, clk)
 define start := prop(startConsumer, clk)
