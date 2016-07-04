@@ -13,7 +13,7 @@ prependcaption]{todonotes}
 %\usepackage{accents} % used for double-hat, double-tilde macro
 \usepackage{amsmath}
 \usepackage{amsthm}
-
+\usepackage{graphicx}
 \usepackage{enumerate}
 \usepackage{cancel}
 \usepackage{microtype}
@@ -63,7 +63,7 @@ In diesem Dokument werden die Testszenarien protokolliert, die zum Testen der In
 
 \subsection{Beschreibung des Szenarios}
 
-Im ersten Testszenario wird ein festes Array mittele Quicksort sortiert. Der Sortiervorgang wird viele Male wiederholt. Das Testszenario ist mit Absicht sehr einfach gehalten, um die generelle Funktion des Gesamtsystems zu testen.
+Im ersten Testszenario wird ein festes Array mittels Quicksort sortiert. Der Sortiervorgang wird viele Male wiederholt. Das Testszenario ist mit Absicht sehr einfach gehalten, um die generelle Funktion des Gesamtsystems zu testen.
 Insbesondere verwendet das Programm keinerlei Bibliotheken.
 
 \subsection{Eigenschaft}
@@ -93,16 +93,21 @@ define error := onTrue(gt(callCount, constantSignal(div(mul(20,19),2))))
 
 \subsection{Beschreibung des Szenarios}
 
+\begin{figure}
+	\resizebox{\textwidth}{!}{\input{fig_example}}
+	\caption{Übersichtsbild für die Architektur des Ringpuffer-Testszenarios mit einem Produzenten (Thread I) sowie zwei Konsumenten (Threads II und III).}
+\end{figure} \label{arch}
+
 Als zweites Testszenario wurde ein Ringpuffer fester Größe (5) betrachtet, in den Elemente geschrieben und aus dem Elemente gelesen und verarbeitet werden. Es gibt genau einen Thread, der als Produzent agiert und Elemente in den Ringpuffer hineinschreiben kann.
 Weiterhin gibt es eine (potenziell beliebige) Anzahl an Konsumenten, die Elemente aus dem Ringpuffer lesen und verarbeiten. Die Konsumenten sind ebenfalls als (gleichartige) Threads implementiert und laufen damit parallel zum Produzenten und zueinander.
 Der Ringpuffer ist im Haldenspeicher abgelegt und wird über Zeiger referenziert.
-Des Weiteren können der Produzent und die Konsumenten durch externe Kontrolleingaben angehalten und wieder gestartet werden.
+Des Weiteren können der Produzent und die Konsumenten durch externe Kontrolleingaben angehalten und wieder gestartet werden. Der Aufbau der einzelnen Komponenten ist grafisch in Abbildung \ref{arch} dargestellt.
 
 \subsection{Eigenschaften}
 
-Für dieses Testszenario wurden drei unterschiedliche Eigenschaften spezifiziert, die mögliche Fehler bei der Verwendung des Ringpuffers oder bei der Verarbeitung der Daten beschreiben. Eine Eigenschaft bezieht sich auf die Größe des Puffers, eine auf Echtzeitanforderungen der Verarbeitung sowie eine temporale Eigenschaft über die Kontrolle der Threads.
+Für dieses Testszenario wurden drei unterschiedliche Eigenschaften spezifiziert, die mögliche Fehler bei der Verwendung des Ringpuffers oder bei der Verarbeitung der Daten beschreiben. Eine Eigenschaft bezieht sich auf die Anzahl der geschriebenen und verarbeiteten Elemente sowie die Größe des Puffers, eine auf Echtzeitanforderungen der Verarbeitung und eine temporale Eigenschaft auf die Kontrolle der Threads.
 
-\subsubsection{Größe des Puffers}
+\subsubsection{Elemente und Größe des Puffers}
 
 Diese Eigenschaft beschreibt zwei mögliche, ähnliche Fehlerfälle dieses Szenarios. Zum Einen,
 dürfen nicht mehr Elemente verarbeitet werden, als in den Ringpuffer geschrieben wurden.
@@ -129,7 +134,7 @@ define bufferOverflow := onIf(writeElement,
   geq(diffWriteProc,constantSignal(6)))
 \end{lstlisting}
 
-Diese die folgenden Spezifikationen verwendet eine Präfixnotation für das \texttt{on-if-yield}-Konstrukt, da Infixnotation im Prototypen des Compilers bisher nicht realisiert wurde.
+Diese und die folgenden Spezifikationen verwenden eine Präfixnotation für das \texttt{on-if-yield}-Konstrukt, da Infixnotation im Prototypen des Compilers bisher nicht realisiert wurde.
 
 \subsubsection{Verarbeitungszeit}
 
@@ -206,5 +211,6 @@ define monitor_output := monitor(
 )
 \end{lstlisting}
 
+Das \texttt{prop}-Konstrukt ist nötig, da die \texttt{monitor}-Funktion im Prototypen des Compilers noch keine Eventströme mit booleschen Werten als Propositionen verarbeiten kann.
 
 \end{document}
