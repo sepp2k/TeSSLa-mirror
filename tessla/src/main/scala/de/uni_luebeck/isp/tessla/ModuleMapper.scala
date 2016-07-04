@@ -74,11 +74,7 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           Some("dataFlowGraph.node.operation.SubNode", ("operandA" -> ref(node.args(0))) ~ ("operandB" -> ref(node.args(1))))
         }
         case SimpleFunction("constantSignal", _) => try {
-          val valStr = node.args(0).node.function.asInstanceOf[ConstantValue[_]].value match {
-            case b: Boolean => if (b) "1" else "0"
-            case v => v.toString
-          }
-          Some("dataFlowGraph.node.operation.ConstantNode", ("value" -> valStr): JObject)
+          Some("dataFlowGraph.node.operation.ConstantNode", ("value" -> JString(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)): JObject)
         } catch {
           case e: ClassCastException =>
             compiler.diagnostic(UnfoldedLiteralError(node.function))
@@ -206,6 +202,15 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
       }
     }
 
-    ModuleGraph(("@type" -> "java.util.Collections$UnmodifiableSet") ~ ("@items" -> graph.nodes.keys.flatMap(toJObject)))
+    // replace true/false by 1/0 in output to comply with FPGA configuration tool
+    for (k <- graph.nodes.keys){
+      k.node.function match {
+        case ConstantValue(t, v: Boolean) => graph.nodes.update(k, k.node.copy(function = ConstantValue(t, if (v) 1 else 0)))
+        case _ =>
+      }
+    }
+
+    val items = graph.nodes.keys.flatMap(toJObject)
+    ModuleGraph(("@type" -> "java.util.Collections$UnmodifiableSet") ~ ("@items" -> items))
   }
 }
