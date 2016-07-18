@@ -71,13 +71,17 @@ Approach
   
 \subsection{The Setting}
 
+\tessla is developed in the scope of the CONIRAS project as a language for specifying properties of multicore systems. The goal is to observe the execution of C programs on multicore systems with the processor's debug interfaces and check if these executions fulfill a certain correctness property specified in \tessla. The correctness properties are synthesized as a monitor on an FPGA which also gets the data from the debug interfaces and then the FPGA can check if the properties are violated of satisfied.  
+
+The workflow for creating a monitor from a \tessla specification and to monitor a C program is given in Figure \ref{fig:workflow}. At first the observable points, called tracepoints, have to be extracted from the compiled C code with debug symbols. Tracepoints can be various lines in the assembler code, for example jumps, a write to a variable or similar things. These tracepoints are needed in \tessla specifications to relate to certain lines in the C code and thus they are also needed for the \tessla-compiler such that it knows which lines of code in the C program can be observed when they are reached during execution. After a \tessla specification is compiled the compiler outputs a directed acyclic graph (DAG) which contains all the functions and constants used in the specification. Afterwards, this DAG is synthesized on the FPGA to work as a monitor. The data which the monitor works on comes from the debug interfaces of the CPU. Besides the information about which operation was executed, the data contains timestamps and an ownership ID which relates to the core that executed the operation. But before giving the data into the monitor engine on the FPGA the interesting points have to be reconstructed. Therefore an Instruction Reconstruction (IR) unit is synthesized on the FPGA in front of the monitor engine, hence all data that comes out of the CPU debug interface first goes through this IR unit. The IR unit matches the incoming data to the interesting points described as tracepoints before and sends an event to the monitor engine every time a tracepoint was executed by the CPU. All the data that does not related to a tracepoint or does not contain general important information will be filtered out by the IR unit to reduce the amount of data that reaches the monitor.
+
 \begin{figure}
 	\input{fig_workflow}
 	\caption{The workflow for reconstructing the program sequence and synthesizing the monitor for a \tessla specification. \label{fig:workflow}} 
 \end{figure}
 
 
-\subsection{The Development of \tessla}
+\subsection{The Design of \tessla}
 
 \subsection{Related Languages}
   
