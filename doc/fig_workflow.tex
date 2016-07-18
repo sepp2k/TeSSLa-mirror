@@ -1,23 +1,23 @@
 \begin{tikzpicture}[node distance = 3.5cm, on grid = true, auto]
 
-\node[rectangle, draw](cpu){CPU};
-\node[rectangle, draw, right of = cpu](reconstruction){Reconstruction};
+\node[rectangle, draw, color = red!70!black, fill = red!20!white](cpu){CPU};
+\node[rectangle, draw, right of = cpu, color = green!40!black, fill = green!20!white](reconstruction){Reconstruction};
 
-\node[rectangle, draw, below of = cpu, node distance = 2cm](analysis){Analysis};
-\node[rectangle, draw, below of = reconstruction, node distance = 2cm](compiler){\tessla compiler};
-\node[left of = analysis, node distance = 3.5cm](c){};
+\node[rectangle, draw, below of = cpu, node distance = 2cm, color = blue!70!black, fill = blue!20!white](analysis){Analysis};
+\node[rectangle, draw, below of = reconstruction, node distance = 2cm, color = blue!70!black, fill = blue!20!white](compiler){\tessla compiler};
+\node[left of = analysis, node distance = 2.5cm](c){};
 \node[below of = compiler, node distance = 2cm](prop){};
-\node[rectangle, draw, right of = reconstruction](fpga){FPGA};
-\node[rectangle, draw, below of = fpga, node distance = 2cm](report){Report};
+\node[rectangle, draw, right of = reconstruction, node distance = 4cm, color = green!40!black, fill = green!20!white](fpga){Monitor engine};
+\node[rectangle, draw, below of = fpga, node distance = 2cm, color = orange!70!black, fill = orange!20!white](report){Report};
 
 \draw[-stealth]
-(cpu) edge node[above]{JTAG} (reconstruction)	
+(cpu) edge node[align = center]{debug \\ interface} (reconstruction)	
 (analysis) edge node[above]{TPs} (compiler)
-(c) edge node[align = center]{C code, \\ binaries, \\ debug symbols} (analysis)
+(c) edge node[align = center]{C code, \\ binaries, \\ debug \\ symbols} (analysis)
 (analysis) edge node[above left]{TPs} (reconstruction)
 (prop) edge node[align = center, left]{\tessla \\ property} (compiler)
 (compiler) edge node[above left]{monitor} (fpga)
-(reconstruction) edge node[align = center]{event- \\ streams} (fpga)
+(reconstruction) edge node[align = center]{TP- \\ stream} (fpga)
 (fpga) edge node[align = center]{monitor \\ output} (report)
 ;
 
