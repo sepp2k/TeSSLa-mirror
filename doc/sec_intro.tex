@@ -80,10 +80,17 @@ The workflow for creating a monitor from a \tessla specification and to monitor 
 	\caption{The workflow for reconstructing the program sequence and synthesizing the monitor for a \tessla specification. \label{fig:workflow}} 
 \end{figure}
 
-
 \subsection{The Design of \tessla}
 
-\subsection{Related Languages}
+Various requirements lead to the form \tessla has now. Some requirements directly result from setting: because the clock speed of the FPGA is much lower than the one of the CPU cores, an asynchronous processing of the incoming data is necessary which leads to the model of asynchronous streams used in \tessla. Otherwise the FPGA would have an enormous performance overhead. Another requirement that leads to asynchronizity is the fact that we want to verify multicore systems and hence data comes in from multiple cores in an arbitrary order and arbitrarily often (really?) (recursion, Philip?).
+
+Besides the requirements that result directly from the setting, there are different requirements which come from the properties that should be specifiable. By viewing the TIMMO specification language used in the AUTOSAR project it becomes clear that real time constraints are really important in the scope of multicore systems. Among others this includes properties like \textit{every time an event $e_1$ occurs, at most $n$ seconds after (before respectively) $e_1$ another event $e_2$ has to occur}. This results in functions being available in \tessla that work on real time units.
+
+Other important properties of program executions on CPUs require to count events that are happening and also to apply different arithmetic operations on the counted values. This is needed to recognize buffer overflows, check fairness properties on, for example, variables access or resource usage, prove constraints on the number of function calls in the C code and other properties. Another use case for arithmetics is to make calculations on variable values, for example medians. These are typical properties that are interesting for the industry and hence to be able to specify those properties, \tessla needs arithmetic functions.
+
+Not only but also because of the necessity of counting events, it is necessary to apply operations directly on the input streams. These can transform the data of the events of an input stream or can even add or take out whole events. Typical examples for these operations are if-then constructs or filter and merge functions which are needed in \tessla.
+
+Another important aspect is possibility to use other well known state-based languages within \tessla. user acceptance and efficiency of STMs
   
 \subsection{What you describe with a \tessla specification}
 
