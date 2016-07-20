@@ -77,7 +77,7 @@ The workflow for creating a monitor from a \tessla specification and to monitor 
 
 \begin{figure}
 	\input{fig_workflow}
-	\caption{The workflow for reconstructing the program sequence and synthesizing the monitor for a \tessla specification. \label{fig:workflow}} 
+	\caption{The workflow for reconstructing the program sequence and synthesizing the monitor for a \tessla specification. The blue nodes represent the part needed for the compilation of a \tessla specification, the red node represents the system, the green nodes represent the parts that are synthesized on the FPGA and the orange node represents the output of the verification process. \label{fig:workflow}} 
 \end{figure}
 
 \subsection{The Design of \tessla}
@@ -90,7 +90,7 @@ Other important properties of program executions on CPUs require to count events
 
 Not only but also because of the necessity of counting events, it is necessary to apply operations directly on the input streams. These can transform the data of the events of an input stream or can even add or take out whole events. Typical examples for these operations are if-then constructs or filter and merge functions which are needed in \tessla.
 
-Another important aspect is possibility to use other well known state-based languages within \tessla. user acceptance and efficiency of STMs
+Besides the properties that are mentioned above an important class of properties is missing: the properties that are specifiable with typical temporal logics such as the LTL or SALT. These have proven to be interesting in a lot of systems. This results in the need to be able to specify such properties also in \tessla and that is why a function needs to be integrated in \tessla which allows for specifying properties with state-based temporal logics. Another positive side effect is that such temporal logic formulas can be transformed into state machines which can be synthesized and executed extremely efficient on the FPGA monitor engine.
   
 \subsection{What you describe with a \tessla specification}
 
