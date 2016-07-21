@@ -10,20 +10,20 @@
 %    \item Functional reactive programming as related concept
 %  \end{itemize}
 %  \item What you describe with a \tessla specification
-%  \begin{itemize}    
+%  \begin{itemize}
 %    \item input, output streams
 %    \item application of functions, composition of function
-%    \item 
+%    \item
 %  \end{itemize}
 %  \item Modelling data in terms of streams
 %  \begin{itemize}
 %    \item timing model ($ℝ$,$ℕ$,$ℚ$,…), restrictions to streams with discrete set of time stamps (event streams) or peace-wise constant streams (continuous stream)
-%    \item continuous streams and event streams    
+%    \item continuous streams and event streams
 %   \end{itemize}
 %   \item Functions on streams and desired properties (in general)
 %   \begin{itemize}
 %     \item small examples
-%     \item causality, statefulness, time invariance 
+%     \item causality, statefulness, time invariance
 %     \item (composition lemmata)
 %   \end{itemize}
 %   \item \tessla syntax
@@ -34,15 +34,15 @@
 %   \item Types
 %   \begin{itemize}
 %     \item Generic types
-%     \item Coercion 
+%     \item Coercion
 %   \end{itemize}
 %   \item Functional semantics of operators, small examples
 %   \item Larger example/case study
 %   \begin{itemize}
 %     \item producer/consumer, ring buffer, …
 %   \end{itemize}
-%   
-%   
+%
+%
 %\end{enumerate}
 
 
@@ -51,7 +51,7 @@ Purpose of \tessla.
 \begin{itemize}
   \item analysis of trace data
   \item specification of failure patterns, correctness properties, transformations
-  \item intuitive, pragmatic means of formulation 
+  \item intuitive, pragmatic means of formulation
 \end{itemize}
 
 Purpose of this document.
@@ -68,16 +68,16 @@ Approach
     \item monitoring of trace properties, specifically execution traces of programs
     \item Functional reactive programming as related concept
   \end{itemize}
-  
+
 \subsection{The Setting}
 
-\tessla is developed in the scope of the CONIRAS project as a language for specifying properties of multicore systems. The goal is to observe the execution of C programs on multicore systems with the processor's debug interfaces and check if these executions fulfill a certain correctness property specified in \tessla. The correctness properties are synthesized as a monitor on an FPGA which also gets the data from the debug interfaces. Then the FPGA can check by using the monitor if the properties are violated of satisfied.  
+\tessla is developed in the scope of the CONIRAS project as a language for specifying properties of multicore systems. The goal is to observe the execution of C programs on multicore systems with the processor's debug interfaces and check if these executions fulfill a certain correctness property specified in \tessla. The correctness properties are synthesized as a monitor on an FPGA which also gets the data from the debug interfaces. Then the FPGA can check by using the monitor if the properties are violated of satisfied.
 
 The workflow for creating a monitor from a \tessla specification and to monitor a C program is given in Figure \ref{fig:workflow}. At first the observable points, called tracepoints, have to be extracted from the compiled C code with debug symbols. Tracepoints can be various lines in the assembler code, for example jumps, a write to a variable or similar things. These tracepoints are needed in \tessla specifications to relate to certain lines in the C code and thus they are also needed for the \tessla-compiler such that it knows which lines of code in the C program can be observed when they are reached during execution. After a \tessla specification is compiled the compiler outputs a directed acyclic graph (DAG) which contains all the functions and constants used in the specification. Afterwards, this DAG is synthesized on the FPGA to work as a monitor. The data which the monitor works on comes from the debug interfaces of the CPU. Besides the information about which operation was executed, the data contains timestamps and an ownership ID which relates to the core that executed the operation. But before giving the data into the monitor engine on the FPGA the tracepoints have to be reconstructed. Therefore an Instruction Reconstruction (IR) unit is synthesized on the FPGA in front of the monitor engine, hence all data that comes out of the CPU debug interface first goes through this IR unit. The IR unit matches the incoming data to the tracepoints and sends an event to the monitor engine every time a tracepoint was executed by the CPU. All the data that does not related to a tracepoint or does not contain general important information will be filtered out by the IR unit to reduce the amount of data that reaches the monitor.
 
 \begin{figure}
 	\input{fig_workflow}
-	\caption{The workflow for reconstructing the program sequence and synthesizing the monitor for a \tessla specification. The blue nodes represent the part needed for the compilation of a \tessla specification, the red node represents the system, the green nodes represent the parts that are synthesized on the FPGA and the orange node represents the output of the verification process. \label{fig:workflow}} 
+	\caption{The workflow for reconstructing the program sequence and synthesizing the monitor for a \tessla specification. The blue nodes represent the part needed for the compilation of a \tessla specification, the red node represents the system, the green nodes represent the parts that are synthesized on the FPGA and the orange node represents the output of the verification process. \label{fig:workflow}}
 \end{figure}
 
 \subsection{The Design of \tessla}
@@ -101,12 +101,12 @@ This results in functions being available in \tessla that work on real time unit
 
 \subsubsection{Arithmetic Requirements}
 
-Other important properties of program executions on CPUs require to count events that are happening and also to apply different arithmetic operations on the counted values. This is needed to recognize buffer overflows, check fairness properties on, for example, variables access or resource usage, prove constraints on the number of function calls in the C code and other properties. Another use case for arithmetics is to make calculations on variable values, for example medians. 
+Other important properties of program executions on CPUs require to count events that are happening and also to apply different arithmetic operations on the counted values. This is needed to recognize buffer overflows, check fairness properties on, for example, variables access or resource usage, prove constraints on the number of function calls in the C code and other properties. Another use case for arithmetics is to make calculations on variable values, for example medians.
 
 Among others these include properties like the following:
 
 \begin{enumerate}
-	\item \textit{The difference of the values written to a buffer of size 5 and the values deleted from it should never exceed 5.} 
+	\item \textit{The difference of the values written to a buffer of size 5 and the values deleted from it should never exceed 5.}
 	\item \textit{The median of the ten last values a temperature sensor delivers should never exceed 20.}
 \end{enumerate}
 
@@ -133,10 +133,10 @@ Properties for which temporal logics can be used are the following:
 	\item \textit{When the only process that writes values to the buffer is deactivated, no write operations should happen on the buffer until the process is activated again.}
 	\item \textit{Every time $a$ occurs a $b$ has to be occurred 2 to 5 seconds before.}
 \end{enumerate}
-  
+
 \subsection{What you describe with a \tessla specification}
 
-\tessla is conceptually based on streams as a model for data processing and data analysis. 
+\tessla is conceptually based on streams as a model for data processing and data analysis.
 The data to be analysed is considered as input streams and a \tessla specification essentially describes a set of output streams and how they can be derived from the input.
 To this end, new streams can be defined by applying some function to existing ones.
 For example, given an input stream of integral values, a \tessla specification could describe the stream that consecutively provides the sum of all previous input values.
@@ -147,14 +147,14 @@ This is achieved by applying a corresponding function to the input stream and th
 
 \begin{figure}
   \input{fig_streams}
-  \caption{Example streams.\label{fig:streams}} 
+  \caption{Example streams.\label{fig:streams}}
 \end{figure}
 
 The streams used in \tessla specifications model the essential aspects found in computer programs, namely values (e.g., the value of a program variable), events (e.g., the call of a specific function) and time, both, in a qualitative (ordering) and quantitative (duration) sense.
 
 The timing model is based on time stamps $t∈𝕋$ where we assume $𝕋$ to be isomorphic to the real numbers $ℝ$.\footnote{Notice that we deliberately choose \emph{the continuum} as a model of real time as is common in philosophy, physics and engineering. For our purposes of specifying timing property, however, also a weaker notion of density would clearly suffice, such as the rational numbers $ℚ$.}
 Although on the technical level time is mostly quantised in actual systems, real time is a common and intuitive model.
-In fact, neither specification nor evaluation based on single steps of, e.g., the a CPU core are reasonable. 
+In fact, neither specification nor evaluation based on single steps of, e.g., the a CPU core are reasonable.
 Time is therefore handled, formally and technically, in terms of intervals.
 In the following, we make the notion of streams precise that provide the semantic basis of the language.
 We use $𝕋$ to denote the time domain to make an explicit distinction between time stamps and, e.g., real values.
@@ -167,7 +167,7 @@ Values, e.g., of a program variable or stored at some specific memory address, m
 They are represented by continuous streams that we call \emph{signals}. \todo{adde preliminary definitions somewhere, e.g., appendix: piece-wise constant function, segments, intervals, left/right-closed, change points}
 
 \begin{definition}[Signals]
-  Let $D$ be a set of data values. 
+  Let $D$ be a set of data values.
   A \emph{signal of type $D$} is a function $σ: 𝕋_{≥0} → D$ such that
   \begin{itemize}
     \item $σ$ is piece-wise constant,
@@ -229,3 +229,24 @@ Given means to observe function calls during the execution of the program\footno
 The calls to \texttt{rcv()} and \texttt{react()} can be considered as input event streams \texttt{rcv} and \texttt{react}.
 
 }
+
+\subsection{Monitoring Engine}
+
+The \tessla\ compiler translates a specification into a DAG of functions.
+This DAG is then synthesized on an FPGA in order to execute such a specification.
+On the FPGA both signals and event streams are represented
+as tuples of data and timestamps.
+In case of signals each value change corresponds to such a tuple.
+On the FPGA data and timestamps are transferred through seperated lines
+with sufficient bus with.
+Data and the corresponding timestamp are always kept in sync.
+An $n$-ary function in the DAG is translated into a function block with $n$ data inputs,
+one timestamp input, one data output and one timestamp output.
+Note that every function block has only one timestamp input,
+which may require additional synchronization in front of it:
+If you want to combine $n$ not yet synchronized streams in one function block,
+a synchronization block is added which takes $n$ value inputs and the corresponding $n$ timestamp inputs
+and has $n$ value outputs and only one timestamp output.
+This block buffers the incoming values and timestamps until all values for a common timestamp are known,
+and then emits one timestamp together with $n$ values.
+% TODO: Does this hold for signals and event streams? Can we compute new event streams out of multiple event stream? How?
