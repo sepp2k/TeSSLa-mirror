@@ -46,28 +46,28 @@
 %\end{enumerate}
 
 
-Purpose of \tessla.
+%Purpose of \tessla.
 
-\begin{itemize}
-  \item analysis of trace data
-  \item specification of failure patterns, correctness properties, transformations
-  \item intuitive, pragmatic means of formulation
-\end{itemize}
+%\begin{itemize}
+%  \item analysis of trace data
+%  \item specification of failure patterns, correctness properties, transformations
+%  \item intuitive, pragmatic means of formulation
+%\end{itemize}
 
-Purpose of this document.
-\begin{itemize}
-  \item Motivate and describe the language
-  \item reference
-  \item case study and examples from the targeted application area
-  \item description of how to integrate runtime verification methodology based on tessla and its implementation into the development process
-\end{itemize}
+%Purpose of this document.
+%\begin{itemize}
+%  \item Motivate and describe the language
+%  \item reference
+%  \item case study and examples from the targeted application area
+%  \item description of how to integrate runtime verification methodology based on tessla and its implementation into the development process
+%\end{itemize}
 
-Approach
-  \begin{itemize}
-    \item online processing of data
-    \item monitoring of trace properties, specifically execution traces of programs
-    \item Functional reactive programming as related concept
-  \end{itemize}
+%Approach
+%  \begin{itemize}
+%    \item online processing of data
+%    \item monitoring of trace properties, specifically execution traces of programs
+%    \item Functional reactive programming as related concept
+%  \end{itemize}
 
 \subsection{The Setting}
 
@@ -77,7 +77,7 @@ The workflow for creating a monitor from a \tessla specification and to monitor 
 
 \begin{figure}
 	\input{fig_workflow}
-	\caption{The workflow for reconstructing the program sequence and synthesizing the monitor for a \tessla specification. The blue nodes represent the part needed for the compilation of a \tessla specification, the red node represents the system, the green nodes represent the parts that are synthesized on the FPGA and the orange node represents the output of the verification process. \label{fig:workflow}}
+	\caption{The workflow for reconstructing the program sequence and synthesizing the monitor for a \tessla specification. The blue nodes represent the part needed for the compilation of a \tessla specification, the red node represents the multicore CPU, the green nodes represent the parts that are synthesized on the FPGA and the orange node represents the output of the verification process. \label{fig:workflow}}
 \end{figure}
 
 \subsection{The Design of \tessla}
@@ -93,7 +93,7 @@ Besides the requirements that result directly from the setting, there are differ
 Among others these include properties like the following:
 
 \begin{enumerate}
-	\item \textit{Every time an event $e_1$ occurs, at most $n$ seconds after (before respectively) $e_1$ another event $e_2$ has to occur.}.
+	\item \textit{Every time an event $e_1$ occurs, at most $n$ seconds after (before respectively) $e_1$ another event $e_2$ has to occur.}
 	\item \textit{For every event in the event stream $E_1$, at most $n$ seconds after (before respectively) an Event has to occur on the stream $E_2$. Every event that occurs on $E_2$ can only be matched to at most one from $E_1$.}
 \end{enumerate}
 
@@ -106,7 +106,7 @@ Other important properties of program executions on CPUs require to count events
 Among others these include properties like the following:
 
 \begin{enumerate}
-	\item \textit{The difference of the values written to a buffer of size 5 and the values deleted from it should never exceed 5.}
+	\item \textit{The difference of the number of write events and the number of delete events for a buffer of size 5 should never exceed 5.}
 	\item \textit{The median of the ten last values a temperature sensor delivers should never exceed 20.}
 \end{enumerate}
 
@@ -119,8 +119,8 @@ Not only but also because of the necessity of counting events, it is necessary t
 Among others these include properties like the following:
 
 \begin{enumerate}
-	\item \textit{There are three cores and only the events that happened on core one and two are important.}
-	\item \textit{If an event with a value smaller than zero occurs, create an event with the value zero, else create an event with the value that occurred.}
+	\item \textit{There exists a system with three cores. Both core one and core two should be able to access a certain resource at least once every ten seconds.}
+	\item \textit{A certain threshold value should not be exceeded by a variable more than three times in the last ten values of that variable.}
 \end{enumerate}
 
 \subsubsection{Temporal Logic Requirements}
