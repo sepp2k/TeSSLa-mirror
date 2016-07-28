@@ -80,6 +80,23 @@ The workflow for creating a monitor from a \tessla specification and to monitor 
 	\caption{The workflow for reconstructing the program sequence and synthesizing the monitor for a \tessla specification. The blue nodes represent the part needed for the compilation of a \tessla specification, the red node represents the multicore CPU, the green nodes represent the parts that are synthesized on the FPGA and the orange node represents the output of the verification process. \label{fig:workflow}}
 \end{figure}
 
+\subsection{Targeted Systems}
+
+\subsection{Taxonomy of Temporal Languages}
+
+Different temporal languages have different characteristics which influence the expressiveness of the language and the way correctness properties can be specified. The characteristics of temporal logics lead from the usages of different types of input streams and the possibility to specify real time values to the availability of arithmetic operations on the input values. In this section different characteristics of temporal logics are considered and various logics that use streams as inputs are investigated for their characteristics.
+
+Characteristics to be considered:
+\begin{itemize}
+	\item asynchronous vs. synchronous streams
+	\item real time
+	\item arithmetic operations
+	\item stream operations
+	\item ?
+\end{itemize}
+
+Different temporal logics cover different of these characteristics. An overview is given in Table ???. As it can be seen, none of the logics covers all of the considered characteristics but as shown in the next section, all of them are needed. That is why none of the mentioned temporal logics could be used in the CONIRAS project and \tessla was developed to cover all of these characteristics.
+
 \subsection{The Design of \tessla}
 
 \subsubsection{General Requirements}
