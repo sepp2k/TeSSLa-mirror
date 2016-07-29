@@ -86,16 +86,28 @@ The workflow for creating a monitor from a \tessla specification and to monitor 
 
 Different temporal languages have different characteristics which influence the expressiveness of the language and the way correctness properties can be specified. The characteristics of temporal logics lead from the usages of different types of input streams and the possibility to specify real time values to the availability of arithmetic operations on the input values. In this section different characteristics of temporal logics are considered and various logics that use streams as inputs are investigated for their characteristics.
 
-Characteristics to be considered:
-\begin{itemize}
-	\item asynchronous vs. synchronous streams
-	\item real time
-	\item arithmetic operations
-	\item stream operations
-	\item ?
-\end{itemize}
+The first one is how the input looks like. For streams, there are two different possibilities: They can be synchronized, hence there is a certain step frequency after which on every input stream synchronously an event occurs. The counterpart to this are asynchronous streams which means that on every stream an event can happen at any point in time independent from the other streams.
 
-Different temporal logics cover different of these characteristics. An overview is given in Table ???. As it can be seen, none of the logics covers all of the considered characteristics but as shown in the next section, all of them are needed. That is why none of the mentioned temporal logics could be used in the CONIRAS project and \tessla was developed to cover all of these characteristics.
+Another characteristic is if real time properties can be expressed with the logic. A real time property described a property of the system that somehow involves a connection to real time time units like seconds or microseconds. Generally some real time bound has to be fulfilled in a real time property.
+
+The third important aspect of temporal logics are arithmetic operators. These are needed to derive new streams from existing ones by applying an arithmetic function to existing streams. Examples for such operators are the calculation of the average of the values of a stream or simply comparing the values on a stream to a constant.
+
+The last characteristic we consider is the availability of stream manipulation operators. These operators allow for manipulating, filtering or merging streams for certain events. They are needed, for example, if a stream contains data from different cores but only the data of certain cores if of interest. Then the stream needs to be filtered for the important events.
+
+\begin{figure}
+	\begin{tabular}{|c||c|c|c|c|}
+		\hline
+		& Asynchronous & Real Time & Arithmetic & Stream Ops \\\hline\hline
+		LOLA & $\times$ & $\times$ & $?$ & $?$ \\\hline
+		STL & $?$ & $\times$ & $?$ & $?$ \\\hline
+		TIMMO & $?$ & $\checkmark$ & $?$ & $\checkmark$ \\\hline
+		QRE & $?$ & $?$ & $?$ & $?$ \\\hline
+	\end{tabular}
+	\caption{Overview over the characteristics of different temporal logics.}
+	\label{tab-characts}
+\end{figure}
+
+Different temporal logics cover different of these characteristics. An overview is given in Table \ref{tab-characts}. As it can be seen, none of the logics covers all of the considered characteristics but as shown in the next section, all of them are needed. That is why none of the mentioned temporal logics could be used in the CONIRAS project and \tessla was developed to cover all of these characteristics.
 
 \subsection{The Design of \tessla}
 
