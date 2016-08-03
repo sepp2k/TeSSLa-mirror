@@ -82,17 +82,25 @@ The workflow for creating a monitor from a \tessla specification and to monitor 
 
 \subsection{Targeted Systems}
 
+\tessla was developed as a specification language for multicore systems. This is a very rough classification because there are various types of such systems. Hence in this section the systems under scrutiny for which properties should be specifiable using \tessla are described more concrete.
+
+\begin{itemize}
+	\item OS / no OS
+	\item Memory (shared or not)
+	\item Paging? 
+\end{itemize}
+
 \subsection{Taxonomy of Temporal Languages}
 
 Different temporal languages have different characteristics which influence the expressiveness of the language and the way correctness properties can be specified. The characteristics of temporal logics lead from the usages of different types of input streams and the possibility to specify real time values to the availability of arithmetic operations on the input values. In this section different characteristics of temporal logics are considered and various logics that use streams as inputs are investigated for their characteristics.
 
 The first one is how the input looks like. For streams, there are two different possibilities: They can be synchronized, hence there is a certain step frequency after which on every input stream synchronously an event occurs. The counterpart to this are asynchronous streams which means that on every stream an event can happen at any point in time independent from the other streams.
 
-Another characteristic is if real time properties can be expressed with the logic. A real time property described a property of the system that somehow involves a connection to real time time units like seconds or microseconds. Generally some real time bound has to be fulfilled in a real time property.
+Another characteristic is if real time properties can be expressed with the logic. A real time property describes a property of the system that somehow involves a connection to real time time units like seconds or microseconds. Generally some real time bound has to be fulfilled in a real time property.
 
 The third important aspect of temporal logics are arithmetic operators. These are needed to derive new streams from existing ones by applying an arithmetic function to existing streams. Examples for such operators are the calculation of the average of the values of a stream or simply comparing the values on a stream to a constant.
 
-The last characteristic we consider is the availability of stream manipulation operators. These operators allow for manipulating, filtering or merging streams for certain events. They are needed, for example, if a stream contains data from different cores but only the data of certain cores if of interest. Then the stream needs to be filtered for the important events.
+The last characteristic we consider is the availability of stream manipulation operators. These operators allow for manipulating, filtering or merging streams for certain events. They are needed, for example, if a stream contains data from different cores but only the data of certain cores is of interest. Then the stream needs to be filtered for the important events.
 
 \begin{figure}
 	\begin{tabular}{|c||c|c|c|c|}
