@@ -1,0 +1,10 @@
+-- We need to define new custom input signals. Malte proposes the following new (not uet implemented) syntax:
+-- define x: Signal<Int>
+-- define y: Signal<Int>
+-- This should result in functions like the hard-coded input_vector_ir_ids specified in tessa.Function
+
+-- As a workaround we use constantSignal with an example value.
+
+define x := constantSignal(0)
+define y := constantSignal(0)
+define foo := add(x,y)
