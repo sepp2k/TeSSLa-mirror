@@ -30,7 +30,7 @@ They are defined as expected in terms of their scalar counterparts as above.
   $\textttbf{max}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\texttt{max}(σ_1,σ_2)(t) := \max \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\texttt{min}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\texttt{min}(σ_1,σ_2)(t) := \min \{σ_1(t), σ_2(t)\}$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\texttt{abs}: 𝓢_D → 𝓢_D$ & $\texttt{abs}(σ)(t) := |σ(t)|$ & $D∈\{ℕ,ℤ,ℝ\}$\\
-  $\texttt{abs}: 𝓔_D → 𝓔_D$ & $\texttt{abs}(η)(t) := \begin{cases} |η(t)| & \text{if } t∈E(η) \\ ⊥&\text{otherwise} \end{cases}$&\\
+  $\texttt{abs}: 𝓔_D → 𝓔_D$ & $\texttt{abs}(η)(t) := \begin{cases} |η(t)| & \text{if } t∈E(η) \\ ⊥&\text{otherwise} \end{cases}$& $D∈\{ℕ,ℤ,ℝ\}$\\
   $\textttbf{and}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\texttt{and}(σ_1,σ_2)(t) := σ_1(t) ∧ σ_2(t)$ & \\
   $\texttt{or}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\texttt{or}(σ_1,σ_2)(t) := σ_1(t) ∨ σ_2(t)$ & \\
   $\texttt{implies}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\texttt{implies}(σ_1,σ_2)(t) := σ_1(t) ⇒ σ_2(t)$ & \\
@@ -55,11 +55,11 @@ We define the function for different signatures and any value domain $D$:
     & \mathtt{delay}(σ,d)(t) &:= σ(t-d) \\
   \textttbf{delay}&: 𝓔_D × 𝕋 → 𝓔_D 
       & \mathtt{delay}(η,d)(t) &:= \begin{cases} 
-           σ(t-d) & \text{if } t-d≥0\\
+           η(t-d) & \text{if } t-d≥0\\
            ⊥      & \text{otherwise}
          \end{cases}\\
 \end{align*}
-Discrete timporal shifts of event streams can be expressed by the functions
+Discrete temporal shifts of event streams can be expressed by the functions
 \begin{align*}
   \textttbf{delay}&: 𝓔_D → 𝓔_D\\
   \texttt{delay}&: 𝓔_D × ℕ_{>0} → 𝓔_D
@@ -103,19 +103,19 @@ Its formal signature is defined as
 Recall that $A+B:= (A×｛1｝)∪(B×｛2｝)$\footnote{In programming languages, structures $A+B$ are often represented by a type \texttt{Either<A,B>} with subtypes \texttt{Left<A>} and \texttt{Right<B>} and suitable operations to access the wrapped values of type A and B, respectively (e.g., \texttt{get()}).}.
 
 Since the function takes the temporal relation between the events into account it is most convenient to define its semantics inductively based on the sequence representation.
-For $d∈𝕋_{≥0}$ and sequences $u∈(𝕋_{≥0}×D_1)^∞$ and $v∈(𝕋_{≥0}×D_2)^∞$ we define the sequence $sync(u,v)$ inductively by 
+For $d∈𝕋_{≥0}$ and sequences $u∈(𝕋_{≥0}×D_1)^∞$ and $v∈(𝕋_{≥0}×D_2)^∞$ we define the sequence $sync(u,v,d)$ inductively by 
 \[
-sync(u,v) = \begin{cases}
+sync(u,v,d) = \begin{cases}
   ε & \text{if } u=v=ε \\
-  ((a,1,1),t_1+d) · sync(u',v) & \text{if } u=(a,t_1) ·u' \text{ and } \\
+  ((a,1,1),t_1+d) · sync(u',v,d) & \text{if } u=(a,t_1) ·u' \text{ and } \\
                                    & v=ε \text{ or } v=(b,t_2)·v' \text{ with } t_2>t_1+d\\
-  ((b,2,1),t_2+d) · sync(u,v') & \text{if } v=(b,t_2)·v' \text{ and } \\
+  ((b,2,1),t_2+d) · sync(u,v',d) & \text{if } v=(b,t_2)·v' \text{ and } \\
                                    & u=ε \text{ or } u=(a,t_1)·u' \text{ with } t_1>t_2+d\\
   ((a,b,2),\max｛t_1,t_2｝) · f(u',v') & \text{if } u=(a,t_1)·u' \text{, } v=(b,t_2)·v' \text{ and } |t_1-t_2|≤d
 \end{cases}
 \]
 
-Based on $sync(u,v)$ we define $\mathtt{synchronise}(η_1,η_2,d) := η_3$ where $η_3$ is the event stream defined by the sequence $s_{η_3} = sync(s_{η_1}, s_{η_2})$. 
+Based on $sync(u,v)$ we define $\mathtt{synchronise}(η_1,η_2,d) := η_3$ where $η_3$ is the event stream defined by the sequence $s_{η_3} = sync(s_{η_1}, s_{η_2},d)$. 
 As defined in Section~\ref{sec:streams}, the sequences $s_{η_1}$ and $s_{η_2}$ are the sequences representing $η_1$ and $η_2$, respectively.
 
 For convenience we further define some lifted functions to access the structural information.
@@ -155,7 +155,7 @@ We define a function that indicates whether an event could not be synchronised w
 \begin{align*}
   \mathtt{timeout}&: 𝓔_{(D_1+D_2)+(D_1×D_2)} → 𝓔_{｛⊤｝}\\
    \mathtt{timeout}(η)(t) & := \begin{cases}
-            ⊤ & \text{if } t∈E(η) \text{ and } η(t) = (v,i,1)∈(D_1+D_2)×｛1｝\\
+            ⊤ & \text{if } t∈E(η) \text{ and } η(t) ∈(D_1+D_2)×｛1｝\\
             ⊥ & \text{otherwise}
           \end{cases}\\
 \end{align*}
@@ -169,7 +169,7 @@ A “flat” synchronisation simply neglects the origin of a value and gives pre
 If necessary, we can keep the timeout information.
 \begin{align*}
   &\mathtt{flatSynchronise}: 𝓔_D × 𝓔_D × 𝕋 → 𝓔_{D×𝔹} \\
-  &\mathtt{flatSynchronise}(η_1,η,_2,d)(t) := \begin{cases}
+  &\mathtt{flatSynchronise}(η_1,η_2,d)(t) := \begin{cases}
         (v,\texttt{true}) & \texttt{if } \mathtt{synchronise}(η_1,η,2,d)(t) = (v,i,1) \texttt{ for } i∈｛1,2｝\\
         (v_1,\texttt{false}) & \texttt{if } \mathtt{synchronise}(η_1,η,2,d)(t) = (v_1,v_2,2) \\
         ⊥ & \texttt{otherwise}
@@ -193,11 +193,11 @@ For any domain $D$ with linear ordering and addition, respectively, e.g., $ℕ,�
     & \mathtt{sum}(η)(t) &:= ∑_{t'∈E(η)｜t'≤t } η(t')\\  
 \end{align*}
 
-Generic functions $eventCount$ providing the number of occurred events and $mrv$ providing the most recent value of an event stream.
+Generic functions $eventCount$ providing the number of occurred events since the last event occurred on the second input stream and $mrv$ providing the most recent value of an event stream.
 
 \begin{align*}
-  \textttbf{eventCount}&: 𝓔_D → 𝓢_D
-    & \mathtt{eventCount}(η)(t) &:= |{t'∈E(η)｜t'≤t } \\
+  \textttbf{eventCount}&: 𝓔_D × 𝓔_D → 𝓢_D
+    & \mathtt{eventCount}(η_1,η_2)(t) &:= |\{t'∈E(η_1) \mid t'≤t \land \forall t'' \in E(\eta_2): t' > t''\}| \\
   \textttbf{mrv}&: 𝓔_D × D → 𝓢_D
     & \mathtt{mrv}(η,d)(t) &:= \begin{cases}
          η(\max E(η)∩[0,t]) & \text{if } E(η)∩[0,t]≠∅ \\
@@ -274,13 +274,13 @@ out std_mean_avg
            ⊥ & \text{otherwise}
          \end{cases}
 \end{align*}
-Notice that \texttt{merge} gives precedence to the first argument and that \texttt{ifThen} is a restricted form of an on-comprehension.
+Notice that \texttt{merge} gives precedence to the first argument and that \texttt{ifThen} is a form of an on-comprehension.
 
 \subsection{Monitors}
 
 The monitor function can be used to enable the usage of temporal logics within \tessla. 
 A monitor is defined by a temporal logic formula and returns an output value that depends on the evaluation status of the given formula at the current point in time.
-We assume that the temporal logic is defined over propositional variables from a fixed and finite set $AP=\{p_1,…,p_n\}$, e.g.\ like LTL.
+We assume that the temporal logic ($TL$) is defined over propositional variables from a fixed and finite set $AP=\{p_1,…,p_n\}$, e.g.\ like LTL.
 Further, the semantics is defined on finite words over the alphabet $Σ=2^{AP}$ and admits truth values from some domain $𝕍$ (e.g., $𝔹$).
 We then let, for arbitrary $D$,
 \[
@@ -296,16 +296,6 @@ with
 \]
 where $w_t=a_1…a_{m}$ with $a_i=\{p_k∈AP \mid σ_k(t_i)=\texttt{true}\}$ for $\{t_1<t_2<…<t_{|E(η)|}\} = E(η)$ and $t_m≤t<t_{m+1}$.
 
-\idea[inline]{
-For practical convenience we could introduce further notation such as where explicit inputs are optionals and instead of fixed propositions $p_1…p_n$ escaped \tessla expressions can be used. For example,
-
-\texttt{monitor("always (p1 implies eventually not p2)", myFunction(in1, in2), in3)}
-
-could be written as
-
-\texttt{monitor "always ( \{myFunction(in1, in2)\}  implies eventually not \{in3\})"}.
-}
-
 \subsection{On-comprehension}
 
 Let $η_1∈𝓔_{D_1},…,η_n∈𝓔_{D_n}$ be event streams, $σ_{cnd}∈𝓢_𝔹$ a Boolean signal and $σ_{val}∈𝓢_D$ a signal of some type $D$.
@@ -318,6 +308,6 @@ We define the semantics of on-comprehensions as follows.
            \end{cases}\\
 \end{align*}
 Omitting the \texttt{yield} part amounts to implicitly take $σ_{val} = σ_⊤$ where $σ_⊤: 𝕋_{≥0} → ｛⊤｝$ is the (unique) signal of type \texttt{Unit}.
-Omitting the conditional (\texttt{if}) part amount to implicitly take $σ_{cnd}=σ_{\mathtt{true}}$ where $σ_\mathtt{true}: 𝕋_{≥0} → ｛\texttt{true}｝$ is the Boolean signal that is always true.
+Omitting the conditional (\texttt{if}) part amounts to implicitly take $σ_{cnd}=σ_{\mathtt{true}}$ where $σ_\mathtt{true}: 𝕋_{≥0} → ｛\texttt{true}｝$ is the Boolean signal that is always true.
 
 \subsection{Related Languages}

@@ -195,7 +195,7 @@ The streams used in \tessla specifications model the essential aspects found in 
 
 The timing model is based on time stamps $t∈𝕋$ where we assume $𝕋$ to be isomorphic to the real numbers $ℝ$.\footnote{Notice that we deliberately choose \emph{the continuum} as a model of real time as is common in philosophy, physics and engineering. For our purposes of specifying timing property, however, also a weaker notion of density would clearly suffice, such as the rational numbers $ℚ$.}
 Although on the technical level time is mostly quantised in actual systems, real time is a common and intuitive model.
-In fact, neither specification nor evaluation based on single steps of, e.g., the a CPU core are reasonable.
+In fact, neither specification nor evaluation based on single steps of, e.g., a CPU core are reasonable.
 Time is therefore handled, formally and technically, in terms of intervals.
 In the following, we make the notion of streams precise that provide the semantic basis of the language.
 We use $𝕋$ to denote the time domain to make an explicit distinction between time stamps and, e.g., real values.
@@ -244,7 +244,7 @@ For example, addition of two (value) streams can be defined as element-wise addi
 \begin{lstlisting}[language=tessla]
   define sum := add(in1, in2)
 \end{lstlisting}
-Here, $\mathtt{add}: 𝓢_ℕ × 𝓢_ℕ → 𝓢_ℕ$ is a function that maps a pair of signals $\mathtt{in1},\mathtt{in2}∈𝓢_ℕ$ with data domain $ℕ$ to the signal representing their sum at every point in time, i.e.,  $\mathtt{sum}(t) = \mathtt{add}(\mathtt{in1}, \mathtt{in2})(t) = \mathtt{in1}(t) + \mathtt{in2}(t)$ for any time point $t∈𝕋$.
+Here, $\mathtt{add}: 𝓢_ℕ × 𝓢_ℕ → 𝓢_ℕ$ is a function that maps a pair of signals $\mathtt{in1},\mathtt{in2}∈𝓢_ℕ$ with data domain $ℕ$ to the signal representing their sum at every point in time, i.e.,  $\mathtt{sum}(t) = \mathtt{add}(\mathtt{in1}, \mathtt{in2})(t) = \mathtt{in1}(t) + \mathtt{in2}(t)$ for any time point $t∈𝕋_{\geq 0}$.
 
 The specification above hence describes a rather simple transformation of two input streams into one output stream.
 
