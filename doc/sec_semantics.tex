@@ -258,7 +258,7 @@ out std_mean_avg
            σ_3(t) & \text{otherwise}
          \end{cases}\\
   \mathtt{merge}&: 𝓔_D × 𝓔_D → 𝓔_D
-      & \mathtt{occurAny}(η_1,η_2)(t) &:= \begin{cases}
+      & \mathtt{merge}(η_1,η_2)(t) &:= \begin{cases}
            η_1(t) & \text{if } t∈E(η_1)\\
            η_2(t) & \text{if } t∈E(η_2)∖E(η_1)\\
            ⊥ & \text{otherwise}
@@ -309,5 +309,13 @@ We define the semantics of on-comprehensions as follows.
 \end{align*}
 Omitting the \texttt{yield} part amounts to implicitly take $σ_{val} = σ_⊤$ where $σ_⊤: 𝕋_{≥0} → ｛⊤｝$ is the (unique) signal of type \texttt{Unit}.
 Omitting the conditional (\texttt{if}) part amounts to implicitly take $σ_{cnd}=σ_{\mathtt{true}}$ where $σ_\mathtt{true}: 𝕋_{≥0} → ｛\texttt{true}｝$ is the Boolean signal that is always true.
+
+An on-comprehension can also be expressed semantically equivalent by using the other \tessla-operators as follows:
+
+\begin{align*}
+⟦\textttbf{on }η_1,…,η_n  \textttbf{ if } σ_{cnd} \textttbf{ yield } σ_{val}⟧(t) \equiv \\ \texttt{ifthen}(\texttt{filter}(\texttt{occurAll}(\eta_1,\dots,\eta_n),\sigma_{cnd}),\sigma_{val})(t)
+\end{align*}
+
+where $\texttt{occurAll}(\eta_1,\dots,\eta_n) = \texttt{occurAll}(\eta_1,\texttt{occurAll}(\eta_2, \dots, \\ \texttt{occurAll}(\eta_{n-2},\texttt{occurAll}(\eta_{n-1},\eta_n))\dots))$ holds. 
 
 \subsection{Related Languages}
