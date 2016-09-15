@@ -1,0 +1,16 @@
+--define x: Event<Unit>
+--define y: Event<Unit>
+define x := changeOf(constantSignal(0))
+define y := changeOf(constantSignal(0))
+
+define xd := delay(x, 2)
+define yd := delay(y, 2)
+
+define diff_x := sub(sub(eventCount(xd), eventCount(y)), eventCount(err_x))
+define err_x := filter(on(changeOf(diff_x)), gt(diff_x, constantSignal(0)))
+
+-- The definition of diff_x is now cyclic. It doesn't need to be cyclic, because
+-- we do not need the updated error instantaneously. But we need it next time we
+-- need it. This is in my mind as unclear as in the last sentence!!!
+
+
