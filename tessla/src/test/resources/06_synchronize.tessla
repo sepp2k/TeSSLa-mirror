@@ -1,16 +1,42 @@
+-- !!! CURRENTLY NOT WORKING EXAMPLE !!!
+
 --define x: Event<Unit>
 --define y: Event<Unit>
 define x := changeOf(constantSignal(0))
 define y := changeOf(constantSignal(0))
 
-define xd := delay(x, 2)
-define yd := delay(y, 2)
+define OFFSET := 2s
 
-define diff_x := sub(sub(eventCount(xd), eventCount(y)), eventCount(err_x))
-define err_x := filter(on(changeOf(diff_x)), gt(diff_x, constantSignal(0)))
+define diff_x := eventCount(delay(x, OFFSET)) - eventCount(delay(err_x))
+                 - (eventCount(y) - eventCount(delay(err_y)))
+define err_x := filter(on(changeOf(diff_x)), diff_x > constantSignal(0))
 
--- The definition of diff_x is now cyclic. It doesn't need to be cyclic, because
--- we do not need the updated error instantaneously. But we need it next time we
--- need it. This is in my mind as unclear as in the last sentence!!!
+define diff_y := eventCount(delay(y, OFFSET)) - eventCount(delay(err_y))
+                 - (eventCount(x) - eventCount(delay(err_x)))
+define err_y := filter(on(changeOf(diff_y)), diff_y > constantSignal(0))
 
+-- We are using the delay of the error in a cyclic way in the above definitions.
+-- What we want in this example is a delay which is as short as possible.
 
+---------------------------
+
+-- In this example it remains unclear what happens, too. The best output
+-- would probably be a constant 0. This contradicts the needed semantics
+-- in the above example, because a delay as short as possible would
+-- count up incredibly fast.
+define x: Event<Unit>
+def eventCount_x := delay(eventCount_x, constantSignal(0)) + 1
+
+---------------------------
+
+-- In this example we want the delay to be synchronized with the changes
+-- of the event or signal x. This contradicts both of the above semantics
+-- somehow...
+
+define x: Event<Int>
+def sum_x := delay(sum_x, constantSignal(0)) + mrv(x)
+
+define x: Signal<Int>
+def sum_x := delay(sum_x, constantSignal(0)) + x
+
+---------------------------
