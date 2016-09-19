@@ -31,6 +31,9 @@ define threadID := mrv(ifThen(owner_valid, mrv(input_vector_RegChangeMessageValu
 
 define exec(x) := filter(on(input_vector_ir_ids), eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
 
+-- adjust trace point ids
+define process_tp = 3
+define done_processing_tp = 4
 --
 -- Inputs
 --

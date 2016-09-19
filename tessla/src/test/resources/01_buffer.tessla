@@ -8,13 +8,18 @@ define lt(x,y) := gt(y,x)
 -- CONIRAS specific
 define exec(x) := filter(on(input_vector_ir_ids), eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
 
+-- Adjust trace point id
+define write_tp = 2
+define process_tp = 1
+
 --
 -- Inputs
 --
 --define writeElement: Events<Unit> := instruction_executions("main.c:49")
-define writeElement: Events<Unit> := exec(2)
+--
+define writeElement: Events<Unit> := exec(write_tp)
 --define processElement: Events<Unit> := function_calls("main.c:process_data")
-define processElement: Events<Unit> := exec(13)
+define processElement: Events<Unit> := exec(process_tp)
 
 --
 -- Spec
@@ -25,4 +30,3 @@ define doubleProcessing := onIf(processElement, geq(diffProcWrite,constantSignal
 
 define diffWriteProc := sub(eventCount(writeElement), eventCount(processElement))
 define bufferOverflow := onIf(writeElement, geq(diffWriteProc,constantSignal(6)))
-
