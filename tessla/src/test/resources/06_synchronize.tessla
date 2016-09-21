@@ -24,8 +24,8 @@ define err_y := filter(on(changeOf(diff_y)), diff_y > constantSignal(0))
 -- would probably be a constant 0. This contradicts the needed semantics
 -- in the above example, because a delay as short as possible would
 -- count up incredibly fast.
-define x: Event<Unit>
-def eventCount_x := delay(eventCount_x, constantSignal(0)) + 1
+define x: Events<Unit>
+define eventCount_x := delay(eventCount_x, constantSignal(0)) + 1
 
 ---------------------------
 
@@ -33,10 +33,10 @@ def eventCount_x := delay(eventCount_x, constantSignal(0)) + 1
 -- of the event or signal x. This contradicts both of the above semantics
 -- somehow...
 
-define x: Event<Int>
-def sum_x := delay(sum_x, constantSignal(0)) + mrv(x)
+define x: Events<Int>
+define sum_x := delay(sum_x, constantSignal(0)) + mrv(x)
 
 define x: Signal<Int>
-def sum_x := delay(sum_x, constantSignal(0)) + x
+define sum_x := delay(sum_x, constantSignal(0)) + x
 
 ---------------------------
