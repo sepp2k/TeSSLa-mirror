@@ -9,8 +9,8 @@ define lt(x,y) := gt(y,x)
 define exec(x) := filter(on(input_vector_ir_ids), eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
 
 -- Adjust trace point id
-define write_tp = 2
-define process_tp = 1
+define write_tp := 2
+define process_tp := 1
 
 --
 -- Inputs
