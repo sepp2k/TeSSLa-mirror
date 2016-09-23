@@ -49,6 +49,9 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           compiler.diagnostic(GenericModuleWarning(node.function))
           None
         }*/
+        case SimpleFunction("out",_) => Some("TODO.OutNode",
+          ("predecessor" -> ref(node.args(0))) ~
+            ("name" -> JString(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString)))
         case StateMachineFunction(name, signature, start, stateMap, transitionList) => {
           val refs = node.args.map(x => ref(x))
           val refTransitions = transitionList.map(t => (t._1,t._2.map(x => refs(x-1)),t._3))

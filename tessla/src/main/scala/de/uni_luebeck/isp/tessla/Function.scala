@@ -59,28 +59,29 @@ object Function {
     Func("variable_values"). from ("String") → Signal(a),
 
     /**** Stream operators ****/
-    Func ("sub").        from (Signal("Int")) × Signal("Int") → Signal("Int"),
-    Func ("add").        from (Signal("Int")) × Signal("Int") → Signal("Int"),
-    Func ("gt").         from (Signal("Int")) × Signal("Int") → Signal("Boolean"),
-    Func ("eq").         from (Signal(a))     × Signal(a)     → Signal("Boolean"),
-    Func ("not").        from (Signal("Boolean"))             → Signal("Boolean"),
-    Func ("and").        from (Signal("Boolean")) × Signal("Boolean") → Signal("Boolean"),
-    Func ("or").        from (Signal("Boolean")) × Signal("Boolean") → Signal("Boolean"),
-    Func ("neg").        from (Events("Boolean"))             → Events("Boolean"),
-    Func ("eventCount"). from (Events(a))                     → Signal("Int"),
-    Func ("eventCount"). from (Events(a)) × Events(b)         → Signal("Int"), // with reset
-    Func ("occursAll").  from (Events(a)) × Events(b)         → Events("Unit"),
-    Func ("occursAny").  from (Events(a)) × Events(b)         → Events("Unit"),
-    Func ("merge").      from (Events(a)) × Events(a)         → Events(a),
-    Func ("filter").     from (Events(a)) × Signal("Boolean") → Events(a),
-    Func ("ifThen").     from (Events(a)) × Signal(b)         → Events(b),
+    Func ("sub").        from (Signal("Int")) × Signal("Int")             → Signal("Int"),
+    Func ("add").        from (Signal("Int")) × Signal("Int")             → Signal("Int"),
+    Func ("gt").         from (Signal("Int")) × Signal("Int")             → Signal("Boolean"),
+    Func ("eq").         from (Signal(a))     × Signal(a)                 → Signal("Boolean"),
+    Func ("not").        from (Signal("Boolean"))                         → Signal("Boolean"),
+    Func ("and").        from (Signal("Boolean")) × Signal("Boolean")     → Signal("Boolean"),
+    Func ("or").         from (Signal("Boolean")) × Signal("Boolean")     → Signal("Boolean"),
+    Func ("neg").        from (Events("Boolean"))                         → Events("Boolean"),
+    Func ("eventCount"). from (Events(a))                                 → Signal("Int"),
+    Func ("eventCount"). from (Events(a)) × Events(b)                     → Signal("Int"), // with reset
+    Func ("occursAll").  from (Events(a)) × Events(b)                     → Events("Unit"),
+    Func ("occursAny").  from (Events(a)) × Events(b)                     → Events("Unit"),
+    Func ("merge").      from (Events(a)) × Events(a)                     → Events(a),
+    Func ("filter").     from (Events(a)) × Signal("Boolean")             → Events(a),
+    Func ("ifThen").     from (Events(a)) × Signal(b)                     → Events(b),
     Func ("ifThenElse"). from (Signal("Boolean")) × Signal(a) × Signal(a) → Signal(a),
-    Func ("inPast").     from ("Int") × Events(b)             → Signal("Boolean"), //Todo: will be from "Time"
-    Func ("mrv").     from (Events(a)) × a                    → Signal(a),
-    Func ("timestamps").     from (Events(a))                 → Events("Int"), //Todo: will be Events("Time")
-    Func ("delay").     from (Events(a))                      → Events(a),
-    Func ("changeOf").     from (Signal(a))                   → Events(a),
-    Func ("on").     from (Events(a))                   → Events("Unit"),
+    Func ("inPast").     from ("Int") × Events(b)                         → Signal("Boolean"), //Todo: will be from "Time"
+    Func ("mrv").        from (Events(a)) × a                             → Signal(a),
+    Func ("timestamps"). from (Events(a))                                 → Events("Int"), //Todo: will be Events("Time")
+    Func ("delay").      from (Events(a))                                 → Events(a),
+    Func ("changeOf").   from (Signal(a))                                 → Events(a),
+    Func ("on").         from (Events(a))                                 → Events("Unit"),
+    Func ("out").        from (a) × "String"                              → "Unit",
 
 
     /** Coniras platform specific functions **/

@@ -21,6 +21,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
 
   object Tokens extends SimpleTokens {
     case object DEFINE extends Token("define")
+    case object OUT extends Token("out")
     case object OF_TYPE extends Token(":")
     case object PERCENT extends Token("%")
     case object DEFINE_AS extends Token(":=")
@@ -35,7 +36,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     override val tokens = Tokens
     import tokens._
 
-    override val keywords = List(DEFINE)
+    override val keywords = List(DEFINE, OUT)
     override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT, LT, GT)
     override val comments = List("--" -> "\n")
   }
@@ -79,6 +80,10 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       (DEFINE ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (DEFINE_AS ~> expr)) ^^! {
         case (loc, (((name, args), typeAscr), expr)) =>
           Ast.Def(name, args getOrElse Seq(), typeAscr, expr, SourceLoc(loc))
+      } |
+      OUT ~> identifier ^^! {
+        case (loc, name) =>
+          Ast.Out(name, SourceLoc(loc))
       }
 
     def macroArgs: Parser[Seq[Ast.MacroArg]] = LPAREN ~> rep1sep(macroArg, COMMA) <~ RPAREN
