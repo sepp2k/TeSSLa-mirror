@@ -12,7 +12,7 @@ object Ast {
   case class FloatLit(value: BigDecimal, loc: SourceLoc)
 
 
-  abstract class Statement
+  abstract sealed class Statement
   case class Def(
     name: Identifier,
     macroArgs: Seq[MacroArg],
