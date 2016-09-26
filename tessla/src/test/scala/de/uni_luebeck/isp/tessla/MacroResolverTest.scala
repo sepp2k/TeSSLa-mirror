@@ -101,7 +101,7 @@ class MacroResolverTest extends FlatSpec with Matchers {
       """
 
     inside(resolve(specification)) {
-      case (Success(Definitions(streamDefs, macroDefs)), Seq()) => {
+      case (Success(Definitions(streamDefs, macroDefs, outStreams)), Seq()) => {
         macroDefs shouldBe empty
         streamDefs should have size 2
         streamDefs should contain key "foo"
@@ -139,7 +139,7 @@ class MacroResolverTest extends FlatSpec with Matchers {
     val expected = parse("""define s := foo(foo(bar(1), 2), arg2)""")._1.streamDefs
 
     inside(resolve(specification)) {
-      case (Success(Definitions(streamDefs, macroDefs)), Seq()) => {
+      case (Success(Definitions(streamDefs, macroDefs, outStreams)), Seq()) => {
         //streamDefs shouldEqual parse("""define s := foo(foo(bar(1), 2), arg2)""")._1.streamDefs
         streamDefs.keySet shouldEqual expected.keySet
         streamDefs.foreach { case (s, streamDef) => expected(s) shouldEqual streamDef }
@@ -164,7 +164,7 @@ class MacroResolverTest extends FlatSpec with Matchers {
       """)._1
 
     inside(resolve(testSpec2)) {
-      case (Success(Definitions(streamDefs, macroDefs)), Seq()) => {
+      case (Success(Definitions(streamDefs, macroDefs, outStreams)), Seq()) => {
         streamDefs shouldEqual expected.streamDefs
         macroDefs shouldEqual expected.macroDefs
       }
@@ -193,7 +193,7 @@ class MacroResolverTest extends FlatSpec with Matchers {
         define s3 := foo(foo(2,foo(bar(bar1),2)), foo(bar(b),c))
       """)._1
     inside(resolve(testSpec3)) {
-      case (Success(Definitions(streamDefs, macroDefs)), Seq()) => {
+      case (Success(Definitions(streamDefs, macroDefs, outStreams)), Seq()) => {
         streamDefs shouldEqual expected.streamDefs
         macroDefs shouldBe empty
       }
@@ -219,7 +219,7 @@ class MacroResolverTest extends FlatSpec with Matchers {
       """
 
     inside((resolve(testSpec5), resolve(testSpec5var))) {
-      case ((Success(Definitions(streamDefs, macroDefs)), Seq()), (Success(Definitions(streamDefs2, macroDefs2)), Seq())) => {
+      case ((Success(Definitions(streamDefs, macroDefs, outStreams)), Seq()), (Success(Definitions(streamDefs2, macroDefs2, outStreams2)), Seq())) => {
         streamDefs shouldEqual streamDefs2
       }
     }
@@ -252,7 +252,7 @@ class MacroResolverTest extends FlatSpec with Matchers {
       """)._1
 
     inside(resolve(testSpec7)) {
-      case (Success(Definitions(streamDefs, macroDefs)), Seq()) => {
+      case (Success(Definitions(streamDefs, macroDefs, outStreams)), Seq()) => {
         streamDefs shouldEqual expected.streamDefs
         macroDefs shouldBe empty
       }
@@ -280,7 +280,7 @@ class MacroResolverTest extends FlatSpec with Matchers {
       """)._1
 
     inside(resolve(testSpec8)) {
-      case (Success(Definitions(streamDefs, macroDefs)), Seq()) => {
+      case (Success(Definitions(streamDefs, macroDefs, outStreams)), Seq()) => {
         streamDefs shouldEqual expected.streamDefs
         macroDefs shouldBe empty
       }
@@ -297,7 +297,7 @@ class MacroResolverTest extends FlatSpec with Matchers {
         define s := mac1(bla)
       """
     inside(resolve(testSpec9)) {
-      case (Success(Definitions(streamDefs, macroDefs)), diagnostics) => {
+      case (Success(Definitions(streamDefs, macroDefs, outStreams)), diagnostics) => {
         streamDefs shouldBe empty
         macroDefs shouldBe empty
         diagnostics should matchPattern {

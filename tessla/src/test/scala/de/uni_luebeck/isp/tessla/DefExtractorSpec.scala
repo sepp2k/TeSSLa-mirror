@@ -21,7 +21,7 @@ class DefExtractorSpec extends FlatSpec with Matchers {
 
   "The definition extractor" should "extract named constants" in {
     inside(extract("define foo := bar")) {
-      case (Definitions(streamDefs, macroDefs), Seq()) =>
+      case (Definitions(streamDefs, macroDefs, outStreams), Seq()) =>
         macroDefs shouldBe empty
         streamDefs should have size 1
         streamDefs should contain key "foo"
@@ -34,7 +34,7 @@ class DefExtractorSpec extends FlatSpec with Matchers {
 
   it should "extract integer literals" in {
     inside(extract("define foo := 123")) {
-      case (Definitions(streamDefs, macroDefs), Seq()) =>
+      case (Definitions(streamDefs, macroDefs, outStreams), Seq()) =>
         macroDefs shouldBe empty
         streamDefs should have size 1
         streamDefs should contain key "foo"
@@ -47,7 +47,7 @@ class DefExtractorSpec extends FlatSpec with Matchers {
 
   it should "extract string literals" in {
     inside(extract("define foo := \"bar\"")) {
-      case (Definitions(streamDefs, macroDefs), Seq()) =>
+      case (Definitions(streamDefs, macroDefs, outStreams), Seq()) =>
         macroDefs shouldBe empty
         streamDefs should have size 1
         streamDefs should contain key "foo"
@@ -60,7 +60,7 @@ class DefExtractorSpec extends FlatSpec with Matchers {
 
   it should "extract functions" in {
     inside(extract("define foo := bar(baz, qux)")) {
-      case (Definitions(streamDefs, macroDefs), Seq()) =>
+      case (Definitions(streamDefs, macroDefs, outStreams), Seq()) =>
         macroDefs shouldBe empty
         streamDefs should have size 1
         streamDefs should contain key "foo"
@@ -83,7 +83,7 @@ class DefExtractorSpec extends FlatSpec with Matchers {
 
   it should "extract functions with named arguments" in {
     inside(extract("define foo := bar(baz, qux := \"thud\")")) {
-      case (Definitions(streamDefs, macroDefs), Seq()) =>
+      case (Definitions(streamDefs, macroDefs, outStreams), Seq()) =>
         macroDefs shouldBe empty
         streamDefs should have size 1
         streamDefs should contain key "foo"
@@ -106,7 +106,7 @@ class DefExtractorSpec extends FlatSpec with Matchers {
 
   it should "extract type ascriptions" in {
     inside(extract("define foo := bar : Int")) {
-      case (Definitions(streamDefs, macroDefs), Seq()) =>
+      case (Definitions(streamDefs, macroDefs, outStreams), Seq()) =>
         macroDefs shouldBe empty
         streamDefs should have size 1
         streamDefs should contain key "foo"
@@ -125,7 +125,7 @@ class DefExtractorSpec extends FlatSpec with Matchers {
 
   it should "extract LHS type ascriptions" in {
     inside(extract("define foo: Int := bar")) {
-      case (Definitions(streamDefs, macroDefs), Seq()) =>
+      case (Definitions(streamDefs, macroDefs, outStreams), Seq()) =>
         macroDefs shouldBe empty
         streamDefs should have size 1
         streamDefs should contain key "foo"
@@ -144,7 +144,7 @@ class DefExtractorSpec extends FlatSpec with Matchers {
 
   it should "extract macros" in {
     inside(extract("define foo(bar) := bar")) {
-      case (Definitions(streamDefs, macroDefs), Seq()) =>
+      case (Definitions(streamDefs, macroDefs, outStreams), Seq()) =>
         streamDefs shouldBe empty
         macroDefs should have size 1
         macroDefs should contain key "foo"
@@ -158,7 +158,7 @@ class DefExtractorSpec extends FlatSpec with Matchers {
 
   it should "extract macro argument type ascriptions" in {
     inside(extract("define foo(bar: Int) := bar")) {
-      case (Definitions(streamDefs, macroDefs), Seq()) =>
+      case (Definitions(streamDefs, macroDefs, outStreams), Seq()) =>
         streamDefs shouldBe empty
         macroDefs should have size 1
         macroDefs should contain key "foo"
