@@ -49,7 +49,7 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
           compiler.diagnostic(GenericModuleWarning(node.function))
           None
         }*/
-        case SimpleFunction("out",_) => Some("TODO.OutNode",
+        case SimpleFunction("out",_) => Some("dataFlowGraph.node.OutputNode",
           ("predecessor" -> ref(node.args(0))) ~
             ("name" -> JString(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString)))
         case StateMachineFunction(name, signature, start, stateMap, transitionList) => {
