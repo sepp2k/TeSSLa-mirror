@@ -83,6 +83,10 @@ object Function {
     Func ("on").         from (Events(a))                                 → Events("Unit"),
     Func ("out").        from (a) × "String"                              → "Unit",
 
+    /** Functions for higher FPGA efficiency **/
+    
+    Func ("eq").         from (Events(a)) × Signal(a)                     → Events("Boolean"),
+    Func ("eq").         from (Signal(a)) × Events(a)                     → Events("Boolean"),
 
     /** Coniras platform specific functions **/
 
