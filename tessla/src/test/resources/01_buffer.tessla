@@ -28,5 +28,9 @@ define diffProcWrite := sub(eventCount(processElement), eventCount(writeElement)
 --define error := on processElement if geq(diffProcWrite,1)
 define doubleProcessing := onIf(processElement, geq(diffProcWrite,constantSignal(1)))
 
+out doubleProcessing
+
 define diffWriteProc := sub(eventCount(writeElement), eventCount(processElement))
 define bufferOverflow := onIf(writeElement, geq(diffWriteProc,constantSignal(6)))
+
+out bufferOverflow

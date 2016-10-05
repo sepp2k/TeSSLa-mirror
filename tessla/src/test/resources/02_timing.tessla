@@ -70,6 +70,8 @@ define errorC3 := onIf(endC3, not(inPast(2000: Int, startC3): Signal<Boolean>): 
 
 define error := merge(merge(errorC1,errorC2),errorC3)
 
+out error
+
 -- more accurate alternative (not semantically equivalent,
 -- yet operationally equivalent in the Coniras system)
 -- need to define anyEvent, though

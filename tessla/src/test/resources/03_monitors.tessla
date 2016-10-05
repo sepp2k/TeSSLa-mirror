@@ -32,4 +32,4 @@ define monitor_output := monitor("
   clock := clk
 )
 
--- out monitor_output
+out monitor_output
