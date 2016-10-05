@@ -85,8 +85,8 @@ object Function {
 
     /** Functions for higher FPGA efficiency **/
     
-    Func ("eq").         from (Events(a)) × Signal(a)                     → Events("Boolean"),
-    Func ("eq").         from (Signal(a)) × Events(a)                     → Events("Boolean"),
+    Func ("eq").         from (Events(a)) × Signal(a)                     → Events("Boolean"), // for Philip, it does not matter
+    Func ("eq").         from (Signal(a)) × Events(a)                     → Events("Boolean"), // if inputs are signal or event
 
     /** Coniras platform specific functions **/
 
