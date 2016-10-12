@@ -1,0 +1,16 @@
+-- recognize execution of tracepoints macro
+define exec(x) := filter(on(input_vector_ir_ids), eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
+
+-- tracepoint IDs
+define process_tp := 1
+define write_tp_1 := 2
+define write_tp_2 := 3
+
+-- streams of points of interest
+define writeElement: Events<Unit> := occursAny(exec(write_tp_1), exec(write_tp_2))
+define processElement: Events<Unit> := exec(process_tp)
+
+-- check for errors
+define error := gt(eventCount(processElement), eventCount(writeElement))
+
+out error

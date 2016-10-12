@@ -1,0 +1,23 @@
+-- recognize execution of tracepoints macro
+define exec(x) := filter(on(input_vector_ir_ids), eq(mrv(input_vector_ir_ids, 0), constantSignal(x)))
+
+-- tracepoint IDs
+define process_tp := 1
+define end_process_tp := 2
+
+define owner_valid := filter(input_vector_RegChangeMessageID, eq(mrv(input_vector_RegChangeMessageID, 1), constantSignal(0)))
+define threadID := mrv(ifThen(owner_valid, mrv(input_vector_RegChangeMessageValue, 0)), 0)
+
+define onIf(trig, cond) := filter(trig, cond)
+define onIfYield(trig, cond, value) := ifThen(filter(trig, cond), value)
+
+define startC1 := onIfYield(exec(process_tp), eq(threadID, constantSignal(1)), constantSignal(true))
+define startC2 := onIfYield(exec(process_tp), eq(threadID, constantSignal(2)), constantSignal(true))
+define endC1 := onIfYield(exec(end_process_tp), eq(threadID, constantSignal(1)), constantSignal(false))
+define endC2 := onIfYield(exec(end_process_tp), eq(threadID, constantSignal(2)), constantSignal(false))
+
+define errorC1 := onIf(endC1, not(inPast(2000, startC1)))
+define errorC2 := onIf(endC2, not(inPast(2000, startC2)))
+
+out errorC1
+out errorC2
