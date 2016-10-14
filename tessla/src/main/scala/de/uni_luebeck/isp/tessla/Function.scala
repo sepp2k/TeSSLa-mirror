@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 // TODO This is preliminary
 
-abstract class Function {
+sealed abstract class Function {
   val name: String
   val signature: FunctionSig
   //val eval: (Any) => Any = identity
