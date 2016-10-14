@@ -1,8 +1,5 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Ast.ExprTypeAscr
-
-import scala.io.Source
 import de.uni_luebeck.isp.compacom.{WithLocation, Parsers, SimpleTokens, SimpleTokenizer}
 
 import scala.util.{Failure, Success}
@@ -22,6 +19,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
   object Tokens extends SimpleTokens {
     case object DEFINE extends Token("define")
     case object OUT extends Token("out")
+    case object IN extends Token("in")
     case object OF_TYPE extends Token(":")
     case object PERCENT extends Token("%")
     case object DEFINE_AS extends Token(":=")
@@ -36,9 +34,11 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     override val tokens = Tokens
     import tokens._
 
-    override val keywords = List(DEFINE, OUT)
+    override val keywords = List(DEFINE, OUT, IN)
     override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT, LT, GT)
     override val comments = List("--" -> "\n")
+
+    override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c) || c == '.'
   }
 
   object Parsers extends Parsers {
@@ -84,6 +84,10 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       OUT ~> identifier ^^! {
         case (loc, name) =>
           Ast.Out(name, SourceLoc(loc))
+      } |
+      IN ~> identifier ~ typeAscr ^^! {
+        case (loc, (name, typeAscr)) =>
+          Ast.In(name, typeAscr, SourceLoc(loc))
       }
 
     def macroArgs: Parser[Seq[Ast.MacroArg]] = LPAREN ~> rep1sep(macroArg, COMMA) <~ RPAREN

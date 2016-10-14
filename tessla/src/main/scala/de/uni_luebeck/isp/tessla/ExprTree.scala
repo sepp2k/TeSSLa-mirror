@@ -12,6 +12,7 @@ case class ExprTree(fn: ExprTreeFn, args: Map[ArgName, ExprTree], loc: NestedLoc
 sealed abstract class ExprTreeFn
 
 case class NamedFn(name: String, loc: NestedLoc) extends ExprTreeFn
+case class InputFn(name: String, `type`: Type, loc: NestedLoc) extends ExprTreeFn
 case class TypeAscrFn(`type`: Type, loc: NestedLoc) extends ExprTreeFn
 case class LiteralFn(value: LiteralValue, loc: NestedLoc) extends ExprTreeFn
 

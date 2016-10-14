@@ -45,6 +45,16 @@ object DefExtractor extends CompilerPass[Ast.Spec, Definitions] {
       case Ast.Out(name, loc) =>
         outStreams += name.name -> OutDef(name.name, loc)
 
+      case Ast.In(name, typeAscr, loc) =>
+        val (type_, _) = buildType(typeAscr)
+        streamDefs += name.name -> StreamDef(name.name, loc, ExprTree(InputFn(name.name, type_, loc), Map(), loc))
+        if (definedNames contains name.name) {
+          compiler diagnostic RedefinitionError(
+            name.name, definedNames(name.name), name.loc)
+        } else {
+          definedNames += name.name -> name.loc
+        }
+
       case Ast.Def(name, args, typeAscr, expr, loc) =>
 
         val macroDiag = (name.name, name.loc)

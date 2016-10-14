@@ -20,6 +20,7 @@ object Ast {
     definition: Expr,
     loc: NestedLoc) extends Statement
 
+  case class In(name: Identifier, typeAscr: Type, loc: NestedLoc) extends Statement
   case class Out(name: Identifier, loc: NestedLoc) extends Statement
 
   case class MacroArg(name: Identifier, typeAscr: Option[Type])
