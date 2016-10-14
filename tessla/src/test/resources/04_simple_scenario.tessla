@@ -1,3 +1,12 @@
+in MessageTimeStampNode: Events<Int>
+in instructionReconstructionMessage.InstructionReconstructionID: Events<Int>
+in regChangeMessage.RegChangeMessageValue: Events<Int>
+in regChangeMessage.RegChangeMessageID: Events<Int>
+
+define input_vector_timestamps := MessageTimeStampNode
+define input_vector_ir_ids := instructionReconstructionMessage.InstructionReconstructionID
+define input_vector_RegChangeMessageValue := regChangeMessage.RegChangeMessageValue
+define input_vector_RegChangeMessageID := regChangeMessage.RegChangeMessageID
 
 define onTrue(x) := filter(changeOf(x), x)
 
