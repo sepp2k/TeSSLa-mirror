@@ -78,7 +78,7 @@ void* consumer_main(void* arg)
       next_read_idx = buffer_next(local_read_idx);
       if (atomic_compare_exchange_weak(&read_idx, &local_read_idx, next_read_idx)) {
         //process data
-        process_data(&data)
+        process_data(&data);
         printf("Consumer %ld: processed data %c\n", id, data);
       }
     }
