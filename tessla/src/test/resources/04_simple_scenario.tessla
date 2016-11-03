@@ -1,3 +1,6 @@
+in instructionReconstructionMessage.InstructionReconstructionID: Events<Int>
+
+define input_vector_ir_ids := instructionReconstructionMessage.InstructionReconstructionID
 
 define onTrue(x) := filter(changeOf(x), x)
 

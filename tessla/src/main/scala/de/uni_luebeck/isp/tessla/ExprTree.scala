@@ -9,13 +9,14 @@ case class Named(name: String) extends ArgName
 
 case class ExprTree(fn: ExprTreeFn, args: Map[ArgName, ExprTree], loc: NestedLoc)
 
-abstract class ExprTreeFn
+sealed abstract class ExprTreeFn
 
 case class NamedFn(name: String, loc: NestedLoc) extends ExprTreeFn
+case class InputFn(name: String, `type`: Type, loc: NestedLoc) extends ExprTreeFn
 case class TypeAscrFn(`type`: Type, loc: NestedLoc) extends ExprTreeFn
 case class LiteralFn(value: LiteralValue, loc: NestedLoc) extends ExprTreeFn
 
-abstract class LiteralValue
+sealed abstract class LiteralValue
 case class IntLiteral(value: BigInt) extends LiteralValue
 case class StringLiteral(value: String) extends LiteralValue
 case class BoolLiteral(value: Boolean) extends LiteralValue

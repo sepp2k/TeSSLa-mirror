@@ -1,9 +1,7 @@
 -- !!! CURRENTLY NOT WORKING EXAMPLE !!!
 
---define x: Event<Unit>
---define y: Event<Unit>
-define x := changeOf(constantSignal(0))
-define y := changeOf(constantSignal(0))
+in x: Events<Unit>
+in y: Events<Unit>
 
 define OFFSET := 2s
 
@@ -24,7 +22,7 @@ define err_y := filter(on(changeOf(diff_y)), diff_y > constantSignal(0))
 -- would probably be a constant 0. This contradicts the needed semantics
 -- in the above example, because a delay as short as possible would
 -- count up incredibly fast.
-define x: Events<Unit>
+in x: Events<Unit>
 define eventCount_x := delay(eventCount_x, 0) + constantSignal(1) 
 
 -- what about this? Off by one?
@@ -36,10 +34,10 @@ define eventcount_x := mrv(onYield(x, eventcount_x + constantSignal(1)))
 -- of the event or signal x. This contradicts both of the above semantics
 -- somehow...
 
-define x: Events<Int>
+in x: Events<Int>
 define sum_x := delay(sum_x, 0) + mrv(x)
 
-define x: Signal<Int>
+in x: Signal<Int>
 define sum_x := delay(sum_x, 0) + x
 
 -- what about this?

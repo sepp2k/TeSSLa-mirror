@@ -120,25 +120,11 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
             None
         }
 
-//        case SimpleFunction("input_vector_ownerships", _) =>
-//          Some("dataFlowGraph.node.input.InputVectorNode", JObject("argument" -> JString("ownership")))
-//        case SimpleFunction("anyEvent", _) =>
-//          Some("dataFlowGraph.node.input.MessageValidNode", JObject("argument" -> JString("valid")))
-//        case SimpleFunction("tracePointID", _) =>
-//          Some("dataFlowGraph.node.input.instructionReconstructionMessage.InstructionReconstructionID", JObject())
-
-
-        case SimpleFunction("input_vector_timestamps", _) => Some("dataFlowGraph.node.input.MessageTimeStampNode", JObject())
         case SimpleFunction("timestamps", _) =>
-          //Some("dataFlowGraph.node.operation.TimestampNode", JObject("predecessor" -> ref(node.args(0))))
-          // timestamps(e) := ifThen(e, input_vector_timestamp)
           Some("dataFlowGraph.node.operation.IfThenNode", ("condition" -> ref(node.args(0))) ~ ("trueCase" -> ref(inputVectorTimestampNodeID.get)))
 
-        case SimpleFunction("input_vector_ir_ids", _) => Some("dataFlowGraph.node.input.instructionReconstructionMessage.InstructionReconstructionID", JObject())
-        //case SimpleFunction("executions", _) =>
-
-        case SimpleFunction("input_vector_RegChangeMessageValue", _) => Some("dataFlowGraph.node.input.regChangeMessage.RegChangeMessageValue", JObject())
-        case SimpleFunction("input_vector_RegChangeMessageID", _) => Some("dataFlowGraph.node.input.regChangeMessage.RegChangeMessageID", JObject())
+        case InputStream(name, _) =>
+          Some(s"dataFlowGraph.node.input.${name}", JObject())
 
         case SimpleFunction("eventCount", FunctionSig(_, Seq(_))) =>
           Some("dataFlowGraph.node.operation.EventCountNode", JObject("predecessor" -> ref(node.args(0))))

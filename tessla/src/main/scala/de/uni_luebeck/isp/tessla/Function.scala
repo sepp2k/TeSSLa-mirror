@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 // TODO This is preliminary
 
-abstract class Function {
+sealed abstract class Function {
   val name: String
   val signature: FunctionSig
   //val eval: (Any) => Any = identity
@@ -26,6 +26,10 @@ case class StateMachineFunction(name: String, signature: FunctionSig, start:Stri
 case class TypeAscription[T](`type`: Type) extends Function {
   val name = "type: " + `type`.toString
   val signature = FunctionSig(`type`, Seq((None, `type`)))
+}
+
+case class InputStream(name: String, `type`: Type) extends Function {
+  val signature = FunctionSig(`type`, Seq())
 }
 
 case class ConstantValue[T](`type`: Type, value: T) extends Function {
@@ -86,18 +90,6 @@ object Function {
     /** Functions for higher FPGA efficiency **/
     
     Func ("eq").         from (Events(a)) × Signal(a)                     → Events("Boolean"), // for Philip, it does not matter
-    Func ("eq").         from (Signal(a)) × Events(a)                     → Events("Boolean"), // if inputs are signal or event
-
-    /** Coniras platform specific functions **/
-
-    // Func ("tracePointID"). from () to Events("Int"), // TODO: replace by instruction_executions
-    // Func ("tracePointExecuterID"). from () to Events("Int") // TODO: replace by instruction_executers
-    //    Func("input_vector_timestamps"). from () to Events("Int"), // TODO: will be Events("Time")
-    Func("input_vector_RegChangeMessageValue"). from () to Events("Int"),
-    Func("input_vector_RegChangeMessageID"). from () to Events("Int"),
-    Func("input_vector_ir_ids"). from () to Events("Int"),
-    Func("input_vector_timestamps"). from () to Events("Int")
-    //    Func("anyEvent") from () to Events("Unit"),
-    
+    Func ("eq").         from (Signal(a)) × Events(a)                     → Events("Boolean")  // if inputs are signal or event
   )
 }

@@ -20,11 +20,12 @@ object Ast {
     definition: Expr,
     loc: NestedLoc) extends Statement
 
+  case class In(name: Identifier, typeAscr: Type, loc: NestedLoc) extends Statement
   case class Out(name: Identifier, loc: NestedLoc) extends Statement
 
   case class MacroArg(name: Identifier, typeAscr: Option[Type])
 
-  abstract class Expr
+  sealed abstract class Expr
   case class ExprName(name: Identifier) extends Expr
   case class ExprApp(name: Identifier, args: Seq[AppArg], loc: SourceLoc) extends Expr
   case class ExprGrouped(expr: Expr, loc: SourceLoc) extends Expr
