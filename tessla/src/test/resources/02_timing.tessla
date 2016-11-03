@@ -27,7 +27,7 @@ define input_vector_ir_ids := instructionReconstructionMessage.InstructionRecons
 define input_vector_RegChangeMessageValue := regChangeMessage.RegChangeMessageValue
 define input_vector_RegChangeMessageID := regChangeMessage.RegChangeMessageID
 
-define now: Signal<Int> := mrv(MessageTimeStampNode,0)
+define now: Signal<Int> := mrv(input_vector_timestamps,0)
 define inPast(time, event) := leq(
                                      sub(
                                          now: Signal<Int>,
