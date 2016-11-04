@@ -10,14 +10,11 @@ class FunctionGraph extends WithDebugOutput {
 
   var nodes: mutable.Map[NodeId, Node] = mutable.Map()
 
-  private def addNode(function: Function, args: Seq[NodeId], name: Option[String]): NodeId = {
+  def addNode(function: Function, args: Seq[NodeId], name: Option[String]): NodeId = {
     val nodeId = new NodeId(name)
     nodes(nodeId) = Node(nodeId, function, args)
     nodeId
   }
-
-  def addNode(function: Function, args: Seq[NodeId]): NodeId = addNode(function, args, None)
-  def addNode(function: Function, args: Seq[NodeId], name: String): NodeId = addNode(function, args, Some(name))
 
   /**
     * Debug output in DOT format

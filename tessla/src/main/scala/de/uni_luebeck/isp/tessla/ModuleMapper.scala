@@ -31,7 +31,7 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
         case None => Some(graph.addNode(
           // function signature will be ignored
           SimpleFunction("input_vector_timestamps", FunctionSig(new TypeVar, Seq())),
-          Seq()
+          Seq(), None
         ): NodeId)
         case Some(node) => Some(node.id)
       }
