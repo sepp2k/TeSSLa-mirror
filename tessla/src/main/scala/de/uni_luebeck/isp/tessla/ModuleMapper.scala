@@ -15,7 +15,8 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
 
     /*** Coniras platform specific implementation of particular functions ***/
 
-    //timestamps(e) := ifThen(e, input_vector_timestamp)
+    //in MessageTimeStampNode
+    //timestamps(e) := ifThen(e, MessageTimeStampNode)
     // => if timestamps function is used, create a node for timestamps that can be references in the mapping
     val timestampsNode = graph.nodes.values.find{ _ match {
         case Node(_, SimpleFunction("timestamps", _), _) => true
@@ -24,13 +25,13 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
     val inputVectorTimestampNodeID = if (!timestampsNode.isEmpty) {
 
       val existingNode = graph.nodes.values.find{ _ match {
-        case Node(_, SimpleFunction("input_vector_timestamps", _), _) => true
+        case Node(_, InputStream("MessageTimeStampNode", _), _) => true
         case _ => false
       }}
       existingNode match {
         case None => Some(graph.addNode(
           // function signature will be ignored
-          SimpleFunction("input_vector_timestamps", FunctionSig(new TypeVar, Seq())),
+          InputStream("MessageTimeStampNode", new TypeVar),
           Seq(), None
         ): NodeId)
         case Some(node) => Some(node.id)
