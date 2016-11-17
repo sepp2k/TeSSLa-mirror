@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <stdatomic.h>
 
-const int BUF_SIZE = 5;
+#define BUF_SIZE 5
 const int NUM_CONS = 3;
 const char* CONTROL_PATH = "control";
 const char* DATA_PATH = "data";
