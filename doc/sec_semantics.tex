@@ -61,13 +61,13 @@ We define the function for different signatures and any value domain $D$:
 \end{align*}
 Discrete temporal shifts of event streams can be expressed by the functions
 \begin{align*}
-  \textttbf{delay}&: 𝓔_D → 𝓔_D\\
-  \texttt{delay}&: 𝓔_D × ℕ_{>0} → 𝓔_D
+  \textttbf{shift}&: 𝓔_D → 𝓔_D\\
+  \texttt{shift}&: 𝓔_D × ℕ_{>0} → 𝓔_D
 \end{align*}
 defined in terms of the sequence representation $s_η$ of event streams $η∈𝓔_D$. 
-For $s_η = (t_0,η(t_0))(t_1,η(t_1))(t_2,η(t_2))…$ we define $\texttt{delay}(s_η) := (t_1,η(t_0))(t_2,η(t_1))…$. 
-Notice that in case $|s_η|<2$ then $\texttt{delay}(s_η)=ε$ is empty.
-A positive natural argument abbrevates iterated application, i.e., $\texttt{delay}(η,n) := \texttt{delay}^n(η)$.
+For $s_η = (t_0,η(t_0))(t_1,η(t_1))(t_2,η(t_2))…$ we define $\texttt{shift}(s_η) := (t_1,η(t_0))(t_2,η(t_1))…$. 
+Notice that in case $|s_η|<2$ then $\texttt{shift}(s_η)=ε$ is empty.
+A positive natural argument abbreviates iterated application, i.e., $\texttt{shift}(η,n) := \texttt{shift}^n(η)$.
 
 The function $\mathtt{timestamp}$ provides the time stamp of an event stream element-wise:
 \begin{align*}
