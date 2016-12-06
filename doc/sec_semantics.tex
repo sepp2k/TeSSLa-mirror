@@ -23,7 +23,7 @@ They are defined as expected in terms of their scalar counterparts as above.
   $\texttt{sub}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\texttt{sub}(σ_1,σ_2)(t) := σ_1(t) - σ_2(t)$ & $D∈\{ℤ,ℝ\}$\\
   $\textttbf{mul}: 𝓢_D × 𝓢_D → 𝓢_D$ & $\texttt{mul}(σ_1,σ_2)(t) := σ_1(t) · σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\textttbf{div}: 𝓢_D × 𝓢_{D'} → 𝓢_D$ & $\texttt{div}(σ_1,σ_2)(t) := \frac{σ_1(t)}{σ_2(t)}$ & $D∈\{ℕ,ℤ,ℝ\}, D'=D∖｛0｝$\\
-  $\textttbf{ge}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\texttt{ge}(σ_1,σ_2)(t) := σ_1(t) > σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
+  $\textttbf{gt}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\texttt{ge}(σ_1,σ_2)(t) := σ_1(t) > σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\texttt{geq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\texttt{geq}(σ_1,σ_2)(t) := σ_1(t) ≥ σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\texttt{leq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\texttt{leq}(σ_1,σ_2)(t) := σ_1(t) ≤ σ_2(t)$ & $D∈\{ℕ,ℤ,ℝ\}$\\
   $\texttt{eq}: 𝓢_D × 𝓢_D → 𝓢_𝔹$ & $\texttt{eq}(σ_1,σ_2)(t) := σ_1(t) = σ_2(t)$ & any $D$ with equality\\
@@ -35,7 +35,7 @@ They are defined as expected in terms of their scalar counterparts as above.
   $\texttt{or}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\texttt{or}(σ_1,σ_2)(t) := σ_1(t) ∨ σ_2(t)$ & \\
   $\texttt{implies}: 𝓢_𝔹 × 𝓢_𝔹 → 𝓢_𝔹$ & $\texttt{implies}(σ_1,σ_2)(t) := σ_1(t) ⇒ σ_2(t)$ & \\
   $\textttbf{not}: 𝓢_𝔹 → 𝓢_𝔹$ & $\texttt{not}(σ)(t) := ¬σ(t)$ &\\
-  $\texttt{not}: 𝓔_𝔹 → 𝓔_𝔹$ & $\texttt{not}(η)(t) := \begin{cases} ¬η(t) & \text{if } t∈E(η) \\ ⊥&\text{otherwise} \end{cases}$&
+  $\texttt{neg}: 𝓔_𝔹 → 𝓔_𝔹$ & $\texttt{neg}(η)(t) := \begin{cases} ¬η(t) & \text{if } t∈E(η) \\ ⊥&\text{otherwise} \end{cases}$&
 \end{tabular}
 
 
@@ -196,8 +196,8 @@ For any domain $D$ with linear ordering and addition, respectively, e.g., $ℕ,�
 Generic functions $eventCount$ providing the number of occurred events since the last event occurred on the second input stream and $mrv$ providing the most recent value of an event stream.
 
 \begin{align*}
-  \textttbf{eventCount}&: 𝓔_D × 𝓔_D → 𝓢_D
-    & \mathtt{eventCount}(η_1,η_2)(t) &:= |\{t'∈E(η_1) \mid t'≤t \land \forall t'' \in E(\eta_2): t' > t''\}| \\
+  \textttbf{eventCount}&: 𝓔_{D_1} × 𝓔_{D_2} → 𝓢_\mathbb{N}
+    & \mathtt{eventCount}(η_1,η_2)(t) &:= |\{t'∈E(η_1) \mid t'≤t \land \forall t'' \leq t \in E(\eta_2): t' > t''\}| \\
   \textttbf{mrv}&: 𝓔_D × D → 𝓢_D
     & \mathtt{mrv}(η,d)(t) &:= \begin{cases}
          η(\max E(η)∩[0,t]) & \text{if } E(η)∩[0,t]≠∅ \\
@@ -263,13 +263,13 @@ out std_mean_avg
            η_2(t) & \text{if } t∈E(η_2)∖E(η_1)\\
            ⊥ & \text{otherwise}
          \end{cases}\\
-   \textttbf{occurAny}&: 𝓔_{D_1} × 𝓔_{D_2} → 𝓔_{｛⊤｝}
-        & \mathtt{occurAny}(η_1,η_2)(t) &:= \begin{cases}
+   \textttbf{occursAny}&: 𝓔_{D_1} × 𝓔_{D_2} → 𝓔_{｛⊤｝}
+        & \mathtt{occursAny}(η_1,η_2)(t) &:= \begin{cases}
              ⊤ & \text{if } t∈E(η_1)∪E(η_2)\\
              ⊥ & \text{otherwise}
            \end{cases}\\
-  \textttbf{occurAll}&: 𝓔_{D_1} × 𝓔_{D_2} → 𝓔_{｛⊤｝}
-      & \mathtt{occurAll}(η_1,η_2)(t) &:= \begin{cases}
+  \textttbf{occursAll}&: 𝓔_{D_1} × 𝓔_{D_2} → 𝓔_{｛⊤｝}
+      & \mathtt{occursAll}(η_1,η_2)(t) &:= \begin{cases}
            ⊤ & \text{if } t∈E(η_1)∩E(η_2)\\
            ⊥ & \text{otherwise}
          \end{cases}
