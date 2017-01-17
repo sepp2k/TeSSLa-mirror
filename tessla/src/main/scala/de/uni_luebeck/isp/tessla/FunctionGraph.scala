@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 import scala.collection.mutable
 
 class FunctionGraph extends WithDebugOutput {
-  class NodeId {
+  class NodeId(val name: Option[String]) {
     def node: Node = nodes(this)
   }
 
@@ -10,8 +10,8 @@ class FunctionGraph extends WithDebugOutput {
 
   var nodes: mutable.Map[NodeId, Node] = mutable.Map()
 
-  def addNode(function: Function, args: Seq[NodeId]): NodeId = {
-    val nodeId = new NodeId
+  def addNode(function: Function, args: Seq[NodeId], name: Option[String]): NodeId = {
+    val nodeId = new NodeId(name)
     nodes(nodeId) = Node(nodeId, function, args)
     nodeId
   }

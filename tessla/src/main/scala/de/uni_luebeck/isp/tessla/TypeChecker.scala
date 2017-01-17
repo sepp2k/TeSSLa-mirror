@@ -183,7 +183,7 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
 
   val defTypes: mutable.Map[String, Option[TypeVar]] = mutable.Map()
   val nodes: mutable.Map[TypeVar, Node] = mutable.Map()
-
+  val names: mutable.Map[TypeVar, String] = mutable.Map()
 
   def handleName(fn: NamedFn, expr: ExprTree): TypeVar = {
     if (sdefs contains fn.name) {
@@ -202,6 +202,7 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
     } else {
       defTypes(sdef.name) = None
       val v = handleSubtree(sdef.expr)
+      names(v) = sdef.name
       defTypes(sdef.name) = Some(v)
       v
     }
@@ -255,7 +256,7 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
         case None =>
           val Seq(overload) = state.overloads(typeVar).toSeq
           val Some((_, args)) = nodes(typeVar).applySignature(overload.signature)
-          val node = graph.addNode(overload, args.tail map process)
+          val node = graph.addNode(overload, args.tail map process, names.get(typeVar))
           graphNodes(typeVar) = node
           node
       }

@@ -155,7 +155,13 @@ object ModuleMapper extends CompilerPass[FunctionGraph, ModuleGraph] {
       }
 
       moduleAndMembers.map {
-        case (typeString, members) => ((("@id" -> idx(nodeId)) ~ ("@type" -> typeString)) ~ ("outputWidth" -> -1) ~ members)
+        case (typeString, members) =>
+          node.id.name match {
+            case Some(name) =>
+              ((("@id" -> idx(nodeId)) ~ ("@type" -> typeString)) ~ ("name" -> name) ~ ("outputWidth" -> -1) ~ members)
+            case None =>
+              ((("@id" -> idx(nodeId)) ~ ("@type" -> typeString)) ~ ("outputWidth" -> -1) ~ members)
+          }
       }
     }
 
