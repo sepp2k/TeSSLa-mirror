@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla
 import org.json4s.JsonDSL._
 import org.json4s._
 
+import scala.collection.mutable
 import scala.util.Try
 
 object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
@@ -16,6 +17,7 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
 
     val idx: Map[NodeId, Int] = graph.nodes.keys.zipWithIndex.toMap
     val ref: Map[NodeId, JObject] = idx.mapValues(i => ("ref" -> i))
+    val outs = new mutable.HashSet[Int]
 
     def toJObject(nodeId: NodeId): Option[JObject] = {
       val node = nodeId.node
@@ -26,6 +28,9 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
           compiler.diagnostic(GenericModuleWarning(node.function))
           None
         }*/
+        case SimpleFunction("out",_) =>
+          outs += idx(node.args(0))
+          None
         case StateMachineFunction(name, signature, start, stateMap, transitionList) =>
           val refs = node.args.map(x => idx(x))
           val clock = refs.last
@@ -264,15 +269,17 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
 
       moduleAndMembers.map {
         case (typeString, members) =>
-          node.id.name match {
-            case Some(name) =>
-              ((("id" -> idx(nodeId)) ~ ("nodetype" -> typeString)) ~ ("name" -> name) ~ members)
-            case None =>
-              ((("id" -> idx(nodeId)) ~ ("nodetype" -> typeString)) ~ members)
-          }
+          var obj = ((("id" -> idx(nodeId)) ~ ("nodetype" -> typeString)) ~ members)
+          node.id.name.foreach(name => obj = obj ~ ("name" -> name))
+          obj
       }
     }
 
-    SoftwareGraph(("type" -> "java.util.Collections$UnmodifiableSet") ~ ("items" -> graph.nodes.keys.flatMap(toJObject)))
+    def addOut(obj: JObject) = {
+      if(outs(obj.values("id").toString.toInt)) obj ~ ("out" -> true)
+      else obj
+    }
+
+    SoftwareGraph(("type" -> "java.util.Collections$UnmodifiableSet") ~ ("items" -> graph.nodes.keys.flatMap(toJObject).map(addOut)))
   }
 }

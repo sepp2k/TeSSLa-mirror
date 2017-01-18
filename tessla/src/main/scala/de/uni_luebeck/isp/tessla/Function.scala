@@ -57,6 +57,7 @@ object Function {
     // Func("input_vector_timestamps"). from () to Events("Int"), // TODO: will be Events("Time")
     // Func("input_vector_ownerships"). from () to Events("Int"),
     // Func("anyEvent") from () to Events("Unit"),
+    Func ("out").        from (a) × "String"                              → "Unit",
 
     /**** Lifted ****/
     Func ("signalAbs").  from (Signal("Int"))                             → Signal("Int"),

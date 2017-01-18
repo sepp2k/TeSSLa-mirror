@@ -222,6 +222,11 @@ class TypeChecker(compiler: Compiler, defs: Definitions) {
     handleStreamDef(sdef)
   }
 
+  for(outStream <- defs.outStreams.values) {
+    handleSubtree(outStream.toExprTree())
+  }
+
+
   var state: State = State(Env(Map()),
     nodes.map({case (_, node) => node.result -> (node.fn match {
       case TypeAscrFn(t, _) => Set(TypeAscription(t): Function)

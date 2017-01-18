@@ -23,7 +23,8 @@ case class FloatLiteral(value: BigDecimal) extends LiteralValue
 
 case class Definitions(
   streamDefs: Map[String, StreamDef],
-  macroDefs: Map[String, MacroDef]
+  macroDefs: Map[String, MacroDef],
+  outStreams: Map[String, OutDef]
 )
 
 case class MacroDef(
@@ -36,3 +37,13 @@ case class StreamDef(
   loc: NestedLoc,
   expr: ExprTree
 )
+
+case class OutDef(
+  name: String,
+  loc: NestedLoc
+) {
+  def toExprTree() = {
+    val nameExp = ExprTree(LiteralFn(StringLiteral(name), loc), Map(), loc)
+    ExprTree(NamedFn("out", loc), Map(Pos(0) -> ExprTree(NamedFn(name, loc), Map(), loc), Pos(1) -> nameExp), loc)
+  }
+}

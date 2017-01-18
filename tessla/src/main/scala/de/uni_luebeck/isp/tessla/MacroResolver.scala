@@ -85,7 +85,6 @@ object MacroResolver extends CompilerPass[Definitions, Definitions] {
 
     // macro definitions are removed because they should not be of interest afterwards and
     // it makes this pass idempotent
-    Definitions(substitutedStreamDefs, Map())
-
+    Definitions(substitutedStreamDefs, Map(), defs.outStreams)
   }
 }

@@ -39,8 +39,12 @@ object DefExtractor extends CompilerPass[Ast.Spec, Definitions] {
     var macroDefs = Map[String, MacroDef]()
     var streamDefs = Map[String, StreamDef]()
     var definedNames = Map[String, NestedLoc]()
+    var outStreams = Map[String, OutDef]()
 
     ast.statements.foreach {
+      case Ast.Out(name, loc) =>
+        outStreams += name.name -> OutDef(name.name, loc)
+
       case Ast.Def(name, args, typeAscr, expr, loc) =>
 
         val macroDiag = (name.name, name.loc)
@@ -163,6 +167,6 @@ object DefExtractor extends CompilerPass[Ast.Spec, Definitions] {
         (GenericType(name.name, args map {x => buildType(x)._1}), loc)
     }
 
-    Definitions(streamDefs, macroDefs)
+    Definitions(streamDefs, macroDefs, outStreams)
   }
 }
