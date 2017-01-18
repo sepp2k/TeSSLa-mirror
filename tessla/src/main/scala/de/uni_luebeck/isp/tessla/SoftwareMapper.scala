@@ -263,7 +263,13 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
       }
 
       moduleAndMembers.map {
-        case (typeString, members) => (("id" -> idx(nodeId)) ~ ("nodetype" -> typeString)) ~ members
+        case (typeString, members) =>
+          node.id.name match {
+            case Some(name) =>
+              ((("id" -> idx(nodeId)) ~ ("nodetype" -> typeString)) ~ ("name" -> name) ~ members)
+            case None =>
+              ((("id" -> idx(nodeId)) ~ ("nodetype" -> typeString)) ~ members)
+          }
       }
     }
 
