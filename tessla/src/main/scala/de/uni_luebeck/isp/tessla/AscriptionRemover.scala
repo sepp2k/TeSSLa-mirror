@@ -14,7 +14,10 @@ object AscriptionRemover extends CompilerPass[FunctionGraph, FunctionGraph] {
       val newArgs:Seq[NodeId] = nodeId.node.args.map{argId => {
         bypassTypeAscr(argId)
         argId.node.function match {
-          case TypeAscription(_) => argId.node.args.head
+          case TypeAscription(_) =>
+            val arg = argId.node.args.head
+            arg.name = argId.name
+            arg
           case _ => argId
         }
       }}

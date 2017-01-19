@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 import scala.collection.mutable
 
 class FunctionGraph extends WithDebugOutput {
-  class NodeId(val name: Option[String]) {
+  class NodeId(var name: Option[String]) {
     def node: Node = nodes(this)
   }
 
