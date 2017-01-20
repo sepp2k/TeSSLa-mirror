@@ -40,7 +40,7 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
           val firstElement = stateList.filter(x => x._1.equals(start.toString)).head
           val sortedStateList = List(firstElement) ++ stateList.filter(x => !x._1.equals(start.toString))
           val jsonStates = seq2jvalue(sortedStateList.map(s => ("name" -> s._1) ~ ("output" -> s._2)))
-          Some("TesslaServer.Node.Monitors.Monitor",
+          Some("TesslaServer.Computation.Monitors.Monitor",
             ("operands" -> refs) ~
               ("options" ->
                 ("clock" -> clock) ~
@@ -54,7 +54,7 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
           None
         /**** Input/Constant functions ****/
         case SimpleFunction("literal", _) => // TODO more types
-          Some("TesslaServer.Node.Literal",
+          Some("TesslaServer.Computation.Literal",
             "options" ->
               ("value" ->
                 Integer.parseInt(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)
@@ -83,125 +83,125 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
 
         /**** Lifted ****/
         case SimpleFunction("eventAbs", _) =>
-          Some("TesslaServer.Node.Lifted.EventAbs",
+          Some("TesslaServer.Computation.Lifted.EventAbs",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("signalAbs", _) =>
-          Some("TesslaServer.Node.Lifted.SignalAbs",
+          Some("TesslaServer.Computation.Lifted.SignalAbs",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("add", _) =>
-          Some("TesslaServer.Node.Lifted.Add",
+          Some("TesslaServer.Computation.Lifted.Add",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("and", _) =>
-          Some("TesslaServer.Node.Lifted.And",
+          Some("TesslaServer.Computation.Lifted.And",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("div", _) =>
-          Some("TesslaServer.Node.Lifted.Div",
+          Some("TesslaServer.Computation.Lifted.Div",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("eq", _) =>
-          Some("TesslaServer.Node.Lifted.Eq",
+          Some("TesslaServer.Computation.Lifted.Eq",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("geq", _) =>
-          Some("TesslaServer.Node.Lifted.Geq",
+          Some("TesslaServer.Computation.Lifted.Geq",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("gt", _) =>
-          Some("TesslaServer.Node.Lifted.Gt",
+          Some("TesslaServer.Computation.Lifted.Gt",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("implies", _) =>
-          Some("TesslaServer.Node.Lifted.Implies",
+          Some("TesslaServer.Computation.Lifted.Implies",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("leq", _) =>
-          Some("TesslaServer.Node.Lifted.Leq",
+          Some("TesslaServer.Computation.Lifted.Leq",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("lt", _) =>
-          Some("TesslaServer.Node.Lifted.Lt",
+          Some("TesslaServer.Computation.Lifted.Lt",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("max", _) =>
-          Some("TesslaServer.Node.Lifted.Max",
+          Some("TesslaServer.Computation.Lifted.Max",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("min", _) =>
-          Some("TesslaServer.Node.Lifted.Min",
+          Some("TesslaServer.Computation.Lifted.Min",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("mul", _) =>
-          Some("TesslaServer.Node.Lifted.Mul",
+          Some("TesslaServer.Computation.Lifted.Mul",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("neg", _) =>
-          Some("TesslaServer.Node.Lifted.Neg",
+          Some("TesslaServer.Computation.Lifted.Neg",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("eventNot", _) =>
-          Some("TesslaServer.Node.Lifted.EventNot",
+          Some("TesslaServer.Computation.Lifted.EventNot",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("signalNot", _) =>
-          Some("TesslaServer.Node.Lifted.SignalNot",
+          Some("TesslaServer.Computation.Lifted.SignalNot",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("or", _) =>
-          Some("TesslaServer.Node.Lifted.Or",
+          Some("TesslaServer.Computation.Lifted.Or",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("sub", _) =>
-          Some("TesslaServer.Node.Lifted.Sub",
+          Some("TesslaServer.Computation.Lifted.Sub",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
 
         /**** Filter ****/
         case SimpleFunction("merge", _) =>
-          Some("TesslaServer.Node.Filter.Merge",
+          Some("TesslaServer.Computation.Filter.Merge",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("filter", _) =>
-          Some("TesslaServer.Node.Filter.Filter",
+          Some("TesslaServer.Computation.Filter.Filter",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("ifThen", _) =>
-          Some("TesslaServer.Node.Filter.IfThen",
+          Some("TesslaServer.Computation.Filter.IfThen",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("ifThenElse", _) =>
-          Some("TesslaServer.Node.Filter.IfThenElse",
+          Some("TesslaServer.Computation.Filter.IfThenElse",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1)), idx(node.args(2))))
         case SimpleFunction("changeOf", _) =>
-          Some("TesslaServer.Node.Filter.ChangeOf",
+          Some("TesslaServer.Computation.Filter.ChangeOf",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("sample", _) =>
-          Some("TesslaServer.Node.Filter.Sample",
+          Some("TesslaServer.Computation.Filter.Sample",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("occurAll", _) =>
-          Some("TesslaServer.Node.Filter.OccurAll",
+          Some("TesslaServer.Computation.Filter.OccurAll",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
         case SimpleFunction("occurAny", _) =>
-          Some("TesslaServer.Node.Filter.OccurAny",
+          Some("TesslaServer.Computation.Filter.OccurAny",
             "operands" -> Seq(idx(node.args(0)), idx(node.args(1))))
 
         /**** Aggregation ****/
         case SimpleFunction("signalMaximum", _) =>
-          Some("TesslaServer.Node.Aggregation.SignalMaximum",
+          Some("TesslaServer.Computation.Aggregation.SignalMaximum",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("eventMaximum", _) =>
-          Some("TesslaServer.Node.Aggregation.EventMaximum",
+          Some("TesslaServer.Computation.Aggregation.EventMaximum",
             ("operands" -> Seq(idx(node.args(0))))
               ~ ("options" -> ("default" -> Integer.parseInt(
               node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString)
             ))
           )
         case SimpleFunction("signalMinimum", _) =>
-          Some("TesslaServer.Node.Aggregation.SignalMinimum",
+          Some("TesslaServer.Computation.Aggregation.SignalMinimum",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("eventMinimum", _) =>
-          Some("TesslaServer.Node.Aggregation.EventMinimum",
+          Some("TesslaServer.Computation.Aggregation.EventMinimum",
             ("operands" -> Seq(idx(node.args(0))))
               ~ ("options" -> ("default" -> Integer.parseInt(
               node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString)
               ))
           )
         case SimpleFunction("sum", _) =>
-          Some("TesslaServer.Node.Aggregation.Sum",
+          Some("TesslaServer.Computation.Aggregation.Sum",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("eventCount", _) =>
-          Some("TesslaServer.Node.Aggregation.EventCount",
+          Some("TesslaServer.Computation.Aggregation.EventCount",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("mrv", _) => // TODO more Types
-          Some("TesslaServer.Node.Aggregation.Mrv",
+          Some("TesslaServer.Computation.Aggregation.Mrv",
             ("operands" -> Seq(idx(node.args(0))))
               ~ ("options" -> ("default" -> Integer.parseInt(
               node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString)
               ))
           )
         case SimpleFunction("sma", _) =>
-          Some("TesslaServer.Node.Aggregation.Sma",
+          Some("TesslaServer.Computation.Aggregation.Sma",
             ("operands" -> Seq(idx(node.args(0))))
               ~ ("options" -> ("count" -> Integer.parseInt(
               node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString)
@@ -210,24 +210,24 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
 
         /**** Timing ****/
         case SimpleFunction("timestamps", _) =>
-          Some("TesslaServer.Node.Timing.Timestamps",
+          Some("TesslaServer.Computation.Timing.Timestamps",
             "operands" -> Seq(idx(node.args(0))))
         case SimpleFunction("delayEventByTime", _) =>
-          Some("TesslaServer.Node.Timing.DelayEventByTime",
+          Some("TesslaServer.Computation.Timing.DelayEventByTime",
             ("operands" -> Seq(idx(node.args(0))))
             ~ ("options" ->
                 ("amount" -> Integer.parseInt(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString))
               )
           )
         case SimpleFunction("delayEventByCount", _) =>
-          Some("TesslaServer.Node.Timing.DelayEventByCount",
+          Some("TesslaServer.Computation.Timing.DelayEventByCount",
             ("operands" -> Seq(idx(node.args(0))))
               ~ ("options" ->
               ("count" -> Integer.parseInt(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString))
               )
           )
         case SimpleFunction("delaySignalByTime", _) => //TODO more types
-          Some("TesslaServer.Node.Timing.DelaySignalByTime",
+          Some("TesslaServer.Computation.Timing.DelaySignalByTime",
             ("operands" -> Seq(idx(node.args(0))))
               ~ ("options" ->
                 (
@@ -237,19 +237,19 @@ object SoftwareMapper extends CompilerPass[FunctionGraph, SoftwareGraph] {
               )
           )
         /*case SimpleFunction("within", _) => // TODO switch int to time
-          Some("TesslaServer.Node.Timing.Within",
+          Some("TesslaServer.Computation.Timing.Within",
             ("operands" -> Seq(ref(node.args(2))))
             ~ ("before" -> Integer.parseInt(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString))
             ~ ("after" -> Integer.parseInt(node.args(1).node.function.asInstanceOf[ConstantValue[_]].value.toString))
           )*/
         case SimpleFunction("inPast", _) => // TODO switch int to time
-          Some("TesslaServer.Node.Timing.InPast",
+          Some("TesslaServer.Computation.Timing.InPast",
             ("operands" -> Seq(idx(node.args(1))))
             ~ ("options" ->
                 ("amount" -> Integer.parseInt(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)))
           )
         /*case SimpleFunction("inFuture", _) => // TODO switch int to time
-          Some("TesslaServer.Node.Timing.InFuture",
+          Some("TesslaServer.Computation.Timing.InFuture",
             ("operands" -> Seq(ref(node.args(1))))
               ~ ("options" ->
               ("amount" -> Integer.parseInt(node.args(0).node.function.asInstanceOf[ConstantValue[_]].value.toString)))
