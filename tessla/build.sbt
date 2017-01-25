@@ -27,5 +27,14 @@ lazy val tessla = (project in file(".")).settings(
     "junit" % "junit" % "4.11"  % "test",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test"
   ),
+  // disable publishing the main sources jar
+  publishArtifact in (Compile, packageSrc) := false,
+  publishTo <<= version { (v: String) =>
+    if (v.trim.endsWith("SNAPSHOT"))
+      Some(snapshots)
+    else
+      Some(releases)
+  },
+  credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials"),
   seq(SbtStartScript.startScriptForClassesSettings: _*)
 )
