@@ -4,6 +4,8 @@ import shapeless._
 
 import scala.collection.immutable.SortedMap
 
+import scala.language.higherKinds
+
 class Specification[Time: Numeric]() {
   private val numeric = implicitly[Numeric[Time]]
 
@@ -95,7 +97,7 @@ class Specification[Time: Numeric]() {
     }
 
     protected override def init(): Unit = {
-      times.addListener{
+      times.addListener {
         case Some(_) => {
           propagate(oldValue)
           update()
@@ -162,6 +164,14 @@ class Specification[Time: Numeric]() {
     }
   }
 
+  def nil[Value]() = new Triggered[Value] {
+    override private[Specification] def step() = {
+      propagate(None)
+    }
+  }
+
+  def const[Value](value: Value) = nil().default(value)
+
   sealed class Stream[Value] {
     self =>
     private var listeners: List[Option[Value] => Unit] = Nil
@@ -189,13 +199,228 @@ class Specification[Time: Numeric]() {
       }
     }
 
-    def +[T: Numeric](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = {
+    def const[T](other: T): Stream[T] =
+      lift(this :: HNil)(
+        (_: Value :: HNil) => Some(other)
+      )
+
+    def alsoAt[T](other: Stream[T]): Stream[Value] =
+      lift(other :: this :: HNil)(
+        (x: T :: Value :: HNil) => Some(x.tail.head)
+      )
+
+    def defined[T](other: Stream[T]): Stream[T] = (time() === time().alsoAt(other)).ifThen(other)
+
+    def &&(other: Boolean)(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
+      lift(ev(this) :: HNil)(
+        (x: Boolean :: HNil) => Some(x.head && other)
+      )
+
+    def &&(other: Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
+      lift(ev(this) :: other :: HNil)(
+        (x: Boolean :: Boolean :: HNil) => Some(x.head && x.tail.head)
+      )
+
+    def ||(other: Boolean)(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
+      lift(ev(this) :: HNil)(
+        (x: Boolean :: HNil) => Some(x.head || other)
+      )
+
+    def ||(other: Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
+      lift(ev(this) :: other :: HNil)(
+        (x: Boolean :: Boolean :: HNil) => Some(x.head || x.tail.head)
+      )
+
+    def unary_!()(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
+      lift(ev(this) :: HNil)(
+        (x: Boolean :: HNil) => Some(!x.head)
+      )
+
+    def <[T: PartialOrdering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[PartialOrdering[T]].lt(x.head, other))
+      )
+
+    def <[T: PartialOrdering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[PartialOrdering[T]].lt(x.head, x.tail.head))
+      )
+
+    def <=[T: PartialOrdering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[PartialOrdering[T]].lteq(x.head, other))
+      )
+
+    def <=[T: PartialOrdering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[PartialOrdering[T]].lteq(x.head, x.tail.head))
+      )
+
+    def >[T: PartialOrdering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[PartialOrdering[T]].gt(x.head, other))
+      )
+
+    def >[T: PartialOrdering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[PartialOrdering[T]].gt(x.head, x.tail.head))
+      )
+
+    def >=[T: PartialOrdering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[PartialOrdering[T]].gteq(x.head, other))
+      )
+
+    def >=[T: PartialOrdering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[PartialOrdering[T]].gteq(x.head, x.tail.head))
+      )
+
+    def max[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[Ordering[T]].max(x.head, other))
+      )
+
+    def max[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].max(x.head, x.tail.head))
+      )
+
+    def min[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[Ordering[T]].min(x.head, other))
+      )
+
+    def min[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].min(x.head, x.tail.head))
+      )
+
+    def compare[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Int] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[Ordering[T]].compare(x.head, other))
+      )
+
+    def compare[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Int] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].compare(x.head, x.tail.head))
+      )
+
+    def tryCompare[T: PartialOrdering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Option[Int]] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[PartialOrdering[T]].tryCompare(x.head, other))
+      )
+
+    def tryCompare[T: PartialOrdering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Option[Int]] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[PartialOrdering[T]].tryCompare(x.head, x.tail.head))
+      )
+
+    def +[T: Numeric](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
       lift(ev(this) :: HNil)(
         (x: T :: HNil) => Some(implicitly[Numeric[T]].plus(x.head, other))
       )
+
+    def +[T: Numeric](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[Numeric[T]].plus(x.head, x.tail.head))
+      )
+
+    def -[T: Numeric](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[Numeric[T]].minus(x.head, other))
+      )
+
+    def -[T: Numeric](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[Numeric[T]].minus(x.head, x.tail.head))
+      )
+
+    def *[T: Numeric](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[Numeric[T]].times(x.head, other))
+      )
+
+    def *[T: Numeric](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
+      lift(ev(this) :: other :: HNil)(
+        (x: T :: T :: HNil) => Some(implicitly[Numeric[T]].times(x.head, x.tail.head))
+      )
+
+    def unary_/[T: Numeric]()(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[Numeric[T]].negate(x.head))
+      )
+
+    def /(other: Int)(implicit ev: Stream[Value] =:= Stream[Int]): Stream[Int] =
+      lift(ev(this) :: HNil)(
+        (x: Int :: HNil) => Some(x.head / other)
+      )
+
+    def /(other: Double)(implicit ev: Stream[Value] =:= Stream[Double]): Stream[Double] =
+      lift(ev(this) :: HNil)(
+        (x: Double :: HNil) => Some(x.head / other)
+      )
+
+    def /(other: Stream[Value])(implicit ev: (Stream[Value] =:= Stream[Int]) ||: (Stream[Value] =:= Stream[Double]) ||: CNil): Stream[Value] = {
+      def intCase(intEv: Stream[Value] =:= Stream[Int]) = intEv.inverse(lift(intEv(this) :: intEv(other) :: HNil)(
+        (x: Int :: Int :: HNil) => Some(x.head / x.tail.head)
+      ))
+
+      def doubleCase(doubleEv: Stream[Value] =:= Stream[Double]) = doubleEv.inverse(lift(doubleEv(this) :: doubleEv(other) :: HNil)(
+        (x: Double :: Double :: HNil) => Some(x.head / x.tail.head)
+      ))
+
+      ev.switch(intCase _ :: doubleCase _ :: HNil)
     }
 
-    def time() = new Operation[Time, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), this :: HNil)((t, s, i) => (s, Some(t)))
+    def %(other: Int)(implicit ev: Stream[Value] =:= Stream[Int]): Stream[Int] =
+      lift(ev(this) :: HNil)(
+        (x: Int :: HNil) => Some(x.head % other)
+      )
+
+    def %(other: Double)(implicit ev: Stream[Value] =:= Stream[Double]): Stream[Double] =
+      lift(ev(this) :: HNil)(
+        (x: Double :: HNil) => Some(x.head % other)
+      )
+
+    def toInt[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[Int] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[Numeric[T]].toInt(x.head))
+      )
+
+    def toDouble[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[Double] =
+      lift(ev(this) :: HNil)(
+        (x: T :: HNil) => Some(implicitly[Numeric[T]].toDouble(x.head))
+      )
+
+    def %(other: Stream[Value])(implicit ev: (Stream[Value] =:= Stream[Int]) ||: (Stream[Value] =:= Stream[Double]) ||: CNil): Stream[Value] = {
+      def intCase(intEv: Stream[Value] =:= Stream[Int]) = intEv.inverse(lift(intEv(this) :: intEv(other) :: HNil)(
+        (x: Int :: Int :: HNil) => Some(x.head % x.tail.head)
+      ))
+
+      def doubleCase(doubleEv: Stream[Value] =:= Stream[Double]) = doubleEv.inverse(lift(doubleEv(this) :: doubleEv(other) :: HNil)(
+        (x: Double :: Double :: HNil) => Some(x.head % x.tail.head)
+      ))
+
+      ev.switch(intCase _ :: doubleCase _ :: HNil)
+    }
+
+    def ===(other: Stream[Value]): Stream[Boolean] =
+      lift(this :: other :: HNil)(
+        (x: Value :: Value :: HNil) => Some(x.head == x.tail.head)
+      )
+
+    def ifThen[T](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[T] =
+      lift(ev(this) :: other :: HNil)(
+        (x: Boolean :: T :: HNil) => if (x.head) Some(x.tail.head) else None
+      )
+
+    def ifThenElse[T](other1: Stream[T], other2: Stream[T])(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[T] =
+      lift(ev(this) :: other1 :: other2 :: HNil)(
+        (x: Boolean :: T :: T :: HNil) => if (x.head) Some(x.tail.head) else Some(x.tail.tail.head)
+      )
+
+    def time() = new Operation[Time, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), this :: HNil)((t, s, i) => (s, if (i.head.isDefined) Some(t) else None))
 
     def default(value: Value) = new Operation[Value, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), self :: HNil)((t, _, i) => i.head match {
       case Some(value) => ((), Some(value))
@@ -262,7 +487,7 @@ class Specification[Time: Numeric]() {
       streams.head.addListener {
         value => setState(value :: getState().tail)
       }
-      ev.register(streams.tail, () => getState().tail, state => getState().head :: state)
+      ev.register(streams.tail, () => getState().tail, state => setState(getState().head :: state))
     }
 
     override def orElse(inputs: Option[Value] :: Inputs, fallback: Option[Value] :: Inputs) = inputs.head.orElse(fallback.head) :: ev.orElse(inputs.tail, fallback.tail)
@@ -303,6 +528,45 @@ class Specification[Time: Numeric]() {
       case Some(value) => println(s"$currentTime $name: $value")
       case None =>
     }
+  }
+
+  trait ConstraintOr {
+    type FS[C] <: HList
+  }
+
+  type CNil = ConstraintNil.type
+
+  object ConstraintNil extends ConstraintOr {
+    override type FS[C] = HNil
+  }
+
+  trait ||:[A, B <: ConstraintOr] extends ConstraintOr {
+    override type FS[C] = (A => C) :: B#FS[C]
+    def switch[C](fs: FS[C]): C
+  }
+
+  implicit val implicitConstraintNil: CNil = ConstraintNil
+
+  implicit def implicitConstraintOrA[A, B <: ConstraintOr](implicit a: A) = new ||:[A, B] {
+    override def switch[C](fs: FS[C]): C = fs.head(a)
+  }
+
+  implicit def implicitConstraintOrB[A, B, C <: ConstraintOr](implicit b: B ||: C) = new ||:[A, B ||: C] {
+    override def switch[C](fs: FS[C]): C = b.switch(fs.tail)
+  }
+
+  sealed abstract class =:=[From, To] extends (From => To) with Serializable {
+    def inverse(to: To): From
+  }
+
+  private[this] final val singleton_=:= = new =:=[Any, Any] {
+    def apply(x: Any): Any = x
+
+    def inverse(x: Any): Any = x
+  }
+
+  object =:= {
+    implicit def tpEquals[A]: A =:= A = singleton_=:=.asInstanceOf[A =:= A]
   }
 
 }
