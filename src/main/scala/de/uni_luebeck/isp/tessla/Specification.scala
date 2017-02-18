@@ -4,7 +4,7 @@ import shapeless._
 
 import scala.collection.immutable.SortedMap
 
-import scala.language.higherKinds
+import ImplicitConstraints._
 
 class Specification[Time: Numeric]() {
   private val numeric = implicitly[Numeric[Time]]
@@ -78,7 +78,7 @@ class Specification[Time: Numeric]() {
   }
 
   def lift[Value, Complete <: HList, Inputs <: HList, Streams <: HList](streams: Streams)(op: Complete => Option[Value])(implicit constraint: StreamConstraint[Complete, Inputs, Streams])
-  = new Operation[Value, Inputs, Inputs, Streams](constraint.init, streams)((_, state, inputs) => {
+  = Operation[Value, Inputs, Inputs, Streams](constraint.init, streams)((_, state, inputs) => {
     val newState = constraint.orElse(inputs, state)
     val newOutput = if (constraint.hasSome(inputs)) constraint.complete(newState).flatMap(x => op(x)) else None
     (newState, newOutput)
@@ -361,7 +361,7 @@ class Specification[Time: Numeric]() {
         (x: Double :: HNil) => Some(x.head / other)
       )
 
-    def /(other: Stream[Value])(implicit ev: (Stream[Value] =:= Stream[Int]) ||: (Stream[Value] =:= Stream[Double]) ||: CNil): Stream[Value] = {
+    def /(other: Stream[Value])(implicit ev: (Stream[Value] =:= Stream[Int]) ||: (Stream[Value] =:= Stream[Double]) ||: CFalse): Stream[Value] = {
       def intCase(intEv: Stream[Value] =:= Stream[Int]) = intEv.inverse(lift(intEv(this) :: intEv(other) :: HNil)(
         (x: Int :: Int :: HNil) => Some(x.head / x.tail.head)
       ))
@@ -393,7 +393,7 @@ class Specification[Time: Numeric]() {
         (x: T :: HNil) => Some(implicitly[Numeric[T]].toDouble(x.head))
       )
 
-    def %(other: Stream[Value])(implicit ev: (Stream[Value] =:= Stream[Int]) ||: (Stream[Value] =:= Stream[Double]) ||: CNil): Stream[Value] = {
+    def %(other: Stream[Value])(implicit ev: (Stream[Value] =:= Stream[Int]) ||: (Stream[Value] =:= Stream[Double]) ||: CFalse): Stream[Value] = {
       def intCase(intEv: Stream[Value] =:= Stream[Int]) = intEv.inverse(lift(intEv(this) :: intEv(other) :: HNil)(
         (x: Int :: Int :: HNil) => Some(x.head % x.tail.head)
       ))
@@ -420,12 +420,48 @@ class Specification[Time: Numeric]() {
         (x: Boolean :: T :: T :: HNil) => if (x.head) Some(x.tail.head) else Some(x.tail.tail.head)
       )
 
-    def time() = new Operation[Time, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), this :: HNil)((t, s, i) => (s, if (i.head.isDefined) Some(t) else None))
+    def fold[T](init: T)(f: (Stream[T], Stream[Value]) => Stream[T]) = {
+      lazy val result: Stream[T] = f(last(this, result).default(init), this).default(init)
+      result
+    }
 
-    def default(value: Value) = new Operation[Value, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), self :: HNil)((t, _, i) => i.head match {
+    def reduce(f: (Stream[Value], Stream[Value]) => Stream[Value]) = {
+      lazy val result: Stream[Value] = f(last(this, result), this).default(this)
+      result
+    }
+
+    def sum[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]) = ev(this).fold(implicitly[Numeric[T]].zero)(_ + _)
+
+    def prod[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]) = ev(this).fold(implicitly[Numeric[T]].one)(_ * _)
+
+    def max[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).reduce(_ max _)
+
+    def min[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).reduce(_ min _)
+
+    def count[T: Numeric]: Stream[T] = const(implicitly[Numeric[T]].one).sum
+
+    def exists(implicit ev: Stream[Value] =:= Stream[Boolean]) = ev(this).fold(false)(_ || _)
+
+    def forall(implicit ev: Stream[Value] =:= Stream[Boolean]) = ev(this).fold(true)(_ && _)
+
+    def time() = Operation[Time, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), this :: HNil)((t, s, i) => (s, if (i.head.isDefined) Some(t) else None))
+
+    def default(value: Value) = Operation[Value, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), self :: HNil)((t, _, i) => i.head match {
       case Some(value) => ((), Some(value))
       case None => ((), if (t equiv zero) Some(value) else None)
     })
+
+    def default[T](value: Value, when: Stream[T]) = Operation[Value, Boolean, Option[Value] :: Option[T] :: HNil, Stream[Value] :: Stream[T] :: HNil](false, self :: when :: HNil) {
+      case (_, false, Some(v) :: _) => (true, Some(v))
+      case (_, false, _ :: Some(_) :: _) => (true, Some(value))
+      case (_, s, _) => (s, None)
+    }
+
+    def default(when: Stream[Value]) = Operation[Value, Boolean, Option[Value] :: Option[Value] :: HNil, Stream[Value] :: Stream[Value] :: HNil](false, self :: when :: HNil) {
+      case (_, false, Some(v) :: _) => (true, Some(v))
+      case (_, false, _ :: Some(v) :: _) => (true, Some(v))
+      case (_, s, _) => (s, None)
+    }
   }
 
   sealed abstract class Triggered[Value]() extends Stream[Value] {
@@ -435,7 +471,7 @@ class Specification[Time: Numeric]() {
 
   }
 
-  final class Input[Value]() extends Triggered[Value] {
+  final class Input[Value] private[Specification]() extends Triggered[Value] {
     private var value: Option[Value] = None
 
     def provide(value: Value): Unit = {
@@ -450,7 +486,7 @@ class Specification[Time: Numeric]() {
 
   }
 
-  trait StreamConstraint[Complete <: HList, Inputs <: HList, InputStreams <: HList] {
+  sealed trait StreamConstraint[Complete <: HList, Inputs <: HList, InputStreams <: HList] {
     def length: Int
 
     def init: Inputs
@@ -498,11 +534,11 @@ class Specification[Time: Numeric]() {
 
   }
 
-  final class Operation[Value, State, Inputs <: HList, InputStreams <: HList]
-  (init: State, inputStreams: InputStreams)
+  def Operation[Value, State, Inputs <: HList, InputStreams <: HList]
+  (initState: State, inputStreams: InputStreams)
   (op: (Time, State, Inputs) => (State, Option[Value]))
-  (implicit constraint: StreamConstraint[_, Inputs, InputStreams]) extends Stream[Value] {
-    private var state: State = init
+  (implicit constraint: StreamConstraint[_, Inputs, InputStreams]) = new Stream[Value] {
+    private var state: State = initState
     private var inputs: Inputs = constraint.init
     private var count = 0
 
@@ -528,45 +564,6 @@ class Specification[Time: Numeric]() {
       case Some(value) => println(s"$currentTime $name: $value")
       case None =>
     }
-  }
-
-  trait ConstraintOr {
-    type FS[C] <: HList
-  }
-
-  type CNil = ConstraintNil.type
-
-  object ConstraintNil extends ConstraintOr {
-    override type FS[C] = HNil
-  }
-
-  trait ||:[A, B <: ConstraintOr] extends ConstraintOr {
-    override type FS[C] = (A => C) :: B#FS[C]
-    def switch[C](fs: FS[C]): C
-  }
-
-  implicit val implicitConstraintNil: CNil = ConstraintNil
-
-  implicit def implicitConstraintOrA[A, B <: ConstraintOr](implicit a: A) = new ||:[A, B] {
-    override def switch[C](fs: FS[C]): C = fs.head(a)
-  }
-
-  implicit def implicitConstraintOrB[A, B, C <: ConstraintOr](implicit b: B ||: C) = new ||:[A, B ||: C] {
-    override def switch[C](fs: FS[C]): C = b.switch(fs.tail)
-  }
-
-  sealed abstract class =:=[From, To] extends (From => To) with Serializable {
-    def inverse(to: To): From
-  }
-
-  private[this] final val singleton_=:= = new =:=[Any, Any] {
-    def apply(x: Any): Any = x
-
-    def inverse(x: Any): Any = x
-  }
-
-  object =:= {
-    implicit def tpEquals[A]: A =:= A = singleton_=:=.asInstanceOf[A =:= A]
   }
 
 }
