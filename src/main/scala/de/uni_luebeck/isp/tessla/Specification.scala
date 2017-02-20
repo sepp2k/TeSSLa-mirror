@@ -583,7 +583,7 @@ class Specification[Time: Numeric]() {
   }
 
   class Lazy[A](a: => A) {
-    def get() = a
+    lazy val get = a
   }
 
   object Lazy {
@@ -591,5 +591,5 @@ class Specification[Time: Numeric]() {
   }
 
   implicit def forceLazy[A](l: Lazy[A]): A = l.get
-
+  
 }
