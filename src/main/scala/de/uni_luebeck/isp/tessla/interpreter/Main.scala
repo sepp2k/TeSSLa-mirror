@@ -1,4 +1,4 @@
-package de.uni_luebeck.isp.tessla
+package de.uni_luebeck.isp.tessla.interpreter
 
 object Main extends App {
 
