@@ -17,7 +17,7 @@ class Specification[Time: Numeric]() {
   private var trigger: (Map[Any, Time], SortedMap[Time, Set[Any]]) = (Map(), SortedMap())
   private var acceptInput = true
 
-  def currentTime = timeVar
+  def getTime = timeVar
 
   private var inputs: List[Triggered[_]] = Nil
 
@@ -64,7 +64,7 @@ class Specification[Time: Numeric]() {
   }
 
   private def updateTrigger(stream: Stream[_], newTime: Time): Unit = {
-    require(newTime > currentTime)
+    require(newTime > getTime)
     val remaining = trigger._1.get(stream) match {
       case Some(t) => {
         val set = trigger._2(t) - stream
@@ -132,7 +132,7 @@ class Specification[Time: Numeric]() {
         oldValue = newValue
         newDelay match {
           case Some(delay) => {
-            val t = targetTime.getOrElse(currentTime) + delay
+            val t = targetTime.getOrElse(getTime) + delay
             targetTime = Some(t)
             updateTrigger(this, t)
           }
@@ -159,7 +159,7 @@ class Specification[Time: Numeric]() {
 
     override private[Specification] def step() = {
       targetTime match {
-        case Some(t) if (t equiv currentTime) => {
+        case Some(t) if (t equiv getTime) => {
           targetTime = None
           propagate(oldValue)
         }
@@ -415,6 +415,11 @@ class Specification[Time: Numeric]() {
         (x: Value :: Value :: HNil) => Some(x.head == x.tail.head)
       )
 
+    def ===(other: Value): Stream[Boolean] =
+      lift(this :: HNil)(
+        (x: Value :: HNil) => Some(x.head == other)
+      )
+
     def ifThen[T](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[T] =
       lift(ev(this) :: other :: HNil)(
         (x: Boolean :: T :: HNil) => if (x.head) Some(x.tail.head) else None
@@ -431,7 +436,7 @@ class Specification[Time: Numeric]() {
     }
 
     def resetFold[T](init: T, reset: => Stream[Boolean])(f: (Stream[T], Stream[Value]) => Stream[T]) = {
-      lazy val state: Stream[T] = f(last(this, result).default(init), this).default(init)
+      lazy val state: Stream[T] = f(last(this, result).default(init), this)
       lazy val result: Stream[T] = this.defined(reset.default(false)).ifThenElse(f(nil[T].default(init), this), state)
       (Lazy(result), Lazy(state))
     }
@@ -441,6 +446,11 @@ class Specification[Time: Numeric]() {
       result
     }
 
+    def resetReduce(reset: => Stream[Boolean])(f: (Stream[Value], Stream[Value]) => Stream[Value]) = {
+      lazy val state: Stream[Value] = f(last(this, result), this).default(this)
+      lazy val result: Stream[Value] = this.defined(reset.default(false)).ifThenElse(this, state)
+      (Lazy(result), Lazy(state))
+    }
 
     def sum[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]) = ev(this).fold(implicitly[Numeric[T]].zero)(_ + _)
 
@@ -448,9 +458,15 @@ class Specification[Time: Numeric]() {
 
     def prod[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]) = ev(this).fold(implicitly[Numeric[T]].one)(_ * _)
 
+    def resetProd[T: Numeric](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetFold(implicitly[Numeric[T]].one, reset)(_ * _)
+
     def max[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).reduce(_ max _)
 
+    def resetMax[T: Ordering](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]) = ev(this).resetReduce(reset)(_ max _)
+
     def min[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).reduce(_ min _)
+
+    def resetMin[T: Ordering](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]) = ev(this).resetReduce(reset)(_ min _)
 
     def count: Stream[Int] = const(1).sum
 
@@ -458,7 +474,32 @@ class Specification[Time: Numeric]() {
 
     def exists(implicit ev: Stream[Value] =:= Stream[Boolean]) = ev(this).fold(false)(_ || _)
 
+    def resetExists(reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[Boolean]): (Lazy[Stream[Boolean]], Lazy[Stream[Boolean]]) = ev(this).resetFold(false, reset)(_ || _)
+
     def forall(implicit ev: Stream[Value] =:= Stream[Boolean]) = ev(this).fold(true)(_ && _)
+
+    def resetForall(reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[Boolean]): (Lazy[Stream[Boolean]], Lazy[Stream[Boolean]]) = ev(this).resetFold(true, reset)(_ && _)
+
+    def mark(from: => Stream[Boolean], to: Stream[Boolean]) = {
+      val from_ = this.defined(from.default(false))
+      val to_ = this.defined(to.default(false))
+      lazy val state: Stream[RegionMark] = last(this, result).default(RegionOutside)
+      lazy val begin: Stream[Boolean] = (state === RegionOutside || to_) && from_
+      lazy val end: Stream[Boolean] = (state === RegionInside || state === RegionBegin) && to_
+      lazy val result: Stream[RegionMark] =
+        begin.ifThenElse(this.const(RegionBegin),
+          end.ifThenElse(this.const(RegionOutside),
+            (state === RegionBegin).ifThenElse(this.const(RegionInside), state)))
+      result
+    }
+
+
+    def merge[T](other: Stream[T]) = {
+      def helper[A, B](first: Stream[A], second: Stream[B]) = lift(first :: second :: HNil)((x: A :: B :: HNil) => Some(()))
+      val a = this.const(())
+      val b = this.const(())
+      helper(a.default(b), b.default(a))
+    }
 
     def time() = Operation[Time, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), this :: HNil)((t, s, i) => (s, if (i.head.isDefined) Some(t) else None))
 
@@ -563,7 +604,7 @@ class Specification[Time: Numeric]() {
         counter += 1
         inputs = newInputs
         if (counter == constraint.length) {
-          val (newState, output) = op(Specification.this.currentTime, state, inputs)
+          val (newState, output) = op(Specification.this.getTime, state, inputs)
           counter = 0
           inputs = constraint.init
           state = newState
@@ -577,7 +618,7 @@ class Specification[Time: Numeric]() {
 
   def printStream(stream: Stream[_], name: String): Unit = {
     stream.addListener {
-      case Some(value) => println(s"$currentTime $name: $value")
+      case Some(value) => println(s"$getTime $name: $value")
       case None =>
     }
   }
@@ -591,5 +632,13 @@ class Specification[Time: Numeric]() {
   }
 
   implicit def forceLazy[A](l: Lazy[A]): A = l.get
-  
+
+  sealed class RegionMark
+
+  case object RegionOutside extends RegionMark
+
+  case object RegionBegin extends RegionMark
+
+  case object RegionInside extends RegionMark
+
 }
