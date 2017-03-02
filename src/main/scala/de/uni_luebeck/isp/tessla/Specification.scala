@@ -476,7 +476,7 @@ class Specification[Time: Numeric]() {
     def default(when: Stream[Value]) = Operation[Value, Boolean, Option[Value] :: Option[Value] :: HNil, Stream[Value] :: Stream[Value] :: HNil](false, self :: when :: HNil) {
       case (_, false, Some(v) :: _) => (true, Some(v))
       case (_, false, _ :: Some(v) :: _) => (true, Some(v))
-      case (_, s, _) => (s, None)
+      case (_, s, v :: _) => (s, v)
     }
   }
 
