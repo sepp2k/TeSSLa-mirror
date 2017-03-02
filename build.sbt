@@ -1,13 +1,32 @@
-name := "tessla2"
+val nexus = "https://sourcecode.isp.uni-luebeck.de/nexus/"
+val privateSnapshots = "ISP Private Snapshots" at nexus + "content/repositories/private_snapshots"
+val snapshots = "ISP Snapshots" at nexus + "content/repositories/private_snapshots"
+val privateReleases = "ISP Private Releases" at nexus + "content/repositories/releases"
+val releases = "ISP Releases" at nexus + "content/repositories/releases"
 
-version := "1.0"
+name := "tessla.interpreter"
+
+organization := "de.uni_luebeck.isp"
+
+version := "0.1.0-SNAPSHOT"
 
 scalaVersion := "2.12.1"
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("releases"),
-  Resolver.sonatypeRepo("snapshots")
+  Resolver.sonatypeRepo("snapshots"),
+  releases, snapshots,
+  privateSnapshots, privateReleases
 )
+
+publishTo := {
+  if (version.value.trim.endsWith("SNAPSHOT"))
+    Some(privateSnapshots)
+  else
+    Some(privateReleases)
+}
+
+credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials")
 
 libraryDependencies ++= Seq(
   "com.chuusai" %% "shapeless" % "2.3.2"
