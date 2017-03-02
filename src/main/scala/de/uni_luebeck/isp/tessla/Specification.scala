@@ -145,6 +145,7 @@ class Specification[Time: Numeric]() {
 
     override def init(): Unit = {
       delays.addListener(delay => {
+        require(delay.map(_ > zero).getOrElse(true))
         newDelay = delay
         update()
       })
