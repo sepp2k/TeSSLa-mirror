@@ -1,0 +1,3 @@
+define cnt_number_calls := eventCount(function_calls("quick_sort"))
+define not_equal := cnt_number_calls != literal(100)
+out not_equal

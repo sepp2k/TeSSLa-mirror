@@ -1,0 +1,15 @@
+define add_event : Events<Unit> :=
+  function_calls("add")
+define sub_event : Events<Unit> :=
+  function_calls("sub")
+
+define add_count := eventCount(add_event)
+define sub_count := eventCount(sub_event)
+define diff := add_count - sub_count
+
+define error := diff >= literal(2)
+define success := !error
+
+out diff
+out error
+out success
