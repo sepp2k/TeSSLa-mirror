@@ -8,7 +8,10 @@ import ImplicitConstraints._
 
 import scala.language.implicitConversions
 
+
+//scalastyle:off method.name number.of.methods
 class Specification[Time: Numeric]() {
+
   private val numeric = implicitly[Numeric[Time]]
 
   import numeric.{mkOrderingOps, mkNumericOps, zero, one}
@@ -17,7 +20,7 @@ class Specification[Time: Numeric]() {
   private var trigger: (Map[Any, Time], SortedMap[Time, Set[Any]]) = (Map(), SortedMap())
   private var acceptInput = true
 
-  def getTime = timeVar
+  def getTime: Time = timeVar
 
   private var inputs: List[Triggered[_]] = Nil
 
@@ -46,7 +49,7 @@ class Specification[Time: Numeric]() {
     }
     acceptInput = true
     val newTime = timeVar + timeDelta
-    while (!trigger._2.isEmpty && trigger._2.head._1 < newTime) {
+    while (trigger._2.nonEmpty && trigger._2.head._1 < newTime) {
       val active = trigger._2.head
       trigger = (trigger._1 -- active._2, trigger._2.tail)
       timeVar = active._1
@@ -66,10 +69,9 @@ class Specification[Time: Numeric]() {
   private def updateTrigger(stream: Stream[_], newTime: Time): Unit = {
     require(newTime > getTime)
     val remaining = trigger._1.get(stream) match {
-      case Some(t) => {
+      case Some(t) =>
         val set = trigger._2(t) - stream
         (trigger._1 - stream, if (set.isEmpty) trigger._2 - t else trigger._2 + (t -> set))
-      }
       case None => trigger
     }
     val temp: Set[Any] = remaining._2.get(newTime) match {
@@ -79,15 +81,15 @@ class Specification[Time: Numeric]() {
     trigger = (remaining._1 + (stream -> newTime), remaining._2 + (newTime -> temp))
   }
 
-  def lift[Value, Complete <: HList, Inputs <: HList, Streams <: HList](streams: Streams)(op: Complete => Option[Value])(implicit constraint: StreamConstraint[Complete, Inputs, Streams])
+  def lift[Value, Complete <: HList, Inputs <: HList, Streams <: HList](streams: Streams)(op: Complete => Option[Value])(implicit constraint: StreamConstraint[Complete, Inputs, Streams]): Stream[Value]
   = Operation[Value, Inputs, Inputs, Streams](constraint.init, streams)((_, state, inputs) => {
     val newState = constraint.orElse(inputs, state)
     val newOutput = if (constraint.hasSome(inputs)) constraint.complete(newState).flatMap(x => op(x)) else None
     (newState, newOutput)
   })
 
-  def last[Value](times: Stream[_], values: => Stream[Value]) = new Stream[Value] {
-    private var done = false;
+  def last[Value](times: Stream[_], values: => Stream[Value]): Stream[Value] = new Stream[Value] {
+    private var done = false
     private var oldValue: Option[Value] = None
     private var newValue: Option[Value] = None
 
@@ -100,26 +102,23 @@ class Specification[Time: Numeric]() {
 
     protected override def init(): Unit = {
       times.addListener {
-        case Some(_) => {
+        case Some(_) =>
           propagate(oldValue)
           update()
-        }
-        case None => {
+        case None =>
           propagate(None)
           update()
-        }
       }
       values.addListener {
-        case Some(v) => {
+        case Some(v) =>
           newValue = Some(v)
           update()
-        }
         case None => update()
       }
     }
   }
 
-  def delayedLast[Value](delays: => Stream[Time], values: => Stream[Value]) = new Triggered[Value] {
+  def delayedLast[Value](delays: => Stream[Time], values: => Stream[Value]): Stream[Value] = new Triggered[Value] {
     private var oldValue: Option[Value] = None
     private var newValue: Option[Value] = None
     private var newDelay: Option[Time] = None
@@ -131,11 +130,10 @@ class Specification[Time: Numeric]() {
         counter = 0
         oldValue = newValue
         newDelay match {
-          case Some(delay) => {
+          case Some(delay) =>
             val t = targetTime.getOrElse(getTime) + delay
             targetTime = Some(t)
             updateTrigger(this, t)
-          }
           case None =>
         }
       } else {
@@ -145,46 +143,40 @@ class Specification[Time: Numeric]() {
 
     override def init(): Unit = {
       delays.addListener(delay => {
-        require(delay.map(_ > zero).getOrElse(true))
+        require(delay.forall(_ > zero))
         newDelay = delay
         update()
       })
       values.addListener {
-        case Some(value) => {
+        case Some(value) =>
           newValue = Some(value)
           update()
-        }
         case None => update()
       }
     }
 
     override private[Specification] def step() = {
       targetTime match {
-        case Some(t) if (t equiv getTime) => {
+        case Some(t) if t equiv getTime =>
           targetTime = None
           propagate(oldValue)
-        }
         case _ => propagate(None)
       }
       update()
     }
   }
 
-  def nil[Value]() = new Triggered[Value] {
+  def nil[Value]: Stream[Value] = new Triggered[Value] {
     override private[Specification] def step() = {
       propagate(None)
     }
   }
 
-  def const[Value](value: Value) = nil().default(value)
+  def const[Value](value: Value): Stream[Value] = nil.default(value)
 
   sealed class Stream[Value] {
     self =>
     private var listeners: List[Option[Value] => Unit] = Nil
-
-    implicit def nilSteamConstraintFix: StreamConstraint[HNil, HNil, HNil] = nilSteamConstraint
-
-    implicit def consStreamConstraintFix[Value, Complete <: HList, Inputs <: HList, InputStreams <: HList](implicit ev: StreamConstraint[Complete, Inputs, InputStreams]): StreamConstraint[Value :: Complete, Option[Value] :: Inputs, Stream[Value] :: InputStreams] = consStreamConstraint(ev)
 
     def addListener(listener: Option[Value] => Unit): Unit = {
       if (listeners.isEmpty) {
@@ -242,24 +234,24 @@ class Specification[Time: Numeric]() {
         (x: Boolean :: HNil) => Some(!x.head)
       )
 
-    def <[T: PartialOrdering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+    def <[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
       lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[PartialOrdering[T]].lt(x.head, other))
+        (x: T :: HNil) => Some(implicitly[Ordering[T]].lt(x.head, other))
       )
 
-    def <[T: PartialOrdering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+    def <[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
       lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[PartialOrdering[T]].lt(x.head, x.tail.head))
+        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].lt(x.head, x.tail.head))
       )
 
-    def <=[T: PartialOrdering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+    def <=[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
       lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[PartialOrdering[T]].lteq(x.head, other))
+        (x: T :: HNil) => Some(implicitly[Ordering[T]].lteq(x.head, other))
       )
 
-    def <=[T: PartialOrdering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+    def <=[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
       lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[PartialOrdering[T]].lteq(x.head, x.tail.head))
+        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].lteq(x.head, x.tail.head))
       )
 
     def >[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
@@ -267,19 +259,19 @@ class Specification[Time: Numeric]() {
         (x: T :: HNil) => Some(implicitly[Ordering[T]].gt(x.head, other))
       )
 
-    def >[T: PartialOrdering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+    def >[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
       lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[PartialOrdering[T]].gt(x.head, x.tail.head))
+        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].gt(x.head, x.tail.head))
       )
 
-    def >=[T: PartialOrdering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+    def >=[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
       lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[PartialOrdering[T]].gteq(x.head, other))
+        (x: T :: HNil) => Some(implicitly[Ordering[T]].gteq(x.head, other))
       )
 
-    def >=[T: PartialOrdering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
+    def >=[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
       lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[PartialOrdering[T]].gteq(x.head, x.tail.head))
+        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].gteq(x.head, x.tail.head))
       )
 
     def max[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
@@ -312,14 +304,14 @@ class Specification[Time: Numeric]() {
         (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].compare(x.head, x.tail.head))
       )
 
-    def tryCompare[T: PartialOrdering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Option[Int]] =
+    def tryCompare[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Option[Int]] =
       lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[PartialOrdering[T]].tryCompare(x.head, other))
+        (x: T :: HNil) => Some(implicitly[Ordering[T]].tryCompare(x.head, other))
       )
 
-    def tryCompare[T: PartialOrdering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Option[Int]] =
+    def tryCompare[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Option[Int]] =
       lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[PartialOrdering[T]].tryCompare(x.head, x.tail.head))
+        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].tryCompare(x.head, x.tail.head))
       )
 
     def +[T: Numeric](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
@@ -431,57 +423,57 @@ class Specification[Time: Numeric]() {
         (x: Boolean :: T :: T :: HNil) => if (x.head) Some(x.tail.head) else Some(x.tail.tail.head)
       )
 
-    def fold[T](init: T)(f: (Stream[T], Stream[Value]) => Stream[T]) = {
+    def fold[T](init: T)(f: (Stream[T], Stream[Value]) => Stream[T]): Stream[T] = {
       lazy val result: Stream[T] = f(last(this, result).default(init), this)
       result
     }
 
-    def resetFold[T](init: T, reset: => Stream[Boolean])(f: (Stream[T], Stream[Value]) => Stream[T]) = {
+    def resetFold[T](init: T, reset: => Stream[Boolean])(f: (Stream[T], Stream[Value]) => Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = {
       lazy val state: Stream[T] = f(last(this, result).default(init), this)
       lazy val result: Stream[T] = this.defined(reset.default(false)).ifThenElse(f(nil[T].default(init), this), state)
       (Lazy(result), Lazy(state))
     }
 
-    def reduce(f: (Stream[Value], Stream[Value]) => Stream[Value]) = {
+    def reduce(f: (Stream[Value], Stream[Value]) => Stream[Value]): Stream[Value] = {
       lazy val result: Stream[Value] = f(last(this, result), this).default(this)
       result
     }
 
-    def resetReduce(reset: => Stream[Boolean])(f: (Stream[Value], Stream[Value]) => Stream[Value]) = {
+    def resetReduce(reset: => Stream[Boolean])(f: (Stream[Value], Stream[Value]) => Stream[Value]): (Lazy[Stream[Value]], Lazy[Stream[Value]]) = {
       lazy val state: Stream[Value] = f(last(this, result), this).default(this)
       lazy val result: Stream[Value] = this.defined(reset.default(false)).ifThenElse(this, state)
       (Lazy(result), Lazy(state))
     }
 
-    def sum[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]) = ev(this).fold(implicitly[Numeric[T]].zero)(_ + _)
+    def sum[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).fold(implicitly[Numeric[T]].zero)(_ + _)
 
     def resetSum[T: Numeric](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetFold(implicitly[Numeric[T]].zero, reset)(_ + _)
 
-    def prod[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]) = ev(this).fold(implicitly[Numeric[T]].one)(_ * _)
+    def prod[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).fold(implicitly[Numeric[T]].one)(_ * _)
 
     def resetProd[T: Numeric](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetFold(implicitly[Numeric[T]].one, reset)(_ * _)
 
     def max[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).reduce(_ max _)
 
-    def resetMax[T: Ordering](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]) = ev(this).resetReduce(reset)(_ max _)
+    def resetMax[T: Ordering](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetReduce(reset)(_ max _)
 
     def min[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).reduce(_ min _)
 
-    def resetMin[T: Ordering](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]) = ev(this).resetReduce(reset)(_ min _)
+    def resetMin[T: Ordering](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetReduce(reset)(_ min _)
 
     def count: Stream[Int] = const(1).sum
 
     def resetCount(reset: => Stream[Boolean]): (Lazy[Stream[Int]], Lazy[Stream[Int]]) = const(1).resetSum(reset)
 
-    def exists(implicit ev: Stream[Value] =:= Stream[Boolean]) = ev(this).fold(false)(_ || _)
+    def exists(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] = ev(this).fold(false)(_ || _)
 
     def resetExists(reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[Boolean]): (Lazy[Stream[Boolean]], Lazy[Stream[Boolean]]) = ev(this).resetFold(false, reset)(_ || _)
 
-    def forall(implicit ev: Stream[Value] =:= Stream[Boolean]) = ev(this).fold(true)(_ && _)
+    def forall(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] = ev(this).fold(true)(_ && _)
 
     def resetForall(reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[Boolean]): (Lazy[Stream[Boolean]], Lazy[Stream[Boolean]]) = ev(this).resetFold(true, reset)(_ && _)
 
-    def mark(from: => Stream[Boolean], to: Stream[Boolean]) = {
+    def mark(from: => Stream[Boolean], to: Stream[Boolean]): Stream[RegionMark] = {
       val from_ = this.defined(from.default(false))
       val to_ = this.defined(to.default(false))
       lazy val state: Stream[RegionMark] = last(this, result).default(RegionOutside)
@@ -495,27 +487,28 @@ class Specification[Time: Numeric]() {
     }
 
 
-    def merge[T](other: Stream[T]) = {
+    def merge[T](other: Stream[T]): Stream[Unit] = {
       def helper[A, B](first: Stream[A], second: Stream[B]) = lift(first :: second :: HNil)((x: A :: B :: HNil) => Some(()))
+
       val a = this.const(())
       val b = this.const(())
       helper(a.default(b), b.default(a))
     }
 
-    def time() = Operation[Time, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), this :: HNil)((t, s, i) => (s, if (i.head.isDefined) Some(t) else None))
+    def time(): Stream[Time] = Operation[Time, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), this :: HNil)((t, s, i) => (s, if (i.head.isDefined) Some(t) else None))
 
-    def default(value: Value) = Operation[Value, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), self :: HNil)((t, _, i) => i.head match {
+    def default(value: Value): Stream[Value] = Operation[Value, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), self :: HNil)((t, _, i) => i.head match {
       case Some(value) => ((), Some(value))
       case None => ((), if (t equiv zero) Some(value) else None)
     })
 
-    def default[T](value: Value, when: Stream[T]) = Operation[Value, Boolean, Option[Value] :: Option[T] :: HNil, Stream[Value] :: Stream[T] :: HNil](false, self :: when :: HNil) {
+    def default[T](value: Value, when: Stream[T]): Stream[Value] = Operation[Value, Boolean, Option[Value] :: Option[T] :: HNil, Stream[Value] :: Stream[T] :: HNil](false, self :: when :: HNil) {
       case (_, false, Some(v) :: _) => (true, Some(v))
       case (_, false, _ :: Some(_) :: _) => (true, Some(value))
       case (_, s, v :: _) => (s, v)
     }
 
-    def default(when: Stream[Value]) = Operation[Value, Boolean, Option[Value] :: Option[Value] :: HNil, Stream[Value] :: Stream[Value] :: HNil](false, self :: when :: HNil) {
+    def default(when: Stream[Value]): Stream[Value] = Operation[Value, Boolean, Option[Value] :: Option[Value] :: HNil, Stream[Value] :: Stream[Value] :: HNil](false, self :: when :: HNil) {
       case (_, false, Some(v) :: _) => (true, Some(v))
       case (_, false, _ :: Some(v) :: _) => (true, Some(v))
       case (_, s, v :: _) => (s, v)
@@ -544,7 +537,7 @@ class Specification[Time: Numeric]() {
 
   }
 
-  sealed trait StreamConstraint[Complete <: HList, Inputs <: HList, InputStreams <: HList] {
+  sealed abstract class StreamConstraint[Complete <: HList, Inputs <: HList, InputStreams <: HList]() {
     def length: Int
 
     def init: Inputs
@@ -558,13 +551,11 @@ class Specification[Time: Numeric]() {
     def complete(inputs: Inputs): Option[Complete]
   }
 
-  implicit def nilSteamConstraint = new StreamConstraint[HNil, HNil, HNil] {
+  implicit val nilSteamConstraint: StreamConstraint[HNil, HNil, HNil] = new StreamConstraint[HNil, HNil, HNil] {
     override val length = 0
     override val init = HNil
 
-    override def register(streams: HNil, getState: () => HNil, setState: HNil => Unit): Unit = {
-
-    }
+    override def register(streams: HNil, getState: () => HNil, setState: HNil => Unit): Unit = {}
 
     override def orElse(inputs: HNil, fallback: HNil) = HNil
 
@@ -573,7 +564,8 @@ class Specification[Time: Numeric]() {
     override def hasSome(inputs: HNil) = false
   }
 
-  implicit def consStreamConstraint[Value, Complete <: HList, Inputs <: HList, InputStreams <: HList](implicit ev: StreamConstraint[Complete, Inputs, InputStreams]) = new StreamConstraint[Value :: Complete, Option[Value] :: Inputs, Stream[Value] :: InputStreams]() {
+  implicit def consStreamConstraint[Value, Complete <: HList, Inputs <: HList, InputStreams <: HList](implicit ev: StreamConstraint[Complete, Inputs, InputStreams]): StreamConstraint[Value :: Complete, Option[Value] :: Inputs, Stream[Value] :: InputStreams]
+  = new StreamConstraint[Value :: Complete, Option[Value] :: Inputs, Stream[Value] :: InputStreams]() {
     override val length = ev.length + 1
     override val init = None :: ev.init
 
@@ -595,7 +587,7 @@ class Specification[Time: Numeric]() {
   def Operation[Value, State, Inputs <: HList, InputStreams <: HList]
   (initState: State, inputStreams: InputStreams)
   (op: (Time, State, Inputs) => (State, Option[Value]))
-  (implicit constraint: StreamConstraint[_, Inputs, InputStreams]) = new Stream[Value] {
+  (implicit constraint: StreamConstraint[_, Inputs, InputStreams]): Stream[Value] = new Stream[Value] {
     private var state: State = initState
     private var inputs: Inputs = constraint.init
     private var counter = 0
@@ -615,24 +607,14 @@ class Specification[Time: Numeric]() {
     }
   }
 
-  def Input[Value]() = new Input[Value]()
+  def Input[Value](): Input[Value] = new Input[Value]()
 
   def printStream(stream: Stream[_], name: String): Unit = {
     stream.addListener {
-      case Some(value) => println(s"$getTime $name: $value")
+      case Some(value) => println(s"$getTime $name: $value") // scalastyle:ignore
       case None =>
     }
   }
-
-  class Lazy[A](a: => A) {
-    lazy val get = a
-  }
-
-  object Lazy {
-    def apply[A](a: => A) = new Lazy(a)
-  }
-
-  implicit def forceLazy[A](l: Lazy[A]): A = l.get
 
   sealed class RegionMark
 

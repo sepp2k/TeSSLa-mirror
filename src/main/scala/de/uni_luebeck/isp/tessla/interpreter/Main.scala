@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+// scalastyle:off
 object Main extends App {
 
 
