@@ -28,6 +28,17 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     case object RPAREN extends Token(")")
     case object LT extends Token("<")
     case object GT extends Token(">")
+    case object GEQ extends Token(">=")
+    case object LEQ extends Token("<=")
+    case object NEQ extends Token("!=")
+    case object EQ extends Token("==")
+    case object AND extends Token("&&")
+    case object OR extends Token("||")
+    case object PLUS extends Token("+")
+    case object MINUS extends Token("-")
+    case object TIMES extends Token("*")
+    case object SLASH extends Token("/")
+    case object BANG extends Token("!")
   }
 
   object Tokenizer extends SimpleTokenizer {
@@ -35,7 +46,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     import tokens._
 
     override val keywords = List(DEFINE, OUT, IN)
-    override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT, LT, GT)
+    override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT, GEQ, LEQ, NEQ, EQ, LT, GT, AND, OR, PLUS, MINUS, TIMES, SLASH, BANG)
     override val comments = List("--" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c) || c == '.'
@@ -105,10 +116,71 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
 
     def typeAppArgs: Parser[Seq[Ast.Type]] = LT ~> rep1sep(`type`, COMMA) <~ GT
 
-    def expr: Parser[Ast.Expr] = exprAtomic ~ typeAscr.? ^^ {
+    def expr: Parser[Ast.Expr] = infixExpr ~ typeAscr.? ^^ {
       case (expr, None) => expr
       case (expr, Some(typeAscr)) => Ast.ExprTypeAscr(expr, typeAscr)
     }
+
+    def infixExpr: Parser[Ast.Expr] = conjunction ~ (OR ~ conjunction).* ^^! {
+      case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
+        case (l,(op, r)) => Ast.ExprApp(Ast.Identifier("or", SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
+      }
+    }
+
+    def conjunction: Parser[Ast.Expr] = comparison ~ (AND ~ comparison).* ^^! {
+      case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
+        case (l,(op, r)) => Ast.ExprApp(Ast.Identifier("and", SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
+      }
+    }
+
+    def comparison: Parser[Ast.Expr] = additiveExpr ~ ((EQ | LT | GT | LEQ | GEQ | NEQ) ~ additiveExpr).* ^^! {
+      case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
+        case (l,(op, r)) =>
+          val functionName = op.value match {
+            case NEQ => "neq"
+            case EQ => "eq"
+            case LT => "lt"
+            case GT => "gt"
+            case LEQ => "leq"
+            case GEQ => "geq"
+          }
+          Ast.ExprApp(Ast.Identifier(functionName, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
+      }
+    }
+
+    def additiveExpr: Parser[Ast.Expr] = multiplicativeExpr ~ ((PLUS | MINUS) ~ multiplicativeExpr).* ^^! {
+      case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
+        case (l,(op, r)) =>
+          val functionName = op.value match {
+            case PLUS => "add"
+            case MINUS => "sub"
+          }
+          Ast.ExprApp(Ast.Identifier(functionName, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
+      }
+    }
+
+    def multiplicativeExpr: Parser[Ast.Expr] = unaryExpr ~ ((TIMES | SLASH) ~ unaryExpr).* ^^! {
+      case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
+        case (l,(op, r)) =>
+          val functionName = op.value match {
+            case TIMES => "mul"
+            case SLASH => "div"
+          }
+          Ast.ExprApp(Ast.Identifier(functionName, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
+      }
+    }
+
+
+    def unaryExpr: Parser[Ast.Expr] =
+      BANG ~ exprAtomic ^^! {
+        case (loc, (op, expr)) =>
+          Ast.ExprApp(Ast.Identifier("signalNot", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
+      } |
+      MINUS ~ exprAtomic ^^! {
+        case (loc, (op, expr)) =>
+          Ast.ExprApp(Ast.Identifier("neg", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
+      } |
+      exprAtomic
 
     def exprAtomic: Parser[Ast.Expr] = exprLit | exprGroup | exprNameOrApp
 
