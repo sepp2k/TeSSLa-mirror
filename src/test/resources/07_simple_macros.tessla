@@ -1,0 +1,3 @@
+in x: Signal<Int>
+define schnupp(x) := add(x,x)
+define foo := schnupp(x)
