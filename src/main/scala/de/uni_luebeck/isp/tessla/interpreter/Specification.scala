@@ -3,7 +3,6 @@ package de.uni_luebeck.isp.tessla.interpreter
 import shapeless._
 
 import scala.collection.immutable.SortedMap
-
 import ImplicitConstraints._
 
 import scala.language.implicitConversions
@@ -174,6 +173,12 @@ class Specification[Time: Numeric]() {
 
   def const[Value](value: Value): Stream[Value] = nil.default(value)
 
+  def period(value: Time): Stream[Unit] = {
+    require(value > zero)
+    lazy val result: Stream[Time] = delayedLast(result, result).default(value)
+    result.const(())
+  }
+
   sealed class Stream[Value] {
     self =>
     private var listeners: List[Option[Value] => Unit] = Nil
@@ -207,7 +212,9 @@ class Specification[Time: Numeric]() {
         (x: Value :: T :: HNil) => Some(x.head)
       )
 
-    def defined[T](other: Stream[T]): Stream[T] = (other.alsoAt(this).time() === time().alsoAt(other)).ifThen(other)
+    def defined[T](other: Stream[T]): Stream[T] = (merge(other).time() === time()).ifThen(other)
+
+    def undefined(other: Stream[Value]): Stream[Value] = (merge(other).time() === time()).default(false).ifThenElse(this.default(other), other.default(this))
 
     def &&(other: Boolean)(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
       lift(ev(this) :: HNil)(
@@ -418,6 +425,12 @@ class Specification[Time: Numeric]() {
         (x: Boolean :: T :: HNil) => if (x.head) Some(x.tail.head) else None
       )
 
+    def ifThen()(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Unit] =
+      lift(ev(this) :: HNil)(
+        (x: Boolean :: HNil) => if (x.head) Some(()) else None
+      )
+
+
     def ifThenElse[T](other1: Stream[T], other2: Stream[T])(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[T] =
       lift(ev(this) :: other1 :: other2 :: HNil)(
         (x: Boolean :: T :: T :: HNil) => if (x.head) Some(x.tail.head) else Some(x.tail.tail.head)
@@ -428,9 +441,9 @@ class Specification[Time: Numeric]() {
       result
     }
 
-    def resetFold[T](init: T, reset: => Stream[Boolean])(f: (Stream[T], Stream[Value]) => Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = {
+    def resetFold[T](init: T, reset: => Stream[_])(f: (Stream[T], Stream[Value]) => Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = {
       lazy val state: Stream[T] = f(last(this, result).default(init), this)
-      lazy val result: Stream[T] = this.defined(reset.default(false)).ifThenElse(f(nil[T].default(init), this), state)
+      lazy val result: Stream[T] = reset.defined(defined(f(reset.const(init), this)).undefined(reset.const(init))).undefined(state)
       (Lazy(result), Lazy(state))
     }
 
@@ -447,11 +460,11 @@ class Specification[Time: Numeric]() {
 
     def sum[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).fold(implicitly[Numeric[T]].zero)(_ + _)
 
-    def resetSum[T: Numeric](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetFold(implicitly[Numeric[T]].zero, reset)(_ + _)
+    def resetSum[T: Numeric](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetFold(implicitly[Numeric[T]].zero, reset)(_ + _)
 
     def prod[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).fold(implicitly[Numeric[T]].one)(_ * _)
 
-    def resetProd[T: Numeric](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetFold(implicitly[Numeric[T]].one, reset)(_ * _)
+    def resetProd[T: Numeric](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetFold(implicitly[Numeric[T]].one, reset)(_ * _)
 
     def max[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).reduce(_ max _)
 
@@ -463,15 +476,15 @@ class Specification[Time: Numeric]() {
 
     def count: Stream[Int] = const(1).sum
 
-    def resetCount(reset: => Stream[Boolean]): (Lazy[Stream[Int]], Lazy[Stream[Int]]) = const(1).resetSum(reset)
+    def resetCount(reset: => Stream[_]): (Lazy[Stream[Int]], Lazy[Stream[Int]]) = const(1).resetSum(reset)
 
     def exists(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] = ev(this).fold(false)(_ || _)
 
-    def resetExists(reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[Boolean]): (Lazy[Stream[Boolean]], Lazy[Stream[Boolean]]) = ev(this).resetFold(false, reset)(_ || _)
+    def resetExists(reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[Boolean]): (Lazy[Stream[Boolean]], Lazy[Stream[Boolean]]) = ev(this).resetFold(false, reset)(_ || _)
 
     def forall(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] = ev(this).fold(true)(_ && _)
 
-    def resetForall(reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[Boolean]): (Lazy[Stream[Boolean]], Lazy[Stream[Boolean]]) = ev(this).resetFold(true, reset)(_ && _)
+    def resetForall(reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[Boolean]): (Lazy[Stream[Boolean]], Lazy[Stream[Boolean]]) = ev(this).resetFold(true, reset)(_ && _)
 
     def mark(from: => Stream[Boolean], to: Stream[Boolean]): Stream[RegionMark] = {
       val from_ = this.defined(from.default(false))
@@ -491,7 +504,7 @@ class Specification[Time: Numeric]() {
       def helper[A, B](first: Stream[A], second: Stream[B]) = lift(first :: second :: HNil)((x: A :: B :: HNil) => Some(()))
 
       val a = this.const(())
-      val b = this.const(())
+      val b = other.const(())
       helper(a.default(b), b.default(a))
     }
 

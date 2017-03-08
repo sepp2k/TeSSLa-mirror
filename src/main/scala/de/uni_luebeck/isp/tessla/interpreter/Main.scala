@@ -15,13 +15,13 @@ object Main extends App {
     printStream(s1, "s1")
 
 
-    lazy val period: Stream[Int] = delayedLast(period, period).default(3)
-    printStream(period, "period")
+    val prd = period(3)
+    printStream(prd, "period")
 
-    val s3 = period.time / in1
+    val s3 = prd.time / in1
     printStream(s3, "s3")
 
-    lazy val s4: (Lazy[Stream[Int]], Lazy[Stream[Int]]) = period.resetCount(s4._2 > 3)
+    lazy val s4: (Lazy[Stream[Int]], Lazy[Stream[Int]]) = prd.resetCount((s4._2 > 3).ifThen())
     printStream(s4._1, "###")
 
   }
