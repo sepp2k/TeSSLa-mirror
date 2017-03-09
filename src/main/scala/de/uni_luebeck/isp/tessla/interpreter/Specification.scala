@@ -516,12 +516,6 @@ class Specification[Time: Numeric]() {
       case None => ((), if (t equiv zero) Some(value) else None)
     })
 
-    def default[T](value: Value, when: Stream[T]): Stream[Value] = Operation[Value, Boolean, Option[Value] :: Option[T] :: HNil, Stream[Value] :: Stream[T] :: HNil](false, self :: when :: HNil) {
-      case (_, false, Some(v) :: _) => (true, Some(v))
-      case (_, false, _ :: Some(_) :: _) => (true, Some(value))
-      case (_, s, v :: _) => (s, v)
-    }
-
     def default(when: Stream[Value]): Stream[Value] = Operation[Value, Boolean, Option[Value] :: Option[Value] :: HNil, Stream[Value] :: Stream[Value] :: HNil](false, self :: when :: HNil) {
       case (_, false, Some(v) :: _) => (true, Some(v))
       case (_, false, _ :: Some(v) :: _) => (true, Some(v))
