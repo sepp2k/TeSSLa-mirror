@@ -441,10 +441,10 @@ class Specification[Time: Numeric]() {
       result
     }
 
-    def resetFold[T](init: T, reset: => Stream[_])(f: (Stream[T], Stream[Value]) => Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = {
+    def resetFold[T](init: T, reset: => Stream[_])(f: (Stream[T], Stream[Value]) => Stream[T]): ResetStream[T] = {
       lazy val state: Stream[T] = f(last(this, result).default(init), this)
       lazy val result: Stream[T] = reset.defined(defined(f(reset.const(init), this)).undefined(reset.const(init))).undefined(state)
-      (Lazy(result), Lazy(state))
+      ResetStream(result, state)
     }
 
     def reduce(f: (Stream[Value], Stream[Value]) => Stream[Value]): Stream[Value] = {
@@ -452,39 +452,40 @@ class Specification[Time: Numeric]() {
       result
     }
 
-    def resetReduce(reset: => Stream[Boolean])(f: (Stream[Value], Stream[Value]) => Stream[Value]): (Lazy[Stream[Value]], Lazy[Stream[Value]]) = {
+    def resetReduce(reset: => Stream[_])(f: (Stream[Value], Stream[Value]) => Stream[Value]): ResetStream[Value] = {
       lazy val state: Stream[Value] = f(last(this, result), this).default(this)
-      lazy val result: Stream[Value] = this.defined(reset.default(false)).ifThenElse(this, state)
-      (Lazy(result), Lazy(state))
+      lazy val resetStream = reset.const(true).resetExists(result)
+      lazy val result: Stream[Value] = this.defined(resetStream.proposed.default(false)).ifThenElse(this, state)
+      ResetStream(result, state)
     }
 
     def sum[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).fold(implicitly[Numeric[T]].zero)(_ + _)
 
-    def resetSum[T: Numeric](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetFold(implicitly[Numeric[T]].zero, reset)(_ + _)
+    def resetSum[T: Numeric](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): ResetStream[T] = ev(this).resetFold(implicitly[Numeric[T]].zero, reset)(_ + _)
 
     def prod[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).fold(implicitly[Numeric[T]].one)(_ * _)
 
-    def resetProd[T: Numeric](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetFold(implicitly[Numeric[T]].one, reset)(_ * _)
+    def resetProd[T: Numeric](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): ResetStream[T] = ev(this).resetFold(implicitly[Numeric[T]].one, reset)(_ * _)
 
     def max[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).reduce(_ max _)
 
-    def resetMax[T: Ordering](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetReduce(reset)(_ max _)
+    def resetMax[T: Ordering](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): ResetStream[T] = ev(this).resetReduce(reset)(_ max _)
 
     def min[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] = ev(this).reduce(_ min _)
 
-    def resetMin[T: Ordering](reset: => Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[T]): (Lazy[Stream[T]], Lazy[Stream[T]]) = ev(this).resetReduce(reset)(_ min _)
+    def resetMin[T: Ordering](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): ResetStream[T] = ev(this).resetReduce(reset)(_ min _)
 
     def count: Stream[Int] = const(1).sum
 
-    def resetCount(reset: => Stream[_]): (Lazy[Stream[Int]], Lazy[Stream[Int]]) = const(1).resetSum(reset)
+    def resetCount(reset: => Stream[_]): ResetStream[Int] = const(1).resetSum(reset)
 
     def exists(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] = ev(this).fold(false)(_ || _)
 
-    def resetExists(reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[Boolean]): (Lazy[Stream[Boolean]], Lazy[Stream[Boolean]]) = ev(this).resetFold(false, reset)(_ || _)
+    def resetExists(reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[Boolean]): ResetStream[Boolean]  = ev(this).resetFold(false, reset)(_ || _)
 
     def forall(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] = ev(this).fold(true)(_ && _)
 
-    def resetForall(reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[Boolean]): (Lazy[Stream[Boolean]], Lazy[Stream[Boolean]]) = ev(this).resetFold(true, reset)(_ && _)
+    def resetForall(reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[Boolean]): ResetStream[Boolean] = ev(this).resetFold(true, reset)(_ && _)
 
     def mark(from: => Stream[Boolean], to: Stream[Boolean]): Stream[RegionMark] = {
       val from_ = this.defined(from.default(false))
@@ -636,5 +637,17 @@ class Specification[Time: Numeric]() {
   case object RegionBegin extends RegionMark
 
   case object RegionInside extends RegionMark
+
+  final class ResetStream[A](value_ : => Stream[A], proposed_ : => Stream[A]) {
+    def value: Stream[A] = value_
+
+    def proposed: Stream[A] = proposed_
+  }
+
+  object ResetStream {
+    def apply[A](value: => Stream[A], proposed: => Stream[A]): ResetStream[A] = new ResetStream(value, proposed)
+
+    implicit def toValue[A](result: ResetStream[A]): Stream[A] = result.value
+  }
 
 }
