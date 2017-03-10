@@ -1,14 +1,14 @@
 val nexus = "https://sourcecode.isp.uni-luebeck.de/nexus/"
 val privateSnapshots = "ISP Private Snapshots" at nexus + "content/repositories/private_snapshots"
-val snapshots = "ISP Snapshots" at nexus + "content/repositories/private_snapshots"
-val privateReleases = "ISP Private Releases" at nexus + "content/repositories/releases"
+val snapshots = "ISP Snapshots" at nexus + "content/repositories/snapshots"
+val privateReleases = "ISP Private Releases" at nexus + "content/repositories/private_releases"
 val releases = "ISP Releases" at nexus + "content/repositories/releases"
 
 name := "tessla.interpreter"
 
 organization := "de.uni_luebeck.isp"
 
-version := "0.1.0-SNAPSHOT"
+version := "0.1.0." + Process("git rev-parse HEAD").lines.head + "-SNAPSHOT"
 
 scalaVersion := "2.12.1"
 
