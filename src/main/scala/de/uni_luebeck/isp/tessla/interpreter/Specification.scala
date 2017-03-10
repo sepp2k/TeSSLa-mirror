@@ -90,9 +90,9 @@ class Specification[Time: Numeric]() {
     Operation[Value, Inputs, Inputs, Streams](constraint.init, streams)((_, state, inputs) => {
       val newState = constraint.orElse(inputs, state)
       val newOutput =
-        if (constraint.hasSome(inputs))
+        if (constraint.hasSome(inputs)) {
           constraint.complete(newState).flatMap(x => op(x))
-        else None
+        } else None
 
       (newState, newOutput)
     })
@@ -473,8 +473,8 @@ class Specification[Time: Numeric]() {
       f: (Stream[Value], Stream[Value]) => Stream[Value]
     ): ResetStream[Value] = {
       lazy val state: Stream[Value] = f(last(this, result), this).default(this)
-      lazy val resetStream = reset.const(true).resetExists(result)
-      lazy val result: Stream[Value] = this.defined(resetStream.proposed.default(false)).ifThenElse(this, state)
+      lazy val resetStream = reset.const(true).resetExists(this)
+      lazy val result: Stream[Value] = this.defined(last(this, resetStream).default(false)).ifThenElse(this, state)
       ResetStream(result, state)
     }
 

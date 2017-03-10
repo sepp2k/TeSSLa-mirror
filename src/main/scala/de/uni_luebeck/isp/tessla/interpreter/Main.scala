@@ -23,6 +23,8 @@ object Main extends App {
 
     val in2 = Input[Unit]()
     val in3 = Input[Unit]()
+    printStream(in3, "in3")
+    printStream(in2, "in2")
     val s5 = in2.const(true).resetExists(in3)
     printStream(s5, "s5")
 
@@ -45,8 +47,10 @@ object Main extends App {
   MySpec.step(1)
   MySpec.in2.provide(())
   MySpec.in4.provide(2)
-  MySpec.step(14)
-  MySpec.in3.provide(())
+  MySpec.step(13)
+  MySpec.in4.provide(1)
+  MySpec.step(1)
+  MySpec.in4.provide(0)
   MySpec.step()
 
 }
