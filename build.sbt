@@ -8,7 +8,7 @@ name := "tessla.interpreter"
 
 organization := "de.uni_luebeck.isp"
 
-version := "0.1.0." + Process("git rev-parse HEAD").lines.head + "-SNAPSHOT"
+version := "0.1.0." + Process("git show -s --format=%ct").lines.head + "-" + Process("git rev-parse HEAD").lines.head + "-SNAPSHOT"
 
 scalaVersion := "2.12.1"
 
