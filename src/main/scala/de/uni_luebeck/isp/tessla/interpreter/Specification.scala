@@ -520,6 +520,20 @@ class Specification[Time: Numeric]() {
     def resetForall(reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[Boolean]): ResetStream[Boolean] =
       ev(this).resetFold(true, reset)(_ && _)
 
+    def first(): Stream[Value] = {
+      def helper(a: Stream[Value], b: Stream[Value]) =
+        lift(a :: b :: HNil)((x: Value :: Value :: HNil) => Some(x.head))
+
+      reduce(helper)
+    }
+
+    def resetFirst(reset: => Stream[_]): ResetStream[Value] = {
+      def helper(a: Stream[Value], b: Stream[Value]) =
+        lift(a :: b :: HNil)((x: Value :: Value :: HNil) => Some(x.head))
+
+      resetReduce(reset)(helper)
+    }
+
     def mark(from: => Stream[Boolean], to: Stream[Boolean]): Stream[RegionMark] = {
       val from_ = this.defined(from.default(false))
       val to_ = this.defined(to.default(false))
@@ -689,8 +703,11 @@ class Specification[Time: Numeric]() {
 
   case object RegionInside extends RegionMark
 
-  final class ResetStream[A](value_ : => Stream[A], proposed_ : => Stream[A]) {
-    def value: Stream[A] = value_
+  final class ResetStream[A](value : => Stream[A], proposed_ : => Stream[A]) extends Stream[A] {
+
+    private[Specification] override protected def init(): Unit = {
+      value.addListener(x => propagate(x))
+    }
 
     def proposed: Stream[A] = proposed_
   }
@@ -698,9 +715,6 @@ class Specification[Time: Numeric]() {
   object ResetStream {
     def apply[A](value: => Stream[A], proposed: => Stream[A]): ResetStream[A] =
       new ResetStream(value, proposed)
-
-    implicit def toValue[A](result: ResetStream[A]): Stream[A] =
-      result.value
   }
 
 }
