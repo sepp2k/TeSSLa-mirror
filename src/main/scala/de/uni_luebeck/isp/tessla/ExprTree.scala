@@ -7,16 +7,43 @@ case class Pos(pos: Integer) extends ArgName
 // TODO right now the loc of the name is lost, but otherwise using this as key is problematic
 case class Named(name: String) extends ArgName
 
-case class ExprTree(fn: ExprTreeFn, args: Map[ArgName, ExprTree], loc: NestedLoc)
+case class ExprTree(fn: ExprTreeFn, args: Map[ArgName, ExprTree], loc: NestedLoc) {
+  private lazy val ppArgs: String = {
+    val posArgs = args.toList.collect {
+      case (Pos(idx), arg) => (idx, arg.toString)
+    }.sorted.map(_._2)
 
-sealed abstract class ExprTreeFn
+    val kwArgs = args.collect {
+      case (Named(name), arg) => s"$name: $arg"
+    }
+    (posArgs ++ kwArgs).mkString(", ")
+  }
 
-case class NamedFn(name: String, loc: NestedLoc) extends ExprTreeFn
-case class InputFn(name: String, `type`: Type, loc: NestedLoc) extends ExprTreeFn
-case class TypeAscrFn(`type`: Type, loc: NestedLoc) extends ExprTreeFn
-case class LiteralFn(value: LiteralValue, loc: NestedLoc) extends ExprTreeFn
+  override def toString = fn.prettyPrint(ppArgs)
+}
 
-sealed abstract class LiteralValue
+sealed abstract class ExprTreeFn {
+  def prettyPrint(argString: =>String): String
+}
+
+case class NamedFn(name: String, loc: NestedLoc) extends ExprTreeFn {
+  override def prettyPrint(argString: => String) =  s"$name( $argString )"
+}
+
+case class InputFn(name: String, `type`: Type, loc: NestedLoc) extends ExprTreeFn {
+  override def prettyPrint(_argString: => String) =  s"input($name)"
+}
+case class TypeAscrFn(`type`: Type, loc: NestedLoc) extends ExprTreeFn {
+  override def prettyPrint(argString: => String) =  s"($argString : ${`type`})"
+}
+case class LiteralFn(value: LiteralValue, loc: NestedLoc) extends ExprTreeFn {
+  override def prettyPrint(_argString: => String) = value.value.toString
+}
+
+sealed abstract class LiteralValue {
+  val value: Any
+}
+
 case class IntLiteral(value: BigInt) extends LiteralValue
 case class StringLiteral(value: String) extends LiteralValue
 case class BoolLiteral(value: Boolean) extends LiteralValue
@@ -26,7 +53,24 @@ case class Definitions(
   streamDefs: Map[String, StreamDef],
   macroDefs: Map[String, MacroDef],
   outStreams: Map[String, OutDef]
-)
+) {
+  override def toString = {
+    val ppStreams = streamDefs.map {
+      case (name, streamDef) =>
+        s"define $name := ${streamDef.expr}\n"
+    }
+    val ppMacros = macroDefs.map {
+      case (name, macroDef) =>
+        val args = macroDef.args.map(_._1).mkString(", ")
+        s"define $name($args) := ${macroDef.streamDef.expr}\n"
+    }
+    val ppOuts = outStreams.map {
+      case (name, _) =>
+        s"out $name\n"
+    }
+    (ppStreams ++ ppMacros ++ ppOuts).mkString
+  }
+}
 
 case class MacroDef(
   args: Seq[(String, NestedLoc)],
@@ -42,9 +86,4 @@ case class StreamDef(
 case class OutDef(
   name: String,
   loc: NestedLoc
-) {
-  def toExprTree() = {
-    val nameExp = ExprTree(LiteralFn(StringLiteral(name), loc), Map(), loc)
-    ExprTree(NamedFn("out", loc), Map(Pos(0) -> ExprTree(NamedFn(name, loc), Map(), loc), Pos(1) -> nameExp), loc)
-  }
-}
+)

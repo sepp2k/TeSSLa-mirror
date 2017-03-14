@@ -33,5 +33,5 @@ lazy val tessla = (project in file(".")).settings(
       Some(releases)
   },
   credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials"),
-  seq(SbtStartScript.startScriptForClassesSettings: _*)
+  SbtStartScript.startScriptForClassesSettings
 )
