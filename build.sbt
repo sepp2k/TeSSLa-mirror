@@ -29,6 +29,7 @@ publishTo := {
 credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials")
 
 libraryDependencies ++= Seq(
+  "de.uni_luebeck.isp" %% "tessla" % "0.3.0-SNAPSHOT",
   "com.chuusai" %% "shapeless" % "2.3.2"
 )
 

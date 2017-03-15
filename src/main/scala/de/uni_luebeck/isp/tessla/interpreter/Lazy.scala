@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import scala.language.implicitConversions
 
-class Lazy[A](a: => A) {
+class Lazy[+A](a: => A) {
   lazy val get: A = a
 }
 
