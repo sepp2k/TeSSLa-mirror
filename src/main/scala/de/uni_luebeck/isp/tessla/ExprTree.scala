@@ -27,7 +27,10 @@ sealed abstract class ExprTreeFn {
 }
 
 case class NamedFn(name: String, loc: NestedLoc) extends ExprTreeFn {
-  override def prettyPrint(argString: => String) =  s"$name( $argString )"
+  override def prettyPrint(argString: => String) =  {
+    if(argString.isEmpty) name
+    else s"$name( $argString )"
+  }
 }
 
 case class InputFn(name: String, `type`: Type, loc: NestedLoc) extends ExprTreeFn {

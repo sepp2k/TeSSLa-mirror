@@ -123,13 +123,13 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
 
     def infixExpr: Parser[Ast.Expr] = conjunction ~ (OR ~ conjunction).* ^^! {
       case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
-        case (l,(op, r)) => Ast.ExprApp(Ast.Identifier("or", SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
+        case (l,(op, r)) => Ast.ExprApp(Ast.Identifier("||", SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
       }
     }
 
     def conjunction: Parser[Ast.Expr] = comparison ~ (AND ~ comparison).* ^^! {
       case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
-        case (l,(op, r)) => Ast.ExprApp(Ast.Identifier("and", SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
+        case (l,(op, r)) => Ast.ExprApp(Ast.Identifier("&&", SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
       }
     }
 
@@ -137,12 +137,12 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
         case (l,(op, r)) =>
           val functionName = op.value match {
-            case NEQ => "neq"
-            case EQ => "eq"
-            case LT => "lt"
-            case GT => "gt"
-            case LEQ => "leq"
-            case GEQ => "geq"
+            case NEQ => "!="
+            case EQ => "=="
+            case LT => "<"
+            case GT => ">"
+            case LEQ => "<="
+            case GEQ => ">="
           }
           Ast.ExprApp(Ast.Identifier(functionName, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
       }
@@ -152,8 +152,8 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
         case (l,(op, r)) =>
           val functionName = op.value match {
-            case PLUS => "add"
-            case MINUS => "sub"
+            case PLUS => "+"
+            case MINUS => "-"
           }
           Ast.ExprApp(Ast.Identifier(functionName, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
       }
@@ -163,8 +163,8 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
         case (l,(op, r)) =>
           val functionName = op.value match {
-            case TIMES => "mul"
-            case SLASH => "div"
+            case TIMES => "*"
+            case SLASH => "/"
           }
           Ast.ExprApp(Ast.Identifier(functionName, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
       }
@@ -174,11 +174,11 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     def unaryExpr: Parser[Ast.Expr] =
       BANG ~ exprAtomic ^^! {
         case (loc, (op, expr)) =>
-          Ast.ExprApp(Ast.Identifier("signalNot", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
+          Ast.ExprApp(Ast.Identifier("!", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
       } |
       MINUS ~ exprAtomic ^^! {
         case (loc, (op, expr)) =>
-          Ast.ExprApp(Ast.Identifier("neg", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
+          Ast.ExprApp(Ast.Identifier("-", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
       } |
       exprAtomic
 

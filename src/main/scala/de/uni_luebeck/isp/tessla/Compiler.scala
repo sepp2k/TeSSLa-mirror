@@ -46,10 +46,13 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
   def applyPasses(src: TesslaSource): Option[AnyRef] = {
     try {
       val result =
-        (StateWrapper(src)
-        (Parser)
-        (DefExtractor)
-        (MacroResolver)).state
+        (
+          StateWrapper(src)
+          (Parser)
+          (DefExtractor)
+          (MacroResolver)
+          (ExprTreeToCore)
+        ).state
 
       Some(result)
     } catch {
