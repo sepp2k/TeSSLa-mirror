@@ -8,7 +8,7 @@ lazy val tessla = (project in file(".")).settings(
 //  offline := true,
   name := "tessla",
   version := "0.3.0-SNAPSHOT",
-  scalaVersion := "2.11.7",
+  scalaVersion := "2.12.1",
   organization := "de.uni_luebeck.isp",
   resolvers += releases,
   resolvers += snapshots,
@@ -16,13 +16,13 @@ lazy val tessla = (project in file(".")).settings(
   resolvers += Resolver.sonatypeRepo("public"),
   resourceDirectory in Compile <<= baseDirectory(_ / "lib"),
   libraryDependencies ++= Seq(
-    "de.uni_luebeck.isp" %% "compacom" % "0.2.0-3-SNAPSHOT",
-    "com.github.scopt" %% "scopt" % "3.3.0"
+    "de.uni_luebeck.isp" %% "compacom" % "0.2.5",
+    "com.github.scopt" %% "scopt" % "3.5.0"
   ),
   scalacOptions ++= Seq("-feature", "-deprecation", "-target:jvm-1.7"),
   libraryDependencies ++= Seq(
     "junit" % "junit" % "4.11"  % "test",
-    "org.scalatest" %% "scalatest" % "2.2.4" % "test"
+    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
   ),
   // disable publishing the main sources jar
   publishArtifact in (Compile, packageSrc) := false,
