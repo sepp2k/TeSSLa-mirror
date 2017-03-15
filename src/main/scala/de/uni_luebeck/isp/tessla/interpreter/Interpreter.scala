@@ -114,4 +114,15 @@ object Interpreter {
         throw new RuntimeException("Failed to compile tessla specification")
     }
   }
+
+  def fromFile(file: String) {
+    new Compiler().applyPasses(TesslaSource.fromFile(file)) match {
+      case Some(spec: TesslaCore.Specification) =>
+        new Interpreter(spec)
+
+      case None =>
+        throw new RuntimeException("Failed to compile tessla specification")
+    }
+  }
+
 }
