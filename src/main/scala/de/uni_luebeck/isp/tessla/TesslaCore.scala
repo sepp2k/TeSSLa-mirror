@@ -1,7 +1,9 @@
 package de.uni_luebeck.isp.tessla
 
 object TesslaCore {
-  sealed abstract class Expression
+  sealed abstract class Expression {
+    def loc: NestedLoc
+  }
 
   final case class Var(name: String, loc: NestedLoc) extends Expression {
     override def toString = name
@@ -25,6 +27,14 @@ object TesslaCore {
 
   final case class IntLiteral(value: BigInt, loc: NestedLoc) extends Expression {
     override def toString = value.toString
+  }
+
+  final case class BoolLiteral(value: Boolean, loc: NestedLoc) extends Expression {
+    override def toString = value.toString
+  }
+
+  final case class Unit(loc: NestedLoc) extends Expression {
+    override def toString = "()"
   }
 
   final case class Specification(streams: Map[String, Expression],

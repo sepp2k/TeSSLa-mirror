@@ -184,8 +184,9 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
 
     def exprAtomic: Parser[Ast.Expr] = exprLit | exprGroup | exprNameOrApp
 
-    def exprGroup: Parser[Ast.Expr] = (LPAREN ~> expr <~ RPAREN) ^^! {
-      case (loc, expr) => Ast.ExprGrouped(expr, SourceLoc(loc))
+    def exprGroup: Parser[Ast.Expr] = (LPAREN ~> expr.? <~ RPAREN) ^^! {
+      case (loc, Some(expr)) => Ast.ExprGrouped(expr, SourceLoc(loc))
+      case (loc, None) => Ast.ExprName(Ast.Identifier("()", SourceLoc(loc)))
     }
 
     def exprNameOrApp: Parser[Ast.Expr] = identifier ~ exprAppArgs.? ^^! {

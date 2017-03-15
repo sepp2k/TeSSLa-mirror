@@ -32,6 +32,9 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
         case LiteralFn(IntLiteral(i), loc) =>
           TesslaCore.IntLiteral(i, loc)
 
+        case LiteralFn(BoolLiteral(b), loc) =>
+          TesslaCore.BoolLiteral(b, loc)
+
         case LiteralFn(lit, loc) =>
           throw NotYetImplementedError(s"Literal of type ${lit.getClass.getSimpleName}", loc)
 
@@ -50,6 +53,10 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
         case NamedFn("default", loc) =>
           val List(values, default) = checkArity("default", 2, loc)
           TesslaCore.Last(values, default, loc)
+
+        case NamedFn("()", loc) =>
+          val List() = checkArity("()", 0, loc)
+          TesslaCore.Unit(loc)
 
         case NamedFn(name, loc) if definitions.streamDefs.isDefinedAt(name) =>
           checkArity(name, 0, loc)
