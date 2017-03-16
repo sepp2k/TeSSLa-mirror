@@ -105,7 +105,7 @@ class Interpreter(spec: TesslaCore.Specification) extends Specification[BigInt] 
 }
 
 object Interpreter {
-  def fromString(tesslaSource: String) {
+  def fromString(tesslaSource: String) = {
     new Compiler().applyPasses(TesslaSource.fromString(tesslaSource)) match {
       case Some(spec: TesslaCore.Specification) =>
         new Interpreter(spec)
@@ -115,7 +115,7 @@ object Interpreter {
     }
   }
 
-  def fromFile(file: String) {
+  def fromFile(file: String) = {
     new Compiler().applyPasses(TesslaSource.fromFile(file)) match {
       case Some(spec: TesslaCore.Specification) =>
         new Interpreter(spec)
