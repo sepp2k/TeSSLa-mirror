@@ -19,7 +19,9 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
       (name, Input[Lazy[PrimValue]]())
   }.toMap
 
-  lazy val defs: Map[String, Lazy[Value]] = spec.streams.mapValues(exp => Lazy(eval(exp)))
+  lazy val defs: Map[String, Lazy[Value]] = spec.streams.map {
+    case (name, exp) => (name, Lazy(eval(exp)))
+  }
 
   lazy val outStreams: Map[String, Stream[Lazy[PrimValue]]] = spec.outStreams.map {
     case (name, _) => defs(name).get match {
