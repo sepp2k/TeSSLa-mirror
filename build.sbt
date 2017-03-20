@@ -40,29 +40,16 @@ scalacOptions += "-feature"
 
 scalacOptions += "-deprecation"
 
-import scala.xml.{Atom, Text, Elem, Node => XNode, XML}
-
-pomPostProcess := { (node: XNode) =>
-  val Elem(prefix, "project", attribs, scope, children@_*) = node
-  val replacement = "." + Process("git show -s --format=%ct").lines.head +
-    "-" + Process("git rev-parse HEAD").lines.head + "-SNAPSHOT"
-  val result = for (child <- children) yield child match {
-    case Elem(prefix, "version", attribs, scope, _: Atom[_]) =>
-      Elem(prefix, "version", attribs, scope, true, Text(child.text.replace("-SNAPSHOT", replacement)))
-    case n => n
-  }
-  Elem(prefix, "project", attribs, scope, true, result: _*)
-}
-
 val checkPublish = taskKey[Unit]("Checks whether all requirements for publication are satisfied.")
 
 checkPublish := {
+  streams.value.log.info("asd")
   if (!version.value.endsWith(s".${gitTimeStamp}-${gitChecksum}${if(isSnapshot.value) "-SNAPSHOT" else ""}")) {
-    sys.error("Git information in version is not up to date. Reoad project.")
+    throw new Incomplete(None, message= Some("Git information in version is not up to date. Reoad project."))
   }
   if (!gitCommited) {
-    sys.error("Git repository has uncommited changes.")
-  } 
+    throw new Incomplete(None, message= Some("Git repository has uncommited changes."))
+  }
 }
 
 publish := (publish dependsOn checkPublish).value
