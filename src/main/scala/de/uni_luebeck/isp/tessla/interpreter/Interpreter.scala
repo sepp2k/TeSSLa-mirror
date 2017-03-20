@@ -49,33 +49,16 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
   }
 
   private def evalBinOp(op: (=>PrimValue, NestedLoc, =>PrimValue, NestedLoc) => Lazy[PrimValue], lhs: TesslaCore.Expression, rhs: TesslaCore.Expression): Value = {
-    (eval(lhs), eval(rhs)) match {
-      case (l: PrimValue, r: PrimValue) =>
-        op(l, lhs.loc, r, rhs.loc)
-      case (StreamValue(s), r: PrimValue) =>
-        val stream = lift(s.get :: HNil) {
-          (args: Lazy[PrimValue] :: HNil) => args match {
-            case l :: HNil => Some(op(l, lhs.loc, r, rhs.loc))
-          }
+    lazy val s1 = getStream(eval(lhs), lhs.loc)
+    lazy val s2 = getStream(eval(rhs), rhs.loc)
+    lazy val stream = lift(s1 :: s2 :: HNil) {
+      (args: Lazy[PrimValue] :: Lazy[PrimValue] :: HNil) =>
+        args match {
+          case l :: r :: HNil =>
+            Some(op(l, lhs.loc, r, rhs.loc))
         }
-        StreamValue(Lazy(stream))
-      case (l: PrimValue, StreamValue(s)) =>
-        val stream = lift(s.get :: HNil) {
-          (args: Lazy[PrimValue] :: HNil) => args match {
-            case r :: HNil => Some(op(l, lhs.loc, r, rhs.loc))
-          }
-        }
-        StreamValue(Lazy(stream))
-
-      case (StreamValue(s1), StreamValue(s2)) =>
-        val stream = lift(s1.get :: s2.get :: HNil) {
-          (args: Lazy[PrimValue] :: Lazy[PrimValue] :: HNil) => args match {
-            case l :: r :: HNil =>
-              Some(op(l, lhs.loc, r, rhs.loc))
-          }
-        }
-        StreamValue(Lazy(stream))
     }
+    StreamValue(Lazy(stream))
   }
 
   private def default(values: Value, defaultValue: Value, loc: NestedLoc): Stream[Lazy[PrimValue]] = {
@@ -94,13 +77,9 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     case other => throw InterpreterError(s"Expected stream, got $other", loc)
   }
 
-  private def last(values: =>Value, clock: =>Value, loc: NestedLoc): Stream[Lazy[PrimValue]] = {
-    last(getStream(clock, loc), getStream(values, loc))
-  }
-
   private def eval(exp: TesslaCore.Expression): Value = exp match {
     case TesslaCore.Var(name, loc) =>
-      defs.getOrElse(name, throw InterpreterError(s"Couldn't find stream named $name", loc))
+      defs.getOrElse(name, throw InterpreterError(s"Couldn't find stream named $name", loc)).get
 
     case TesslaCore.Input(name, loc) =>
       StreamValue(Lazy(inStreams.getOrElse(name, throw InterpreterError(s"Couldn't find stream named $name", loc))))
@@ -113,13 +92,16 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
 
     case TesslaCore.BoolLiteral(b, _) => BoolValue(Lazy(b))
     case TesslaCore.IntLiteral(i, _) => IntValue(Lazy(i))
-    case TesslaCore.Unit(_) => Lazy(UnitValue)
+    case TesslaCore.Unit(_) => UnitValue
 
     case TesslaCore.Default(values, defaultValue, loc) =>
       StreamValue(Lazy(default(eval(values), eval(defaultValue), loc)))
 
     case TesslaCore.Last(values, clock, loc) =>
-      StreamValue(Lazy(last(eval(values), eval(clock), loc)))
+      StreamValue(Lazy(last(getStream(eval(clock), loc), getStream(eval(values), loc))))
+
+    case TesslaCore.Nil(loc) =>
+      StreamValue(Lazy(nil))
   }
 }
 
