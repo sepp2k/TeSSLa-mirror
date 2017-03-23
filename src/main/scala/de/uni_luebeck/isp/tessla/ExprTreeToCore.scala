@@ -58,6 +58,10 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
           val List() = checkArity("()", 0, loc)
           TesslaCore.Unit(loc)
 
+        case NamedFn("nil", loc) =>
+          val List() = checkArity("nil", 0, loc)
+          TesslaCore.Nil(loc)
+
         case NamedFn(name, loc) if definitions.streamDefs.isDefinedAt(name) =>
           checkArity(name, 0, loc)
           TesslaCore.Var(name, loc)

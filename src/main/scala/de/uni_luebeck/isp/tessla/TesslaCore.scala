@@ -17,6 +17,10 @@ object TesslaCore {
     override def toString = s"last($values, $clock)"
   }
 
+  final case class Nil(loc: NestedLoc) extends Expression {
+    override def toString = "nil"
+  }
+
   final case class Add(lhs: Expression, rhs: Expression, loc: NestedLoc) extends Expression {
     override def toString = s"($lhs + $rhs)"
   }
