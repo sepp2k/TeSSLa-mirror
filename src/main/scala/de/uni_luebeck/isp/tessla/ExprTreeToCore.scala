@@ -21,6 +21,13 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
         }.toList
       }
 
+      def lift(exp: TesslaCore.Expression) = exp match {
+        case _ : TesslaCore.LiteralValue =>
+          TesslaCore.Default(TesslaCore.Nil(exp.loc), exp, exp.loc)
+        case _ =>
+          exp
+      }
+
       exprTree.fn match {
         case InputFn(name, _, loc) =>
           inStreams += name -> loc
@@ -39,11 +46,15 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
           throw NotYetImplementedError(s"Literal of type ${lit.getClass.getSimpleName}", loc)
 
         case NamedFn("+", loc) =>
-          val List(lhs, rhs) = checkArity("+", 2, loc)
+          var List(lhs, rhs) = checkArity("+", 2, loc)
+          lhs = lift(lhs)
+          rhs = lift(rhs)
           TesslaCore.Add(lhs, rhs, loc)
 
         case NamedFn("-", loc) =>
-          val List(lhs, rhs) = checkArity("-", 2, loc)
+          var List(lhs, rhs) = checkArity("-", 2, loc)
+          lhs = lift(lhs)
+          rhs = lift(rhs)
           TesslaCore.Sub(lhs, rhs, loc)
 
         case NamedFn("last", loc) =>

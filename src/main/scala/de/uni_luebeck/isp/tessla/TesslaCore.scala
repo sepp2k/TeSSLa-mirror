@@ -33,15 +33,17 @@ object TesslaCore {
     override def toString = s"($lhs - $rhs)"
   }
 
-  final case class IntLiteral(value: BigInt, loc: NestedLoc) extends Expression {
+  sealed abstract class LiteralValue extends Expression
+
+  final case class IntLiteral(value: BigInt, loc: NestedLoc) extends LiteralValue {
     override def toString = value.toString
   }
 
-  final case class BoolLiteral(value: Boolean, loc: NestedLoc) extends Expression {
+  final case class BoolLiteral(value: Boolean, loc: NestedLoc) extends LiteralValue {
     override def toString = value.toString
   }
 
-  final case class Unit(loc: NestedLoc) extends Expression {
+  final case class Unit(loc: NestedLoc) extends LiteralValue {
     override def toString = "()"
   }
 
