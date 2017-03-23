@@ -82,7 +82,9 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
       }
     }
 
-    TesslaCore.Specification(definitions.streamDefs.mapValues(sdef => translateExpression(sdef.expr)),
-      inStreams = inStreams, outStreams = definitions.outStreams.values.map { out => (out.name, out.loc) }.toSeq)
+    val defs = definitions.streamDefs.map { case (name, sdef) => name -> translateExpression(sdef.expr) }
+    val outs = definitions.outStreams.values.map { out => (out.name, out.loc) }.toSeq
+
+    TesslaCore.Specification(defs, inStreams = inStreams, outStreams = outs)
   }
 }
