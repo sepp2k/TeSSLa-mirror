@@ -20,6 +20,9 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     case object DEFINE extends Token("define")
     case object OUT extends Token("out")
     case object IN extends Token("in")
+    case object IF extends Token("if")
+    case object THEN extends Token("then")
+    case object ELSE extends Token("else")
     case object OF_TYPE extends Token(":")
     case object PERCENT extends Token("%")
     case object DEFINE_AS extends Token(":=")
@@ -45,7 +48,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     override val tokens = Tokens
     import tokens._
 
-    override val keywords = List(DEFINE, OUT, IN)
+    override val keywords = List(DEFINE, OUT, IN, IF, THEN, ELSE)
     override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT, GEQ, LEQ, NEQ, EQ, LT, GT, AND, OR, PLUS, MINUS, TIMES, SLASH, BANG)
     override val comments = List("--" -> "\n")
 
@@ -116,7 +119,16 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
 
     def typeAppArgs: Parser[Seq[Ast.Type]] = LT ~> rep1sep(`type`, COMMA) <~ GT
 
-    def expr: Parser[Ast.Expr] = infixExpr ~ typeAscr.? ^^ {
+    def expr: Parser[Ast.Expr] = ifThenElse | typedExpression
+
+    def ifThenElse = (IF ~ expr) ~ (THEN ~> expr) ~ (ELSE ~> expr).? ^^! {
+      case (loc, (((ifToken, cond), thenCase), Some(elseCase))) =>
+        Ast.ExprApp(Ast.Identifier("if then else", SourceLoc(ifToken.loc)), List(Ast.PosArg(cond), Ast.PosArg(thenCase), Ast.PosArg(elseCase)), SourceLoc(loc))
+      case (loc, (((ifToken, cond), thenCase), None)) =>
+        Ast.ExprApp(Ast.Identifier("if then", SourceLoc(ifToken.loc)), List(Ast.PosArg(cond), Ast.PosArg(thenCase)), SourceLoc(loc))
+    }
+
+    def typedExpression: Parser[Ast.Expr] = infixExpr ~ typeAscr.? ^^ {
       case (expr, None) => expr
       case (expr, Some(typeAscr)) => Ast.ExprTypeAscr(expr, typeAscr)
     }
