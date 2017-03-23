@@ -52,7 +52,7 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
 
         case NamedFn("default", loc) =>
           val List(values, default) = checkArity("default", 2, loc)
-          TesslaCore.Last(values, default, loc)
+          TesslaCore.Default(values, default, loc)
 
         case NamedFn("()", loc) =>
           val List() = checkArity("()", 0, loc)
