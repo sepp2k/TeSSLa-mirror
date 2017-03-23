@@ -23,8 +23,8 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
 
       exprTree.fn match {
         case InputFn(name, _, loc) =>
-          inStreams += (name -> loc)
-          TesslaCore.Var(name, loc)
+          inStreams += name -> loc
+          TesslaCore.Input(name, loc)
 
         case TypeAscrFn(_, loc) =>
           args.getOrElse(Pos(0), throw InternalCoreTranslationError("Missing argument in type ascriptio node", loc))

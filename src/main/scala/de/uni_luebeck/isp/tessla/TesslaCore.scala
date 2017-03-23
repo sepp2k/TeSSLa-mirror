@@ -9,6 +9,10 @@ object TesslaCore {
     override def toString = name
   }
 
+  final case class Input(name: String, loc: NestedLoc) extends Expression {
+    override def toString = s"input($name)"
+  }
+
   final case class Default(stream: Expression, default: Expression, loc: NestedLoc) extends Expression {
     override def toString = s"default($stream, $default)"
   }
