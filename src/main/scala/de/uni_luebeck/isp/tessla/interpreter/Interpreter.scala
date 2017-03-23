@@ -10,9 +10,18 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
   final case class StreamValue(stream: Stream[PrimValue]) extends Value
 
   sealed abstract class PrimValue extends Value
-  final case class IntValue(i: BigInt) extends PrimValue
-  final case class BoolValue(b: Boolean) extends PrimValue
-  final case object UnitValue extends PrimValue
+
+  final case class IntValue(i: BigInt) extends PrimValue {
+    override def toString: String = i.toString
+  }
+
+  final case class BoolValue(b: Boolean) extends PrimValue {
+    override def toString: String = b.toString
+  }
+
+  final case object UnitValue extends PrimValue {
+    override def toString: String = "()"
+  }
 
   val inStreams: Map[String, Input[PrimValue]] = spec.inStreams.map {
     case (name, _) =>
