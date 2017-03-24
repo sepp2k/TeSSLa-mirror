@@ -136,30 +136,19 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
       defs.getOrElse(name, throw InterpreterError(s"Couldn't find stream named $name", loc)).get
     case TesslaCore.Input(name, loc) =>
       StreamValue(inStreams.getOrElse(name, throw InterpreterError(s"Couldn't find stream named $name", loc)))
-    case TesslaCore.Add(lhs, rhs, _) =>
-      evalBinOp(add, lhs, rhs)
-    case TesslaCore.Sub(lhs, rhs, _) =>
-      evalBinOp(sub, lhs, rhs)
-    case TesslaCore.Mul(lhs, rhs, _) =>
-      evalBinOp(mul, lhs, rhs)
-    case TesslaCore.And(lhs, rhs, _) =>
-      evalBinOp(and, lhs, rhs)
-    case TesslaCore.Or(lhs, rhs, _) =>
-      evalBinOp(or, lhs, rhs)
+    case TesslaCore.Add(lhs, rhs, _) => evalBinOp(add, lhs, rhs)
+    case TesslaCore.Sub(lhs, rhs, _) => evalBinOp(sub, lhs, rhs)
+    case TesslaCore.Mul(lhs, rhs, _) => evalBinOp(mul, lhs, rhs)
+    case TesslaCore.And(lhs, rhs, _) => evalBinOp(and, lhs, rhs)
+    case TesslaCore.Or(lhs, rhs, _) => evalBinOp(or, lhs, rhs)
     case TesslaCore.Not(arg, loc) =>
       StreamValue(boolStreamToValueStream(!boolStream(getStream(eval(arg), loc), loc)))
-    case TesslaCore.Lt(lhs, rhs, _) =>
-      evalBinOp(lt, lhs, rhs)
-    case TesslaCore.Lte(lhs, rhs, _) =>
-      evalBinOp(lte, lhs, rhs)
-    case TesslaCore.Gt(lhs, rhs, _) =>
-      evalBinOp(gt, lhs, rhs)
-    case TesslaCore.Gte(lhs, rhs, _) =>
-      evalBinOp(gte, lhs, rhs)
-    case TesslaCore.Eq(lhs, rhs, _) =>
-      evalBinOp(eq, lhs, rhs)
-    case TesslaCore.Neq(lhs, rhs, _) =>
-      evalBinOp(neq, lhs, rhs)
+    case TesslaCore.Lt(lhs, rhs, _) => evalBinOp(lt, lhs, rhs)
+    case TesslaCore.Lte(lhs, rhs, _) => evalBinOp(lte, lhs, rhs)
+    case TesslaCore.Gt(lhs, rhs, _) => evalBinOp(gt, lhs, rhs)
+    case TesslaCore.Gte(lhs, rhs, _) => evalBinOp(gte, lhs, rhs)
+    case TesslaCore.Eq(lhs, rhs, _) => evalBinOp(eq, lhs, rhs)
+    case TesslaCore.Neq(lhs, rhs, _) => evalBinOp(neq, lhs, rhs)
     case TesslaCore.IfThenElse(cond, thenCase, elseCase, loc) =>
       StreamValue(boolStream(getStream(eval(cond), loc), loc).
         ifThenElse(getStream(eval(thenCase), loc), getStream(eval(elseCase), loc)))
@@ -177,10 +166,9 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
       StreamValue(last(getStream(eval(clock), loc), getStream(eval(values), loc)))
     case TesslaCore.DelayedLast(values, delays, loc) =>
       StreamValue(delayedLast(intStream(getStream(eval(delays), loc), loc), getStream(eval(values), loc)))
-    case TesslaCore.Nil(loc) =>
-      StreamValue(nil)
     case TesslaCore.Const(value, clock, loc) =>
       StreamValue(getStream(eval(clock), loc).const(eval(value).asInstanceOf[PrimValue]))
+    case TesslaCore.Nil(loc) => StreamValue(nil)
     case TesslaCore.Time(values, loc) =>
       StreamValue(intStreamToValueStream(getStream(eval(values), loc).time()))
   }
