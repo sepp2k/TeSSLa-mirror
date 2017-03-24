@@ -8,7 +8,11 @@ name := "tessla.interpreter"
 
 organization := "de.uni_luebeck.isp"
 
-version := "0.1.0." + Process("git show -s --format=%ct").lines.head + "-" + Process("git rev-parse HEAD").lines.head + "-SNAPSHOT"
+def gitTimeStamp = Process("git show -s --format=%ct").lines.head
+def gitChecksum = Process("git rev-parse HEAD").lines.head
+def gitCommited = Process("git status --porcelain").lines.isEmpty
+
+version := s"0.1.0.${gitTimeStamp}-${gitChecksum}-SNAPSHOT"
 
 scalaVersion := "2.12.1"
 
@@ -20,7 +24,7 @@ resolvers ++= Seq(
 )
 
 publishTo := {
-  if (version.value.trim.endsWith("SNAPSHOT"))
+  if (isSnapshot.value)
     Some(privateSnapshots)
   else
     Some(privateReleases)
@@ -36,3 +40,17 @@ libraryDependencies ++= Seq(
 scalacOptions += "-feature"
 
 scalacOptions += "-deprecation"
+
+val checkPublish = taskKey[Unit]("Checks whether all requirements for publication are satisfied.")
+
+checkPublish := {
+  streams.value.log.info("asd")
+  if (!version.value.endsWith(s".${gitTimeStamp}-${gitChecksum}${if(isSnapshot.value) "-SNAPSHOT" else ""}")) {
+    throw new Incomplete(None, message= Some("Git information in version is not up to date. Reoad project."))
+  }
+  if (!gitCommited) {
+    throw new Incomplete(None, message= Some("Git repository has uncommited changes."))
+  }
+}
+
+publish := (publish dependsOn checkPublish).value
