@@ -179,6 +179,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
       StreamValue(delayedLast(intStream(getStream(eval(delays), loc), loc), getStream(eval(values), loc)))
     case TesslaCore.Nil(loc) =>
       StreamValue(nil)
+    case TesslaCore.Const(value, clock, loc) =>
+      StreamValue(getStream(eval(clock), loc).const(eval(value).asInstanceOf[PrimValue]))
     case TesslaCore.Time(values, loc) =>
       StreamValue(intStreamToValueStream(getStream(eval(values), loc).time()))
   }
