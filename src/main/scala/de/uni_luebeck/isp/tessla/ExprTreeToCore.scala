@@ -145,6 +145,10 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
           val List(values, default) = checkArity("defaultFrom", 2, loc)
           TesslaCore.DefaultFrom(values, default, loc)
 
+        case NamedFn("const", loc) =>
+          val List(value, clock) = checkArity("const", 2, loc)
+          TesslaCore.Const(value, clock, loc)
+
         case NamedFn("time", loc) =>
           val List(values) = checkArity("defaultFrom", 1, loc)
           TesslaCore.Time(values, loc)

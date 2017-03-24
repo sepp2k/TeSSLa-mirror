@@ -21,6 +21,10 @@ object TesslaCore {
     override def toString = s"defaultFrom($valueStream, $defaultStream)"
   }
 
+  final case class Const(value: Expression, clock: Expression, loc: NestedLoc) extends Expression {
+    override def toString = s"const($value, $clock)"
+  }
+
   final case class Time(stream: Expression, loc: NestedLoc) extends Expression {
     override def toString = s"time($stream)"
   }
