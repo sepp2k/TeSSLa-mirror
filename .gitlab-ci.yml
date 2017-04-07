@@ -1,3 +1,4 @@
+image: hseeberger/scala-sbt
 before_script:
   # Log the Java version
   - java -version
@@ -5,6 +6,8 @@ before_script:
   - sbt sbt-version
 
 test:
+  tags:
+    - docker
   script:
     # Execute your project's tests
-    - cd tessla && sbt clean test
+    - sbt clean test
