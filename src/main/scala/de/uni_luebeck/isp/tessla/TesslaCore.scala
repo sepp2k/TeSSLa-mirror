@@ -53,6 +53,30 @@ object TesslaCore {
     override def toString = s"($lhs * $rhs)"
   }
 
+  final case class BitAnd(lhs: Expression, rhs: Expression, loc: NestedLoc) extends Expression {
+    override def toString = s"($lhs & $rhs)"
+  }
+
+  final case class BitOr(lhs: Expression, rhs: Expression, loc: NestedLoc) extends Expression {
+    override def toString = s"($lhs | $rhs)"
+  }
+
+  final case class BitXor(lhs: Expression, rhs: Expression, loc: NestedLoc) extends Expression {
+    override def toString = s"($lhs ^ $rhs)"
+  }
+
+  final case class LeftShift(lhs: Expression, rhs: Expression, loc: NestedLoc) extends Expression {
+    override def toString = s"($lhs << $rhs)"
+  }
+
+  final case class RightShift(lhs: Expression, rhs: Expression, loc: NestedLoc) extends Expression {
+    override def toString = s"($lhs >> $rhs)"
+  }
+
+  final case class BitFlip(arg: Expression, loc: NestedLoc) extends Expression {
+    override def toString = s"(~ $arg)"
+  }
+
   final case class Lt(lhs: Expression, rhs: Expression, loc: NestedLoc) extends Expression {
     override def toString = s"($lhs < $rhs)"
   }

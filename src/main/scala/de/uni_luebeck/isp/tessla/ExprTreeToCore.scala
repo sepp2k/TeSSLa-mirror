@@ -63,6 +63,41 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
           rhs = lift(rhs)
           TesslaCore.Mul(lhs, rhs, loc)
 
+        case NamedFn("&", loc) =>
+          var List(lhs, rhs) = checkArity("&", 2, loc)
+          lhs = lift(lhs)
+          rhs = lift(rhs)
+          TesslaCore.BitAnd(lhs, rhs, loc)
+
+        case NamedFn("|", loc) =>
+          var List(lhs, rhs) = checkArity("|", 2, loc)
+          lhs = lift(lhs)
+          rhs = lift(rhs)
+          TesslaCore.BitOr(lhs, rhs, loc)
+
+        case NamedFn("^", loc) =>
+          var List(lhs, rhs) = checkArity("^", 2, loc)
+          lhs = lift(lhs)
+          rhs = lift(rhs)
+          TesslaCore.BitXor(lhs, rhs, loc)
+
+        case NamedFn("~", loc) =>
+          var List(arg) = checkArity("~", 1, loc)
+          arg = lift(arg)
+          TesslaCore.BitFlip(arg, loc)
+
+        case NamedFn("<<", loc) =>
+          var List(lhs, rhs) = checkArity("<<", 2, loc)
+          lhs = lift(lhs)
+          rhs = lift(rhs)
+          TesslaCore.LeftShift(lhs, rhs, loc)
+
+        case NamedFn(">>", loc) =>
+          var List(lhs, rhs) = checkArity(">>", 2, loc)
+          lhs = lift(lhs)
+          rhs = lift(rhs)
+          TesslaCore.RightShift(lhs, rhs, loc)
+
         case NamedFn("<", loc) =>
           var List(lhs, rhs) = checkArity("<", 2, loc)
           lhs = lift(lhs)

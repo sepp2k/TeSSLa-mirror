@@ -29,14 +29,20 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     case object COMMA extends Token(",")
     case object LPAREN extends Token("(")
     case object RPAREN extends Token(")")
-    case object LT extends Token("<")
-    case object GT extends Token(">")
+    case object LSHIFT extends Token(">>")
+    case object RSHIFT extends Token("<<")
     case object GEQ extends Token(">=")
     case object LEQ extends Token("<=")
+    case object LT extends Token("<")
+    case object GT extends Token(">")
     case object NEQ extends Token("!=")
     case object EQ extends Token("==")
     case object AND extends Token("&&")
     case object OR extends Token("||")
+    case object BITFLIP extends Token("~")
+    case object BITAND extends Token("&")
+    case object BITOR extends Token("|")
+    case object BITXOR extends Token("^")
     case object PLUS extends Token("+")
     case object MINUS extends Token("-")
     case object TIMES extends Token("*")
@@ -49,7 +55,8 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     import tokens._
 
     override val keywords = List(DEFINE, OUT, IN, IF, THEN, ELSE)
-    override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT, GEQ, LEQ, NEQ, EQ, LT, GT, AND, OR, PLUS, MINUS, TIMES, SLASH, BANG)
+    override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT, LSHIFT, RSHIFT,
+      GEQ, LEQ, NEQ, EQ, LT, GT, AND, OR, BITFLIP, BITAND, BITOR, BITXOR, PLUS, MINUS, TIMES, SLASH, BANG)
     override val comments = List("--" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c) || c == '.'
@@ -148,9 +155,20 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-    def comparison: Parser[Ast.Expr] = additiveExpr ~ ((EQ | LT | GT | LEQ | GEQ | NEQ) ~ additiveExpr).* ^^! {
+    def comparison: Parser[Ast.Expr] = bitOrExpr ~ ((EQ | LT | GT | LEQ | GEQ | NEQ) ~ bitOrExpr).* ^^! {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
+
+    def bitOrExpr: Parser[Ast.Expr] = bitAndExpr ~ ((BITOR | BITXOR) ~ bitAndExpr).* ^^! {
+      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    }
+
+    def bitAndExpr: Parser[Ast.Expr] = bitShiftExpr ~ (BITAND ~ bitShiftExpr).* ^^! {
+      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    }
+
+    def bitShiftExpr: Parser[Ast.Expr] = additiveExpr ~ ((LSHIFT | RSHIFT) ~ additiveExpr).* ^^! {
+      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
     def additiveExpr: Parser[Ast.Expr] = multiplicativeExpr ~ ((PLUS | MINUS) ~ multiplicativeExpr).* ^^! {
@@ -166,6 +184,10 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       BANG ~ exprAtomic ^^! {
         case (loc, (op, expr)) =>
           Ast.ExprApp(Ast.Identifier("!", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
+      } |
+      BITFLIP ~ exprAtomic ^^! {
+        case (loc, (op, expr)) =>
+          Ast.ExprApp(Ast.Identifier("~", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
       } |
       MINUS ~ exprAtomic ^^! {
         case (loc, (op, expr)) =>
