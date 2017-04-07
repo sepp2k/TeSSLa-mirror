@@ -61,6 +61,26 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     liftBinIntOp("*", _ * _, lhs, lhsLoc, rhs, rhsLoc)
   }
 
+  private def bitand(lhs: PrimValue, lhsLoc: NestedLoc, rhs: PrimValue, rhsLoc: NestedLoc): PrimValue = {
+    liftBinIntOp("&", _ & _, lhs, lhsLoc, rhs, rhsLoc)
+  }
+
+  private def bitor(lhs: PrimValue, lhsLoc: NestedLoc, rhs: PrimValue, rhsLoc: NestedLoc): PrimValue = {
+    liftBinIntOp("|", _ | _, lhs, lhsLoc, rhs, rhsLoc)
+  }
+
+  private def bitxor(lhs: PrimValue, lhsLoc: NestedLoc, rhs: PrimValue, rhsLoc: NestedLoc): PrimValue = {
+    liftBinIntOp("^", _ ^ _, lhs, lhsLoc, rhs, rhsLoc)
+  }
+
+  private def leftshift(lhs: PrimValue, lhsLoc: NestedLoc, rhs: PrimValue, rhsLoc: NestedLoc): PrimValue = {
+    liftBinIntOp("<<", _ << _.toInt, lhs, lhsLoc, rhs, rhsLoc)
+  }
+
+  private def rightshift(lhs: PrimValue, lhsLoc: NestedLoc, rhs: PrimValue, rhsLoc: NestedLoc): PrimValue = {
+    liftBinIntOp(">>", _ >> _.toInt, lhs, lhsLoc, rhs, rhsLoc)
+  }
+
   private def liftBinBoolOp(opName: String, op: (Boolean, Boolean) => Boolean, lhs: PrimValue, lhsLoc: NestedLoc, rhs: PrimValue, rhsLoc: NestedLoc): PrimValue =
     (lhs, rhs) match {
       case (BoolValue(l), BoolValue(r)) =>
@@ -139,10 +159,25 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     case TesslaCore.Add(lhs, rhs, _) => evalBinOp(add, lhs, rhs)
     case TesslaCore.Sub(lhs, rhs, _) => evalBinOp(sub, lhs, rhs)
     case TesslaCore.Mul(lhs, rhs, _) => evalBinOp(mul, lhs, rhs)
+    case TesslaCore.BitAnd(lhs, rhs, _) => evalBinOp(bitand, lhs, rhs)
+    case TesslaCore.BitOr(lhs, rhs, _) => evalBinOp(bitor, lhs, rhs)
+    case TesslaCore.BitXor(lhs, rhs, _) => evalBinOp(bitxor, lhs, rhs)
+    case TesslaCore.LeftShift(lhs, rhs, _) => evalBinOp(leftshift, lhs, rhs)
+    case TesslaCore.RightShift(lhs, rhs, _) => evalBinOp(rightshift, lhs, rhs)
     case TesslaCore.And(lhs, rhs, _) => evalBinOp(and, lhs, rhs)
     case TesslaCore.Or(lhs, rhs, _) => evalBinOp(or, lhs, rhs)
     case TesslaCore.Not(arg, loc) =>
       StreamValue(boolStreamToValueStream(!boolStream(getStream(eval(arg), loc), loc)))
+    case TesslaCore.BitFlip(arg, loc) =>
+      lazy val ints = intStream(getStream(eval(arg), loc), loc)
+      lazy val stream = lift(ints :: HNil) {
+        (args: BigInt :: HNil) =>
+          args match {
+            case i :: HNil =>
+              Some(~i)
+          }
+      }
+      StreamValue(intStreamToValueStream(stream))
     case TesslaCore.Lt(lhs, rhs, _) => evalBinOp(lt, lhs, rhs)
     case TesslaCore.Lte(lhs, rhs, _) => evalBinOp(lte, lhs, rhs)
     case TesslaCore.Gt(lhs, rhs, _) => evalBinOp(gt, lhs, rhs)
