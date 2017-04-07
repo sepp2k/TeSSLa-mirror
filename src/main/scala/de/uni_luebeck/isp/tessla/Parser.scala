@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.compacom.{WithLocation, Parsers, SimpleTokens, SimpleTokenizer}
+import de.uni_luebeck.isp.compacom.{WithLocation, Parsers, SimpleTokens, SimpleTokenizer, Location}
 
 import scala.util.{Failure, Success}
 
@@ -133,53 +133,32 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case (expr, Some(typeAscr)) => Ast.ExprTypeAscr(expr, typeAscr)
     }
 
-    def infixExpr: Parser[Ast.Expr] = conjunction ~ (OR ~ conjunction).* ^^! {
-      case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
-        case (l,(op, r)) => Ast.ExprApp(Ast.Identifier("||", SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
+    def infixOp(loc: Location, lhs: Ast.Expr, rhss: List[(WithLocation[Token], Ast.Expr)]) = {
+      rhss.foldLeft(lhs) {
+        case (l,(op, r)) =>
+          Ast.ExprApp(Ast.Identifier(op.value.string, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
       }
+    }
+
+    def infixExpr: Parser[Ast.Expr] = conjunction ~ (OR ~ conjunction).* ^^! {
+      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
     def conjunction: Parser[Ast.Expr] = comparison ~ (AND ~ comparison).* ^^! {
-      case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
-        case (l,(op, r)) => Ast.ExprApp(Ast.Identifier("&&", SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
-      }
+      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
     def comparison: Parser[Ast.Expr] = additiveExpr ~ ((EQ | LT | GT | LEQ | GEQ | NEQ) ~ additiveExpr).* ^^! {
-      case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
-        case (l,(op, r)) =>
-          val functionName = op.value match {
-            case NEQ => "!="
-            case EQ => "=="
-            case LT => "<"
-            case GT => ">"
-            case LEQ => "<="
-            case GEQ => ">="
-          }
-          Ast.ExprApp(Ast.Identifier(functionName, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
-      }
+      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    }
     }
 
     def additiveExpr: Parser[Ast.Expr] = multiplicativeExpr ~ ((PLUS | MINUS) ~ multiplicativeExpr).* ^^! {
-      case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
-        case (l,(op, r)) =>
-          val functionName = op.value match {
-            case PLUS => "+"
-            case MINUS => "-"
-          }
-          Ast.ExprApp(Ast.Identifier(functionName, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
-      }
+      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
     def multiplicativeExpr: Parser[Ast.Expr] = unaryExpr ~ ((TIMES | SLASH) ~ unaryExpr).* ^^! {
-      case (loc, (lhs, rhss)) => rhss.foldLeft(lhs) {
-        case (l,(op, r)) =>
-          val functionName = op.value match {
-            case TIMES => "*"
-            case SLASH => "/"
-          }
-          Ast.ExprApp(Ast.Identifier(functionName, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
-      }
+      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
 
