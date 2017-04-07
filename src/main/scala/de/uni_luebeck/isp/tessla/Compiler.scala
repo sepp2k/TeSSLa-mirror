@@ -43,7 +43,7 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
   }
 
   // TODO change return type
-  def applyPasses(src: TesslaSource): Option[AnyRef] = {
+  def applyPasses(src: TesslaSource): Option[TesslaCore.Specification] = {
     try {
       val result =
         (
