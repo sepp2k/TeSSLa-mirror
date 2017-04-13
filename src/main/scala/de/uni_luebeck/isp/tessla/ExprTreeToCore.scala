@@ -8,6 +8,7 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
   case class ArityMismatch(function: String, expected: Int, actual: Int, atLocation: NestedLoc) extends Fatal
   case class NotYetImplementedError(feature: String, atLocation: NestedLoc) extends Fatal
   case class UndefinedMacroError(macroName: String, atLocation: NestedLoc) extends Fatal
+  case class Error(message: String, atLocation: NestedLoc) extends Fatal
 
   override def apply(compiler: Compiler, definitions: Definitions) = Try {
     val inStreams = new ArrayBuffer[(String, NestedLoc)]
@@ -150,6 +151,15 @@ object ExprTreeToCore extends CompilerPass[Definitions, TesslaCore.Specification
           var List(arg) = checkArity("!", 1, loc)
           arg = lift(arg)
           TesslaCore.Not(arg, loc)
+
+        case NamedFn("log", loc) =>
+          checkArity("log", 2, loc) match {
+            case List(TesslaCore.IntLiteral(x, _), TesslaCore.IntLiteral(base, _)) =>
+              TesslaCore.IntLiteral( (Math.log(x.toDouble) / Math.log(base.toDouble)).toInt, loc )
+            case _ =>
+              throw Error("Arguments to log must be integer constants after macro expansion.", loc)
+          }
+
 
         case NamedFn("if then else", loc) =>
           var List(cond, thenCase, elseCase) = checkArity("if-then-else", 3, loc)
