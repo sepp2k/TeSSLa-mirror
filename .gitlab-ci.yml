@@ -5,9 +5,15 @@ before_script:
   # Log the sbt version
   - sbt sbt-version
 
+build:
+  tags:
+    - docker
+  script:
+    - sbt clean compile
+
 test:
   tags:
     - docker
   script:
     # Execute your project's tests
-    - sbt clean test
+    - sbt test
