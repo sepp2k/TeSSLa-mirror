@@ -5,6 +5,10 @@ before_script:
   # Log the sbt version
   - sbt sbt-version
 
+cache:
+  paths:
+    - .
+
 build:
   tags:
     - docker
