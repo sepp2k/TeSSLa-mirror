@@ -49,9 +49,7 @@ class Compiler(val debug: Boolean = false, val silent: Boolean = false) {
         (
           StateWrapper(src)
           (Parser)
-          (DefExtractor)
-          (MacroResolver)
-          (ExprTreeToCore)
+          (AstToCore)
         ).state
 
       Some(result)
