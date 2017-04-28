@@ -16,10 +16,10 @@ object Ast {
     macroArgs: Seq[MacroArg],
     typeAscr: Option[Type],
     definition: Expr,
-    loc: NestedLoc) extends Statement
+    loc: Location) extends Statement
 
-  case class In(name: Identifier, typeAscr: Type, loc: NestedLoc) extends Statement
-  case class Out(name: Identifier, loc: NestedLoc) extends Statement
+  case class In(name: Identifier, typeAscr: Type, loc: Location) extends Statement
+  case class Out(name: Identifier, loc: Location) extends Statement
 
   case class MacroArg(name: Identifier, typeAscr: Option[Type])
 

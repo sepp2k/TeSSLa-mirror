@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.compacom.{WithLocation, Parsers, SimpleTokens, SimpleTokenizer, Location}
+import de.uni_luebeck.isp.compacom.{WithLocation, Parsers, SimpleTokens, SimpleTokenizer}
+import de.uni_luebeck.isp.compacom
 
 import scala.util.{Failure, Success}
 
@@ -140,7 +141,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case (expr, Some(typeAscr)) => Ast.ExprTypeAscr(expr, typeAscr)
     }
 
-    def infixOp(loc: Location, lhs: Ast.Expr, rhss: List[(WithLocation[Token], Ast.Expr)]) = {
+    def infixOp(loc: compacom.Location, lhs: Ast.Expr, rhss: List[(WithLocation[Token], Ast.Expr)]) = {
       rhss.foldLeft(lhs) {
         case (l,(op, r)) =>
           Ast.ExprApp(Ast.Identifier(op.value.string, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
