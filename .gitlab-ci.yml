@@ -5,9 +5,9 @@ before_script:
   # Log the sbt version
   - sbt sbt-version
 
-cache:
-  paths:
-    - .
+# cache:
+#   paths:
+#     - .
 
 build:
   tags:
