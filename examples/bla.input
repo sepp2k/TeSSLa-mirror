@@ -1,9 +1,9 @@
-1 x 42
-1 y 23
-1 c true
-2 e ()
-2 x 13
-3 e ()
-3 c false
-5 e ()
-7 e ()
+1: x = 42
+1: y = 23
+1: c = true
+2: e
+2: x = 13
+3: e
+3: c = false
+5: e
+7: e

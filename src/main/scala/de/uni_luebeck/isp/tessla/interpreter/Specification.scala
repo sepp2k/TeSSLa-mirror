@@ -691,7 +691,7 @@ class Specification[Time: Numeric]() {
 
   def printStream(stream: Stream[_], name: String): Unit =
     stream.addListener {
-      case Some(value) => println(s"$getTime $name: $value") // scalastyle:ignore
+      case Some(value) => println(s"$getTime: $name = $value") // scalastyle:ignore
       case None =>
     }
 
