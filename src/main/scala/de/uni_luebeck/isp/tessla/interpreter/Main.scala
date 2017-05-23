@@ -1,56 +1,46 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-// scalastyle:off
-object Main extends App {
+import scala.io.Source
 
-  object MySpec extends Specification[Int] {
-    val in1 = Input[Int]()
-    printStream(in1, "in1")
-    val op1 = in1 + 2
-    printStream(op1, "op1")
+object Main {
+  def main(args: Array[String]) = {
+    val (tesslaFile, traceSource) = args match {
+      case Array(tesslaFile, traceFile) => (tesslaFile, Source.fromFile(traceFile))
+      case Array(tesslaFile) => (tesslaFile, Source.stdin)
+      case _ =>
+        System.err.println("Usage: tessla-interpreter tessla-file [trace-file]")
+        sys.exit(1)
+    }
+    val tesslaSpec = Interpreter.fromFile(tesslaFile)
+    tesslaSpec.outStreams.foreach { case (name, stream) => tesslaSpec.printStream(stream, name) }
 
-    val s1 = last(op1, op1.default(10))
-    printStream(s1, "s1")
+    def provide(streamName: String, value: tesslaSpec.PrimValue) = {
+      tesslaSpec.inStreams.get(streamName) match {
+        case Some(inStream) => inStream.provide(value)
+        case None => sys.error(s"Undeclared input stream: $streamName")
+      }
+    }
 
-    val prd = period(3)
-    printStream(prd, "period")
+    def parseValue(string: String) = string match {
+      case "()" => tesslaSpec.UnitValue
+      case "true" => tesslaSpec.BoolValue(true)
+      case "false" => tesslaSpec.BoolValue(false)
+      case _ =>
+        tesslaSpec.IntValue(BigInt(string))
+    }
 
-    val s3 = prd.time / in1
-    printStream(s3, "s3")
+    var previousTS: BigInt = 0
+    traceSource.getLines.map(_.split("\\s+")).foreach {
+      case Array(timestamp, inStream, value) =>
+        val ts = BigInt(timestamp)
+        if(ts < previousTS) sys.error("Decreasing time stamps")
+        if(ts > previousTS) {
+          tesslaSpec.step(ts - previousTS)
+          previousTS = ts
+        }
+        provide(inStream, parseValue(value));
+    }
 
-    val s4: ResetStream[Int] = prd.resetCount((s4.proposed > 3).ifThen())
-    printStream(s4, "###")
-
-    val in2 = Input[Unit]()
-    val in3 = Input[Unit]()
-    printStream(in3, "in3")
-    printStream(in2, "in2")
-    val s5 = in2.const(true).resetExists(in3)
-    printStream(s5, "s5")
-
-    val in4 = Input[Int]()
-    val s6 = in4.resetMax(in3)
-    printStream(s6, "s6")
+    tesslaSpec.step()
   }
-
-  MySpec.step(5)
-  MySpec.in1.provide(1)
-  MySpec.in2.provide(())
-  MySpec.in4.provide(3)
-  MySpec.step()
-  MySpec.step(1)
-  MySpec.in2.provide(())
-  MySpec.in4.provide(1)
-  MySpec.step(2)
-  MySpec.in3.provide(())
-  MySpec.in1.provide(6)
-  MySpec.step(1)
-  MySpec.in2.provide(())
-  MySpec.in4.provide(2)
-  MySpec.step(13)
-  MySpec.in4.provide(1)
-  MySpec.step(1)
-  MySpec.in4.provide(0)
-  MySpec.step()
-
 }
