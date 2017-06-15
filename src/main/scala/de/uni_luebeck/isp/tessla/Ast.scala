@@ -30,7 +30,6 @@ object Ast {
   case class ExprIntLit(value: IntLit) extends Expr
   case class ExprStringLit(value: StringLit) extends Expr
   case class ExprBoolLit(value: BoolLit) extends Expr
-  case class ExprFloatLit(value: FloatLit) extends Expr
   case class ExprUnit(loc: SourceLoc) extends Expr
 
   abstract class AppArg

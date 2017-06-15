@@ -209,9 +209,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case (loc, (name, Some(args))) => Ast.ExprApp(name, args, SourceLoc(loc))
     }
 
-    def exprLit: Parser[Ast.Expr] = exprIntLit | exprStringLit | exprBoolLit | exprFloatLit
-
-    def exprFloatLit: Parser[Ast.Expr] = floatLit ^^ Ast.ExprFloatLit
+    def exprLit: Parser[Ast.Expr] = exprIntLit | exprStringLit | exprBoolLit
 
     def exprBoolLit: Parser[Ast.Expr] = boolLit ^^ Ast.ExprBoolLit
 
