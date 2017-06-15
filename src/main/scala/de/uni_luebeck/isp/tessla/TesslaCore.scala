@@ -1,127 +1,146 @@
 package de.uni_luebeck.isp.tessla
 
 object TesslaCore {
+  final case class Specification(streams: Map[String, Expression],
+                                 inStreams: Seq[(String, Location)],
+                                 outStreams: Seq[StreamRef]) {
+    override def toString = {
+      inStreams.map { case (name, _) => s"in $name\n" }.mkString +
+        streams.map { case (name, expr) => s"define $name = $expr\n" }.mkString +
+        outStreams.map { ref => s"out ${ref.name}\n" }.mkString
+    }
+  }
+
   sealed abstract class Expression {
     def loc: Location
   }
 
-  final case class Var(name: String, loc: Location) extends Expression {
+  sealed abstract class Arg {
+    def loc: Location
+  }
+
+  sealed abstract class StreamRef extends Arg {
+    def name: String
+  }
+
+  final case class Stream(name: String, loc: Location) extends StreamRef {
     override def toString = name
   }
 
-  final case class Input(name: String, loc: Location) extends Expression {
+  final case class InputStream(name: String, loc: Location) extends StreamRef {
     override def toString = s"input($name)"
   }
 
-  final case class Default(stream: Expression, default: Expression, loc: Location) extends Expression {
+  final case class Nil(loc: Location) extends StreamRef {
+    override def name = "nil"
+    override def toString = name
+  }
+
+  final case class Default(stream: StreamRef, default: LiteralValue, loc: Location) extends Expression {
     override def toString = s"default($stream, $default)"
   }
 
-  final case class DefaultFrom(valueStream: Expression, defaultStream: Expression, loc: Location) extends Expression {
+  final case class DefaultFrom(valueStream: StreamRef, defaultStream: StreamRef, loc: Location) extends Expression {
     override def toString = s"defaultFrom($valueStream, $defaultStream)"
   }
 
-  final case class Const(value: Expression, clock: Expression, loc: Location) extends Expression {
+  final case class Const(value: LiteralValue, clock: StreamRef, loc: Location) extends Expression {
     override def toString = s"const($value, $clock)"
   }
 
-  final case class Time(stream: Expression, loc: Location) extends Expression {
+  final case class Time(stream: StreamRef, loc: Location) extends Expression {
     override def toString = s"time($stream)"
   }
 
-  final case class Last(values: Expression, clock: Expression, loc: Location) extends Expression {
+  final case class Last(values: StreamRef, clock: StreamRef, loc: Location) extends Expression {
     override def toString = s"last($values, $clock)"
   }
 
-  final case class DelayedLast(values: Expression, delays: Expression, loc: Location) extends Expression {
+  final case class DelayedLast(values: StreamRef, delays: StreamRef, loc: Location) extends Expression {
     override def toString = s"deleayedLast($values, $delays)"
   }
 
-  final case class Nil(loc: Location) extends Expression {
-    override def toString = "nil"
+  final case class Add(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs + $rhs"
   }
 
-  final case class Add(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs + $rhs)"
+  final case class Sub(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs - $rhs"
   }
 
-  final case class Sub(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs - $rhs)"
+  final case class Mul(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs * $rhs"
   }
 
-  final case class Mul(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs * $rhs)"
+  final case class BitAnd(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs & $rhs"
   }
 
-  final case class BitAnd(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs & $rhs)"
+  final case class BitOr(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs | $rhs"
   }
 
-  final case class BitOr(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs | $rhs)"
+  final case class BitXor(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs ^ $rhs"
   }
 
-  final case class BitXor(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs ^ $rhs)"
+  final case class LeftShift(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs << $rhs"
   }
 
-  final case class LeftShift(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs << $rhs)"
+  final case class RightShift(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs >> $rhs"
   }
 
-  final case class RightShift(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs >> $rhs)"
+  final case class BitFlip(arg: StreamRef, loc: Location) extends Expression {
+    override def toString = s"~ $arg"
   }
 
-  final case class BitFlip(arg: Expression, loc: Location) extends Expression {
-    override def toString = s"(~ $arg)"
+  final case class Lt(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs < $rhs"
   }
 
-  final case class Lt(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs < $rhs)"
+  final case class Gt(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs > $rhs"
   }
 
-  final case class Gt(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs > $rhs)"
+  final case class Lte(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs <= $rhs"
   }
 
-  final case class Lte(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs <= $rhs)"
+  final case class Gte(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs >= $rhs"
   }
 
-  final case class Gte(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs >= $rhs)"
+  final case class Eq(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs == $rhs"
   }
 
-  final case class Eq(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs == $rhs)"
+  final case class Neq(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs != $rhs"
   }
 
-  final case class Neq(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs != $rhs)"
+  final case class And(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs && $rhs"
   }
 
-  final case class And(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs && $rhs)"
+  final case class Or(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs || $rhs"
   }
 
-  final case class Or(lhs: Expression, rhs: Expression, loc: Location) extends Expression {
-    override def toString = s"($lhs || $rhs)"
+  final case class Not(arg: StreamRef, loc: Location) extends Expression {
+    override def toString = s"! $arg"
   }
 
-  final case class Not(arg: Expression, loc: Location) extends Expression {
-    override def toString = s"(! $arg)"
+  final case class IfThenElse(condition: StreamRef, thenCase: StreamRef, elseCase: StreamRef, loc: Location) extends Expression {
+    override def toString = s"if $condition then $thenCase else $elseCase"
   }
 
-  final case class IfThenElse(condition: Expression, thenCase: Expression, elseCase: Expression, loc: Location) extends Expression {
-    override def toString = s"(if $condition then $thenCase else $elseCase)"
+  final case class IfThen(condition: StreamRef, thenCase: StreamRef, loc: Location) extends Expression {
+    override def toString = s"if $condition then $thenCase"
   }
 
-  final case class IfThen(condition: Expression, thenCase: Expression, loc: Location) extends Expression {
-    override def toString = s"(if $condition then $thenCase)"
-  }
-
-  sealed abstract class LiteralValue extends Expression
+  sealed abstract class LiteralValue extends Arg
 
   final case class IntLiteral(value: BigInt, loc: Location) extends LiteralValue {
     override def toString = value.toString
@@ -133,15 +152,5 @@ object TesslaCore {
 
   final case class Unit(loc: Location) extends LiteralValue {
     override def toString = "()"
-  }
-
-  final case class Specification(streams: Map[String, Expression],
-                                 inStreams: Seq[(String, Location)],
-                                 outStreams: Seq[(String, Location)]) {
-    override def toString = {
-      inStreams.map { case (name, _) => s"in $name\n" }.mkString +
-      streams.map { case (name, expr) => s"define $name = $expr\n" }.mkString +
-      outStreams.map { case (name, _) => s"out $name\n" }.mkString
-    }
   }
 }

@@ -26,12 +26,12 @@ object Ast {
   sealed abstract class Expr
   case class ExprName(name: Identifier) extends Expr
   case class ExprApp(name: Identifier, args: Seq[AppArg], loc: SourceLoc) extends Expr
-  case class ExprGrouped(expr: Expr, loc: SourceLoc) extends Expr
   case class ExprTypeAscr(expr: Expr, `type`: Type) extends Expr
   case class ExprIntLit(value: IntLit) extends Expr
   case class ExprStringLit(value: StringLit) extends Expr
   case class ExprBoolLit(value: BoolLit) extends Expr
   case class ExprFloatLit(value: FloatLit) extends Expr
+  case class ExprUnit(loc: SourceLoc) extends Expr
 
   abstract class AppArg
   case class PosArg(expr: Expr) extends AppArg

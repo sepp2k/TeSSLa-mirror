@@ -6,14 +6,15 @@ import de.uni_luebeck.isp.compacom
 import scala.util.{Failure, Success}
 
 object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
-  case class ParserError(parserFailure: Parsers.Failure) extends Fatal {
-    override def toString = "ParserError(" + parserFailure + ")"
+  case class ParserError(parserFailure: Parsers.Failure) extends CompilationError {
+    override def loc = SourceLoc(parserFailure.loc)
+    override def message = parserFailure.toString
   }
 
   override def apply(compiler: Compiler, source: TesslaSource) = {
     Parsers.parseAll(Parsers.spec, source.src) match {
-      case Parsers.Success(_, spec, _, _) => Success(spec)
-      case fail: Parsers.Failure => Failure(ParserError(fail))
+      case Parsers.Success(_, spec, _, _) => spec
+      case fail: Parsers.Failure => throw ParserError(fail)
     }
   }
 
@@ -199,8 +200,8 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     def exprAtomic: Parser[Ast.Expr] = exprLit | exprGroup | exprNameOrApp
 
     def exprGroup: Parser[Ast.Expr] = (LPAREN ~> expr.? <~ RPAREN) ^^! {
-      case (loc, Some(expr)) => Ast.ExprGrouped(expr, SourceLoc(loc))
-      case (loc, None) => Ast.ExprName(Ast.Identifier("()", SourceLoc(loc)))
+      case (loc, Some(expr)) => expr
+      case (loc, None) => Ast.ExprUnit(SourceLoc(loc))
     }
 
     def exprNameOrApp: Parser[Ast.Expr] = identifier ~ exprAppArgs.? ^^! {
