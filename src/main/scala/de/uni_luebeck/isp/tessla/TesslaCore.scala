@@ -150,6 +150,10 @@ object TesslaCore {
     override def toString = value.toString
   }
 
+  final case class StringLiteral(value: String, loc: Location) extends LiteralValue {
+    override def toString = s""""$value""""
+  }
+
   final case class Unit(loc: Location) extends LiteralValue {
     override def toString = "()"
   }

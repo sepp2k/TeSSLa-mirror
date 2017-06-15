@@ -111,7 +111,8 @@ class AstToCore(spec: Ast.Spec) {
           (Seq(), TesslaCore.IntLiteral(value, loc))
         case Ast.ExprUnit(loc) =>
           (Seq(), TesslaCore.Unit(loc))
-        case Ast.ExprStringLit(_) | Ast.ExprFloatLit(_) => ???
+        case Ast.ExprStringLit(Ast.StringLit(str, loc)) =>
+          (Seq(), TesslaCore.StringLiteral(str, loc))
         case Ast.ExprName(id) =>
           env.get((id.name, 0)) match {
             case Some(Definition(d)) =>
