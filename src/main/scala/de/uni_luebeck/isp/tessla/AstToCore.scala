@@ -89,9 +89,15 @@ class AstToCore(spec: Ast.Spec) {
     def outs = outStreams.map { out =>
       val name = out.name.name
       val loc = out.name.loc
-      if (streams.contains(name)) TesslaCore.Stream(name, loc)
-      else if (inStreams.contains(name)) TesslaCore.InputStream(name, loc)
-      else throw UndefinedVariable(out.name)
+      visited.get(name) match {
+        case Some(s: TesslaCore.StreamRef) =>
+          s
+        case Some(_) =>
+          throw TypeError("stream", "constant value", loc)
+        case None =>
+          if (inStreams.contains(name)) TesslaCore.InputStream(name, loc)
+          else throw UndefinedVariable(out.name)
+      }
     }
     TesslaCore.Specification(streams, inStreams.toSeq, outs)
   }
