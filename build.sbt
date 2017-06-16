@@ -12,7 +12,7 @@ def gitTimeStamp = Process("git show -s --format=%ct").lines.head
 def gitChecksum = Process("git rev-parse HEAD").lines.head
 def gitCommited = Process("git status --porcelain").lines.isEmpty
 
-version := s"0.1.0.${gitTimeStamp}-${gitChecksum}-SNAPSHOT"
+version := s"0.1.1.${gitTimeStamp}-${gitChecksum}-SNAPSHOT"
 
 scalaVersion := "2.12.1"
 
@@ -33,7 +33,7 @@ publishTo := {
 credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials")
 
 libraryDependencies ++= Seq(
-  "de.uni_luebeck.isp" %% "tessla" % "0.3.0-SNAPSHOT",
+  "de.uni_luebeck.isp" %% "tessla" % "0.3.1-SNAPSHOT",
   "com.chuusai" %% "shapeless" % "2.3.2"
 )
 
