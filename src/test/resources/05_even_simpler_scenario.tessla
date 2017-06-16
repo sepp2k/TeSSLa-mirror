@@ -1,3 +1,0 @@
-in x: Signal<Int>
-in y: Signal<Int>
-define foo := add(x,y)
