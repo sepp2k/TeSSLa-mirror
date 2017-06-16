@@ -34,7 +34,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
   }
 
   lazy val outStreams: Map[String, Stream[Value]] = spec.outStreams.map {
-    streamRef => streamRef.name -> defs(streamRef.name).get
+    case (name, streamRef) => name -> defs(streamRef.name).get
   }.toMap
 
   private def liftBinIntOp(opName: String, op: (BigInt, BigInt) => BigInt, lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value =
