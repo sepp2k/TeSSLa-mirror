@@ -1,7 +1,8 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.AstToCore._
+
 import scala.collection.mutable
-import AstToCore._
 
 class AstToCore(spec: Ast.Spec) {
   var counter = 0
@@ -38,6 +39,130 @@ class AstToCore(spec: Ast.Spec) {
 
   type Env = Map[(String, Int), EnvEntry]
 
+  def binaryIntFunction(
+                         constantOperation: (BigInt, BigInt, Location) => TesslaCore.LiteralValue,
+                         createExpression: (TesslaCore.StreamRef, TesslaCore.StreamRef, Location) => TesslaCore.Expression):
+  (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression = {
+    case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.StreamRef), name, loc) =>
+      (Seq(name -> createExpression(lhs, rhs, loc)), TesslaCore.Stream(name, loc))
+    case (Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)), name, loc) =>
+      (Seq(), constantOperation(lhs, rhs, loc))
+    case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.LiteralValue), name, loc) =>
+      val liftedRhs = mkId(name)
+      (
+        Seq(
+          liftedRhs -> TesslaCore.Default(TesslaCore.Nil(loc), rhs, loc),
+          name -> createExpression(lhs, TesslaCore.Stream(liftedRhs, loc), loc)
+        ),
+        TesslaCore.Stream(name, loc)
+      )
+    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.StreamRef), name, loc) =>
+      val liftedLhs = mkId(name)
+      (
+        Seq(
+          liftedLhs -> TesslaCore.Default(TesslaCore.Nil(loc), lhs, loc),
+          name -> createExpression(TesslaCore.Stream(liftedLhs, loc), rhs, loc)
+        ),
+        TesslaCore.Stream(name, loc)
+      )
+    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.IntLiteral), name, loc) =>
+      throw TypeError(rhs.getClass.getSimpleName, lhs.getClass.getSimpleName, lhs.loc)
+    case (Seq(lhs: TesslaCore.IntLiteral, rhs: TesslaCore.LiteralValue), name, loc) =>
+      throw TypeError(lhs.getClass.getSimpleName, rhs.getClass.getSimpleName, rhs.loc)
+  }
+
+  def binaryBoolFunction(
+                         constantOperation: (Boolean, Boolean, Location) => TesslaCore.LiteralValue,
+                         createExpression: (TesslaCore.StreamRef, TesslaCore.StreamRef, Location) => TesslaCore.Expression):
+  (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression = {
+    case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.StreamRef), name, loc) =>
+      (Seq(name -> createExpression(lhs, rhs, loc)), TesslaCore.Stream(name, loc))
+    case (Seq(TesslaCore.BoolLiteral(lhs, _), TesslaCore.BoolLiteral(rhs, _)), name, loc) =>
+      (Seq(), constantOperation(lhs, rhs, loc))
+    case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.LiteralValue), name, loc) =>
+      val liftedRhs = mkId(name)
+      (
+        Seq(
+          liftedRhs -> TesslaCore.Default(TesslaCore.Nil(loc), rhs, loc),
+          name -> createExpression(lhs, TesslaCore.Stream(liftedRhs, loc), loc)
+        ),
+        TesslaCore.Stream(name, loc)
+      )
+    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.StreamRef), name, loc) =>
+      val liftedLhs = mkId(name)
+      (
+        Seq(
+          liftedLhs -> TesslaCore.Default(TesslaCore.Nil(loc), lhs, loc),
+          name -> createExpression(TesslaCore.Stream(liftedLhs, loc), rhs, loc)
+        ),
+        TesslaCore.Stream(name, loc)
+      )
+    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.BoolLiteral), name, loc) =>
+      throw TypeError(rhs.getClass.getSimpleName, lhs.getClass.getSimpleName, lhs.loc)
+    case (Seq(lhs: TesslaCore.IntLiteral, rhs: TesslaCore.LiteralValue), name, loc) =>
+      throw TypeError(lhs.getClass.getSimpleName, rhs.getClass.getSimpleName, rhs.loc)
+  }
+
+  def binaryFunction(
+                         constantOperation: (Any, Any, Location) => TesslaCore.LiteralValue,
+                         createExpression: (TesslaCore.StreamRef, TesslaCore.StreamRef, Location) => TesslaCore.Expression):
+  (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression = {
+    case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.StreamRef), name, loc) =>
+      (Seq(name -> createExpression(lhs, rhs, loc)), TesslaCore.Stream(name, loc))
+    case (Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)), name, loc) =>
+      (Seq(), constantOperation(lhs, rhs, loc))
+    case (Seq(TesslaCore.BoolLiteral(lhs, _), TesslaCore.BoolLiteral(rhs, _)), name, loc) =>
+      (Seq(), constantOperation(lhs, rhs, loc))
+    case (Seq(TesslaCore.StringLiteral(lhs, _), TesslaCore.StringLiteral(rhs, _)), name, loc) =>
+      (Seq(), constantOperation(lhs, rhs, loc))
+    case (Seq(TesslaCore.Unit(_), TesslaCore.Unit(_)), name, loc) =>
+      (Seq(), constantOperation((), (), loc))
+    case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.LiteralValue), name, loc) =>
+      val liftedRhs = mkId(name)
+      (
+        Seq(
+          liftedRhs -> TesslaCore.Default(TesslaCore.Nil(loc), rhs, loc),
+          name -> createExpression(lhs, TesslaCore.Stream(liftedRhs, loc), loc)
+        ),
+        TesslaCore.Stream(name, loc)
+      )
+    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.StreamRef), name, loc) =>
+      val liftedLhs = mkId(name)
+      (
+        Seq(
+          liftedLhs -> TesslaCore.Default(TesslaCore.Nil(loc), lhs, loc),
+          name -> createExpression(TesslaCore.Stream(liftedLhs, loc), rhs, loc)
+        ),
+        TesslaCore.Stream(name, loc)
+      )
+    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.LiteralValue), name, loc) =>
+      throw TypeError(lhs.getClass.getSimpleName, rhs.getClass.getSimpleName, rhs.loc)
+  }
+
+  def unaryIntFunction(
+                        constantOperation: (BigInt, Location) => TesslaCore.LiteralValue,
+                        createExpression: (TesslaCore.StreamRef, Location) => TesslaCore.Expression):
+  (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression = {
+    case (Seq(operand: TesslaCore.StreamRef), name, loc) =>
+      (Seq(name -> createExpression(operand, loc)), TesslaCore.Stream(name, loc))
+    case (Seq(TesslaCore.IntLiteral(operand, _)), name, loc) =>
+      (Seq(), constantOperation(operand, loc))
+    case (Seq(operand: TesslaCore.LiteralValue), name, loc) =>
+      throw TypeError(classOf[TesslaCore.IntLiteral].getSimpleName, operand.getClass.getSimpleName, operand.loc)
+  }
+
+  def unaryBoolFunction(
+                        constantOperation: (Boolean, Location) => TesslaCore.LiteralValue,
+                        createExpression: (TesslaCore.StreamRef, Location) => TesslaCore.Expression):
+  (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression = {
+    case (Seq(operand: TesslaCore.StreamRef), name, loc) =>
+      (Seq(name -> createExpression(operand, loc)), TesslaCore.Stream(name, loc))
+    case (Seq(TesslaCore.BoolLiteral(operand, _)), name, loc) =>
+      (Seq(), constantOperation(operand, loc))
+    case (Seq(operand: TesslaCore.LiteralValue), name, loc) =>
+      throw TypeError(classOf[TesslaCore.IntLiteral].getSimpleName, operand.getClass.getSimpleName, operand.loc)
+  }
+
   val builtins: Map[(String, Int), (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression] = Map(
     ("nil", 0) -> {
       case (Seq(), _, loc) => (Seq(), TesslaCore.Nil(loc))
@@ -49,6 +174,18 @@ class AstToCore(spec: Ast.Spec) {
         (Seq(name -> TesslaCore.Default(stream, default, loc)), TesslaCore.Stream(name, loc))
       case (Seq(stream, _), _, _) => throw TypeError("stream", "constant value", stream.loc)
     },
+    ("const", 2) -> {
+      case (Seq(value: TesslaCore.LiteralValue, clock: TesslaCore.StreamRef), name, loc) =>
+        (Seq(name -> TesslaCore.Const(value, clock, loc)), TesslaCore.Stream(name, loc))
+      case (Seq(value: TesslaCore.LiteralValue, clock: TesslaCore.LiteralValue), name, loc) =>
+        throw TypeError("stream", "constant value", clock.loc)
+    },
+    ("time", 1) -> {
+      case (Seq(clock: TesslaCore.StreamRef), name, loc) =>
+        (Seq(name -> TesslaCore.Time(clock, loc)), TesslaCore.Stream(name, loc))
+      case (Seq(clock: TesslaCore.LiteralValue), name, loc) =>
+        throw TypeError("stream", "constant value", clock.loc)
+    },
     ("last", 2) -> {
       case (Seq(values: TesslaCore.StreamRef, clock: TesslaCore.StreamRef), name, loc) =>
         (Seq(name -> TesslaCore.Last(values, clock, loc)), TesslaCore.Stream(name, loc))
@@ -57,29 +194,76 @@ class AstToCore(spec: Ast.Spec) {
       case (Seq(_, clock: TesslaCore.LiteralValue, _), _, _) =>
         throw TypeError("stream", "constant value", clock.loc)
     },
-    ("+", 2) -> {
-      case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.StreamRef), name, loc) =>
-        (Seq(name -> TesslaCore.Add(lhs, rhs, loc)), TesslaCore.Stream(name, loc))
-      case (Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)), name, loc) =>
-        (Seq(), TesslaCore.IntLiteral(lhs + rhs, loc))
-      case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.LiteralValue), name, loc) =>
-        val liftedRhs = mkId(name)
+    ("delayedLast", 2) -> {
+      case (Seq(values: TesslaCore.StreamRef, delays: TesslaCore.StreamRef), name, loc) =>
+        (Seq(name -> TesslaCore.DelayedLast(values, delays, loc)), TesslaCore.Stream(name, loc))
+      case (Seq(values: TesslaCore.LiteralValue, _), _, _) =>
+        throw TypeError("stream", "constant value", values.loc)
+      case (Seq(_, delays: TesslaCore.LiteralValue, _), _, _) =>
+        throw TypeError("stream", "constant value", delays.loc)
+    },
+    ("+", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a+b, loc), TesslaCore.Add(_,_,_)),
+    ("-", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a-b, loc), TesslaCore.Sub(_,_,_)),
+    ("*", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a*b, loc), TesslaCore.Mul(_,_,_)),
+    ("&", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a&b, loc), TesslaCore.BitAnd(_,_,_)),
+    ("|", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a|b, loc), TesslaCore.BitOr(_,_,_)),
+    ("^", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a^b, loc), TesslaCore.BitXor(_,_,_)),
+    ("<<", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a << b.toInt, loc), TesslaCore.LeftShift(_,_,_)),
+    (">>", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a >> b.toInt, loc), TesslaCore.RightShift(_,_,_)),
+    ("~", 1) -> unaryIntFunction((a,loc) => TesslaCore.IntLiteral(~a, loc), TesslaCore.BitFlip(_,_)),
+    ("<", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.BoolLiteral(a<b, loc), TesslaCore.Lt(_,_,_)),
+    (">", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.BoolLiteral(a>b, loc), TesslaCore.Gt(_,_,_)),
+    ("<=", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.BoolLiteral(a<=b, loc), TesslaCore.Lte(_,_,_)),
+    (">=", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.BoolLiteral(a>=b, loc), TesslaCore.Gte(_,_,_)),
+    ("==", 2) -> binaryFunction((a,b,loc) => TesslaCore.BoolLiteral(a==b, loc), TesslaCore.Eq(_,_,_)),
+    ("!=", 2) -> binaryFunction((a,b,loc) => TesslaCore.BoolLiteral(a!=b, loc), TesslaCore.Neq(_,_,_)),
+    ("&&", 2) -> binaryBoolFunction((a,b,loc) => TesslaCore.BoolLiteral(a&&b, loc), TesslaCore.And(_,_,_)),
+    ("||", 2) -> binaryBoolFunction((a,b,loc) => TesslaCore.BoolLiteral(a||b, loc), TesslaCore.Or(_,_,_)),
+    ("!", 1) -> unaryBoolFunction((a,loc) => TesslaCore.BoolLiteral(!a, loc), TesslaCore.Not(_,_)),
+    ("if then else", 3) -> {
+      case (Seq(condition: TesslaCore.StreamRef, thenCase: TesslaCore.StreamRef, elseCase: TesslaCore.StreamRef), name, loc) =>
+        (Seq(name -> TesslaCore.IfThenElse(condition, thenCase, elseCase, loc)), TesslaCore.Stream(name, loc))
+      case (Seq(condition: TesslaCore.StreamRef, thenCase: TesslaCore.LiteralValue, elseCase: TesslaCore.StreamRef), name, loc) =>
+        val liftedThenCase = mkId(name)
         (
           Seq(
-            liftedRhs -> TesslaCore.Default(TesslaCore.Nil(loc), rhs, loc),
-            name -> TesslaCore.Add(lhs, TesslaCore.Stream(liftedRhs, loc), loc)
+            liftedThenCase -> TesslaCore.Default(TesslaCore.Nil(loc), thenCase, loc),
+            name -> TesslaCore.IfThenElse(condition, TesslaCore.Stream(liftedThenCase, loc), elseCase, loc)
           ),
           TesslaCore.Stream(name, loc)
         )
-      case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.StreamRef), name, loc) =>
-        val liftedLhs = mkId(name)
+      case (Seq(condition: TesslaCore.StreamRef, thenCase: TesslaCore.StreamRef, elseCase: TesslaCore.LiteralValue), name, loc) =>
+        val liftedElseCase = mkId(name)
         (
           Seq(
-            liftedLhs -> TesslaCore.Default(TesslaCore.Nil(loc), lhs, loc),
-            name -> TesslaCore.Add(TesslaCore.Stream(liftedLhs, loc), rhs, loc)
+            liftedElseCase -> TesslaCore.Default(TesslaCore.Nil(loc), elseCase, loc),
+            name -> TesslaCore.IfThenElse(condition, thenCase, TesslaCore.Stream(liftedElseCase, loc), loc)
           ),
           TesslaCore.Stream(name, loc)
         )
+      case (Seq(TesslaCore.BoolLiteral(true, _), thenCase: TesslaCore.Arg, elseCase: TesslaCore.Arg), name, loc) =>
+        (Seq(), thenCase)
+      case (Seq(TesslaCore.BoolLiteral(false, _), thenCase: TesslaCore.Arg, elseCase: TesslaCore.Arg), name, loc) =>
+        (Seq(), elseCase)
+      case (Seq(condition: TesslaCore.LiteralValue, thenCase: TesslaCore.Arg, elseCase: TesslaCore.Arg), name, loc) =>
+        throw TypeError(classOf[TesslaCore.BoolLiteral].getSimpleName, condition.getClass.getSimpleName, condition.loc)
+    },
+    ("if then", 2) -> {
+      case (Seq(condition: TesslaCore.StreamRef, thenCase: TesslaCore.StreamRef), name, loc) =>
+        (Seq(name -> TesslaCore.IfThen(condition, thenCase, loc)), TesslaCore.Stream(name, loc))
+      case (Seq(condition: TesslaCore.StreamRef, thenCase: TesslaCore.LiteralValue), name, loc) =>
+        val liftedThenCase = mkId(name)
+        (
+          Seq(
+            liftedThenCase -> TesslaCore.Default(TesslaCore.Nil(loc), thenCase, loc),
+            name -> TesslaCore.IfThen(condition, TesslaCore.Stream(liftedThenCase, loc), loc)
+          ),
+          TesslaCore.Stream(name, loc)
+        )
+      case (Seq(TesslaCore.BoolLiteral(true, _), thenCase: TesslaCore.Arg), name, loc) =>
+        (Seq(), thenCase)
+      case (Seq(TesslaCore.BoolLiteral(false, _), thenCase: TesslaCore.Arg), name, loc) =>
+        (Seq(), TesslaCore.Nil(loc))
     }
   )
 
