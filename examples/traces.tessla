@@ -3,14 +3,16 @@ in function: fds
 in line: sgf
 in column: gd
 
-define last(s) := last(s,s)
+def last(s) := last(s,s)
 
-define eventCount(self, e) :=
-  default(last(self, e) + 1, 0)
+def eventCount(e) := {
+  def ec := default(last(ec, e) + 1, 0)
+  ec
+}
 
-define function_call(name) :=
+def function_call(name) :=
   if function == name && last(function) != name then ()
 
-define f_count := eventCount(f_count, function_call("f"))
+def f_count := eventCount(function_call("f"))
 
 out f_count
