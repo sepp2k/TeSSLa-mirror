@@ -32,6 +32,8 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     case object COMMA extends Token(",")
     case object LPAREN extends Token("(")
     case object RPAREN extends Token(")")
+    case object LBRACE extends Token("{")
+    case object RBRACE extends Token("}")
     case object LSHIFT extends Token(">>")
     case object RSHIFT extends Token("<<")
     case object GEQ extends Token(">=")
@@ -58,7 +60,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     import tokens._
 
     override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE)
-    override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT, LSHIFT, RSHIFT,
+    override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, LBRACE, RBRACE, PERCENT, LSHIFT, RSHIFT,
       GEQ, LEQ, NEQ, EQ, LT, GT, AND, OR, BITFLIP, BITAND, BITOR, BITXOR, PLUS, MINUS, TIMES, SLASH, BANG)
     override val comments = List("--" -> "\n")
 
@@ -73,8 +75,6 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     implicit def tokenToParser(t: Token): Parser[WithLocation[Token]] = token(t)
 
     def spec: Parser[Ast.Spec] = statement.* ^^ Ast.Spec
-
-    def statement: Parser[Ast.Statement] = defOrMacroDef
 
     // TODO identifier completion, requires some small compacom enhancements
     def identifier: Parser[Ast.Identifier] = matchToken("identifier", Set("<identifier>")) {
@@ -100,11 +100,14 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case WithLocation(loc, STRING(value)) => Ast.StringLit(value, SourceLoc(loc))
     }
 
-    def defOrMacroDef: Parser[Ast.Statement] =
+    def defOrMacroDef =
       ((DEFINE | DEF) ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (DEFINE_AS ~> expr)) ^^! {
         case (loc, (((name, args), typeAscr), expr)) =>
           Ast.Def(name, args getOrElse Seq(), typeAscr, expr, SourceLoc(loc))
-      } |
+      }
+
+    def statement: Parser[Ast.Statement] =
+      defOrMacroDef |
       OUT ~> identifier ^^! {
         case (loc, name) =>
           Ast.Out(name, SourceLoc(loc))
@@ -182,7 +185,6 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-
     def unaryExpr: Parser[Ast.Expr] =
       BANG ~ exprAtomic ^^! {
         case (loc, (op, expr)) =>
@@ -198,11 +200,16 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       } |
       exprAtomic
 
-    def exprAtomic: Parser[Ast.Expr] = exprLit | exprGroup | exprNameOrApp
+    def exprAtomic: Parser[Ast.Expr] = exprLit | exprGroup | exprBlock | exprNameOrApp
 
     def exprGroup: Parser[Ast.Expr] = (LPAREN ~> expr.? <~ RPAREN) ^^! {
       case (loc, Some(expr)) => expr
       case (loc, None) => Ast.ExprUnit(SourceLoc(loc))
+    }
+
+    def exprBlock = (LBRACE ~> defOrMacroDef.* ~ expr <~ RBRACE) ^^! {
+      case (loc, (statements, expr)) =>
+        Ast.ExprBlock(statements, expr, SourceLoc(loc))
     }
 
     def exprNameOrApp: Parser[Ast.Expr] = identifier ~ exprAppArgs.? ^^! {

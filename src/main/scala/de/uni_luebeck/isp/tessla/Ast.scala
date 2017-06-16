@@ -31,6 +31,7 @@ object Ast {
   case class ExprStringLit(value: StringLit) extends Expr
   case class ExprBoolLit(value: BoolLit) extends Expr
   case class ExprUnit(loc: SourceLoc) extends Expr
+  case class ExprBlock(definitions: Seq[Def], expression: Expr, loc: SourceLoc) extends Expr
 
   abstract class AppArg
   case class PosArg(expr: Expr) extends AppArg

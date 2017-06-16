@@ -313,7 +313,7 @@ class AstToCore(spec: Ast.Spec) {
         case Ast.ExprName(id) =>
           env.get((id.name, 0)) match {
             case Some(Definition(d, closure)) =>
-              translateExpression(d.definition, id.name, closure)
+              translateExpression(d.definition, d.name.name, closure)
             case Some(BuiltIn(b)) =>
               b(Seq(), name, id.loc)
             case None =>
@@ -325,6 +325,13 @@ class AstToCore(spec: Ast.Spec) {
         case Ast.ExprTypeAscr(e, _) =>
           alreadyTranslated.remove(name)
           translateExpression(e, name, env)
+        case Ast.ExprBlock(definitions, expression, loc) =>
+          lazy val scope: Env = env ++ definitions.map { definition =>
+            val uniqDef = definition.copy(name = definition.name.copy(name = mkId(definition.name.name)))
+            (definition.name.name, definition.macroArgs.length) -> Definition(uniqDef, scope)
+          }
+          alreadyTranslated.remove(name)
+          translateExpression(expression, name, scope)
         case Ast.ExprApp(id, args, loc) =>
           env.get((id.name, args.length)) match {
             case Some(Definition(d, closure)) =>
