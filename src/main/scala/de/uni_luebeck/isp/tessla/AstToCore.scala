@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.AstToCore._
+import AstToCore._
 
 import scala.collection.mutable
 
@@ -284,11 +284,11 @@ class AstToCore(spec: Ast.Spec) {
       val loc = out.name.loc
       alreadyTranslated.get(name) match {
         case Some(s: TesslaCore.StreamRef) =>
-          s
+          (name, s)
         case Some(_) =>
           throw TypeError("stream", "constant value", loc)
         case None =>
-          if (inStreams.contains(name)) TesslaCore.InputStream(name, loc)
+          if (inStreams.contains(name)) (name, TesslaCore.InputStream(name, loc))
           else throw UndefinedVariable(out.name)
       }
     }

@@ -3,11 +3,11 @@ package de.uni_luebeck.isp.tessla
 object TesslaCore {
   final case class Specification(streams: Map[String, Expression],
                                  inStreams: Seq[(String, Location)],
-                                 outStreams: Seq[StreamRef]) {
+                                 outStreams: Seq[(String, StreamRef)]) {
     override def toString = {
       inStreams.map { case (name, _) => s"in $name\n" }.mkString +
         streams.map { case (name, expr) => s"define $name = $expr\n" }.mkString +
-        outStreams.map { ref => s"out ${ref.name}\n" }.mkString
+        outStreams.map { case (name, _) => s"out $name\n" }.mkString
     }
   }
 
