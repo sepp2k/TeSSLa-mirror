@@ -20,6 +20,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
 
   object Tokens extends SimpleTokens {
     case object DEFINE extends Token("define")
+    case object DEF extends Token("def")
     case object OUT extends Token("out")
     case object IN extends Token("in")
     case object IF extends Token("if")
@@ -56,7 +57,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     override val tokens = Tokens
     import tokens._
 
-    override val keywords = List(DEFINE, OUT, IN, IF, THEN, ELSE)
+    override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE)
     override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, PERCENT, LSHIFT, RSHIFT,
       GEQ, LEQ, NEQ, EQ, LT, GT, AND, OR, BITFLIP, BITAND, BITOR, BITXOR, PLUS, MINUS, TIMES, SLASH, BANG)
     override val comments = List("--" -> "\n")
@@ -100,7 +101,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     }
 
     def defOrMacroDef: Parser[Ast.Statement] =
-      (DEFINE ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (DEFINE_AS ~> expr)) ^^! {
+      ((DEFINE | DEF) ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (DEFINE_AS ~> expr)) ^^! {
         case (loc, (((name, args), typeAscr), expr)) =>
           Ast.Def(name, args getOrElse Seq(), typeAscr, expr, SourceLoc(loc))
       } |
