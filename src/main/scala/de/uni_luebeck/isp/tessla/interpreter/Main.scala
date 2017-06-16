@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import scala.io.Source
 
 object Main {
-  def main(args: Array[String]) = {
+  def main(args: Array[String]): Unit = {
     val (tesslaFile, traceSource) = args match {
       case Array(tesslaFile, traceFile) => (tesslaFile, Source.fromFile(traceFile))
       case Array(tesslaFile) => (tesslaFile, Source.stdin)
@@ -11,7 +11,12 @@ object Main {
         System.err.println("Usage: tessla-interpreter tessla-file [trace-file]")
         sys.exit(1)
     }
-    val tesslaSpec = Interpreter.fromFile(tesslaFile)
+    val tesslaSpec = try {
+      Interpreter.fromFile(tesslaFile)
+    } catch {
+      case _: RuntimeException =>
+        sys.exit(1)
+    }
     tesslaSpec.outStreams.foreach { case (name, stream) => tesslaSpec.printStream(stream, name) }
 
     def provide(streamName: String, value: tesslaSpec.Value) = {
@@ -40,7 +45,7 @@ object Main {
         tesslaSpec.step(ts - previousTS)
         previousTS = ts
       }
-      provide(inStream, value);
+      provide(inStream, value)
     }
 
     val InputPattern = """(\d+)\s*:\s*([a-zA-Z][0-9a-zA-Z]*)(?:\s*=\s*(.+))?""".r
