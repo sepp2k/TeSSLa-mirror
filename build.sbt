@@ -19,7 +19,7 @@ lazy val tessla = (project in file(".")).settings(
     "de.uni_luebeck.isp" %% "compacom" % "0.2.6",
     "com.github.scopt" %% "scopt" % "3.5.0"
   ),
-  scalacOptions ++= Seq("-feature", "-deprecation", "-target:jvm-1.7"),
+  scalacOptions ++= Seq("-feature", "-deprecation"),
   libraryDependencies ++= Seq(
     "junit" % "junit" % "4.11"  % "test",
     "org.scalatest" %% "scalatest" % "3.0.1" % "test"
