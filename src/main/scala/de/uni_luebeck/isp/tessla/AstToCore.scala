@@ -5,8 +5,6 @@ import AstToCore._
 import scala.collection.mutable
 
 class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
-  override def name = "Flatten, macro expand and constant fold"
-
   override def translateSpec(spec: Ast.Spec) = {
     var counter = 0
     val alreadyTranslated = mutable.Map[String, TesslaCore.Arg]()

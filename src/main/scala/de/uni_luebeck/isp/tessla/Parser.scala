@@ -9,8 +9,6 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
     override def message = parserFailure.message
   }
 
-  override def name = "Parser"
-
   override def translateSpec(source: TesslaSource) = {
     Parsers.parseAll(Parsers.spec, source.src) match {
       case Parsers.Success(_, spec, _, _) => spec

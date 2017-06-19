@@ -36,8 +36,6 @@ trait TranslationPhase[T, U] {
         Failure(errors += ex, warnings)
     }
   }
-
-  def name: String
 }
 
 object TranslationPhase {
