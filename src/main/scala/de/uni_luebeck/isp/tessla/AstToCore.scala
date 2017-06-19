@@ -45,7 +45,7 @@ class AstToCore(spec: Ast.Spec) {
   (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression = {
     case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.StreamRef), name, loc) =>
       (Seq(name -> createExpression(lhs, rhs, loc)), TesslaCore.Stream(name, loc))
-    case (Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)), name, loc) =>
+    case (Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)), _, loc) =>
       (Seq(), constantOperation(lhs, rhs, loc))
     case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.LiteralValue), name, loc) =>
       val liftedRhs = mkId(name)
@@ -65,9 +65,9 @@ class AstToCore(spec: Ast.Spec) {
         ),
         TesslaCore.Stream(name, loc)
       )
-    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.IntLiteral), name, loc) =>
+    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.IntLiteral), _, _) =>
       throw TypeError(rhs.getClass.getSimpleName, lhs.getClass.getSimpleName, lhs.loc)
-    case (Seq(lhs: TesslaCore.IntLiteral, rhs: TesslaCore.LiteralValue), name, loc) =>
+    case (Seq(lhs: TesslaCore.IntLiteral, rhs: TesslaCore.LiteralValue), _, _) =>
       throw TypeError(lhs.getClass.getSimpleName, rhs.getClass.getSimpleName, rhs.loc)
   }
 
@@ -77,7 +77,7 @@ class AstToCore(spec: Ast.Spec) {
   (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression = {
     case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.StreamRef), name, loc) =>
       (Seq(name -> createExpression(lhs, rhs, loc)), TesslaCore.Stream(name, loc))
-    case (Seq(TesslaCore.BoolLiteral(lhs, _), TesslaCore.BoolLiteral(rhs, _)), name, loc) =>
+    case (Seq(TesslaCore.BoolLiteral(lhs, _), TesslaCore.BoolLiteral(rhs, _)), _, loc) =>
       (Seq(), constantOperation(lhs, rhs, loc))
     case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.LiteralValue), name, loc) =>
       val liftedRhs = mkId(name)
@@ -97,9 +97,9 @@ class AstToCore(spec: Ast.Spec) {
         ),
         TesslaCore.Stream(name, loc)
       )
-    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.BoolLiteral), name, loc) =>
+    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.BoolLiteral), _, _) =>
       throw TypeError(rhs.getClass.getSimpleName, lhs.getClass.getSimpleName, lhs.loc)
-    case (Seq(lhs: TesslaCore.IntLiteral, rhs: TesslaCore.LiteralValue), name, loc) =>
+    case (Seq(lhs: TesslaCore.IntLiteral, rhs: TesslaCore.LiteralValue), _, _) =>
       throw TypeError(lhs.getClass.getSimpleName, rhs.getClass.getSimpleName, rhs.loc)
   }
 
@@ -109,13 +109,13 @@ class AstToCore(spec: Ast.Spec) {
   (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression = {
     case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.StreamRef), name, loc) =>
       (Seq(name -> createExpression(lhs, rhs, loc)), TesslaCore.Stream(name, loc))
-    case (Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)), name, loc) =>
+    case (Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)), _, loc) =>
       (Seq(), constantOperation(lhs, rhs, loc))
-    case (Seq(TesslaCore.BoolLiteral(lhs, _), TesslaCore.BoolLiteral(rhs, _)), name, loc) =>
+    case (Seq(TesslaCore.BoolLiteral(lhs, _), TesslaCore.BoolLiteral(rhs, _)), _, loc) =>
       (Seq(), constantOperation(lhs, rhs, loc))
-    case (Seq(TesslaCore.StringLiteral(lhs, _), TesslaCore.StringLiteral(rhs, _)), name, loc) =>
+    case (Seq(TesslaCore.StringLiteral(lhs, _), TesslaCore.StringLiteral(rhs, _)), _, loc) =>
       (Seq(), constantOperation(lhs, rhs, loc))
-    case (Seq(TesslaCore.Unit(_), TesslaCore.Unit(_)), name, loc) =>
+    case (Seq(TesslaCore.Unit(_), TesslaCore.Unit(_)), _, loc) =>
       (Seq(), constantOperation((), (), loc))
     case (Seq(lhs: TesslaCore.StreamRef, rhs: TesslaCore.LiteralValue), name, loc) =>
       val liftedRhs = mkId(name)
@@ -135,7 +135,7 @@ class AstToCore(spec: Ast.Spec) {
         ),
         TesslaCore.Stream(name, loc)
       )
-    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.LiteralValue), name, loc) =>
+    case (Seq(lhs: TesslaCore.LiteralValue, rhs: TesslaCore.LiteralValue), _, _) =>
       throw TypeError(lhs.getClass.getSimpleName, rhs.getClass.getSimpleName, rhs.loc)
   }
 
@@ -145,9 +145,9 @@ class AstToCore(spec: Ast.Spec) {
   (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression = {
     case (Seq(operand: TesslaCore.StreamRef), name, loc) =>
       (Seq(name -> createExpression(operand, loc)), TesslaCore.Stream(name, loc))
-    case (Seq(TesslaCore.IntLiteral(operand, _)), name, loc) =>
+    case (Seq(TesslaCore.IntLiteral(operand, _)), _, loc) =>
       (Seq(), constantOperation(operand, loc))
-    case (Seq(operand: TesslaCore.LiteralValue), name, loc) =>
+    case (Seq(operand: TesslaCore.LiteralValue), _, _) =>
       throw TypeError(classOf[TesslaCore.IntLiteral].getSimpleName, operand.getClass.getSimpleName, operand.loc)
   }
 
@@ -157,9 +157,9 @@ class AstToCore(spec: Ast.Spec) {
   (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression = {
     case (Seq(operand: TesslaCore.StreamRef), name, loc) =>
       (Seq(name -> createExpression(operand, loc)), TesslaCore.Stream(name, loc))
-    case (Seq(TesslaCore.BoolLiteral(operand, _)), name, loc) =>
+    case (Seq(TesslaCore.BoolLiteral(operand, _)), _, loc) =>
       (Seq(), constantOperation(operand, loc))
-    case (Seq(operand: TesslaCore.LiteralValue), name, loc) =>
+    case (Seq(operand: TesslaCore.LiteralValue), _, _) =>
       throw TypeError(classOf[TesslaCore.IntLiteral].getSimpleName, operand.getClass.getSimpleName, operand.loc)
   }
 
@@ -177,13 +177,13 @@ class AstToCore(spec: Ast.Spec) {
     ("const", 2) -> {
       case (Seq(value: TesslaCore.LiteralValue, clock: TesslaCore.StreamRef), name, loc) =>
         (Seq(name -> TesslaCore.Const(value, clock, loc)), TesslaCore.Stream(name, loc))
-      case (Seq(value: TesslaCore.LiteralValue, clock: TesslaCore.LiteralValue), name, loc) =>
+      case (Seq(_: TesslaCore.LiteralValue, clock: TesslaCore.LiteralValue), _, _) =>
         throw TypeError("stream", "constant value", clock.loc)
     },
     ("time", 1) -> {
       case (Seq(clock: TesslaCore.StreamRef), name, loc) =>
         (Seq(name -> TesslaCore.Time(clock, loc)), TesslaCore.Stream(name, loc))
-      case (Seq(clock: TesslaCore.LiteralValue), name, loc) =>
+      case (Seq(clock: TesslaCore.LiteralValue), _, _) =>
         throw TypeError("stream", "constant value", clock.loc)
     },
     ("last", 2) -> {
@@ -241,11 +241,11 @@ class AstToCore(spec: Ast.Spec) {
           ),
           TesslaCore.Stream(name, loc)
         )
-      case (Seq(TesslaCore.BoolLiteral(true, _), thenCase: TesslaCore.Arg, elseCase: TesslaCore.Arg), name, loc) =>
+      case (Seq(TesslaCore.BoolLiteral(true, _), thenCase: TesslaCore.Arg, _: TesslaCore.Arg), _, _) =>
         (Seq(), thenCase)
-      case (Seq(TesslaCore.BoolLiteral(false, _), thenCase: TesslaCore.Arg, elseCase: TesslaCore.Arg), name, loc) =>
+      case (Seq(TesslaCore.BoolLiteral(false, _), _: TesslaCore.Arg, elseCase: TesslaCore.Arg), _, _) =>
         (Seq(), elseCase)
-      case (Seq(condition: TesslaCore.LiteralValue, thenCase: TesslaCore.Arg, elseCase: TesslaCore.Arg), name, loc) =>
+      case (Seq(condition: TesslaCore.LiteralValue, _: TesslaCore.Arg, _: TesslaCore.Arg), _, _) =>
         throw TypeError(classOf[TesslaCore.BoolLiteral].getSimpleName, condition.getClass.getSimpleName, condition.loc)
     },
     ("if then", 2) -> {
@@ -260,9 +260,9 @@ class AstToCore(spec: Ast.Spec) {
           ),
           TesslaCore.Stream(name, loc)
         )
-      case (Seq(TesslaCore.BoolLiteral(true, _), thenCase: TesslaCore.Arg), name, loc) =>
+      case (Seq(TesslaCore.BoolLiteral(true, _), thenCase: TesslaCore.Arg), _, _) =>
         (Seq(), thenCase)
-      case (Seq(TesslaCore.BoolLiteral(false, _), thenCase: TesslaCore.Arg), name, loc) =>
+      case (Seq(TesslaCore.BoolLiteral(false, _), _: TesslaCore.Arg), _, loc) =>
         (Seq(), TesslaCore.Nil(loc))
     }
   )
@@ -325,7 +325,7 @@ class AstToCore(spec: Ast.Spec) {
         case Ast.ExprTypeAscr(e, _) =>
           alreadyTranslated.remove(name)
           translateExpression(e, name, env)
-        case Ast.ExprBlock(definitions, expression, loc) =>
+        case Ast.ExprBlock(definitions, expression, _) =>
           lazy val scope: Env = env ++ definitions.map { definition =>
             val uniqDef = definition.copy(name = definition.name.copy(name = mkId(definition.name.name)))
             (definition.name.name, definition.macroArgs.length) -> Definition(uniqDef, scope)
