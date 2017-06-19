@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{Compiler, Location, TesslaCore, TesslaSource}
+import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.{Compiler, Location, TesslaCore, TesslaSource, TranslationPhase}
 import shapeless.{::, HNil}
 
 class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigInt] {
@@ -260,24 +261,16 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
 }
 
 object Interpreter {
-  def fromString(tesslaSource: String): Interpreter = {
-    new Compiler().applyPasses(TesslaSource.fromString(tesslaSource)) match {
-      case Some(spec: TesslaCore.Specification) =>
-        new Interpreter(spec)
-
-      case None =>
-        throw new RuntimeException("Failed to compile tessla specification")
-    }
+  class CoreToInterpreterSpec extends TranslationPhase[TesslaCore.Specification, Interpreter] {
+    def translateSpec(spec: TesslaCore.Specification) = new Interpreter(spec)
   }
 
-  def fromFile(file: String): Interpreter = {
-    new Compiler().applyPasses(TesslaSource.fromFile(file)) match {
-      case Some(spec: TesslaCore.Specification) =>
-        new Interpreter(spec)
+  def fromString(tesslaSource: String): Result[Interpreter] = {
+    new Compiler().applyPasses(TesslaSource.fromString(tesslaSource)).andThen(new CoreToInterpreterSpec)
+  }
 
-      case None =>
-        throw new RuntimeException("Failed to compile tessla specification")
-    }
+  def fromFile(file: String): Result[Interpreter] = {
+    new Compiler().applyPasses(TesslaSource.fromFile(file)).andThen(new CoreToInterpreterSpec)
   }
 
 }
