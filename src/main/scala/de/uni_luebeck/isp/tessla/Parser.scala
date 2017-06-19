@@ -8,7 +8,7 @@ import scala.util.{Failure, Success}
 object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
   case class ParserError(parserFailure: Parsers.Failure) extends CompilationError {
     override def loc = SourceLoc(parserFailure.loc)
-    override def message = parserFailure.toString
+    override def message = parserFailure.message
   }
 
   override def apply(compiler: Compiler, source: TesslaSource) = {
