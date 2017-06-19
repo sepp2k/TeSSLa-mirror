@@ -3,15 +3,15 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.compacom.{WithLocation, Parsers, SimpleTokens, SimpleTokenizer}
 import de.uni_luebeck.isp.compacom
 
-import scala.util.{Failure, Success}
-
-object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
+class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
   case class ParserError(parserFailure: Parsers.Failure) extends CompilationError {
     override def loc = SourceLoc(parserFailure.loc)
     override def message = parserFailure.message
   }
 
-  override def apply(compiler: Compiler, source: TesslaSource) = {
+  override def name = "Parser"
+
+  override def translateSpec(source: TesslaSource) = {
     Parsers.parseAll(Parsers.spec, source.src) match {
       case Parsers.Success(_, spec, _, _) => spec
       case fail: Parsers.Failure => throw ParserError(fail)
@@ -82,9 +82,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     }
 
     def boolLit: Parser[Ast.BoolLit] = matchToken("boolean", Set("<boolean>")) {
-      case WithLocation(loc, ID("true")) => {
-        Ast.BoolLit(true, SourceLoc(loc))
-      }
+      case WithLocation(loc, ID("true")) => Ast.BoolLit(true, SourceLoc(loc))
       case WithLocation(loc, ID("false")) => Ast.BoolLit(false, SourceLoc(loc))
     }
 
@@ -100,8 +98,13 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
       case WithLocation(loc, STRING(value)) => Ast.StringLit(value, SourceLoc(loc))
     }
 
+    def define =
+      DEFINE ^^^! {
+        loc => warn(SourceLoc(loc), "The keyword 'define' is deprecated, use 'def' instead.")
+      } | DEF
+
     def defOrMacroDef =
-      ((DEFINE | DEF) ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (DEFINE_AS ~> expr)) ^^! {
+      (define ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (DEFINE_AS ~> expr)) ^^! {
         case (loc, (((name, args), typeAscr), expr)) =>
           Ast.Def(name, args getOrElse Seq(), typeAscr, expr, SourceLoc(loc))
       }
@@ -203,7 +206,7 @@ object Parser extends CompilerPass[TesslaSource, Ast.Spec] {
     def exprAtomic: Parser[Ast.Expr] = exprLit | exprGroup | exprBlock | exprNameOrApp
 
     def exprGroup: Parser[Ast.Expr] = (LPAREN ~> expr.? <~ RPAREN) ^^! {
-      case (loc, Some(expr)) => expr
+      case (_, Some(expr)) => expr
       case (loc, None) => Ast.ExprUnit(SourceLoc(loc))
     }
 

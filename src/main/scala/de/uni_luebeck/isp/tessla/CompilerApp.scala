@@ -7,14 +7,10 @@ import scala.util.Success
 
 object CompilerApp extends App {
 
-  case class Config(
-                     debug: Boolean = false,
-                     file: Source = Source.stdin)
+  case class Config(file: Source = Source.stdin)
 
   val parser = new scopt.OptionParser[Config]("tesslac") {
     head("tesslac", "0.2")
-    (opt[Unit]('d', "debug") text "enable verbose debug output"
-      action { (_, c) => c.copy(debug = true) })
     (arg[File]("<source>") text "input tessla source (default: stdin)"
       optional() action { (f, c) =>
       c.copy(file = Source.fromFile(f))
@@ -22,22 +18,25 @@ object CompilerApp extends App {
     help("help") text "prints this usage text"
   }
 
-  var dbg = false
-
   val result = parser.parse(args, Config()) match {
     case Some(config) =>
-      dbg = config.debug
-      val compiler = new Compiler(debug = config.debug)
+      val compiler = new Compiler
       compiler.applyPasses(new TesslaSource(config.file))
     case None =>
   }
 
-  if (!dbg) { //debug output will print result
-    result match {
-      case Some(result) => {
-        println(result)
+  result match {
+    case TranslationPhase.Success(value, warnings) =>
+      println(value)
+      println("------")
+      if (warnings.isEmpty) println("Compilation succeeded without warnings")
+      else {
+        println(s"Compilation succeeded with ${warnings.length} warnings:")
+        warnings.foreach(w => println(s"Warning: $w"))
       }
-      case _ =>
-    }
+    case TranslationPhase.Failure(errors, warnings) =>
+      println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors:")
+      warnings.foreach(w => println(s"Warning: $w"))
+      errors.foreach(e => println(s"Error: $e"))
   }
 }
