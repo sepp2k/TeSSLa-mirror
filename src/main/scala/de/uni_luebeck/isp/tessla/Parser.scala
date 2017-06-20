@@ -24,7 +24,7 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
     case object IF extends Token("if")
     case object THEN extends Token("then")
     case object ELSE extends Token("else")
-    case object OF_TYPE extends Token(":")
+    case object COLON extends Token(":")
     case object PERCENT extends Token("%")
     case object DEFINE_AS extends Token(":=")
     case object COMMA extends Token(",")
@@ -39,7 +39,8 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
     case object LT extends Token("<")
     case object GT extends Token(">")
     case object NEQ extends Token("!=")
-    case object EQ extends Token("==")
+    case object EQEQ extends Token("==")
+    case object EQ extends Token("=")
     case object AND extends Token("&&")
     case object OR extends Token("||")
     case object BITFLIP extends Token("~")
@@ -58,8 +59,9 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
     import tokens._
 
     override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE)
-    override val symbols = List(DEFINE_AS, OF_TYPE, COMMA, LPAREN, RPAREN, LBRACE, RBRACE, PERCENT, LSHIFT, RSHIFT,
-      GEQ, LEQ, NEQ, EQ, LT, GT, AND, OR, BITFLIP, BITAND, BITOR, BITXOR, PLUS, MINUS, TIMES, SLASH, BANG)
+    override val symbols = List(DEFINE_AS, COLON, COMMA, LPAREN, RPAREN, LBRACE, RBRACE, PERCENT,
+      LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, EQ, LT, GT, AND, OR, BITFLIP, BITAND, BITOR, BITXOR, PLUS, MINUS, TIMES,
+      SLASH, BANG)
     override val comments = List("--" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c) || c == '.'
@@ -122,7 +124,7 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
 
     def macroArg: Parser[Ast.MacroArg] = (identifier ~ typeAscr.?) ^^ Ast.MacroArg.tupled
 
-    def typeAscr: Parser[Ast.Type] = OF_TYPE ~> `type`
+    def typeAscr: Parser[Ast.Type] = COLON ~> `type`
 
     def `type`: Parser[Ast.Type] = typeNameOrApp
 
@@ -162,7 +164,7 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-    def comparison: Parser[Ast.Expr] = bitOrExpr ~ ((EQ | LT | GT | LEQ | GEQ | NEQ) ~ bitOrExpr).* ^^! {
+    def comparison: Parser[Ast.Expr] = bitOrExpr ~ ((EQEQ | LT | GT | LEQ | GEQ | NEQ) ~ bitOrExpr).* ^^! {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
@@ -228,9 +230,14 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
 
     def exprAppArgs: Parser[Seq[Ast.AppArg]] = LPAREN ~> rep1sep(exprAppArg, COMMA) <~ RPAREN
 
+    def namedArgAssignmentOperator =
+      DEFINE_AS ^^^! {
+        loc => warn(SourceLoc(loc), "Using ':=' for named arguments is deprecated, use '=' instead.")
+      } | EQ
+
     def exprAppArg: Parser[Ast.AppArg] = expr ~^ {
       case (x @ Ast.ExprName(name)) =>
-        DEFINE_AS ~> expr ^^ (Ast.NamedArg(name, _)) | success(Ast.PosArg(x))
+        namedArgAssignmentOperator ~> expr ^^ (Ast.NamedArg(name, _)) | success(Ast.PosArg(x))
       case x => success(Ast.PosArg(x))
     }
   }
