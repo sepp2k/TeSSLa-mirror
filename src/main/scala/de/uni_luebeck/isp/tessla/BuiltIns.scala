@@ -205,6 +205,17 @@ class BuiltIns private(mkId: String => String) {
           ),
           TesslaCore.Stream(name, loc)
         )
+      case (Seq(condition: TesslaCore.StreamRef, thenCase: TesslaCore.LiteralValue, elseCase: TesslaCore.LiteralValue), name, loc) =>
+        val liftedThenCase = mkId(name)
+        val liftedElseCase = mkId(name)
+        (
+          Seq(
+            liftedThenCase -> TesslaCore.Default(TesslaCore.Nil(loc), thenCase, loc),
+            liftedElseCase -> TesslaCore.Default(TesslaCore.Nil(loc), elseCase, loc),
+            name -> TesslaCore.IfThenElse(condition, TesslaCore.Stream(liftedThenCase, loc), TesslaCore.Stream(liftedElseCase, loc), loc)
+          ),
+          TesslaCore.Stream(name, loc)
+        )
       case (Seq(TesslaCore.BoolLiteral(true, _), thenCase: TesslaCore.Arg, _: TesslaCore.Arg), _, _) =>
         (Seq(), thenCase)
       case (Seq(TesslaCore.BoolLiteral(false, _), _: TesslaCore.Arg, elseCase: TesslaCore.Arg), _, _) =>
