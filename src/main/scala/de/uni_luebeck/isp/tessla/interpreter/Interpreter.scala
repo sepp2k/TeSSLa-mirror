@@ -14,7 +14,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
   }
 
   final case class StringValue(s: String) extends Value {
-    override def toString: String = s
+    override def toString: String = s""""$s""""
   }
 
   final case class BoolValue(b: Boolean) extends Value {
