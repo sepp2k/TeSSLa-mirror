@@ -34,8 +34,9 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
       case (name, d) => (name, d.macroArgs.length) -> Definition(d, globalEnv)
     }
 
+    val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", UnknownLoc)
     def translateExpression(expr: Ast.Expr, name: String, env: Env): TranslatedExpression = {
-      val errorNode: TranslatedExpression = (Seq(), TesslaCore.Stream("$$$error$$$", UnknownLoc))
+      val errorNode: TranslatedExpression = (Seq(), errorStream)
       tryWithDefault(errorNode) {
         if (alreadyTranslated.contains(name)) (Seq(), alreadyTranslated(name))
         else {
@@ -118,14 +119,16 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
     def outs = outStreams.map { out =>
       val name = out.name.name
       val loc = out.name.loc
-      alreadyTranslated.get(name) match {
-        case Some(s: TesslaCore.StreamRef) =>
-          (name, s)
-        case Some(_) =>
-          throw TypeError("stream", "constant value", loc)
-        case None =>
-          if (inStreams.contains(name)) (name, TesslaCore.InputStream(name, loc))
-          else throw UndefinedVariable(out.name)
+      tryWithDefault(name, errorStream) {
+        alreadyTranslated.get(name) match {
+          case Some(s: TesslaCore.StreamRef) =>
+            (name, s)
+          case Some(_) =>
+            throw TypeError("stream", "constant value", loc)
+          case None =>
+            if (inStreams.contains(name)) (name, TesslaCore.InputStream(name, loc))
+            else throw UndefinedVariable(out.name)
+        }
       }
     }
 
