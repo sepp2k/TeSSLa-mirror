@@ -1,0 +1,14 @@
+in a: Event<Unit>
+in b: Event<Unit>
+in z: Event<Unit>
+
+def merge(x,y) := if default(x==x, false) || default(y==y, false) then ()
+
+def c := merge(a,b)
+
+def verify := default(const(false, c), true)
+
+out a
+out b
+out c
+out verify
