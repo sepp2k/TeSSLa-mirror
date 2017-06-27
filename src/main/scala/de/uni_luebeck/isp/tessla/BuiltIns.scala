@@ -143,6 +143,7 @@ class BuiltIns private(mkId: String => String) {
         (Seq(name -> TesslaCore.Const(value, clock, loc)), TesslaCore.Stream(name, loc))
       case (Seq(_: TesslaCore.LiteralValue, clock: TesslaCore.LiteralValue), _, _) =>
         throw TypeError("stream", "constant value", clock.loc)
+      case (Seq(stream, _), _, _) => throw TypeError("stream", "constant value", stream.loc)
     },
     ("time", 1) -> {
       case (Seq(clock: TesslaCore.StreamRef), name, loc) =>
