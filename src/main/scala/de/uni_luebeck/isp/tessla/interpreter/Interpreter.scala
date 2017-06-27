@@ -225,7 +225,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
       (args: Value :: HNil) =>
         args match {
           case IntValue(i) :: HNil => Some(i)
-          case value :: HNil => throw InterpreterError(s"Expected it integer value, got: $value", loc)
+          case value :: HNil => throw InterpreterError(s"Expected integer value, got: $value", loc)
         }
     }
   }
@@ -235,7 +235,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
       (args: Value :: HNil) =>
         args match {
           case BoolValue(b) :: HNil => Some(b)
-          case value :: HNil => throw InterpreterError(s"Expected it integer value, got: $value", loc)
+          case value :: HNil => throw InterpreterError(s"Expected Boolean value, got: $value", loc)
         }
     }
   }
