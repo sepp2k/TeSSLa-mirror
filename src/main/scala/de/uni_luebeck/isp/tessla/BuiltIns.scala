@@ -176,6 +176,21 @@ class BuiltIns private(mkId: String => String) {
     ("<<", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a << b.toInt, loc), TesslaCore.LeftShift),
     (">>", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a >> b.toInt, loc), TesslaCore.RightShift),
     ("~", 1) -> unaryIntFunction((a,loc) => TesslaCore.IntLiteral(~a, loc), TesslaCore.BitFlip),
+    ("-", 1) -> {
+      case (Seq(operand: TesslaCore.StreamRef), name, loc) =>
+        val zero = mkId(name)
+        (
+          Seq(
+            zero -> TesslaCore.Default(TesslaCore.Nil(loc), TesslaCore.IntLiteral(0, loc), loc),
+            name -> TesslaCore.Sub(TesslaCore.Stream(zero, loc), operand, loc)
+          ),
+          TesslaCore.Stream(name, loc)
+        )
+      case (Seq(TesslaCore.IntLiteral(operand, _)), _, loc) =>
+        (Seq(), TesslaCore.IntLiteral(-operand, loc))
+      case (Seq(operand: TesslaCore.LiteralValue), _, _) =>
+        throw TypeError(classOf[TesslaCore.IntLiteral].getSimpleName, operand.getClass.getSimpleName, operand.loc)
+    },
     ("<", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.BoolLiteral(a<b, loc), TesslaCore.Lt),
     (">", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.BoolLiteral(a>b, loc), TesslaCore.Gt),
     ("<=", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.BoolLiteral(a<=b, loc), TesslaCore.Lte),

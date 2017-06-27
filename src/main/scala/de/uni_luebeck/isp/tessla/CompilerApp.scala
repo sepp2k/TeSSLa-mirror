@@ -28,7 +28,6 @@ object CompilerApp extends App {
   result match {
     case TranslationPhase.Success(value, warnings) =>
       println(value)
-      println("------")
       if (warnings.isEmpty) println("Compilation succeeded without warnings")
       else {
         println(s"Compilation succeeded with ${warnings.length} warnings:")
