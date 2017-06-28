@@ -60,6 +60,10 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     liftBinIntOp("*", _ * _, lhs, lhsLoc, rhs, rhsLoc)
   }
 
+  private def div(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
+    liftBinIntOp("/", _ / _, lhs, lhsLoc, rhs, rhsLoc)
+  }
+
   private def bitand(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
     liftBinIntOp("&", _ & _, lhs, lhsLoc, rhs, rhsLoc)
   }
@@ -177,6 +181,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     case TesslaCore.Add(lhs, rhs, _) => evalBinOp(add, lhs, rhs)
     case TesslaCore.Sub(lhs, rhs, _) => evalBinOp(sub, lhs, rhs)
     case TesslaCore.Mul(lhs, rhs, _) => evalBinOp(mul, lhs, rhs)
+    case TesslaCore.Div(lhs, rhs, _) => evalBinOp(div, lhs, rhs)
     case TesslaCore.BitAnd(lhs, rhs, _) => evalBinOp(bitand, lhs, rhs)
     case TesslaCore.BitOr(lhs, rhs, _) => evalBinOp(bitor, lhs, rhs)
     case TesslaCore.BitXor(lhs, rhs, _) => evalBinOp(bitxor, lhs, rhs)
