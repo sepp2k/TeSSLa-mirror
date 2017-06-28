@@ -170,6 +170,7 @@ class BuiltIns private(mkId: String => String) {
     ("+", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a+b, loc), TesslaCore.Add),
     ("-", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a-b, loc), TesslaCore.Sub),
     ("*", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a*b, loc), TesslaCore.Mul),
+    ("/", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a/b, loc), TesslaCore.Div),
     ("&", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a&b, loc), TesslaCore.BitAnd),
     ("|", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a|b, loc), TesslaCore.BitOr),
     ("^", 2) -> binaryIntFunction((a,b,loc) => TesslaCore.IntLiteral(a^b, loc), TesslaCore.BitXor),

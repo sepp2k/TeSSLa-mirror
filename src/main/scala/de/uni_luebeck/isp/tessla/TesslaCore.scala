@@ -72,6 +72,10 @@ object TesslaCore {
     override def toString = s"$lhs * $rhs"
   }
 
+  final case class Div(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
+    override def toString = s"$lhs / $rhs"
+  }
+
   final case class BitAnd(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
     override def toString = s"$lhs & $rhs"
   }
