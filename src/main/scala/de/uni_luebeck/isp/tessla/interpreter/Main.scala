@@ -1,19 +1,21 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
-
+import sexyopt.SexyOpt
 import scala.io.Source
 
-object Main {
+object Main extends SexyOpt {
+  val programName = "tessla-interpreter"
+  val programDescription = "Evaluate the given Tessla specification on the input streams provided by the given trace file."
+
+  val tesslaFile = posArg("tessla-file", "The file containing the Tessla specification")
+  val traceFile = optionalPosArg("trace-file", "The file containing the trace data used as input for the specification." +
+                                               "If this is not provided, input is read froms stdin")
+
   def main(args: Array[String]): Unit = {
-    val (tesslaFile, traceSource) = args match {
-      case Array(tesslaFile, traceFile) => (tesslaFile, Source.fromFile(traceFile))
-      case Array(tesslaFile) => (tesslaFile, Source.stdin)
-      case _ =>
-        System.err.println("Usage: tessla-interpreter tessla-file [trace-file]")
-        sys.exit(1)
-    }
-    val tesslaSpec = Interpreter.fromFile(tesslaFile) match {
+    parse(args)
+    val traceSource = traceFile.value.map(Source.fromFile).getOrElse(Source.stdin)
+    val tesslaSpec = Interpreter.fromFile(tesslaFile.value) match {
       case Success(spec, warnings) =>
         warnings.foreach(w => println(s"Warning: $w"))
         spec
