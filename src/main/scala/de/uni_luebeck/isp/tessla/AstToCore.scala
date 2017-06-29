@@ -44,13 +44,13 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
           // it should be the correct one.
           alreadyTranslated(name) = TesslaCore.Stream(name, UnknownLoc)
           val (defs, arg) = expr match {
-            case Ast.ExprBoolLit(Ast.BoolLit(value, loc)) =>
+            case Ast.ExprBoolLit(value, loc) =>
               (Seq(), TesslaCore.BoolLiteral(value, loc))
-            case Ast.ExprIntLit(Ast.IntLit(value, loc)) =>
+            case Ast.ExprIntLit(value, loc) =>
               (Seq(), TesslaCore.IntLiteral(value, loc))
             case Ast.ExprUnit(loc) =>
               (Seq(), TesslaCore.Unit(loc))
-            case Ast.ExprStringLit(Ast.StringLit(str, loc)) =>
+            case Ast.ExprStringLit(str, loc) =>
               (Seq(), TesslaCore.StringLiteral(str, loc))
             case Ast.ExprName(id) =>
               env.get((id.name, 0)) match {

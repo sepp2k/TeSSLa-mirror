@@ -24,9 +24,11 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
     case object IF extends Token("if")
     case object THEN extends Token("then")
     case object ELSE extends Token("else")
+    case object TRUE extends Token("true")
+    case object FALSE extends Token("false")
     case object COLON extends Token(":")
     case object PERCENT extends Token("%")
-    case object DEFINE_AS extends Token(":=")
+    case object COLONEQ extends Token(":=")
     case object COMMA extends Token(",")
     case object LPAREN extends Token("(")
     case object RPAREN extends Token(")")
@@ -58,8 +60,8 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
     override val tokens = Tokens
     import tokens._
 
-    override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE)
-    override val symbols = List(DEFINE_AS, COLON, COMMA, LPAREN, RPAREN, LBRACE, RBRACE, PERCENT,
+    override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE)
+    override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACE, RBRACE, PERCENT,
       LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, EQ, LT, GT, AND, OR, BITFLIP, BITAND, BITOR, BITXOR, PLUS, MINUS, TIMES,
       SLASH, BANG)
     override val comments = List("--" -> "\n")
@@ -81,30 +83,13 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
       case WithLocation(loc, ID(name)) => Ast.Identifier(name, SourceLoc(loc))
     }
 
-    def boolLit: Parser[Ast.BoolLit] = matchToken("boolean", Set("<boolean>")) {
-      case WithLocation(loc, ID("true")) => Ast.BoolLit(true, SourceLoc(loc))
-      case WithLocation(loc, ID("false")) => Ast.BoolLit(false, SourceLoc(loc))
-    }
-
-    def intLit: Parser[Ast.IntLit] = matchToken("integer", Set("<integer>")) {
-      case WithLocation(loc, INT(value)) => Ast.IntLit(BigInt(value), SourceLoc(loc))
-    }
-
-    def floatLit: Parser[Ast.FloatLit] = matchToken("float", Set("<float>")) {
-      case WithLocation(loc, FLOAT(value)) => Ast.FloatLit(BigDecimal(value), SourceLoc(loc))
-    }
-
-    def stringLit: Parser[Ast.StringLit] = matchToken("string", Set("<string>")) {
-      case WithLocation(loc, STRING(value)) => Ast.StringLit(value, SourceLoc(loc))
-    }
-
     def define =
       DEFINE ^^^! {
         loc => warn(SourceLoc(loc), "The keyword 'define' is deprecated, use 'def' instead.")
       } | DEF
 
     def defOrMacroDef =
-      (define ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (DEFINE_AS ~> expr)) ^^! {
+      (define ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (COLONEQ ~> expr)) ^^! {
         case (loc, (((name, args), typeAscr), expr)) =>
           Ast.Def(name, args getOrElse Seq(), typeAscr, expr, SourceLoc(loc))
       }
@@ -222,16 +207,26 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
 
     def exprLit: Parser[Ast.Expr] = exprIntLit | exprStringLit | exprBoolLit
 
-    def exprBoolLit: Parser[Ast.Expr] = boolLit ^^ Ast.ExprBoolLit
+    def exprBoolLit: Parser[Ast.ExprBoolLit] =
+      TRUE ^^^! {
+        loc => Ast.ExprBoolLit(true, SourceLoc(loc))
+      } |
+      FALSE ^^^! {
+        loc => Ast.ExprBoolLit(false, SourceLoc(loc))
+      }
 
-    def exprIntLit: Parser[Ast.Expr] = intLit ^^ Ast.ExprIntLit
+    def exprIntLit: Parser[Ast.ExprIntLit] = matchToken("integer", Set("<integer>")) {
+      case WithLocation(loc, INT(value)) => Ast.ExprIntLit(BigInt(value), SourceLoc(loc))
+    }
 
-    def exprStringLit: Parser[Ast.Expr] = stringLit ^^ Ast.ExprStringLit
+    def exprStringLit: Parser[Ast.ExprStringLit] = matchToken("string", Set("<string>")) {
+      case WithLocation(loc, STRING(value)) => Ast.ExprStringLit(value, SourceLoc(loc))
+    }
 
     def exprAppArgs: Parser[Seq[Ast.AppArg]] = LPAREN ~> rep1sep(exprAppArg, COMMA) <~ RPAREN
 
     def namedArgAssignmentOperator =
-      DEFINE_AS ^^^! {
+      COLONEQ ^^^! {
         loc => warn(SourceLoc(loc), "Using ':=' for named arguments is deprecated, use '=' instead.")
       } | EQ
 

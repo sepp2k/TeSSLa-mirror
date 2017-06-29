@@ -3,12 +3,7 @@ package de.uni_luebeck.isp.tessla
 object Ast {
   case class Spec(statements: Seq[Statement])
 
-  case class Identifier(name: String, loc: SourceLoc)
-  case class IntLit(value: BigInt, loc: SourceLoc)
-  case class StringLit(value: String, loc: SourceLoc)
-  case class BoolLit(value: Boolean, loc: SourceLoc)
-  case class FloatLit(value: BigDecimal, loc: SourceLoc)
-
+  case class Identifier(name: String, loc: Location)
 
   abstract sealed class Statement
   case class Def(
@@ -26,10 +21,9 @@ object Ast {
   sealed abstract class Expr
   case class ExprName(name: Identifier) extends Expr
   case class ExprApp(name: Identifier, args: Seq[AppArg], loc: SourceLoc) extends Expr
-  case class ExprTypeAscr(expr: Expr, `type`: Type) extends Expr
-  case class ExprIntLit(value: IntLit) extends Expr
-  case class ExprStringLit(value: StringLit) extends Expr
-  case class ExprBoolLit(value: BoolLit) extends Expr
+  case class ExprIntLit(value: BigInt, loc: Location) extends Expr
+  case class ExprStringLit(value: String, loc: Location) extends Expr
+  case class ExprBoolLit(value: Boolean, loc: Location) extends Expr
   case class ExprUnit(loc: SourceLoc) extends Expr
   case class ExprBlock(definitions: Seq[Def], expression: Expr, loc: SourceLoc) extends Expr
 
