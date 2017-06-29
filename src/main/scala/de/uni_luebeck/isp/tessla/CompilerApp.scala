@@ -3,7 +3,6 @@ package de.uni_luebeck.isp.tessla
 import java.io.File
 
 import scala.io.Source
-import scala.util.Success
 
 object CompilerApp extends App {
 
@@ -23,16 +22,17 @@ object CompilerApp extends App {
       val compiler = new Compiler
       compiler.applyPasses(new TesslaSource(config.file))
     case None =>
+      sys.exit(1)
   }
 
   result match {
     case TranslationPhase.Success(value, warnings) =>
-      println(value)
       if (warnings.isEmpty) println("Compilation succeeded without warnings")
       else {
         println(s"Compilation succeeded with ${warnings.length} warnings:")
         warnings.foreach(w => println(s"Warning: $w"))
       }
+      println(value)
     case TranslationPhase.Failure(errors, warnings) =>
       println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors:")
       warnings.foreach(w => println(s"Warning: $w"))
