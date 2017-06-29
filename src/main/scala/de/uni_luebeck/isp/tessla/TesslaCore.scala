@@ -7,7 +7,7 @@ object TesslaCore {
     override def toString = {
       inStreams.map { case (name, _) => s"in $name\n" }.mkString +
         streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +
-        outStreams.map { case (name, _) => s"out $name\n" }.mkString
+        outStreams.map { case (name, stream) => s"out $stream as $name\n" }.mkString
     }
   }
 

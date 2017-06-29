@@ -14,7 +14,7 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
     }.toMap
 
     val outStreams = spec.statements.collect {
-      case out @ Ast.Out(_, _) => out
+      case out @ Ast.Out(_, _, _) => out
     }
 
     val globalDefs = spec.statements.collect {
@@ -23,7 +23,7 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
 
     def mkId(name: String) = {
       counter += 1
-      name.replaceFirst("\\$.*$", "") + "$" + counter
+      name.replaceFirst("\\$\\d+$", "") + "$" + counter
     }
 
     val builtIns = BuiltIns(mkId)
@@ -110,29 +110,22 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
       }
     }
 
-    val streams: Map[String, TesslaCore.Expression] = spec.statements.flatMap {
-      case Ast.Def(name, Seq(), _, expr, _) =>
-        translateExpression(expr, name.name, globalEnv)._1
-      case _ => Seq()
-    }.toMap
-
-    def outs = outStreams.map { out =>
-      val name = out.name.name
-      val loc = out.name.loc
-      tryWithDefault(name, errorStream) {
-        alreadyTranslated.get(name) match {
-          case Some(s: TesslaCore.StreamRef) =>
-            (name, s)
-          case Some(_) =>
+    val outs: Seq[(Seq[(String, TesslaCore.Expression)], (String, TesslaCore.StreamRef))] = outStreams.map { out =>
+      val name = out.name
+      val loc = out.expr.loc
+      tryWithDefault((Seq[(String, TesslaCore.Expression)](), name -> errorStream)) {
+        val outName = mkId("out")
+        println(outName)
+        translateExpression(out.expr, out.nameOpt.map(_.name).getOrElse(outName), globalEnv) match {
+          case (defs, s: TesslaCore.StreamRef) =>
+            (defs, name -> s)
+          case (_, _) =>
             throw TypeError("stream", "constant value", loc)
-          case None =>
-            if (inStreams.contains(name)) (name, TesslaCore.InputStream(name, loc))
-            else throw UndefinedVariable(out.name)
         }
       }
     }
 
-    TesslaCore.Specification(streams, inStreams.toSeq, outs)
+    TesslaCore.Specification(outs.flatMap(_._1).toMap, inStreams.toSeq, outs.map(_._2))
   }
 }
 

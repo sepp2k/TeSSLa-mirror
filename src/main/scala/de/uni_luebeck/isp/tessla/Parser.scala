@@ -24,6 +24,7 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
     case object IF extends Token("if")
     case object THEN extends Token("then")
     case object ELSE extends Token("else")
+    case object AS extends Token("as")
     case object TRUE extends Token("true")
     case object FALSE extends Token("false")
     case object COLON extends Token(":")
@@ -60,7 +61,7 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
     override val tokens = Tokens
     import tokens._
 
-    override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE)
+    override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE, AS)
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACE, RBRACE, PERCENT,
       LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, EQ, LT, GT, AND, OR, BITFLIP, BITAND, BITOR, BITXOR, PLUS, MINUS, TIMES,
       SLASH, BANG)
@@ -96,9 +97,9 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
 
     def statement: Parser[Ast.Statement] =
       defOrMacroDef |
-      OUT ~> identifier ^^! {
-        case (loc, name) =>
-          Ast.Out(name, SourceLoc(loc))
+      OUT ~> expr ~ (AS ~> identifier).? ^^! {
+        case (loc, (expr, name)) =>
+          Ast.Out(expr, name, SourceLoc(loc))
       } |
       IN ~> identifier ~ typeAscr ^^! {
         case (loc, (name, typeAscr)) =>

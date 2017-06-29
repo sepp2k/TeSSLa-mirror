@@ -24,9 +24,12 @@ object Ast {
     }
   }
 
-  case class Out(name: Identifier, loc: Location) extends Statement
   case class In(name: Identifier, typeAscr: Type, loc: Location) extends Statement {
     override def toString = s"in $name: $typeAscr"
+  }
+  case class Out(expr: Expr, nameOpt: Option[Identifier], loc: Location) extends Statement {
+    def name = nameOpt.map(_.name).getOrElse(expr.toString)
+    override def toString = s"out $expr as $name"
   }
 
   case class MacroArg(name: Identifier, typeAscr: Option[Type]) {
