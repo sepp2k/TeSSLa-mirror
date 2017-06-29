@@ -25,9 +25,9 @@ resolvers ++= Seq(
 
 publishTo := {
   if (isSnapshot.value)
-    Some(privateSnapshots)
+    Some(snapshots)
   else
-    Some(privateReleases)
+    Some(releases)
 }
 
 credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials")
