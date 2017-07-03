@@ -24,7 +24,7 @@ define esSinceAGreaterThanB := countSince(esSinceAGreaterThanB, e, a > b)
 
 -- burstLength = 5, wait = 4, burstAmount = 3
 define burstStarts :=
-    defaultFrom(
+    default(
         if time(e) - last(time(burstStarts), e) >= 9
         then e,
         e)
