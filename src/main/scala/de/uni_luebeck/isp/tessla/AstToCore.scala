@@ -17,10 +17,6 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
       case out @ Ast.Out(_, _, _) => out
     }
 
-    val globalDefs = spec.statements.collect {
-      case definition @ Ast.Def(name, _, _, _, _) => name.name -> definition
-    }.toMap
-
     def mkId(name: String) = {
       counter += 1
       name.replaceFirst("\\$\\d+$", "") + "$" + counter
@@ -28,11 +24,17 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
 
     val builtIns = BuiltIns(mkId)
 
+    def mkEnv(statements: Seq[Ast.Statement], env: =>Env) = {
+      statements.collect {
+        case definition @ Ast.Def(name, _, _, _, _) =>
+          val uniqueDef = definition.copy(name = definition.name.copy(name = mkId(definition.name.name)))
+          (name.name, definition.macroArgs.length) -> Definition(uniqueDef, env)
+      }
+    }
+
     lazy val globalEnv: Env = builtIns.map {
       case (key, b) => key -> BuiltIn(b)
-    } ++ globalDefs.map {
-      case (name, d) => (name, d.macroArgs.length) -> Definition(d, globalEnv)
-    }
+    } ++ mkEnv(spec.statements, globalEnv)
 
     val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", UnknownLoc)
     def translateExpression(expr: Ast.Expr, name: String, env: Env): TranslatedExpression = {
@@ -68,10 +70,7 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
               alreadyTranslated.remove(name)
               translateExpression(e, name, env)
             case Ast.ExprBlock(definitions, expression, _) =>
-              lazy val scope: Env = env ++ definitions.map { definition =>
-                val uniqDef = definition.copy(name = definition.name.copy(name = mkId(definition.name.name)))
-                (definition.name.name, definition.macroArgs.length) -> Definition(uniqDef, scope)
-              }
+              lazy val scope: Env = env ++ mkEnv(definitions, scope)
               alreadyTranslated.remove(name)
               translateExpression(expression, name, scope)
             case Ast.ExprApp(id, args, loc) =>
@@ -115,7 +114,6 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
       val loc = out.expr.loc
       tryWithDefault((Seq[(String, TesslaCore.Expression)](), name -> errorStream)) {
         val outName = mkId("out")
-        println(outName)
         translateExpression(out.expr, out.nameOpt.map(_.name).getOrElse(outName), globalEnv) match {
           case (defs, s: TesslaCore.StreamRef) =>
             (defs, name -> s)
