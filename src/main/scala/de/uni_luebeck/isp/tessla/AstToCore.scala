@@ -25,10 +25,19 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
     val builtIns = BuiltIns(mkId)
 
     def mkEnv(statements: Seq[Ast.Statement], env: =>Env) = {
-      statements.collect {
-        case definition @ Ast.Def(name, _, _, _, _) =>
-          val uniqueDef = definition.copy(name = definition.name.copy(name = mkId(definition.name.name)))
-          (name.name, definition.macroArgs.length) -> Definition(uniqueDef, env)
+      val previousDefs = mutable.Map[String, Location]()
+      statements.flatMap {
+        case definition @ Ast.Def(name, _, _, _, loc) =>
+          previousDefs.get(definition.name.name) match {
+            case Some(previousLoc) =>
+              error(MultipleDefinitionsError(definition.name, previousLoc))
+              None
+            case None =>
+              previousDefs += name.name -> loc
+              val uniqueDef = definition.copy(name = definition.name.copy(name = mkId(definition.name.name)))
+              Some((name.name, definition.macroArgs.length) -> Definition(uniqueDef, env))
+          }
+        case _ => None
       }
     }
 
@@ -162,5 +171,10 @@ object AstToCore {
 
   case class TypeError(expected: String, found: String, loc: Location) extends CompilationError {
     override def message = s"Type mismatch: Expected $expected, found $found."
+  }
+
+  case class MultipleDefinitionsError(id: Ast.Identifier, previousLoc: Location) extends CompilationError {
+    override def loc = id.loc
+    override def message = s"Multiple definitions of ${id.name} in same scope (previous definition at $previousLoc)"
   }
 }

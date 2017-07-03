@@ -14,6 +14,10 @@ trait TranslationPhase[T, U] {
     warnings += diagnostic
   }
 
+  def error(error: CompilationError) {
+    errors += error
+  }
+
   def warn(loc: Location, message: String): Unit = warn(SimpleWarning(loc, message))
 
   def tryWithDefault[R](default: => R)(body: => R): R = {
