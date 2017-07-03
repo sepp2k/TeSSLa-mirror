@@ -4,6 +4,8 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.{Compiler, Location, TesslaCore, TesslaSource, TranslationPhase}
 import shapeless.{::, HNil}
 
+import scala.io.Source
+
 class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigInt] {
   case class InterpreterError(message: String, loc: Location) extends RuntimeException(s"Interpreter error at $loc: $message")
 
@@ -270,12 +272,16 @@ object Interpreter {
     def translateSpec(spec: TesslaCore.Specification) = new Interpreter(spec)
   }
 
+  def fromSource(source: Source): Result[Interpreter] = {
+    new Compiler().applyPasses(new TesslaSource(source)).andThen(new CoreToInterpreterSpec)
+  }
+
   def fromString(tesslaSource: String): Result[Interpreter] = {
-    new Compiler().applyPasses(TesslaSource.fromString(tesslaSource)).andThen(new CoreToInterpreterSpec)
+    fromSource(Source.fromString(tesslaSource))
   }
 
   def fromFile(file: String): Result[Interpreter] = {
-    new Compiler().applyPasses(TesslaSource.fromFile(file)).andThen(new CoreToInterpreterSpec)
+    fromSource(Source.fromFile(file))
   }
 
 }

@@ -1,0 +1,3 @@
+define f(x) := default(nil, x + 19)
+
+out f(x := 23)

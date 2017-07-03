@@ -1,0 +1,8 @@
+def x := undefinedStream
+def y := 15 + true
+def z := 1
+def z := 2
+
+out x
+out y
+out z
