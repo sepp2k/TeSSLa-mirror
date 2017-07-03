@@ -12,4 +12,4 @@ Or if you downloaded a JAR:
 
 ## Examples
 
-Example tessla and input files can be found in the src/test/resources/de/uni_luebeck/isp/tessla/interpreter/tests directory.
+Example tessla and input files can be found in the [src/test/resources/de/uni_luebeck/isp/tessla/interpreter/tests directory](src/test/resources/de/uni_luebeck/isp/tessla/interpreter/tests).
