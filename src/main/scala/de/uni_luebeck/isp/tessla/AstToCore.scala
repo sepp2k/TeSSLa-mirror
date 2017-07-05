@@ -7,7 +7,7 @@ import scala.collection.mutable
 class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
   override def translateSpec(spec: Ast.Spec) = {
     var counter = 0
-    val alreadyTranslated = mutable.Map[String, TesslaCore.Arg]()
+    val alreadyTranslated = mutable.Map[String, Arg]()
 
     val inStreams = spec.statements.collect {
       case Ast.In(name, _, loc) => (name.name, loc)
@@ -47,31 +47,31 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
 
     val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", UnknownLoc)
     def translateExpression(expr: Ast.Expr, name: String, env: Env): TranslatedExpression = {
-      val errorNode: TranslatedExpression = (Seq(), errorStream)
+      val errorNode: TranslatedExpression = (Seq(), Stream(errorStream))
       tryWithDefault(errorNode) {
         if (alreadyTranslated.contains(name)) (Seq(), alreadyTranslated(name))
         else {
           // This value will be overridden later. This one will only be reached in case of recursion, in which case
           // it should be the correct one.
-          alreadyTranslated(name) = TesslaCore.Stream(name, UnknownLoc)
-          val (defs, arg) = expr match {
+          alreadyTranslated(name) = Stream(TesslaCore.Stream(name, UnknownLoc))
+          val (defs, arg): TranslatedExpression = expr match {
             case Ast.ExprBoolLit(value, loc) =>
-              (Seq(), TesslaCore.BoolLiteral(value, loc))
+              (Seq(), Literal(TesslaCore.BoolLiteral(value, loc)))
             case Ast.ExprIntLit(value, loc) =>
-              (Seq(), TesslaCore.IntLiteral(value, loc))
+              (Seq(), Literal(TesslaCore.IntLiteral(value, loc)))
             case Ast.ExprUnit(loc) =>
-              (Seq(), TesslaCore.Unit(loc))
+              (Seq(), Literal(TesslaCore.Unit(loc)))
             case Ast.ExprStringLit(str, loc) =>
-              (Seq(), TesslaCore.StringLiteral(str, loc))
+              (Seq(), Literal(TesslaCore.StringLiteral(str, loc)))
             case Ast.ExprName(id) =>
               env.get((id.name, 0)) match {
                 case Some(Definition(d, closure)) =>
-                  translateExpression(d.definition, d.name.name, closure)
+                  translateExpression(d.body, d.name.name, closure)
                 case Some(BuiltIn(b)) =>
                   b(Seq(), name, id.loc)
                 case None =>
                   inStreams.get(id.name) match {
-                    case Some(loc) => (Seq(), TesslaCore.InputStream(id.name, loc))
+                    case Some(loc) => (Seq(), Stream(TesslaCore.InputStream(id.name, loc)))
                     case None => throw UndefinedVariable(id)
                   }
               }
@@ -100,7 +100,7 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
                       (argName.name.name, 0) -> Definition(Ast.Def(newName, Seq(), None, expr, argName.name.loc), env)
                   }.toMap
                   alreadyTranslated.remove(name)
-                  translateExpression(d.definition, name, closure ++ posArgs ++ namedArgs)
+                  translateExpression(d.body, name, closure ++ posArgs ++ namedArgs)
                 case Some(BuiltIn(b)) =>
                   val coreArgs = args.map {
                     case Ast.PosArg(expr) => translateExpression(expr, mkId(name), env)
@@ -124,7 +124,7 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
       tryWithDefault((Seq[(String, TesslaCore.Expression)](), name -> errorStream)) {
         val outName = mkId("out")
         translateExpression(out.expr, out.nameOpt.map(_.name).getOrElse(outName), globalEnv) match {
-          case (defs, s: TesslaCore.StreamRef) =>
+          case (defs, Stream(s)) =>
             (defs, name -> s)
           case (_, _) =>
             throw TypeError("stream", "constant value", loc)
@@ -137,9 +137,13 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
 }
 
 object AstToCore {
-  type TranslatedExpression = (Seq[(String, TesslaCore.Expression)], TesslaCore.Arg)
+  sealed abstract class Arg
+  case class Stream(s: TesslaCore.StreamRef) extends Arg
+  case class Literal(l: TesslaCore.LiteralValue) extends Arg
+
+  type TranslatedExpression = (Seq[(String, TesslaCore.Expression)], Arg)
   sealed abstract class EnvEntry
-  case class BuiltIn(apply: (Seq[TesslaCore.Arg], String, Location) => TranslatedExpression) extends EnvEntry
+  case class BuiltIn(apply: (Seq[Arg], String, Location) => TranslatedExpression) extends EnvEntry
   class Definition(val definition: Ast.Def, _closure: =>Env) extends EnvEntry {
     lazy val closure = _closure
   }

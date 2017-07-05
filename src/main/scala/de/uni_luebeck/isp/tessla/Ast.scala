@@ -11,16 +11,16 @@ object Ast {
 
   abstract sealed class Statement
   case class Def(
-    name: Identifier,
-    macroArgs: Seq[MacroArg],
-    typeAscr: Option[Type],
-    definition: Expr,
-    loc: Location) extends Statement {
+                  name: Identifier,
+                  macroArgs: Seq[MacroArg],
+                  typeAscr: Option[Type],
+                  body: Expr,
+                  loc: Location) extends Statement {
     override def toString = {
       val argList =
         if (macroArgs.isEmpty) ""
         else macroArgs.mkString("(", ", ", ")")
-      s"def $name$argList := $definition"
+      s"def $name$argList := $body"
     }
   }
 

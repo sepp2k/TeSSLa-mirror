@@ -15,11 +15,8 @@ object TesslaCore {
     def loc: Location
   }
 
-  sealed abstract class Arg {
+  sealed abstract class StreamRef {
     def loc: Location
-  }
-
-  sealed abstract class StreamRef extends Arg {
     def name: String
   }
 
@@ -144,7 +141,9 @@ object TesslaCore {
     override def toString = s"if $condition then $thenCase"
   }
 
-  sealed abstract class LiteralValue extends Arg
+  sealed abstract class LiteralValue {
+    def loc: Location
+  }
 
   final case class IntLiteral(value: BigInt, loc: Location) extends LiteralValue {
     override def toString = value.toString
