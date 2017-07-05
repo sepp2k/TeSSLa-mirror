@@ -49,43 +49,50 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
         throw InterpreterError(s"Invalid type for left operand of $opName: ${l.getClass.getSimpleName}", lhsLoc)
     }
 
-  private def add(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
+  private def add(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
     liftBinIntOp("+", _ + _, lhs, lhsLoc, rhs, rhsLoc)
   }
 
-  private def sub(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
+  private def sub(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
     liftBinIntOp("-", _ - _, lhs, lhsLoc, rhs, rhsLoc)
   }
 
-  private def mul(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
+  private def mul(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
     liftBinIntOp("*", _ * _, lhs, lhsLoc, rhs, rhsLoc)
   }
 
-  private def div(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
-    liftBinIntOp("/", _ / _, lhs, lhsLoc, rhs, rhsLoc)
+  private def div(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
+    def myDiv(x: BigInt, y: BigInt): BigInt = {
+      if (y == 0) {
+        throw InterpreterError("Division by zero", expLoc)
+      } else {
+        x / y
+      }
+    }
+    liftBinIntOp("/", myDiv, lhs, lhsLoc, rhs, rhsLoc)
   }
 
-  private def bitand(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
+  private def bitand(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
     liftBinIntOp("&", _ & _, lhs, lhsLoc, rhs, rhsLoc)
   }
 
-  private def bitor(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
+  private def bitor(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
     liftBinIntOp("|", _ | _, lhs, lhsLoc, rhs, rhsLoc)
   }
 
-  private def bitxor(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
+  private def bitxor(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
     liftBinIntOp("^", _ ^ _, lhs, lhsLoc, rhs, rhsLoc)
   }
 
-  private def leftshift(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
+  private def leftshift(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
     liftBinIntOp("<<", _ << _.toInt, lhs, lhsLoc, rhs, rhsLoc)
   }
 
-  private def rightshift(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
+  private def rightshift(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
     liftBinIntOp(">>", _ >> _.toInt, lhs, lhsLoc, rhs, rhsLoc)
   }
 
-  private def liftBinBoolOp(opName: String, op: (Boolean, Boolean) => Boolean, lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value =
+  private def liftBinBoolOp(opName: String, op: (Boolean, Boolean) => Boolean, lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value =
     (lhs, rhs) match {
       case (BoolValue(l), BoolValue(r)) =>
         BoolValue(op(l, r))
@@ -95,15 +102,16 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
         throw InterpreterError(s"Invalid type for left operand of $opName: ${l.getClass.getSimpleName}", lhsLoc)
     }
 
-  private def and(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
-    liftBinBoolOp("&&", _ && _, lhs, lhsLoc, rhs, rhsLoc)
+  private def and(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
+    liftBinBoolOp("&&", _ && _, lhs, lhsLoc, rhs, rhsLoc, expLoc)
   }
 
-  private def or(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
-    liftBinBoolOp("||", _ || _, lhs, lhsLoc, rhs, rhsLoc)
+  private def or(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
+    liftBinBoolOp("||", _ || _, lhs, lhsLoc, rhs, rhsLoc, expLoc)
   }
 
-  private def liftBinCompOp(opName: String, op: (BigInt, BigInt) => Boolean, lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value =
+  private def liftBinCompOp(opName: String, op: (BigInt, BigInt) => Boolean, lhs: Value, lhsLoc: Location,
+                            rhs: Value, rhsLoc: Location, expLoc: Location): Value =
     (lhs, rhs) match {
       case (IntValue(l), IntValue(r)) =>
         BoolValue(op(l, r))
@@ -113,23 +121,23 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
         throw InterpreterError(s"Invalid type for left operand of $opName: ${l.getClass.getSimpleName}", lhsLoc)
     }
 
-  private def lt(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
-    liftBinCompOp("<", _ < _, lhs, lhsLoc, rhs, rhsLoc)
+  private def lt(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
+    liftBinCompOp("<", _ < _, lhs, lhsLoc, rhs, rhsLoc, expLoc)
   }
 
-  private def gt(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
-    liftBinCompOp(">", _ > _, lhs, lhsLoc, rhs, rhsLoc)
+  private def gt(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
+    liftBinCompOp(">", _ > _, lhs, lhsLoc, rhs, rhsLoc, expLoc)
   }
 
-  private def lte(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
-    liftBinCompOp("<=", _ <= _, lhs, lhsLoc, rhs, rhsLoc)
+  private def lte(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
+    liftBinCompOp("<=", _ <= _, lhs, lhsLoc, rhs, rhsLoc, expLoc)
   }
 
-  private def gte(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
-    liftBinCompOp(">=", _ >= _, lhs, lhsLoc, rhs, rhsLoc)
+  private def gte(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
+    liftBinCompOp(">=", _ >= _, lhs, lhsLoc, rhs, rhsLoc, expLoc)
   }
 
-  private def eq(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
+  private def eq(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
     (lhs, rhs) match {
       case (IntValue(l), IntValue(r)) =>
         BoolValue(l == r)
@@ -144,21 +152,22 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     }
   }
 
-  private def neq(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value = {
-    eq(lhs, lhsLoc, rhs, rhsLoc) match {
+  private def neq(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
+    eq(lhs, lhsLoc, rhs, rhsLoc, expLoc) match {
       case BoolValue(b) => BoolValue(!b)
       case _ => sys.error("Internal error: Unreachable case reached")
     }
   }
 
-  private def evalBinOp(op: (Value, Location, Value, Location) => Value,
+  private def evalBinOp(op: (Value, Location, Value, Location, Location) => Value,
                         lhs: TesslaCore.StreamRef,
-                        rhs: TesslaCore.StreamRef): Stream[Value] = {
+                        rhs: TesslaCore.StreamRef,
+                        loc: Location): Stream[Value] = {
     lift(evalStream(lhs) :: evalStream(rhs) :: HNil) {
       (args: Value :: Value :: HNil) =>
         args match {
           case l :: r :: HNil =>
-            Some(op(l, lhs.loc, r, rhs.loc))
+            Some(op(l, lhs.loc, r, rhs.loc, loc))
         }
     }
   }
@@ -179,17 +188,17 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
   }
 
   private def eval(exp: TesslaCore.Expression): Stream[Value] = exp match {
-    case TesslaCore.Add(lhs, rhs, _) => evalBinOp(add, lhs, rhs)
-    case TesslaCore.Sub(lhs, rhs, _) => evalBinOp(sub, lhs, rhs)
-    case TesslaCore.Mul(lhs, rhs, _) => evalBinOp(mul, lhs, rhs)
-    case TesslaCore.Div(lhs, rhs, _) => evalBinOp(div, lhs, rhs)
-    case TesslaCore.BitAnd(lhs, rhs, _) => evalBinOp(bitand, lhs, rhs)
-    case TesslaCore.BitOr(lhs, rhs, _) => evalBinOp(bitor, lhs, rhs)
-    case TesslaCore.BitXor(lhs, rhs, _) => evalBinOp(bitxor, lhs, rhs)
-    case TesslaCore.LeftShift(lhs, rhs, _) => evalBinOp(leftshift, lhs, rhs)
-    case TesslaCore.RightShift(lhs, rhs, _) => evalBinOp(rightshift, lhs, rhs)
-    case TesslaCore.And(lhs, rhs, _) => evalBinOp(and, lhs, rhs)
-    case TesslaCore.Or(lhs, rhs, _) => evalBinOp(or, lhs, rhs)
+    case TesslaCore.Add(lhs, rhs, loc) => evalBinOp(add, lhs, rhs, loc)
+    case TesslaCore.Sub(lhs, rhs, loc) => evalBinOp(sub, lhs, rhs, loc)
+    case TesslaCore.Mul(lhs, rhs, loc) => evalBinOp(mul, lhs, rhs, loc)
+    case TesslaCore.Div(lhs, rhs, loc) => evalBinOp(div, lhs, rhs, loc)
+    case TesslaCore.BitAnd(lhs, rhs, loc) => evalBinOp(bitand, lhs, rhs, loc)
+    case TesslaCore.BitOr(lhs, rhs, loc) => evalBinOp(bitor, lhs, rhs, loc)
+    case TesslaCore.BitXor(lhs, rhs, loc) => evalBinOp(bitxor, lhs, rhs, loc)
+    case TesslaCore.LeftShift(lhs, rhs, loc) => evalBinOp(leftshift, lhs, rhs, loc)
+    case TesslaCore.RightShift(lhs, rhs, loc) => evalBinOp(rightshift, lhs, rhs, loc)
+    case TesslaCore.And(lhs, rhs, loc) => evalBinOp(and, lhs, rhs, loc)
+    case TesslaCore.Or(lhs, rhs, loc) => evalBinOp(or, lhs, rhs, loc)
     case TesslaCore.Not(arg, loc) =>
       boolStreamToValueStream(!boolStream(evalStream(arg), loc))
     case TesslaCore.BitFlip(arg, loc) =>
@@ -202,12 +211,12 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
           }
       }
       intStreamToValueStream(stream)
-    case TesslaCore.Lt(lhs, rhs, _) => evalBinOp(lt, lhs, rhs)
-    case TesslaCore.Lte(lhs, rhs, _) => evalBinOp(lte, lhs, rhs)
-    case TesslaCore.Gt(lhs, rhs, _) => evalBinOp(gt, lhs, rhs)
-    case TesslaCore.Gte(lhs, rhs, _) => evalBinOp(gte, lhs, rhs)
-    case TesslaCore.Eq(lhs, rhs, _) => evalBinOp(eq, lhs, rhs)
-    case TesslaCore.Neq(lhs, rhs, _) => evalBinOp(neq, lhs, rhs)
+    case TesslaCore.Lt(lhs, rhs, loc) => evalBinOp(lt, lhs, rhs, loc)
+    case TesslaCore.Lte(lhs, rhs, loc) => evalBinOp(lte, lhs, rhs, loc)
+    case TesslaCore.Gt(lhs, rhs, loc) => evalBinOp(gt, lhs, rhs, loc)
+    case TesslaCore.Gte(lhs, rhs, loc) => evalBinOp(gte, lhs, rhs, loc)
+    case TesslaCore.Eq(lhs, rhs, loc) => evalBinOp(eq, lhs, rhs, loc)
+    case TesslaCore.Neq(lhs, rhs, loc) => evalBinOp(neq, lhs, rhs, loc)
     case TesslaCore.IfThenElse(cond, thenCase, elseCase, loc) =>
       boolStream(evalStream(cond), loc).ifThenElse(evalStream(thenCase), evalStream(elseCase))
     case TesslaCore.IfThen(cond, thenCase, loc) =>
