@@ -21,14 +21,14 @@ object Main extends SexyOpt {
     val traceSource = traceFile.value.map(Source.fromFile).getOrElse(Source.stdin)
     val tesslaSpec = Interpreter.fromFile(tesslaFile.value) match {
       case Success(spec, warnings) =>
-        if (diagnostics) warnings.foreach(w => println(s"Warning: $w"))
+        if (diagnostics) warnings.foreach(w => System.err.println(s"Warning: $w"))
         if (printCore.value) println(spec.spec)
         spec
       case Failure(errors, warnings) =>
         if (diagnostics) {
-          println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors:")
-          warnings.foreach(w => println(s"Warning: $w"))
-          errors.foreach(e => println(s"Error: $e"))
+          warnings.foreach(w => System.err.println(s"Warning: $w"))
+          errors.foreach(e => System.err.println(s"Error: $e"))
+          System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors:")
         }
         sys.exit(1)
     }
