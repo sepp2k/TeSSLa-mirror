@@ -15,6 +15,7 @@ object Main extends SexyOpt {
   val noDiagnostics = flag("no-diagnostics", "Don't print error messages and warnings")
   def diagnostics = !noDiagnostics.value
   val printCore = flag("print-core", "Print the Tessla Core representation generated from the Tessla specification")
+  val debug = flag("debug", "Print stack traces for runtime errors")
 
   def main(args: Array[String]): Unit = {
     parse(args)
@@ -33,7 +34,13 @@ object Main extends SexyOpt {
         sys.exit(1)
     }
     if (verifyOnly.value) return
-    tesslaSpec.outStreams.foreach { case (name, stream) => tesslaSpec.printStream(stream, name) }
-    Traces.feedInput(tesslaSpec, traceSource)
+    try {
+      tesslaSpec.outStreams.foreach { case (name, stream) => tesslaSpec.printStream(stream, name) }
+      Traces.feedInput(tesslaSpec, traceSource)
+    } catch {
+      case ex: Interpreter.InterpreterError =>
+        System.err.println(s"Runtime error: $ex")
+        if(debug.value) ex.printStackTrace()
+    }
   }
 }

@@ -1,14 +1,13 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
-import de.uni_luebeck.isp.tessla.{Compiler, Location, TesslaCore, TesslaSource, TranslationPhase}
+import de.uni_luebeck.isp.tessla.TranslationPhase.Result
+import de.uni_luebeck.isp.tessla.{CompilationError, Compiler, Location, TesslaCore, TesslaSource, TranslationPhase}
 import shapeless.{::, HNil}
 
 import scala.io.Source
+import Interpreter._
 
 class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigInt] {
-  case class InterpreterError(message: String, loc: Location) extends RuntimeException(s"Interpreter error at $loc: $message")
-
   sealed abstract class Value
 
   final case class IntValue(i: BigInt) extends Value {
@@ -268,8 +267,10 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
 }
 
 object Interpreter {
+  case class InterpreterError(message: String, loc: Location) extends CompilationError
+
   class CoreToInterpreterSpec extends TranslationPhase[TesslaCore.Specification, Interpreter] {
-    def translateSpec(spec: TesslaCore.Specification) = new Interpreter(spec)
+    def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
   }
 
   def fromSource(source: Source): Result[Interpreter] = {
