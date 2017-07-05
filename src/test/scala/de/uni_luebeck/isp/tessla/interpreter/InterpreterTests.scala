@@ -22,16 +22,23 @@ class InterpreterTests extends FunSuite {
           val result = Interpreter.fromSource(testFile(name, "tessla"))
           result match {
             case Success(spec, _) =>
-              assert(extensions.contains("output"), "Expected: Compilation failure. Actual: Compilation success.")
-              val expectedOutput = testFile(name, "output").getLines.toSet
+              assert(!extensions.contains("errors"), "Expected: Compilation failure. Actual: Compilation success.")
+              def expectedOutput = testFile(name, "output").getLines.toSet
               val actualOutput = mutable.Set[String]()
               spec.outStreams.foreach {
-                case (name, stream) => stream.addListener {
-                  case Some(value) => actualOutput += s"${spec.getTime}: $name = $value"
+                case (streamName, stream) => stream.addListener {
+                  case Some(value) => actualOutput += s"${spec.getTime}: $streamName = $value"
                   case None =>
                 }
               }
-              Traces.feedInput(spec, testFile(name, "input"))
+              def runTraces() = {
+                Traces.feedInput(spec, testFile(name, "input"))
+              }
+              if (extensions.contains("runtime-errors")) {
+                assertThrows[Interpreter.InterpreterError](runTraces())
+              } else {
+                runTraces()
+              }
               assert(actualOutput == expectedOutput)
             case Failure(errors, _) =>
               assert(extensions.contains("errors"), "Expected: Compilation success. Actual: Compilation failure.")
