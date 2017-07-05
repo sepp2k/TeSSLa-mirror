@@ -1,0 +1,8 @@
+in a: Events<Int>
+
+def f(x) := x
+
+out a + 1
+out f(a)
+out a + 1 as aPlusOne
+out f(a) as fOfA
