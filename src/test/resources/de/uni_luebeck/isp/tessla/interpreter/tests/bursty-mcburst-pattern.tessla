@@ -1,17 +1,20 @@
-define resetCount(self, values, reset) :=
-    default(
-        if default(time(reset) > time(values), false)
-        then 0
-        else if default(time(reset) == time(values), false)
-        then 1
-        else last(self, values) + 1
-    , 0)
+def resetCount(values, reset) := {
+    def rc :=
+        default(
+            if default(time(reset) > time(values), false)
+            then 0
+            else if default(time(reset) == time(values), false)
+            then 1
+            else last(rc, values) + 1
+        , 0)
+    rc
+}
 
-define trigger(condition) :=
+def trigger(condition) :=
     if condition && !last(condition, condition) then ()
 
-define countSince(self, e, condition) :=
-    resetCount(self, e, trigger(condition))
+def countSince(e, condition) :=
+    resetCount(e, trigger(condition))
 
 in a: Events<Int>
 out a
@@ -20,21 +23,21 @@ out b
 in e: Events<Unit>
 out e
 
-define esSinceAGreaterThanB := countSince(esSinceAGreaterThanB, e, a > b)
+def esSinceAGreaterThanB := countSince(e, a > b)
 
 -- burstLength = 5, wait = 4, burstAmount = 3
-define burstStarts :=
+def burstStarts :=
     default(
         if time(e) - last(time(burstStarts), e) >= 9
         then e,
         e)
 out burstStarts
 
-define numberInBurst := resetCount(numberInBurst, e, burstStarts)
+def numberInBurst := resetCount(e, burstStarts)
 out numberInBurst
 
-define inBursts := time(e) < time(burstStarts) + 5 && numberInBurst <= 3
+def inBursts := time(e) < time(burstStarts) + 5 && numberInBurst <= 3
 out inBursts
 
-define property := if a > b then esSinceAGreaterThanB == 0 else inBursts
+def property := if a > b then esSinceAGreaterThanB == 0 else inBursts
 out property

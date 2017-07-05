@@ -1,7 +1,7 @@
 in source: Events<Unit>
 in target: Events<Unit>
 
-define diff := time(target) - last(time(source), target)
-define error := diff < 2 || diff > 5
+def diff := time(target) - last(time(source), target)
+def error := diff < 2 || diff > 5
 
 out error

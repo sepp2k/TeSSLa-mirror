@@ -1,6 +1,6 @@
 in a: Events<unit>
 in b: Events<unit>
 
-define c := time(a) > time(b)
+def c := time(a) > time(b)
 
 out c

@@ -1,15 +1,18 @@
-define eventCount(self, e) := default(last(self, e) + 1, 0)
+def eventCount(e) := {
+    def ec := default(last(ec, e) + 1, 0)
+    ec
+}
 
 in x: Events<int>
 in y: Events<int>
 in e: Events<unit>
 in c: Events<bool>
 
-define z := x + y
+def z := x + y
 out z
 
-define ec := eventCount(ec, e)
+def ec := eventCount(e)
 out ec
 
-define ecOrZ := if c then z else ec
+def ecOrZ := if c then z else ec
 out ecOrZ
