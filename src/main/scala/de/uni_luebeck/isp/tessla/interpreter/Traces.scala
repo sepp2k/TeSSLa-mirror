@@ -1,13 +1,16 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import de.uni_luebeck.isp.tessla.UnknownLoc
+import de.uni_luebeck.isp.tessla.interpreter.Interpreter.InterpreterError
+
 import scala.io.Source
 
 object Traces {
-  def feedInput(tesslaSpec: Interpreter, traceSource: Source) = {
+  def feedInput(tesslaSpec: Interpreter, traceSource: Source): Unit = {
     def provide(streamName: String, value: tesslaSpec.Value) = {
       tesslaSpec.inStreams.get(streamName) match {
         case Some(inStream) => inStream.provide(value)
-        case None => sys.error(s"Undeclared input stream: $streamName")
+        case None => throw InterpreterError(s"Undeclared input stream: $streamName", UnknownLoc)
       }
     }
 
