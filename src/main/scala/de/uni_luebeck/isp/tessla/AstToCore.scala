@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import AstToCore._
+import de.uni_luebeck.isp.tessla.Types.TypeMismatch
 
 import scala.collection.mutable
 
@@ -10,7 +11,14 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
     val alreadyTranslated = mutable.Map[String, Arg]()
 
     val inStreams = spec.statements.collect {
-      case Ast.In(name, _, loc) => (name.name, loc)
+      case Ast.In(name, typAst, loc) =>
+        val typ = tryWithDefault(Types.Stream(Types.WildCard)) {
+          Types.fromAst(typAst) match {
+            case s @ Types.Stream(_) => s
+            case t => throw TypeMismatch(Types.Stream(Types.WildCard), t, typAst.loc)
+          }
+        }
+        name.name -> (typ, loc)
     }.toMap
 
     val outStreams = spec.statements.collect {
@@ -47,13 +55,13 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
 
     val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", UnknownLoc)
     def translateExpression(expr: Ast.Expr, name: String, env: Env): TranslatedExpression = {
-      val errorNode: TranslatedExpression = (Seq(), Stream(errorStream))
+      val errorNode: TranslatedExpression = (Seq(), Stream(errorStream, Types.WildCard))
       tryWithDefault(errorNode) {
         if (alreadyTranslated.contains(name)) (Seq(), alreadyTranslated(name))
         else {
           // This value will be overridden later. This one will only be reached in case of recursion, in which case
           // it should be the correct one.
-          alreadyTranslated(name) = Stream(TesslaCore.Stream(name, UnknownLoc))
+          alreadyTranslated(name) = Stream(TesslaCore.Stream(name, UnknownLoc), Types.WildCard)
           val (defs, arg): TranslatedExpression = expr match {
             case Ast.ExprBoolLit(value, loc) =>
               (Seq(), Literal(TesslaCore.BoolLiteral(value, loc)))
@@ -71,7 +79,8 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
                   b(Seq(), name, id.loc)
                 case None =>
                   inStreams.get(id.name) match {
-                    case Some(loc) => (Seq(), Stream(TesslaCore.InputStream(id.name, loc)))
+                    case Some((typ, loc)) =>
+                      (Seq(), Stream(TesslaCore.InputStream(id.name, id.loc), typ.elementType))
                     case None => throw UndefinedVariable(id)
                   }
               }
@@ -124,22 +133,36 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
       tryWithDefault((Seq[(String, TesslaCore.Expression)](), name -> errorStream)) {
         val outName = mkId("out")
         translateExpression(out.expr, out.nameOpt.map(_.name).getOrElse(outName), globalEnv) match {
-          case (defs, Stream(s)) =>
+          case (defs, Stream(s, _)) =>
             (defs, name -> s)
-          case (_, _) =>
-            throw TypeError("stream", "constant value", loc)
+          case (_, lit) =>
+            throw TypeMismatch(Types.Stream(Types.WildCard), lit.typ, loc)
         }
       }
     }
 
-    TesslaCore.Specification(outs.flatMap(_._1).toMap, inStreams.toSeq, outs.map(_._2))
+    TesslaCore.Specification(outs.flatMap(_._1).toMap, inStreams.map {case (n, (t, l)) => (n,t,l)}.toSeq, outs.map(_._2))
   }
 }
 
 object AstToCore {
-  sealed abstract class Arg
-  case class Stream(s: TesslaCore.StreamRef) extends Arg
-  case class Literal(l: TesslaCore.LiteralValue) extends Arg
+  sealed abstract class Arg {
+    def typ: Types.Type
+    def loc: Location
+  }
+  case class Stream(value: TesslaCore.StreamRef, elementType: Types.ValueType) extends Arg {
+    def typ: Types.Stream = Types.Stream(elementType)
+    def loc = value.loc
+  }
+  case class Literal(value: TesslaCore.LiteralValue) extends Arg {
+    def typ: Types.ValueType = value match {
+      case TesslaCore.StringLiteral(_, _) => Types.String
+      case TesslaCore.IntLiteral(_, _) => Types.Int
+      case TesslaCore.BoolLiteral(_, _) => Types.Bool
+      case TesslaCore.Unit(_) => Types.Unit
+    }
+    def loc = value.loc
+  }
 
   type TranslatedExpression = (Seq[(String, TesslaCore.Expression)], Arg)
   sealed abstract class EnvEntry
@@ -173,12 +196,12 @@ object AstToCore {
     override def message = s"Undefined keyword argument ${id.name}"
   }
 
-  case class TypeError(expected: String, found: String, loc: Location) extends CompilationError {
-    override def message = s"Type mismatch: Expected $expected, found $found."
-  }
-
   case class MultipleDefinitionsError(id: Ast.Identifier, previousLoc: Location) extends CompilationError {
     override def loc = id.loc
     override def message = s"Multiple definitions of ${id.name} in same scope (previous definition at $previousLoc)"
+  }
+
+  case class InternalError(m: String, loc: Location = UnknownLoc) {
+    def message = s"Internal error: $m"
   }
 }

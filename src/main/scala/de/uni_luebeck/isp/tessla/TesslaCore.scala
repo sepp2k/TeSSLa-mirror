@@ -2,10 +2,10 @@ package de.uni_luebeck.isp.tessla
 
 object TesslaCore {
   final case class Specification(streams: Map[String, Expression],
-                                 inStreams: Seq[(String, Location)],
+                                 inStreams: Seq[(String, Types.Stream, Location)],
                                  outStreams: Seq[(String, StreamRef)]) {
     override def toString = {
-      inStreams.map { case (name, _) => s"in $name\n" }.mkString +
+      inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
         streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +
         outStreams.map { case (name, stream) => s"out $stream as $name\n" }.mkString
     }
