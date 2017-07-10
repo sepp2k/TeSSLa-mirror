@@ -29,7 +29,7 @@ object Main extends SexyOpt {
         if (diagnostics) {
           warnings.foreach(w => System.err.println(s"Warning: $w"))
           errors.foreach(e => System.err.println(s"Error: $e"))
-          System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors:")
+          System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors")
         }
         sys.exit(1)
     }
