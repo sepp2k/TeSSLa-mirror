@@ -2,7 +2,7 @@
 
 ## Grammar:
 
-    spec ::= statement*
+    spec          ::= statement*
     statement     ::= definition | out | in
     definition    ::= ("def" | "define") ID paramList? (":" type)? ":=" expression
     paramList     ::= "(" ID (":" type)? ("," ID (":" type)?)* ")"
