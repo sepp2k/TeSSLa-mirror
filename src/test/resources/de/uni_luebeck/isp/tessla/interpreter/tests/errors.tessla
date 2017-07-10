@@ -3,6 +3,14 @@ def y := 15 + true
 def z := 1
 def z := 2
 
+in ints: Events<Int>
+in strings: Events<String>
+
+def bla := ints + ints
+def blubb := ints + strings
+
 out x
 out y
 out z
+out bla
+out blubb

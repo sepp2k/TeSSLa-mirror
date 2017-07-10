@@ -1,5 +1,5 @@
-in a: Events<unit>
-in b: Events<unit>
+in a: Events<Unit>
+in b: Events<Unit>
 
 def c := time(a) > time(b)
 

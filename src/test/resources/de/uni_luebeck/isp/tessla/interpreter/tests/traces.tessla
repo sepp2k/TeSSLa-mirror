@@ -1,7 +1,7 @@
-in instruction: grgd
-in function: fds
-in line: sgf
-in column: gd
+in instruction: Events<String>
+in function: Events<String>
+in line: Events<Int>
+in column: Events<Int>
 
 def last(s) := last(s,s)
 
@@ -11,7 +11,7 @@ def eventCount(e) := {
 }
 
 def function_call(name) :=
-  if function == name && last(function) != name then ()
+  if function == name && last(function) != name && last(instruction) == "call" then ()
 
 def f_count := eventCount(function_call("f"))
 

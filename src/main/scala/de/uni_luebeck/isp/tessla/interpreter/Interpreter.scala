@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import de.uni_luebeck.isp.tessla.Types
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.{CompilationError, Compiler, Location, TesslaCore, TesslaSource, TranslationPhase}
 import shapeless.{::, HNil}
@@ -8,12 +9,14 @@ import scala.io.Source
 import Interpreter._
 
 class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigInt] {
-  val inStreams: Map[String, Input[Value]] = spec.inStreams.map {
-    case (name, _) =>
-      (name, Input[Value]())
+  val inStreams: Map[String, (Input[Value], Types.ValueType)] = spec.inStreams.map {
+    case (name, typ, _) =>
+      name -> (Input[Value](), typ.elementType)
   }.toMap
 
-  lazy val defs: Map[String, Lazy[Stream[Value]]] = inStreams.mapValues(Lazy(_)) ++ spec.streams.map {
+  lazy val defs: Map[String, Lazy[Stream[Value]]] = inStreams.mapValues {
+    case (inputStream, _) => Lazy(inputStream)
+  } ++ spec.streams.map {
     case (name, exp) => (name, Lazy(eval(exp)))
   }
 
@@ -158,7 +161,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     case TesslaCore.Stream(name, loc) =>
       defs.getOrElse(name, throw InterpreterError(s"Couldn't find stream named $name", loc)).get
     case TesslaCore.InputStream(name, loc) =>
-      inStreams.getOrElse(name, throw InterpreterError(s"Couldn't find stream named $name", loc))
+      inStreams.getOrElse(name, throw InterpreterError(s"Couldn't find stream named $name", loc))._1
     case TesslaCore.Nil(_) => nil
   }
 
@@ -258,22 +261,28 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
 }
 
 object Interpreter {
-  sealed abstract class Value
+  sealed abstract class Value {
+    def typ: Types.ValueType
+  }
 
   final case class IntValue(i: BigInt) extends Value {
     override def toString: String = i.toString
+    override def typ = Types.Int
   }
 
   final case class StringValue(s: String) extends Value {
     override def toString: String = s""""$s""""
+    override def typ = Types.String
   }
 
   final case class BoolValue(b: Boolean) extends Value {
     override def toString: String = b.toString
+    override def typ = Types.Bool
   }
 
   final case object UnitValue extends Value {
     override def toString: String = "()"
+    override def typ = Types.Unit
   }
 
   case class InterpreterError(message: String, loc: Location) extends CompilationError

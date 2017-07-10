@@ -1,4 +1,5 @@
 (1,10 - 1,25): Undefined variable undefinedStream
-(2,15 - 2,19): Type mismatch: Expected IntLiteral, found BoolLiteral.
+(2,15 - 2,19): Type mismatch: Expected Int, found Bool.
 (4,5 - 4,6): Multiple definitions of z in same scope (previous definition at (3,1 - 3,11))
-(8,5 - 8,6): Type mismatch: Expected stream, found constant value.
+(10,21 - 10,28): Type mismatch: Expected Events<Int>, found Events<String>.
+(14,5 - 14,6): Type mismatch: Expected Events<?>, found Int.

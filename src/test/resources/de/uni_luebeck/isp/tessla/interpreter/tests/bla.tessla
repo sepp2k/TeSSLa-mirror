@@ -3,10 +3,10 @@ def eventCount(e) := {
     ec
 }
 
-in x: Events<int>
-in y: Events<int>
-in e: Events<unit>
-in c: Events<bool>
+in x: Events<Int>
+in y: Events<Int>
+in e: Events<Unit>
+in c: Events<Bool>
 
 def z := x + y
 out z
