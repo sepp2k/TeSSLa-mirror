@@ -7,7 +7,7 @@ import scala.io.Source
 
 object Traces {
   def feedInput(tesslaSpec: Interpreter, traceSource: Source): Unit = {
-    def provide(streamName: String, value: tesslaSpec.Value) = {
+    def provide(streamName: String, value: Interpreter.Value) = {
       tesslaSpec.inStreams.get(streamName) match {
         case Some(inStream) => inStream.provide(value)
         case None => throw InterpreterError(s"Undeclared input stream: $streamName", UnknownLoc)
@@ -17,16 +17,16 @@ object Traces {
     val StringPattern = """^"([^"]*)"$""".r
 
     def parseValue(string: String) = string match {
-      case "()" => tesslaSpec.UnitValue
-      case "true" => tesslaSpec.BoolValue(true)
-      case "false" => tesslaSpec.BoolValue(false)
-      case StringPattern(s) => tesslaSpec.StringValue(s)
+      case "()" => Interpreter.UnitValue
+      case "true" => Interpreter.BoolValue(true)
+      case "false" => Interpreter.BoolValue(false)
+      case StringPattern(s) => Interpreter.StringValue(s)
       case _ =>
-        tesslaSpec.IntValue(BigInt(string))
+        Interpreter.IntValue(BigInt(string))
     }
 
     var previousTS: BigInt = 0
-    def handleInput(timestamp: String, inStream: String, value: tesslaSpec.Value = tesslaSpec.UnitValue) {
+    def handleInput(timestamp: String, inStream: String, value: Interpreter.Value = Interpreter.UnitValue) {
       val ts = BigInt(timestamp)
       if(ts < previousTS) sys.error("Decreasing time stamps")
       if(ts > previousTS) {

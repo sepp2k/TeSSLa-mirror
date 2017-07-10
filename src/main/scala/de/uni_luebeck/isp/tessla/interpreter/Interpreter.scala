@@ -8,24 +8,6 @@ import scala.io.Source
 import Interpreter._
 
 class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigInt] {
-  sealed abstract class Value
-
-  final case class IntValue(i: BigInt) extends Value {
-    override def toString: String = i.toString
-  }
-
-  final case class StringValue(s: String) extends Value {
-    override def toString: String = s""""$s""""
-  }
-
-  final case class BoolValue(b: Boolean) extends Value {
-    override def toString: String = b.toString
-  }
-
-  final case object UnitValue extends Value {
-    override def toString: String = "()"
-  }
-
   val inStreams: Map[String, Input[Value]] = spec.inStreams.map {
     case (name, _) =>
       (name, Input[Value]())
@@ -276,6 +258,24 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
 }
 
 object Interpreter {
+  sealed abstract class Value
+
+  final case class IntValue(i: BigInt) extends Value {
+    override def toString: String = i.toString
+  }
+
+  final case class StringValue(s: String) extends Value {
+    override def toString: String = s""""$s""""
+  }
+
+  final case class BoolValue(b: Boolean) extends Value {
+    override def toString: String = b.toString
+  }
+
+  final case object UnitValue extends Value {
+    override def toString: String = "()"
+  }
+
   case class InterpreterError(message: String, loc: Location) extends CompilationError
 
   class CoreToInterpreterSpec extends TranslationPhase[TesslaCore.Specification, Interpreter] {
