@@ -19,11 +19,11 @@ object Main extends SexyOpt {
 
   def main(args: Array[String]): Unit = {
     parse(args)
-    val traceSource = traceFile.value.map(Source.fromFile).getOrElse(Source.stdin)
-    val tesslaSpec = Interpreter.fromFile(tesslaFile.value) match {
+    val traceSource = traceFile.map(Source.fromFile).getOrElse(Source.stdin)
+    val tesslaSpec = Interpreter.fromFile(tesslaFile) match {
       case Success(spec, warnings) =>
         if (diagnostics) warnings.foreach(w => System.err.println(s"Warning: $w"))
-        if (printCore.value) println(spec.spec)
+        if (printCore) println(spec.spec)
         spec
       case Failure(errors, warnings) =>
         if (diagnostics) {
@@ -33,14 +33,14 @@ object Main extends SexyOpt {
         }
         sys.exit(1)
     }
-    if (verifyOnly.value) return
+    if (verifyOnly) return
     try {
       tesslaSpec.outStreams.foreach { case (name, stream) => tesslaSpec.printStream(stream, name) }
       Traces.feedInput(tesslaSpec, traceSource)
     } catch {
       case ex: Interpreter.InterpreterError =>
         System.err.println(s"Runtime error: $ex")
-        if(debug.value) ex.printStackTrace()
+        if(debug) ex.printStackTrace()
     }
   }
 }
