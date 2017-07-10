@@ -35,7 +35,8 @@ class InterpreterTests extends FunSuite {
                 Traces.feedInput(spec, testFile(name, "input"))
               }
               if (extensions.contains("runtime-errors")) {
-                assertThrows[Interpreter.InterpreterError](runTraces())
+                val ex = intercept[Interpreter.InterpreterError](runTraces())
+                assert(ex.toString == testFile(name, "runtime-errors").mkString)
               } else {
                 runTraces()
               }
