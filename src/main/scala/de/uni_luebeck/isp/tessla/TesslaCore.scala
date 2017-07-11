@@ -18,19 +18,23 @@ object TesslaCore {
   sealed abstract class StreamRef {
     def loc: Location
     def name: String
+    def withLoc(loc: Location): StreamRef
   }
 
   final case class Stream(name: String, loc: Location) extends StreamRef {
     override def toString = name
+    def withLoc(loc: Location): Stream = copy(loc = loc)
   }
 
   final case class InputStream(name: String, loc: Location) extends StreamRef {
     override def toString = s"input($name)"
+    def withLoc(loc: Location): InputStream = copy(loc = loc)
   }
 
   final case class Nil(loc: Location) extends StreamRef {
     override def name = "nil"
     override def toString = name
+    def withLoc(loc: Location): Nil = copy(loc = loc)
   }
 
   final case class Default(stream: StreamRef, default: LiteralValue, loc: Location) extends Expression {
@@ -143,21 +147,26 @@ object TesslaCore {
 
   sealed abstract class LiteralValue {
     def loc: Location
+    def withLoc(loc: Location): LiteralValue
   }
 
   final case class IntLiteral(value: BigInt, loc: Location) extends LiteralValue {
     override def toString = value.toString
+    def withLoc(loc: Location): IntLiteral = copy(loc = loc)
   }
 
   final case class BoolLiteral(value: Boolean, loc: Location) extends LiteralValue {
     override def toString = value.toString
+    def withLoc(loc: Location): BoolLiteral = copy(loc = loc)
   }
 
   final case class StringLiteral(value: String, loc: Location) extends LiteralValue {
     override def toString = s""""$value""""
+    def withLoc(loc: Location): StringLiteral = copy(loc = loc)
   }
 
   final case class Unit(loc: Location) extends LiteralValue {
     override def toString = "()"
+    def withLoc(loc: Location): Unit = copy(loc = loc)
   }
 }

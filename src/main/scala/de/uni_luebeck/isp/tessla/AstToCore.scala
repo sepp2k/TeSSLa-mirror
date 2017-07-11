@@ -53,6 +53,10 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
       case (key, b) => key -> BuiltIn(b)
     } ++ mkEnv(spec.statements, globalEnv)
 
+    def updateLoc(exp: TranslatedExpression, loc: Location): TranslatedExpression = {
+      (exp._1, exp._2.withLoc(loc))
+    }
+
     val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", UnknownLoc)
     def translateExpression(expr: Ast.Expr, name: String, env: Env): TranslatedExpression = {
       val errorNode: TranslatedExpression = (Seq(), Stream(errorStream, Types.WildCard))
@@ -74,7 +78,7 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
             case Ast.ExprName(id) =>
               env.get((id.name, 0)) match {
                 case Some(Definition(d, closure)) =>
-                  translateExpression(d.body, d.name.name, closure)
+                  updateLoc(translateExpression(d.body, d.name.name, closure), id.loc)
                 case Some(BuiltIn(b)) =>
                   b(Seq(), name, id.loc)
                 case None =>
@@ -109,7 +113,7 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
                       (argName.name.name, 0) -> Definition(Ast.Def(newName, Seq(), None, expr, argName.name.loc), env)
                   }.toMap
                   alreadyTranslated.remove(name)
-                  translateExpression(d.body, name, closure ++ posArgs ++ namedArgs)
+                  updateLoc(translateExpression(d.body, name, closure ++ posArgs ++ namedArgs), loc)
                 case Some(BuiltIn(b)) =>
                   val coreArgs = args.map {
                     case Ast.PosArg(expr) => translateExpression(expr, mkId(name), env)
@@ -149,10 +153,12 @@ object AstToCore {
   sealed abstract class Arg {
     def typ: Types.Type
     def loc: Location
+    def withLoc(loc: Location): Arg
   }
   case class Stream(value: TesslaCore.StreamRef, elementType: Types.ValueType) extends Arg {
     def typ: Types.Stream = Types.Stream(elementType)
     def loc = value.loc
+    def withLoc(loc: Location): Stream = Stream(value.withLoc(loc), elementType)
   }
   case class Literal(value: TesslaCore.LiteralValue) extends Arg {
     def typ: Types.ValueType = value match {
@@ -162,6 +168,7 @@ object AstToCore {
       case TesslaCore.Unit(_) => Types.Unit
     }
     def loc = value.loc
+    def withLoc(loc: Location): Literal = Literal(value.withLoc(loc))
   }
 
   type TranslatedExpression = (Seq[(String, TesslaCore.Expression)], Arg)
