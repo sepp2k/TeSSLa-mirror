@@ -24,67 +24,67 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     case (name, streamRef) => name -> defs(streamRef.name).get
   }.toMap
 
-  private def liftBinIntOp(opName: String, op: (BigInt, BigInt) => BigInt, lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location): Value =
+  private def typeError(loc: Location): Nothing = {
+    throw InterpreterError(s"Internal error: Invalid types for operation (this is indicative of a bug the type checker)", loc)
+  }
+
+  private def liftBinIntOp(opName: String, op: (BigInt, BigInt) => BigInt, lhs: Value, rhs: Value, loc: Location): Value =
     (lhs, rhs) match {
       case (IntValue(l), IntValue(r)) =>
         IntValue(op(l, r))
-      case (IntValue(_), r) =>
-        throw InterpreterError(s"Invalid type for right operand of $opName: ${r.getClass.getSimpleName}", rhsLoc)
-      case (l, _) =>
-        throw InterpreterError(s"Invalid type for left operand of $opName: ${l.getClass.getSimpleName}", lhsLoc)
+      case _ =>
+        typeError(loc)
     }
 
   private def add(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
-    liftBinIntOp("+", _ + _, lhs, lhsLoc, rhs, rhsLoc)
+    liftBinIntOp("+", _ + _, lhs, rhs, expLoc)
   }
 
   private def sub(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
-    liftBinIntOp("-", _ - _, lhs, lhsLoc, rhs, rhsLoc)
+    liftBinIntOp("-", _ - _, lhs, rhs, expLoc)
   }
 
   private def mul(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
-    liftBinIntOp("*", _ * _, lhs, lhsLoc, rhs, rhsLoc)
+    liftBinIntOp("*", _ * _, lhs, rhs, expLoc)
   }
 
   private def div(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
-    def myDiv(x: BigInt, y: BigInt): BigInt = {
-      if (y == 0) {
-        throw InterpreterError("Division by zero", expLoc)
-      } else {
-        x / y
-      }
+    (lhs, rhs) match {
+      case (IntValue(_), IntValue(r)) if r == 0 =>
+        ErrorValue(InterpreterError("Division by zero", rhsLoc))
+      case (IntValue(l), IntValue(r)) =>
+        IntValue(l / r)
+      case _ =>
+        typeError(expLoc)
     }
-    liftBinIntOp("/", myDiv, lhs, lhsLoc, rhs, rhsLoc)
   }
 
   private def bitand(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
-    liftBinIntOp("&", _ & _, lhs, lhsLoc, rhs, rhsLoc)
+    liftBinIntOp("&", _ & _, lhs, rhs, expLoc)
   }
 
   private def bitor(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
-    liftBinIntOp("|", _ | _, lhs, lhsLoc, rhs, rhsLoc)
+    liftBinIntOp("|", _ | _, lhs, rhs, expLoc)
   }
 
   private def bitxor(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
-    liftBinIntOp("^", _ ^ _, lhs, lhsLoc, rhs, rhsLoc)
+    liftBinIntOp("^", _ ^ _, lhs, rhs, expLoc)
   }
 
   private def leftshift(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
-    liftBinIntOp("<<", _ << _.toInt, lhs, lhsLoc, rhs, rhsLoc)
+    liftBinIntOp("<<", _ << _.toInt, lhs, rhs, expLoc)
   }
 
   private def rightshift(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
-    liftBinIntOp(">>", _ >> _.toInt, lhs, lhsLoc, rhs, rhsLoc)
+    liftBinIntOp(">>", _ >> _.toInt, lhs, rhs, expLoc)
   }
 
   private def liftBinBoolOp(opName: String, op: (Boolean, Boolean) => Boolean, lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value =
     (lhs, rhs) match {
       case (BoolValue(l), BoolValue(r)) =>
         BoolValue(op(l, r))
-      case (IntValue(_), r) =>
-        throw InterpreterError(s"Invalid type for right operand of $opName: ${r.getClass.getSimpleName}", rhsLoc)
-      case (l, _) =>
-        throw InterpreterError(s"Invalid type for left operand of $opName: ${l.getClass.getSimpleName}", lhsLoc)
+      case _ =>
+        typeError(expLoc)
     }
 
   private def and(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
@@ -100,10 +100,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     (lhs, rhs) match {
       case (IntValue(l), IntValue(r)) =>
         BoolValue(op(l, r))
-      case (IntValue(_), r) =>
-        throw InterpreterError(s"Invalid type for right operand of $opName: ${r.getClass.getSimpleName}", rhsLoc)
-      case (l, _) =>
-        throw InterpreterError(s"Invalid type for left operand of $opName: ${l.getClass.getSimpleName}", lhsLoc)
+      case _ =>
+        typeError(expLoc)
     }
 
   private def lt(lhs: Value, lhsLoc: Location, rhs: Value, rhsLoc: Location, expLoc: Location): Value = {
@@ -283,6 +281,11 @@ object Interpreter {
   final case object UnitValue extends Value {
     override def toString: String = "()"
     override def typ = Types.Unit
+  }
+
+  final case class ErrorValue(error: InterpreterError) extends Value {
+    override def toString: String = throw error
+    override def typ = Types.WildCard
   }
 
   case class InterpreterError(message: String, loc: Location) extends CompilationError
