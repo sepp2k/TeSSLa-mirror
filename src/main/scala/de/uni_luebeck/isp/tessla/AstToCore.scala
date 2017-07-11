@@ -33,15 +33,15 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
     val builtIns = BuiltIns(mkId)
 
     def mkEnv(statements: Seq[Ast.Statement], env: =>Env) = {
-      val previousDefs = mutable.Map[String, Location]()
+      val previousDefs = mutable.Map[(String, Int), Location]()
       statements.flatMap {
-        case definition @ Ast.Def(name, _, _, _, loc) =>
-          previousDefs.get(definition.name.name) match {
+        case definition @ Ast.Def(name, args, _, _, loc) =>
+          previousDefs.get((definition.name.name, args.length)) match {
             case Some(previousLoc) =>
               error(MultipleDefinitionsError(definition.name, previousLoc))
               None
             case None =>
-              previousDefs += name.name -> loc
+              previousDefs += (name.name, args.length) -> loc
               val uniqueDef = definition.copy(name = definition.name.copy(name = mkId(definition.name.name)))
               Some((name.name, definition.macroArgs.length) -> Definition(uniqueDef, env))
           }
@@ -83,14 +83,16 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
                   b(Seq(), name, id.loc)
                 case None =>
                   inStreams.get(id.name) match {
-                    case Some((typ, loc)) =>
+                    case Some((typ, _)) =>
                       (Seq(), Stream(TesslaCore.InputStream(id.name, id.loc), typ.elementType))
                     case None => throw UndefinedVariable(id)
                   }
               }
-            case Ast.ExprTypeAscr(e, _) =>
+            case Ast.ExprTypeAscr(e, t) =>
               alreadyTranslated.remove(name)
-              translateExpression(e, name, env)
+              val (statements, arg) = translateExpression(e, name, env)
+              Types.requireType(Types.fromAst(t), arg.typ, e.loc)
+              (statements, arg)
             case Ast.ExprBlock(definitions, expression, _) =>
               lazy val scope: Env = env ++ mkEnv(definitions, scope)
               alreadyTranslated.remove(name)
@@ -100,20 +102,29 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
                 case Some(Definition(d, closure)) =>
                   val namedArgs: Env = args.collect {
                     case Ast.NamedArg(argName, expr) =>
-                      if (d.macroArgs.exists(_.name.name == argName.name)) {
-                        val newName = Ast.Identifier(mkId(argName.name), argName.loc)
-                        (argName.name, 0) -> Definition(Ast.Def(newName, Seq(), None, expr, argName.loc), env)
-                      } else throw UndefinedNamedArg(argName)
+                      d.macroArgs.find(_.name.name == argName.name) match {
+                        case Some(arg) =>
+                          val typedExpr = arg.typeAscr.map(t => Ast.ExprTypeAscr(expr, t.withLoc(arg.loc))).getOrElse(expr)
+                          val newName = Ast.Identifier(mkId(argName.name), argName.loc)
+                          (argName.name, 0) -> Definition(Ast.Def(newName, Seq(), None, typedExpr, argName.loc), env)
+                        case None =>
+                          throw UndefinedNamedArg(argName)
+                      }
                   }.toMap
-                  val posArgs: Env = d.macroArgs.filterNot { argName =>
-                    namedArgs.contains((argName.name.name, 0))
+                  val posArgs: Env = d.macroArgs.filterNot { arg =>
+                    namedArgs.contains((arg.name.name, 0))
                   }.zip(args.collect { case Ast.PosArg(expr) => expr }).map {
-                    case (argName, expr) =>
-                      val newName = Ast.Identifier(mkId(argName.name.name), argName.name.loc)
-                      (argName.name.name, 0) -> Definition(Ast.Def(newName, Seq(), None, expr, argName.name.loc), env)
+                    case (arg, expr) =>
+                      val typedExpr = arg.typeAscr.map(t => Ast.ExprTypeAscr(expr, t.withLoc(arg.loc))).getOrElse(expr)
+                      val newName = Ast.Identifier(mkId(arg.name.name), arg.name.loc)
+                      (arg.name.name, 0) -> Definition(Ast.Def(newName, Seq(), None, typedExpr, arg.name.loc), env)
                   }.toMap
                   alreadyTranslated.remove(name)
-                  updateLoc(translateExpression(d.body, name, closure ++ posArgs ++ namedArgs), loc)
+                  val result@(_, resultExp) = updateLoc(translateExpression(d.body, name, closure ++ posArgs ++ namedArgs), loc)
+                  d.typeAscr.foreach { t =>
+                    Types.requireType(Types.fromAst(t), resultExp.typ, resultExp.loc)
+                  }
+                  result
                 case Some(BuiltIn(b)) =>
                   val coreArgs = args.map {
                     case Ast.PosArg(expr) => translateExpression(expr, mkId(name), env)

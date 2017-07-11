@@ -125,11 +125,11 @@ class BuiltIns private(mkId: String => String) {
     },
     ("default", 2) -> {
       case (Seq(Stream(stream, t1), Stream(default, t2)), name, loc) =>
-        Types.requireType(Types.Stream(t1), Types.Stream(t2), default.loc)
-        (Seq(name -> TesslaCore.DefaultFrom(stream, default, loc)), Stream(TesslaCore.Stream(name, loc), t1))
+        val t = Types.requireType(Types.Stream(t1), Types.Stream(t2), default.loc).elementType
+        (Seq(name -> TesslaCore.DefaultFrom(stream, default, loc)), Stream(TesslaCore.Stream(name, loc), t))
       case (Seq(Stream(stream, t), default @ Literal(_)), name, loc) =>
-        Types.requireType(t, default.typ, default.loc)
-        (Seq(name -> TesslaCore.Default(stream, default.value, loc)), Stream(TesslaCore.Stream(name, loc), t))
+        val resultType = Types.requireType(t, default.typ, default.loc)
+        (Seq(name -> TesslaCore.Default(stream, default.value, loc)), Stream(TesslaCore.Stream(name, loc), resultType))
       case (Seq(lit @ Literal(_), _), _, _) => throw TypeMismatch(Types.Stream(Types.WildCard), lit.typ, lit.loc)
     },
     ("const", 2) -> {
@@ -181,7 +181,7 @@ class BuiltIns private(mkId: String => String) {
             zero -> TesslaCore.Default(TesslaCore.Nil(loc), TesslaCore.IntLiteral(0, loc), loc),
             name -> TesslaCore.Sub(TesslaCore.Stream(zero, loc), operand, loc)
           ),
-          Stream(TesslaCore.Stream(name, loc), t)
+          Stream(TesslaCore.Stream(name, loc), Types.Int)
         )
       case (Seq(Literal(TesslaCore.IntLiteral(operand, _))), _, loc) =>
         (Seq(), Literal(TesslaCore.IntLiteral(-operand, loc)))
@@ -200,33 +200,32 @@ class BuiltIns private(mkId: String => String) {
     ("if then else", 3) -> {
       case (Seq(Stream(condition, condType), Stream(thenCase, thenType), Stream(elseCase, elseType)), name, loc) =>
         Types.requireType(Types.Stream(Types.Bool), Types.Stream(condType), condition.loc)
-        Types.requireType(Types.Stream(thenType), Types.Stream(elseType), elseCase.loc)
-        (Seq(name -> TesslaCore.IfThenElse(condition, thenCase, elseCase, loc)), Stream(TesslaCore.Stream(name, loc), thenType))
+        val t = Types.requireType(Types.Stream(thenType), Types.Stream(elseType), elseCase.loc).elementType
+        (Seq(name -> TesslaCore.IfThenElse(condition, thenCase, elseCase, loc)), Stream(TesslaCore.Stream(name, loc), t))
       case (Seq(Stream(condition, condType), thenCase @ Literal(_), Stream(elseCase, elseType)), name, loc) =>
         Types.requireType(Types.Stream(Types.Bool), Types.Stream(condType), condition.loc)
-        Types.requireType(Types.Stream(thenCase.typ), Types.Stream(elseType), elseCase.loc)
+        val t = Types.requireType(Types.Stream(thenCase.typ), Types.Stream(elseType), elseCase.loc).elementType
         val liftedThenCase = mkId(name)
         (
           Seq(
             liftedThenCase -> TesslaCore.Default(TesslaCore.Nil(loc), thenCase.value, loc),
             name -> TesslaCore.IfThenElse(condition, TesslaCore.Stream(liftedThenCase, loc), elseCase, loc)
-          ),
-          Stream(TesslaCore.Stream(name, loc), thenCase.typ)
+          ), Stream(TesslaCore.Stream(name, loc), t)
         )
       case (Seq(Stream(condition, condType), Stream(thenCase, thenType), elseCase @ Literal(_)), name, loc) =>
         Types.requireType(Types.Stream(Types.Bool), Types.Stream(condType), condition.loc)
-        Types.requireType(thenType, elseCase.typ, elseCase.loc)
+        val t = Types.requireType(thenType, elseCase.typ, elseCase.loc)
         val liftedElseCase = mkId(name)
         (
           Seq(
             liftedElseCase -> TesslaCore.Default(TesslaCore.Nil(loc), elseCase.value, loc),
             name -> TesslaCore.IfThenElse(condition, thenCase, TesslaCore.Stream(liftedElseCase, loc), loc)
           ),
-          Stream(TesslaCore.Stream(name, loc), thenType)
+          Stream(TesslaCore.Stream(name, loc), t)
         )
       case (Seq(Stream(condition, condType), thenCase @ Literal(_), elseCase @ Literal(_)), name, loc) =>
         Types.requireType(Types.Stream(Types.Bool), Types.Stream(condType), condition.loc)
-        Types.requireType(thenCase.typ, elseCase.typ, elseCase.loc)
+        val t = Types.requireType(thenCase.typ, elseCase.typ, elseCase.loc)
         val liftedThenCase = mkId(name)
         val liftedElseCase = mkId(name)
         (
@@ -235,7 +234,7 @@ class BuiltIns private(mkId: String => String) {
             liftedElseCase -> TesslaCore.Default(TesslaCore.Nil(loc), elseCase.value, loc),
             name -> TesslaCore.IfThenElse(condition, TesslaCore.Stream(liftedThenCase, loc), TesslaCore.Stream(liftedElseCase, loc), loc)
           ),
-          Stream(TesslaCore.Stream(name, loc), thenCase.typ)
+          Stream(TesslaCore.Stream(name, loc), t)
         )
       case (Seq(Literal(TesslaCore.BoolLiteral(true, _)), thenCase, _), _, _) =>
         (Seq(), thenCase)

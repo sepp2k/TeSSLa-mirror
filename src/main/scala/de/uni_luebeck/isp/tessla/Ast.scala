@@ -37,6 +37,11 @@ object Ast {
       case Some(t) => s"${name.name}: $t"
       case None => name.name
     }
+
+    def loc: Location = typeAscr match {
+      case Some(t) => name.loc.merge(t.loc)
+      case None => name.loc
+    }
   }
 
   sealed abstract class Expr {
@@ -91,23 +96,30 @@ object Ast {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
   }
 
-  abstract class AppArg
+  abstract class AppArg {
+    def loc: Location
+  }
   case class PosArg(expr: Expr) extends AppArg {
     override def toString = expr.toString
+    def loc = expr.loc
   }
   case class NamedArg(name: Identifier, expr: Expr) extends AppArg {
     override def toString = s"$name = $expr"
+    def loc = name.loc.merge(expr.loc)
   }
 
   abstract class Type {
     def loc: Location
+    def withLoc(loc: Location): Type
   }
   case class TypeName(name: Identifier) extends Type {
     def loc = name.loc
     override def toString = name.name
+    def withLoc(loc: Location): TypeName = TypeName(name.copy(loc = loc))
   }
-  case class TypeApp(name: Identifier, args: Seq[Type], loc: SourceLoc) extends Type {
+  case class TypeApp(name: Identifier, args: Seq[Type], loc: Location) extends Type {
     override def toString = s"$name<${args.mkString(", ")}>"
+    def withLoc(loc: Location): TypeApp = copy(loc = loc)
   }
 }
 
