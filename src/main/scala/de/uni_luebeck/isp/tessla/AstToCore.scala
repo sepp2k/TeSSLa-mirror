@@ -12,10 +12,10 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
 
     val inStreams = spec.statements.collect {
       case Ast.In(name, typAst, loc) =>
-        val typ = tryWithDefault(Types.Stream(Types.WildCard)) {
+        val typ = tryWithDefault(Types.Stream(Types.Nothing)) {
           Types.fromAst(typAst) match {
             case s @ Types.Stream(_) => s
-            case t => throw TypeMismatch(Types.Stream(Types.WildCard), t, typAst.loc)
+            case t => throw TypeMismatch(Types.Stream(Types.Nothing), t, typAst.loc)
           }
         }
         name.name -> (typ, loc)
@@ -59,13 +59,13 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
 
     val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", UnknownLoc)
     def translateExpression(expr: Ast.Expr, name: String, env: Env): TranslatedExpression = {
-      val errorNode: TranslatedExpression = (Seq(), Stream(errorStream, Types.WildCard))
+      val errorNode: TranslatedExpression = (Seq(), Stream(errorStream, Types.Nothing))
       tryWithDefault(errorNode) {
         if (alreadyTranslated.contains(name)) (Seq(), alreadyTranslated(name))
         else {
           // This value will be overridden later. This one will only be reached in case of recursion, in which case
           // it should be the correct one.
-          alreadyTranslated(name) = Stream(TesslaCore.Stream(name, UnknownLoc), Types.WildCard)
+          alreadyTranslated(name) = Stream(TesslaCore.Stream(name, UnknownLoc), Types.Nothing)
           val (defs, arg): TranslatedExpression = expr match {
             case Ast.ExprBoolLit(value, loc) =>
               (Seq(), Literal(TesslaCore.BoolLiteral(value, loc)))
@@ -151,7 +151,7 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
           case (defs, Stream(s, _)) =>
             (defs, name -> s)
           case (_, lit) =>
-            throw TypeMismatch(Types.Stream(Types.WildCard), lit.typ, loc)
+            throw TypeMismatch(Types.Stream(Types.Nothing), lit.typ, loc)
         }
       }
     }
@@ -172,12 +172,7 @@ object AstToCore {
     def withLoc(loc: Location): Stream = Stream(value.withLoc(loc), elementType)
   }
   case class Literal(value: TesslaCore.LiteralValue) extends Arg {
-    def typ: Types.ValueType = value match {
-      case TesslaCore.StringLiteral(_, _) => Types.String
-      case TesslaCore.IntLiteral(_, _) => Types.Int
-      case TesslaCore.BoolLiteral(_, _) => Types.Bool
-      case TesslaCore.Unit(_) => Types.Unit
-    }
+    def typ: Types.ValueType = value.typ
     def loc = value.loc
     def withLoc(loc: Location): Literal = Literal(value.withLoc(loc))
   }
@@ -219,7 +214,7 @@ object AstToCore {
     override def message = s"Multiple definitions of ${id.name} in same scope (previous definition at $previousLoc)"
   }
 
-  case class InternalError(m: String, loc: Location = UnknownLoc) {
+  case class InternalError(m: String, loc: Location = UnknownLoc) extends CompilationError {
     def message = s"Internal error: $m"
   }
 }

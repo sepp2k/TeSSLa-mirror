@@ -7,13 +7,10 @@ object Types {
   case object String extends ValueType
   case object Bool extends ValueType
   case object Unit extends ValueType
-  case object WildCard extends ValueType {
+  case object Nothing extends ValueType {
     override def toString = "?"
   }
-//  case class TypeVariable(name: String) extends ValueType {
-//    override def toString = s"'$name"
-//  }
-  case class Stream(elementType: ValueType) extends Type {
+  final case class Stream(elementType: ValueType) extends Type {
     override def toString = s"Events<$elementType>"
   }
 
@@ -32,8 +29,8 @@ object Types {
   }
 
   private def requireTypeOption[T <: Type](expected: T, actual: T): Option[T] = (expected, actual) match {
-    case (WildCard, _: ValueType) => Some(actual)
-    case (_: ValueType, WildCard) => Some(expected)
+    case (Nothing, _: ValueType) => Some(actual)
+    case (_: ValueType, Nothing) => Some(expected)
     case (Stream(t1), Stream(t2)) =>
       requireTypeOption(t1, t2).map(Stream).asInstanceOf[Option[T]]
     case _ =>

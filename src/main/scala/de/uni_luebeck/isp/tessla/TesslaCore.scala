@@ -45,10 +45,6 @@ object TesslaCore {
     override def toString = s"defaultFrom($valueStream, $defaultStream)"
   }
 
-  final case class Const(value: LiteralValue, clock: StreamRef, loc: Location) extends Expression {
-    override def toString = s"const($value, $clock)"
-  }
-
   final case class Time(stream: StreamRef, loc: Location) extends Expression {
     override def toString = s"time($stream)"
   }
@@ -61,112 +57,43 @@ object TesslaCore {
     override def toString = s"deleayedLast($values, $delays)"
   }
 
-  final case class Add(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs + $rhs"
-  }
-
-  final case class Sub(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs - $rhs"
-  }
-
-  final case class Mul(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs * $rhs"
-  }
-
-  final case class Div(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs / $rhs"
-  }
-
-  final case class BitAnd(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs & $rhs"
-  }
-
-  final case class BitOr(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs | $rhs"
-  }
-
-  final case class BitXor(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs ^ $rhs"
-  }
-
-  final case class LeftShift(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs << $rhs"
-  }
-
-  final case class RightShift(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs >> $rhs"
-  }
-
-  final case class BitFlip(arg: StreamRef, loc: Location) extends Expression {
-    override def toString = s"~ $arg"
-  }
-
-  final case class Lt(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs < $rhs"
-  }
-
-  final case class Gt(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs > $rhs"
-  }
-
-  final case class Lte(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs <= $rhs"
-  }
-
-  final case class Gte(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs >= $rhs"
-  }
-
-  final case class Eq(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs == $rhs"
-  }
-
-  final case class Neq(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs != $rhs"
-  }
-
-  final case class And(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs && $rhs"
-  }
-
-  final case class Or(lhs: StreamRef, rhs: StreamRef, loc: Location) extends Expression {
-    override def toString = s"$lhs || $rhs"
-  }
-
-  final case class Not(arg: StreamRef, loc: Location) extends Expression {
-    override def toString = s"! $arg"
-  }
-
-  final case class IfThenElse(condition: StreamRef, thenCase: StreamRef, elseCase: StreamRef, loc: Location) extends Expression {
-    override def toString = s"if $condition then $thenCase else $elseCase"
-  }
-
-  final case class IfThen(condition: StreamRef, thenCase: StreamRef, loc: Location) extends Expression {
-    override def toString = s"if $condition then $thenCase"
+  final case class Lift(operator: PrimitiveOperators.PrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
+    override def toString = operator match {
+      case _: PrimitiveOperators.PrefixOperator => s"$operator${args(0)}"
+      case _: PrimitiveOperators.InfixOperator => s"${args(0)} $operator ${args(1)}"
+      case PrimitiveOperators.IfThen => s"if ${args(0)} then ${args(1)}"
+      case PrimitiveOperators.IfThenElse => s"if ${args(0)} then ${args(1)}"
+      case PrimitiveOperators.Const(value) => args.mkString(s"const($value)(", ", ", ")")
+    }
   }
 
   sealed abstract class LiteralValue {
     def loc: Location
     def withLoc(loc: Location): LiteralValue
+    def typ: Types.ValueType
   }
 
   final case class IntLiteral(value: BigInt, loc: Location) extends LiteralValue {
     override def toString = value.toString
     def withLoc(loc: Location): IntLiteral = copy(loc = loc)
+    val typ = Types.Int
   }
 
   final case class BoolLiteral(value: Boolean, loc: Location) extends LiteralValue {
     override def toString = value.toString
     def withLoc(loc: Location): BoolLiteral = copy(loc = loc)
+    val typ = Types.Bool
   }
 
   final case class StringLiteral(value: String, loc: Location) extends LiteralValue {
     override def toString = s""""$value""""
     def withLoc(loc: Location): StringLiteral = copy(loc = loc)
+    val typ = Types.String
   }
 
   final case class Unit(loc: Location) extends LiteralValue {
     override def toString = "()"
     def withLoc(loc: Location): Unit = copy(loc = loc)
+    val typ = Types.Unit
   }
 }
