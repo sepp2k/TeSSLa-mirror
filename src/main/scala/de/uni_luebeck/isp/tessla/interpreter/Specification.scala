@@ -29,6 +29,7 @@ class Specification[Time: Numeric]() {
     * No more input values can be provided for the current time afterwards.
     */
   def step(): Unit = {
+    //println("step")
     require(acceptInput)
     acceptInput = false
     for (input <- inputs) {
@@ -42,6 +43,7 @@ class Specification[Time: Numeric]() {
     * @param timeDelta
     */
   def step(timeDelta: Time): Unit = {
+
     require(timeDelta > zero)
     if (acceptInput) {
       step()
