@@ -62,15 +62,29 @@ object TesslaCore {
       case _: PrimitiveOperators.PrefixOperator => s"$operator${args(0)}"
       case _: PrimitiveOperators.InfixOperator => s"${args(0)} $operator ${args(1)}"
       case PrimitiveOperators.IfThen => s"if ${args(0)} then ${args(1)}"
-      case PrimitiveOperators.IfThenElse => s"if ${args(0)} then ${args(1)}"
+      case PrimitiveOperators.IfThenElse => s"if ${args(0)} then ${args(1)} else ${args(2)}"
       case PrimitiveOperators.Const(value) => args.mkString(s"const($value)(", ", ", ")")
     }
   }
 
-  sealed abstract class LiteralValue {
+  sealed abstract class Value {
     def loc: Location
-    def withLoc(loc: Location): LiteralValue
+    def withLoc(loc: Location): Value
     def typ: Types.ValueType
+    def toLiteral: LiteralValue
+  }
+
+  final case class ErrorValue(err: CompilationError) extends Value {
+    def loc = err.loc
+    def withLoc(loc: Location): ErrorValue = this
+    def toLiteral = throw err
+    def typ = Types.Nothing
+    override def toString = throw err
+  }
+
+  sealed abstract class LiteralValue extends Value {
+    def toLiteral = this
+    def withLoc(loc: Location): LiteralValue
   }
 
   final case class IntLiteral(value: BigInt, loc: Location) extends LiteralValue {

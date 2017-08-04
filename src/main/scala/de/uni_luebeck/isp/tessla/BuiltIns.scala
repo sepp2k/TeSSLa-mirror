@@ -10,7 +10,7 @@ class BuiltIns private(mkId: String => String) {
         case Literal(lit) => lit
       }
       if (literals.length == args.length) {
-        (Seq(), Literal(op.eval(literals, loc).get))
+        (Seq(), Literal(op.eval(literals, loc).get.toLiteral))
       } else {
         val streams: Seq[(Seq[(String, TesslaCore.Expression)], Stream)] = args.map {
           case s @ Stream(_, _) =>
@@ -20,8 +20,16 @@ class BuiltIns private(mkId: String => String) {
             (Seq(liftedName -> TesslaCore.Default(TesslaCore.Nil(l.loc), l.value, l.loc)),
               Stream(TesslaCore.Stream(liftedName, l.loc), l.typ))
         }
-        (Seq(name -> TesslaCore.Lift(op, streams.map(_._2.value), loc)),
-          Stream(TesslaCore.Stream(name, loc), op.returnTypeFor(streams.map(_._2.elementType), loc)))
+        try {
+          (streams.flatMap(_._1) :+ (name -> TesslaCore.Lift(op, streams.map(_._2.value), loc)),
+            Stream(TesslaCore.Stream(name, loc), op.returnTypeFor(streams.map {
+              case (_, stream) => (stream.elementType, stream.loc)
+            }))
+          )
+        } catch {
+          case Types.TypeMismatch(expected: Types.ValueType, actual: Types.ValueType, loc) =>
+            throw Types.TypeMismatch(Types.Stream(expected), Types.Stream(actual), loc)
+        }
       }
   }
 
