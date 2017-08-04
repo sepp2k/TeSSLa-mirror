@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import de.uni_luebeck.isp.tessla.CompilationError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import sexyopt.SexyOpt
 import scala.io.Source
@@ -38,7 +39,7 @@ object Main extends SexyOpt {
       tesslaSpec.outStreams.foreach { case (name, stream) => tesslaSpec.printStream(stream, name) }
       Traces.feedInput(tesslaSpec, traceSource)
     } catch {
-      case ex: Interpreter.InterpreterError =>
+      case ex: CompilationError =>
         System.err.println(s"Runtime error: $ex")
         if(debug) ex.printStackTrace()
     }

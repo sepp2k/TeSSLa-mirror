@@ -1,37 +1,39 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{Types, UnknownLoc}
-import de.uni_luebeck.isp.tessla.interpreter.Interpreter.InterpreterError
+import de.uni_luebeck.isp.tessla.{CompilationError, TesslaCore, Types, UnknownLoc}
 
 import scala.io.Source
 
 object Traces {
+  case class InvalidInputError(message: String) extends CompilationError {
+    def loc = UnknownLoc
+  }
   def feedInput(tesslaSpec: Interpreter, traceSource: Source): Unit = {
-    def provide(streamName: String, value: Interpreter.Value) = {
+    def provide(streamName: String, value: TesslaCore.Value) = {
       tesslaSpec.inStreams.get(streamName) match {
         case Some((inStream, typ)) =>
           if (value.typ == typ) {
             inStream.provide(value)
           } else {
-            throw InterpreterError(s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $typ", UnknownLoc)
+            throw InvalidInputError(s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $typ")
           }
-        case None => throw InterpreterError(s"Undeclared input stream: $streamName", UnknownLoc)
+        case None => throw InvalidInputError(s"Undeclared input stream: $streamName")
       }
     }
 
     val StringPattern = """^"([^"]*)"$""".r
 
     def parseValue(string: String) = string match {
-      case "()" => Interpreter.UnitValue
-      case "true" => Interpreter.BoolValue(true)
-      case "false" => Interpreter.BoolValue(false)
-      case StringPattern(s) => Interpreter.StringValue(s)
+      case "()" => TesslaCore.Unit(UnknownLoc)
+      case "true" => TesslaCore.BoolLiteral(true, UnknownLoc)
+      case "false" => TesslaCore.BoolLiteral(false, UnknownLoc)
+      case StringPattern(s) => TesslaCore.StringLiteral(s, UnknownLoc)
       case _ =>
-        Interpreter.IntValue(BigInt(string))
+        TesslaCore.IntLiteral(BigInt(string), UnknownLoc)
     }
 
     var previousTS: BigInt = 0
-    def handleInput(timestamp: String, inStream: String, value: Interpreter.Value = Interpreter.UnitValue) {
+    def handleInput(timestamp: String, inStream: String, value: TesslaCore.Value = TesslaCore.Unit(UnknownLoc)) {
       val ts = BigInt(timestamp)
       if(ts < previousTS) sys.error("Decreasing time stamps")
       if(ts > previousTS) {
