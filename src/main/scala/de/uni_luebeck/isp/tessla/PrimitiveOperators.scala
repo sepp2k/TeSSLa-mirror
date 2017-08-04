@@ -194,6 +194,8 @@ object PrimitiveOperators {
     val argumentTypes = Seq(Types.Int)
     val returnType = Types.Int
     def doEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
+    val argumentTypes = Seq(Types.Bool)
+    val returnType = Types.Bool
       case Seq(TesslaCore.BoolLiteral(arg, _)) =>
         Some(TesslaCore.BoolLiteral(!arg, loc))
     }
