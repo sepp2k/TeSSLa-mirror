@@ -6,8 +6,12 @@ import de.uni_luebeck.isp.tessla.interpreter.Interpreter.InterpreterError
 import scala.io.Source
 
 object Traces {
-  def feedInput(tesslaSpec: Interpreter, traceSource: Source): Unit = {
-    val queue = new TracesQueue()
+  def feedInput(tesslaSpec: Interpreter, traceSource: Source, threshold: Option[BigInt]): Unit = {
+
+    val queue = threshold match {
+      case Some(n) => new TracesQueue(n)
+      case None => new TracesQueue()
+    }
 
     def provide(streamName: String, value: Interpreter.Value) = {
       tesslaSpec.inStreams.get(streamName) match {
@@ -35,13 +39,11 @@ object Traces {
     var previousTS: BigInt = 0
     def handleInput(timestamp: BigInt, inStream: String, value: Interpreter.Value = Interpreter.UnitValue) {
       val ts = timestamp
-      if(ts < previousTS) sys.error("Decreasing time stamps")
+      if(ts < previousTS) sys.error("Decreasing time stamps: first = " + previousTS + " , second = " + ts)
       if(ts > previousTS) {
         tesslaSpec.step(ts - previousTS)
         previousTS = ts
       }
-      println("provide" + inStream + " " + value)
-
       provide(inStream, value)
     }
 
@@ -49,9 +51,11 @@ object Traces {
     val EmptyLinePattern = """\s*""".r
 
     def dequeue(timeStamp: String): Unit = {
-      queue.dequeue(BigInt(timeStamp)) match {
-        case Some((ts, (n, v))) => handleInput(ts, n, v)
-        case None =>
+      while(queue.hasNext(BigInt(timeStamp))) {
+        queue.dequeue(BigInt(timeStamp)) match {
+          case Some((ts, (n, v))) => handleInput(ts, n, v)
+          case None =>
+        }
       }
     }
 
