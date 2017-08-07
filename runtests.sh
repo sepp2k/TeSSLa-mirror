@@ -18,6 +18,6 @@ function runTest {
 }
 export -f runTest
 
-echo sbt "set test in assembly := {}" clean assembly
+sbt "set test in assembly := {}" clean assembly
 command='runTest "{}" '"$@"
 find $testPath -name "*.tessla" -exec bash -c "$command" \;
