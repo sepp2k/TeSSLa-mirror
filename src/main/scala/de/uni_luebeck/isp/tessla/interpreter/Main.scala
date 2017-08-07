@@ -17,6 +17,8 @@ object Main extends SexyOpt {
   def diagnostics = !noDiagnostics.value
   val printCore = flag("print-core", "Print the Tessla Core representation generated from the Tessla specification")
   val debug = flag("debug", "Print stack traces for runtime errors")
+  val threshold = option("threshold", "Allowed maximal difference between decreasing timestamps (default: 100,000)", "100000")
+
 
   def main(args: Array[String]): Unit = {
     parse(args)
@@ -37,7 +39,7 @@ object Main extends SexyOpt {
     if (verifyOnly) return
     try {
       tesslaSpec.outStreams.foreach { case (name, stream) => tesslaSpec.printStream(stream, name) }
-      Traces.feedInput(tesslaSpec, traceSource)
+      Traces.feedInput(tesslaSpec, traceSource, BigInt(threshold))
     } catch {
       case ex: CompilationError =>
         System.err.println(s"Runtime error: $ex")

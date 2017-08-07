@@ -42,6 +42,7 @@ class Specification[Time: Numeric]() {
     * @param timeDelta
     */
   def step(timeDelta: Time): Unit = {
+
     require(timeDelta > zero)
     if (acceptInput) {
       step()

@@ -8,7 +8,9 @@ object Traces {
   case class InvalidInputError(message: String) extends CompilationError {
     def loc = UnknownLoc
   }
-  def feedInput(tesslaSpec: Interpreter, traceSource: Source): Unit = {
+  def feedInput(tesslaSpec: Interpreter, traceSource: Source, threshold: BigInt): Unit = {
+    val queue = new TracesQueue(threshold)
+
     def provide(streamName: String, value: TesslaCore.Value) = {
       tesslaSpec.inStreams.get(streamName) match {
         case Some((inStream, typ)) =>
@@ -33,9 +35,10 @@ object Traces {
     }
 
     var previousTS: BigInt = 0
-    def handleInput(timestamp: String, inStream: String, value: TesslaCore.Value = TesslaCore.Unit(UnknownLoc)) {
-      val ts = BigInt(timestamp)
-      if(ts < previousTS) sys.error("Decreasing time stamps")
+
+    def handleInput(timestamp: BigInt, inStream: String, value: TesslaCore.Value = TesslaCore.Unit(UnknownLoc)) {
+      val ts = timestamp
+      if(ts < previousTS) sys.error("Decreasing time stamps: first = " + previousTS + " , second = " + ts)
       if(ts > previousTS) {
         tesslaSpec.step(ts - previousTS)
         previousTS = ts
@@ -46,16 +49,37 @@ object Traces {
     val InputPattern = """(\d+)\s*:\s*([a-zA-Z][0-9a-zA-Z]*)(?:\s*=\s*(.+))?""".r
     val EmptyLinePattern = """\s*""".r
 
+    def dequeue(timeStamp: String): Unit = {
+      while(queue.hasNext(BigInt(timeStamp))) {
+        queue.dequeue(BigInt(timeStamp)) match {
+          case Some((ts, (n, v))) => handleInput(ts, n, v)
+          case None =>
+        }
+      }
+    }
+
+
     traceSource.getLines.zipWithIndex.foreach {
       case (EmptyLinePattern(), _) =>
         // do nothing
-      case (InputPattern(timestamp, inStream, null), _) =>
-        handleInput(timestamp, inStream)
-      case (InputPattern(timestamp, inStream, value), _) =>
-        handleInput(timestamp, inStream, parseValue(value))
+      case (InputPattern(timestamp, inStream, null), _) => {
+        queue.enqueue(BigInt(timestamp), inStream)
+        dequeue(timestamp)
+      }
+      case (InputPattern(timestamp, inStream, value), _) => {
+        queue.enqueue(BigInt(timestamp), inStream, parseValue(value))
+        dequeue(timestamp)
+      }
       case (line, index) =>
         sys.error(s"Syntax error on input line $index: $line")
     }
+
+    //in the end handle every remaining event from the queue
+    queue.toList().foreach{
+      case (ts, (n, v)) =>
+        handleInput(ts, n, v)
+    }
+
     tesslaSpec.step()
   }
 }

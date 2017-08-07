@@ -33,7 +33,7 @@ class InterpreterTests extends FunSuite {
                 }
               }
               def runTraces() = {
-                Traces.feedInput(spec, testFile(name, "input"))
+                Traces.feedInput(spec, testFile(name, "input"), 100000)
               }
               if (extensions.contains("runtime-errors")) {
                 val ex = intercept[CompilationError](runTraces())
