@@ -164,7 +164,7 @@ class Specification[Time: Numeric]() {
           oldValue = newValue
           newDelay match {
             case Some(delay) =>
-              val t = targetTime.getOrElse(getTime) + delay
+              val t = getTime + delay
               targetTime = Some(t)
               updateTrigger(this, t)
             case None =>
