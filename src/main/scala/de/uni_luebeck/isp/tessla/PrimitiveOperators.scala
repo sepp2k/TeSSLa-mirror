@@ -201,7 +201,9 @@ object PrimitiveOperators {
 
   case object IfThenElse extends PrimitiveOperator {
     override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = argTypes match {
-      case Seq((Types.Bool, _), (thenType, _), (elseType, elseLoc)) => Types.requireType(thenType, elseType, elseLoc)
+      case Seq((condType, condLoc), (thenType, _), (elseType, elseLoc)) =>
+        Types.requireType(Types.Bool, condType, condLoc)
+        Types.requireType(thenType, elseType, elseLoc)
       case _ => throw ArityError
     }
 
@@ -213,7 +215,9 @@ object PrimitiveOperators {
 
   case object IfThen extends PrimitiveOperator {
     override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = argTypes match {
-      case Seq((Types.Bool, _), (thenType, _)) => thenType
+      case Seq((condType, condLoc), (thenType, _)) =>
+        Types.requireType(Types.Bool, condType, condLoc)
+        thenType
       case _ => throw ArityError
     }
 
