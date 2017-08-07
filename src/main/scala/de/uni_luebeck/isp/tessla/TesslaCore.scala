@@ -54,7 +54,7 @@ object TesslaCore {
   }
 
   final case class DelayedLast(values: StreamRef, delays: StreamRef, loc: Location) extends Expression {
-    override def toString = s"deleayedLast($values, $delays)"
+    override def toString = s"delayedLast($values, $delays)"
   }
 
   final case class Lift(operator: PrimitiveOperators.PrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
