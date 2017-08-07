@@ -12,7 +12,15 @@ class InterpreterTests extends FunSuite {
 
   def testFile(name: String, extension: String): Source = reSource(s"tests/$name.$extension")
 
-  val testCases = reSource("tests").getLines.toSeq.groupBy {
+  def getFilesRecursively(root: String, path: String = ""): Stream[String] = {
+    def isDir(filename: String) = !filename.contains(".")
+    reSource(s"$root/$path").getLines.flatMap { file =>
+      if (isDir(file)) getFilesRecursively(root, s"$path/$file")
+      else Stream(s"$path/$file")
+    }.toStream
+  }
+
+  val testCases = getFilesRecursively("tests").groupBy {
     fileName => fileName.replaceFirst("""\.[^.]+$""", "")
   }.mapValues(_.map(_.replaceFirst("""^.*\.([^.]+)$""", "$1")).toSet)
 
