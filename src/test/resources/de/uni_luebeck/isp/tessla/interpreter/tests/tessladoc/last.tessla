@@ -1,0 +1,4 @@
+in x: Events<Int>
+in y: Events<Int>
+def z := last(x,y)
+out z
