@@ -14,3 +14,13 @@ out y
 out z
 out bla
 out blubb
+
+def bla(x: Int, y: String, z: Events<Bool>): Events<Bool> := x==x && y==y && z==z
+
+out bla(1, "la", default(nil, true))
+out bla(1, y = "la", z = default(nil, true))
+out default(nil: Events<Int>, 42: Int)
+out bla(1, 2, default(nil, 42))
+out bla(1, y = "lala", z = default(nil, 42))
+out default(nil, 1: String)
+out default(nil, 1): Events<String>

@@ -1,0 +1,9 @@
+in x: Events<Int>
+in y: Events<Int>
+
+def result :=
+    if y == 0
+    then -1234567890
+    else x / y
+
+out result

@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import de.uni_luebeck.isp.tessla.CompilationError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 
@@ -35,7 +36,7 @@ class InterpreterTests extends FunSuite {
                 Traces.feedInput(spec, testFile(name, "input"))
               }
               if (extensions.contains("runtime-errors")) {
-                val ex = intercept[Interpreter.InterpreterError](runTraces())
+                val ex = intercept[CompilationError](runTraces())
                 assert(ex.toString == testFile(name, "runtime-errors").mkString)
               } else {
                 runTraces()
