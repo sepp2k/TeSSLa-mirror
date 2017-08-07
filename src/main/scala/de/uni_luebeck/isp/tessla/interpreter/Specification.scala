@@ -80,6 +80,27 @@ class Specification[Time: Numeric]() {
     trigger = (remaining._1 + (stream -> newTime), remaining._2 + (newTime -> temp))
   }
 
+  def lift[Value](
+    streams: Seq[Stream[Value]]
+  )(
+    op: Seq[Value] => Option[Value]
+  ): Stream[Value] =
+    Operation[Seq[Option[Value]], Value](streams.map(_ => None), streams)((_, state, inputs) => {
+      val newState = inputs.zip(state).map {
+        case (in, st) => in.orElse(st)
+      }
+      val newOutput =
+        if (inputs.exists(_.isDefined)) {
+          val tmp = newState.foldLeft(Some(Nil): Option[List[Value]]) {
+            case (Some(list), Some(value)) => Some(value :: list)
+            case _ => None
+          }
+          tmp.flatMap(x => op(x.reverse))
+        } else None
+
+      (newState, newOutput)
+    })
+
   def lift[Value, Complete <: HList, Inputs <: HList, Streams <: HList](
     streams: Streams
   )(
@@ -685,6 +706,34 @@ class Specification[Time: Numeric]() {
         })
       }
     }
+
+  def Operation[State, Value](
+    initState: State, inputStreams: Seq[Stream[Value]]
+  )(
+    op: (Time, State, Seq[Option[Value]]) => (State, Option[Value])
+  ): Stream[Value] =
+    new Stream[Value] {
+      private var state: State = initState
+      private var inputs: Array[Option[Value]] = inputStreams.map(_ => None).toArray
+      private var counter = 0
+
+      override protected def init(): Unit = {
+        for ((stream, i) <- inputStreams.zipWithIndex) {
+          stream.addListener {value =>
+            counter += 1
+            inputs(i) = value
+            if (counter == inputStreams.length) {
+              val (newState, output) = op(Specification.this.getTime, state, inputs)
+              counter = 0
+              inputs = inputStreams.map(_ => None).toArray
+              state = newState
+              propagate(output)
+            }
+          }
+        }
+      }
+    }
+
 
   def Input[Value](): Input[Value] =
     new Input[Value]()
