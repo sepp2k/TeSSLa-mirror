@@ -6,12 +6,9 @@ import de.uni_luebeck.isp.tessla.interpreter.Interpreter.InterpreterError
 import scala.io.Source
 
 object Traces {
-  def feedInput(tesslaSpec: Interpreter, traceSource: Source, threshold: Option[BigInt]): Unit = {
+  def feedInput(tesslaSpec: Interpreter, traceSource: Source, threshold: BigInt): Unit = {
 
-    val queue = threshold match {
-      case Some(n) => new TracesQueue(n)
-      case None => new TracesQueue()
-    }
+    val queue = new TracesQueue(threshold)
 
     def provide(streamName: String, value: Interpreter.Value) = {
       tesslaSpec.inStreams.get(streamName) match {

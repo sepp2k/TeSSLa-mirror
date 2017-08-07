@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import scala.collection.mutable
 import scala.math.Ordering.BigIntOrdering
 
-class TracesQueue(val threshold: BigInt = BigInt("100000")) {
+class TracesQueue(val threshold: BigInt) {
   /*A PriorityQueue, having a BigInt as timestamp and using the lowest value has highest priority.*/
   val queue: mutable.PriorityQueue[(BigInt, (String, Interpreter.Value))] = new mutable.PriorityQueue[(BigInt, (String, Interpreter.Value))]()(Ordering.by(e=>e._1)).reverse
 
