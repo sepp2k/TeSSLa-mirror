@@ -22,7 +22,7 @@ class InterpreterTests extends FunSuite {
 
   val testCases = getFilesRecursively("tests").groupBy {
     fileName => fileName.replaceFirst("""\.[^.]+$""", "")
-  }.mapValues(_.map(_.replaceFirst("""^.*\.([^.]+)$""", "$1")).toSet)
+  }.mapValues(_.map(_.replaceFirst("""^.*\.([^.]+)$""", "$1"))).toSeq.sortBy(_._1)
 
   testCases.foreach {
     case (name, extensions) =>
