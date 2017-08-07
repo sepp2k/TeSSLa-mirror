@@ -22,7 +22,6 @@ object Main extends SexyOpt {
   def main(args: Array[String]): Unit = {
     parse(args)
     val traceSource = traceFile.map(Source.fromFile).getOrElse(Source.stdin)
-    println(tesslaFile)
     val tesslaSpec = Interpreter.fromFile(tesslaFile) match {
       case Success(spec, warnings) =>
         if (diagnostics) warnings.foreach(w => System.err.println(s"Warning: $w"))
