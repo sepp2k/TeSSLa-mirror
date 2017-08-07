@@ -42,44 +42,14 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
         case c: CompilationError =>
           nil.default(TesslaCore.ErrorValue(c))
       }
-    case TesslaCore.Lift(op, Seq(argStream), loc) =>
-      lift(evalStream(argStream) :: HNil) {
-        (args: TesslaCore.Value :: HNil) =>
-          args match {
-            case arg :: HNil =>
-              try {
-                op.eval(Seq(arg.withLoc(argStream.loc)), loc)
-              } catch {
-                case c: CompilationError =>
-                  Some(TesslaCore.ErrorValue(c))
-              }
-          }
-      }
-    case TesslaCore.Lift(op, Seq(argStream1, argStream2), loc) =>
-      lift(evalStream(argStream1) :: evalStream(argStream2) :: HNil) {
-        (args: TesslaCore.Value :: TesslaCore.Value :: HNil) =>
-          args match {
-            case arg1 :: arg2 :: HNil =>
-              try {
-                op.eval(Seq(arg1.withLoc(argStream1.loc), arg2.withLoc(argStream2.loc)), loc)
-              } catch {
-                case c: CompilationError =>
-                  Some(TesslaCore.ErrorValue(c))
-              }
-          }
-      }
-    case TesslaCore.Lift(op, Seq(argStream1, argStream2, argStream3), loc) =>
-      lift(evalStream(argStream1) :: evalStream(argStream2) :: evalStream(argStream3) :: HNil) {
-        (args: TesslaCore.Value :: TesslaCore.Value :: TesslaCore.Value :: HNil) =>
-          args match {
-            case arg1 :: arg2 :: arg3 :: HNil =>
-              try {
-                op.eval(Seq(arg1.withLoc(argStream1.loc), arg2.withLoc(argStream2.loc), arg3.withLoc(argStream3.loc)), loc)
-              } catch {
-                case c: CompilationError =>
-                  Some(TesslaCore.ErrorValue(c))
-              }
-          }
+    case TesslaCore.Lift(op, argStreams, loc) =>
+      lift(argStreams.map(evalStream)) { args =>
+        try {
+          op.eval((args, argStreams).zipped.map((arg, s) => arg.withLoc(s.loc)), loc)
+        } catch {
+          case c: CompilationError =>
+            Some(TesslaCore.ErrorValue(c))
+        }
       }
     case TesslaCore.Default(values, defaultValue, _) =>
       evalStream(values).default(defaultValue)
