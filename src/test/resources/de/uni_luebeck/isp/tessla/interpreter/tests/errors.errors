@@ -8,3 +8,6 @@
 (24,28 - 24,44): Type mismatch: Expected Events<Bool>, found Events<Int>.
 (25,18 - 25,19): Type mismatch: Expected String, found Int.
 (26,5 - 26,20): Type mismatch: Expected Events<String>, found Events<Int>.
+(29,8 - 29,12): Type mismatch: Expected Events<Bool>, found Events<Int>.
+(30,8 - 30,12): Type mismatch: Expected Events<Bool>, found Events<Int>.
+(31,27 - 31,31): Type mismatch: Expected Events<Int>, found Events<String>.
