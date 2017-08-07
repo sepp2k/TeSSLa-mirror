@@ -64,6 +64,7 @@ object TesslaCore {
       case PrimitiveOperators.IfThen => s"if ${args(0)} then ${args(1)}"
       case PrimitiveOperators.IfThenElse => s"if ${args(0)} then ${args(1)} else ${args(2)}"
       case PrimitiveOperators.Const(value) => args.mkString(s"const($value)(", ", ", ")")
+      case PrimitiveOperators.First => args.mkString("first(", ", ", ")")
     }
   }
 

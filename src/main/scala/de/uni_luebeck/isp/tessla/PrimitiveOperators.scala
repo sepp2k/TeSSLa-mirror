@@ -29,6 +29,18 @@ object PrimitiveOperators {
     def doEval(values: Seq[TesslaCore.Value], loc: Location) = Some(value)
   }
 
+  /**
+    * Take a variable amount of arguments and return the first one
+    */
+  case object First extends PrimitiveOperator {
+    override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = {
+      require(argTypes.nonEmpty)
+      argTypes.head._1
+    }
+
+    def doEval(values: Seq[TesslaCore.Value], loc: Location) = Some(values.head)
+  }
+
   sealed protected trait Monomorphic extends PrimitiveOperator {
     protected def argumentTypes: Seq[Types.ValueType]
     protected def returnType: Types.ValueType

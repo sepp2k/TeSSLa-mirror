@@ -97,6 +97,7 @@ class BuiltIns private(mkId: String => String) {
     ("&&", 2) -> primOp(PrimitiveOperators.And),
     ("||", 2) -> primOp(PrimitiveOperators.Or),
     ("!", 1) -> primOp(PrimitiveOperators.Not),
+    ("first", 2) -> primOp(PrimitiveOperators.First),
     ("if then else", 3) -> primOp(PrimitiveOperators.IfThenElse),
     ("if then", 2) -> primOp(PrimitiveOperators.IfThen)
   )
