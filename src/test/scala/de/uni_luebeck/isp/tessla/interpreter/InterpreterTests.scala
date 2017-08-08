@@ -24,6 +24,21 @@ class InterpreterTests extends FunSuite {
     fileName => fileName.replaceFirst("""\.[^.]+$""", "")
   }.mapValues(_.map(_.replaceFirst("""^.*\.([^.]+)$""", "$1"))).toSeq.sortBy(_._1)
 
+  def assert(condition: Boolean, message: String): Unit = {
+    if (!condition) fail(message)
+  }
+
+  def assertEquals[T](expected: T, actual: T, name: String): Unit = {
+    assert(expected == actual, s"Actual $name did not equal $name. Expected: $expected. Actual: $actual.")
+  }
+
+  def assertEquals[T](expected: Set[T], actual: Set[T], name: String): Unit = {
+    val onlyExpected = expected -- actual
+    val onlyActual = actual -- expected
+    val diff = (onlyExpected.map("+ " + _) ++ onlyActual.map("- " + _)).toSeq.sortBy(_.substring(2)).mkString("\n")
+    assert(expected == actual, s"Actual $name did not equal $name. Diff:\n$diff\n")
+  }
+
   testCases.foreach {
     case (name, extensions) =>
       test(name) {
@@ -45,17 +60,18 @@ class InterpreterTests extends FunSuite {
               }
               if (extensions.contains("runtime-errors")) {
                 val ex = intercept[CompilationError](runTraces())
-                assert(ex.toString == testFile(name, "runtime-errors").mkString)
+                assertEquals(ex.toString, testFile(name, "runtime-errors").mkString, "runtime error")
               } else {
                 runTraces()
               }
-              assert(actualOutput == expectedOutput)
+              assertEquals(actualOutput, expectedOutput, "output")
             case Failure(errors, _) =>
-              assert(extensions.contains("errors"), "Expected: Compilation success. Actual: Compilation failure.")
-              assert(errors.map(_.toString).toSet == testFile(name, "errors").getLines.toSet)
+              assert(extensions.contains("errors"),
+                s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
+              assertEquals(errors.map(_.toString).toSet, testFile(name, "errors").getLines.toSet, "errors")
           }
           if (extensions.contains("warnings")) {
-            assert(result.warnings.map(_.toString).toSet == testFile(name, "warnings").getLines.toSet)
+            assertEquals(result.warnings.map(_.toString).toSet, testFile(name, "warnings").getLines.toSet, "warnings")
           }
         }
       }
