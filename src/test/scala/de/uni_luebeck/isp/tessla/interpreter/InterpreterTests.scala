@@ -32,10 +32,10 @@ class InterpreterTests extends FunSuite {
     assert(expected == actual, s"Actual $name did not equal expected $name. Expected: $expected. Actual: $actual.")
   }
 
-  def assertEqualSets[T: Ordering](actual: Set[T], expected: Set[T], name: String): Unit = {
+  def assertEqualSets[T: Ordering](actual: Set[T], expected: Set[T], name: String, stringify: T => String = (x:T) => x.toString): Unit = {
     val onlyExpected = (expected -- actual).map(x => (x, "-"))
     val onlyActual = (actual -- expected).map(x => (x, "+"))
-    val diff = (onlyExpected ++ onlyActual).toSeq.sorted.map {case (entry, prefix) => s"$prefix $entry"}.mkString("\n")
+    val diff = (onlyExpected ++ onlyActual).toSeq.sorted.map {case (entry, prefix) => s"$prefix ${stringify(entry)}"}.mkString("\n")
     assert(expected == actual, s"Actual $name did not equal expected $name. Diff:\n$diff\n")
   }
 
@@ -43,6 +43,8 @@ class InterpreterTests extends FunSuite {
     val parts = line.split(":", 2)
     (BigInt(parts(0)), parts(1))
   }
+
+  def unsplitOutput(pair: (BigInt, String)): String = s"${pair._1}:${pair._2}"
 
   testCases.foreach {
     case (name, extensions) =>
@@ -69,7 +71,7 @@ class InterpreterTests extends FunSuite {
               } else {
                 runTraces()
               }
-              assertEqualSets(actualOutput.map(splitOutput).toSet, expectedOutput.map(splitOutput), "output")
+              assertEqualSets(actualOutput.map(splitOutput).toSet, expectedOutput.map(splitOutput), "output", unsplitOutput)
             case Failure(errors, _) =>
               assert(extensions.contains("errors"),
                 s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
