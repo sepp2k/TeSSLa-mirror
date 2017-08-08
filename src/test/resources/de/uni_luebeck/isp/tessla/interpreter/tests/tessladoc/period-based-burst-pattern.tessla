@@ -10,7 +10,15 @@ def resetCount(events, reset) := {
   sum
 }
 
+def period(delay) := {
+  def s := default(delayedLast(s, s), delay)
+  const((), s)
+}
+
 in x: Events<Unit>
-in y: Events<Unit>
-def z := resetCount(x,y)
-out z
+def p := period(5)
+out p
+def c := resetCount(x, p)
+out c
+def e := c > 2
+out e
