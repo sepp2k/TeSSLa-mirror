@@ -1,0 +1,9 @@
+def resetCount(events, reset) := {
+  def sum := default(if time(events) > default(time(reset),0) then last(sum, events) + 1 else 0, 0)
+  sum
+}
+
+in x: Events<Unit>
+in y: Events<Unit>
+def z := resetCount(x,y)
+out z
