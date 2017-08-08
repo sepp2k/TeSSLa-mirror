@@ -28,19 +28,15 @@ class InterpreterTests extends FunSuite {
     if (!condition) fail(message)
   }
 
-  def assertEquals[T](expected: T, actual: T, name: String): Unit = {
-    assert(expected == actual, s"Actual $name did not equal $name. Expected: $expected. Actual: $actual.")
+  def assertEquals[T](actual: T, expected: T, name: String): Unit = {
+    assert(expected == actual, s"Actual $name did not equal expected $name. Expected: $expected. Actual: $actual.")
   }
 
-  def assertEquals[T](expected: Set[T], actual: Set[T], name: String): Unit = {
+  def assertEqualSets[T](actual: Set[T], expected: Set[T], name: String): Unit = {
     val onlyExpected = expected -- actual
     val onlyActual = actual -- expected
     val diff = (onlyExpected.map("+ " + _) ++ onlyActual.map("- " + _)).toSeq.sortBy(_.substring(2)).mkString("\n")
-    assert(expected == actual, s"Actual $name did not equal $name. Diff:\n$diff\n")
-  }
-
-  def assertEquals[T](expected: mutable.Set[T], actual: mutable.Set[T], name: String): Unit = {
-    assertEquals(expected.toSet, actual.toSet, name)
+    assert(expected == actual, s"Actual $name did not equal expected $name. Diff:\n$diff\n")
   }
 
   testCases.foreach {
@@ -68,14 +64,14 @@ class InterpreterTests extends FunSuite {
               } else {
                 runTraces()
               }
-              assertEquals(actualOutput, expectedOutput, "output")
+              assertEqualSets(actualOutput.toSet, expectedOutput, "output")
             case Failure(errors, _) =>
               assert(extensions.contains("errors"),
                 s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
-              assertEquals(errors.map(_.toString).toSet, testFile(name, "errors").getLines.toSet, "errors")
+              assertEqualSets(errors.map(_.toString).toSet, testFile(name, "errors").getLines.toSet, "errors")
           }
           if (extensions.contains("warnings")) {
-            assertEquals(result.warnings.map(_.toString).toSet, testFile(name, "warnings").getLines.toSet, "warnings")
+            assertEqualSets(result.warnings.map(_.toString).toSet, testFile(name, "warnings").getLines.toSet, "warnings")
           }
         }
       }
