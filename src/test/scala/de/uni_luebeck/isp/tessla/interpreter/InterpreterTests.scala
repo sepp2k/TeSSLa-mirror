@@ -39,6 +39,10 @@ class InterpreterTests extends FunSuite {
     assert(expected == actual, s"Actual $name did not equal $name. Diff:\n$diff\n")
   }
 
+  def assertEquals[T](expected: mutable.Set[T], actual: mutable.Set[T], name: String): Unit = {
+    assertEquals(expected.toSet, actual.toSet, name)
+  }
+
   testCases.foreach {
     case (name, extensions) =>
       test(name) {
