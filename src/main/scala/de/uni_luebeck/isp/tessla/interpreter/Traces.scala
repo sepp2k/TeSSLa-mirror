@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import de.uni_luebeck.isp.tessla.interpreter.TimeUnit.Nanos
 import de.uni_luebeck.isp.tessla.{CompilationError, TesslaCore, Types, UnknownLoc}
 
 import scala.io.Source
@@ -10,6 +11,7 @@ object Traces {
   }
   def feedInput(tesslaSpec: Interpreter, traceSource: Source, threshold: BigInt): Unit = {
     val queue = new TracesQueue(threshold)
+    var timeUnit: TimeUnit.Unit = Nanos
 
     def provide(streamName: String, value: TesslaCore.Value) = {
       tesslaSpec.inStreams.get(streamName) match {
@@ -48,6 +50,7 @@ object Traces {
 
     val InputPattern = """(\d+)\s*:\s*([a-zA-Z][0-9a-zA-Z]*)(?:\s*=\s*(.+))?""".r
     val EmptyLinePattern = """\s*""".r
+    val TimeUnitPattern = """\$timeunit\s*=\s*([a-zA-Z]{1,2})""".r
 
     def dequeue(timeStamp: String): Unit = {
       while(queue.hasNext(BigInt(timeStamp))) {
@@ -70,6 +73,8 @@ object Traces {
         queue.enqueue(BigInt(timestamp), inStream, parseValue(value))
         dequeue(timestamp)
       }
+      case (TimeUnitPattern(unit), _) =>
+        timeUnit = TimeUnit.fromString(unit)
       case (line, index) =>
         sys.error(s"Syntax error on input line $index: $line")
     }
