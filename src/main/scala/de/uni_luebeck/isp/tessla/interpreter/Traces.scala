@@ -16,7 +16,7 @@ object Traces {
     var timeUnit: TimeUnit.Unit = Nanos
 
     val StringPattern = """^"([^"]*)"$""".r
-    
+
     val InputPattern = """(\d+)\s*:\s*([a-zA-Z][0-9a-zA-Z]*)(?:\s*=\s*(.+))?""".r
     val EmptyLinePattern = """\s*""".r
     val TimeUnitPattern = """\$timeunit\s*=\s*("[a-zA-Z]{1,2}"|[a-zA-Z]{1,2})""".r
