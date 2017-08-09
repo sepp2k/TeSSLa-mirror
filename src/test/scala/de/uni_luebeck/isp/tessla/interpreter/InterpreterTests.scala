@@ -20,9 +20,14 @@ class InterpreterTests extends FunSuite {
     }.toStream
   }
 
-  val testCases = getFilesRecursively("tests").groupBy {
-    fileName => fileName.replaceFirst("""\.[^.]+$""", "")
-  }.mapValues(_.map(_.replaceFirst("""^.*\.([^.]+)$""", "$1"))).toSeq.sortBy(_._1)
+  def stripExtension(fileName: String) = fileName.replaceFirst("""\.[^.]+$""", "")
+  def getExtension(fileName: String) = fileName.replaceFirst("""^.*\.([^.]+)$""", "$1")
+
+  val files = getFilesRecursively("tests")
+  val testCaseNames = files.filter{ _.endsWith(".tessla") }.map(stripExtension).toSet
+  val testCases = files.groupBy(stripExtension).filter{
+    case (fileName, _) => testCaseNames.contains(fileName)
+  }.mapValues(_.map(getExtension)).toSeq.sortBy(_._1)
 
   def assert(condition: Boolean, message: String): Unit = {
     if (!condition) fail(message)
