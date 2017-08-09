@@ -14,7 +14,8 @@ object TimeUnit {
     case "m" => Minutes
     case "h" => Hours
     case "d" => Days
-    case _ => throw new InvalidInputError("Invalid time unit: "+str)
+    case _ => throw new InvalidInputError(s"Invalid time unit: $str. " +
+      "Allowed time units: ns, us, ms, s, m, h, d.")
   }
 
   trait Unit {
@@ -27,36 +28,43 @@ object TimeUnit {
 
   case object Nanos extends Unit {
     val factor = 1
+
     override def toString: String = "ns"
   }
 
   case object Micros extends Unit {
     val factor = 1000
+
     override def toString: String = "us"
   }
 
   case object Millis extends Unit {
     val factor = 1000000
+
     override def toString: String = "ms"
   }
 
   case object Seconds extends Unit {
     val factor = 1000000000
+
     override def toString: String = "ms"
   }
 
   case object Minutes extends Unit {
     val factor = 60000000000L
+
     override def toString: String = "ms"
   }
 
   case object Hours extends Unit {
     val factor = 3600000000000L
+
     override def toString: String = "h"
   }
 
   case object Days extends Unit {
     val factor = 86400000000000L
+
     override def toString: String = "d"
   }
 

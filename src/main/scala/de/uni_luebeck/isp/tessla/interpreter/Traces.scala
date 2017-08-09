@@ -19,7 +19,7 @@ object Traces {
 
     val InputPattern = """(\d+)\s*:\s*([a-zA-Z][0-9a-zA-Z]*)(?:\s*=\s*(.+))?""".r
     val EmptyLinePattern = """\s*""".r
-    val TimeUnitPattern = """\$timeunit\s*=\s*("[a-zA-Z]{1,2}"|[a-zA-Z]{1,2})""".r
+    val TimeUnitPattern = """\$timeunit\s*=\s*("[a-zA-Z]{1,2}")""".r
 
     def provide(streamName: String, value: TesslaCore.Value) = {
       tesslaSpec.inStreams.get(streamName) match {
