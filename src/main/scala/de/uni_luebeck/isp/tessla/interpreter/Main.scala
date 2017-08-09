@@ -11,10 +11,12 @@ object Main extends SexyOpt {
 
   val tesslaFile = posArg("tessla-file", "The file containing the Tessla specification")
   val traceFile = optionalPosArg("trace-file", "The file containing the trace data used as input for the specification." +
-                                               " If this is not provided, input is read from stdin")
+    " If this is not provided, input is read from stdin")
   val verifyOnly = flag("verify-only", "Only check the Tessla spec for errors and don't execute it")
   val noDiagnostics = flag("no-diagnostics", "Don't print error messages and warnings")
+
   def diagnostics = !noDiagnostics.value
+
   val printCore = flag("print-core", "Print the Tessla Core representation generated from the Tessla specification")
   val debug = flag("debug", "Print stack traces for runtime errors")
   val threshold = option("threshold", "Allowed maximal difference between decreasing timestamps (default: 100,000)", "100000")
@@ -38,12 +40,14 @@ object Main extends SexyOpt {
     }
     if (verifyOnly) return
     try {
-      tesslaSpec.outStreams.foreach { case (name, stream) => tesslaSpec.printStream(stream, name) }
-      Traces.feedInput(tesslaSpec, traceSource, BigInt(threshold))
+      Traces.feedInput(tesslaSpec, traceSource, BigInt(threshold), {
+        case (Some(ts), name, value) => println(s"$ts: $name = $value")
+        case (None, name, value) => println(s"$name = $value")
+      })
     } catch {
       case ex: CompilationError =>
         System.err.println(s"Runtime error: $ex")
-        if(debug) ex.printStackTrace()
+        if (debug) ex.printStackTrace()
     }
   }
 }

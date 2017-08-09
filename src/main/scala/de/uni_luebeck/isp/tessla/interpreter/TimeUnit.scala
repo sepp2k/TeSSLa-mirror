@@ -6,7 +6,7 @@ import de.uni_luebeck.isp.tessla.interpreter.Traces.InvalidInputError
   * Created by Thiemo on 08.08.2017.
   */
 object TimeUnit {
-  def fromString(str: String): Unit = str match {
+  def fromString(str: String): Unit = str.replaceAll("\"", "") match {
     case "ns" => Nanos
     case "us" => Micros
     case "ms" => Millis

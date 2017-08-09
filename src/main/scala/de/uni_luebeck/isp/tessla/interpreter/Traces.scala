@@ -6,12 +6,20 @@ import de.uni_luebeck.isp.tessla.{CompilationError, TesslaCore, Types, UnknownLo
 import scala.io.Source
 
 object Traces {
+
   case class InvalidInputError(message: String) extends CompilationError {
     def loc = UnknownLoc
   }
-  def feedInput(tesslaSpec: Interpreter, traceSource: Source, threshold: BigInt): Unit = {
+
+  def feedInput(tesslaSpec: Interpreter, traceSource: Source, threshold: BigInt, callback: (Option[BigInt], String, TesslaCore.Value) => Unit): Unit = {
     val queue = new TracesQueue(threshold)
     var timeUnit: TimeUnit.Unit = Nanos
+
+    val StringPattern = """^"([^"]*)"$""".r
+    
+    val InputPattern = """(\d+)\s*:\s*([a-zA-Z][0-9a-zA-Z]*)(?:\s*=\s*(.+))?""".r
+    val EmptyLinePattern = """\s*""".r
+    val TimeUnitPattern = """\$timeunit\s*=\s*("[a-zA-Z]{1,2}"|[a-zA-Z]{1,2})""".r
 
     def provide(streamName: String, value: TesslaCore.Value) = {
       tesslaSpec.inStreams.get(streamName) match {
@@ -24,8 +32,6 @@ object Traces {
         case None => throw InvalidInputError(s"Undeclared input stream: $streamName")
       }
     }
-
-    val StringPattern = """^"([^"]*)"$""".r
 
     def parseValue(string: String) = string match {
       case "()" => TesslaCore.Unit(UnknownLoc)
@@ -40,20 +46,16 @@ object Traces {
 
     def handleInput(timestamp: BigInt, inStream: String, value: TesslaCore.Value = TesslaCore.Unit(UnknownLoc)) {
       val ts = timestamp
-      if(ts < previousTS) sys.error("Decreasing time stamps: first = " + previousTS + " , second = " + ts)
-      if(ts > previousTS) {
+      if (ts < previousTS) sys.error("Decreasing time stamps: first = " + previousTS + " , second = " + ts)
+      if (ts > previousTS) {
         tesslaSpec.step(ts - previousTS)
         previousTS = ts
       }
       provide(inStream, value)
     }
 
-    val InputPattern = """(\d+)\s*:\s*([a-zA-Z][0-9a-zA-Z]*)(?:\s*=\s*(.+))?""".r
-    val EmptyLinePattern = """\s*""".r
-    val TimeUnitPattern = """\$timeunit\s*=\s*([a-zA-Z]{1,2})""".r
-
     def dequeue(timeStamp: String): Unit = {
-      while(queue.hasNext(BigInt(timeStamp))) {
+      while (queue.hasNext(BigInt(timeStamp))) {
         queue.dequeue(BigInt(timeStamp)) match {
           case Some((ts, (n, v))) => handleInput(ts, n, v)
           case None =>
@@ -61,10 +63,16 @@ object Traces {
       }
     }
 
+    tesslaSpec.outStreams.foreach {
+      case (name, stream) => stream.addListener {
+        case Some(value) => callback(Some(tesslaSpec.getTime), name, value)
+        case None =>
+      }
+    }
 
     traceSource.getLines.zipWithIndex.foreach {
       case (EmptyLinePattern(), _) =>
-        // do nothing
+      // do nothing
       case (InputPattern(timestamp, inStream, null), _) => {
         queue.enqueue(BigInt(timestamp), inStream)
         dequeue(timestamp)
@@ -75,12 +83,14 @@ object Traces {
       }
       case (TimeUnitPattern(unit), _) =>
         timeUnit = TimeUnit.fromString(unit)
+        callback(None, "$timeunit",
+          TesslaCore.StringLiteral(timeUnit.toString, UnknownLoc))
       case (line, index) =>
         sys.error(s"Syntax error on input line $index: $line")
     }
 
     //in the end handle every remaining event from the queue
-    queue.toList().foreach{
+    queue.toList().foreach {
       case (ts, (n, v)) =>
         handleInput(ts, n, v)
     }
