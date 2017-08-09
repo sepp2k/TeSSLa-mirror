@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import de.uni_luebeck.isp.tessla.interpreter.Traces.InvalidInputError
+
 /**
   * Created by Thiemo on 08.08.2017.
   */
@@ -12,6 +14,7 @@ object TimeUnit {
     case "m" => Minutes
     case "h" => Hours
     case "d" => Days
+    case _ => throw new InvalidInputError("Invalid time unit: "+str)
   }
 
   trait Unit {
