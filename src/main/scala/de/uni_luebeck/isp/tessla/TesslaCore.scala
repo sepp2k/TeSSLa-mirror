@@ -94,6 +94,12 @@ object TesslaCore {
     val typ = Types.Int
   }
 
+  final case class TimeLiteral(value: BigInt, unit: TimeUnit.Unit, loc: Location) extends LiteralValue {
+    override def toString = value.toString
+    def withLoc(loc: Location): TimeLiteral = copy(loc = loc)
+    val typ = Types.Time
+  }
+
   final case class BoolLiteral(value: Boolean, loc: Location) extends LiteralValue {
     override def toString = value.toString
     def withLoc(loc: Location): BoolLiteral = copy(loc = loc)

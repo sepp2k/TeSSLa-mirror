@@ -71,6 +71,8 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
               (Seq(), Literal(TesslaCore.BoolLiteral(value, loc)))
             case Ast.ExprIntLit(value, loc) =>
               (Seq(), Literal(TesslaCore.IntLiteral(value, loc)))
+            case Ast.ExprTimeLit(value, unit, loc) =>
+              (Seq(), Literal(TesslaCore.TimeLiteral(value, unit, loc)))
             case Ast.ExprUnit(loc) =>
               (Seq(), Literal(TesslaCore.Unit(loc)))
             case Ast.ExprStringLit(str, loc) =>
