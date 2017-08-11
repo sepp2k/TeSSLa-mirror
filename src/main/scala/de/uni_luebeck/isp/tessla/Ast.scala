@@ -83,6 +83,9 @@ object Ast {
   case class ExprIntLit(value: BigInt, loc: Location) extends Expr {
     override def toString(inner: Boolean) = value.toString
   }
+  case class ExprTimeLit(value: BigInt, unit: TimeUnit.Unit, loc: Location) extends Expr {
+    override def toString(inner: Boolean) = value.toString
+  }
   case class ExprStringLit(value: String, loc: Location) extends Expr {
     override def toString(inner: Boolean) = value.toString
   }

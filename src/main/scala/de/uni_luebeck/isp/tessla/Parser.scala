@@ -1,11 +1,14 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.compacom.{WithLocation, Parsers, SimpleTokens, SimpleTokenizer}
+import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.compacom
+import de.uni_luebeck.isp.tessla.TimeUnit._
 
 class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
+
   case class ParserError(parserFailure: Parsers.Failure) extends CompilationError {
     override def loc = SourceLoc(parserFailure.loc)
+
     override def message = parserFailure.message
   }
 
@@ -17,48 +20,88 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
   }
 
   object Tokens extends SimpleTokens {
+
     case object DEFINE extends Token("define")
+
     case object DEF extends Token("def")
+
     case object OUT extends Token("out")
+
     case object IN extends Token("in")
+
     case object IF extends Token("if")
+
     case object THEN extends Token("then")
+
     case object ELSE extends Token("else")
+
     case object AS extends Token("as")
+
     case object TRUE extends Token("true")
+
     case object FALSE extends Token("false")
+
     case object COLON extends Token(":")
+
     case object PERCENT extends Token("%")
+
     case object COLONEQ extends Token(":=")
+
     case object COMMA extends Token(",")
+
     case object LPAREN extends Token("(")
+
     case object RPAREN extends Token(")")
+
     case object LBRACE extends Token("{")
+
     case object RBRACE extends Token("}")
+
     case object LSHIFT extends Token("<<")
+
     case object RSHIFT extends Token(">>")
+
     case object GEQ extends Token(">=")
+
     case object LEQ extends Token("<=")
+
     case object LT extends Token("<")
+
     case object GT extends Token(">")
+
     case object NEQ extends Token("!=")
+
     case object EQEQ extends Token("==")
+
     case object EQ extends Token("=")
+
     case object AND extends Token("&&")
+
     case object OR extends Token("||")
+
     case object BITFLIP extends Token("~")
+
     case object BITAND extends Token("&")
+
     case object BITOR extends Token("|")
+
     case object BITXOR extends Token("^")
+
     case object PLUS extends Token("+")
+
     case object MINUS extends Token("-")
+
     case object TIMES extends Token("*")
+
     case object SLASH extends Token("/")
+
     case object BANG extends Token("!")
+
   }
 
   object Tokenizer extends SimpleTokenizer {
     override val tokens = Tokens
+
     import tokens._
 
     override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE, AS)
@@ -71,8 +114,10 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
   }
 
   object Parsers extends Parsers {
+
     import scala.language.implicitConversions
     import Tokens._
+
     override val tokenizer = Tokenizer
 
     implicit def tokenToParser(t: Token): Parser[WithLocation[Token]] = token(t)
@@ -97,14 +142,14 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
 
     def statement: Parser[Ast.Statement] =
       defOrMacroDef |
-      OUT ~> expr ~ (AS ~> identifier).? ^^! {
-        case (loc, (expr, name)) =>
-          Ast.Out(expr, name, SourceLoc(loc))
-      } |
-      IN ~> identifier ~ typeAscr ^^! {
-        case (loc, (name, typeAscr)) =>
-          Ast.In(name, typeAscr, SourceLoc(loc))
-      }
+        OUT ~> expr ~ (AS ~> identifier).? ^^! {
+          case (loc, (expr, name)) =>
+            Ast.Out(expr, name, SourceLoc(loc))
+        } |
+        IN ~> identifier ~ typeAscr ^^! {
+          case (loc, (name, typeAscr)) =>
+            Ast.In(name, typeAscr, SourceLoc(loc))
+        }
 
     def macroArgs: Parser[Seq[Ast.MacroArg]] = LPAREN ~> rep1sep(macroArg, COMMA) <~ RPAREN
 
@@ -137,7 +182,7 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
 
     def infixOp(loc: compacom.Location, lhs: Ast.Expr, rhss: List[(WithLocation[Token], Ast.Expr)]) = {
       rhss.foldLeft(lhs) {
-        case (l,(op, r)) =>
+        case (l, (op, r)) =>
           Ast.ExprApp(Ast.Identifier(op.value.string, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
       }
     }
@@ -179,15 +224,15 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
         case (loc, (op, expr)) =>
           Ast.ExprApp(Ast.Identifier("!", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
       } |
-      BITFLIP ~ exprAtomic ^^! {
-        case (loc, (op, expr)) =>
-          Ast.ExprApp(Ast.Identifier("~", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
-      } |
-      MINUS ~ exprAtomic ^^! {
-        case (loc, (op, expr)) =>
-          Ast.ExprApp(Ast.Identifier("-", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
-      } |
-      exprAtomic
+        BITFLIP ~ exprAtomic ^^! {
+          case (loc, (op, expr)) =>
+            Ast.ExprApp(Ast.Identifier("~", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
+        } |
+        MINUS ~ exprAtomic ^^! {
+          case (loc, (op, expr)) =>
+            Ast.ExprApp(Ast.Identifier("-", SourceLoc(op.loc)), List(Ast.PosArg(expr)), SourceLoc(loc))
+        } |
+        exprAtomic
 
     def exprAtomic: Parser[Ast.Expr] = exprLit | exprGroup | exprBlock | exprNameOrApp
 
@@ -212,13 +257,39 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
       TRUE ^^^! {
         loc => Ast.ExprBoolLit(true, SourceLoc(loc))
       } |
-      FALSE ^^^! {
-        loc => Ast.ExprBoolLit(false, SourceLoc(loc))
-      }
+        FALSE ^^^! {
+          loc => Ast.ExprBoolLit(false, SourceLoc(loc))
+        }
 
-    def exprIntLit: Parser[Ast.ExprIntLit] = matchToken("integer", Set("<integer>")) {
-      case WithLocation(loc, INT(value)) => Ast.ExprIntLit(BigInt(value), SourceLoc(loc))
+    def exprIntLit: Parser[Ast.Expr] = matchToken("integer", Set("<integer>")){
+      case WithLocation(loc, INT(value)) => BigInt(value)
+    } ~ timeUnit.? ^^! {
+      case (loc, (value, None)) => Ast.ExprIntLit(value, SourceLoc(loc))
+      case (loc, (value, Some(unit))) => Ast.ExprTimeLit(value, unit, SourceLoc(loc))
     }
+
+    def timeUnit: Parser[Unit] =
+      ID("ns") ^^^ {
+        Nanos
+      } |
+        ID("us") ^^^ {
+          Micros
+        } |
+        ID("ms") ^^^ {
+        Millis
+      } |
+        ID("s") ^^^ {
+          Seconds
+        } |
+        ID("m") ^^^ {
+          Minutes
+        } |
+        ID("h") ^^^ {
+          Hours
+        } |
+        ID("d") ^^^ {
+          Days
+        }
 
     def exprStringLit: Parser[Ast.ExprStringLit] = matchToken("string", Set("<string>")) {
       case WithLocation(loc, STRING(value)) => Ast.ExprStringLit(value, SourceLoc(loc))
@@ -232,9 +303,10 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
       } | EQ
 
     def exprAppArg: Parser[Ast.AppArg] = expr ~^ {
-      case (x @ Ast.ExprName(name)) =>
+      case (x@Ast.ExprName(name)) =>
         namedArgAssignmentOperator ~> expr ^^ (Ast.NamedArg(name, _)) | success(Ast.PosArg(x))
       case x => success(Ast.PosArg(x))
     }
   }
+
 }
