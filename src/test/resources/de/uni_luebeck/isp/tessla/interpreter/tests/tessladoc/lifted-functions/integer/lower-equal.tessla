@@ -1,0 +1,4 @@
+in x: Events<Int>
+in y: Events<Int>
+def z := x <= y
+out z
