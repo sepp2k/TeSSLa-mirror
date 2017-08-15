@@ -14,6 +14,7 @@ class InterpreterTests extends FunSuite {
 
   def getFilesRecursively(root: String, path: String = ""): Stream[String] = {
     def isDir(filename: String) = !filename.contains(".")
+
     reSource(s"$root/$path").getLines.flatMap { file =>
       if (isDir(file)) getFilesRecursively(root, s"$path/$file")
       else Stream(s"$path/$file")
@@ -28,34 +29,44 @@ class InterpreterTests extends FunSuite {
     case (name, extensions) =>
       test(name) {
         if (extensions.contains("tessla")) {
-          val traces = Traces.read(testFile(name, "input"))
-          val result = Interpreter.fromSource(testFile(name, "tessla"), traces.timeStampUnit)
-          result match {
-            case Success(spec, _) =>
-              assert(!extensions.contains("errors"), "Expected: Compilation failure. Actual: Compilation success.")
-              def expectedOutput = testFile(name, "output").getLines.toSet
-              val actualOutput = mutable.Set[String]()
-              traces.timeStampUnit.foreach(unit => actualOutput += ("$timeunit = \"" + unit + "\""))
-              def runTraces() : Unit = {
-                val threshold = 100000
-                traces.feedInput(spec, threshold){
-                  case (Some(ts), n, value) => actualOutput += s"$ts: $n = $value"
-                  case (None, _, _) =>
+          try {
+            val traces = Traces.read(testFile(name, "input"))
+            val result = Interpreter.fromSource(testFile(name, "tessla"), traces.timeStampUnit)
+            result match {
+              case Success(spec, _) =>
+                assert(!extensions.contains("errors"), "Expected: Compilation failure. Actual: Compilation success.")
+
+                def expectedOutput = testFile(name, "output").getLines.toSet
+
+                val actualOutput = mutable.Set[String]()
+                traces.timeStampUnit.foreach(unit => actualOutput += ("$timeunit = \"" + unit + "\""))
+
+                def runTraces(): Unit = {
+                  val threshold = 100000
+                  traces.feedInput(spec, threshold) {
+                    case (Some(ts), n, value) => actualOutput += s"$ts: $n = $value"
+                    case (None, _, _) =>
+                  }
                 }
-              }
-              if (extensions.contains("runtime-errors")) {
-                val ex = intercept[CompilationError](runTraces())
-                assert(ex.toString == testFile(name, "runtime-errors").mkString)
-              } else {
-                runTraces()
-              }
-              assert(actualOutput == expectedOutput)
-            case Failure(errors, _) =>
-              assert(extensions.contains("errors"), "Expected: Compilation success. Actual: Compilation failure.")
-              assert(errors.map(_.toString).toSet == testFile(name, "errors").getLines.toSet)
-          }
-          if (extensions.contains("warnings")) {
-            assert(result.warnings.map(_.toString).toSet == testFile(name, "warnings").getLines.toSet)
+
+                if (extensions.contains("runtime-errors")) {
+                  println("Bla" + name)
+                  val ex = intercept[CompilationError](runTraces())
+                  assert(ex.toString == testFile(name, "runtime-errors").mkString)
+                } else {
+                  runTraces()
+                }
+                assert(actualOutput == expectedOutput)
+              case Failure(errors, _) =>
+                assert(extensions.contains("errors"), "Expected: Compilation success. Actual: Compilation failure.")
+                assert(errors.map(_.toString).toSet == testFile(name, "errors").getLines.toSet)
+            }
+            if (extensions.contains("warnings")) {
+              assert(result.warnings.map(_.toString).toSet == testFile(name, "warnings").getLines.toSet)
+            }
+          } catch {
+            case ex: CompilationError =>
+              testFile(name, "runtime-errors").mkString.contains(ex.toString())
           }
         }
       }

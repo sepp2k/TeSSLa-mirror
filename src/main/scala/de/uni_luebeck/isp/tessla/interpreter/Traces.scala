@@ -8,7 +8,7 @@ import scala.util.matching.Regex
 
 
 object Traces {
-  val TimeUnitPattern = """\$timeunit\s*=\s*("[a-zA-Z]{1,2}")""".r
+  val TimeUnitPattern = """\$timeunit\s*=\s*("[a-zA-Z]{1,3}")""".r
   val InputPattern = """(\d+)\s*:\s*([a-zA-Z][0-9a-zA-Z]*)(?:\s*=\s*(.+))?""".r
   val EmptyLinePattern = """\s*""".r
 
