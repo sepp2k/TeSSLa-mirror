@@ -21,9 +21,14 @@ object Main extends SexyOpt {
   val stopOn = option("stop-on", "Stop when the output stream with the given name generates its first event")
   val listOutStreams = flag("list-out-streams", "Print a list of the output streams defined in the given tessla spec and then exit")
   val listInStreams = flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
+  val printVersion = flag("version", "Print the version number of the tessla interpreter and then exit")
 
   def main(args: Array[String]): Unit = {
     parse(args)
+    if(printVersion) {
+      println(BuildInfo.version)
+      return
+    }
     val traceSource = traceFile.map(Source.fromFile).getOrElse(Source.stdin)
     val tesslaSpec = Interpreter.fromFile(tesslaFile) match {
       case Success(spec, warnings) =>
