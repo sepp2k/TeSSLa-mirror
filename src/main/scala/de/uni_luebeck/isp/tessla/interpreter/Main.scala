@@ -43,14 +43,14 @@ object Main extends SexyOpt {
     if (verifyOnly) {
       tesslaSpec(None)
     } else {
-      val traces = Traces.read(traceFile.map(Source.fromFile).getOrElse(Source.stdin), {
-        case (Some(ts), name, value) => println(s"$ts: $name = $value")
-        case (None, name, value) => println(s"$name = $value")
-      })
+      val traces = Traces.read(traceFile.map(Source.fromFile).getOrElse(Source.stdin))
+      traces.timeStampUnit.foreach(unit => println("$timeunit = \"" + unit + "\""))
       val spec = tesslaSpec(traces.timeStampUnit)
-
       try {
-        traces.feedInput(spec, BigInt(threshold))
+        traces.feedInput(spec, BigInt(threshold)) {
+          case (Some(ts), name, value) => println(s"$ts: $name = $value")
+          case (None, name, value) => println(s"$name = $value")
+        }
       } catch {
         case ex: CompilationError =>
           System.err.println(s"Runtime error: $ex")

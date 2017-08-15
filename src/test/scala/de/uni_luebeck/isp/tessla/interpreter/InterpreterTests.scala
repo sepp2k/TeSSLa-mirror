@@ -28,19 +28,20 @@ class InterpreterTests extends FunSuite {
     case (name, extensions) =>
       test(name) {
         if (extensions.contains("tessla")) {
-          val actualOutput = mutable.Set[String]()
-          val traces = Traces.read(testFile(name, "input"), {
-            case (Some(ts), name, value) => actualOutput += s"$ts: $name = $value"
-            case (None, name, value) =>
-          })
+          val traces = Traces.read(testFile(name, "input"))
           val result = Interpreter.fromSource(testFile(name, "tessla"), traces.timeStampUnit)
           result match {
             case Success(spec, _) =>
               assert(!extensions.contains("errors"), "Expected: Compilation failure. Actual: Compilation success.")
               def expectedOutput = testFile(name, "output").getLines.toSet
-
+              val actualOutput = mutable.Set[String]()
+              traces.timeStampUnit.foreach(unit => actualOutput += ("$timeunit = \"" + unit + "\""))
               def runTraces() : Unit = {
-                traces.feedInput(spec, 100000)
+                val threshold = 100000
+                traces.feedInput(spec, threshold){
+                  case (Some(ts), n, value) => actualOutput += s"$ts: $n = $value"
+                  case (None, _, _) =>
+                }
               }
               if (extensions.contains("runtime-errors")) {
                 val ex = intercept[CompilationError](runTraces())

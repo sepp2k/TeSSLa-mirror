@@ -23,7 +23,7 @@ object Traces {
       TesslaCore.IntLiteral(BigInt(string), UnknownLoc)
   }
 
-  def read(traceSource: Source, callback: (Option[BigInt], String, TesslaCore.Value) => Unit): Traces = {
+  def read(traceSource: Source): Traces = {
     def getValues(src: Iterator[String]): Iterator[(BigInt, String, TesslaCore.LiteralValue)] = {
       src.zipWithIndex.map {
         case (InputPattern(timestamp, inStream, null), _) =>
@@ -39,24 +39,22 @@ object Traces {
     lines.take(1).toList match {
       case TimeUnitPattern(u) :: Nil =>
         val timeUnit = TimeUnit.fromString(u)
-        callback(None, "$timeunit",
-          TesslaCore.StringLiteral(timeUnit.toString, UnknownLoc))
-        new Traces(Some(timeUnit), getValues(lines), callback)
+        new Traces(Some(timeUnit), getValues(lines))
       case v :: Nil =>
-        new Traces(None, getValues(Iterator(v) ++ lines), callback)
+        new Traces(None, getValues(Iterator(v) ++ lines))
       case Nil =>
-        new Traces(None, Iterator(), callback)
+        new Traces(None, Iterator())
     }
   }
 }
 
-class Traces(val timeStampUnit: Option[TimeUnit.TimeUnit], values: Iterator[(BigInt, String, TesslaCore.LiteralValue)], callback: (Option[BigInt], String, TesslaCore.Value) => Unit) {
+class Traces(val timeStampUnit: Option[TimeUnit.TimeUnit], values: Iterator[(BigInt, String, TesslaCore.LiteralValue)]) {
 
   case class InvalidInputError(message: String) extends CompilationError {
     def loc = UnknownLoc
   }
 
-  def feedInput(tesslaSpec: Interpreter, threshold: BigInt): Unit = {
+  def feedInput(tesslaSpec: Interpreter, threshold: BigInt)(callback: (Option[BigInt], String, TesslaCore.Value) => Unit): Unit = {
     val queue = new TracesQueue(threshold)
 
     def provide(streamName: String, value: TesslaCore.Value) = {
