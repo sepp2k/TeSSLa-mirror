@@ -20,7 +20,7 @@ object CompilerApp extends App {
   val result = parser.parse(args, Config()) match {
     case Some(config) =>
       val compiler = new Compiler
-      compiler.applyPasses(new TesslaSource(config.file))
+      compiler.applyPasses(new TesslaSource(config.file), None)
     case None =>
       sys.exit(1)
   }

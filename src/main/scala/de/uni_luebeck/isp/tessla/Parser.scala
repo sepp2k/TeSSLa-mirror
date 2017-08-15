@@ -268,7 +268,7 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
       case (loc, (value, Some(unit))) => Ast.ExprTimeLit(value, unit, SourceLoc(loc))
     }
 
-    def timeUnit: Parser[Unit] =
+    def timeUnit: Parser[TimeUnit.TimeUnit] =
       ID("ns") ^^^ {
         Nanos
       } |

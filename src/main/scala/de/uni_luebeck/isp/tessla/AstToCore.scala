@@ -1,12 +1,12 @@
 package de.uni_luebeck.isp.tessla
 
 import AstToCore._
-import de.uni_luebeck.isp.tessla.TimeUnit.{TimeUnitConversionError, UndefinedTimeUnit}
+import de.uni_luebeck.isp.tessla.TimeUnit._
 import de.uni_luebeck.isp.tessla.Types.TypeMismatch
 
 import scala.collection.mutable
 
-class AstToCore(val unit: Option[TimeUnit.Unit]) extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
+class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
   override def translateSpec(spec: Ast.Spec) = {
     var counter = 0
     val alreadyTranslated = mutable.Map[String, Arg]()
