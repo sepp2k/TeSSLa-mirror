@@ -4,7 +4,6 @@ object Types {
   sealed abstract class Type
   sealed abstract class ValueType extends Type
   case object Int extends ValueType
-  case object Time extends ValueType
   case object String extends ValueType
   case object Bool extends ValueType
   case object Unit extends ValueType
@@ -20,7 +19,6 @@ object Types {
     case Ast.TypeName(Ast.Identifier("String", _)) => String
     case Ast.TypeName(Ast.Identifier("Bool", _)) => Bool
     case Ast.TypeName(Ast.Identifier("Unit", _)) => Unit
-    case Ast.TypeName(Ast.Identifier("Time", _)) => Time
     case Ast.TypeName(Ast.Identifier(name, loc)) => throw UnknownType(name, loc)
     case Ast.TypeApp(Ast.Identifier("Events", _), Seq(elementType), loc) =>
       fromAst(elementType) match {

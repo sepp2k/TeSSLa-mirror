@@ -12,8 +12,16 @@ object TimeUnit {
     case "m" => Minutes
     case "h" => Hours
     case "d" => Days
-    case _ => throw new Exception(s"Invalid time unit: $str. " +
-      "Allowed time units: ns, us, ms, s, m, h, d.")
+    case _ => throw new UnknownTimeUnit(str, UnknownLoc)
+  }
+
+  case class UnknownTimeUnit(name: String, loc: Location) extends CompilationError {
+    def message = s"Invalid time unit: $name. " +
+      "Allowed time units: ns, us, ms, s, m, h, d."
+  }
+
+  case class TimeUnitConversionError(from: Unit, to: Unit, loc: Location) extends CompilationError {
+    def message = s"Cannot convert from $from to $to."
   }
 
   trait Unit {

@@ -1,11 +1,12 @@
 package de.uni_luebeck.isp.tessla
 
 import AstToCore._
+import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnitConversionError
 import de.uni_luebeck.isp.tessla.Types.TypeMismatch
 
 import scala.collection.mutable
 
-class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
+class AstToCore(val unit: TimeUnit.Unit) extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
   override def translateSpec(spec: Ast.Spec) = {
     var counter = 0
     val alreadyTranslated = mutable.Map[String, Arg]()
@@ -71,8 +72,12 @@ class AstToCore extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
               (Seq(), Literal(TesslaCore.BoolLiteral(value, loc)))
             case Ast.ExprIntLit(value, loc) =>
               (Seq(), Literal(TesslaCore.IntLiteral(value, loc)))
-            case Ast.ExprTimeLit(value, unit, loc) =>
-              (Seq(), Literal(TesslaCore.TimeLiteral(value, unit, loc)))
+            case Ast.ExprTimeLit(value, unit2, loc) =>
+              if (unit2 < unit){
+                throw TimeUnitConversionError(unit2, unit, loc)
+              }else{
+                (Seq(), Literal(TesslaCore.IntLiteral(value * unit2.convertTo(unit), loc)))
+              }
             case Ast.ExprUnit(loc) =>
               (Seq(), Literal(TesslaCore.Unit(loc)))
             case Ast.ExprStringLit(str, loc) =>
