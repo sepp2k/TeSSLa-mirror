@@ -37,10 +37,16 @@ def create(key, header, data)
   data.map do |line|
     line.zip(header)[1..-1].select { |el, hd| hd.start_with?(key) && !blank?(el) }.map do |el, hd|
       gen(line[0], hd[key.length+1..-1], el)
-    end.join
-  end.join
+    end
+  end.flatten
+end
+
+def write(filename, key, header, data)
+  events = create(key, header, data)
+  File.write(filename, events.join)
+  puts "Written #{filename} with #{events.count} events."
 end
 
 basename = ARGV[0].sub(/\.[^.]+$/, '')
-File.write(basename + ".output", create("out", header, data))
-File.write(basename + ".input", create("in", header, data))
+write(basename + ".output", "out", header, data)
+write(basename + ".input", "in", header, data)
