@@ -1,0 +1,16 @@
+in x: Events<Int>
+in y: Events<Int>
+in z: Events<Int>
+
+def merge(x,y) := if default(x==x, false) || default(y==y, false) then ()
+
+def mergeValues(a,b) :=
+  if default(time(a), 0) >= default(time(b), 0)
+  then default(a,b)
+  else default(b,a)
+
+def a := merge(x,y)
+def b := mergeValues(x,y)
+
+out a
+out b
