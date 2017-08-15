@@ -24,32 +24,33 @@ object Traces {
   }
 
   def read(traceSource: Source, callback: (Option[BigInt], String, TesslaCore.Value) => Unit): Traces = {
-    def getValues(src: Seq[String]) = src.zipWithIndex.filterNot {
-      case (line, _) => EmptyLinePattern.pattern.matcher(line).matches()
-    }.map {
-      case (InputPattern(timestamp, inStream, null), _) =>
-        (BigInt(timestamp), inStream, TesslaCore.Unit(UnknownLoc))
-      case (InputPattern(timestamp, inStream, value), _) =>
-        (BigInt(timestamp), inStream, parseValue(value))
-      case (line, index) =>
-        sys.error(s"Syntax error on input line $index: $line")
+    def getValues(src: Iterator[String]): Iterator[(BigInt, String, TesslaCore.LiteralValue)] = {
+      src.zipWithIndex.map {
+        case (InputPattern(timestamp, inStream, null), _) =>
+          (BigInt(timestamp), inStream, TesslaCore.Unit(UnknownLoc))
+        case (InputPattern(timestamp, inStream, value), _) =>
+          (BigInt(timestamp), inStream, parseValue(value))
+        case (line, index) =>
+          sys.error(s"Syntax error on input line $index: $line")
+      }
     }
 
-    traceSource.getLines().take(1).toList.headOption match {
-      case Some(TimeUnitPattern(u)) =>
+    val lines = traceSource.getLines().filterNot(_.matches(EmptyLinePattern.regex))
+    lines.take(1).toList match {
+      case TimeUnitPattern(u) :: Nil =>
         val timeUnit = TimeUnit.fromString(u)
         callback(None, "$timeunit",
           TesslaCore.StringLiteral(timeUnit.toString, UnknownLoc))
-        new Traces(timeUnit, getValues(traceSource.getLines().toSeq), callback)
-      case Some(v) =>
-        new Traces(TimeUnit.Nanos, getValues(Seq(v) ++ traceSource.getLines()), callback)
-      case None =>
-        new Traces(TimeUnit.Nanos, Seq(), callback)
+        new Traces(timeUnit, getValues(lines), callback)
+      case v :: Nil =>
+        new Traces(TimeUnit.Nanos, getValues(Iterator(v) ++ lines), callback)
+      case Nil =>
+        new Traces(TimeUnit.Nanos, Iterator(), callback)
     }
   }
 }
 
-class Traces(val timeStampUnit: TimeUnit.Unit, values: => Seq[(BigInt, String, TesslaCore.LiteralValue)], val callback: (Option[BigInt], String, TesslaCore.Value) => Unit) {
+class Traces(val timeStampUnit: TimeUnit.Unit, values: Iterator[(BigInt, String, TesslaCore.LiteralValue)], callback: (Option[BigInt], String, TesslaCore.Value) => Unit) {
 
   case class InvalidInputError(message: String) extends CompilationError {
     def loc = UnknownLoc
