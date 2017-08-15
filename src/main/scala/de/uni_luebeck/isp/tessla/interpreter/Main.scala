@@ -19,6 +19,8 @@ object Main extends SexyOpt {
   val debug = flag("debug", "Print stack traces for runtime errors")
   val threshold = option("threshold", "Allowed maximal difference between decreasing timestamps (default: 100,000)", "100000")
 
+  val listOutStreams = flag("list-out-streams", "Print a list of the output streams defined in the given tessla spec and then exit")
+  val listInStreams = flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
 
   def main(args: Array[String]): Unit = {
     parse(args)
@@ -35,6 +37,14 @@ object Main extends SexyOpt {
           System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors")
         }
         sys.exit(1)
+    }
+    if (listInStreams) {
+      tesslaSpec.inStreams.foreach { case (name, _) => println(name) }
+      return
+    }
+    if (listOutStreams) {
+      tesslaSpec.outStreams.foreach { case (name, _) => println(name) }
+      return
     }
     if (verifyOnly) return
     try {
