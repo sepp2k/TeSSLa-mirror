@@ -25,7 +25,7 @@ object Main extends SexyOpt {
 
 
   def main(args: Array[String]): Unit = {
-    def tesslaSpec(timeUnit: TimeUnit.Unit) = Interpreter.fromFile(tesslaFile, timeUnit) match {
+    def tesslaSpec(timeUnit: Option[TimeUnit.TimeUnit]) = Interpreter.fromFile(tesslaFile, timeUnit) match {
       case Success(spec, warnings) =>
         if (diagnostics) warnings.foreach(w => System.err.println(s"Warning: $w"))
         if (printCore) println(spec.spec)
@@ -41,7 +41,7 @@ object Main extends SexyOpt {
 
     parse(args)
     if (verifyOnly) {
-      tesslaSpec(Nanos)
+      tesslaSpec(None)
     } else {
       val traces = Traces.read(traceFile.map(Source.fromFile).getOrElse(Source.stdin), {
         case (Some(ts), name, value) => println(s"$ts: $name = $value")

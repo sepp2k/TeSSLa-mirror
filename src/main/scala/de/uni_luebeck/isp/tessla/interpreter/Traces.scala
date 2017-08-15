@@ -41,16 +41,16 @@ object Traces {
         val timeUnit = TimeUnit.fromString(u)
         callback(None, "$timeunit",
           TesslaCore.StringLiteral(timeUnit.toString, UnknownLoc))
-        new Traces(timeUnit, getValues(lines), callback)
+        new Traces(Some(timeUnit), getValues(lines), callback)
       case v :: Nil =>
-        new Traces(TimeUnit.Nanos, getValues(Iterator(v) ++ lines), callback)
+        new Traces(None, getValues(Iterator(v) ++ lines), callback)
       case Nil =>
-        new Traces(TimeUnit.Nanos, Iterator(), callback)
+        new Traces(None, Iterator(), callback)
     }
   }
 }
 
-class Traces(val timeStampUnit: TimeUnit.Unit, values: Iterator[(BigInt, String, TesslaCore.LiteralValue)], callback: (Option[BigInt], String, TesslaCore.Value) => Unit) {
+class Traces(val timeStampUnit: Option[TimeUnit.TimeUnit], values: Iterator[(BigInt, String, TesslaCore.LiteralValue)], callback: (Option[BigInt], String, TesslaCore.Value) => Unit) {
 
   case class InvalidInputError(message: String) extends CompilationError {
     def loc = UnknownLoc
