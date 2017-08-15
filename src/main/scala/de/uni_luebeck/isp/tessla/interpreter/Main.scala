@@ -18,7 +18,7 @@ object Main extends SexyOpt {
   val printCore = flag("print-core", "Print the Tessla Core representation generated from the Tessla specification")
   val debug = flag("debug", "Print stack traces for runtime errors")
   val threshold = option("threshold", "Allowed maximal difference between decreasing timestamps (default: 100,000)", "100000")
-
+  val stopOn = option("stop-on", "Stop when the output stream with the given name generates its first event")
   val listOutStreams = flag("list-out-streams", "Print a list of the output streams defined in the given tessla spec and then exit")
   val listInStreams = flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
 
@@ -48,7 +48,14 @@ object Main extends SexyOpt {
     }
     if (verifyOnly) return
     try {
-      tesslaSpec.outStreams.foreach { case (name, stream) => tesslaSpec.printStream(stream, name) }
+      tesslaSpec.outStreams.foreach { case (name, stream) =>
+        stream.addListener {
+          case Some(value) =>
+            println(s"${tesslaSpec.getTime}: $name = $value")
+            if (stopOn.contains(name)) return
+          case None =>
+        }
+      }
       Traces.feedInput(tesslaSpec, traceSource, BigInt(threshold))
     } catch {
       case ex: CompilationError =>
