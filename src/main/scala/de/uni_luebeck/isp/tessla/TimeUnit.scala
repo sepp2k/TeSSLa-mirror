@@ -53,13 +53,13 @@ object TimeUnit {
   case object Seconds extends Unit {
     val factor = 1000000000
 
-    override def toString: String = "ms"
+    override def toString: String = "s"
   }
 
   case object Minutes extends Unit {
     val factor = 60000000000L
 
-    override def toString: String = "ms"
+    override def toString: String = "min"
   }
 
   case object Hours extends Unit {
