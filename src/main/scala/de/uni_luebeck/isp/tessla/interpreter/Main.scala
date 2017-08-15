@@ -1,8 +1,10 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.CompilationError
+import de.uni_luebeck.isp.tessla.{CompilationError, TimeUnit}
+import de.uni_luebeck.isp.tessla.TimeUnit.Nanos
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import sexyopt.SexyOpt
+
 import scala.io.Source
 
 object Main extends SexyOpt {
@@ -23,9 +25,7 @@ object Main extends SexyOpt {
 
 
   def main(args: Array[String]): Unit = {
-    parse(args)
-    val traceSource = traceFile.map(Source.fromFile).getOrElse(Source.stdin)
-    val tesslaSpec = Interpreter.fromFile(tesslaFile) match {
+    def tesslaSpec(timeUnit: TimeUnit.Unit) = Interpreter.fromFile(tesslaFile, timeUnit) match {
       case Success(spec, warnings) =>
         if (diagnostics) warnings.foreach(w => System.err.println(s"Warning: $w"))
         if (printCore) println(spec.spec)
@@ -38,16 +38,24 @@ object Main extends SexyOpt {
         }
         sys.exit(1)
     }
-    if (verifyOnly) return
-    try {
-      Traces.feedInput(tesslaSpec, traceSource, BigInt(threshold), {
+
+    parse(args)
+    if (verifyOnly) {
+      tesslaSpec(Nanos)
+    } else {
+      val traces = Traces.read(traceFile.map(Source.fromFile).getOrElse(Source.stdin), {
         case (Some(ts), name, value) => println(s"$ts: $name = $value")
         case (None, name, value) => println(s"$name = $value")
       })
-    } catch {
-      case ex: CompilationError =>
-        System.err.println(s"Runtime error: $ex")
-        if (debug) ex.printStackTrace()
+      val spec = tesslaSpec(traces.timeStampUnit)
+
+      try {
+        traces.feedInput(spec, BigInt(threshold))
+      } catch {
+        case ex: CompilationError =>
+          System.err.println(s"Runtime error: $ex")
+          if (debug) ex.printStackTrace()
+      }
     }
   }
 }
