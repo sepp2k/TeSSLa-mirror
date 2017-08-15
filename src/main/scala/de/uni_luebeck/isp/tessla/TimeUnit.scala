@@ -9,14 +9,14 @@ object TimeUnit {
     case "us" => Micros
     case "ms" => Millis
     case "s" => Seconds
-    case "m" => Minutes
+    case "min" => Minutes
     case "h" => Hours
     case "d" => Days
     case _ => throw UnknownTimeUnit(str, UnknownLoc)
   }
 
   case class UnknownTimeUnit(name: String, loc: Location) extends CompilationError {
-    def message = s"Invalid time unit: $name. " +
+    def message = s"Unknown time unit: $name. " +
       "Allowed time units: ns, us, ms, s, m, h, d."
   }
 
