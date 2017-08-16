@@ -66,6 +66,7 @@ class InterpreterTests extends FunSuite {
             }
           } catch {
             case ex: CompilationError =>
+              assert(extensions.contains("runtime-errors"), "Expected: success, actual: runtime error.")
               testFile(name, "runtime-errors").mkString.contains(ex.toString())
           }
         }
