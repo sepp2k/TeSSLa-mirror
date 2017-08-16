@@ -75,8 +75,7 @@ class InterpreterTests extends FunSuite {
                 def runTraces(): Unit = {
                   val threshold = 100000
                   traces.feedInput(spec, threshold) {
-                    case (Some(ts), n, value) => actualOutput += s"$ts: $n = $value"
-                    case (None, _, _) =>
+                    case (ts, n, value) => actualOutput += s"$ts: $n = $value"
                   }
                 }
 

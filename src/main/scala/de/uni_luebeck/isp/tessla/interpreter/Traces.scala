@@ -54,7 +54,7 @@ class Traces(val timeStampUnit: Option[TimeUnit.TimeUnit], values: Iterator[(Big
     def loc = UnknownLoc
   }
 
-  def feedInput(tesslaSpec: Interpreter, threshold: BigInt)(callback: (Option[BigInt], String, TesslaCore.Value) => Unit): Unit = {
+  def feedInput(tesslaSpec: Interpreter, threshold: BigInt)(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
     val queue = new TracesQueue(threshold)
 
     def provide(streamName: String, value: TesslaCore.Value) = {
@@ -92,7 +92,7 @@ class Traces(val timeStampUnit: Option[TimeUnit.TimeUnit], values: Iterator[(Big
 
     tesslaSpec.outStreams.foreach {
       case (name, stream) => stream.addListener {
-        case Some(value) => callback(Some(tesslaSpec.getTime), name, value)
+        case Some(value) => callback(tesslaSpec.getTime, name, value)
         case None =>
       }
     }
