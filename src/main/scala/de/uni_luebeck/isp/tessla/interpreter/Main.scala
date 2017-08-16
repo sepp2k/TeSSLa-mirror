@@ -26,6 +26,7 @@ object Main extends SexyOpt {
   val listOutStreams = flag("list-out-streams", "Print a list of the output streams defined in the given tessla spec and then exit")
   val listInStreams = flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
   val printVersion = flag("version", "Print the version number of the tessla interpreter and then exit")
+  val timeunit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
 
   def main(args: Array[String]): Unit = {
     def tesslaSpec(timeUnit: Option[TimeUnit.TimeUnit]) = Interpreter.fromFile(tesslaFile, timeUnit) match {
@@ -47,32 +48,33 @@ object Main extends SexyOpt {
       println(BuildInfo.version)
       return
     }
-    if (verifyOnly || listInStreams || listOutStreams) {
-      val spec = tesslaSpec(None)
-      if (listInStreams) {
-        spec.inStreams.foreach { case (name, _) => println(name) }
-        return
-      }
-      if (listOutStreams) {
-        spec.outStreams.foreach { case (name, _) => println(name) }
-        return
-      }
-    } else {
-      try {
+    try {
+      if (verifyOnly || listInStreams || listOutStreams) {
+        val spec = tesslaSpec(timeunit.map(TimeUnit.fromString))
+        if (listInStreams) {
+          spec.inStreams.foreach { case (name, _) => println(name) }
+          return
+        }
+        if (listOutStreams) {
+          spec.outStreams.foreach { case (name, _) => println(name) }
+          return
+        }
+      } else {
         val traces = Traces.read(traceFile.map(Source.fromFile).getOrElse(Source.stdin))
-        traces.timeStampUnit.foreach(unit => println("$timeunit = \"" + unit + "\""))
-        val spec = tesslaSpec(traces.timeStampUnit)
+        val tu = timeunit.map(TimeUnit.fromString).orElse(traces.timeStampUnit)
+        tu.foreach(unit => println("$timeunit = \"" + unit + "\""))
+        val spec = tesslaSpec(tu)
         traces.feedInput(spec, BigInt(threshold)) {
           case (Some(ts), name, value) =>
             println(s"$ts: $name = $value")
             if (stopOn.contains(name)) return
           case (None, name, value) => println(s"$name = $value")
         }
-      } catch {
-        case ex: CompilationError =>
-          System.err.println(s"Runtime error: $ex")
-          if (debug) ex.printStackTrace()
       }
+    } catch {
+      case ex: CompilationError =>
+        System.err.println(s"Runtime error: $ex")
+        if (debug) ex.printStackTrace()
     }
   }
 }
