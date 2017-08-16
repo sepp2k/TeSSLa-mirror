@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{AstToCore, CompilationError, Compiler, Location, TesslaCore, TesslaSource, TranslationPhase, Types, UnknownLoc}
+import de.uni_luebeck.isp.tessla.TimeUnit.Nanos
+import de.uni_luebeck.isp.tessla.{AstToCore, CompilationError, Compiler, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types, UnknownLoc}
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import shapeless.{::, HNil}
 
@@ -88,16 +89,16 @@ object Interpreter {
     def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
   }
 
-  def fromSource(source: Source): Result[Interpreter] = {
-    new Compiler().applyPasses(new TesslaSource(source)).andThen(new CoreToInterpreterSpec)
+  def fromSource(source: Source, timeUnit: Option[TimeUnit.TimeUnit]): Result[Interpreter] = {
+    new Compiler().applyPasses(new TesslaSource(source), timeUnit).andThen(new CoreToInterpreterSpec)
   }
 
-  def fromString(tesslaSource: String): Result[Interpreter] = {
-    fromSource(Source.fromString(tesslaSource))
+  def fromString(tesslaSource: String, timeUnit: Option[TimeUnit.TimeUnit]): Result[Interpreter] = {
+    fromSource(Source.fromString(tesslaSource), timeUnit)
   }
 
-  def fromFile(file: String): Result[Interpreter] = {
-    fromSource(Source.fromFile(file))
+  def fromFile(file: String, timeUnit: Option[TimeUnit.TimeUnit]): Result[Interpreter] = {
+    fromSource(Source.fromFile(file), timeUnit)
   }
 
 }
