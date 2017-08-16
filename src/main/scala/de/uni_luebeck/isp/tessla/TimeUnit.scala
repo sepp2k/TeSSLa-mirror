@@ -28,7 +28,7 @@ object TimeUnit {
     def message = s"Cannot convert from $from to $to."
   }
 
-  trait TimeUnit {
+  sealed abstract class TimeUnit {
     val factor: BigInt
 
     def <(that: TimeUnit): Boolean = factor < that.factor
