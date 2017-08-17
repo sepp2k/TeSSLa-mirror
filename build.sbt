@@ -33,7 +33,7 @@ credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-rep
 libraryDependencies ++= Seq(
   "de.uni_luebeck.isp" %% "tessla" % "0.3.6-SNAPSHOT",
   "com.chuusai" %% "shapeless" % "2.3.2",
-  "com.github.sepp2k" %% "sexyopt" % "0.1",
+  "com.github.sepp2k" %% "sexyopt" % "0.1.1",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 )
 

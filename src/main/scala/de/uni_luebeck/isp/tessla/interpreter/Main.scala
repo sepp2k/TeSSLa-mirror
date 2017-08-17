@@ -8,8 +8,9 @@ import sexyopt.SexyOpt
 import scala.io.Source
 
 object Main extends SexyOpt {
-  val programName = "tessla-interpreter"
-  val programDescription = "Evaluate the given Tessla specification on the input streams provided by the given trace file."
+  override val programName = "tessla-interpreter"
+  override val version = Some(BuildInfo.version)
+  override val programDescription = "Evaluate the given Tessla specification on the input streams provided by the given trace file."
 
   val tesslaFile = posArg("tessla-file", "The file containing the Tessla specification")
   val traceFile = optionalPosArg("trace-file", "The file containing the trace data used as input for the specification." +
@@ -25,7 +26,6 @@ object Main extends SexyOpt {
   val stopOn = option("stop-on", "Stop when the output stream with the given name generates its first event")
   val listOutStreams = flag("list-out-streams", "Print a list of the output streams defined in the given tessla spec and then exit")
   val listInStreams = flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
-  val printVersion = flag("version", "Print the version number of the tessla interpreter and then exit")
   val timeunit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
 
   def main(args: Array[String]): Unit = {
@@ -44,10 +44,6 @@ object Main extends SexyOpt {
     }
 
     parse(args)
-    if(printVersion) {
-      println(BuildInfo.version)
-      return
-    }
     try {
       if (verifyOnly || listInStreams || listOutStreams) {
         val spec = tesslaSpec(timeunit.map(TimeUnit.fromString))
