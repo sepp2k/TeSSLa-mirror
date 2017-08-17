@@ -6,7 +6,6 @@ import scala.language.higherKinds
 
 import scala.language.implicitConversions
 
-//scalastyle:off object.name class.name
 object ImplicitConstraints {
 
   trait ConstraintOr {
