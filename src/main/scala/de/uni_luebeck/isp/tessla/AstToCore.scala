@@ -22,18 +22,12 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
         name.name -> (typ, loc)
     }.toMap
 
-    val outStreams = if (spec.statements.exists{
-      case Ast.OutAll(_) => true
-      case _ => false
-    }) {
-      spec.statements.collect {
+    val outStreams = spec.statements.collect {
+      case out@Ast.Out(_, _, _) => Seq(out)
+      case Ast.OutAll(_) => spec.statements.collect {
         case Ast.Def(name, Seq(), _, _, loc) => Ast.Out(Ast.ExprName(name), None, loc)
       }
-    } else {
-      spec.statements.collect {
-        case out@Ast.Out(_, _, _) => out
-      }
-    }
+    }.flatten : Seq[Ast.Out]
 
 
     def mkId(name: String) = {
