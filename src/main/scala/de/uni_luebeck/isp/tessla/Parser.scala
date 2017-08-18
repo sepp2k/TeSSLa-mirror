@@ -149,12 +149,12 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
         }
 
     def outstatement: Parser[Ast.Statement] =
-      expr ~ (AS ~> identifier).? ^^! {
-        case (loc, (expr, name)) =>
-          Ast.Out(expr, name, SourceLoc(loc))
+      TIMES ^^^! {
+        loc => Ast.OutAll(SourceLoc(loc))
       } |
-        TIMES ^^^! {
-          loc => Ast.OutAll(SourceLoc(loc))
+        expr ~ (AS ~> identifier).? ^^! {
+          case (loc, (expr, name)) =>
+            Ast.Out(expr, name, SourceLoc(loc))
         }
 
     def macroArgs: Parser[Seq[Ast.MacroArg]] = LPAREN ~> rep1sep(macroArg, COMMA) <~ RPAREN

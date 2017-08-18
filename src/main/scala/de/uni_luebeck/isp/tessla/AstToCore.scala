@@ -15,16 +15,26 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
       case Ast.In(name, typAst, loc) =>
         val typ = tryWithDefault(Types.Stream(Types.Nothing)) {
           Types.fromAst(typAst) match {
-            case s @ Types.Stream(_) => s
+            case s@Types.Stream(_) => s
             case t => throw TypeMismatch(Types.Stream(Types.Nothing), t, typAst.loc)
           }
         }
         name.name -> (typ, loc)
     }.toMap
 
-    val outStreams = spec.statements.collect {
-      case out @ Ast.Out(_, _, _) => out
+    val outStreams = if (spec.statements.exists{
+      case Ast.OutAll(_) => true
+      case _ => false
+    }) {
+      spec.statements.collect {
+        case Ast.Def(name, Seq(), _, _, loc) => Ast.Out(Ast.ExprName(name), None, loc)
+      }
+    } else {
+      spec.statements.collect {
+        case out@Ast.Out(_, _, _) => out
+      }
     }
+
 
     def mkId(name: String) = {
       counter += 1
@@ -33,10 +43,10 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
 
     val builtIns = BuiltIns(mkId)
 
-    def mkEnv(statements: Seq[Ast.Statement], env: =>Env) = {
+    def mkEnv(statements: Seq[Ast.Statement], env: => Env) = {
       val previousDefs = mutable.Map[(String, Int), Location]()
       statements.flatMap {
-        case definition @ Ast.Def(name, args, _, _, loc) =>
+        case definition@Ast.Def(name, args, _, _, loc) =>
           previousDefs.get((definition.name.name, args.length)) match {
             case Some(previousLoc) =>
               error(MultipleDefinitionsError(definition.name, previousLoc))
@@ -59,6 +69,7 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
     }
 
     val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", UnknownLoc)
+
     def translateExpression(expr: Ast.Expr, name: String, env: Env): TranslatedExpression = {
       val errorNode: TranslatedExpression = (Seq(), Stream(errorStream, Types.Nothing))
       tryWithDefault(errorNode) {
@@ -73,9 +84,9 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
             case Ast.ExprIntLit(value, loc) =>
               (Seq(), Literal(TesslaCore.IntLiteral(value, loc)))
             case Ast.ExprTimeLit(value, unit2, loc) => unit match {
-              case Some(u) => if (unit2 < u){
+              case Some(u) => if (unit2 < u) {
                 throw TimeUnitConversionError(unit2, u, loc)
-              }else{
+              } else {
                 (Seq(), Literal(TesslaCore.IntLiteral(value * unit2.convertTo(u), loc)))
               }
               case None => throw UndefinedTimeUnit(loc)
@@ -165,36 +176,49 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
       }
     }
 
-    TesslaCore.Specification(outs.flatMap(_._1).toMap, inStreams.map {case (n, (t, l)) => (n,t,l)}.toSeq, outs.map(_._2))
+    TesslaCore.Specification(outs.flatMap(_._1).toMap, inStreams.map { case (n, (t, l)) => (n, t, l) }.toSeq, outs.map(_._2))
   }
 }
 
 object AstToCore {
+
   sealed abstract class Arg {
     def typ: Types.Type
+
     def loc: Location
+
     def withLoc(loc: Location): Arg
   }
+
   case class Stream(value: TesslaCore.StreamRef, elementType: Types.ValueType) extends Arg {
     def typ: Types.Stream = Types.Stream(elementType)
+
     def loc = value.loc
+
     def withLoc(loc: Location): Stream = Stream(value.withLoc(loc), elementType)
   }
+
   case class Literal(value: TesslaCore.LiteralValue) extends Arg {
     def typ: Types.ValueType = value.typ
+
     def loc = value.loc
+
     def withLoc(loc: Location): Literal = Literal(value.withLoc(loc))
   }
 
   type TranslatedExpression = (Seq[(String, TesslaCore.Expression)], Arg)
+
   sealed abstract class EnvEntry
+
   case class BuiltIn(apply: (Seq[Arg], String, Location) => TranslatedExpression) extends EnvEntry
-  class Definition(val definition: Ast.Def, _closure: =>Env) extends EnvEntry {
+
+  class Definition(val definition: Ast.Def, _closure: => Env) extends EnvEntry {
     lazy val closure = _closure
   }
 
   object Definition {
     def apply(definition: Ast.Def, _closure: => Env) = new Definition(definition, _closure)
+
     def unapply(d: Definition): Option[(Ast.Def, Env)] = Some((d.definition, d.closure))
   }
 
@@ -203,27 +227,33 @@ object AstToCore {
   case class InfiniteRecursion(loc: Location) extends CompilationError {
     override def message = "Definition is infinitely recursive"
   }
+
   case class UndefinedVariable(id: Ast.Identifier) extends CompilationError {
     override def loc = id.loc
+
     override def message = s"Undefined variable ${id.name}"
   }
 
   case class UndefinedFunction(id: Ast.Identifier, arity: Int) extends CompilationError {
     override def loc = id.loc
+
     override def message = s"Undefined macro or operator ${id.name}/$arity"
   }
 
   case class UndefinedNamedArg(id: Ast.Identifier) extends CompilationError {
     override def loc = id.loc
+
     override def message = s"Undefined keyword argument ${id.name}"
   }
 
   case class MultipleDefinitionsError(id: Ast.Identifier, previousLoc: Location) extends CompilationError {
     override def loc = id.loc
+
     override def message = s"Multiple definitions of ${id.name} in same scope (previous definition at $previousLoc)"
   }
 
   case class InternalError(m: String, loc: Location = UnknownLoc) extends CompilationError {
     def message = s"Internal error: $m"
   }
+
 }
