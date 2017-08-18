@@ -32,6 +32,11 @@ object Ast {
     override def toString = s"out $expr as $name"
   }
 
+  case class OutAll(loc: Location) extends Statement {
+    def name = "out *"
+    override def toString = name
+  }
+
   case class MacroArg(name: Identifier, typeAscr: Option[Type]) {
     override def toString = typeAscr match {
       case Some(t) => s"${name.name}: $t"

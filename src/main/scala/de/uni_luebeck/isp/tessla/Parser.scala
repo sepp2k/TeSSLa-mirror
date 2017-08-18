@@ -142,13 +142,19 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
 
     def statement: Parser[Ast.Statement] =
       defOrMacroDef |
-        OUT ~> expr ~ (AS ~> identifier).? ^^! {
-          case (loc, (expr, name)) =>
-            Ast.Out(expr, name, SourceLoc(loc))
-        } |
+        OUT ~> outstatement |
         IN ~> identifier ~ typeAscr ^^! {
           case (loc, (name, typeAscr)) =>
             Ast.In(name, typeAscr, SourceLoc(loc))
+        }
+
+    def outstatement: Parser[Ast.Statement] =
+      expr ~ (AS ~> identifier).? ^^! {
+        case (loc, (expr, name)) =>
+          Ast.Out(expr, name, SourceLoc(loc))
+      } |
+        TIMES ^^^! {
+          loc => Ast.OutAll(SourceLoc(loc))
         }
 
     def macroArgs: Parser[Seq[Ast.MacroArg]] = LPAREN ~> rep1sep(macroArg, COMMA) <~ RPAREN
@@ -261,7 +267,7 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
           loc => Ast.ExprBoolLit(false, SourceLoc(loc))
         }
 
-    def exprIntLit: Parser[Ast.Expr] = matchToken("integer", Set("<integer>")){
+    def exprIntLit: Parser[Ast.Expr] = matchToken("integer", Set("<integer>")) {
       case WithLocation(loc, INT(value)) => BigInt(value)
     } ~ timeUnit.? ^^! {
       case (loc, (value, None)) => Ast.ExprIntLit(value, SourceLoc(loc))
@@ -276,8 +282,8 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
           Micros
         } |
         ID("ms") ^^^ {
-        Millis
-      } |
+          Millis
+        } |
         ID("s") ^^^ {
           Seconds
         } |
