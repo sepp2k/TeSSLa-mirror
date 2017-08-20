@@ -61,8 +61,9 @@ class InterpreterTests extends FunSuite {
       test(name) {
         if (extensions.contains("tessla")) {
           try {
-            val traces = Traces.read(testFile(name, "input"))
-            val result = Interpreter.fromSource(testFile(name, "tessla"), traces.timeStampUnit)
+            val input = new Parser().translateSpec(testFile(name, "input"))
+            val traces = Traces.read(input)
+            val result = Interpreter.fromSource(testFile(name, "tessla"), traces.timeStampUnit.map(_.timeUnit))
             result match {
               case Success(spec, _) =>
                 assert(!extensions.contains("errors"), "Expected: Compilation failure. Actual: Compilation success.")

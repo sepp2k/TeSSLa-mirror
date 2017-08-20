@@ -2,53 +2,18 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.TimeUnit
 import de.uni_luebeck.isp.tessla.{CompilationError, TesslaCore, UnknownLoc}
+import de.uni_luebeck.isp.tessla.interpreter.Input._
 
-import scala.io.Source
-import scala.util.matching.Regex
 
 
 object Traces {
-  val TimeUnitPattern = """\$timeunit\s*=\s*("[a-zA-Z]{1,3}")""".r
-  val InputPattern = """(\d+)\s*:\s*([a-zA-Z][0-9a-zA-Z]*)(?:\s*=\s*(.+))?""".r
-  val EmptyLinePattern = """\s*""".r
 
-  val StringPattern = """^"([^"]*)"$""".r
-
-  def parseValue(string: String): TesslaCore.LiteralValue = string match {
-    case "()" => TesslaCore.Unit(UnknownLoc)
-    case "true" => TesslaCore.BoolLiteral(true, UnknownLoc)
-    case "false" => TesslaCore.BoolLiteral(false, UnknownLoc)
-    case StringPattern(s) => TesslaCore.StringLiteral(s, UnknownLoc)
-    case _ =>
-      TesslaCore.IntLiteral(BigInt(string), UnknownLoc)
-  }
-
-  def read(traceSource: Source): Traces = {
-    def getValues(src: Iterator[String]): Iterator[(BigInt, String, TesslaCore.LiteralValue)] = {
-      src.zipWithIndex.map {
-        case (InputPattern(timestamp, inStream, null), _) =>
-          (BigInt(timestamp), inStream, TesslaCore.Unit(UnknownLoc))
-        case (InputPattern(timestamp, inStream, value), _) =>
-          (BigInt(timestamp), inStream, parseValue(value))
-        case (line, index) =>
-          sys.error(s"Syntax error on input line $index: $line")
-      }
-    }
-
-    val lines = traceSource.getLines().filterNot(_.matches(EmptyLinePattern.regex))
-    lines.take(1).toList match {
-      case TimeUnitPattern(u) :: Nil =>
-        val timeUnit = TimeUnit.fromString(u)
-        new Traces(Some(timeUnit), getValues(lines))
-      case v :: Nil =>
-        new Traces(None, getValues(Iterator(v) ++ lines))
-      case Nil =>
-        new Traces(None, Iterator())
-    }
+  def read(input: Spec): Traces = {
+    new Traces(input.timeUnit, input.events)
   }
 }
 
-class Traces(val timeStampUnit: Option[TimeUnit.TimeUnit], values: Iterator[(BigInt, String, TesslaCore.LiteralValue)]) {
+class Traces(val timeStampUnit: Option[Input.TimeUnit], values: Seq[Input.Event]) {
 
   case class InvalidInputError(message: String) extends CompilationError {
     def loc = UnknownLoc
@@ -98,8 +63,8 @@ class Traces(val timeStampUnit: Option[TimeUnit.TimeUnit], values: Iterator[(Big
     }
 
     values.foreach {
-      case (ts, inStream, value) =>
-        queue.enqueue(ts, inStream, value)
+      case Event(loc, ts, inStream, value) =>
+        queue.enqueue(ts, inStream.name, value)
         dequeue(ts)
     }
 
