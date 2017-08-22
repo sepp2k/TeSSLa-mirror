@@ -5,9 +5,8 @@ val snapshots = "Snapshots" at nexus + "content/repositories/snapshots"
 val releases = "Releases" at nexus + "content/repositories/releases"
 
 lazy val tessla = (project in file(".")).settings(
-//  offline := true,
   name := "tessla",
-  version := "0.3.7-SNAPSHOT",
+  version := "0.3.8-SNAPSHOT",
   scalaVersion := "2.12.1",
   organization := "de.uni_luebeck.isp",
   resolvers += releases,
@@ -16,7 +15,7 @@ lazy val tessla = (project in file(".")).settings(
   resolvers += Resolver.sonatypeRepo("public"),
   resourceDirectory in Compile <<= baseDirectory(_ / "lib"),
   libraryDependencies ++= Seq(
-    "de.uni_luebeck.isp" %% "compacom" % "0.2.6",
+    "de.uni_luebeck.isp" %% "compacom" % "0.2.7",
     "com.github.scopt" %% "scopt" % "3.5.0"
   ),
   scalacOptions ++= Seq("-feature", "-deprecation"),

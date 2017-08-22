@@ -186,7 +186,7 @@ class Parser extends TranslationPhase[TesslaSource, Ast.Spec] {
       case (expr, Some(typeAscr)) => Ast.ExprTypeAscr(expr, typeAscr)
     }
 
-    def infixOp(loc: compacom.Location, lhs: Ast.Expr, rhss: List[(WithLocation[Token], Ast.Expr)]) = {
+    def infixOp(loc: compacom.Location, lhs: Ast.Expr, rhss: Seq[(WithLocation[Token], Ast.Expr)]) = {
       rhss.foldLeft(lhs) {
         case (l, (op, r)) =>
           Ast.ExprApp(Ast.Identifier(op.value.string, SourceLoc(op.loc)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc))
