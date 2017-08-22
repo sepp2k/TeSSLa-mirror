@@ -42,11 +42,7 @@ object Tokens extends SimpleTokens {
 
   case object RPAREN extends Token(")")
 
-  case object DQUOTE extends Token("\"")
-
   case object MINUS extends Token("-")
-
-
 }
 
 object Tokenizer extends SimpleTokenizer {
@@ -55,10 +51,12 @@ object Tokenizer extends SimpleTokenizer {
   import tokens._
 
   override val keywords = List(TRUE, FALSE)
-  override val symbols = List(COLON, EQ, DOLLAR, LPAREN, RPAREN, DQUOTE, MINUS)
+  override val symbols = List(COLON, EQ, DOLLAR, LPAREN, RPAREN, MINUS)
   override val comments = List("--" -> "\n")
 
-  override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c) || c == '.'
+  override def isIdentifierCont(c: Char): Boolean = {
+    super.isIdentifierCont(c)
+  }
 }
 
 object Parsers extends Parsers {
@@ -74,9 +72,14 @@ object Parsers extends Parsers {
     case (time, events) => Input.Spec(time, events)
   }
 
+  var counter = 1
+
   def event: Parser[Input.Event] =
     (((bigInt <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
-      case (loc, ((time, id), v)) => Input.Event(loc, time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc))))
+      case (loc, ((time, id), v)) =>
+        println(s"Successfully parsed line number: $counter")
+        counter += 1
+        Input.Event(loc, time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc))))
     }
 
 
@@ -119,7 +122,7 @@ object Parsers extends Parsers {
 
 
   def timeUnitDecl: Parser[Input.TimeUnit] =
-    DOLLAR ~> ID("timeunit") ~> EQ ~> DQUOTE ~> timeUnit <~ DQUOTE ^^! {
+    DOLLAR ~> ID("timeunit") ~> EQ ~> timeUnit^^! {
       case (loc, unit) => Input.TimeUnit(loc, unit)
     }
 
