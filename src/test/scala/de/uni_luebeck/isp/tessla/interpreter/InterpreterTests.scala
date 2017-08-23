@@ -61,7 +61,7 @@ class InterpreterTests extends FunSuite {
       test(name) {
         if (extensions.contains("tessla")) {
           try {
-            val input = new Parser().translateSpec(testFile(name, "input"))
+            val input = new TraceParser().translateSpec(testFile(name, "input"))
             val traces = Traces.read(input)
             val result = Interpreter.fromSource(testFile(name, "tessla"), traces.timeStampUnit.map(_.timeUnit))
             result match {

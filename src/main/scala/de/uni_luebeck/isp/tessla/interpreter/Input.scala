@@ -8,7 +8,7 @@ import de.uni_luebeck.isp.tessla.TesslaCore
   */
 object Input {
 
-  case class Spec(timeUnit: Option[TimeUnit], events: Seq[Event]) {
+  case class Input(timeUnit: Option[TimeUnit], events: Seq[Event]) {
     override def toString = timeUnit + "\n" + events.mkString("\n")
   }
 

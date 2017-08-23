@@ -8,7 +8,7 @@ import scala.io.Source
 /**
   * Created by Larissa on 19.08.2017.
   */
-class Parser {
+class TraceParser {
 
   case class ParserError(parserFailure: Parsers.Failure) extends CompilationError {
     override def loc = SourceLoc(parserFailure.loc)

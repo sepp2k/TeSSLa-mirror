@@ -1,6 +1,5 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.TimeUnit
 import de.uni_luebeck.isp.tessla.{CompilationError, TesslaCore, UnknownLoc}
 import de.uni_luebeck.isp.tessla.interpreter.Input._
 import de.uni_luebeck.isp.tessla.interpreter.Traces.InvalidInputError
@@ -20,7 +19,7 @@ object Traces {
 
     input.headOption match {
       case Some(tu: Input.TimeUnit) => new Traces(Some(tu), eventsOnly(input.tail))
-      case Some(ev: Input.Event) => new Traces(None, eventsOnly(input))
+      case Some(_: Input.Event) => new Traces(None, eventsOnly(input))
       case None => new Traces(None, Seq())
     }
   }
