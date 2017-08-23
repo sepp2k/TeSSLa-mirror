@@ -1,8 +1,9 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{CompilationError, SourceLoc, _}
-import de.uni_luebeck.isp.compacom.{SimpleTokenizer, SimpleTokens, WithLocation, _}
-import de.uni_luebeck.isp.tessla.TimeUnit.{Days, Hours, TimeUnit => _, _}
+import de.uni_luebeck.isp.tessla.{CompilationError, SourceLoc, TesslaCore, TimeUnit}
+import de.uni_luebeck.isp.compacom.{SimpleTokenizer, SimpleTokens, WithLocation, Parsers}
+import de.uni_luebeck.isp.tessla.TimeUnit._
+
 import scala.io.Source
 
 /**
@@ -74,7 +75,7 @@ object Parsers extends Parsers {
   def event: Parser[Input.Event] =
     (((bigInt <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
       case (loc, ((time, id), v)) =>
-        Input.Event(loc, time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc))))
+        Input.Event(SourceLoc(loc), time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc))))
     }
 
   def value: Parser[TesslaCore.LiteralValue] =
@@ -96,7 +97,7 @@ object Parsers extends Parsers {
 
   def timeUnitDecl: Parser[Input.TimeUnit] =
     DOLLAR ~> ID("timeunit") ~> EQ ~> timeUnit ^^! {
-      case (loc, unit) => Input.TimeUnit(loc, unit)
+      case (loc, unit) => Input.TimeUnit(SourceLoc(loc), unit)
     }
 
   def timeUnit: Parser[TimeUnit.TimeUnit] =
@@ -134,7 +135,7 @@ object Parsers extends Parsers {
     }
 
   def identifier: Parser[Input.Identifier] = matchToken("identifier", Set("<identifier>")) {
-    case WithLocation(loc, ID(name)) => Input.Identifier(loc, name)
+    case WithLocation(loc, ID(name)) => Input.Identifier(SourceLoc(loc), name)
   }
 
   def string: Parser[String] = matchToken("string", Set("<string>")) {

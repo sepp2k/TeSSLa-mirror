@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.compacom.Location
+import de.uni_luebeck.isp.tessla.Location
 import de.uni_luebeck.isp.tessla.TesslaCore
 
 /**
@@ -12,7 +12,6 @@ object Input {
     override def toString = timeUnit + "\n" + events.mkString("\n")
   }
 
-
   sealed trait Line {
     def loc: Location
   }
@@ -21,12 +20,12 @@ object Input {
     override def toString = timeUnit.toString
   }
 
-  case class Event(loc: Location, timeStamp: BigInt, name: Identifier, value: TesslaCore.LiteralValue) extends Line {
-    override def toString = s"$timeStamp: $name = $value"
+  case class Event(loc: Location, timeStamp: BigInt, stream: Identifier, value: TesslaCore.LiteralValue) extends Line {
+    override def toString = s"$timeStamp: $stream = $value"
   }
 
   case class Identifier(loc: Location, name: String) {
-    override def toString = name
+    override def toString = "\"" + name + "\""
   }
 
 }

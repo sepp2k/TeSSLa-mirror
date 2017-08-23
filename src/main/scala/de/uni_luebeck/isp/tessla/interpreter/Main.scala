@@ -1,7 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{CompilationError, TimeUnit}
-import de.uni_luebeck.isp.tessla.TimeUnit.Nanos
+import de.uni_luebeck.isp.tessla.{TimeUnit, CompilationError}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import sexyopt.SexyOpt
 

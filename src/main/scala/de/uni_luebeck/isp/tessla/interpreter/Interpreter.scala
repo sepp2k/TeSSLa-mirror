@@ -1,6 +1,5 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.TimeUnit.Nanos
 import de.uni_luebeck.isp.tessla.{AstToCore, CompilationError, Compiler, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types, UnknownLoc}
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import shapeless.{::, HNil}
