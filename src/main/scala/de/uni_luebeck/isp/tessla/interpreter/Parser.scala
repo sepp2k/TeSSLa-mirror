@@ -72,13 +72,9 @@ object Parsers extends Parsers {
     case (time, events) => Input.Spec(time, events)
   }
 
-  var counter = 1
-
   def event: Parser[Input.Event] =
     (((bigInt <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
       case (loc, ((time, id), v)) =>
-        println(s"Successfully parsed line number: $counter")
-        counter += 1
         Input.Event(loc, time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc))))
     }
 
