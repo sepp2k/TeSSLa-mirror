@@ -123,25 +123,25 @@ object Parsers extends Parsers {
     }
 
   def timeUnit: Parser[TimeUnit.TimeUnit] =
-    ID("ns") ^^^ {
+    STRING("ns") ^^^ {
       Nanos
     } |
-      ID("us") ^^^ {
+      STRING("us") ^^^ {
         Micros
       } |
-      ID("ms") ^^^ {
+      STRING("ms") ^^^ {
         Millis
       } |
-      ID("s") ^^^ {
+      STRING("s") ^^^ {
         Seconds
       } |
-      ID("min") ^^^ {
+      STRING("min") ^^^ {
         Minutes
       } |
-      ID("h") ^^^ {
+      STRING("h") ^^^ {
         Hours
       } |
-      ID("d") ^^^ {
+      STRING("d") ^^^ {
         Days
       }
 }
