@@ -16,11 +16,11 @@ class Parser {
     override def message = parserFailure.message
   }
 
-  def translateSpec(source: Source) = {
-    Parsers.parseAll(Parsers.spec, source) match {
-      case Parsers.Success(_, spec, _, _) => spec
+  def translateSpec(source: Source): Seq[Input.Line] = {
+    Parsers.parseMany(Parsers.line, source).map({
+      case Parsers.Success(_, line, _, _) => line
       case fail: Parsers.Failure => throw ParserError(fail)
-    }
+    }).toSeq
   }
 
 }
@@ -43,6 +43,7 @@ object Tokens extends SimpleTokens {
   case object RPAREN extends Token(")")
 
   case object MINUS extends Token("-")
+
 }
 
 object Tokenizer extends SimpleTokenizer {
@@ -68,31 +69,13 @@ object Parsers extends Parsers {
 
   implicit def tokenToParser(t: Token): Parser[WithLocation[Token]] = token(t)
 
-  def spec: Parser[Input.Spec] = timeUnitDecl.? ~ event.* ^^ {
-    case (time, events) => Input.Spec(time, events)
-  }
+  def line: Parser[Input.Line] = event | timeUnitDecl
 
   def event: Parser[Input.Event] =
     (((bigInt <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
       case (loc, ((time, id), v)) =>
         Input.Event(loc, time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc))))
     }
-
-
-  def bigInt: Parser[BigInt] =
-    MINUS.? ~ bigNat ^^{
-      case (Some(_), nat) => -nat
-      case (None, nat) => nat
-  }
-
-  def bigNat: Parser[BigInt] =
-    matchToken("integer", Set("<integer>")) {
-      case WithLocation(loc, INT(value)) => BigInt(value)
-    }
-
-  def identifier: Parser[Input.Identifier] = matchToken("identifier", Set("<identifier>")) {
-    case WithLocation(loc, ID(name)) => Input.Identifier(loc, name)
-  }
 
   def value: Parser[TesslaCore.LiteralValue] =
     TRUE ^^^! {
@@ -111,14 +94,8 @@ object Parsers extends Parsers {
         case (loc, value) => TesslaCore.IntLiteral(value, SourceLoc(loc))
       }
 
-
-  def string: Parser[String] = matchToken("string", Set("<string>")) {
-    case WithLocation(loc, STRING(value)) => value
-  }
-
-
   def timeUnitDecl: Parser[Input.TimeUnit] =
-    DOLLAR ~> ID("timeunit") ~> EQ ~> timeUnit^^! {
+    DOLLAR ~> ID("timeunit") ~> EQ ~> timeUnit ^^! {
       case (loc, unit) => Input.TimeUnit(loc, unit)
     }
 
@@ -144,4 +121,23 @@ object Parsers extends Parsers {
       STRING("d") ^^^ {
         Days
       }
+
+  def bigInt: Parser[BigInt] =
+    MINUS.? ~ bigNat ^^ {
+      case (Some(_), nat) => -nat
+      case (None, nat) => nat
+    }
+
+  def bigNat: Parser[BigInt] =
+    matchToken("integer", Set("<integer>")) {
+      case WithLocation(loc, INT(value)) => BigInt(value)
+    }
+
+  def identifier: Parser[Input.Identifier] = matchToken("identifier", Set("<identifier>")) {
+    case WithLocation(loc, ID(name)) => Input.Identifier(loc, name)
+  }
+
+  def string: Parser[String] = matchToken("string", Set("<string>")) {
+    case WithLocation(loc, STRING(value)) => value
+  }
 }

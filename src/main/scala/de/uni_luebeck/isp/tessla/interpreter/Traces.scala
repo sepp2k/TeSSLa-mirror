@@ -3,21 +3,30 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.TimeUnit
 import de.uni_luebeck.isp.tessla.{CompilationError, TesslaCore, UnknownLoc}
 import de.uni_luebeck.isp.tessla.interpreter.Input._
-
+import de.uni_luebeck.isp.tessla.interpreter.Traces.InvalidInputError
 
 
 object Traces {
 
-  def read(input: Spec): Traces = {
-    new Traces(input.timeUnit, input.events)
+  case class InvalidInputError(message: String) extends CompilationError {
+    def loc = UnknownLoc
+  }
+
+  def read(input: Seq[Input.Line]): Traces = {
+    def eventsOnly(lines: Seq[Input.Line]): Seq[Input.Event] = lines.map {
+      case e: Input.Event => e
+      case _ => throw InvalidInputError("Time Unit declarations are only allowed in the beginning of the input.")
+    }
+
+    input.headOption match {
+      case Some(tu: Input.TimeUnit) => new Traces(Some(tu), eventsOnly(input.tail))
+      case Some(ev: Input.Event) => new Traces(None, eventsOnly(input))
+      case None => new Traces(None, Seq())
+    }
   }
 }
 
 class Traces(val timeStampUnit: Option[Input.TimeUnit], values: Seq[Input.Event]) {
-
-  case class InvalidInputError(message: String) extends CompilationError {
-    def loc = UnknownLoc
-  }
 
   def feedInput(tesslaSpec: Interpreter, threshold: BigInt)(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
     val queue = new TracesQueue(threshold)
