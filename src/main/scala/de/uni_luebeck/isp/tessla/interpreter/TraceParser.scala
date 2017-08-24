@@ -6,9 +6,6 @@ import de.uni_luebeck.isp.tessla.TimeUnit._
 
 import scala.io.Source
 
-/**
-  * Created by Larissa on 19.08.2017.
-  */
 class TraceParser {
 
   case class ParserError(parserFailure: Parsers.Failure) extends CompilationError {
