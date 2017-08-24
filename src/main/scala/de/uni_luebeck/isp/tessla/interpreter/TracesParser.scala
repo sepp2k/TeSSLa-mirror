@@ -7,23 +7,22 @@ import de.uni_luebeck.isp.tessla.interpreter.Traces.NotAnEventError
 
 import scala.io.Source
 
-class TraceParser {
-
-  case class ParserError(parserFailure: Parsers.Failure) extends CompilationError {
+object TracesParser extends Parsers {
+  case class ParserError(parserFailure: Failure) extends CompilationError {
     override def loc = SourceLoc(parserFailure.loc)
 
     override def message = parserFailure.message
   }
 
-  def translateTraces(source: Source): Traces = {
+  def parseTraces(source: Source): Traces = {
     def eventsOnly(lines: Iterator[Traces.Line]): Iterator[Traces.Event] = lines.map {
       case e: Traces.Event => e
       case l => throw NotAnEventError(l)
     }
 
-    val input = Parsers.parseMany(Parsers.line, source).map({
-      case Parsers.Success(_, line, _, _) => line
-      case fail: Parsers.Failure => throw ParserError(fail)
+    val input = parseMany(line, source).map({
+      case Success(_, line, _, _) => line
+      case fail: Failure => throw ParserError(fail)
     })
 
     input.take(1).toList.headOption match {
@@ -32,51 +31,42 @@ class TraceParser {
       case None => new Traces(None, Iterator())
     }
   }
-}
 
+  object Tokens extends SimpleTokens {
+    case object COLON extends Token(":")
 
-object Tokens extends SimpleTokens {
+    case object EQ extends Token("=")
 
-  case object COLON extends Token(":")
+    case object DOLLAR extends Token("$")
 
-  case object EQ extends Token("=")
+    case object TRUE extends Token("true")
 
-  case object DOLLAR extends Token("$")
+    case object FALSE extends Token("false")
 
-  case object TRUE extends Token("true")
+    case object LPAREN extends Token("(")
 
-  case object FALSE extends Token("false")
+    case object RPAREN extends Token(")")
 
-  case object LPAREN extends Token("(")
-
-  case object RPAREN extends Token(")")
-
-  case object MINUS extends Token("-")
-
-}
-
-object Tokenizer extends SimpleTokenizer {
-  override val tokens = Tokens
-
-  import tokens._
-
-  override val keywords = List(TRUE, FALSE)
-  override val symbols = List(COLON, EQ, DOLLAR, LPAREN, RPAREN, MINUS)
-  override val comments = List("--" -> "\n")
-
-  override def isIdentifierCont(c: Char): Boolean = {
-    super.isIdentifierCont(c)
+    case object MINUS extends Token("-")
   }
-}
 
-object Parsers extends Parsers {
+  object Tokenizer extends SimpleTokenizer {
+    override val tokens = Tokens
 
-  import scala.language.implicitConversions
+    import tokens._
+
+    override val keywords = List(TRUE, FALSE)
+    override val symbols = List(COLON, EQ, DOLLAR, LPAREN, RPAREN, MINUS)
+    override val comments = List("--" -> "\n")
+
+    override def isIdentifierCont(c: Char): Boolean = {
+      super.isIdentifierCont(c)
+    }
+  }
+
   import Tokens._
 
   override val tokenizer = Tokenizer
-
-  implicit def tokenToParser(t: Token): Parser[WithLocation[Token]] = token(t)
 
   def line: Parser[Traces.Line] = event | timeUnitDecl
 
