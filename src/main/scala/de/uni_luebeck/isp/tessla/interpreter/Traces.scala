@@ -23,21 +23,21 @@ object Traces {
     def message: String = s"Decreasing time stamps: first = $first, second = $second."
   }
 
-  def read(input: Seq[Input.Line]): Traces = {
-    def eventsOnly(lines: Seq[Input.Line]): Seq[Input.Event] = lines.map {
+  def read(input: Iterator[Input.Line]): Traces = {
+    def eventsOnly(lines: Iterator[Input.Line]): Iterator[Input.Event] = lines.map {
       case e: Input.Event => e
       case l => throw NotAnEventError(l)
     }
 
-    input.headOption match {
-      case Some(tu: Input.TimeUnit) => new Traces(Some(tu), eventsOnly(input.tail))
-      case Some(_: Input.Event) => new Traces(None, eventsOnly(input))
-      case None => new Traces(None, Seq())
+    input.take(1).toList.headOption match {
+      case Some(tu: Input.TimeUnit) => new Traces(Some(tu), eventsOnly(input))
+      case Some(ev: Input.Event) => new Traces(None, eventsOnly(Iterator(ev) ++ input))
+      case None => new Traces(None, Iterator())
     }
   }
 }
 
-class Traces(val timeStampUnit: Option[Input.TimeUnit], values: Seq[Input.Event]) {
+class Traces(val timeStampUnit: Option[Input.TimeUnit], values: Iterator[Input.Event]) {
 
   def feedInput(tesslaSpec: Interpreter, threshold: BigInt)(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
     val queue = new TracesQueue(threshold)

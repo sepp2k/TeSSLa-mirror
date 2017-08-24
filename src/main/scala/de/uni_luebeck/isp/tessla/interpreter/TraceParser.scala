@@ -14,11 +14,11 @@ class TraceParser {
     override def message = parserFailure.message
   }
 
-  def translateSpec(source: Source): Seq[Input.Line] = {
+  def translateSpec(source: Source): Iterator[Input.Line] = {
     Parsers.parseMany(Parsers.line, source).map({
       case Parsers.Success(_, line, _, _) => line
       case fail: Parsers.Failure => throw ParserError(fail)
-    }).toSeq
+    })
   }
 
 }
