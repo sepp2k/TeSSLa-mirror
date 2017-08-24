@@ -15,7 +15,7 @@ lazy val tessla = (project in file(".")).settings(
   resolvers += Resolver.sonatypeRepo("public"),
   resourceDirectory in Compile <<= baseDirectory(_ / "lib"),
   libraryDependencies ++= Seq(
-    "de.uni_luebeck.isp" %% "compacom" % "0.2.7",
+    "de.uni_luebeck.isp" %% "compacom" % "0.2.8",
     "com.github.scopt" %% "scopt" % "3.5.0"
   ),
   scalacOptions ++= Seq("-feature", "-deprecation"),
