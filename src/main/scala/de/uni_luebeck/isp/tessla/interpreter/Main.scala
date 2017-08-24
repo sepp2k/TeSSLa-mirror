@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{CompilationError, TimeUnit}
+import de.uni_luebeck.isp.tessla.{TimeUnit, CompilationError}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import sexyopt.SexyOpt
 
@@ -55,8 +55,8 @@ object Main extends SexyOpt {
           return
         }
       } else {
-        val traces = Traces.read(traceFile.map(Source.fromFile).getOrElse(Source.stdin))
-        val tu = timeunit.map(TimeUnit.fromString).orElse(traces.timeStampUnit)
+        val traces: Traces = new TraceParser().translateTraces(traceFile.map(Source.fromFile).getOrElse(Source.stdin))
+        val tu = timeunit.map(TimeUnit.fromString).orElse(traces.timeStampUnit.map(_.timeUnit))
         tu.foreach(unit => println("$timeunit = \"" + unit + "\""))
         val spec = tesslaSpec(tu)
         traces.feedInput(spec, BigInt(threshold)) {

@@ -1,40 +1,41 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{TesslaCore, UnknownLoc}
+import de.uni_luebeck.isp.tessla.interpreter.Traces.DecreasingTimeStampsError
+
 import scala.collection.mutable
 
 class TracesQueue(val threshold: BigInt) {
   /*A PriorityQueue, having a BigInt as timestamp and using the lowest value has highest priority.*/
-  val queue: mutable.PriorityQueue[(BigInt, (String, TesslaCore.Value))] =
-    new mutable.PriorityQueue[(BigInt, (String, TesslaCore.Value))]()(Ordering.by(e=>e._1)).reverse
+  val queue: mutable.PriorityQueue[Traces.Event] =
+    new mutable.PriorityQueue[Traces.Event]()(Ordering.by(ev => ev.timeStamp)).reverse
 
-  def enqueue(timeStamp: BigInt, inStream: String, value: TesslaCore.Value = TesslaCore.Unit(UnknownLoc)): Unit = {
-    queue.enqueue((timeStamp, (inStream, value)))
+  /*Dequeues and processes all events with a time stamp lower than the one of the event subtracted by the threshold, and then adds the new event to the queue.*/
+  def enqueue(event: Traces.Event, callback: Traces.Event => Unit): Unit = {
+    dequeue(event.timeStamp).foreach(callback)
+    /*Note: queue.min actually looks for the highest timestamp (which is the lowest priority, therefore min)*/
+    if (queue.nonEmpty && event.timeStamp <= queue.min(queue.ord).timeStamp - threshold){
+      /*New Input has a too small timestamp*/
+      throw DecreasingTimeStampsError(queue.last.timeStamp, event.timeStamp, event.loc)
+    }
+    queue.enqueue(event)
   }
 
-
-  def hasNext(timeStamp: BigInt): Boolean = {
-    queue.nonEmpty && timeStamp >= queue.head._1 + threshold
-  }
-
-  /*Dequeues the element with the lowest timestamp, if it is lower than the current timestamp subtracted by the threshold.*/
-  def dequeue(timeStamp: BigInt): Option[(BigInt, (String, TesslaCore.Value))] = {
-    queue.headOption match {
-      case Some((t, _)) => if (timeStamp >= t + threshold) {
-        Some(queue.dequeue())
-      } else {
-        None
-      }
-      case None => None
+  /*Dequeue every event which has a timestamp lower than the given timestamp subtracted by the threshold.*/
+  def dequeue(timeStamp: BigInt): List[Traces.Event] = {
+    queue.headOption.filter(_.timeStamp <= timeStamp - threshold) match {
+      case None => Nil
+      case Some(_) =>
+        queue.dequeue() +: dequeue(timeStamp)
     }
   }
 
-  /*Returns all elements of the queue in a list*/
-  def toList(): List[(BigInt, (String, TesslaCore.Value))] = {
-    queue.dequeueAll.toList
+  /*Dequeue every event from the queue and apply the callback to it.*/
+  def processAll(callback: Traces.Event => Unit): Unit = {
+    queue.dequeueAll.foreach(callback)
   }
 
-  override def toString(): String = {
+  /*Print the whole queue without altering it.*/
+  override def toString: String = {
     queue.clone.dequeueAll.toString
   }
 }
