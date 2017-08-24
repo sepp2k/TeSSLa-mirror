@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{AstToCore, CompilationError, Compiler, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types, UnknownLoc}
+import de.uni_luebeck.isp.tessla.Errors.{InternalError, TesslaError, TypeMismatch}
+import de.uni_luebeck.isp.tessla.{AstToCore, Compiler, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types, UnknownLoc}
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import shapeless.{::, HNil}
 
@@ -24,9 +25,9 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
 
   private def evalStream(arg: TesslaCore.StreamRef): Stream[TesslaCore.Value] = arg match {
     case TesslaCore.Stream(name, loc) =>
-      defs.getOrElse(name, throw AstToCore.InternalError(s"Couldn't find stream named $name", loc)).get
+      defs.getOrElse(name, throw InternalError(s"Couldn't find stream named $name", loc)).get
     case TesslaCore.InputStream(name, loc) =>
-      inStreams.getOrElse(name, throw AstToCore.InternalError(s"Couldn't find stream named $name", loc))._1
+      inStreams.getOrElse(name, throw InternalError(s"Couldn't find stream named $name", loc))._1
     case TesslaCore.Nil(_) => nil
   }
 
@@ -39,7 +40,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
             nil.default(x)
         }
       } catch {
-        case c: CompilationError =>
+        case c: TesslaError =>
           nil.default(TesslaCore.ErrorValue(c))
       }
     case TesslaCore.Lift(op, argStreams, loc) =>
@@ -47,7 +48,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
         try {
           op.eval((args, argStreams).zipped.map((arg, s) => arg.withLoc(s.loc)), loc)
         } catch {
-          case c: CompilationError =>
+          case c: TesslaError =>
             Some(TesslaCore.ErrorValue(c))
         }
       }
@@ -68,7 +69,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
       (args: TesslaCore.Value :: HNil) =>
         args match {
           case TesslaCore.IntLiteral(i, _) :: HNil => Some(i)
-          case value :: HNil => throw Types.TypeMismatch(Types.Int, value.typ, loc)
+          case value :: HNil => throw TypeMismatch(Types.Int, value.typ, loc)
         }
     }
   }

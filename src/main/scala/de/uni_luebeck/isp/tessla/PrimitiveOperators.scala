@@ -1,8 +1,10 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Errors.DivideByZero
+
 object PrimitiveOperators {
   def ArityError =
-    AstToCore.InternalError("Arity mismatch should have been caught during overload resolution", UnknownLoc)
+    Errors.InternalError("Arity mismatch should have been caught during overload resolution", UnknownLoc)
 
   sealed abstract class PrimitiveOperator {
     /** Return the return type of the result for the given types of the operands, or throw a TypeError if the provided
@@ -237,9 +239,5 @@ object PrimitiveOperators {
       case Seq(TesslaCore.BoolLiteral(cond, _), thenCase) =>
         if (cond) Some(thenCase) else None
     }
-  }
-
-  case class DivideByZero(loc: Location) extends CompilationError {
-    def message = "Division by zero"
   }
 }

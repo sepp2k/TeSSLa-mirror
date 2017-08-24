@@ -1,8 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import AstToCore._
-import de.uni_luebeck.isp.tessla.TimeUnit._
-import de.uni_luebeck.isp.tessla.Types.TypeMismatch
+import de.uni_luebeck.isp.tessla.Errors._
 
 import scala.collection.mutable
 
@@ -217,37 +216,4 @@ object AstToCore {
   }
 
   type Env = Map[(String, Int), EnvEntry]
-
-  case class InfiniteRecursion(loc: Location) extends CompilationError {
-    override def message = "Definition is infinitely recursive"
-  }
-
-  case class UndefinedVariable(id: Ast.Identifier) extends CompilationError {
-    override def loc = id.loc
-
-    override def message = s"Undefined variable ${id.name}"
-  }
-
-  case class UndefinedFunction(id: Ast.Identifier, arity: Int) extends CompilationError {
-    override def loc = id.loc
-
-    override def message = s"Undefined macro or operator ${id.name}/$arity"
-  }
-
-  case class UndefinedNamedArg(id: Ast.Identifier) extends CompilationError {
-    override def loc = id.loc
-
-    override def message = s"Undefined keyword argument ${id.name}"
-  }
-
-  case class MultipleDefinitionsError(id: Ast.Identifier, previousLoc: Location) extends CompilationError {
-    override def loc = id.loc
-
-    override def message = s"Multiple definitions of ${id.name} in same scope (previous definition at $previousLoc)"
-  }
-
-  case class InternalError(m: String, loc: Location = UnknownLoc) extends CompilationError {
-    def message = s"Internal error: $m"
-  }
-
 }

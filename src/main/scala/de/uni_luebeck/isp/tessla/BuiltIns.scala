@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.AstToCore.{TranslatedExpression, Arg, Stream, Literal}
-import Types.TypeMismatch
+import Errors.TypeMismatch
 
 class BuiltIns private(mkId: String => String) {
   def primOp(op: PrimitiveOperators.PrimitiveOperator): (Seq[Arg], String, Location) => TranslatedExpression = {
@@ -27,8 +27,8 @@ class BuiltIns private(mkId: String => String) {
             }))
           )
         } catch {
-          case Types.TypeMismatch(expected: Types.ValueType, actual: Types.ValueType, loc) =>
-            throw Types.TypeMismatch(Types.Stream(expected), Types.Stream(actual), loc)
+          case TypeMismatch(expected: Types.ValueType, actual: Types.ValueType, loc) =>
+            throw TypeMismatch(Types.Stream(expected), Types.Stream(actual), loc)
         }
       }
   }

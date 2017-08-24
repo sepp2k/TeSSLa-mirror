@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Errors.{StreamOfStreams, TypeMismatch, UnknownType}
+
 object Types {
   sealed abstract class Type
   sealed abstract class ValueType extends Type
@@ -42,20 +44,5 @@ object Types {
     requireTypeOption(expected, actual).getOrElse {
       throw TypeMismatch(expected, actual, loc)
     }
-  }
-
-  case class TypeMismatch(expected: Type, found: Type, loc: Location) extends CompilationError {
-    override def message = s"Type mismatch: Expected $expected, found $found."
-  }
-
-  case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends CompilationError {
-    def message = s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
-  }
-  case class UnknownType(name: String, loc: Location) extends CompilationError {
-    def message = s"Unknown type: $name"
-  }
-
-  case class StreamOfStreams(loc: Location) extends CompilationError {
-    def message = "Streams may not contain other streams"
   }
 }

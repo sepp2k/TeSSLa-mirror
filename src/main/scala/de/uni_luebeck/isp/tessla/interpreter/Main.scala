@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{TimeUnit, CompilationError}
+import de.uni_luebeck.isp.tessla.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.TimeUnit
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import sexyopt.SexyOpt
 
@@ -66,7 +67,7 @@ object Main extends SexyOpt {
         }
       }
     } catch {
-      case ex: CompilationError =>
+      case ex: TesslaError =>
         System.err.println(s"Runtime error: $ex")
         if (debug) ex.printStackTrace()
     }

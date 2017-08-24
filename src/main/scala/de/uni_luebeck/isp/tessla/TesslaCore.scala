@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Errors.TesslaError
+
 object TesslaCore {
   final case class Specification(streams: Map[String, Expression],
                                  inStreams: Seq[(String, Types.Stream, Location)],
@@ -75,7 +77,7 @@ object TesslaCore {
     def toLiteral: LiteralValue
   }
 
-  final case class ErrorValue(err: CompilationError) extends Value {
+  final case class ErrorValue(err: TesslaError) extends Value {
     def loc = err.loc
     def withLoc(loc: Location): ErrorValue = this
     def toLiteral = throw err

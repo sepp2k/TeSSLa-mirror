@@ -2,19 +2,14 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.compacom
+import de.uni_luebeck.isp.tessla.Errors.ParserError
 import de.uni_luebeck.isp.tessla.TimeUnit._
 
 object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parsers {
-  case class ParserError(parserFailure: Failure) extends CompilationError {
-    override def loc = SourceLoc(parserFailure.loc)
-
-    override def message = parserFailure.message
-  }
-
   override def translateSpec(source: TesslaSource) = {
     parseAll(spec, source.src) match {
       case Success(_, spec, _, _) => spec
-      case fail: Failure => throw ParserError(fail)
+      case fail: Failure => throw ParserError(fail.message, SourceLoc(fail.loc))
     }
   }
 

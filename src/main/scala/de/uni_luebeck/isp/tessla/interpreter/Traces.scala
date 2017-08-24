@@ -1,27 +1,11 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{CompilationError, TesslaCore, Types}
+import de.uni_luebeck.isp.tessla.Errors.{InputTypeMismatch, UndeclaredInputStreamError}
+import de.uni_luebeck.isp.tessla.{TesslaCore, Types}
 import de.uni_luebeck.isp.tessla.interpreter.Traces._
 import de.uni_luebeck.isp.tessla.Location
 
 object Traces {
-  case class TypeMismatchError(value: TesslaCore.Value, streamName: String, streamType: Types.ValueType, loc: Location) extends CompilationError {
-    def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
-  }
-
-  case class NotAnEventError(line: Traces.Line) extends CompilationError{
-    def loc: Location = line.loc
-    def message: String = s"Input $line is not an event."
-  }
-
-  case class UndeclaredInputStreamError(streamName: String, loc: Location) extends CompilationError {
-    def message: String = s"Undeclared input stream: $streamName"
-  }
-
-  case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location) extends CompilationError{
-    def message: String = s"Decreasing time stamps: first = $first, second = $second."
-  }
-
   sealed trait Line {
     def loc: Location
   }
@@ -52,7 +36,7 @@ class Traces(val timeStampUnit: Option[Traces.TimeUnit], values: Iterator[Traces
               if (value.typ == typ) {
                 inStream.provide(value)
               } else {
-                throw TypeMismatchError(value, name, typ, loc)
+                throw InputTypeMismatch(value, name, typ, loc)
               }
             case None => throw UndeclaredInputStreamError(name, streamLoc)
           }

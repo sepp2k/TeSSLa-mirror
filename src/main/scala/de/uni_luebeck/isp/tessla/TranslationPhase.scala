@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import TranslationPhase._
+import de.uni_luebeck.isp.tessla.Errors.TesslaError
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -8,13 +9,13 @@ trait TranslationPhase[T, U] {
   def translateSpec(spec: T): U
 
   val warnings = ArrayBuffer[Diagnostic]()
-  val errors = ArrayBuffer[CompilationError]()
+  val errors = ArrayBuffer[TesslaError]()
 
   def warn(diagnostic: Diagnostic): Unit = {
     warnings += diagnostic
   }
 
-  def error(error: CompilationError) {
+  def error(error: TesslaError) {
     errors += error
   }
 
@@ -24,7 +25,7 @@ trait TranslationPhase[T, U] {
     try {
       body
     } catch {
-      case ex: CompilationError =>
+      case ex: TesslaError =>
         errors += ex
         default
     }
@@ -36,7 +37,7 @@ trait TranslationPhase[T, U] {
       if (errors.isEmpty) Success(result, warnings)
       else Failure(errors, warnings)
     } catch {
-      case ex: CompilationError =>
+      case ex: TesslaError =>
         Failure(errors += ex, warnings)
     }
   }

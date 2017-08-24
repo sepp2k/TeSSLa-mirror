@@ -1,19 +1,13 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{CompilationError, SourceLoc, TesslaCore, TimeUnit}
+import de.uni_luebeck.isp.tessla.{SourceLoc, TesslaCore, TimeUnit}
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
+import de.uni_luebeck.isp.tessla.Errors.{NotAnEventError, ParserError}
 import de.uni_luebeck.isp.tessla.TimeUnit._
-import de.uni_luebeck.isp.tessla.interpreter.Traces.NotAnEventError
 
 import scala.io.Source
 
 object TracesParser extends Parsers {
-  case class ParserError(parserFailure: Failure) extends CompilationError {
-    override def loc = SourceLoc(parserFailure.loc)
-
-    override def message = parserFailure.message
-  }
-
   def parseTraces(source: Source): Traces = {
     def eventsOnly(lines: Iterator[Traces.Line]): Iterator[Traces.Event] = lines.map {
       case e: Traces.Event => e
@@ -22,7 +16,7 @@ object TracesParser extends Parsers {
 
     val input = parseMany(line, source).map({
       case Success(_, line, _, _) => line
-      case fail: Failure => throw ParserError(fail)
+      case fail: Failure => throw ParserError(fail.message, SourceLoc(fail.loc))
     })
 
     input.take(1).toList.headOption match {

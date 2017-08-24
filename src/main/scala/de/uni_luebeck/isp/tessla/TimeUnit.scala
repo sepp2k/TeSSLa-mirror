@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Errors.UnknownTimeUnit
+
 /**
   * Created by Thiemo on 08.08.2017.
   */
@@ -13,19 +15,6 @@ object TimeUnit {
     case "h" => Hours
     case "d" => Days
     case _ => throw UnknownTimeUnit(str, UnknownLoc)
-  }
-
-  case class UnknownTimeUnit(name: String, loc: Location) extends CompilationError {
-    def message = s"Unknown time unit: $name. " +
-      "Allowed time units: ns, us, ms, s, m, h, d."
-  }
-
-  case class UndefinedTimeUnit(loc: Location) extends CompilationError {
-    def message = s"No time unit defined in trace file."
-  }
-
-  case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit, loc: Location) extends CompilationError {
-    def message = s"Cannot convert from $from to $to."
   }
 
   sealed abstract class TimeUnit {

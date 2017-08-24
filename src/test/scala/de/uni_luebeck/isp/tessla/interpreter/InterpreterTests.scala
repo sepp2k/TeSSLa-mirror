@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.CompilationError
+import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 
@@ -80,7 +80,7 @@ class InterpreterTests extends FunSuite {
                 }
 
                 if (extensions.contains("runtime-errors")) {
-                  val ex = intercept[CompilationError](runTraces())
+                  val ex = intercept[TesslaError](runTraces())
                   assertEquals(ex.toString, testFile(name, "runtime-errors").mkString, "runtime error")
                 } else {
                   runTraces()
@@ -95,7 +95,7 @@ class InterpreterTests extends FunSuite {
               assertEqualSets(result.warnings.map(_.toString).toSet, testFile(name, "warnings").getLines.toSet, "warnings")
             }
           } catch {
-            case ex: CompilationError =>
+            case ex: TesslaError =>
               assert(extensions.contains("runtime-errors"), s"Expected: success, Actual: Runtime error:\n${ex.message}")
               testFile(name, "runtime-errors").mkString.contains(ex.toString())
           }
