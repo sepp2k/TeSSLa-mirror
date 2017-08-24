@@ -10,7 +10,7 @@ organization := "de.uni_luebeck.isp"
 
 version := s"0.4.0-SNAPSHOT"
 
-scalaVersion := "2.12.1"
+scalaVersion := "2.12.3"
 
 resolvers ++= Seq(
   releases, snapshots,
