@@ -14,7 +14,7 @@ ls tessla.interpreter* >/dev/null 2>/dev/null || {
 set -e # cancel script if anything fails
 
 mkdir -p /usr/local/opt/tessla
-cp `ls tessla.interpreter*` /usr/local/opt/tessla/tessla.jar
+cp `ls tessla*` /usr/local/opt/tessla/tessla.jar
 
 printf '#!/bin/bash\njava -jar /usr/local/opt/tessla/tessla.jar $@\n' > /usr/local/bin/tessla
 chmod +x /usr/local/bin/tessla

@@ -13,7 +13,7 @@ function runTest {
   testcaseName=${testcase#$testPath}
   echo $testcaseName
   inputfile="$(dirname $testcase)/$(basename $testcase .tessla).input"
-  java -jar target/scala-2.12/tessla.interpreter-assembly-*.jar "$@" "$testcase" "$inputfile"
+  java -jar target/scala-2.12/tessla-assembly-*.jar "$@" "$testcase" "$inputfile"
   echo
 }
 export -f runTest
