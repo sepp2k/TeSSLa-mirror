@@ -2,7 +2,6 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.{CompilationError, TesslaCore, Types}
 import de.uni_luebeck.isp.tessla.interpreter.Traces._
-import de.uni_luebeck.isp.tessla.interpreter.Traces.{DecreasingTimeStampsError, TypeMismatchError, UndeclaredInputStreamError}
 import de.uni_luebeck.isp.tessla.Location
 
 object Traces {
