@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.{CompilationError, TesslaCore, Types}
-import de.uni_luebeck.isp.tessla.interpreter.Input._
+import de.uni_luebeck.isp.tessla.interpreter.Traces._
 import de.uni_luebeck.isp.tessla.interpreter.Traces.{DecreasingTimeStampsError, TypeMismatchError, UndeclaredInputStreamError}
 import de.uni_luebeck.isp.tessla.Location
 
@@ -10,7 +10,7 @@ object Traces {
     def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
   }
 
-  case class NotAnEventError(line: Input.Line) extends CompilationError{
+  case class NotAnEventError(line: Traces.Line) extends CompilationError{
     def loc: Location = line.loc
     def message: String = s"Input $line is not an event."
   }
@@ -23,28 +23,31 @@ object Traces {
     def message: String = s"Decreasing time stamps: first = $first, second = $second."
   }
 
-  def read(input: Iterator[Input.Line]): Traces = {
-    def eventsOnly(lines: Iterator[Input.Line]): Iterator[Input.Event] = lines.map {
-      case e: Input.Event => e
-      case l => throw NotAnEventError(l)
-    }
+  sealed trait Line {
+    def loc: Location
+  }
 
-    input.take(1).toList.headOption match {
-      case Some(tu: Input.TimeUnit) => new Traces(Some(tu), eventsOnly(input))
-      case Some(ev: Input.Event) => new Traces(None, eventsOnly(Iterator(ev) ++ input))
-      case None => new Traces(None, Iterator())
-    }
+  case class TimeUnit(loc: Location, timeUnit: de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit) extends Line {
+    override def toString = timeUnit.toString
+  }
+
+  case class Event(loc: Location, timeStamp: BigInt, stream: Identifier, value: TesslaCore.LiteralValue) extends Line {
+    override def toString = s"$timeStamp: $stream = $value"
+  }
+
+  case class Identifier(loc: Location, name: String) {
+    override def toString = "\"" + name + "\""
   }
 }
 
-class Traces(val timeStampUnit: Option[Input.TimeUnit], values: Iterator[Input.Event]) {
+class Traces(val timeStampUnit: Option[Traces.TimeUnit], values: Iterator[Traces.Event]) {
 
   def feedInput(tesslaSpec: Interpreter, threshold: BigInt)(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
     val queue = new TracesQueue(threshold)
 
-    def provide(event: Input.Event) = {
+    def provide(event: Traces.Event) = {
       event match{
-        case Input.Event(loc, _, Input.Identifier(streamLoc, name), value) =>
+        case Traces.Event(loc, _, Traces.Identifier(streamLoc, name), value) =>
           tesslaSpec.inStreams.get(name) match {
             case Some((inStream, typ)) =>
               if (value.typ == typ) {
@@ -60,7 +63,7 @@ class Traces(val timeStampUnit: Option[Input.TimeUnit], values: Iterator[Input.E
 
     var previousTS: BigInt = 0
 
-    def handleInput(event : Input.Event) {
+    def handleInput(event : Traces.Event) {
       if (event.timeStamp - previousTS != 0) {
         tesslaSpec.step(event.timeStamp - previousTS)
         previousTS = event.timeStamp

@@ -55,8 +55,7 @@ object Main extends SexyOpt {
           return
         }
       } else {
-        val input = new TraceParser().translateSpec(traceFile.map(Source.fromFile).getOrElse(Source.stdin))
-        val traces = Traces.read(input)
+        val traces: Traces = new TraceParser().translateTraces(traceFile.map(Source.fromFile).getOrElse(Source.stdin))
         val tu = timeunit.map(TimeUnit.fromString).orElse(traces.timeStampUnit.map(_.timeUnit))
         tu.foreach(unit => println("$timeunit = \"" + unit + "\""))
         val spec = tesslaSpec(tu)

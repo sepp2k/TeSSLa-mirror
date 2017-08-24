@@ -6,11 +6,11 @@ import scala.collection.mutable
 
 class TracesQueue(val threshold: BigInt) {
   /*A PriorityQueue, having a BigInt as timestamp and using the lowest value has highest priority.*/
-  val queue: mutable.PriorityQueue[Input.Event] =
-    new mutable.PriorityQueue[Input.Event]()(Ordering.by(ev => ev.timeStamp)).reverse
+  val queue: mutable.PriorityQueue[Traces.Event] =
+    new mutable.PriorityQueue[Traces.Event]()(Ordering.by(ev => ev.timeStamp)).reverse
 
   /*Dequeues and processes all events with a time stamp lower than the one of the event subtracted by the threshold, and then adds the new event to the queue.*/
-  def enqueue(event: Input.Event, callback: Input.Event => Unit): Unit = {
+  def enqueue(event: Traces.Event, callback: Traces.Event => Unit): Unit = {
     dequeue(event.timeStamp).foreach(callback)
     /*Note: queue.min actually looks for the highest timestamp (which is the lowest priority, therefore min)*/
     if (queue.nonEmpty && event.timeStamp <= queue.min(queue.ord).timeStamp - threshold){
@@ -21,7 +21,7 @@ class TracesQueue(val threshold: BigInt) {
   }
 
   /*Dequeue every event which has a timestamp lower than the given timestamp subtracted by the threshold.*/
-  def dequeue(timeStamp: BigInt): List[Input.Event] = {
+  def dequeue(timeStamp: BigInt): List[Traces.Event] = {
     queue.headOption.filter(_.timeStamp <= timeStamp - threshold) match {
       case None => Nil
       case Some(_) =>
@@ -30,7 +30,7 @@ class TracesQueue(val threshold: BigInt) {
   }
 
   /*Dequeue every event from the queue and apply the callback to it.*/
-  def processAll(callback: Input.Event => Unit): Unit = {
+  def processAll(callback: Traces.Event => Unit): Unit = {
     queue.dequeueAll.foreach(callback)
   }
 

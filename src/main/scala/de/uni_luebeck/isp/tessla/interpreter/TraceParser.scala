@@ -1,8 +1,9 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.{CompilationError, SourceLoc, TesslaCore, TimeUnit}
-import de.uni_luebeck.isp.compacom.{SimpleTokenizer, SimpleTokens, WithLocation, Parsers}
+import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.tessla.TimeUnit._
+import de.uni_luebeck.isp.tessla.interpreter.Traces.NotAnEventError
 
 import scala.io.Source
 
@@ -14,13 +15,23 @@ class TraceParser {
     override def message = parserFailure.message
   }
 
-  def translateSpec(source: Source): Iterator[Input.Line] = {
-    Parsers.parseMany(Parsers.line, source).map({
+  def translateTraces(source: Source): Traces = {
+    def eventsOnly(lines: Iterator[Traces.Line]): Iterator[Traces.Event] = lines.map {
+      case e: Traces.Event => e
+      case l => throw NotAnEventError(l)
+    }
+
+    val input = Parsers.parseMany(Parsers.line, source).map({
       case Parsers.Success(_, line, _, _) => line
       case fail: Parsers.Failure => throw ParserError(fail)
     })
-  }
 
+    input.take(1).toList.headOption match {
+      case Some(tu: Traces.TimeUnit) => new Traces(Some(tu), eventsOnly(input))
+      case Some(ev: Traces.Event) => new Traces(None, eventsOnly(Iterator(ev) ++ input))
+      case None => new Traces(None, Iterator())
+    }
+  }
 }
 
 
@@ -67,12 +78,12 @@ object Parsers extends Parsers {
 
   implicit def tokenToParser(t: Token): Parser[WithLocation[Token]] = token(t)
 
-  def line: Parser[Input.Line] = event | timeUnitDecl
+  def line: Parser[Traces.Line] = event | timeUnitDecl
 
-  def event: Parser[Input.Event] =
+  def event: Parser[Traces.Event] =
     (((bigInt <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
       case (loc, ((time, id), v)) =>
-        Input.Event(SourceLoc(loc), time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc))))
+        Traces.Event(SourceLoc(loc), time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc))))
     }
 
   def value: Parser[TesslaCore.LiteralValue] =
@@ -92,9 +103,9 @@ object Parsers extends Parsers {
         case (loc, value) => TesslaCore.IntLiteral(value, SourceLoc(loc))
       }
 
-  def timeUnitDecl: Parser[Input.TimeUnit] =
+  def timeUnitDecl: Parser[Traces.TimeUnit] =
     DOLLAR ~> ID("timeunit") ~> EQ ~> timeUnit ^^! {
-      case (loc, unit) => Input.TimeUnit(SourceLoc(loc), unit)
+      case (loc, unit) => Traces.TimeUnit(SourceLoc(loc), unit)
     }
 
   def timeUnit: Parser[TimeUnit.TimeUnit] =
@@ -131,8 +142,8 @@ object Parsers extends Parsers {
       case WithLocation(loc, INT(value)) => BigInt(value)
     }
 
-  def identifier: Parser[Input.Identifier] = matchToken("identifier", Set("<identifier>")) {
-    case WithLocation(loc, ID(name)) => Input.Identifier(SourceLoc(loc), name)
+  def identifier: Parser[Traces.Identifier] = matchToken("identifier", Set("<identifier>")) {
+    case WithLocation(loc, ID(name)) => Traces.Identifier(SourceLoc(loc), name)
   }
 
   def string: Parser[String] = matchToken("string", Set("<string>")) {
