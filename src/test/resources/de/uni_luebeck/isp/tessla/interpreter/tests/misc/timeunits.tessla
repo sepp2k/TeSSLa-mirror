@@ -1,0 +1,7 @@
+in a: Events<Int>
+
+def hundredSecLater := time(a) + 100s
+def oneDayLater := time(a) + 1d
+
+out hundredSecLater
+out oneDayLater

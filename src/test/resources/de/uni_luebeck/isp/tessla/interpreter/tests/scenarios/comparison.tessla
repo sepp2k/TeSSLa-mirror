@@ -1,0 +1,14 @@
+in x: Events<Int>
+in y: Events<Int>
+def equal := x == y
+def notEqual := x != y
+def greater := x > y
+def greaterEqual := x >= y
+def lower := x < y
+def lowerEqual := x <= y
+out equal
+out notEqual
+out greater
+out greaterEqual
+out lower
+out lowerEqual

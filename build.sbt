@@ -1,36 +1,42 @@
-import com.typesafe.sbt.SbtStartScript
-
 val nexus = "https://sourcecode.isp.uni-luebeck.de/nexus/"
-val snapshots = "Snapshots" at nexus + "content/repositories/snapshots"
-val releases = "Releases" at nexus + "content/repositories/releases"
+val privateSnapshots = "ISP Private Snapshots" at nexus + "content/repositories/private_snapshots"
+val snapshots = "ISP Snapshots" at nexus + "content/repositories/snapshots"
+val privateReleases = "ISP Private Releases" at nexus + "content/repositories/private_releases"
+val releases = "ISP Releases" at nexus + "content/repositories/releases"
 
-lazy val tessla = (project in file(".")).settings(
-  name := "tessla",
-  version := "0.3.8-SNAPSHOT",
-  scalaVersion := "2.12.1",
-  organization := "de.uni_luebeck.isp",
-  resolvers += releases,
-  resolvers += snapshots,
-  resolvers += "ISP Public" at nexus + "content/groups/public",
-  resolvers += Resolver.sonatypeRepo("public"),
-  resourceDirectory in Compile <<= baseDirectory(_ / "lib"),
-  libraryDependencies ++= Seq(
-    "de.uni_luebeck.isp" %% "compacom" % "0.2.8",
-    "com.github.scopt" %% "scopt" % "3.5.0"
-  ),
-  scalacOptions ++= Seq("-feature", "-deprecation"),
-  libraryDependencies ++= Seq(
-    "junit" % "junit" % "4.11"  % "test",
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
-  ),
-  // disable publishing the main sources jar
-  publishArtifact in (Compile, packageSrc) := false,
-  publishTo <<= version { (v: String) =>
-    if (v.trim.endsWith("SNAPSHOT"))
-      Some(snapshots)
-    else
-      Some(releases)
-  },
-  credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials"),
-  SbtStartScript.startScriptForClassesSettings
+name := "tessla"
+
+organization := "de.uni_luebeck.isp"
+
+version := s"0.4.0-SNAPSHOT"
+
+scalaVersion := "2.12.1"
+
+resolvers ++= Seq(
+  releases, snapshots,
+  privateSnapshots, privateReleases
 )
+
+publishTo := {
+  if (isSnapshot.value)
+    Some(snapshots)
+  else
+    Some(releases)
+}
+
+credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials")
+
+libraryDependencies ++= Seq(
+  "com.chuusai" %% "shapeless" % "2.3.2",
+  "com.github.sepp2k" %% "sexyopt" % "0.1.1",
+  "de.uni_luebeck.isp" %% "compacom" % "0.2.8",
+  "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+)
+
+scalacOptions += "-feature"
+scalacOptions += "-unchecked"
+scalacOptions += "-deprecation"
+
+enablePlugins(BuildInfoPlugin)
+buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion)
+buildInfoPackage := "de.uni_luebeck.isp.tessla.interpreter"

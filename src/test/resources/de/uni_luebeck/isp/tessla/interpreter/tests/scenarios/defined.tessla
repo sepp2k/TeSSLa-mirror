@@ -1,0 +1,9 @@
+in x: Events<Unit>
+in y: Events<Unit>
+
+def defined(a) := default(const(true, a), false)
+
+def a := defined(x)
+def b := defined(y)
+out a
+out b

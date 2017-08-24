@@ -1,0 +1,43 @@
+def resetCount(values, reset) := {
+    def rc :=
+        default(
+            if default(time(reset) > time(values), false)
+            then 0
+            else if default(time(reset) == time(values), false)
+            then 1
+            else last(rc, values) + 1
+        , 0)
+    rc
+}
+
+def trigger(condition) :=
+    if condition && !last(condition, condition) then ()
+
+def countSince(e, condition) :=
+    resetCount(e, trigger(condition))
+
+in a: Events<Int>
+out a
+in b: Events<Int>
+out b
+in e: Events<Unit>
+out e
+
+def esSinceAGreaterThanB := countSince(e, a > b)
+
+-- burstLength = 5, wait = 4, burstAmount = 3
+def burstStarts :=
+    default(
+        if time(e) - last(time(burstStarts), e) >= 9
+        then e,
+        e)
+out burstStarts
+
+def numberInBurst := resetCount(e, burstStarts)
+out numberInBurst
+
+def inBursts := time(e) < time(burstStarts) + 5 && numberInBurst <= 3
+out inBursts
+
+def property := if a > b then esSinceAGreaterThanB == 0 else inBursts
+out property

@@ -1,0 +1,5 @@
+in b: Events<Bool>
+in y: Events<Int>
+in y2: Events<Int>
+def z := if b then y else y2
+out z

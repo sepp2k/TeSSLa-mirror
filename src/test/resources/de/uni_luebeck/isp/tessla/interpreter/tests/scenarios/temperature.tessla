@@ -1,0 +1,8 @@
+in temperature: Events<Int>
+
+def low := !(temperature > -10)
+def high := temperature > 10
+
+def unsafeTemperature := low || high
+
+out unsafeTemperature
