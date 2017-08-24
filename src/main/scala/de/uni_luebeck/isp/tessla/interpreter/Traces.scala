@@ -61,24 +61,11 @@ class Traces(val timeStampUnit: Option[Input.TimeUnit], values: Seq[Input.Event]
     var previousTS: BigInt = 0
 
     def handleInput(event : Input.Event) {
-      val ts = event.timeStamp
-      if (ts < previousTS) {
-        throw DecreasingTimeStampsError(previousTS, ts, event.loc)
-      }
-      if (ts > previousTS) {
-        tesslaSpec.step(ts - previousTS)
-        previousTS = ts
+      if (event.timeStamp - previousTS != 0) {
+        tesslaSpec.step(event.timeStamp - previousTS)
+        previousTS = event.timeStamp
       }
       provide(event)
-    }
-
-    def dequeue(timeStamp: BigInt, loc:Location): Unit = {
-      if (queue.hasDecreasingTimeStamp(timeStamp)){
-        throw DecreasingTimeStampsError(queue.smallestTimeStamp, timeStamp, loc)
-      }
-      while (queue.hasNext(timeStamp)) {
-        queue.dequeue(timeStamp).foreach(handleInput)
-      }
     }
 
     tesslaSpec.outStreams.foreach {
@@ -88,14 +75,10 @@ class Traces(val timeStampUnit: Option[Input.TimeUnit], values: Seq[Input.Event]
       }
     }
 
-    values.foreach {
-      case ev@Event(loc, ts, _, _) =>
-        dequeue(ts, loc)
-        queue.enqueue(ev)
-    }
+    values.foreach(queue.enqueue(_, handleInput))
 
     //in the end handle every remaining event from the queue
-    queue.toList.foreach(handleInput)
+    queue.processAll(handleInput)
 
     tesslaSpec.step()
   }
