@@ -4,11 +4,6 @@ import de.uni_luebeck.isp.tessla.Location
 import de.uni_luebeck.isp.tessla.TesslaCore
 
 object Input {
-
-  case class Input(timeUnit: Option[TimeUnit], events: Seq[Event]) {
-    override def toString = timeUnit + "\n" + events.mkString("\n")
-  }
-
   sealed trait Line {
     def loc: Location
   }
