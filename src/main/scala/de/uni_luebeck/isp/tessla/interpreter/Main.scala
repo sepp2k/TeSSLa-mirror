@@ -7,7 +7,7 @@ import sexyopt.SexyOpt
 import scala.io.Source
 
 object Main extends SexyOpt {
-  override val programName = "tessla-interpreter"
+  override val programName = "tessla"
   override val version = Some(BuildInfo.version)
   override val programDescription = "Evaluate the given Tessla specification on the input streams provided by the given trace file."
 
