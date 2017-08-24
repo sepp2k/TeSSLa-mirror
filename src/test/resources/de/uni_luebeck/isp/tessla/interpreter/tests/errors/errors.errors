@@ -1,13 +1,13 @@
 (1,10 - 1,25): Undefined variable undefinedStream
-(2,15 - 2,19): Type mismatch: Expected Int, found Bool.
+(2,15 - 2,19): Type mismatch: Expected Int, found Bool
 (4,5 - 4,6): Multiple definitions of z in same scope (previous definition at (3,1 - 3,11))
-(10,21 - 10,28): Type mismatch: Expected Events<Int>, found Events<String>.
-(14,5 - 14,6): Type mismatch: Expected Events<?>, found Int.
-(23,12 - 23,13): Type mismatch: Expected String, found Int.
-(23,15 - 23,31): Type mismatch: Expected Events<Bool>, found Events<Int>.
-(24,28 - 24,44): Type mismatch: Expected Events<Bool>, found Events<Int>.
-(25,18 - 25,19): Type mismatch: Expected String, found Int.
-(26,5 - 26,20): Type mismatch: Expected Events<String>, found Events<Int>.
-(29,8 - 29,12): Type mismatch: Expected Events<Bool>, found Events<Int>.
-(30,8 - 30,12): Type mismatch: Expected Events<Bool>, found Events<Int>.
-(31,27 - 31,31): Type mismatch: Expected Events<Int>, found Events<String>.
+(10,21 - 10,28): Type mismatch: Expected Events<Int>, found Events<String>
+(14,5 - 14,6): Type mismatch: Expected Events<?>, found Int
+(23,12 - 23,13): Type mismatch: Expected String, found Int
+(23,15 - 23,31): Type mismatch: Expected Events<Bool>, found Events<Int>
+(24,28 - 24,44): Type mismatch: Expected Events<Bool>, found Events<Int>
+(25,18 - 25,19): Type mismatch: Expected String, found Int
+(26,5 - 26,20): Type mismatch: Expected Events<String>, found Events<Int>
+(29,8 - 29,12): Type mismatch: Expected Events<Bool>, found Events<Int>
+(30,8 - 30,12): Type mismatch: Expected Events<Bool>, found Events<Int>
+(31,27 - 31,31): Type mismatch: Expected Events<Int>, found Events<String>
