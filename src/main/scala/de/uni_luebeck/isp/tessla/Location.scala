@@ -6,9 +6,11 @@ abstract class Location {
   def merge(other: Location): Location
 }
 
-case class SourceLoc(loc: compacom.Location) extends Location {
+case class SourceLoc(loc: compacom.Location, fileName: String) extends Location {
   override def merge(other: Location) = other match {
-    case SourceLoc(loc2) => SourceLoc(loc.merge(loc2))
+    case SourceLoc(loc2, fileName2) =>
+      require(fileName2 == fileName)
+      SourceLoc(loc.merge(loc2), fileName)
     case UnknownLoc => this
   }
 
