@@ -27,6 +27,7 @@ object TracesParser extends Parsers {
   }
 
   object Tokens extends SimpleTokens {
+
     case object COLON extends Token(":")
 
     case object EQ extends Token("=")
@@ -42,6 +43,7 @@ object TracesParser extends Parsers {
     case object RPAREN extends Token(")")
 
     case object MINUS extends Token("-")
+
   }
 
   object Tokenizer extends SimpleTokenizer {
@@ -94,28 +96,9 @@ object TracesParser extends Parsers {
         case (loc, unit) => Traces.TimeUnit(SourceLoc(loc, path), unit)
       }
 
-    def timeUnit: Parser[TimeUnit.TimeUnit] =
-      STRING("ns") ^^^ {
-        Nanos
-      } |
-        STRING("us") ^^^ {
-          Micros
-        } |
-        STRING("ms") ^^^ {
-          Millis
-        } |
-        STRING("s") ^^^ {
-          Seconds
-        } |
-        STRING("min") ^^^ {
-          Minutes
-        } |
-        STRING("h") ^^^ {
-          Hours
-        } |
-        STRING("d") ^^^ {
-          Days
-        }
+    def timeUnit: Parser[TimeUnit.TimeUnit] = matchToken("string", Set("<string>")) {
+      case WithLocation(loc, STRING(name)) => TimeUnit.fromString(name, SourceLoc(loc, path))
+    }
 
     def bigInt: Parser[BigInt] =
       MINUS.? ~ bigNat ^^ {
@@ -136,4 +119,5 @@ object TracesParser extends Parsers {
       case WithLocation(loc, STRING(value)) => value
     }
   }
+
 }

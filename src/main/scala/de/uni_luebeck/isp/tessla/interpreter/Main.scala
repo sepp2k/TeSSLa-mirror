@@ -45,10 +45,9 @@ object Main extends SexyOpt {
 
     parse(args)
     try {
-      println(args.mkString(" "))
       val tu = timeunit.map{
-        val arg = args.mkString(" ").indexOfSlice(timeunit.get)
-        s => TimeUnit.fromString(s, CommandLineLoc(arg-11, arg + timeunit.get.size, timeunit.get))
+        s => val arg = args.mkString(" ").indexOfSlice(timeunit.get)
+          TimeUnit.fromString(s, CommandLineLoc(arg-11, arg + timeunit.get.size, timeunit.get))
       }
       if (verifyOnly || listInStreams || listOutStreams) {
         val spec = tesslaSpec(tu)

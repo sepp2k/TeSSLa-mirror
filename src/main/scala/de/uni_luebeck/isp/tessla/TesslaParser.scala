@@ -266,28 +266,9 @@ object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parser
       case (loc, (value, Some(unit))) => Ast.ExprTimeLit(value, unit, SourceLoc(loc, path))
     }
 
-    def timeUnit: Parser[TimeUnit.TimeUnit] =
-      ID("ns") ^^^ {
-        Nanos
-      } |
-        ID("us") ^^^ {
-          Micros
-        } |
-        ID("ms") ^^^ {
-          Millis
-        } |
-        ID("s") ^^^ {
-          Seconds
-        } |
-        ID("m") ^^^ {
-          Minutes
-        } |
-        ID("h") ^^^ {
-          Hours
-        } |
-        ID("d") ^^^ {
-          Days
-        }
+    def timeUnit: Parser[TimeUnit.TimeUnit] = matchToken("identifier", Set("<identifier>")) {
+      case WithLocation(loc, ID(name)) => TimeUnit.fromString(name, SourceLoc(loc, path))
+    }
 
     def exprStringLit: Parser[Ast.ExprStringLit] = matchToken("string", Set("<string>")) {
       case WithLocation(loc, STRING(value)) => Ast.ExprStringLit(value, SourceLoc(loc, path))

@@ -97,6 +97,7 @@ class InterpreterTests extends FunSuite {
             }
           } catch {
             case ex: TesslaError =>
+              assert(extensions.contains("runtime-errors"), s"Expected: success, Actual: Runtime error:\n${ex.message}")
               assertEquals(ex.toString, testFile(name, "runtime-errors").mkString, "runtime error")
           }
         }
