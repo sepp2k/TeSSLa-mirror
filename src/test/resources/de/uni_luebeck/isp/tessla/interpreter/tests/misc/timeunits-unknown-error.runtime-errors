@@ -1,1 +1,1 @@
-(unknown location): Unknown time unit: "m". Allowed time units: ns, us, ms, s, m, h, d.
+[/misc/timeunits-unknown-error.input]: (1,13 - 1,16): Invalid syntax: One of '"us"', '"min"', '"ns"', '"h"', '"s"', '"ms"', '"d"' expected but '"m"' found.

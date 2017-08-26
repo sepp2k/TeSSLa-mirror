@@ -1,7 +1,9 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import java.nio.file.Paths
+
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.TimeUnit
+import de.uni_luebeck.isp.tessla.{TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import sexyopt.SexyOpt
 
@@ -56,7 +58,7 @@ object Main extends SexyOpt {
           return
         }
       } else {
-        val traces: Traces = TracesParser.parseTraces(traceFile.map(Source.fromFile).getOrElse(Source.stdin))
+        val traces: Traces = TracesParser.parseTraces(traceFile.map(TesslaSource.fromFile).getOrElse(new TesslaSource(Source.stdin)))
         val tu = timeunit.map(TimeUnit.fromString).orElse(traces.timeStampUnit.map(_.timeUnit))
         tu.foreach(unit => println("$timeunit = \"" + unit + "\""))
         val spec = tesslaSpec(tu)

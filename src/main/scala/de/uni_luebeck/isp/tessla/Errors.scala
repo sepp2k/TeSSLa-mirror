@@ -78,7 +78,7 @@ object Errors {
 
   case class NotAnEventError(line: Traces.Line) extends TesslaError{
     def loc: Location = line.loc
-    def message: String = s"Input $line is not an event."
+    def message: String = s"Input $line is not an event"
   }
 
   case class UndeclaredInputStreamError(streamName: String, loc: Location) extends TesslaError {
@@ -86,7 +86,7 @@ object Errors {
   }
 
   case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location) extends TesslaError{
-    def message: String = s"Decreasing time stamps: first = $first, second = $second."
+    def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
   case class InputTypeMismatch(value: TesslaCore.Value, streamName: String, streamType: Types.ValueType, loc: Location) extends TesslaError {

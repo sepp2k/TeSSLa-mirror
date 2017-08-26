@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{SourceLoc, TesslaCore, TimeUnit}
+import de.uni_luebeck.isp.tessla.{SourceLoc, TesslaCore, TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.tessla.Errors.{NotAnEventError, ParserError}
 import de.uni_luebeck.isp.tessla.TimeUnit._
@@ -8,15 +8,15 @@ import de.uni_luebeck.isp.tessla.TimeUnit._
 import scala.io.Source
 
 object TracesParser extends Parsers {
-  def parseTraces(source: Source): Traces = {
+  def parseTraces(tesslaSource: TesslaSource): Traces = {
     def eventsOnly(lines: Iterator[Traces.Line]): Iterator[Traces.Event] = lines.map {
       case e: Traces.Event => e
       case l => throw NotAnEventError(l)
     }
 
-    val input = parseMany(line, source).map({
+    val input = parseMany(new Parsers(tesslaSource.path).line, tesslaSource.src).map({
       case Success(_, line, _, _) => line
-      case fail: Failure => throw ParserError(fail.message, SourceLoc(fail.loc))
+      case fail: Failure => throw ParserError(fail.message, SourceLoc(fail.loc, tesslaSource.path))
     })
 
     input.take(1).toList.headOption match {
@@ -62,75 +62,78 @@ object TracesParser extends Parsers {
 
   override val tokenizer = Tokenizer
 
-  def line: Parser[Traces.Line] = event | timeUnitDecl
 
-  def event: Parser[Traces.Event] =
-    (((bigInt <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
-      case (loc, ((time, id), v)) =>
-        Traces.Event(SourceLoc(loc), time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc))))
-    }
+  class Parsers(path: String) {
+    def line: Parser[Traces.Line] = event | timeUnitDecl
 
-  def value: Parser[TesslaCore.LiteralValue] =
-    TRUE ^^^! {
-      loc => TesslaCore.BoolLiteral(true, SourceLoc(loc))
-    } |
-      FALSE ^^^! {
-        loc => TesslaCore.BoolLiteral(false, SourceLoc(loc))
-      } |
-      LPAREN ~ RPAREN ^^^! {
-        loc => TesslaCore.Unit(SourceLoc(loc))
-      } |
-      string ^^! {
-        case (loc, value) => TesslaCore.StringLiteral(value, SourceLoc(loc))
-      } |
-      bigInt ^^! {
-        case (loc, value) => TesslaCore.IntLiteral(value, SourceLoc(loc))
+    def event: Parser[Traces.Event] =
+      (((bigInt <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
+        case (loc, ((time, id), v)) =>
+          Traces.Event(SourceLoc(loc, path), time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc, path))))
       }
 
-  def timeUnitDecl: Parser[Traces.TimeUnit] =
-    DOLLAR ~> ID("timeunit") ~> EQ ~> timeUnit ^^! {
-      case (loc, unit) => Traces.TimeUnit(SourceLoc(loc), unit)
-    }
+    def value: Parser[TesslaCore.LiteralValue] =
+      TRUE ^^^! {
+        loc => TesslaCore.BoolLiteral(true, SourceLoc(loc, path))
+      } |
+        FALSE ^^^! {
+          loc => TesslaCore.BoolLiteral(false, SourceLoc(loc, path))
+        } |
+        LPAREN ~ RPAREN ^^^! {
+          loc => TesslaCore.Unit(SourceLoc(loc, path))
+        } |
+        string ^^! {
+          case (loc, value) => TesslaCore.StringLiteral(value, SourceLoc(loc, path))
+        } |
+        bigInt ^^! {
+          case (loc, value) => TesslaCore.IntLiteral(value, SourceLoc(loc, path))
+        }
 
-  def timeUnit: Parser[TimeUnit.TimeUnit] =
-    STRING("ns") ^^^ {
-      Nanos
-    } |
-      STRING("us") ^^^ {
-        Micros
-      } |
-      STRING("ms") ^^^ {
-        Millis
-      } |
-      STRING("s") ^^^ {
-        Seconds
-      } |
-      STRING("min") ^^^ {
-        Minutes
-      } |
-      STRING("h") ^^^ {
-        Hours
-      } |
-      STRING("d") ^^^ {
-        Days
+    def timeUnitDecl: Parser[Traces.TimeUnit] =
+      DOLLAR ~> ID("timeunit") ~> EQ ~> timeUnit ^^! {
+        case (loc, unit) => Traces.TimeUnit(SourceLoc(loc, path), unit)
       }
 
-  def bigInt: Parser[BigInt] =
-    MINUS.? ~ bigNat ^^ {
-      case (Some(_), nat) => -nat
-      case (None, nat) => nat
+    def timeUnit: Parser[TimeUnit.TimeUnit] =
+      STRING("ns") ^^^ {
+        Nanos
+      } |
+        STRING("us") ^^^ {
+          Micros
+        } |
+        STRING("ms") ^^^ {
+          Millis
+        } |
+        STRING("s") ^^^ {
+          Seconds
+        } |
+        STRING("min") ^^^ {
+          Minutes
+        } |
+        STRING("h") ^^^ {
+          Hours
+        } |
+        STRING("d") ^^^ {
+          Days
+        }
+
+    def bigInt: Parser[BigInt] =
+      MINUS.? ~ bigNat ^^ {
+        case (Some(_), nat) => -nat
+        case (None, nat) => nat
+      }
+
+    def bigNat: Parser[BigInt] =
+      matchToken("integer", Set("<integer>")) {
+        case WithLocation(loc, INT(value)) => BigInt(value)
+      }
+
+    def identifier: Parser[Traces.Identifier] = matchToken("identifier", Set("<identifier>")) {
+      case WithLocation(loc, ID(name)) => Traces.Identifier(SourceLoc(loc, path), name)
     }
 
-  def bigNat: Parser[BigInt] =
-    matchToken("integer", Set("<integer>")) {
-      case WithLocation(loc, INT(value)) => BigInt(value)
+    def string: Parser[String] = matchToken("string", Set("<string>")) {
+      case WithLocation(loc, STRING(value)) => value
     }
-
-  def identifier: Parser[Traces.Identifier] = matchToken("identifier", Set("<identifier>")) {
-    case WithLocation(loc, ID(name)) => Traces.Identifier(SourceLoc(loc), name)
-  }
-
-  def string: Parser[String] = matchToken("string", Set("<string>")) {
-    case WithLocation(loc, STRING(value)) => value
   }
 }

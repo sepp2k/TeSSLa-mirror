@@ -2,9 +2,6 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors.UnknownTimeUnit
 
-/**
-  * Created by Thiemo on 08.08.2017.
-  */
 object TimeUnit {
   def fromString(str: String): TimeUnit = str.replaceAll("\"", "") match {
     case "ns" => Nanos

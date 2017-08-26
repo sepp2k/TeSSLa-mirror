@@ -6,15 +6,19 @@ abstract class Location {
   def merge(other: Location): Location
 }
 
-case class SourceLoc(loc: compacom.Location, fileName: String) extends Location {
+case class SourceLoc(loc: compacom.Location, path: String) extends Location {
   override def merge(other: Location) = other match {
-    case SourceLoc(loc2, fileName2) =>
-      require(fileName2 == fileName)
-      SourceLoc(loc.merge(loc2), fileName)
+    case SourceLoc(loc2, path2) =>
+      require(path2 == path)
+      SourceLoc(loc.merge(loc2), path)
     case UnknownLoc => this
   }
 
-  override def toString = loc.toString
+  override def toString = (if (path != "") {
+    s"[$path]: "
+  } else {
+    ""
+  }) + loc.toString
 }
 
 case object UnknownLoc extends Location {

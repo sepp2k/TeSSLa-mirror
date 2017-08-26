@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.Errors.{ParserError, TesslaError}
+import de.uni_luebeck.isp.tessla.TesslaSource
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 
@@ -61,8 +62,8 @@ class InterpreterTests extends FunSuite {
       test(name) {
         if (extensions.contains("tessla")) {
           try {
-            val traces = TracesParser.parseTraces(testFile(name, "input"))
-            val result = Interpreter.fromSource(testFile(name, "tessla"), traces.timeStampUnit.map(_.timeUnit))
+            val traces = TracesParser.parseTraces(new TesslaSource(testFile(name, "input"), name+".input"))
+            val result = Interpreter.fromTesslaSource(new TesslaSource(testFile(name, "tessla"), name+".input"), traces.timeStampUnit.map(_.timeUnit))
             result match {
               case Success(spec, _) =>
                 assert(!extensions.contains("errors"), "Expected: Compilation failure. Actual: Compilation success.")
@@ -96,8 +97,7 @@ class InterpreterTests extends FunSuite {
             }
           } catch {
             case ex: TesslaError =>
-              assert(extensions.contains("runtime-errors"), s"Expected: success, Actual: Runtime error:\n${ex.message}")
-              testFile(name, "runtime-errors").mkString.contains(ex.toString())
+              assertEquals(ex.toString, testFile(name, "runtime-errors").mkString, "runtime error")
           }
         }
       }
