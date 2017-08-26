@@ -15,9 +15,9 @@ case class SourceLoc(loc: compacom.Location, path: String) extends Location {
   }
 
   override def toString = (if (path != "") {
-    s"[$path]: "
+    path
   } else {
-    ""
+    "<stdin>"
   }) + loc.toString
 }
 
