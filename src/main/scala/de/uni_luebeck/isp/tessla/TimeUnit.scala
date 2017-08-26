@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.UnknownTimeUnit
 
 object TimeUnit {
-  def fromString(str: String): TimeUnit = str.replaceAll("\"", "") match {
+  def fromString(str: String, loc: Location): TimeUnit = str.replaceAll("\"", "") match {
     case "ns" => Nanos
     case "us" => Micros
     case "ms" => Millis
@@ -11,7 +11,7 @@ object TimeUnit {
     case "min" => Minutes
     case "h" => Hours
     case "d" => Days
-    case _ => throw UnknownTimeUnit(str, UnknownLoc)
+    case _ => throw UnknownTimeUnit(str, loc)
   }
 
   sealed abstract class TimeUnit {

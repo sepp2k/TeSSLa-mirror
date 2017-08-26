@@ -1,9 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import java.nio.file.Paths
-
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{TesslaSource, TimeUnit}
+import de.uni_luebeck.isp.tessla.{CommandLineLoc, TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import sexyopt.SexyOpt
 
@@ -47,8 +45,13 @@ object Main extends SexyOpt {
 
     parse(args)
     try {
+      println(args.mkString(" "))
+      val tu = timeunit.map{
+        val arg = args.mkString(" ").indexOfSlice(timeunit.get)
+        s => TimeUnit.fromString(s, CommandLineLoc(arg-11, arg + timeunit.get.size, timeunit.get))
+      }
       if (verifyOnly || listInStreams || listOutStreams) {
-        val spec = tesslaSpec(timeunit.map(TimeUnit.fromString))
+        val spec = tesslaSpec(tu)
         if (listInStreams) {
           spec.inStreams.foreach { case (name, _) => println(name) }
           return
@@ -59,9 +62,9 @@ object Main extends SexyOpt {
         }
       } else {
         val traces: Traces = TracesParser.parseTraces(traceFile.map(TesslaSource.fromFile).getOrElse(new TesslaSource(Source.stdin)))
-        val tu = timeunit.map(TimeUnit.fromString).orElse(traces.timeStampUnit.map(_.timeUnit))
-        tu.foreach(unit => println("$timeunit = \"" + unit + "\""))
-        val spec = tesslaSpec(tu)
+        val tu2 = tu.orElse(traces.timeStampUnit.map(_.timeUnit))
+        tu2.foreach(unit => println("$timeunit = \"" + unit + "\""))
+        val spec = tesslaSpec(tu2)
         traces.feedInput(spec, BigInt(threshold)) {
           case (ts, name, value) =>
             println(s"$ts: $name = $value")

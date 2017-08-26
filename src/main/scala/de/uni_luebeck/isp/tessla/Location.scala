@@ -12,6 +12,7 @@ case class SourceLoc(loc: compacom.Location, path: String) extends Location {
       require(path2 == path)
       SourceLoc(loc.merge(loc2), path)
     case UnknownLoc => this
+    case _ => throw new IllegalArgumentException
   }
 
   override def toString = (if (path != "") {
@@ -19,6 +20,26 @@ case class SourceLoc(loc: compacom.Location, path: String) extends Location {
   } else {
     "<stdin>"
   }) + loc.toString
+}
+
+case class CommandLineLoc(from: Int, to: Int, arg: String) extends Location {
+  override def merge(other: Location) = other match {
+    case CommandLineLoc(from2, to2, arg2) =>
+      require(arg == arg2)
+      CommandLineLoc(if (from < from2) {
+        from
+      } else {
+        from2
+      }, if (to < to2) {
+        to
+      } else {
+        to2
+      }, arg)
+    case UnknownLoc => this
+    case _ => throw new IllegalArgumentException
+  }
+
+  override def toString = s"($from, $to)"
 }
 
 case object UnknownLoc extends Location {
