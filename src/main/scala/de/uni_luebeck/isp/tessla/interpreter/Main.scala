@@ -1,7 +1,8 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import de.uni_luebeck.isp.compacom.{Location, Position}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{CommandLineLoc, TesslaSource, TimeUnit}
+import de.uni_luebeck.isp.tessla.{SourceLoc, TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import sexyopt.SexyOpt
 
@@ -45,9 +46,10 @@ object Main extends SexyOpt {
 
     parse(args)
     try {
-      val tu = timeunit.map{
-        s => val arg = args.mkString(" ").indexOfSlice(timeunit.get)
-          TimeUnit.fromString(s, CommandLineLoc(arg-11, arg + timeunit.get.size, timeunit.get))
+      val tu = timeunit.map {
+        s =>
+          val split = s.split("\\n")
+          TimeUnit.fromString(s, SourceLoc(Location(Position(0, 0), Position(split.length - 1, split.last.length)), "--timeunit"))
       }
       if (verifyOnly || listInStreams || listOutStreams) {
         val spec = tesslaSpec(tu)
