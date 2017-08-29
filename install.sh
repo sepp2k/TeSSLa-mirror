@@ -16,5 +16,5 @@ set -e # cancel script if anything fails
 mkdir -p /usr/local/opt/tessla
 cp tessla*.jar /usr/local/opt/tessla/tessla.jar
 
-printf '#!/bin/bash\njava -jar /usr/local/opt/tessla/tessla.jar $@\n' > /usr/local/bin/tessla
+printf '#!/bin/bash\njava -jar /usr/local/opt/tessla/tessla.jar "$@"\n' > /usr/local/bin/tessla
 chmod +x /usr/local/bin/tessla
