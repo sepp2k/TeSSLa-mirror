@@ -102,7 +102,7 @@ object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parser
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACE, RBRACE, PERCENT,
       LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, EQ, LT, GT, AND, OR, BITFLIP, BITAND, BITOR, BITXOR, PLUS, MINUS, TIMES,
       SLASH, BANG)
-    override val comments = List("--" -> "\n")
+    override val comments = List("--" -> "\n", "#" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c) || c == '.'
   }
