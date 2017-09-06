@@ -51,12 +51,13 @@ None of these type names are keywords and type names have their own namespace, s
 
 The following builtins exist in Tessla:
 
- * `nil`
- * `default`
- * `last`
- * `const`
- * `time`
- * `delayedLast`
+ * `nil: Events<D>`
+ * `default(stream: Events<D>, value: D): Events<D>`
+ * `default(stream: Events<D>, value: Events<D>): Events<D>`
+ * `last(values: Events<D>, clock: Events<E>): Events<D>`
+ * `const(stream: Events<D>, value: D): Events<D>`
+ * `time(stream: Events<D>): Events<Int>`
+ * `delayedLast(values: Events<D>, delay: Events<Int>): Events<D>`
 
 Again, these are not keywords.
 
