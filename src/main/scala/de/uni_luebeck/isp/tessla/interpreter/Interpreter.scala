@@ -82,6 +82,12 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
         }
     }
   }
+
+  def addOutStreamListener(callback: (BigInt, String, TesslaCore.Value) => Unit) : Unit = {
+    outStreams.foreach {
+      case (name, stream) => stream.addListener{_.foreach(callback(getTime, name, _))}
+    }
+  }
 }
 
 object Interpreter {
