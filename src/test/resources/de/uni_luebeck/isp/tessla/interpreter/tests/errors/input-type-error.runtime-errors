@@ -1,1 +1,1 @@
-(2,13 - 3,48): Tried to provide value of type String ("Haha! I'm a string, not an integer!") to input stream 'ints' of type Int
+/errors/input-type-error.input(2,13 - 3,48): Tried to provide value of type String ("Haha! I'm a string, not an integer!") to input stream 'ints' of type Int

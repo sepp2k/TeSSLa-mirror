@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
+import java.nio.file.Paths
+
 import io.Source
 
 /**
@@ -7,16 +9,15 @@ import io.Source
   *
   * @param src
   */
-class TesslaSource(val src: Source) {}
+class TesslaSource(val src: Source, val path: String = "") {}
 
 
 /**
   * Convenience object for creating TesslaSource instances.
   */
 object TesslaSource {
-
   def fromFile(name: String): TesslaSource = {
-    new TesslaSource(Source.fromFile(name))
+    new TesslaSource(Source.fromFile(name), name)
   }
 
   def fromString(str: String): TesslaSource = {

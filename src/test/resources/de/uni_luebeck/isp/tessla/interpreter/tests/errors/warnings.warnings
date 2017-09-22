@@ -1,2 +1,2 @@
-(1,1 - 1,7): The keyword 'define' is deprecated, use 'def' instead.
-(3,9 - 3,11): Using ':=' for named arguments is deprecated, use '=' instead.
+/errors/warnings.tessla(1,1 - 1,7): The keyword 'define' is deprecated, use 'def' instead.
+/errors/warnings.tessla(3,9 - 3,11): Using ':=' for named arguments is deprecated, use '=' instead.

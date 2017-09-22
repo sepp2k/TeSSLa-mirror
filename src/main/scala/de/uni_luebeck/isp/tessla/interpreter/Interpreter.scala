@@ -95,16 +95,20 @@ object Interpreter {
     def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
   }
 
+  def fromTesslaSource(tesslaSource: TesslaSource, timeUnit: Option[TimeUnit.TimeUnit]) = {
+    new Compiler().applyPasses(tesslaSource, timeUnit).andThen(new CoreToInterpreterSpec)
+  }
+
   def fromSource(source: Source, timeUnit: Option[TimeUnit.TimeUnit]): Result[Interpreter] = {
-    new Compiler().applyPasses(new TesslaSource(source), timeUnit).andThen(new CoreToInterpreterSpec)
+    fromTesslaSource(new TesslaSource(source), timeUnit)
   }
 
   def fromString(tesslaSource: String, timeUnit: Option[TimeUnit.TimeUnit]): Result[Interpreter] = {
-    fromSource(Source.fromString(tesslaSource), timeUnit)
+    fromTesslaSource(TesslaSource.fromString(tesslaSource), timeUnit)
   }
 
   def fromFile(file: String, timeUnit: Option[TimeUnit.TimeUnit]): Result[Interpreter] = {
-    fromSource(Source.fromFile(file), timeUnit)
+    fromTesslaSource(TesslaSource.fromFile(file), timeUnit)
   }
 
 }
