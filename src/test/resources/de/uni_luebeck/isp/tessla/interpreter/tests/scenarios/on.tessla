@@ -1,0 +1,15 @@
+def mergeValues(a,b) :=
+  if default(time(a), 0) >= default(time(b), 0)
+  then default(a,b)
+  else default(b,a)
+
+def on(trigger, stream) :=
+  mergeValues(
+    if time(trigger) == time(stream) then stream,
+    if time(trigger) > time(stream) then last(stream, trigger)
+  )
+
+in x: Events<Unit>
+in y: Events<Int>
+
+out on(x,y) as z
