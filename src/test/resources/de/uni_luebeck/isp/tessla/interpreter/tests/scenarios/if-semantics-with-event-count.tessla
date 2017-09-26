@@ -1,0 +1,35 @@
+in functioncall: Events<String>
+def function_call(name) := if functioncall == name then ()
+
+def eventCount(e) := {
+  def count := default(last(count, e) + 1, 0)
+  count
+}
+
+def foo_count := eventCount(function_call("foo"))
+def bar_count := eventCount(function_call("bar"))
+
+def foobardiff := foo_count - bar_count
+
+def foobarmin := if foo_count < bar_count then foo_count else bar_count
+
+def foobardiff_abs_nonzero :=
+    if foobardiff > 0
+    then foobardiff
+    else if foobardiff < 0
+    then 0 - foobardiff
+
+def foobardiff_abs_nonzero2 :=
+    if foobardiff != 0
+    then
+        if foobardiff > 0
+        then foobardiff
+        else 0 - foobardiff
+
+
+out foo_count
+out bar_count
+out foobardiff_abs_nonzero
+out foobardiff_abs_nonzero2
+out foobardiff
+out foobarmin
