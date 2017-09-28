@@ -3,7 +3,6 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.compacom
 import de.uni_luebeck.isp.tessla.Errors.ParserError
-import de.uni_luebeck.isp.tessla.TimeUnit._
 
 object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parsers {
   override def translateSpec(source: TesslaSource) = {
@@ -92,6 +91,8 @@ object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parser
 
     case object BANG extends Token("!")
 
+    case object INCLUDE extends Token("include")
+
   }
 
   object Tokenizer extends SimpleTokenizer {
@@ -99,7 +100,7 @@ object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parser
 
     import tokens._
 
-    override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE, AS)
+    override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACE, RBRACE, PERCENT,
       LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, EQ, LT, GT, AND, OR, BITFLIP, BITAND, BITOR, BITXOR, PLUS, MINUS, TIMES,
       SLASH, BANG)
@@ -114,7 +115,16 @@ object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parser
 
   class Parsers(path: String) {
 
-    def spec: Parser[Ast.Spec] = statement.* ^^ Ast.Spec
+    def spec: Parser[Ast.Spec] = include.* ~ statement.* ^^ {
+      case (includes, statements) =>
+        Ast.Spec(includes.flatMap(_.statements) ++ statements)
+    }
+
+    def include = INCLUDE ~> exprStringLit ^^ { file =>
+      import java.nio.file.Paths
+      val includePath = Paths.get(path).getParent.resolve(file.value)
+      TesslaParser.translateSpec(TesslaSource.fromFile(includePath.toString))
+    }
 
     // TODO identifier completion, requires some small compacom enhancements
     def identifier: Parser[Ast.Identifier] = matchToken("identifier", Set("<identifier>")) {
