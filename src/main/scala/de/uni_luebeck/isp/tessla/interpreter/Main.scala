@@ -48,8 +48,8 @@ object Main extends SexyOpt {
     try {
       val tu = timeunit.map {
         s =>
-          val split = s.split("\\n")
-          TimeUnit.fromString(s, SourceLoc(Location(Position(0, 0), Position(split.length - 1, split.last.length)), "--timeunit"))
+          val lines = s.split("\\n")
+          TimeUnit.fromString(s, SourceLoc(Location(Position(0, 0), Position(lines.length - 1, lines.last.length)), "--timeunit"))
       }
       if (verifyOnly || listInStreams || listOutStreams) {
         val spec = tesslaSpec(tu)
