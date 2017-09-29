@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-object Ast {
+object Tessla {
   case class Spec(statements: Seq[Statement]) {
     override def toString = statements.mkString("\n")
   }
@@ -130,4 +130,3 @@ object Ast {
     def withLoc(loc: Location): TypeApp = copy(loc = loc)
   }
 }
-

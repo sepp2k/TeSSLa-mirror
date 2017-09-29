@@ -4,7 +4,7 @@ import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, With
 import de.uni_luebeck.isp.compacom
 import de.uni_luebeck.isp.tessla.Errors.ParserError
 
-object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parsers {
+object TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Parsers {
   override def translateSpec(source: TesslaSource) = {
     val p =  new Parsers(source.path)
     parseAll(p.spec, source.src) match {
@@ -115,9 +115,9 @@ object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parser
 
   class Parsers(path: String) {
 
-    def spec: Parser[Ast.Spec] = include.* ~ statement.* ^^ {
+    def spec: Parser[Tessla.Spec] = include.* ~ statement.* ^^ {
       case (includes, statements) =>
-        Ast.Spec(includes.flatMap(_.statements) ++ statements)
+        Tessla.Spec(includes.flatMap(_.statements) ++ statements)
     }
 
     def include = INCLUDE ~> exprStringLit ^^ { file =>
@@ -127,8 +127,8 @@ object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parser
     }
 
     // TODO identifier completion, requires some small compacom enhancements
-    def identifier: Parser[Ast.Identifier] = matchToken("identifier", Set("<identifier>")) {
-      case WithLocation(loc, ID(name)) => Ast.Identifier(name, SourceLoc(loc, path))
+    def identifier: Parser[Tessla.Identifier] = matchToken("identifier", Set("<identifier>")) {
+      case WithLocation(loc, ID(name)) => Tessla.Identifier(name, SourceLoc(loc, path))
     }
 
     def define =
@@ -139,162 +139,162 @@ object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parser
     def defOrMacroDef =
       (define ~> identifier ~ macroArgs.? ~ typeAscr.? ~ (COLONEQ ~> expr)) ^^! {
         case (loc, (((name, args), typeAscr), expr)) =>
-          Ast.Def(name, args getOrElse Seq(), typeAscr, expr, SourceLoc(loc, path))
+          Tessla.Def(name, args getOrElse Seq(), typeAscr, expr, SourceLoc(loc, path))
       }
 
-    def statement: Parser[Ast.Statement] =
+    def statement: Parser[Tessla.Statement] =
       defOrMacroDef |
         OUT ~> outstatement |
         IN ~> identifier ~ typeAscr ^^! {
           case (loc, (name, typeAscr)) =>
-            Ast.In(name, typeAscr, SourceLoc(loc, path))
+            Tessla.In(name, typeAscr, SourceLoc(loc, path))
         }
 
-    def outstatement: Parser[Ast.Statement] =
+    def outstatement: Parser[Tessla.Statement] =
       TIMES ^^^! {
-        loc => Ast.OutAll(SourceLoc(loc, path))
+        loc => Tessla.OutAll(SourceLoc(loc, path))
       } |
         expr ~ (AS ~> identifier).? ^^! {
           case (loc, (expr, name)) =>
-            Ast.Out(expr, name, SourceLoc(loc, path))
+            Tessla.Out(expr, name, SourceLoc(loc, path))
         }
 
-    def macroArgs: Parser[Seq[Ast.MacroArg]] = LPAREN ~> rep1sep(macroArg, COMMA) <~ RPAREN
+    def macroArgs: Parser[Seq[Tessla.MacroArg]] = LPAREN ~> rep1sep(macroArg, COMMA) <~ RPAREN
 
-    def macroArg: Parser[Ast.MacroArg] = (identifier ~ typeAscr.?) ^^ Ast.MacroArg.tupled
+    def macroArg: Parser[Tessla.MacroArg] = (identifier ~ typeAscr.?) ^^ Tessla.MacroArg.tupled
 
-    def typeAscr: Parser[Ast.Type] = COLON ~> `type`
+    def typeAscr: Parser[Tessla.Type] = COLON ~> `type`
 
-    def `type`: Parser[Ast.Type] = typeNameOrApp
+    def `type`: Parser[Tessla.Type] = typeNameOrApp
 
-    def typeNameOrApp: Parser[Ast.Type] = identifier ~ typeAppArgs.? ^^! {
-      case (_, (name, None)) => Ast.TypeName(name)
-      case (loc, (name, Some(args))) => Ast.TypeApp(name, args, SourceLoc(loc, path))
+    def typeNameOrApp: Parser[Tessla.Type] = identifier ~ typeAppArgs.? ^^! {
+      case (_, (name, None)) => Tessla.TypeName(name)
+      case (loc, (name, Some(args))) => Tessla.TypeApp(name, args, SourceLoc(loc, path))
     }
 
-    def typeAppArgs: Parser[Seq[Ast.Type]] = LT ~> rep1sep(`type`, COMMA) <~ GT
+    def typeAppArgs: Parser[Seq[Tessla.Type]] = LT ~> rep1sep(`type`, COMMA) <~ GT
 
-    def expr: Parser[Ast.Expr] = ifThenElse | typedExpression
+    def expr: Parser[Tessla.Expr] = ifThenElse | typedExpression
 
     def ifThenElse = (IF ~ expr) ~ (THEN ~> expr) ~ (ELSE ~> expr).? ^^! {
       case (loc, (((ifToken, cond), thenCase), Some(elseCase))) =>
-        Ast.ExprApp(Ast.Identifier("if then else", SourceLoc(ifToken.loc, path)), List(Ast.PosArg(cond), Ast.PosArg(thenCase), Ast.PosArg(elseCase)), SourceLoc(loc, path))
+        Tessla.ExprApp(Tessla.Identifier("if then else", SourceLoc(ifToken.loc, path)), List(Tessla.PosArg(cond), Tessla.PosArg(thenCase), Tessla.PosArg(elseCase)), SourceLoc(loc, path))
       case (loc, (((ifToken, cond), thenCase), None)) =>
-        Ast.ExprApp(Ast.Identifier("if then", SourceLoc(ifToken.loc, path)), List(Ast.PosArg(cond), Ast.PosArg(thenCase)), SourceLoc(loc, path))
+        Tessla.ExprApp(Tessla.Identifier("if then", SourceLoc(ifToken.loc, path)), List(Tessla.PosArg(cond), Tessla.PosArg(thenCase)), SourceLoc(loc, path))
     }
 
-    def typedExpression: Parser[Ast.Expr] = infixExpr ~ typeAscr.? ^^ {
+    def typedExpression: Parser[Tessla.Expr] = infixExpr ~ typeAscr.? ^^ {
       case (expr, None) => expr
-      case (expr, Some(typeAscr)) => Ast.ExprTypeAscr(expr, typeAscr)
+      case (expr, Some(typeAscr)) => Tessla.ExprTypeAscr(expr, typeAscr)
     }
 
-    def infixOp(loc: compacom.Location, lhs: Ast.Expr, rhss: Seq[(WithLocation[Token], Ast.Expr)]) = {
+    def infixOp(loc: compacom.Location, lhs: Tessla.Expr, rhss: Seq[(WithLocation[Token], Tessla.Expr)]) = {
       rhss.foldLeft(lhs) {
         case (l, (op, r)) =>
-          Ast.ExprApp(Ast.Identifier(op.value.string, SourceLoc(op.loc, path)), List(Ast.PosArg(l), Ast.PosArg(r)), SourceLoc(loc, path))
+          Tessla.ExprApp(Tessla.Identifier(op.value.string, SourceLoc(op.loc, path)), List(Tessla.PosArg(l), Tessla.PosArg(r)), SourceLoc(loc, path))
       }
     }
 
-    def infixExpr: Parser[Ast.Expr] = conjunction ~ (OR ~ conjunction).* ^^! {
+    def infixExpr: Parser[Tessla.Expr] = conjunction ~ (OR ~ conjunction).* ^^! {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-    def conjunction: Parser[Ast.Expr] = comparison ~ (AND ~ comparison).* ^^! {
+    def conjunction: Parser[Tessla.Expr] = comparison ~ (AND ~ comparison).* ^^! {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-    def comparison: Parser[Ast.Expr] = bitOrExpr ~ ((EQEQ | LT | GT | LEQ | GEQ | NEQ) ~ bitOrExpr).* ^^! {
+    def comparison: Parser[Tessla.Expr] = bitOrExpr ~ ((EQEQ | LT | GT | LEQ | GEQ | NEQ) ~ bitOrExpr).* ^^! {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-    def bitOrExpr: Parser[Ast.Expr] = bitAndExpr ~ ((BITOR | BITXOR) ~ bitAndExpr).* ^^! {
+    def bitOrExpr: Parser[Tessla.Expr] = bitAndExpr ~ ((BITOR | BITXOR) ~ bitAndExpr).* ^^! {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-    def bitAndExpr: Parser[Ast.Expr] = bitShiftExpr ~ (BITAND ~ bitShiftExpr).* ^^! {
+    def bitAndExpr: Parser[Tessla.Expr] = bitShiftExpr ~ (BITAND ~ bitShiftExpr).* ^^! {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-    def bitShiftExpr: Parser[Ast.Expr] = additiveExpr ~ ((LSHIFT | RSHIFT) ~ additiveExpr).* ^^! {
+    def bitShiftExpr: Parser[Tessla.Expr] = additiveExpr ~ ((LSHIFT | RSHIFT) ~ additiveExpr).* ^^! {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-    def additiveExpr: Parser[Ast.Expr] = multiplicativeExpr ~ ((PLUS | MINUS) ~ multiplicativeExpr).* ^^! {
+    def additiveExpr: Parser[Tessla.Expr] = multiplicativeExpr ~ ((PLUS | MINUS) ~ multiplicativeExpr).* ^^! {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-    def multiplicativeExpr: Parser[Ast.Expr] = unaryExpr ~ ((TIMES | SLASH) ~ unaryExpr).* ^^! {
+    def multiplicativeExpr: Parser[Tessla.Expr] = unaryExpr ~ ((TIMES | SLASH) ~ unaryExpr).* ^^! {
       case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
     }
 
-    def unaryExpr: Parser[Ast.Expr] =
+    def unaryExpr: Parser[Tessla.Expr] =
       BANG ~ exprAtomic ^^! {
         case (loc, (op, expr)) =>
-          Ast.ExprApp(Ast.Identifier("!", SourceLoc(op.loc, path)), List(Ast.PosArg(expr)), SourceLoc(loc, path))
+          Tessla.ExprApp(Tessla.Identifier("!", SourceLoc(op.loc, path)), List(Tessla.PosArg(expr)), SourceLoc(loc, path))
       } |
         BITFLIP ~ exprAtomic ^^! {
           case (loc, (op, expr)) =>
-            Ast.ExprApp(Ast.Identifier("~", SourceLoc(op.loc, path)), List(Ast.PosArg(expr)), SourceLoc(loc, path))
+            Tessla.ExprApp(Tessla.Identifier("~", SourceLoc(op.loc, path)), List(Tessla.PosArg(expr)), SourceLoc(loc, path))
         } |
         MINUS ~ exprAtomic ^^! {
           case (loc, (op, expr)) =>
-            Ast.ExprApp(Ast.Identifier("-", SourceLoc(op.loc, path)), List(Ast.PosArg(expr)), SourceLoc(loc, path))
+            Tessla.ExprApp(Tessla.Identifier("-", SourceLoc(op.loc, path)), List(Tessla.PosArg(expr)), SourceLoc(loc, path))
         } |
         exprAtomic
 
-    def exprAtomic: Parser[Ast.Expr] = exprLit | exprGroup | exprBlock | exprNameOrApp
+    def exprAtomic: Parser[Tessla.Expr] = exprLit | exprGroup | exprBlock | exprNameOrApp
 
-    def exprGroup: Parser[Ast.Expr] = (LPAREN ~> expr.? <~ RPAREN) ^^! {
+    def exprGroup: Parser[Tessla.Expr] = (LPAREN ~> expr.? <~ RPAREN) ^^! {
       case (_, Some(expr)) => expr
-      case (loc, None) => Ast.ExprUnit(SourceLoc(loc, path))
+      case (loc, None) => Tessla.ExprUnit(SourceLoc(loc, path))
     }
 
     def exprBlock = (LBRACE ~> defOrMacroDef.* ~ expr <~ RBRACE) ^^! {
       case (loc, (statements, expr)) =>
-        Ast.ExprBlock(statements, expr, SourceLoc(loc, path))
+        Tessla.ExprBlock(statements, expr, SourceLoc(loc, path))
     }
 
-    def exprNameOrApp: Parser[Ast.Expr] = identifier ~ exprAppArgs.? ^^! {
-      case (_, (name, None)) => Ast.ExprName(name)
-      case (loc, (name, Some(args))) => Ast.ExprApp(name, args, SourceLoc(loc, path))
+    def exprNameOrApp: Parser[Tessla.Expr] = identifier ~ exprAppArgs.? ^^! {
+      case (_, (name, None)) => Tessla.ExprName(name)
+      case (loc, (name, Some(args))) => Tessla.ExprApp(name, args, SourceLoc(loc, path))
     }
 
-    def exprLit: Parser[Ast.Expr] = exprIntLit | exprStringLit | exprBoolLit
+    def exprLit: Parser[Tessla.Expr] = exprIntLit | exprStringLit | exprBoolLit
 
-    def exprBoolLit: Parser[Ast.ExprBoolLit] =
+    def exprBoolLit: Parser[Tessla.ExprBoolLit] =
       TRUE ^^^! {
-        loc => Ast.ExprBoolLit(true, SourceLoc(loc, path))
+        loc => Tessla.ExprBoolLit(true, SourceLoc(loc, path))
       } |
         FALSE ^^^! {
-          loc => Ast.ExprBoolLit(false, SourceLoc(loc, path))
+          loc => Tessla.ExprBoolLit(false, SourceLoc(loc, path))
         }
 
-    def exprIntLit: Parser[Ast.Expr] = matchToken("integer", Set("<integer>")) {
+    def exprIntLit: Parser[Tessla.Expr] = matchToken("integer", Set("<integer>")) {
       case WithLocation(_, INT(value)) => BigInt(value)
     } ~ timeUnit.? ^^! {
-      case (loc, (value, None)) => Ast.ExprIntLit(value, SourceLoc(loc, path))
-      case (loc, (value, Some(unit))) => Ast.ExprTimeLit(value, unit, SourceLoc(loc, path))
+      case (loc, (value, None)) => Tessla.ExprIntLit(value, SourceLoc(loc, path))
+      case (loc, (value, Some(unit))) => Tessla.ExprTimeLit(value, unit, SourceLoc(loc, path))
     }
 
     def timeUnit: Parser[TimeUnit.TimeUnit] = matchToken("identifier", Set("<identifier>")) {
       case WithLocation(loc, ID(name)) => TimeUnit.fromString(name, SourceLoc(loc, path))
     }
 
-    def exprStringLit: Parser[Ast.ExprStringLit] = matchToken("string", Set("<string>")) {
-      case WithLocation(loc, STRING(value)) => Ast.ExprStringLit(value, SourceLoc(loc, path))
+    def exprStringLit: Parser[Tessla.ExprStringLit] = matchToken("string", Set("<string>")) {
+      case WithLocation(loc, STRING(value)) => Tessla.ExprStringLit(value, SourceLoc(loc, path))
     }
 
-    def exprAppArgs: Parser[Seq[Ast.AppArg]] = LPAREN ~> rep1sep(exprAppArg, COMMA) <~ RPAREN
+    def exprAppArgs: Parser[Seq[Tessla.AppArg]] = LPAREN ~> rep1sep(exprAppArg, COMMA) <~ RPAREN
 
     def namedArgAssignmentOperator =
       COLONEQ ^^^! {
         loc => warn(SourceLoc(loc, path), "Using ':=' for named arguments is deprecated, use '=' instead.")
       } | EQ
 
-    def exprAppArg: Parser[Ast.AppArg] = expr ~^ {
-      case (x@Ast.ExprName(name)) =>
-        namedArgAssignmentOperator ~> expr ^^ (Ast.NamedArg(name, _)) | success(Ast.PosArg(x))
-      case x => success(Ast.PosArg(x))
+    def exprAppArg: Parser[Tessla.AppArg] = expr ~^ {
+      case (x@Tessla.ExprName(name)) =>
+        namedArgAssignmentOperator ~> expr ^^ (Tessla.NamedArg(name, _)) | success(Tessla.PosArg(x))
+      case x => success(Tessla.PosArg(x))
     }
   }
 }
