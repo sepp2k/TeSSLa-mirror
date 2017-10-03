@@ -4,22 +4,19 @@ import shapeless._
 
 import scala.collection.immutable.SortedMap
 import ImplicitConstraints._
+import de.uni_luebeck.isp.tessla.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.{TesslaCore, UnknownLoc}
 
 import scala.language.implicitConversions
 
-class Specification[Time: Numeric]() {
-
-  private val numeric = implicitly[Numeric[Time]]
-
-  import numeric.{mkOrderingOps, mkNumericOps, zero, one}
-
-  private var timeVar: Time = zero
-  private var trigger: (Map[Any, Time], SortedMap[Time, Set[Any]]) = (Map(), SortedMap())
+class Specification() {
+  private var timeVar: BigInt = 0
+  private var trigger: (Map[Any, BigInt], SortedMap[BigInt, Set[Any]]) = (Map(), SortedMap())
   private var acceptInput = true
 
-  def getTime: Time = timeVar
+  def getTime: BigInt = timeVar
 
-  private var inputs: List[Triggered[_]] = Nil
+  private var inputs: List[Triggered] = Nil
 
   /**
     * Propagates all inputs without progressing time.
@@ -39,9 +36,9 @@ class Specification[Time: Numeric]() {
     *
     * @param timeDelta
     */
-  def step(timeDelta: Time): Unit = {
+  def step(timeDelta: BigInt): Unit = {
 
-    require(timeDelta > zero)
+    require(timeDelta > 0)
     if (acceptInput) {
       step()
     }
@@ -64,7 +61,7 @@ class Specification[Time: Numeric]() {
     timeVar = newTime
   }
 
-  private def updateTrigger(stream: Stream[_], newTime: Time): Unit = {
+  private def updateTrigger(stream: Stream, newTime: BigInt): Unit = {
     require(newTime > getTime)
     val remaining = trigger._1.get(stream) match {
       case Some(t) =>
@@ -79,18 +76,18 @@ class Specification[Time: Numeric]() {
     trigger = (remaining._1 + (stream -> newTime), remaining._2 + (newTime -> temp))
   }
 
-  def lift[Value](
-    streams: Seq[Stream[Value]]
-  )(
-    op: Seq[Value] => Option[Value]
-  ): Stream[Value] =
-    Operation[Seq[Option[Value]], Value](streams.map(_ => None), streams)((_, state, inputs) => {
+  def lift(
+            streams: Seq[Stream]
+          )(
+            op: Seq[TesslaCore.Value] => Option[TesslaCore.Value]
+          ): Stream =
+    Operation[Seq[Option[TesslaCore.Value]], TesslaCore.Value](streams.map(_ => None), streams)((_, state, inputs) => {
       val newState = inputs.zip(state).map {
         case (in, st) => in.orElse(st)
       }
       val newOutput =
         if (inputs.exists(_.isDefined)) {
-          val tmp = newState.foldLeft(Some(Nil): Option[List[Value]]) {
+          val tmp = newState.foldLeft(Some(Nil): Option[List[TesslaCore.Value]]) {
             case (Some(list), Some(value)) => Some(value :: list)
             case _ => None
           }
@@ -101,12 +98,12 @@ class Specification[Time: Numeric]() {
     })
 
   def lift[Value, Complete <: HList, Inputs <: HList, Streams <: HList](
-    streams: Streams
-  )(
-    op: Complete => Option[Value]
-  )(
-    implicit constraint: StreamConstraint[Complete, Inputs, Streams]
-  ): Stream[Value] =
+                                                                         streams: Streams
+                                                                       )(
+                                                                         op: Complete => Option[TesslaCore.Value]
+                                                                       )(
+                                                                         implicit constraint: StreamConstraint[Complete, Inputs, Streams]
+                                                                       ): Stream =
     Operation[Value, Inputs, Inputs, Streams](constraint.init, streams)((_, state, inputs) => {
       val newState = constraint.orElse(inputs, state)
       val newOutput =
@@ -117,11 +114,11 @@ class Specification[Time: Numeric]() {
       (newState, newOutput)
     })
 
-  def last[Value](times: Stream[_], values: => Stream[Value]): Stream[Value] =
-    new Stream[Value] {
+  def last(times: Stream, values: => Stream): Stream =
+    new Stream {
       private var done = false
-      private var oldValue: Option[Value] = None
-      private var newValue: Option[Value] = None
+      private var oldValue: Option[TesslaCore.Value] = None
+      private var newValue: Option[TesslaCore.Value] = None
 
       def update(): Unit = {
         if (done) {
@@ -148,12 +145,12 @@ class Specification[Time: Numeric]() {
       }
     }
 
-  def delayedLast[Value](delays: => Stream[Time], values: => Stream[Value]): Stream[Value] =
-    new Triggered[Value] {
-      private var oldValue: Option[Value] = None
-      private var newValue: Option[Value] = None
-      private var newDelay: Option[Time] = None
-      private var targetTime: Option[Time] = None
+  def delayedLast(delays: => Stream, values: => Stream): Stream =
+    new Triggered {
+      private var oldValue: Option[TesslaCore.Value] = None
+      private var newValue: Option[TesslaCore.Value] = None
+      private var newDelay: Option[BigInt] = None
+      private var targetTime: Option[BigInt] = None
       private var counter = 0
 
       def update(): Unit = {
@@ -174,8 +171,15 @@ class Specification[Time: Numeric]() {
 
       override def init(): Unit = {
         delays.addListener(delay => {
-          require(delay.forall(_ > zero))
-          newDelay = delay
+          newDelay = delay.map {
+            case TesslaCore.IntLiteral(value, loc) =>
+              if (value > 0) {
+                value
+              } else {
+                throw new Exception("Not allowed")
+              }
+            case _ => throw new Exception("Not allowed")
+          }: Option[BigInt]
           update()
         })
         values.addListener {
@@ -186,9 +190,9 @@ class Specification[Time: Numeric]() {
         }
       }
 
-      override private[Specification] def step() = {
+      override def step() = {
         targetTime match {
-          case Some(t) if t equiv getTime =>
+          case Some(target) if target == getTime =>
             targetTime = None
             propagate(oldValue)
           case _ => propagate(None)
@@ -197,27 +201,27 @@ class Specification[Time: Numeric]() {
       }
     }
 
-  def nil[Value]: Stream[Value] =
-    new Triggered[Value] {
-      override private[Specification] def step() = {
+  def nil: Stream =
+    new Triggered {
+      override def step() = {
         propagate(None)
       }
     }
 
-  def const[Value](value: Value): Stream[Value] = nil.default(value)
+  def const(value: TesslaCore.Value): Stream = nil.default(value)
 
-  def period(value: Time): Stream[Unit] = {
-    require(value > zero)
-    lazy val result: Stream[Time] = delayedLast(result, result).default(value)
-    result.const(())
+  def period(value: BigInt): Stream = {
+    require(value > 0)
+    lazy val result: Stream = delayedLast(result, result).default(TesslaCore.IntLiteral(value, UnknownLoc))
+    result.const(TesslaCore.Unit(UnknownLoc))
   }
 
-  sealed class Stream[Value] {
+  sealed class Stream {
     self =>
 
-    private var listeners: List[Option[Value] => Unit] = Nil
+    private var listeners: List[Option[TesslaCore.Value] => Unit] = Nil
 
-    def addListener(listener: Option[Value] => Unit): Unit = {
+    def addListener(listener: Option[TesslaCore.Value] => Unit): Unit = {
       if (listeners.isEmpty) {
         listeners +:= listener
         init()
@@ -228,367 +232,29 @@ class Specification[Time: Numeric]() {
 
     protected def init(): Unit = {}
 
-    private[Specification] def propagate(value: Option[Value]): Unit = {
+    def propagate(value: Option[TesslaCore.Value]): Unit = {
       for (listener <- listeners) {
         listener(value)
       }
     }
 
-    def const[T](other: T): Stream[T] =
+    def const(other: TesslaCore.Value): Stream =
       lift(this :: HNil)(
-        (_: Value :: HNil) => Some(other)
+        (_: TesslaCore.Value :: HNil) => Some(other)
       )
 
-    def alsoAt[T](other: Stream[T]): Stream[Value] =
-      lift(this :: other :: HNil)(
-        (x: Value :: T :: HNil) => Some(x.head)
-      )
-
-    def defined[T](other: Stream[T]): Stream[T] =
-      (merge(other).time() === time()).ifThen(other)
-
-    def undefined(other: Stream[Value]): Stream[Value] =
-      (merge(other).time() === time()).default(false).ifThenElse(this.default(other), other.default(this))
-
-    def &&(other: Boolean)(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
-      lift(ev(this) :: HNil)(
-        (x: Boolean :: HNil) => Some(x.head && other)
-      )
-
-    def &&(other: Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
-      lift(ev(this) :: other :: HNil)(
-        (x: Boolean :: Boolean :: HNil) => Some(x.head && x.tail.head)
-      )
-
-    def ||(other: Boolean)(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
-      lift(ev(this) :: HNil)(
-        (x: Boolean :: HNil) => Some(x.head || other)
-      )
-
-    def ||(other: Stream[Boolean])(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
-      lift(ev(this) :: other :: HNil)(
-        (x: Boolean :: Boolean :: HNil) => Some(x.head || x.tail.head)
-      )
-
-    def unary_!()(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
-      lift(ev(this) :: HNil)(
-        (x: Boolean :: HNil) => Some(!x.head)
-      )
-
-    def <[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Ordering[T]].lt(x.head, other))
-      )
-
-    def <[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
-      lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].lt(x.head, x.tail.head))
-      )
-
-    def <=[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Ordering[T]].lteq(x.head, other))
-      )
-
-    def <=[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
-      lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].lteq(x.head, x.tail.head))
-      )
-
-    def >[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Ordering[T]].gt(x.head, other))
-      )
-
-    def >[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
-      lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].gt(x.head, x.tail.head))
-      )
-
-    def >=[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Ordering[T]].gteq(x.head, other))
-      )
-
-    def >=[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Boolean] =
-      lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].gteq(x.head, x.tail.head))
-      )
-
-    def max[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Ordering[T]].max(x.head, other))
-      )
-
-    def max[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].max(x.head, x.tail.head))
-      )
-
-    def min[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Ordering[T]].min(x.head, other))
-      )
-
-    def min[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].min(x.head, x.tail.head))
-      )
-
-    def compare[T: Ordering](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[Int] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Ordering[T]].compare(x.head, other))
-      )
-
-    def compare[T: Ordering](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[Int] =
-      lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[Ordering[T]].compare(x.head, x.tail.head))
-      )
-
-    def +[T: Numeric](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Numeric[T]].plus(x.head, other))
-      )
-
-    def +[T: Numeric](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[Numeric[T]].plus(x.head, x.tail.head))
-      )
-
-    def -[T: Numeric](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Numeric[T]].minus(x.head, other))
-      )
-
-    def -[T: Numeric](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[Numeric[T]].minus(x.head, x.tail.head))
-      )
-
-    def *[T: Numeric](other: T)(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Numeric[T]].times(x.head, other))
-      )
-
-    def *[T: Numeric](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: other :: HNil)(
-        (x: T :: T :: HNil) => Some(implicitly[Numeric[T]].times(x.head, x.tail.head))
-      )
-
-    def unary_/[T: Numeric]()(implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Numeric[T]].negate(x.head))
-      )
-
-    def /(other: Int)(implicit ev: Stream[Value] =:= Stream[Int]): Stream[Int] =
-      lift(ev(this) :: HNil)(
-        (x: Int :: HNil) => Some(x.head / other)
-      )
-
-    def /(other: Double)(implicit ev: Stream[Value] =:= Stream[Double]): Stream[Double] =
-      lift(ev(this) :: HNil)(
-        (x: Double :: HNil) => Some(x.head / other)
-      )
-
-    def /(other: Stream[Value])(
-      implicit ev: (Stream[Value] =:= Stream[Int]) ||: (Stream[Value] =:= Stream[Double]) ||: CFalse
-    ): Stream[Value] = {
-      def intCase(intEv: Stream[Value] =:= Stream[Int]) =
-        intEv.inverse(lift(intEv(this) :: intEv(other) :: HNil)(
-          (x: Int :: Int :: HNil) => Some(x.head / x.tail.head)
-        ))
-
-      def doubleCase(doubleEv: Stream[Value] =:= Stream[Double]) =
-        doubleEv.inverse(lift(doubleEv(this) :: doubleEv(other) :: HNil)(
-          (x: Double :: Double :: HNil) => Some(x.head / x.tail.head)
-        ))
-
-      ev.switch(intCase _ :: doubleCase _ :: HNil)
-    }
-
-    def %(other: Int)(implicit ev: Stream[Value] =:= Stream[Int]): Stream[Int] =
-      lift(ev(this) :: HNil)(
-        (x: Int :: HNil) => Some(x.head % other)
-      )
-
-    def %(other: Double)(implicit ev: Stream[Value] =:= Stream[Double]): Stream[Double] =
-      lift(ev(this) :: HNil)(
-        (x: Double :: HNil) => Some(x.head % other)
-      )
-
-    def toInt[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[Int] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Numeric[T]].toInt(x.head))
-      )
-
-    def toDouble[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[Double] =
-      lift(ev(this) :: HNil)(
-        (x: T :: HNil) => Some(implicitly[Numeric[T]].toDouble(x.head))
-      )
-
-    def %(other: Stream[Value])(
-      implicit ev: (Stream[Value] =:= Stream[Int]) ||: (Stream[Value] =:= Stream[Double]) ||: CFalse
-    ): Stream[Value] = {
-      def intCase(intEv: Stream[Value] =:= Stream[Int]) =
-        intEv.inverse(lift(intEv(this) :: intEv(other) :: HNil)(
-          (x: Int :: Int :: HNil) => Some(x.head % x.tail.head)
-        ))
-
-      def doubleCase(doubleEv: Stream[Value] =:= Stream[Double]) =
-        doubleEv.inverse(lift(doubleEv(this) :: doubleEv(other) :: HNil)(
-          (x: Double :: Double :: HNil) => Some(x.head % x.tail.head)
-        ))
-
-      ev.switch(intCase _ :: doubleCase _ :: HNil)
-    }
-
-    def ===(other: Stream[Value]): Stream[Boolean] =
-      lift(this :: other :: HNil)(
-        (x: Value :: Value :: HNil) => Some(x.head == x.tail.head)
-      )
-
-    def ===(other: Value): Stream[Boolean] =
-      lift(this :: HNil)(
-        (x: Value :: HNil) => Some(x.head == other)
-      )
-
-    def ifThen[T](other: Stream[T])(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[T] =
-      lift(ev(this) :: other :: HNil)(
-        (x: Boolean :: T :: HNil) => if (x.head) Some(x.tail.head) else None
-      )
-
-    def ifThen()(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Unit] =
-      lift(ev(this) :: HNil)(
-        (x: Boolean :: HNil) => if (x.head) Some(()) else None
-      )
-
-
-    def ifThenElse[T](other1: Stream[T], other2: Stream[T])(
-      implicit ev: Stream[Value] =:= Stream[Boolean]
-    ): Stream[T] =
-      lift(ev(this) :: other1 :: other2 :: HNil)(
-        (x: Boolean :: T :: T :: HNil) => if (x.head) Some(x.tail.head) else Some(x.tail.tail.head)
-      )
-
-    def fold[T](init: T)(f: (Stream[T], Stream[Value]) => Stream[T]): Stream[T] = {
-      lazy val result: Stream[T] = f(last(this, result).default(init), this)
-      result
-    }
-
-    def resetFold[T](init: T, reset: => Stream[_])(
-      f: (Stream[T], Stream[Value]) => Stream[T]
-    ): ResetStream[T] = {
-      lazy val state: Stream[T] = f(last(this, result).default(init), this)
-      lazy val result: Stream[T] =
-        reset.defined(defined(f(reset.const(init), this)).undefined(reset.const(init))).undefined(state)
-      ResetStream(result, state)
-    }
-
-    def reduce(f: (Stream[Value], Stream[Value]) => Stream[Value]): Stream[Value] = {
-      lazy val result: Stream[Value] = f(last(this, result), this).default(this)
-      result
-    }
-
-    def resetReduce(reset: => Stream[_])(
-      f: (Stream[Value], Stream[Value]) => Stream[Value]
-    ): ResetStream[Value] = {
-      lazy val state: Stream[Value] = f(last(this, result), this).default(this)
-      lazy val resetStream = reset.const(true).resetExists(this)
-      lazy val result: Stream[Value] = this.defined(last(this, resetStream).default(false)).ifThenElse(this, state)
-      ResetStream(result, state)
-    }
-
-    def sum[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      ev(this).fold(implicitly[Numeric[T]].zero)(_ + _)
-
-    def resetSum[T: Numeric](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): ResetStream[T] =
-      ev(this).resetFold(implicitly[Numeric[T]].zero, reset)(_ + _)
-
-    def prod[T: Numeric](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      ev(this).fold(implicitly[Numeric[T]].one)(_ * _)
-
-    def resetProd[T: Numeric](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): ResetStream[T] =
-      ev(this).resetFold(implicitly[Numeric[T]].one, reset)(_ * _)
-
-    def max[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      ev(this).reduce(_ max _)
-
-    def resetMax[T: Ordering](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): ResetStream[T] =
-      ev(this).resetReduce(reset)(_ max _)
-
-    def min[T: Ordering](implicit ev: Stream[Value] =:= Stream[T]): Stream[T] =
-      ev(this).reduce(_ min _)
-
-    def resetMin[T: Ordering](reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[T]): ResetStream[T] =
-      ev(this).resetReduce(reset)(_ min _)
-
-    def count: Stream[Int] =
-      const(1).sum
-
-    def resetCount(reset: => Stream[_]): ResetStream[Int] =
-      const(1).resetSum(reset)
-
-    def exists(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
-      ev(this).fold(false)(_ || _)
-
-    def resetExists(reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[Boolean]): ResetStream[Boolean] =
-      ev(this).resetFold(false, reset)(_ || _)
-
-    def forall(implicit ev: Stream[Value] =:= Stream[Boolean]): Stream[Boolean] =
-      ev(this).fold(true)(_ && _)
-
-    def resetForall(reset: => Stream[_])(implicit ev: Stream[Value] =:= Stream[Boolean]): ResetStream[Boolean] =
-      ev(this).resetFold(true, reset)(_ && _)
-
-    def first(): Stream[Value] = {
-      def helper(a: Stream[Value], b: Stream[Value]) =
-        lift(a :: b :: HNil)((x: Value :: Value :: HNil) => Some(x.head))
-
-      reduce(helper)
-    }
-
-    def resetFirst(reset: => Stream[_]): ResetStream[Value] = {
-      def helper(a: Stream[Value], b: Stream[Value]) =
-        lift(a :: b :: HNil)((x: Value :: Value :: HNil) => Some(x.head))
-
-      resetReduce(reset)(helper)
-    }
-
-    def mark(from: => Stream[Boolean], to: Stream[Boolean]): Stream[RegionMark] = {
-      val from_ = this.defined(from.default(false))
-      val to_ = this.defined(to.default(false))
-      lazy val state: Stream[RegionMark] = last(this, result).default(RegionOutside)
-      lazy val begin: Stream[Boolean] = (state === RegionOutside || to_) && from_
-      lazy val end: Stream[Boolean] = (state === RegionInside || state === RegionBegin) && to_
-      lazy val result: Stream[RegionMark] =
-        begin.ifThenElse(this.const(RegionBegin),
-          end.ifThenElse(this.const(RegionOutside),
-            (state === RegionBegin).ifThenElse(this.const(RegionInside), state)))
-      result
-    }
-
-
-    def merge[T](other: Stream[T]): Stream[Unit] = {
-      def helper[A, B](first: Stream[A], second: Stream[B]) =
-        lift(first :: second :: HNil)((x: A :: B :: HNil) => Some(()))
-
-      val a = this.const(())
-      val b = other.const(())
-      helper(a.default(b), b.default(a))
-    }
-
-    def time(): Stream[Time] =
-      Operation[Time, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), this :: HNil)(
-        (t, s, i) => (s, if (i.head.isDefined) Some(t) else None))
-
-    def default(value: Value): Stream[Value] =
-      Operation[Value, Unit, Option[Value] :: HNil, Stream[Value] :: HNil]((), self :: HNil) {
+    def time(): Stream =
+      Operation[BigInt, Unit, Option[TesslaCore.Value] :: HNil, Stream :: HNil]((), this :: HNil)(
+        (t, s, i) => (s, if (i.head.isDefined) Some(TesslaCore.IntLiteral(t, UnknownLoc)) else None))
+
+    def default(value: TesslaCore.Value): Stream =
+      Operation[TesslaCore.Value, Unit, Option[TesslaCore.Value] :: HNil, Stream :: HNil]((), self :: HNil) {
         case (t, _, Some(value) :: _) => ((), Some(value))
-        case (t, _, None :: _) => ((), if (t equiv zero) Some(value) else None)
+        case (t, _, None :: _) => ((), if (t == 0) Some(value) else None)
       }
 
-    def default(when: Stream[Value]): Stream[Value] =
-      Operation[Value, Boolean, Option[Value] :: Option[Value] :: HNil, Stream[Value] :: Stream[Value] :: HNil](
+    def default(when: Stream): Stream =
+      Operation[TesslaCore.Value, Boolean, Option[TesslaCore.Value] :: Option[TesslaCore.Value] :: HNil, Stream :: Stream :: HNil](
         false, self :: when :: HNil
       ) {
         case (_, false, Some(v) :: _) => (true, Some(v))
@@ -597,22 +263,21 @@ class Specification[Time: Numeric]() {
       }
   }
 
-  sealed abstract class Triggered[Value]() extends Stream[Value] {
+  sealed abstract class Triggered extends Stream {
     inputs +:= this
 
-    private[Specification] def step()
-
+    def step(): Unit
   }
 
-  final class Input[Value] private[Specification]() extends Triggered[Value] {
-    private var value: Option[Value] = None
+  final class Input extends Triggered {
+    private var value: Option[TesslaCore.Value] = None
 
-    def provide(value: Value): Unit = {
+    def provide(value: TesslaCore.Value): Unit = {
       require(acceptInput)
       this.value = Some(value)
     }
 
-    private[Specification] def step(): Unit = {
+    override def step(): Unit = {
       propagate(value)
       value = None
     }
@@ -651,42 +316,43 @@ class Specification[Time: Numeric]() {
         false
     }
 
-  implicit def consStreamConstraint[Value, Complete <: HList, Inputs <: HList, InputStreams <: HList](
-    implicit ev: StreamConstraint[Complete, Inputs, InputStreams]
-  ): StreamConstraint[Value :: Complete, Option[Value] :: Inputs, Stream[Value] :: InputStreams] =
-    new StreamConstraint[Value :: Complete, Option[Value] :: Inputs, Stream[Value] :: InputStreams]() {
+
+  implicit def consStreamConstraint[ Complete <: HList, Inputs <: HList, InputStreams <: HList](
+       implicit ev: StreamConstraint[Complete, Inputs, InputStreams]): StreamConstraint[TesslaCore.Value :: Complete, Option[TesslaCore.Value] :: Inputs, Stream :: InputStreams] =
+    new StreamConstraint[TesslaCore.Value :: Complete, Option[TesslaCore.Value] :: Inputs, Stream :: InputStreams]() {
       override val length = ev.length + 1
       override val init = None :: ev.init
 
       override def register(
-        streams: Stream[Value] :: InputStreams, getState: () => Option[Value] :: Inputs,
-        setState: (Option[Value] :: Inputs) => Unit
-      ): Unit = {
+                             streams: Stream :: InputStreams, getState: () => Option[TesslaCore.Value] :: Inputs,
+                             setState: (Option[TesslaCore.Value] :: Inputs) => Unit
+                           ): Unit = {
         streams.head.addListener {
           value => setState(value :: getState().tail)
         }
         ev.register(streams.tail, () => getState().tail, state => setState(getState().head :: state))
       }
 
-      override def orElse(inputs: Option[Value] :: Inputs, fallback: Option[Value] :: Inputs) =
+      override def orElse(inputs: Option[TesslaCore.Value] :: Inputs, fallback: Option[TesslaCore.Value] :: Inputs) =
         inputs.head.orElse(fallback.head) :: ev.orElse(inputs.tail, fallback.tail)
 
-      override def complete(inputs: Option[Value] :: Inputs) =
+      override def complete(inputs: Option[TesslaCore.Value] :: Inputs) =
         inputs.head.flatMap(x => ev.complete(inputs.tail).map(y => x :: y))
 
-      override def hasSome(inputs: Option[Value] :: Inputs) =
+      override def hasSome(inputs: Option[TesslaCore.Value] :: Inputs) =
         inputs.head.isDefined || ev.hasSome(inputs.tail)
 
     }
 
+
   def Operation[Value, State, Inputs <: HList, InputStreams <: HList](
-    initState: State, inputStreams: InputStreams
-  )(
-    op: (Time, State, Inputs) => (State, Option[Value])
-  )(
-    implicit constraint: StreamConstraint[_, Inputs, InputStreams]
-  ): Stream[Value] =
-    new Stream[Value] {
+                                                                       initState: State, inputStreams: InputStreams
+                                                                     )(
+                                                                       op: (BigInt, State, Inputs) => (State, Option[TesslaCore.Value])
+                                                                     )(
+                                                                       implicit constraint: StreamConstraint[_, Inputs, InputStreams]
+                                                                     ): Stream =
+    new Stream {
       private var state: State = initState
       private var inputs: Inputs = constraint.init
       private var counter = 0
@@ -707,18 +373,18 @@ class Specification[Time: Numeric]() {
     }
 
   def Operation[State, Value](
-    initState: State, inputStreams: Seq[Stream[Value]]
-  )(
-    op: (Time, State, Seq[Option[Value]]) => (State, Option[Value])
-  ): Stream[Value] =
-    new Stream[Value] {
+                               initState: State, inputStreams: Seq[Stream]
+                             )(
+                               op: (BigInt, State, Seq[Option[TesslaCore.Value]]) => (State, Option[TesslaCore.Value])
+                             ): Stream =
+    new Stream {
       private var state: State = initState
-      private var inputs: Array[Option[Value]] = inputStreams.map(_ => None).toArray
+      private var inputs: Array[Option[TesslaCore.Value]] = inputStreams.map(_ => None).toArray
       private var counter = 0
 
       override protected def init(): Unit = {
         for ((stream, i) <- inputStreams.zipWithIndex) {
-          stream.addListener {value =>
+          stream.addListener { value =>
             counter += 1
             inputs(i) = value
             if (counter == inputStreams.length) {
@@ -733,11 +399,10 @@ class Specification[Time: Numeric]() {
       }
     }
 
+  def Input(): Input = new Input()
 
-  def Input[Value](): Input[Value] =
-    new Input[Value]()
 
-  def printStream(stream: Stream[_], name: String): Unit =
+  def printStream(stream: Stream, name: String): Unit =
     stream.addListener {
       case Some(value) => println(s"$getTime: $name = $value")
       case None =>
@@ -751,17 +416,17 @@ class Specification[Time: Numeric]() {
 
   case object RegionInside extends RegionMark
 
-  final class ResetStream[A](value : => Stream[A], proposed_ : => Stream[A]) extends Stream[A] {
+  final class ResetStream(value: => Stream, proposed_ : => Stream) extends Stream {
 
-    private[Specification] override protected def init(): Unit = {
+    override def init(): Unit = {
       value.addListener(x => propagate(x))
     }
 
-    def proposed: Stream[A] = proposed_
+    def proposed: Stream = proposed_
   }
 
   object ResetStream {
-    def apply[A](value: => Stream[A], proposed: => Stream[A]): ResetStream[A] =
+    def apply[A](value: => Stream, proposed: => Stream): ResetStream =
       new ResetStream(value, proposed)
   }
 

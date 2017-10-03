@@ -7,23 +7,24 @@ import shapeless.{::, HNil}
 
 import scala.io.Source
 
-class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigInt] {
-  val inStreams: Map[String, (Input[TesslaCore.Value], Types.ValueType)] = spec.inStreams.map {
+class Interpreter(val spec: TesslaCore.Specification) extends Specification {
+  val inStreams: Map[String, (Input, Types.ValueType)] = spec.inStreams.map {
     case (name, typ, _) =>
-      name -> (Input[TesslaCore.Value](), typ.elementType)
+      name -> (Input, typ.elementType)
   }.toMap
 
-  lazy val defs: Map[String, Lazy[Stream[TesslaCore.Value]]] = inStreams.mapValues {
+
+  lazy val defs: Map[String, Lazy[Stream]] = inStreams.mapValues {
     case (inputStream, _) => Lazy(inputStream)
   } ++ spec.streams.map {
     case (name, exp) => (name, Lazy(eval(exp)))
   }
 
-  lazy val outStreams: Map[String, Stream[TesslaCore.Value]] = spec.outStreams.map {
+  lazy val outStreams: Map[String, Stream] = spec.outStreams.map {
     case (name, streamRef) => name -> defs(streamRef.name).get
   }.toMap
 
-  private def evalStream(arg: TesslaCore.StreamRef): Stream[TesslaCore.Value] = arg match {
+  private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
     case TesslaCore.Stream(name, loc) =>
       defs.getOrElse(name, throw InternalError(s"Couldn't find stream named $name", loc)).get
     case TesslaCore.InputStream(name, loc) =>
@@ -31,7 +32,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     case TesslaCore.Nil(_) => nil
   }
 
-  private def eval(exp: TesslaCore.Expression): Stream[TesslaCore.Value] = exp match {
+  private def eval(exp: TesslaCore.Expression): Stream = exp match {
     case TesslaCore.Lift(op, Seq(), loc) =>
       try {
         op.eval(Seq(), loc) match {
@@ -61,27 +62,19 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     case TesslaCore.DelayedLast(values, delays, loc) =>
       delayedLast(intStream(evalStream(delays), loc), evalStream(values))
     case TesslaCore.Time(values, _) =>
-      intStreamToValueStream(evalStream(values).time())
+      evalStream(values).time()
   }
 
-  def intStream(stream: Stream[TesslaCore.Value], loc: Location): Stream[BigInt] = {
+  def intStream(stream: Stream, loc: Location): Stream = {
     lift(stream :: HNil) {
       (args: TesslaCore.Value :: HNil) =>
         args match {
-          case TesslaCore.IntLiteral(i, _) :: HNil => Some(i)
+          case TesslaCore.IntLiteral(i, _) :: HNil => Some(TesslaCore.IntLiteral(i, loc))
           case value :: HNil => throw TypeMismatch(Types.Int, value.typ, loc)
         }
     }
   }
 
-  def intStreamToValueStream(stream: Stream[BigInt]): Stream[TesslaCore.Value] = {
-    lift(stream :: HNil) {
-      (args: BigInt :: HNil) =>
-        args match {
-          case i :: HNil => Some(TesslaCore.IntLiteral(i, UnknownLoc))
-        }
-    }
-  }
 
   def addOutStreamListener(callback: (BigInt, String, TesslaCore.Value) => Unit) : Unit = {
     outStreams.foreach {
