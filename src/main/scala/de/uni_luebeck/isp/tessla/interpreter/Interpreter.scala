@@ -3,7 +3,6 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.Errors.{InternalError, TesslaError, TypeMismatch}
 import de.uni_luebeck.isp.tessla.{AstToCore, Compiler, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types, UnknownLoc}
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
-import shapeless.{::, HNil}
 
 import scala.io.Source
 
@@ -66,11 +65,11 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }
 
   def intStream(stream: Stream, loc: Location): Stream = {
-    lift(stream :: HNil) {
-      (args: TesslaCore.Value :: HNil) =>
-        args match {
-          case TesslaCore.IntLiteral(i, _) :: HNil => Some(TesslaCore.IntLiteral(i, loc))
-          case value :: HNil => throw TypeMismatch(Types.Int, value.typ, loc)
+    lift(stream :: Nil) {
+      (args: List[TesslaCore.Value]) =>
+        args.head match {
+          case TesslaCore.IntLiteral(i, _) => Some(TesslaCore.IntLiteral(i, loc))
+          case value => throw TypeMismatch(Types.Int, value.typ, loc)
         }
     }
   }
