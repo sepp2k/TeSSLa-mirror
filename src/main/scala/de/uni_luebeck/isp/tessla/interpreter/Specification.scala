@@ -1,7 +1,9 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import de.uni_luebeck.isp.tessla.Errors._
+
 import scala.collection.immutable.SortedMap
-import de.uni_luebeck.isp.tessla.{TesslaCore, UnknownLoc}
+import de.uni_luebeck.isp.tessla.{Location, TesslaCore, UnknownLoc}
 
 class Specification() {
   type Time = BigInt
@@ -19,10 +21,13 @@ class Specification() {
     * No more input values can be provided for the current time afterwards.
     */
   def step(): Unit = {
-    require(acceptInput)
-    acceptInput = false
-    for (input <- inputs) {
-      input.step()
+    if (acceptInput) {
+      acceptInput = false
+      for (input <- inputs) {
+        input.step()
+      }
+    } else {
+      throw ProvideAfterPropagationError(timeVar, UnknownLoc)
     }
   }
 
@@ -32,44 +37,49 @@ class Specification() {
     * @param timeDelta
     */
   def step(timeDelta: Time): Unit = {
-
-    require(timeDelta > 0)
-    if (acceptInput) {
-      step()
-    }
-    acceptInput = true
-    val newTime = timeVar + timeDelta
-    while (trigger._2.nonEmpty && trigger._2.head._1 < newTime) {
-      val active = trigger._2.head
-      trigger = (trigger._1 -- active._2, trigger._2.tail)
-      timeVar = active._1
-      for (input <- inputs) {
-        input.step()
+    if (timeDelta > 0) {
+      if (acceptInput) {
+        step()
       }
+      acceptInput = true
+      val newTime = timeVar + timeDelta
+      while (trigger._2.nonEmpty && trigger._2.head._1 < newTime) {
+        val active = trigger._2.head
+        trigger = (trigger._1 -- active._2, trigger._2.tail)
+        timeVar = active._1
+        for (input <- inputs) {
+          input.step()
+        }
+      }
+
+      val removed = trigger._2.takeWhile { case (t, _) => t <= newTime }
+      val remaining = trigger._2.dropWhile { case (t, _) => t <= newTime }
+      val map = removed.foldLeft(trigger._1)((x, y) => x -- y._2)
+      trigger = (map, remaining)
+
+      timeVar = newTime
+    } else {
+      throw NonPositiveTimeDeltaError(timeDelta, UnknownLoc)
     }
-
-    val removed = trigger._2.takeWhile { case (t, _) => t <= newTime }
-    val remaining = trigger._2.dropWhile { case (t, _) => t <= newTime }
-    val map = removed.foldLeft(trigger._1)((x, y) => x -- y._2)
-    trigger = (map, remaining)
-
-    timeVar = newTime
   }
 
   /*used in update*/
   private def updateTrigger(stream: Stream, newTime: Time): Unit = {
-    require(newTime > getTime)
-    val remaining = trigger._1.get(stream) match {
-      case Some(t) =>
-        val set = trigger._2(t) - stream
-        (trigger._1 - stream, if (set.isEmpty) trigger._2 - t else trigger._2 + (t -> set))
-      case None => trigger
+    if (newTime > getTime) {
+      val remaining = trigger._1.get(stream) match {
+        case Some(t) =>
+          val set = trigger._2(t) - stream
+          (trigger._1 - stream, if (set.isEmpty) trigger._2 - t else trigger._2 + (t -> set))
+        case None => trigger
+      }
+      val temp: Set[Any] = remaining._2.get(newTime) match {
+        case Some(set) => set + stream
+        case None => Set(stream)
+      }
+      trigger = (remaining._1 + (stream -> newTime), remaining._2 + (newTime -> temp))
+    } else {
+      throw DecreasingTimeStampsError(getTime, newTime, UnknownLoc)
     }
-    val temp: Set[Any] = remaining._2.get(newTime) match {
-      case Some(set) => set + stream
-      case None => Set(stream)
-    }
-    trigger = (remaining._1 + (stream -> newTime), remaining._2 + (newTime -> temp))
   }
 
   /*used*/
@@ -157,9 +167,9 @@ class Specification() {
               if (value > 0) {
                 value
               } else {
-                throw new Exception("Not allowed")
+                throw NegativeDelayError(value, loc) //TODO: possibly an internal error?
               }
-            case _ => throw new Exception("Not allowed")
+            case _ => throw new Exception("???") //TODO: Can this happen at all?
           }: Option[Time]
           update()
         })
@@ -218,15 +228,18 @@ class Specification() {
     def time(): Stream =
       Operation[Unit]((), Seq(this))(
         (t, s, i) => {
-          require(i.nonEmpty)
-          (s, if (i.head.isDefined) Some(TesslaCore.IntLiteral(t, UnknownLoc)) else None)
+          if (i.nonEmpty) {
+            (s, if (i.head.isDefined) Some(TesslaCore.IntLiteral(t, UnknownLoc)) else None)
+          } else {
+            sys.error("Internal Error: No inputs found.")
+          }
         })
 
     def default(value: TesslaCore.Value): Stream =
       Operation[Unit]((), self :: Nil) {
         case (t, _, Some(v) +: _) => ((), Some(v))
         case (t, _, None +: _) => ((), if (t == 0) Some(value) else None)
-        case (t, s, v) => throw new Exception(s"TODO $t $s $v")
+        case (_, _, _) => sys.error("Internal Error: No inputs found.")
       }
 
     def default(when: Stream): Stream =
@@ -236,7 +249,7 @@ class Specification() {
         case (_, false, Some(v) +: _) => (true, Some(v))
         case (_, false, _ +: Some(v) +: _) => (true, Some(v))
         case (_, s, v +: _) => (s, v)
-        case (_, _, _) => throw new Exception("TODO")
+        case (_, _, _) => sys.error("Internal Error: No inputs found.")
       }
   }
 
@@ -250,8 +263,11 @@ class Specification() {
     private var value: Option[TesslaCore.Value] = None
 
     def provide(value: TesslaCore.Value): Unit = {
-      require(acceptInput)
-      this.value = Some(value)
+      if (acceptInput) {
+        this.value = Some(value)
+      } else {
+        throw ProvideAfterPropagationError(timeVar, value.loc)
+      }
     }
 
     override def step(): Unit = {
