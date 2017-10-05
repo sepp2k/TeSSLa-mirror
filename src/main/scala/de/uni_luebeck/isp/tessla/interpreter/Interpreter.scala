@@ -65,8 +65,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }
 
   def intStream(stream: Stream, loc: Location): Stream = {
-    lift(stream :: Nil) {
-      (args: List[TesslaCore.Value]) =>
+    lift(Seq(stream)) {
+      (args: Seq[TesslaCore.Value]) =>
         args.head match {
           case TesslaCore.IntLiteral(i, _) => Some(TesslaCore.IntLiteral(i, loc))
           case value => throw TypeMismatch(Types.Int, value.typ, loc)
@@ -74,15 +74,17 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     }
   }
 
-
-  def addOutStreamListener(callback: (BigInt, String, TesslaCore.Value) => Unit) : Unit = {
+  def addOutStreamListener(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
     outStreams.foreach {
-      case (name, stream) => stream.addListener{_.foreach(callback(getTime, name, _))}
+      case (name, stream) => stream.addListener {
+        _.foreach(callback(getTime, name, _))
+      }
     }
   }
 }
 
 object Interpreter {
+
   class CoreToInterpreterSpec extends TranslationPhase[TesslaCore.Specification, Interpreter] {
     def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
   }

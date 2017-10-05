@@ -1,15 +1,15 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import scala.collection.immutable.SortedMap
-import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.{TesslaCore, UnknownLoc}
 
 class Specification() {
-  private var timeVar: BigInt = 0
-  private var trigger: (Map[Any, BigInt], SortedMap[BigInt, Set[Any]]) = (Map(), SortedMap())
+  type Time = BigInt
+  private var timeVar: Time = 0
+  private var trigger: (Map[Any, Time], SortedMap[Time, Set[Any]]) = (Map(), SortedMap())
   private var acceptInput = true
 
-  def getTime: BigInt = timeVar
+  def getTime: Time = timeVar
 
   private var inputs: List[Triggered] = Nil
 
@@ -31,7 +31,7 @@ class Specification() {
     *
     * @param timeDelta
     */
-  def step(timeDelta: BigInt): Unit = {
+  def step(timeDelta: Time): Unit = {
 
     require(timeDelta > 0)
     if (acceptInput) {
@@ -57,7 +57,7 @@ class Specification() {
   }
 
   /*used in update*/
-  private def updateTrigger(stream: Stream, newTime: BigInt): Unit = {
+  private def updateTrigger(stream: Stream, newTime: Time): Unit = {
     require(newTime > getTime)
     val remaining = trigger._1.get(stream) match {
       case Some(t) =>
@@ -75,14 +75,14 @@ class Specification() {
   /*used*/
   def lift(streams: Seq[Stream])
           (op: Seq[TesslaCore.Value] => Option[TesslaCore.Value]): Stream =
-    Operation[Seq[Option[TesslaCore.Value]], TesslaCore.Value](streams.map(_ => None), streams)((_, state, inputs) => {
+    Operation[Seq[Option[TesslaCore.Value]]](streams.map(_ => None), streams)((_, state, inputs) => {
       val newState = inputs.zip(state).map {
         case (in, st) => in.orElse(st)
       }
       val newOutput =
         if (inputs.exists(_.isDefined)) {
-          val tmp = newState.foldLeft(Some(Nil): Option[List[TesslaCore.Value]]) {
-            case (Some(list), Some(value)) => Some(value :: list)
+          val tmp = newState.foldLeft(Some(Nil): Option[Seq[TesslaCore.Value]]) {
+            case (Some(list), Some(value)) => Some(value +: list)
             case _ => None
           }
           tmp.flatMap(x => op(x.reverse))
@@ -90,17 +90,6 @@ class Specification() {
 
       (newState, newOutput)
     })
-
-  /*used*/
-  def lift(streams: List[Stream])(op: List[TesslaCore.Value] => Option[TesslaCore.Value]): Stream = {
-    val constraint = consStreamConstraint
-    Operation[List[TesslaCore.Value]](constraint.init, streams)((_, state, inputs) => {
-      val newState = constraint.orElse(inputs, state)
-      val newOutput =
-        op(constraint.complete(newState))
-      (newState, newOutput)
-    })(consStreamConstraint)
-  }
 
   /*used*/
   def last(times: Stream, values: => Stream): Stream =
@@ -139,8 +128,8 @@ class Specification() {
     new Triggered {
       private var oldValue: Option[TesslaCore.Value] = None
       private var newValue: Option[TesslaCore.Value] = None
-      private var newDelay: Option[BigInt] = None
-      private var targetTime: Option[BigInt] = None
+      private var newDelay: Option[Time] = None
+      private var targetTime: Option[Time] = None
       private var counter = 0
 
       /*used in init and step*/
@@ -171,7 +160,7 @@ class Specification() {
                 throw new Exception("Not allowed")
               }
             case _ => throw new Exception("Not allowed")
-          }: Option[BigInt]
+          }: Option[Time]
           update()
         })
         values.addListener {
@@ -205,7 +194,7 @@ class Specification() {
     self =>
 
     /*List of listeners which get invoked on every single value propagation*/
-    private var listeners: List[Option[TesslaCore.Value] => Unit] = Nil
+    private var listeners: Seq[Option[TesslaCore.Value] => Unit] = Nil
 
     /*Register a new listener*/
     def addListener(listener: Option[TesslaCore.Value] => Unit): Unit = {
@@ -227,23 +216,28 @@ class Specification() {
     }
 
     def time(): Stream =
-      Operation[Unit]((), this :: Nil)(
-        (t, s, i) => (s, if (i.nonEmpty) Some(TesslaCore.IntLiteral(t, UnknownLoc)) else None))(consStreamConstraint)
+      Operation[Unit]((), Seq(this))(
+        (t, s, i) => {
+          require(i.nonEmpty)
+          (s, if (i.head.isDefined) Some(TesslaCore.IntLiteral(t, UnknownLoc)) else None)
+        })
 
     def default(value: TesslaCore.Value): Stream =
       Operation[Unit]((), self :: Nil) {
-        case (t, _, v :: _) => ((), Some(v))
-        case (t, _, Nil) => ((), if (t == 0) Some(value) else None)
-      }(consStreamConstraint)
+        case (t, _, Some(v) +: _) => ((), Some(v))
+        case (t, _, None +: _) => ((), if (t == 0) Some(value) else None)
+        case (t, s, v) => throw new Exception(s"TODO $t $s $v")
+      }
 
     def default(when: Stream): Stream =
       Operation[Boolean](
-        false, self :: when :: Nil
+        false, Seq(self, when)
       ) {
-        case (_, false, v :: _) => (true, Some(v))
-        case (_, false, _ :: v :: _) => (true, Some(v))
-        case (_, s, l) => (s, l.headOption)
-      }(consStreamConstraint)
+        case (_, false, Some(v) +: _) => (true, Some(v))
+        case (_, false, _ +: Some(v) +: _) => (true, Some(v))
+        case (_, s, v +: _) => (s, v)
+        case (_, _, _) => throw new Exception("TODO")
+      }
   }
 
   sealed abstract class Triggered extends Stream {
@@ -267,99 +261,8 @@ class Specification() {
 
   }
 
-  sealed abstract class StreamConstraint() {
-    def length: Int
-
-    def init: List[TesslaCore.Value]
-
-    def register(streams: List[Stream], getState: () => List[TesslaCore.Value], setState: List[TesslaCore.Value]=> Unit): Unit
-
-    def orElse(inputs: List[TesslaCore.Value], fallback: List[TesslaCore.Value]): List[TesslaCore.Value]
-
-    def hasSome(inputs: List[TesslaCore.Value]): Boolean
-
-    def complete(inputs: List[TesslaCore.Value]): List[TesslaCore.Value]
-  }
-
-  val nilSteamConstraint: StreamConstraint =
-    new StreamConstraint {
-      override val length = 0
-      override val init = Nil
-
-      override def register(streams: List[Stream], getState: () => List[TesslaCore.Value], setState: List[TesslaCore.Value] => Unit): Unit = {
-      }
-
-      override def orElse(inputs: List[TesslaCore.Value], fallback: List[TesslaCore.Value]) =
-        Nil
-
-      override def complete(inputs: List[TesslaCore.Value]) =
-        Nil
-
-      override def hasSome(inputs: List[TesslaCore.Value]) =
-        false
-    }
-
-
-  def consStreamConstraint: StreamConstraint =
-    new StreamConstraint() {
-      val ev = nilSteamConstraint
-      override val length = ev.length + 1
-      override val init = ev.init
-
-      override def register(
-                             streams: List[Stream], getState: () => List[TesslaCore.Value],
-                             setState: List[TesslaCore.Value]=> Unit
-                           ): Unit = {
-        streams.head.addListener {
-          value =>setState(value.map(_ :: getState().tail).getOrElse(getState().tail))
-        }
-        ev.register(streams.tail, () => getState().tail, state => setState(getState().head :: state))
-      }
-
-      override def orElse(inputs: List[TesslaCore.Value], fallback: List[TesslaCore.Value]) =
-        inputs.headOption.getOrElse(fallback.head) :: ev.orElse(inputs.tail, fallback.tail)
-
-      override def complete(inputs: List[TesslaCore.Value]) =
-        inputs.flatMap(x => ev.complete(inputs.tail).flatMap(y => List(x,y)))
-
-      override def hasSome(inputs: List[TesslaCore.Value]) =
-        inputs.nonEmpty || ev.hasSome(inputs.tail)
-
-    }
-
-
-  def Operation[State](
-                                                                       initState: State, inputStreams: List[Stream]
-                                                                     )(
-                                                                       op: (BigInt, State, List[TesslaCore.Value]) => (State, Option[TesslaCore.Value])
-                                                                     )(
-                                                                        constraint: StreamConstraint
-                                                                     ): Stream =
-    new Stream {
-      private var state: State = initState
-      private var inputs: List[TesslaCore.Value]= constraint.init
-      private var counter = 0
-
-      override protected def init(): Unit = {
-        constraint.register(inputStreams, () => inputs, (newInputStreams) => {
-          counter += 1
-          inputs = newInputStreams
-          if (counter == constraint.length) {
-            val (newState, output) = op(Specification.this.getTime, state, inputs)
-            counter = 0
-            inputs = constraint.init
-            state = newState
-            propagate(output)
-          }
-        })
-      }
-    }
-
-  def Operation[State, Value](
-                               initState: State, inputStreams: Seq[Stream]
-                             )(
-                               op: (BigInt, State, Seq[Option[TesslaCore.Value]]) => (State, Option[TesslaCore.Value])
-                             ): Stream =
+  def Operation[State](initState: State, inputStreams: Seq[Stream])
+                      (op: (Time, State, Seq[Option[TesslaCore.Value]]) => (State, Option[TesslaCore.Value])): Stream =
     new Stream {
       private var state: State = initState
       private var inputs: Array[Option[TesslaCore.Value]] = inputStreams.map(_ => None).toArray
@@ -383,7 +286,6 @@ class Specification() {
     }
 
   def Input(): Input = new Input()
-
 
   def printStream(stream: Stream, name: String): Unit =
     stream.addListener {
