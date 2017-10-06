@@ -63,7 +63,6 @@ class Specification() {
     }
   }
 
-  /*used in update*/
   private def updateTrigger(stream: Stream, newTime: Time): Unit = {
     if (newTime > getTime) {
       val remaining = trigger._1.get(stream) match {
@@ -82,26 +81,40 @@ class Specification() {
     }
   }
 
-  /*used*/
   def lift(streams: Seq[Stream])
           (op: Seq[TesslaCore.Value] => Option[TesslaCore.Value]): Stream =
-    Operation[Seq[Option[TesslaCore.Value]]](streams.map(_ => None), streams)((_, state, inputs) => {
-      val newState = inputs.zip(state).map {
-        case (in, st) => in.orElse(st)
-      }
-      val newOutput =
-        if (inputs.exists(_.isDefined)) {
-          val tmp = newState.foldLeft(Some(Nil): Option[Seq[TesslaCore.Value]]) {
-            case (Some(list), Some(value)) => Some(value +: list)
-            case _ => None
+    new Stream {
+      private var state: Seq[Option[TesslaCore.Value]] = streams.map(_ => None)
+      private var inputs: Array[Option[TesslaCore.Value]] = streams.map(_ => None).toArray
+      private var counter = 0
+
+      override protected def init(): Unit = {
+        for ((stream, i) <- streams.zipWithIndex) {
+          stream.addListener { value =>
+            counter += 1
+            inputs(i) = value
+            if (counter == streams.length) {
+              val newState = inputs.zip(state).map {
+                case (in, st) => in.orElse(st)
+              }
+              val newOutput =
+                if (inputs.exists(_.isDefined)) {
+                  val tmp = newState.foldLeft(Some(Nil): Option[Seq[TesslaCore.Value]]) {
+                    case (Some(list), Some(v)) => Some(v +: list)
+                    case _ => None
+                  }
+                  tmp.flatMap(x => op(x.reverse))
+                } else None
+              counter = 0
+              inputs = streams.map(_ => None).toArray
+              state = newState
+              propagate(newOutput)
+            }
           }
-          tmp.flatMap(x => op(x.reverse))
-        } else None
+        }
+      }
+    }
 
-      (newState, newOutput)
-    })
-
-  /*used*/
   def last(times: Stream, values: => Stream): Stream =
     new Stream {
       private var done = false
@@ -133,7 +146,6 @@ class Specification() {
       }
     }
 
-  /*used*/
   def delayedLast(delays: => Stream, values: => Stream): Stream =
     new Triggered {
       private var oldValue: Option[TesslaCore.Value] = None
@@ -142,7 +154,6 @@ class Specification() {
       private var targetTime: Option[Time] = None
       private var counter = 0
 
-      /*used in init and step*/
       def update(): Unit = {
         if (counter == 2) {
           counter = 0
@@ -159,7 +170,6 @@ class Specification() {
         }
       }
 
-      /*used in addlistener*/
       override def init(): Unit = {
         delays.addListener(delay => {
           newDelay = delay.map {
@@ -192,7 +202,6 @@ class Specification() {
       }
     }
 
-  /*nil*/
   def nil: Stream =
     new Triggered {
       override def step() = {
@@ -216,7 +225,6 @@ class Specification() {
       }
     }
 
-    /**/
     protected def init(): Unit = {}
 
     def propagate(value: Option[TesslaCore.Value]): Unit = {
@@ -226,31 +234,51 @@ class Specification() {
     }
 
     def time(): Stream =
-      Operation[Unit]((), Seq(this))(
-        (t, s, i) => {
-          if (i.nonEmpty) {
-            (s, if (i.head.isDefined) Some(TesslaCore.IntLiteral(t, UnknownLoc)) else None)
-          } else {
-            sys.error("Internal Error: No inputs found.")
+      new Stream {
+        override protected def init(): Unit = {
+          self.addListener {
+            value => propagate(value.map{_ => TesslaCore.IntLiteral(getTime, UnknownLoc)})
           }
-        })
-
-    def default(value: TesslaCore.Value): Stream =
-      Operation[Unit]((), self :: Nil) {
-        case (t, _, Some(v) +: _) => ((), Some(v))
-        case (t, _, None +: _) => ((), if (t == 0) Some(value) else None)
-        case (_, _, _) => sys.error("Internal Error: No inputs found.")
+        }
       }
 
-    def default(when: Stream): Stream =
-      Operation[Boolean](
-        false, Seq(self, when)
-      ) {
-        case (_, false, Some(v) +: _) => (true, Some(v))
-        case (_, false, _ +: Some(v) +: _) => (true, Some(v))
-        case (_, s, v +: _) => (s, v)
-        case (_, _, _) => sys.error("Internal Error: No inputs found.")
+    def default(defaultValue: TesslaCore.Value): Stream =
+      new Stream {
+        override protected def init(): Unit = {
+          self.addListener {
+            case Some(v) => propagate(Some(v))
+            case None => propagate(if (getTime == 0) Some(defaultValue) else None)
+          }
+        }
       }
+
+    def default(when: Stream): Stream = {
+      new Stream {
+        override protected def init(): Unit = {
+          var other: Option[Option[TesslaCore.Value]] = None
+          var state = false
+
+          def listener(flip: Boolean) = {
+            value: Option[TesslaCore.Value] =>
+              if (other.isDefined) {
+                val (newState, result) = (state, if (flip) other.get else value, if (flip) value else other.get) match {
+                  case (false, Some(v), _) => (true, Some(v))
+                  case (false, _, Some(v)) => (true, Some(v))
+                  case (s, v, _) => (s, v)
+                }
+                state = newState
+                propagate(result)
+                other = None
+              } else {
+                other = Some(value)
+              }
+          }
+
+          self.addListener(listener(false))
+          when.addListener(listener(true))
+        }
+      }
+    }
   }
 
   sealed abstract class Triggered extends Stream {
@@ -276,30 +304,6 @@ class Specification() {
     }
 
   }
-
-  def Operation[State](initState: State, inputStreams: Seq[Stream])
-                      (op: (Time, State, Seq[Option[TesslaCore.Value]]) => (State, Option[TesslaCore.Value])): Stream =
-    new Stream {
-      private var state: State = initState
-      private var inputs: Array[Option[TesslaCore.Value]] = inputStreams.map(_ => None).toArray
-      private var counter = 0
-
-      override protected def init(): Unit = {
-        for ((stream, i) <- inputStreams.zipWithIndex) {
-          stream.addListener { value =>
-            counter += 1
-            inputs(i) = value
-            if (counter == inputStreams.length) {
-              val (newState, output) = op(Specification.this.getTime, state, inputs)
-              counter = 0
-              inputs = inputStreams.map(_ => None).toArray
-              state = newState
-              propagate(output)
-            }
-          }
-        }
-      }
-    }
 
   def Input(): Input = new Input()
 
