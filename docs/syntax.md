@@ -27,10 +27,21 @@
     type          ::= ID "<" type ("," type)* ">"
                     | ID
     infixOperator ::= "%" | "<<" | ">>" | ">=" | "<=" | "<" | ">" | "!=" | "==" | "&" | "|" | "^"
-                    | "+" | "-" | "*" | "/"
+                    | "+" | "-" | "*" | "/" | "&&" | "||"
     unaryOperator ::= "~" | "-" | "!"
 
 Anything that appears within quotes in the grammar is a keyword and can not be used as an identifier.
+
+The precedence of the infix operators is as follows (lowest-to-highest):
+
+ * `||`
+ * `&&`
+ * `==`, `<`, `>`, `<=`, `>=`, `!=`
+ * `|`, `^`
+ * `&`
+ * `<<`, `>>`
+ * `+`, `-`
+ * `*`, `/`
 
 ## Types
 
