@@ -4,61 +4,63 @@ import de.uni_luebeck.isp.tessla.Errors.UnknownTimeUnit
 
 object TimeUnit {
   def fromString(str: String, loc: Location): TimeUnit = str.replaceAll("\"", "") match {
-    case "ns" => Nanos
-    case "us" => Micros
-    case "ms" => Millis
-    case "s" => Seconds
-    case "min" => Minutes
-    case "h" => Hours
-    case "d" => Days
+    case "ns" => Nanos(loc)
+    case "us" => Micros(loc)
+    case "ms" => Millis(loc)
+    case "s" => Seconds(loc)
+    case "min" => Minutes(loc)
+    case "h" => Hours(loc)
+    case "d" => Days(loc)
     case _ => throw UnknownTimeUnit(str, loc)
   }
 
   sealed abstract class TimeUnit {
     val factor: BigInt
 
+    def loc: Location
+
     def <(that: TimeUnit): Boolean = factor < that.factor
 
     def convertTo(that: TimeUnit): BigInt = factor / that.factor
   }
 
-  case object Nanos extends TimeUnit {
+  case class Nanos(loc: Location) extends TimeUnit {
     val factor = 1
 
     override def toString: String = "ns"
   }
 
-  case object Micros extends TimeUnit {
+  case class Micros(loc: Location) extends TimeUnit {
     val factor = 1000
 
     override def toString: String = "us"
   }
 
-  case object Millis extends TimeUnit {
+  case class Millis(loc: Location) extends TimeUnit {
     val factor = 1000000
 
     override def toString: String = "ms"
   }
 
-  case object Seconds extends TimeUnit {
+  case class Seconds(loc: Location) extends TimeUnit {
     val factor = 1000000000
 
     override def toString: String = "s"
   }
 
-  case object Minutes extends TimeUnit {
+  case class Minutes(loc: Location) extends TimeUnit {
     val factor = 60000000000L
 
     override def toString: String = "min"
   }
 
-  case object Hours extends TimeUnit {
+  case class Hours(loc: Location) extends TimeUnit {
     val factor = 3600000000000L
 
     override def toString: String = "h"
   }
 
-  case object Days extends TimeUnit {
+  case class Days(loc: Location) extends TimeUnit {
     val factor = 86400000000000L
 
     override def toString: String = "d"

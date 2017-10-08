@@ -5,6 +5,7 @@ import de.uni_luebeck.isp.tessla.Types.Type
 import de.uni_luebeck.isp.tessla.interpreter.Traces
 
 object Errors {
+
   abstract class TesslaError extends Exception with Diagnostic
 
   case class TypeMismatch(expected: Type, found: Type, loc: Location) extends TesslaError {
@@ -76,8 +77,7 @@ object Errors {
     def message = s"Invalid syntax: $m"
   }
 
-  case class NotAnEventError(line: Traces.Line) extends TesslaError{
-    def loc: Location = line.loc
+  case class NotAnEventError(line: String, loc: Location) extends TesslaError {
     def message: String = s"Input $line is not an event"
   }
 
@@ -85,11 +85,12 @@ object Errors {
     def message: String = s"Undeclared input stream: $streamName"
   }
 
-  case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location) extends TesslaError{
+  case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location) extends TesslaError {
     def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
   case class InputTypeMismatch(value: TesslaCore.Value, streamName: String, streamType: Types.ValueType, loc: Location) extends TesslaError {
     def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
   }
+
 }

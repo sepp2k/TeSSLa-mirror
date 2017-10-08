@@ -3,28 +3,19 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.Errors.{InputTypeMismatch, UndeclaredInputStreamError}
 import de.uni_luebeck.isp.tessla.TesslaCore
 import de.uni_luebeck.isp.tessla.Location
+import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 
 object Traces {
-
-  sealed trait Line {
-    def loc: Location
-  }
-
-  case class TimeUnit(loc: Location, timeUnit: de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit) extends Line {
-    override def toString: String = timeUnit.toString
-  }
-
-  case class Event(loc: Location, timeStamp: BigInt, stream: Identifier, value: TesslaCore.LiteralValue) extends Line {
+  case class Event(loc: Location, timeStamp: BigInt, stream: Identifier, value: TesslaCore.LiteralValue){
     override def toString: String = s"$timeStamp: $stream = $value"
   }
 
   case class Identifier(loc: Location, name: String) {
     override def toString: String = "\"" + name + "\""
   }
-
 }
 
-class Traces(val timeStampUnit: Option[Traces.TimeUnit], values: Iterator[Traces.Event]) {
+class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]) {
 
   def feedInput(tesslaSpec: Interpreter, threshold: BigInt)(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
     val queue = new TracesQueue(threshold)
