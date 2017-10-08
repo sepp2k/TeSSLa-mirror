@@ -9,18 +9,18 @@ import io.Source
   *
   * @param src
   */
-class TesslaSource(val src: Source, val path: String = "") {}
+class TesslaSource(val src: Source, val path: String) {}
 
 
 /**
   * Convenience object for creating TesslaSource instances.
   */
 object TesslaSource {
-  def fromFile(name: String): TesslaSource = {
-    new TesslaSource(Source.fromFile(name), name)
+  def fromFile(path: String): TesslaSource = {
+    new TesslaSource(Source.fromFile(path), path)
   }
 
-  def fromString(str: String): TesslaSource = {
-    new TesslaSource(Source.fromString(str))
+  def fromString(str: String, path: String): TesslaSource = {
+    new TesslaSource(Source.fromString(str), path)
   }
 }
