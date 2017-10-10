@@ -78,7 +78,7 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
               (Seq(), Literal(TesslaCore.IntLiteral(value, loc)))
             case Ast.ExprTimeLit(value, unit2, loc) => unit match {
               case Some(u) => if (unit2 < u) {
-                throw TimeUnitConversionError(unit2, u, loc)
+                throw TimeUnitConversionError(unit2, u)
               } else {
                 (Seq(), Literal(TesslaCore.IntLiteral(value * unit2.convertTo(u), loc)))
               }

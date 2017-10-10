@@ -65,7 +65,12 @@ object Errors {
     def message = s"No time unit defined in trace file"
   }
 
-  case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit, loc: Location) extends TesslaError {
+  case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit) extends TesslaError {
+    // This error happens when applying the unit `from` to a number in a spec that uses the unit `to`
+    // (where `from` can't be converted to `to`), so we want to use `from`'s location to have it
+    // marked as the problem.
+    def loc = from.loc
+
     def message = s"Cannot convert from $from to $to"
   }
 
