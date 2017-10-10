@@ -94,6 +94,14 @@ object Errors {
     def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
+  case class ProvideAfterPropagationError(time: BigInt, loc: Location) extends TesslaError {
+    def message: String = s"Tried to provide inputs after their propagation at time $time"
+  }
+
+  case class NegativeDelayError(value: BigInt, loc: Location) extends TesslaError {
+    def message: String = s"Negative delay $value"
+  }
+
   case class InputTypeMismatch(value: TesslaCore.Value, streamName: String, streamType: Types.ValueType, loc: Location) extends TesslaError {
     def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
   }
