@@ -307,8 +307,6 @@ class Specification() {
 
   }
 
-  def Input(): Input = new Input()
-
   def printStream(stream: Stream, name: String): Unit =
     stream.addListener {
       case Some(value) => println(s"$getTime: $name = $value")

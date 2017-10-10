@@ -9,7 +9,7 @@ import scala.io.Source
 class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   val inStreams: Map[String, (Input, Types.ValueType)] = spec.inStreams.map {
     case (name, typ, _) =>
-      name -> (Input, typ.elementType)
+      name -> (new Input, typ.elementType)
   }.toMap
 
 
