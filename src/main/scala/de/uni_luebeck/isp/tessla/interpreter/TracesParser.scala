@@ -2,9 +2,9 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.{SourceLoc, TesslaCore, TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
-import de.uni_luebeck.isp.tessla.Errors.{NotAnEventError, ParserError}
+import de.uni_luebeck.isp.tessla.Errors.{NotAnEventError, ParserError, TesslaError}
 import de.uni_luebeck.isp.tessla.TimeUnit._
-import de.uni_luebeck.isp.tessla.interpreter.Traces.{Event, Step}
+import de.uni_luebeck.isp.tessla.interpreter.Traces.Event
 
 object TracesParser extends Parsers {
   def parseTraces(tesslaSource: TesslaSource): Traces = {
@@ -144,29 +144,29 @@ object TracesParser extends Parsers {
       bigNat ~ (((COMMA ~> bigNat) ~ (DDOT ~> identifierOrWildcard.?)) | (DDOT ~> ((bigNat ~ step2.?) | identifierOrWildcard.?)) | ((((LEQ | LT) ~ identifierOrWildcard) ~ ((LEQ | LT) ~ bigNat).?) ~ step1.?)).? ^^! {
         case (loc, (value, None)) =>
           /*value*/
-          Traces.TimeRange(None, value, Some(value), Step(None, 1))
+          Traces.TimeRange(None, value, Some(value), 1)
         case (loc, (from: BigInt, Some((rhs: BigInt, rrhs: Option[BigInt])))) =>
           /*
           from .. to
           from .. to-step, to
           */
-          Traces.TimeRange(None, from, rrhs.orElse(Some(rhs)), Step(None, rrhs.getOrElse(rhs + 1) - rhs))
+          Traces.TimeRange(None, from, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
         case (loc, (from: BigInt, Some(idOpt: Option[Traces.Identifier]))) =>
           /*
           from .. (infinite)
           from .. id (infinite)
           */
-          Traces.TimeRange(idOpt, from, None, Step(idOpt, 1))
+          Traces.TimeRange(idOpt, from, None, 1)
         case (loc, (valLeft, Some((valLeft2: BigInt, Some(id: Traces.Identifier))))) =>
           /*
           from, from+step .. id (infinite)
           */
-          Traces.TimeRange(Some(id), valLeft, None, Step(Some(id), valLeft2 - valLeft))
+          Traces.TimeRange(Some(id), valLeft, None, valLeft2 - valLeft)
         case (loc, (valLeft, Some((valLeft2: BigInt, None)))) =>
           /*
           from, from+step ..
           */
-          Traces.TimeRange(None, valLeft, None, Step(None, valLeft2 - valLeft))
+          Traces.TimeRange(None, valLeft, None, valLeft2 - valLeft)
         case (loc, (valLeft, Some((((op1: WithLocation[_], id: Traces.Identifier), rhs: Option[(WithLocation[_], BigInt)]), stepOpt: Option[(Option[Traces.Identifier], BigInt)])))) =>
           /*
           from < id < to
@@ -186,21 +186,41 @@ object TracesParser extends Parsers {
             case Some((WithLocation(_, LT), value)) => Some(value - 1)
             case Some((WithLocation(_, LEQ), value)) => Some(value)
           }
-          val step = stepOpt.map(_._2).getOrElse(BigInt(1))
-          Traces.TimeRange(Some(id), from, to, Step(stepOpt.flatMap(_._1), step))
+          if (stepOpt.isDefined && id.name == "_"){
+            /*Definition of a step while using a wildcard (e.g 1 < _ < 20; += 3) is not allowed.*/
+            throw ParserError(s"Declaration of a step is not allowed when using '_'.", SourceLoc(loc, path))
+          }
+          val step : BigInt = stepOpt match {
+            case None =>
+              /*no step given, implicitly use 1*/
+              1
+            case Some((Some(id2), value)) =>
+              /*step with notation 't += 5'*/
+              if (id.name != id2.name && id2.name != "_"){
+                throw ParserError(s"Mismatching identifiers: ${id.name}, ${id2.name}", SourceLoc(loc, path))
+              }
+              value
+            case Some((None, value)) =>
+              /*step with notation '+= 5' (a usage like '1 < _ < 20; += 2' is allowed)*/
+              if (id.name != "_"){
+                throw ParserError(s"Notation '+= $value' is only allowed when no identifier is used.", SourceLoc(loc, path))
+              }
+              value
+          }
+          Traces.TimeRange(Some(id), from, to, step)
       } | identifierOrWildcard ~ ((((LEQ | LT | GEQ | GT) ~ bigNat) ~ step1.?) | (DDOT ~> (bigNat ~ step2.?)) | ((((IN ~> bigNat) <~ DDOT) ~ bigNat) ~ step2.?)) ^^! {
         case (loc, (id: Traces.Identifier, (rhs: BigInt, rrhs: Option[BigInt]))) =>
           /*
           id .. to
           id .. to-step, to
           * */
-          Traces.TimeRange(Some(id), 1, rrhs.orElse(Some(rhs)), Step(Some(id), rrhs.getOrElse(rhs + 1) - rhs))
+          Traces.TimeRange(Some(id), 1, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
         case (loc, (id: Traces.Identifier, ((from: BigInt, rhs: BigInt), rrhs: Option[BigInt]))) =>
           /*
           id in from .. to
           id in from .. to-step, to
           */
-          Traces.TimeRange(Some(id), from, rrhs.orElse(Some(rhs)), Step(Some(id), rrhs.getOrElse(rhs + 1) - rhs))
+          Traces.TimeRange(Some(id), from, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
         case (loc, (id: Traces.Identifier, (rhs: (WithLocation[_], BigInt), stepOpt: Option[(Option[Traces.Identifier], BigInt)]))) =>
           /*
           id < to
@@ -215,8 +235,28 @@ object TracesParser extends Parsers {
             case (WithLocation(_, GT), value) => (value + 1, None)
             case (WithLocation(_, GEQ), value) => (value, None)
           }
-          val step = stepOpt.map(_._2).getOrElse(BigInt(1))
-          Traces.TimeRange(Some(id), from, to, Step(stepOpt.flatMap(_._1), step))
+          if (stepOpt.isDefined && id.name == "_"){
+            /*Definition of a step while using a wildcard (e.g 1 < _ < 20; += 3) is not allowed.*/
+            throw ParserError(s"Declaration of a step is not allowed when using '_'.", SourceLoc(loc, path))
+          }
+          val step: BigInt = stepOpt match {
+          case None =>
+            /*no step given, implicitly use 1*/
+            1
+          case Some((Some(id2), value)) =>
+            /*step with notation 't += 5'*/
+            if (id.name != id2.name && id2.name != "_"){
+              throw ParserError(s"Mismatching identifiers: ${id.name}, ${id2.name}", SourceLoc(loc, path))
+            }
+            value
+          case Some((None, value)) =>
+            /*step with notation '+= 5' (a usage like '1 < _; += 2' is allowed)*/
+            if (id.name != "_"){
+              throw ParserError(s"Notation '+= $value' is only allowed when no identifier is used.", SourceLoc(loc, path))
+            }
+            value
+        }
+          Traces.TimeRange(Some(id), from, to, step)
       } | ((((LEQ | LT | GEQ | GT) ~ bigNat) ~ step1.?) | (DDOT ~> (bigNat ~ step2.?))) ^^! {
         case (loc, (rhs: (WithLocation[_], BigInt), stepOpt: Option[(Option[Traces.Identifier], BigInt)])) =>
           /*
@@ -232,14 +272,27 @@ object TracesParser extends Parsers {
             case (WithLocation(_, GT), value) => (value + 1, None)
             case (WithLocation(_, GEQ), value) => (value, None)
           }
-          val step = stepOpt.map(_._2).getOrElse(BigInt(1))
-          Traces.TimeRange(None, from, to, Step(stepOpt.flatMap(_._1), step))
+          val step : BigInt = stepOpt match {
+            case None =>
+              /*no step given, implicitly use 1*/
+              1
+            case Some((Some(id2), value)) =>
+              /*step with notation 't += 5'*/
+              if (id2.name != "_") {
+                throw ParserError(s"Notation '$id2 += $value' is only allowed when identifiers are used.", SourceLoc(loc, path))
+              }
+              value
+            case Some((None, value)) =>
+              /*step with notation '+= 5'*/
+              value
+          }
+          Traces.TimeRange(None, from, to, step)
         case (loc, (rhs: BigInt, rrhs: Option[BigInt])) =>
           /*
           .. to
           .. to-step, to
           */
-          Traces.TimeRange(None, 1, rrhs.orElse(Some(rhs)), Step(None, rrhs.getOrElse(rhs + 1) - rhs))
+          Traces.TimeRange(None, 1, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
       }
     }
 

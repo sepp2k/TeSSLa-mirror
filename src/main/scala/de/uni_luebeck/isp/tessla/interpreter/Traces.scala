@@ -10,12 +10,8 @@ object Traces {
     override def toString: String = s"$timeRange: $stream = $value"
   }
 
-  case class TimeRange(id: Option[Identifier], from: BigInt, to: Option[BigInt], step: Step){
+  case class TimeRange(id: Option[Identifier], from: BigInt, to: Option[BigInt], step: BigInt){
     override def toString: String = s"${id.getOrElse("_")} from $from to ${to.getOrElse("infinity")} with step $step."
-  }
-
-  case class Step(id: Option[Identifier], value: BigInt){
-    override def toString: String = s"$value"
   }
 
   case class Identifier(loc: Location, name: String) {
