@@ -108,7 +108,7 @@ object TracesParser extends Parsers {
 
     def bigNat: Parser[BigInt] =
       matchToken("integer", Set("<integer>")) {
-        case WithLocation(loc, INT(value)) => BigInt(value)
+        case WithLocation(_, INT(value)) => BigInt(value)
       }
 
     def identifier: Parser[Traces.Identifier] = matchToken("identifier", Set("<identifier>")) {
@@ -116,7 +116,7 @@ object TracesParser extends Parsers {
     }
 
     def string: Parser[String] = matchToken("string", Set("<string>")) {
-      case WithLocation(loc, STRING(value)) => value
+      case WithLocation(_, STRING(value)) => value
     }
   }
 

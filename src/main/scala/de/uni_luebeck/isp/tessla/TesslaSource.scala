@@ -1,13 +1,9 @@
 package de.uni_luebeck.isp.tessla
 
-import java.nio.file.Paths
-
 import io.Source
 
 /**
   * Wrapper for tessla source code.
-  *
-  * @param src
   */
 class TesslaSource(val src: Source, val path: String) {}
 

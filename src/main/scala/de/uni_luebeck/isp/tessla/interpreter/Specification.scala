@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.Errors._
 
 import scala.collection.immutable.SortedMap
-import de.uni_luebeck.isp.tessla.{Location, TesslaCore, UnknownLoc}
+import de.uni_luebeck.isp.tessla.{TesslaCore, UnknownLoc}
 
 class Specification() {
   type Time = BigInt
@@ -32,9 +32,7 @@ class Specification() {
   }
 
   /**
-    * Propagates all inputs and progresses time.z
-    *
-    * @param timeDelta
+    * Propagates all inputs and progresses time.
     */
   def step(timeDelta: Time): Unit = {
     if (timeDelta > 0) {
@@ -304,7 +302,6 @@ class Specification() {
       propagate(value)
       value = None
     }
-
   }
 
   def printStream(stream: Stream, name: String): Unit =
@@ -312,5 +309,4 @@ class Specification() {
       case Some(value) => println(s"$getTime: $name = $value")
       case None =>
     }
-
 }

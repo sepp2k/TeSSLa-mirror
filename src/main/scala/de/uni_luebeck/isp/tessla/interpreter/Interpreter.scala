@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.{InternalError, TesslaError, TypeMismatch}
-import de.uni_luebeck.isp.tessla.{AstToCore, Compiler, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types, UnknownLoc}
+import de.uni_luebeck.isp.tessla.{Compiler, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types}
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 
 import scala.io.Source

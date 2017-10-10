@@ -270,7 +270,7 @@ object TesslaParser extends TranslationPhase[TesslaSource, Ast.Spec] with Parser
         }
 
     def exprIntLit: Parser[Ast.Expr] = matchToken("integer", Set("<integer>")) {
-      case WithLocation(loc, INT(value)) => BigInt(value)
+      case WithLocation(_, INT(value)) => BigInt(value)
     } ~ timeUnit.? ^^! {
       case (loc, (value, None)) => Ast.ExprIntLit(value, SourceLoc(loc, path))
       case (loc, (value, Some(unit))) => Ast.ExprTimeLit(value, unit, SourceLoc(loc, path))
