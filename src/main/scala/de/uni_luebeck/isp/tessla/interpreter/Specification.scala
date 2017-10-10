@@ -257,20 +257,21 @@ class Specification() {
       new Stream {
         override protected def init(): Unit = {
           var other: Option[Option[TesslaCore.Value]] = None
-          var state = false
+          var hasValue = false
 
-          def listener(flip: Boolean) = {
-            value: Option[TesslaCore.Value] =>
-              if (other.isDefined) {
-                val (newState, result) = (state, if (flip) other.get else value, if (flip) value else other.get) match {
-                  case (false, Some(v), _) => (true, Some(v))
-                  case (false, _, Some(v)) => (true, Some(v))
-                  case (s, v, _) => (s, v)
-                }
-                state = newState
+          def listener(flip: Boolean)(value: Option[TesslaCore.Value]) = {
+            other match {
+              case Some(otherValue) =>
+                val (newHasValue, result) =
+                  (hasValue, if (flip) otherValue else value, if (flip) value else otherValue) match {
+                    case (false, Some(v), _) => (true, Some(v))
+                    case (false, _, Some(v)) => (true, Some(v))
+                    case (s, v, _) => (s, v)
+                  }
+                hasValue = newHasValue
                 propagate(result)
                 other = None
-              } else {
+              case None =>
                 other = Some(value)
               }
           }
