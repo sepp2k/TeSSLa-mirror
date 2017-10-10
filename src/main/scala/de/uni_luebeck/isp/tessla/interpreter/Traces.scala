@@ -41,13 +41,16 @@ object Traces {
 
 class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]) {
 
-  def flattenInput(threshold: BigInt, abortAt: Option[BigInt]) = {
-    val queue = new TracesQueue(threshold, abortAt)
-    var abort = false
+  def flattenInput(threshold: BigInt, abortAt: Option[BigInt]) = feedInput(threshold, abortAt)(println)
 
+
+  def feedInput(threshold: BigInt, abortAt: Option[BigInt])(process: Traces.Event => Unit): Unit = {
+    val queue = new TracesQueue(threshold, abortAt)
+
+    var abort = false
     def handleInput(event: Traces.Event) {
       if (abortAt.isEmpty || event.timeRange.from <= abortAt.get) {
-        println(event)
+        process(event)
       } else {
         abort = true
       }
@@ -65,10 +68,14 @@ class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]
     queue.processAll(handleInput)
   }
 
-  def feedInput(tesslaSpec: Interpreter, threshold: BigInt, abortAt: Option[BigInt])(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
-    val queue = new TracesQueue(threshold, abortAt)
-
+  def interpretInput(tesslaSpec: Interpreter, threshold: BigInt, abortAt: Option[BigInt])(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
+    tesslaSpec.addOutStreamListener(callback)
+    var previousTS: BigInt = 0
     def provide(event: Traces.Event): Unit = {
+      if (event.timeRange.from - previousTS != 0) {
+        tesslaSpec.step(event.timeRange.from - previousTS)
+        previousTS = event.timeRange.from
+      }
       event match {
         case Traces.Event(loc, _, Traces.Identifier(streamLoc, name), value) =>
           tesslaSpec.inStreams.get(name) match {
@@ -83,33 +90,7 @@ class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]
       }
     }
 
-    var previousTS: BigInt = 0
-    var abort = false
-
-    def handleInput(event: Traces.Event) {
-      if (abortAt.isEmpty || event.timeRange.from <= abortAt.get) {
-        if (event.timeRange.from - previousTS != 0) {
-          tesslaSpec.step(event.timeRange.from - previousTS)
-          previousTS = event.timeRange.from
-        }
-        provide(event)
-      } else {
-        abort = true
-      }
-    }
-
-    tesslaSpec.addOutStreamListener(callback)
-
-    values.takeWhile {
-      value => !abort
-    }.foreach { value =>
-      if (!abort) {
-        queue.enqueue(value, handleInput)
-      }
-    }
-
-    //in the end handle every remaining event from the queue
-    queue.processAll(handleInput)
+    feedInput(threshold, abortAt)(provide)
 
     tesslaSpec.step()
   }

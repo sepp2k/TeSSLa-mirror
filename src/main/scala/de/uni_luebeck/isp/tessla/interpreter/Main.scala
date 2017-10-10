@@ -74,7 +74,7 @@ object Main extends SexyOpt {
         }else {
           val spec = tesslaSpec(tu2)
           tu2.foreach(unit => println("$timeunit = \"" + unit + "\""))
-          traces.feedInput(spec, thresholdValue, abortAtValue) {
+          traces.interpretInput(spec, thresholdValue, abortAtValue) {
             case (ts, name, value) =>
               println(s"$ts: $name = $value")
               if (stopOn.contains(name)) return
