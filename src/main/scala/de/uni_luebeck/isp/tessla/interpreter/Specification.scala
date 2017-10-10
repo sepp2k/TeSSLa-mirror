@@ -59,7 +59,7 @@ class Specification() {
 
       timeVar = newTime
     } else {
-      throw NonPositiveTimeDeltaError(timeDelta, UnknownLoc)
+      throw InternalError(s"Specification.step called with non-positive delta: ${timeDelta}")
     }
   }
 
@@ -177,9 +177,10 @@ class Specification() {
               if (value > 0) {
                 value
               } else {
-                throw NegativeDelayError(value, loc) //TODO: possibly an internal error?
+                throw NegativeDelayError(value, loc)
               }
-            case _ => throw new Exception("???") //TODO: Can this happen at all?
+            case _ =>
+              throw InternalError("Uncaught type error: delayedLast called with non-int delay")
           }: Option[Time]
           update()
         })

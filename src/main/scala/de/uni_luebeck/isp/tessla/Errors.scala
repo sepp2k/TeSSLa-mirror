@@ -91,11 +91,6 @@ object Errors {
     def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
-  /*TODO: Potentially merge-able with DecreasingTimeStampsError*/
-  case class NonPositiveTimeDeltaError(delta: BigInt, loc: Location) extends TesslaError {
-    def message: String = s"Non-positive time delta: $delta"
-  }
-
   case class ProvideAfterPropagationError(time: BigInt, loc: Location) extends TesslaError {
     def message: String = s"Tried to provide inputs after their propagation at time $time"
   }
