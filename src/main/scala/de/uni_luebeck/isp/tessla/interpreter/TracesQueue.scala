@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.DecreasingTimeStampsError
+import de.uni_luebeck.isp.tessla.interpreter.Traces.TimeRange
 
 import scala.collection.mutable
 
@@ -32,7 +33,14 @@ class TracesQueue(val threshold: BigInt) {
     queue.headOption.filter(_.timeRange.from <= timeStamp - threshold) match {
       case None => Nil
       case Some(_) =>
-        queue.dequeue() +: dequeue(timeStamp)
+        val generator = queue.dequeue()
+        val range = generator.timeRange
+        if (range.to.isEmpty || range.to.get - range.from >= range.step){
+          queue.enqueue(Traces.Event(generator.loc,
+            TimeRange(range.id, range.from + range.step, range.to, range.step),
+            generator.stream, generator.value))
+        }
+        generator +: dequeue(timeStamp)
     }
   }
 
@@ -40,7 +48,19 @@ class TracesQueue(val threshold: BigInt) {
     * Dequeue every event from the queue and apply the callback to it.
     */
   def processAll(callback: Traces.Event => Unit): Unit = {
-    queue.dequeueAll.foreach(callback)
+    queue.headOption match {
+      case None => Nil
+      case Some(_) =>
+        val generator = queue.dequeue()
+        val range = generator.timeRange
+        if (range.to.isEmpty || range.to.get - range.from >= range.step){
+          queue.enqueue(Traces.Event(generator.loc,
+            TimeRange(range.id, range.from + range.step, range.to, range.step),
+            generator.stream, generator.value))
+        }
+        callback(generator)
+        processAll(callback)
+    }
   }
 
   /**

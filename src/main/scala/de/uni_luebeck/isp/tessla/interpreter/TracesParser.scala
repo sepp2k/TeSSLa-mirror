@@ -94,7 +94,6 @@ object TracesParser extends Parsers {
     def event: Parser[Traces.Event] =
       (((timeRange <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
         case (loc, ((time, id), v)) =>
-          println("TIME: "+time)
           Traces.Event(SourceLoc(loc, path), time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc, path))))
       }
 
