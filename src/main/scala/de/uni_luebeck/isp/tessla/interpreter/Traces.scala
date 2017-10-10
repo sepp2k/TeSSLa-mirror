@@ -6,8 +6,16 @@ import de.uni_luebeck.isp.tessla.Location
 import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 
 object Traces {
-  case class Event(loc: Location, timeStamp: BigInt, stream: Identifier, value: TesslaCore.LiteralValue){
-    override def toString: String = s"$timeStamp: $stream = $value"
+  case class Event(loc: Location, timeRange: TimeRange, stream: Identifier, value: TesslaCore.LiteralValue){
+    override def toString: String = s"$timeRange: $stream = $value"
+  }
+
+  case class TimeRange(id: Option[Identifier], from: BigInt, to: Option[BigInt], step: Step){
+    override def toString: String = s"${id.getOrElse("_")} from $from to ${to.getOrElse("infinity")} with step $step."
+  }
+
+  case class Step(id: Option[Identifier], value: BigInt){
+    override def toString: String = s"$value"
   }
 
   case class Identifier(loc: Location, name: String) {
@@ -38,9 +46,9 @@ class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]
     var previousTS: BigInt = 0
 
     def handleInput(event: Traces.Event) {
-      if (event.timeStamp - previousTS != 0) {
-        tesslaSpec.step(event.timeStamp - previousTS)
-        previousTS = event.timeStamp
+      if (event.timeRange.from - previousTS != 0) { //TODO
+        tesslaSpec.step(event.timeRange.from - previousTS)
+        previousTS = event.timeRange.from
       }
       provide(event)
     }

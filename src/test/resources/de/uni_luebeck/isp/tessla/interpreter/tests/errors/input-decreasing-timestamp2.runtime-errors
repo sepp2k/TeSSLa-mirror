@@ -1,1 +1,1 @@
-/errors/input-decreasing-timestamp2.input(2,14 - 3,14): Decreasing time stamps: first = 500000, second = 400000
+/errors/input-decreasing-timestamp2.input(3,1 - 3,14): Decreasing time stamps: first = 500000, second = 400000
