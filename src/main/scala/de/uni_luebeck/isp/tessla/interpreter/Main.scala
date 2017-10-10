@@ -29,6 +29,7 @@ object Main extends SexyOpt {
   val listInStreams = flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
   val timeunit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
   val abortAt = option("abort-at", "Stop the interpreter at this timestamp.")
+  val flattenInput = flag("flatten-input", "Print the input trace in a flattened form.")
 
   def main(args: Array[String]): Unit = {
     def tesslaSpec(timeUnit: Option[TimeUnit.TimeUnit]) = Interpreter.fromFile(tesslaFile, timeUnit) match {
@@ -65,12 +66,19 @@ object Main extends SexyOpt {
       } else {
         val traces: Traces = TracesParser.parseTraces(traceFile.map(TesslaSource.fromFile).getOrElse(new TesslaSource(Source.stdin, "<stdin>")))
         val tu2 = tu.orElse(traces.timeStampUnit)
-        val spec = tesslaSpec(tu2)
-        tu2.foreach(unit => println("$timeunit = \"" + unit + "\""))
-        traces.feedInput(spec, BigInt(threshold), abortAt.map(BigInt(_))) {
-          case (ts, name, value) =>
-            println(s"$ts: $name = $value")
-            if (stopOn.contains(name)) return
+        val thresholdValue = BigInt(threshold)
+        val abortAtValue = abortAt.map(BigInt(_))
+        if (flattenInput){
+          tu2.foreach(unit => println("$timeunit = \"" + unit + "\""))
+          val flat = traces.flattenInput(thresholdValue, abortAtValue)
+        }else {
+          val spec = tesslaSpec(tu2)
+          tu2.foreach(unit => println("$timeunit = \"" + unit + "\""))
+          traces.feedInput(spec, thresholdValue, abortAtValue) {
+            case (ts, name, value) =>
+              println(s"$ts: $name = $value")
+              if (stopOn.contains(name)) return
+          }
         }
       }
     } catch {

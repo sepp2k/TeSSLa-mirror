@@ -40,7 +40,10 @@ class TracesQueue(val threshold: BigInt, val abortAt: Option[BigInt]) {
             TimeRange(range.id, range.from + range.step, range.to, range.step),
             generator.stream, generator.value))
         }
-        generator +: dequeue(timeStamp)
+
+        Traces.Event(generator.loc,
+          TimeRange(range.id, range.from, Some(range.from), range.step),
+          generator.stream, generator.value) +: dequeue(timeStamp)
     }
   }
 
@@ -57,7 +60,9 @@ class TracesQueue(val threshold: BigInt, val abortAt: Option[BigInt]) {
               TimeRange(range.id, range.from + range.step, range.to, range.step),
               generator.stream, generator.value))
           }
-          callback(generator)
+          callback(Traces.Event(generator.loc,
+            TimeRange(range.id, range.from, Some(range.from), range.step),
+            generator.stream, generator.value))
           processAll(callback)
         }
     }
