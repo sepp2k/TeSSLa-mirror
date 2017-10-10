@@ -28,6 +28,7 @@ object Main extends SexyOpt {
   val listOutStreams = flag("list-out-streams", "Print a list of the output streams defined in the given tessla spec and then exit")
   val listInStreams = flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
   val timeunit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
+  val abortAt = option("abort-at", "Stop the interpreter at this timestamp.")
 
   def main(args: Array[String]): Unit = {
     def tesslaSpec(timeUnit: Option[TimeUnit.TimeUnit]) = Interpreter.fromFile(tesslaFile, timeUnit) match {
@@ -66,7 +67,7 @@ object Main extends SexyOpt {
         val tu2 = tu.orElse(traces.timeStampUnit)
         val spec = tesslaSpec(tu2)
         tu2.foreach(unit => println("$timeunit = \"" + unit + "\""))
-        traces.feedInput(spec, BigInt(threshold)) {
+        traces.feedInput(spec, BigInt(threshold), abortAt.map(BigInt(_))) {
           case (ts, name, value) =>
             println(s"$ts: $name = $value")
             if (stopOn.contains(name)) return

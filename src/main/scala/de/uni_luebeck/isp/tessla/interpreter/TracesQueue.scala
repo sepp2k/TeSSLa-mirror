@@ -5,7 +5,7 @@ import de.uni_luebeck.isp.tessla.interpreter.Traces.TimeRange
 
 import scala.collection.mutable
 
-class TracesQueue(val threshold: BigInt) {
+class TracesQueue(val threshold: BigInt, val abortAt: Option[BigInt]) {
   /**
     * A PriorityQueue, having a BigInt as timestamp and using the lowest value has highest priority.
     */
@@ -48,18 +48,18 @@ class TracesQueue(val threshold: BigInt) {
     * Dequeue every event from the queue and apply the callback to it.
     */
   def processAll(callback: Traces.Event => Unit): Unit = {
-    queue.headOption match {
-      case None => Nil
-      case Some(_) =>
+    if (queue.nonEmpty){
         val generator = queue.dequeue()
         val range = generator.timeRange
-        if (range.to.isEmpty || range.to.get - range.from >= range.step){
-          queue.enqueue(Traces.Event(generator.loc,
-            TimeRange(range.id, range.from + range.step, range.to, range.step),
-            generator.stream, generator.value))
+        if (abortAt.isEmpty || range.from <= abortAt.get) {
+          if (range.to.isEmpty || range.to.get - range.from >= range.step) {
+            queue.enqueue(Traces.Event(generator.loc,
+              TimeRange(range.id, range.from + range.step, range.to, range.step),
+              generator.stream, generator.value))
+          }
+          callback(generator)
+          processAll(callback)
         }
-        callback(generator)
-        processAll(callback)
     }
   }
 

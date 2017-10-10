@@ -21,8 +21,8 @@ object Traces {
 
 class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]) {
 
-  def feedInput(tesslaSpec: Interpreter, threshold: BigInt)(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
-    val queue = new TracesQueue(threshold)
+  def feedInput(tesslaSpec: Interpreter, threshold: BigInt, abortAt: Option[BigInt])(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
+    val queue = new TracesQueue(threshold, abortAt)
 
     def provide(event: Traces.Event): Unit = {
       event match {
@@ -40,19 +40,29 @@ class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]
     }
 
     var previousTS: BigInt = 0
-
+    var abort = false
     def handleInput(event: Traces.Event) {
-      if (event.timeRange.from - previousTS != 0) { //TODO
-        tesslaSpec.step(event.timeRange.from - previousTS)
-        previousTS = event.timeRange.from
+      if (abortAt.isEmpty || event.timeRange.from <= abortAt.get) {
+        if (event.timeRange.from - previousTS != 0) {
+          tesslaSpec.step(event.timeRange.from - previousTS)
+          previousTS = event.timeRange.from
+        }
+        provide(event)
+      }else{
+        abort = true
       }
-      provide(event)
     }
 
     tesslaSpec.addOutStreamListener(callback)
 
-    values.foreach(queue.enqueue(_, handleInput))
-
+    values.takeWhile{
+      value => !abort
+    }.foreach{value =>
+      if (!abort) {
+        queue.enqueue(value, handleInput)
+      }
+    }
+    
     //in the end handle every remaining event from the queue
     queue.processAll(handleInput)
 
