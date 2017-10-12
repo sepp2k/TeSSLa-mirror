@@ -94,8 +94,8 @@ object Errors {
     def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
-  case class ProvideAfterPropagationError(time: BigInt, loc: Location) extends TesslaError {
-    def message: String = s"Tried to provide inputs after their propagation at time $time"
+  def ProvideAfterPropagationError(time: BigInt, loc: Location = UnknownLoc) = {
+    InternalError(s"Tried to provide inputs after their propagation at time $time", loc)
   }
 
   case class NegativeDelayError(value: BigInt, loc: Location) extends TesslaError {

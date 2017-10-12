@@ -60,8 +60,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       last(evalStream(clock), evalStream(values))
     case TesslaCore.DelayedLast(values, delays, loc) =>
       delayedLast(intStream(evalStream(delays), loc), evalStream(values))
-    case TesslaCore.Time(values, _) =>
-      evalStream(values).time()
+    case TesslaCore.Time(values, loc) =>
+      evalStream(values).time(loc)
   }
 
   def intStream(stream: Stream, loc: Location): Stream = {

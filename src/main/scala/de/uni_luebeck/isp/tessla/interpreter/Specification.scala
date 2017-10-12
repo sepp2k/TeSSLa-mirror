@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.Errors._
 
 import scala.collection.immutable.SortedMap
-import de.uni_luebeck.isp.tessla.{TesslaCore, UnknownLoc}
+import de.uni_luebeck.isp.tessla.{Location, TesslaCore}
 
 class Specification() {
   type Time = BigInt
@@ -27,7 +27,7 @@ class Specification() {
         input.step()
       }
     } else {
-      throw ProvideAfterPropagationError(timeVar, UnknownLoc)
+      throw ProvideAfterPropagationError(timeVar)
     }
   }
 
@@ -57,7 +57,7 @@ class Specification() {
 
       timeVar = newTime
     } else {
-      throw InternalError(s"Specification.step called with non-positive delta: ${timeDelta}")
+      throw InternalError(s"Specification.step called with non-positive delta: $timeDelta")
     }
   }
 
@@ -75,7 +75,7 @@ class Specification() {
       }
       trigger = (remaining._1 + (stream -> newTime), remaining._2 + (newTime -> temp))
     } else {
-      throw DecreasingTimeStampsError(getTime, newTime, UnknownLoc)
+      throw InternalError(s"updateTrigger has been called with newTime ($newTime) <= current time ($getTime)")
     }
   }
 
@@ -232,11 +232,11 @@ class Specification() {
       }
     }
 
-    def time(): Stream =
+    def time(loc: Location): Stream =
       new Stream {
         override protected def init(): Unit = {
           self.addListener {
-            value => propagate(value.map{_ => TesslaCore.IntLiteral(getTime, UnknownLoc)})
+            value => propagate(value.map{_ => TesslaCore.IntLiteral(getTime, loc)})
           }
         }
       }
