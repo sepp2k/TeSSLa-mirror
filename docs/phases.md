@@ -8,4 +8,6 @@ FlatTessla
 ———Evaluator—> (evaluates macro calls and constant expressions, inserts overload nodes for overloaded macros)  
 UntypedTesslaCore  
 ———TypeChecker—> (finds type errors, resolves overloads and auto-converts constant values to `default(nil, value)`-streams where needed)
+TesslaCore  
+———DeadStreamEliminator—> (removes streams not used by outstreams)  
 TesslaCore
