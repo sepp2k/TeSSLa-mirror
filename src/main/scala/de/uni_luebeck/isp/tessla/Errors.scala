@@ -52,7 +52,7 @@ object Errors {
     override def message = s"Multiple definitions of ${id.name} in same scope (previous definition at $previousLoc)"
   }
 
-  case class InternalError(m: String, loc: Location = UnknownLoc) extends TesslaError {
+  case class InternalError(m: String, loc: Location = Location.unknown) extends TesslaError {
     def message = s"Internal error: $m"
   }
 
@@ -94,7 +94,7 @@ object Errors {
     def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
-  def ProvideAfterPropagationError(time: BigInt, loc: Location = UnknownLoc) = {
+  def ProvideAfterPropagationError(time: BigInt, loc: Location = Location.unknown) = {
     InternalError(s"Tried to provide inputs after their propagation at time $time", loc)
   }
 

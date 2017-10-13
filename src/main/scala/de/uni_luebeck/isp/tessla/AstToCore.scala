@@ -61,7 +61,7 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[Te
       (exp._1, exp._2.withLoc(loc))
     }
 
-    val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", UnknownLoc)
+    val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", Location.unknown)
 
     def translateExpression(expr: Tessla.Expression, name: String, env: Env): TranslatedExpression = {
       val errorNode: TranslatedExpression = (Seq(), Stream(errorStream, Types.Nothing))
@@ -70,7 +70,7 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[Te
         else {
           // This value will be overridden later. This one will only be reached in case of recursion, in which case
           // it should be the correct one.
-          alreadyTranslated(name) = Stream(TesslaCore.Stream(name, UnknownLoc), Types.Nothing)
+          alreadyTranslated(name) = Stream(TesslaCore.Stream(name, Location.unknown), Types.Nothing)
           val (defs, arg): TranslatedExpression = expr match {
             case Tessla.BoolLiteral(value, loc) =>
               (Seq(), Literal(TesslaCore.BoolLiteral(value, loc)))

@@ -64,7 +64,7 @@ object Tessla {
 
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
-  case class MacroCall(macroID: Identifier, args: Seq[Argument], loc: SourceLoc) extends Expression {
+  case class MacroCall(macroID: Identifier, args: Seq[Argument], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
       val str = (macroID.name, args) match {
         case (ID_PATTERN(), _) | (_, Seq()) => s"${macroID.name}(${args.mkString(", ")})"
@@ -108,11 +108,11 @@ object Tessla {
     override def toString(inner: Boolean) = value.toString
   }
 
-  case class Unit(loc: SourceLoc) extends Expression {
+  case class Unit(loc: Location) extends Expression {
     override def toString(inner: Boolean) = "()"
   }
 
-  case class Block(definitions: Seq[Definition], expression: Expression, loc: SourceLoc) extends Expression {
+  case class Block(definitions: Seq[Definition], expression: Expression, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
   }
 
