@@ -4,7 +4,7 @@ import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, With
 import de.uni_luebeck.isp.compacom
 import de.uni_luebeck.isp.tessla.Errors.ParserError
 
-object TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Parsers {
+class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Parsers {
   override def translateSpec(source: TesslaSource) = {
     val p =  new Parsers(source.path)
     parseAll(p.spec, source.src) match {
@@ -123,7 +123,7 @@ object TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Par
     def include = INCLUDE ~> stringLiteral ^^ { file =>
       import java.nio.file.Paths
       val includePath = Paths.get(path).getParent.resolve(file.value)
-      TesslaParser.translateSpec(TesslaSource.fromFile(includePath.toString))
+      new TesslaParser().translateSpec(TesslaSource.fromFile(includePath.toString))
     }
 
     // TODO identifier completion, requires some small compacom enhancements

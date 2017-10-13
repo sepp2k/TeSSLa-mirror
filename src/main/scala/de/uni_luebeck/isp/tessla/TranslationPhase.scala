@@ -5,6 +5,14 @@ import de.uni_luebeck.isp.tessla.Errors.TesslaError
 
 import scala.collection.mutable.ArrayBuffer
 
+/**
+  * Trait representing a phase of the translation process.
+  *
+  * Note that this trait contains mutable members and should only be extended by classes, not objects.
+  *
+  * @tparam T The type of representation that this phase will be applied to
+  * @tparam U The result of applying this phase
+  */
 trait TranslationPhase[T, U] {
   def translateSpec(spec: T): U
 
