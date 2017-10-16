@@ -17,11 +17,9 @@ object Location {
       case _ => throw new IllegalArgumentException
     }
 
-    override def toString = (if (path != "") {
-      path
-    } else {
-      "<stdin>"
-    }) + loc.toString
+    override def toString = {
+      s"$path$loc"
+    }
   }
 
   def apply(loc: compacom.Location, path: String): Location = {
