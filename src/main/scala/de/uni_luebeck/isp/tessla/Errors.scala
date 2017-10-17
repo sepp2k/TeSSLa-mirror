@@ -93,4 +93,8 @@ object Errors {
     def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
   }
 
+  case class TracesOperationError(loc: Location, op: String, args: TesslaCore.LiteralValue*) extends TesslaError {
+    def message: String = s"Operation $op not defined for ${args.mkString(", ")}."
+  }
+
 }
