@@ -11,9 +11,9 @@ object Traces {
   }
 
   case class TimeRange(id: Option[Identifier], from: BigInt, to: Option[BigInt], step: BigInt) {
-    override def toString: String = if (to.isDefined && to.get == from){
+    override def toString: String = if (to.isDefined && to.get == from) {
       s"$from"
-    }else{
+    } else {
       s"$from <= ${id.getOrElse("\"_\"")} ${
         if (to.isDefined) {
           "<= " + to.get
@@ -28,6 +28,7 @@ object Traces {
         }
       }"
     }
+  }
 
     trait TracesOp{
       def loc: Location
@@ -130,7 +131,7 @@ object Traces {
     case class Atomic(v: TesslaCore.LiteralValue, loc: Location) extends TracesOp{
       override def eval: TesslaCore.LiteralValue = v
     }
-  }
+
 
   case class Identifier(loc: Location, name: String) {
     override def toString: String = name

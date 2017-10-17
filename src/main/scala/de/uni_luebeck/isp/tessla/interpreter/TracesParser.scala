@@ -1,10 +1,10 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{SourceLoc, TesslaCore, TesslaSource, TimeUnit}
+import de.uni_luebeck.isp.tessla.{TimeUnit, _}
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.tessla.Errors.{NotAnEventError, ParserError, TesslaError}
 import de.uni_luebeck.isp.tessla.TimeUnit._
-import de.uni_luebeck.isp.tessla.interpreter.Traces.Event
+import de.uni_luebeck.isp.tessla.interpreter.Traces._
 
 object TracesParser extends Parsers {
   def parseTraces(tesslaSource: TesslaSource): Traces = {
@@ -64,6 +64,24 @@ object TracesParser extends Parsers {
 
     case object PLUSEQ extends Token("+=")
 
+    case object EXCLMARK extends Token("!")
+
+    case object PLUS extends Token("+")
+
+    case object STAR extends Token("*")
+
+    case object SLASH extends Token("/")
+
+    case object PERCENT extends Token("%")
+
+    case object DAMPERSAND extends Token("&&")
+
+    case object DPIPE extends Token("||")
+
+    case object RARROW extends Token("->")
+
+    case object LRARROW extends Token("<->")
+
   }
 
   object Tokenizer extends SimpleTokenizer {
@@ -72,7 +90,8 @@ object TracesParser extends Parsers {
     import tokens._
 
     override val keywords = List(TRUE, FALSE, IN)
-    override val symbols = List(COLON, SEMICOLON, COMMA, EQ, DOLLAR, LPAREN, RPAREN, MINUS, DDOT, LEQ, GEQ, LT, GT, UNDERSCORE, PLUSEQ)
+    override val symbols = List(COLON, SEMICOLON, COMMA, EQ, DOLLAR, LPAREN, RPAREN, MINUS, DDOT, LEQ, GEQ, LT, GT,
+      UNDERSCORE, PLUSEQ, PLUS, STAR, SLASH, PERCENT, DAMPERSAND, DPIPE, RARROW, LRARROW, EXCLMARK)
     override val comments = List("--" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = {
@@ -92,20 +111,103 @@ object TracesParser extends Parsers {
     }
 
     def event: Parser[Traces.Event] =
-      (((timeRange <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
+      (((timeRange <~ COLON) ~ identifier) ~ (EQ ~> literalWithUnit).?) ^^! {
         case (loc, ((time, id), v)) =>
           Traces.Event(SourceLoc(loc, path), time, id, v.getOrElse(TesslaCore.Unit(SourceLoc(loc, path))))
       }
 
-    def value: Parser[TesslaCore.LiteralValue] =
+    def equivalence: Parser[Traces.TracesOp] =
+      rep1sep(implication, LRARROW) ^^! {
+        case (loc, operands) => operands.reduceLeft{
+          (acc, elem) => Traces.Equiv(acc, elem, SourceLoc(loc, path))
+        }
+      }
+
+    def implication: Parser[Traces.TracesOp] =
+      rep1sep(disjunction, RARROW) ^^! {
+        case (loc, operands) => operands.reduceLeft{
+          (acc, elem) => Traces.Equiv(acc, elem, SourceLoc(loc, path))
+        }
+      }
+
+    def disjunction: Parser[Traces.TracesOp] =
+      rep1sep(conjunction, DPIPE) ^^! {
+        case (loc, operands) => operands.reduceLeft{
+          (acc, elem) => Traces.Equiv(acc, elem, SourceLoc(loc, path))
+        }
+      }
+
+    def conjunction: Parser[Traces.TracesOp] =
+      rep1sep(mult, DAMPERSAND) ^^! {
+        case (loc, operands) => operands.reduceLeft{
+          (acc, elem) => Traces.Equiv(acc, elem, SourceLoc(loc, path))
+        }
+      }
+
+    def mult: Parser[Traces.TracesOp] =
+      add ~ (multArithOp ~ add).* ^^! {
+        case (loc, (lhs, ops)) =>
+          ops match{
+            case Seq() => lhs
+            case _ => ops.foldLeft(lhs){
+              case (l, (op, r)) => op(l, r, SourceLoc(loc, path))
+            }
+          }
+      }
+
+    def add: Parser[Traces.TracesOp] =
+      unaryOp ~ (addArithOp ~ unaryOp).* ^^! {
+        case (loc, (lhs, ops)) =>
+          ops match{
+            case Seq() => lhs
+            case _ => ops.foldLeft(lhs){
+              case (l, (op, r)) => op(l, r, SourceLoc(loc, path))
+            }
+          }
+      }
+
+    def multArithOp: Parser[(TracesOp, TracesOp, Location) => TracesOp] =
+      STAR ^^^{
+        (lhs: TracesOp, rhs: TracesOp, loc: Location) => Traces.Mult(lhs, rhs, loc)
+      }|
+        SLASH ^^^{
+          (lhs: TracesOp, rhs: TracesOp, loc: Location) => Traces.Div(lhs, rhs, loc)
+        }|
+        PERCENT ^^^{
+          (lhs: TracesOp, rhs: TracesOp, loc: Location) => Traces.Mod(lhs, rhs, loc)
+        }
+
+    def addArithOp: Parser[(TracesOp, TracesOp, Location) => TracesOp] =
+      PLUS ^^^{
+        (lhs: TracesOp, rhs: TracesOp, loc: Location) => Traces.Add(lhs, rhs, loc)
+      }|
+        MINUS ^^^{
+          (lhs: TracesOp, rhs: TracesOp, loc: Location) => Traces.Sub(lhs, rhs, loc)
+        }
+
+    def unaryOp: Parser[Traces.TracesOp] =
+      EXCLMARK ~> atomic ^^!{
+        case (loc, v) => Traces.Not(v, SourceLoc(loc, path))
+      }|
+    MINUS ~> atomic ^^!{
+      case (loc, v) => Traces.Neg(v, SourceLoc(loc, path))
+    }|
+    LPAREN ~> equivalence.? <~ RPAREN ^^!{
+      case (loc, None) => Traces.Atomic(TesslaCore.Unit(SourceLoc(loc, path)), SourceLoc(loc, path))
+      case (_, Some(exp)) => exp
+    }
+
+    def atomic: Parser[Traces.TracesOp] =
+      literal ^^!{
+        (loc, v) => Traces.Atomic(v, SourceLoc(loc, path))
+      }
+
+    def literal: Parser[TesslaCore.LiteralValue] =
       TRUE ^^^! {
         loc => TesslaCore.BoolLiteral(true, SourceLoc(loc, path))
       } |
         FALSE ^^^! {
           loc => TesslaCore.BoolLiteral(false, SourceLoc(loc, path))
-        } |
-        LPAREN ~ RPAREN ^^^! {
-          loc => TesslaCore.Unit(SourceLoc(loc, path))
         } |
         string ^^! {
           case (loc, value) => TesslaCore.StringLiteral(value, SourceLoc(loc, path))
@@ -113,6 +215,13 @@ object TracesParser extends Parsers {
         bigInt ^^! {
           case (loc, value) => TesslaCore.IntLiteral(value, SourceLoc(loc, path))
         }
+
+    def unit: Parser[TesslaCore.LiteralValue] =
+      LPAREN ~ RPAREN ^^^! {
+        loc => TesslaCore.Unit(SourceLoc(loc, path))
+      }
+
+    def literalWithUnit: Parser[TesslaCore.LiteralValue] = literal | unit
 
     def timeUnit: Parser[TimeUnit.TimeUnit] = DOLLAR ~> ID("timeunit") ~> EQ ~> matchToken("string", Set("<string>")) {
       case WithLocation(loc, STRING(name)) => TimeUnit.fromString(name, SourceLoc(loc, path))
@@ -185,23 +294,23 @@ object TracesParser extends Parsers {
             case Some((WithLocation(_, LT), value)) => Some(value - 1)
             case Some((WithLocation(_, LEQ), value)) => Some(value)
           }
-          if (stepOpt.isDefined && id.name == "_"){
+          if (stepOpt.isDefined && id.name == "_") {
             /*Definition of a step while using a wildcard (e.g 1 < _ < 20; += 3) is not allowed.*/
             throw ParserError(s"Declaration of a step is not allowed when using '_'.", SourceLoc(loc, path))
           }
-          val step : BigInt = stepOpt match {
+          val step: BigInt = stepOpt match {
             case None =>
               /*no step given, implicitly use 1*/
               1
             case Some((Some(id2), value)) =>
               /*step with notation 't += 5'*/
-              if (id.name != id2.name && id2.name != "_"){
+              if (id.name != id2.name && id2.name != "_") {
                 throw ParserError(s"Mismatching identifiers: ${id.name}, ${id2.name}", SourceLoc(loc, path))
               }
               value
             case Some((None, value)) =>
               /*step with notation '+= 5' (a usage like '1 < _ < 20; += 2' is allowed)*/
-              if (id.name != "_"){
+              if (id.name != "_") {
                 throw ParserError(s"Notation '+= $value' is only allowed when no identifier is used.", SourceLoc(loc, path))
               }
               value
@@ -234,27 +343,27 @@ object TracesParser extends Parsers {
             case (WithLocation(_, GT), value) => (value + 1, None)
             case (WithLocation(_, GEQ), value) => (value, None)
           }
-          if (stepOpt.isDefined && id.name == "_"){
+          if (stepOpt.isDefined && id.name == "_") {
             /*Definition of a step while using a wildcard (e.g 1 < _ < 20; += 3) is not allowed.*/
             throw ParserError(s"Declaration of a step is not allowed when using '_'.", SourceLoc(loc, path))
           }
           val step: BigInt = stepOpt match {
-          case None =>
-            /*no step given, implicitly use 1*/
-            1
-          case Some((Some(id2), value)) =>
-            /*step with notation 't += 5'*/
-            if (id.name != id2.name && id2.name != "_"){
-              throw ParserError(s"Mismatching identifiers: ${id.name}, ${id2.name}", SourceLoc(loc, path))
-            }
-            value
-          case Some((None, value)) =>
-            /*step with notation '+= 5' (a usage like '1 < _; += 2' is allowed)*/
-            if (id.name != "_"){
-              throw ParserError(s"Notation '+= $value' is only allowed when no identifier is used.", SourceLoc(loc, path))
-            }
-            value
-        }
+            case None =>
+              /*no step given, implicitly use 1*/
+              1
+            case Some((Some(id2), value)) =>
+              /*step with notation 't += 5'*/
+              if (id.name != id2.name && id2.name != "_") {
+                throw ParserError(s"Mismatching identifiers: ${id.name}, ${id2.name}", SourceLoc(loc, path))
+              }
+              value
+            case Some((None, value)) =>
+              /*step with notation '+= 5' (a usage like '1 < _; += 2' is allowed)*/
+              if (id.name != "_") {
+                throw ParserError(s"Notation '+= $value' is only allowed when no identifier is used.", SourceLoc(loc, path))
+              }
+              value
+          }
           Traces.TimeRange(Some(id), from, to, step)
       } | ((((LEQ | LT | GEQ | GT) ~ bigNat) ~ step1.?) | (DDOT ~> (bigNat ~ step2.?))) ^^! {
         case (loc, (rhs: (WithLocation[_], BigInt), stepOpt: Option[(Option[Traces.Identifier], BigInt)])) =>
@@ -271,7 +380,7 @@ object TracesParser extends Parsers {
             case (WithLocation(_, GT), value) => (value + 1, None)
             case (WithLocation(_, GEQ), value) => (value, None)
           }
-          val step : BigInt = stepOpt match {
+          val step: BigInt = stepOpt match {
             case None =>
               /*no step given, implicitly use 1*/
               1
