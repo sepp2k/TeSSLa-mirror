@@ -16,6 +16,7 @@ object Traces {
 }
 
 class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]) {
+  def hasNext = values.hasNext
 
   def feedInput(tesslaSpec: Interpreter, threshold: BigInt)(callback: (BigInt, String, TesslaCore.Value) => Unit): Unit = {
     val queue = new TracesQueue(threshold)
