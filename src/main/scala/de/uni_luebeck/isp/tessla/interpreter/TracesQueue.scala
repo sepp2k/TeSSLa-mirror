@@ -9,14 +9,14 @@ class TracesQueue(val threshold: BigInt, val abortAt: Option[BigInt]) {
   /**
     * A PriorityQueue, having a BigInt as timestamp and using the lowest value has highest priority.
     */
-  val queue: mutable.PriorityQueue[Traces.Event] =
-    new mutable.PriorityQueue[Traces.Event]()(Ordering.by(ev => ev.timeRange.from)).reverse
+  val queue: mutable.PriorityQueue[Traces.EventRange] =
+    new mutable.PriorityQueue[Traces.EventRange]()(Ordering.by(ev => ev.timeRange.from)).reverse
 
   /**
     * Dequeues and processes all events with a time stamp lower than the one of the event subtracted by the threshold,
     * and then adds the new event to the queue.
     */
-  def enqueue(event: Traces.Event, callback: Traces.Event => Unit): Unit = {
+  def enqueue(event: Traces.EventRange, callback: Traces.Event => Unit): Unit = {
     dequeue(event.timeRange.from).foreach(callback)
     // Note: queue.min actually looks for the highest timestamp (which is the lowest priority, therefore min)
     if (queue.nonEmpty && event.timeRange.from <= queue.min(queue.ord).timeRange.from - threshold){
@@ -36,14 +36,13 @@ class TracesQueue(val threshold: BigInt, val abortAt: Option[BigInt]) {
         val generator = queue.dequeue()
         val range = generator.timeRange
         if (range.to.isEmpty || range.to.get - range.from >= range.step){
-          queue.enqueue(Traces.Event(generator.loc,
-            TimeRange(range.id, range.from + range.step, range.to, range.step),
+          queue.enqueue(Traces.EventRange(generator.loc,
+            TimeRange(range.from + range.step, range.to, range.step),
             generator.stream, generator.value))
         }
 
-        Traces.Event(generator.loc,
-          TimeRange(range.id, range.from, Some(range.from), range.step),
-          generator.stream, generator.value) +: dequeue(timeStamp)
+        Traces.Event(generator.loc, range.from,
+          generator.stream, generator.value.eval) +: dequeue(timeStamp)
     }
   }
 
@@ -56,13 +55,12 @@ class TracesQueue(val threshold: BigInt, val abortAt: Option[BigInt]) {
         val range = generator.timeRange
         if (abortAt.isEmpty || range.from <= abortAt.get) {
           if (range.to.isEmpty || range.to.get - range.from >= range.step) {
-            queue.enqueue(Traces.Event(generator.loc,
-              TimeRange(range.id, range.from + range.step, range.to, range.step),
+            queue.enqueue(Traces.EventRange(generator.loc,
+              TimeRange(range.from + range.step, range.to, range.step),
               generator.stream, generator.value))
           }
-          callback(Traces.Event(generator.loc,
-            TimeRange(range.id, range.from, Some(range.from), range.step),
-            generator.stream, generator.value))
+          callback(Traces.Event(generator.loc, range.from,
+            generator.stream, generator.value.eval))
           processAll(callback)
         }
     }

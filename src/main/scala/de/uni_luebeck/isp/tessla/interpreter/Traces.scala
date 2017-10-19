@@ -1,32 +1,31 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.{InputTypeMismatch, TracesOperationError, UndeclaredInputStreamError}
-import de.uni_luebeck.isp.tessla.{Location, SourceLoc, TesslaCore}
+import de.uni_luebeck.isp.tessla.{Location, TesslaCore}
 import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 
 object Traces {
 
-  case class Event(loc: Location, timeRange: TimeRange, stream: Identifier, value: TesslaCore.LiteralValue) {
+  case class Event(loc: Location, timeStamp: BigInt, stream: Identifier, value: TesslaCore.LiteralValue) {
+    override def toString: String = s"$timeStamp: $stream = $value"
+  }
+
+  case class EventRange(loc: Location, timeRange: TimeRange, stream: Identifier, value: TracesOp) {
     override def toString: String = s"$timeRange: $stream = $value"
   }
 
-  case class TimeRange(id: Option[Identifier], from: BigInt, to: Option[BigInt], step: BigInt) {
+  case class TimeRange(from: BigInt, to: Option[BigInt], step: BigInt) {
     override def toString: String = if (to.isDefined && to.get == from) {
       s"$from"
     } else {
-      s"$from <= ${id.getOrElse("\"_\"")} ${
-        if (to.isDefined) {
-          "<= " + to.get
-        } else {
-          ""
+      s"$from"+{
+        (step == 1, to.isDefined) match {
+          case (true, true) => s" .. $to"
+          case (true, false) => s" .."
+          case (false, true) => s" .. ${to.get - step}, $to"
+          case (false, false) => s", ${from + step} .."
         }
-      }${
-        if (step != 1) {
-          s"; ${id.getOrElse("\"_\"")} += $step"
-        } else {
-          ""
-        }
-      }"
+      }
     }
   }
 
@@ -139,7 +138,7 @@ object Traces {
 
 }
 
-class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]) {
+class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.EventRange]) {
 
   def flattenInput(threshold: BigInt, abortAt: Option[BigInt]) = feedInput(threshold, abortAt)(println)
 
@@ -149,7 +148,7 @@ class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]
 
     var abort = false
     def handleInput(event: Traces.Event) {
-      if (abortAt.isEmpty || event.timeRange.from <= abortAt.get) {
+      if (abortAt.isEmpty || event.timeStamp <= abortAt.get) {
         process(event)
       } else {
         abort = true
@@ -172,9 +171,9 @@ class Traces(val timeStampUnit: Option[TimeUnit], values: Iterator[Traces.Event]
     tesslaSpec.addOutStreamListener(callback)
     var previousTS: BigInt = 0
     def provide(event: Traces.Event): Unit = {
-      if (event.timeRange.from - previousTS != 0) {
-        tesslaSpec.step(event.timeRange.from - previousTS)
-        previousTS = event.timeRange.from
+      if (event.timeStamp - previousTS != 0) {
+        tesslaSpec.step(event.timeStamp - previousTS)
+        previousTS = event.timeStamp
       }
       event match {
         case Traces.Event(loc, _, Traces.Identifier(streamLoc, name), value) =>
