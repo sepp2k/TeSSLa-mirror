@@ -97,4 +97,7 @@ object Errors {
     def message: String = s"Operation $op not defined for ${args.mkString(", ")}."
   }
 
+  case class TracesUnknownIdentifierError(loc: Location, name: String) extends TesslaError {
+    def message: String = s"Unknown identifier in traces: $name."
+  }
 }

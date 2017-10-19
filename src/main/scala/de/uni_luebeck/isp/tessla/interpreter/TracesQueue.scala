@@ -37,12 +37,12 @@ class TracesQueue(val threshold: BigInt, val abortAt: Option[BigInt]) {
         val range = generator.timeRange
         if (range.to.isEmpty || range.to.get - range.from >= range.step){
           queue.enqueue(Traces.EventRange(generator.loc,
-            TimeRange(range.from + range.step, range.to, range.step),
+            TimeRange(range.id, range.from + range.step, range.to, range.step),
             generator.stream, generator.value))
         }
 
         Traces.Event(generator.loc, range.from,
-          generator.stream, generator.value.eval) +: dequeue(timeStamp)
+          generator.stream, generator.evalValue) +: dequeue(timeStamp)
     }
   }
 
@@ -56,11 +56,11 @@ class TracesQueue(val threshold: BigInt, val abortAt: Option[BigInt]) {
         if (abortAt.isEmpty || range.from <= abortAt.get) {
           if (range.to.isEmpty || range.to.get - range.from >= range.step) {
             queue.enqueue(Traces.EventRange(generator.loc,
-              TimeRange(range.from + range.step, range.to, range.step),
+              TimeRange(range.id, range.from + range.step, range.to, range.step),
               generator.stream, generator.value))
           }
           callback(Traces.Event(generator.loc, range.from,
-            generator.stream, generator.value.eval))
+            generator.stream, generator.evalValue))
           processAll(callback)
         }
     }
