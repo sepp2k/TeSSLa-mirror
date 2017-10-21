@@ -4,11 +4,37 @@ import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TesslaSource
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 import scala.collection.mutable
 import scala.io.Source
 
 class InterpreterTests extends FunSuite {
+
+  object JSON {
+    case class Tests(spec: String, interpreterTest: Option[InterpreterTest], pipelineTest: Option[PipelineTest], testArgs: TestArgs)
+
+    case class InterpreterTest(input: Option[String], expectedOutput: Option[String],
+                               expectedErrors: Option[String], expectedWarnings: Option[String])
+
+    case class PipelineTest(expectedPipeline: Option[String], expectedRuntimeErrors: Option[String],
+                            expectedPipelineErrors: Option[String], expectedPipelineWarnings: Option[String])
+
+    case class TestArgs(threshold: Option[Int], abortAt: Option[Int])
+
+    implicit val interpreterTestReads: Reads[InterpreterTest] = Json.reads[InterpreterTest]
+    implicit val pipelineTestReads: Reads[PipelineTest] = Json.reads[PipelineTest]
+    implicit val testArgsReads: Reads[TestArgs] = Json.reads[TestArgs]
+
+    implicit val testReads: Reads[Tests] = (
+      (JsPath \ "spec").read[String] and
+        (JsPath \ "interpreter").readNullable[InterpreterTest] and
+        (JsPath \ "pipeline").readNullable[PipelineTest] and
+        (JsPath \ "args").read[TestArgs]
+      ) (Tests.apply _)
+  }
+
   def reSource(path: String): Source = Source.fromInputStream(getClass.getResourceAsStream(path))
 
   def testFile(name: String, extension: String): Source = reSource(s"tests/$name.$extension")
@@ -23,11 +49,14 @@ class InterpreterTests extends FunSuite {
   }
 
   def stripExtension(fileName: String) = fileName.replaceFirst("""\.[^.]+$""", "")
+
   def getExtension(fileName: String) = fileName.replaceFirst("""^.*\.([^.]+)$""", "$1")
 
   val files = getFilesRecursively("tests")
-  val testCaseNames = files.filter{ _.endsWith(".tessla") }.map(stripExtension).toSet
-  val testCases = files.groupBy(stripExtension).filter{
+  val testCaseNames = files.filter {
+    _.endsWith(".tessla")
+  }.map(stripExtension).toSet
+  val testCases = files.groupBy(stripExtension).filter {
     case (fileName, _) => testCaseNames.contains(fileName)
   }.mapValues(_.map(getExtension)).toSeq.sortBy(_._1)
 
@@ -39,15 +68,15 @@ class InterpreterTests extends FunSuite {
     assert(expected == actual, s"Actual $name did not equal expected $name. Expected: $expected. Actual: $actual.")
   }
 
-  def assertEqualSets[T: Ordering](actual: Set[T], expected: Set[T], name: String, stringify: T => String = (x:T) => x.toString): Unit = {
+  def assertEqualSets[T: Ordering](actual: Set[T], expected: Set[T], name: String, stringify: T => String = (x: T) => x.toString): Unit = {
     val onlyExpected = (expected -- actual).map(x => (x, "-"))
     val onlyActual = (actual -- expected).map(x => (x, "+"))
-    val diff = (onlyExpected ++ onlyActual).toSeq.sorted.map {case (entry, prefix) => s"$prefix ${stringify(entry)}"}.mkString("\n")
+    val diff = (onlyExpected ++ onlyActual).toSeq.sorted.map { case (entry, prefix) => s"$prefix ${stringify(entry)}" }.mkString("\n")
     assert(expected == actual, s"Actual $name did not equal expected $name. Diff:\n$diff\n")
   }
 
   def splitOutput(line: String): (BigInt, String) = {
-    if(line.startsWith("$timeunit")) {
+    if (line.startsWith("$timeunit")) {
       (-1, line)
     } else {
       val parts = line.split(":", 2)
@@ -62,8 +91,8 @@ class InterpreterTests extends FunSuite {
       test(name) {
         if (extensions.contains("tessla")) {
           try {
-            val traces = TracesParser.parseTraces(new TesslaSource(testFile(name, "input"), name+".input"))
-            val result = Interpreter.fromTesslaSource(new TesslaSource(testFile(name, "tessla"), name+".tessla"), traces.timeStampUnit)
+            val traces = TracesParser.parseTraces(new TesslaSource(testFile(name, "input"), name + ".input"))
+            val result = Interpreter.fromTesslaSource(new TesslaSource(testFile(name, "tessla"), name + ".tessla"), traces.timeStampUnit)
             result match {
               case Success(spec, _) =>
                 assert(!extensions.contains("errors"), "Expected: Compilation failure. Actual: Compilation success.")
