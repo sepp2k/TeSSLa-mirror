@@ -1,8 +1,5 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import java.io.{File, PrintWriter}
-import java.nio.file.{Files, Paths}
-
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TesslaSource
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
