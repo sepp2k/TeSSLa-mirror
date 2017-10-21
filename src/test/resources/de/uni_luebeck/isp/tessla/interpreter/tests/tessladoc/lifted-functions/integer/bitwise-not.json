@@ -1,0 +1,8 @@
+{
+  "spec": "bitwise-not.tessla",
+  "interpreter": {
+    "input": "bitwise-not.input",
+    "expectedOutput": "bitwise-not.output"
+  }
+}
+            

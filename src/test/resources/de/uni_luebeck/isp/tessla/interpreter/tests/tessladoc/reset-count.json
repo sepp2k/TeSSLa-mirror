@@ -1,0 +1,8 @@
+{
+  "spec": "reset-count.tessla",
+  "interpreter": {
+    "input": "reset-count.input",
+    "expectedOutput": "reset-count.output"
+  }
+}
+            

@@ -1,0 +1,8 @@
+{
+  "spec": "bitwise-and.tessla",
+  "interpreter": {
+    "input": "bitwise-and.input",
+    "expectedOutput": "bitwise-and.output"
+  }
+}
+            

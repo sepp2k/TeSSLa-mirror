@@ -1,0 +1,8 @@
+{
+  "spec": "period.tessla",
+  "interpreter": {
+    "input": "period.input",
+    "expectedOutput": "period.output"
+  }
+}
+            

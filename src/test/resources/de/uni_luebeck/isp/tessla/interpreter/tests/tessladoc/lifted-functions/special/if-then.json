@@ -1,0 +1,8 @@
+{
+  "spec": "if-then.tessla",
+  "interpreter": {
+    "input": "if-then.input",
+    "expectedOutput": "if-then.output"
+  }
+}
+            

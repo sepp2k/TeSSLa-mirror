@@ -1,0 +1,9 @@
+{
+  "spec": "input-late-timeunit.tessla",
+  "interpreter": {
+    "input": "input-late-timeunit.input",
+    "expectedOutput": "input-late-timeunit.output",
+    "expectedRuntimeErrors": "input-late-timeunit.runtime-errors"
+  }
+}
+            

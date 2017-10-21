@@ -1,0 +1,12 @@
+{
+  "spec": "input-decreasing-timestamp2.tessla",
+  "interpreter": {
+    "input": "input-decreasing-timestamp2.input",
+    "expectedOutput": "input-decreasing-timestamp2.output",
+    "expectedRuntimeErrors": "input-decreasing-timestamp2.runtime-errors"
+  },
+  "args": {
+    "threshold": 100000
+  }
+}
+            

@@ -1,0 +1,8 @@
+{
+  "spec": "right-shift.tessla",
+  "interpreter": {
+    "input": "right-shift.input",
+    "expectedOutput": "right-shift.output"
+  }
+}
+            

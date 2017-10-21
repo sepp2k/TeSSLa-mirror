@@ -1,0 +1,8 @@
+{
+  "spec": "time.tessla",
+  "interpreter": {
+    "input": "time.input",
+    "expectedOutput": "time.output"
+  }
+}
+            

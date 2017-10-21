@@ -1,0 +1,9 @@
+{
+  "spec": "input-type-error.tessla",
+  "interpreter": {
+    "input": "input-type-error.input",
+    "expectedOutput": "input-type-error.output",
+    "expectedRuntimeErrors": "input-type-error.runtime-errors"
+  }
+}
+            

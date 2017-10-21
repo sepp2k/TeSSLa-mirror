@@ -1,0 +1,8 @@
+{
+  "spec": "comparison-derived.tessla",
+  "interpreter": {
+    "input": "comparison-derived.input",
+    "expectedOutput": "comparison-derived.output"
+  }
+}
+            

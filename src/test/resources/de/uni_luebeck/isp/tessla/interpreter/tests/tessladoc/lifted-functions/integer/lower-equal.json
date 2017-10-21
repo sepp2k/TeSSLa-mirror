@@ -1,0 +1,8 @@
+{
+  "spec": "lower-equal.tessla",
+  "interpreter": {
+    "input": "lower-equal.input",
+    "expectedOutput": "lower-equal.output"
+  }
+}
+            

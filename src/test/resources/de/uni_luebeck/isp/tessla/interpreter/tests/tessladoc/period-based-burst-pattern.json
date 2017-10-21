@@ -1,0 +1,8 @@
+{
+  "spec": "period-based-burst-pattern.tessla",
+  "interpreter": {
+    "input": "period-based-burst-pattern.input",
+    "expectedOutput": "period-based-burst-pattern.output"
+  }
+}
+            

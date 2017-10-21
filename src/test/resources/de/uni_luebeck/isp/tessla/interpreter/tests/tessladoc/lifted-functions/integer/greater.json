@@ -1,0 +1,8 @@
+{
+  "spec": "greater.tessla",
+  "interpreter": {
+    "input": "greater.input",
+    "expectedOutput": "greater.output"
+  }
+}
+            

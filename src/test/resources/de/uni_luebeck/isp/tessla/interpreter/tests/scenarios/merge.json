@@ -1,0 +1,8 @@
+{
+  "spec": "merge.tessla",
+  "interpreter": {
+    "input": "merge.input",
+    "expectedOutput": "merge.output"
+  }
+}
+            

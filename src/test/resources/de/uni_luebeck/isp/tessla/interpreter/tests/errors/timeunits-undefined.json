@@ -1,0 +1,8 @@
+{
+  "spec": "timeunits-undefined.tessla",
+  "interpreter": {
+    "input": "timeunits-undefined.input",
+    "expectedErrors": "timeunits-undefined.errors"
+  }
+}
+            

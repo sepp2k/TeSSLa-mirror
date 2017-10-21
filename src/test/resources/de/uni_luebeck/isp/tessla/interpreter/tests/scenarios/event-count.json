@@ -1,0 +1,8 @@
+{
+  "spec": "event-count.tessla",
+  "interpreter": {
+    "input": "event-count.input",
+    "expectedOutput": "event-count.output"
+  }
+}
+            

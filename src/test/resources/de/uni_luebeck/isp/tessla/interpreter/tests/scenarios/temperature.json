@@ -1,0 +1,8 @@
+{
+  "spec": "temperature.tessla",
+  "interpreter": {
+    "input": "temperature.input",
+    "expectedOutput": "temperature.output"
+  }
+}
+            

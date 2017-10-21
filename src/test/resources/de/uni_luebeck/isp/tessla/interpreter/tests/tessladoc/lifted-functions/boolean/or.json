@@ -1,0 +1,8 @@
+{
+  "spec": "or.tessla",
+  "interpreter": {
+    "input": "or.input",
+    "expectedOutput": "or.output"
+  }
+}
+            

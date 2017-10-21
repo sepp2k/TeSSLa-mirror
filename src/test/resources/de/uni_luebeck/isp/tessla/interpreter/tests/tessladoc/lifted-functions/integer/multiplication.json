@@ -1,0 +1,8 @@
+{
+  "spec": "multiplication.tessla",
+  "interpreter": {
+    "input": "multiplication.input",
+    "expectedOutput": "multiplication.output"
+  }
+}
+            

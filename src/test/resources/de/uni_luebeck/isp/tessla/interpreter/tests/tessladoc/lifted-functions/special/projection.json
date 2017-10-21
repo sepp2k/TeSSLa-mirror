@@ -1,0 +1,8 @@
+{
+  "spec": "projection.tessla",
+  "interpreter": {
+    "input": "projection.input",
+    "expectedOutput": "projection.output"
+  }
+}
+            

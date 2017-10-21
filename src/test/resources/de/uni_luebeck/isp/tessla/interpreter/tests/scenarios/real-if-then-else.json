@@ -1,0 +1,8 @@
+{
+  "spec": "real-if-then-else.tessla",
+  "interpreter": {
+    "input": "real-if-then-else.input",
+    "expectedOutput": "real-if-then-else.output"
+  }
+}
+            

@@ -1,0 +1,8 @@
+{
+  "spec": "age-constraint.tessla",
+  "interpreter": {
+    "input": "age-constraint.input",
+    "expectedOutput": "age-constraint.output"
+  }
+}
+            
