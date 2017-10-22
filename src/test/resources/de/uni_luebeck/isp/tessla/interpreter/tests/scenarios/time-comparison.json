@@ -1,8 +1,6 @@
 {
   "spec": "time-comparison.tessla",
-  "interpreter": {
-    "input": "time-comparison.input",
-    "expectedOutput": "time-comparison.output"
-  }
+  "input": "time-comparison.input",
+  "expectedOutput": "time-comparison.output"
 }
             

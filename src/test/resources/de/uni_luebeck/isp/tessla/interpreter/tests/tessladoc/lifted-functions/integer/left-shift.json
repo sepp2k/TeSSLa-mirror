@@ -1,8 +1,6 @@
 {
   "spec": "left-shift.tessla",
-  "interpreter": {
-    "input": "left-shift.input",
-    "expectedOutput": "left-shift.output"
-  }
+  "input": "left-shift.input",
+  "expectedOutput": "left-shift.output"
 }
             

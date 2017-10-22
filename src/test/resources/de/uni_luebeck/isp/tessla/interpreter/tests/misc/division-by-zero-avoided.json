@@ -1,8 +1,6 @@
 {
   "spec": "division-by-zero-avoided.tessla",
-  "interpreter": {
-    "input": "division-by-zero-avoided.input",
-    "expectedOutput": "division-by-zero-avoided.output"
-  }
+  "input": "division-by-zero-avoided.input",
+  "expectedOutput": "division-by-zero-avoided.output"
 }
             

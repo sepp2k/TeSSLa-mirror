@@ -1,8 +1,6 @@
 {
   "spec": "simple-recursion.tessla",
-  "interpreter": {
-    "input": "simple-recursion.input",
-    "expectedOutput": "simple-recursion.output"
-  }
+  "input": "simple-recursion.input",
+  "expectedOutput": "simple-recursion.output"
 }
             

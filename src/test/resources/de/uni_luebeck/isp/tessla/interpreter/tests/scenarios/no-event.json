@@ -1,8 +1,6 @@
 {
   "spec": "no-event.tessla",
-  "interpreter": {
-    "input": "no-event.input",
-    "expectedOutput": "no-event.output"
-  }
+  "input": "no-event.input",
+  "expectedOutput": "no-event.output"
 }
             

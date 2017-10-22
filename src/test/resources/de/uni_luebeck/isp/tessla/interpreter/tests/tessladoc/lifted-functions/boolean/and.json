@@ -1,8 +1,6 @@
 {
   "spec": "and.tessla",
-  "interpreter": {
-    "input": "and.input",
-    "expectedOutput": "and.output"
-  }
+  "input": "and.input",
+  "expectedOutput": "and.output"
 }
             

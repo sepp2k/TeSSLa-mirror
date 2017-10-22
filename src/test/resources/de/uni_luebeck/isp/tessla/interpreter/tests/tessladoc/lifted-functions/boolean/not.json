@@ -1,8 +1,6 @@
 {
   "spec": "not.tessla",
-  "interpreter": {
-    "input": "not.input",
-    "expectedOutput": "not.output"
-  }
+  "input": "not.input",
+  "expectedOutput": "not.output"
 }
             

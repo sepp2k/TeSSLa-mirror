@@ -1,9 +1,7 @@
 {
   "spec": "warnings.tessla",
-  "interpreter": {
-    "input": "warnings.input",
-    "expectedOutput": "warnings.output",
-    "expectedWarnings": "warnings.warnings"
-  }
+  "input": "warnings.input",
+  "expectedOutput": "warnings.output",
+  "expectedWarnings": "warnings.warnings"
 }
             

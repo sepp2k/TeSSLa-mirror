@@ -1,9 +1,7 @@
 {
   "spec": "input-undeclared-stream.tessla",
-  "interpreter": {
-    "input": "input-undeclared-stream.input",
-    "expectedOutput": "input-undeclared-stream.output",
-    "expectedRuntimeErrors": "input-undeclared-stream.runtime-errors"
-  }
+  "input": "input-undeclared-stream.input",
+  "expectedOutput": "input-undeclared-stream.output",
+  "expectedRuntimeErrors": "input-undeclared-stream.runtime-errors"
 }
             

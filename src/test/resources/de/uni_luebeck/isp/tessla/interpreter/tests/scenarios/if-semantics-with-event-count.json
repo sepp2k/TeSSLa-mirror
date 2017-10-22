@@ -1,8 +1,6 @@
 {
   "spec": "if-semantics-with-event-count.tessla",
-  "interpreter": {
-    "input": "if-semantics-with-event-count.input",
-    "expectedOutput": "if-semantics-with-event-count.output"
-  }
+  "input": "if-semantics-with-event-count.input",
+  "expectedOutput": "if-semantics-with-event-count.output"
 }
             

@@ -1,8 +1,6 @@
 {
   "spec": "subtraction.tessla",
-  "interpreter": {
-    "input": "subtraction.input",
-    "expectedOutput": "subtraction.output"
-  }
+  "input": "subtraction.input",
+  "expectedOutput": "subtraction.output"
 }
             

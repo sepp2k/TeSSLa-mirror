@@ -1,8 +1,6 @@
 {
   "spec": "greater.tessla",
-  "interpreter": {
-    "input": "greater.input",
-    "expectedOutput": "greater.output"
-  }
+  "input": "greater.input",
+  "expectedOutput": "greater.output"
 }
             

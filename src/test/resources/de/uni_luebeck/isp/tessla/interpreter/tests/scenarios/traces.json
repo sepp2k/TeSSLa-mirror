@@ -1,8 +1,6 @@
 {
   "spec": "traces.tessla",
-  "interpreter": {
-    "input": "traces.input",
-    "expectedOutput": "traces.output"
-  }
+  "input": "traces.input",
+  "expectedOutput": "traces.output"
 }
             

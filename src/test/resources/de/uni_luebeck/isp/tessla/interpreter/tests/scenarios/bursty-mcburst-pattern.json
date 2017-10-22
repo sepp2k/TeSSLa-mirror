@@ -1,8 +1,6 @@
 {
   "spec": "bursty-mcburst-pattern.tessla",
-  "interpreter": {
-    "input": "bursty-mcburst-pattern.input",
-    "expectedOutput": "bursty-mcburst-pattern.output"
-  }
+  "input": "bursty-mcburst-pattern.input",
+  "expectedOutput": "bursty-mcburst-pattern.output"
 }
             

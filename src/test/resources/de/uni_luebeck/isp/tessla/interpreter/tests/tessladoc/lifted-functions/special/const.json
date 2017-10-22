@@ -1,8 +1,6 @@
 {
   "spec": "const.tessla",
-  "interpreter": {
-    "input": "const.input",
-    "expectedOutput": "const.output"
-  }
+  "input": "const.input",
+  "expectedOutput": "const.output"
 }
             

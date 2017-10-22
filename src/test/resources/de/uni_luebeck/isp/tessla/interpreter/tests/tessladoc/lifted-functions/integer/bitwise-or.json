@@ -1,8 +1,6 @@
 {
   "spec": "bitwise-or.tessla",
-  "interpreter": {
-    "input": "bitwise-or.input",
-    "expectedOutput": "bitwise-or.output"
-  }
+  "input": "bitwise-or.input",
+  "expectedOutput": "bitwise-or.output"
 }
             

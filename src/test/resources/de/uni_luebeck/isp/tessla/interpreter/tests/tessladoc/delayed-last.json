@@ -1,8 +1,6 @@
 {
   "spec": "delayed-last.tessla",
-  "interpreter": {
-    "input": "delayed-last.input",
-    "expectedOutput": "delayed-last.output"
-  }
+  "input": "delayed-last.input",
+  "expectedOutput": "delayed-last.output"
 }
             

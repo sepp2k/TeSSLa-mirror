@@ -1,11 +1,7 @@
 {
   "spec": "correct-order.tessla",
-  "interpreter": {
-    "input": "correct-order.input",
-    "expectedOutput": "correct-order.output"
-  },
-  "args": {
-    "threshold": 100000
-  }
+  "input": "correct-order.input",
+  "expectedOutput": "correct-order.output",
+  "threshold": 100000
 }
             

@@ -1,8 +1,6 @@
 {
   "spec": "comments.tessla",
-  "interpreter": {
-    "input": "comments.input",
-    "expectedOutput": "comments.output"
-  }
+  "input": "comments.input",
+  "expectedOutput": "comments.output"
 }
             

@@ -1,8 +1,6 @@
 {
   "spec": "defaultFrom-2.tessla",
-  "interpreter": {
-    "input": "defaultFrom-2.input",
-    "expectedOutput": "defaultFrom-2.output"
-  }
+  "input": "defaultFrom-2.input",
+  "expectedOutput": "defaultFrom-2.output"
 }
             

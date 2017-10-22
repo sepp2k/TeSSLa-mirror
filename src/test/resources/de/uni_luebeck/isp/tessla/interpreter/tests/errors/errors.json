@@ -1,8 +1,6 @@
 {
   "spec": "errors.tessla",
-  "interpreter": {
-    "input": "errors.input",
-    "expectedErrors": "errors.errors"
-  }
+  "input": "errors.input",
+  "expectedErrors": "errors.errors"
 }
             
