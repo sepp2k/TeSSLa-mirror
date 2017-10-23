@@ -4,6 +4,7 @@ val snapshots = "ISP Snapshots" at nexus + "content/repositories/snapshots"
 val privateReleases = "ISP Private Releases" at nexus + "content/repositories/private_releases"
 val releases = "ISP Releases" at nexus + "content/repositories/releases"
 val playResolver = "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
+val validatorResolver = "emueller-bintray" at "http://dl.bintray.com/emueller/maven"
 
 name := "tessla"
 
@@ -16,7 +17,7 @@ scalaVersion := "2.12.3"
 resolvers ++= Seq(
   releases, snapshots,
   privateSnapshots, privateReleases,
-  playResolver
+  playResolver, validatorResolver
 )
 
 publishTo := {
@@ -33,7 +34,8 @@ libraryDependencies ++= Seq(
   "com.github.sepp2k" %% "sexyopt" % "0.1.1",
   "de.uni_luebeck.isp" %% "compacom" % "0.2.8",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-"com.typesafe.play" %% "play-json" % "2.6.6"
+  "com.typesafe.play" %% "play-json" % "2.6.6",
+  "com.eclipsesource" %% "play-json-schema-validator" % "0.9.4"
 )
 
 scalacOptions += "-feature"

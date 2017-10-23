@@ -2,11 +2,11 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TesslaSource
-import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
+
 import scala.collection.mutable
 import scala.io.Source
 
