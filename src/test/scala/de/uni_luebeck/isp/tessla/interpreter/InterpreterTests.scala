@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import com.eclipsesource.schema.{SchemaType, SchemaValidator}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TesslaSource
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
@@ -30,11 +31,23 @@ class InterpreterTests extends FunSuite {
     implicit val interpreterTestReads: Reads[InterpreterTest] = Json.reads[InterpreterTest]
     implicit val pipelineTestReads: Reads[PipelineTest] = Json.reads[PipelineTest]
     implicit val compilerTestReads: Reads[CompilerTest] = Json.reads[CompilerTest]
+
+    /*Validates a test of a given type using its json instance and a schema for that test type
+    (Schema for type X must be named XSchema.json and located in the root directory).
+    Returns the test if successful, throws an Exception otherwise.*/
+    def validate(test: Test, testjson: JsValue): Test = {
+      val fileName = test.getClass.getTypeName.substring(test.getClass.getTypeName.lastIndexOf("$") + 1) + "Schema"
+      val schema = Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root/$fileName.json"))).get
+      SchemaValidator().validate(schema, testjson) match{
+        case JsSuccess(_, _) => test
+        case e: JsError => sys.error(s"Validation failed for\n$test:\n"+JsError.toJson(e).fields.mkString("\n"))
+      }
+    }
   }
 
   val root = "tests"
   val testCases: Stream[(String, String)] = getFilesRecursively().filter {
-    _._2.endsWith(".json")
+    case ((path, file)) => file.endsWith(".json") && !(file.endsWith("Schema.json") && path.isEmpty)
   }.map {
     case (path, file) => (path, stripExtension(file))
   }
@@ -48,6 +61,7 @@ class InterpreterTests extends FunSuite {
       .getLines.flatMap { file =>
       if (isDir(file)) getFilesRecursively(s"$path/$file")
       else Stream((path, file))
+
 
     }.toStream
   }
@@ -84,16 +98,19 @@ class InterpreterTests extends FunSuite {
 
     /*Try to parse it as InterpreterTest*/
     Json.fromJson[JSON.InterpreterTest](json) match {
-      case JsSuccess(value, _) => value
+      case JsSuccess(value, _) =>
+        JSON.validate(value, json)
       case _ =>
         /*If failed, try to parse as PipelineTest*/
         Json.fromJson[JSON.PipelineTest](json) match {
-        case JsSuccess(value, _) => value
+        case JsSuccess(value, _) =>
+          JSON.validate(value, json)
         case _: JsError =>
           /*If failed, try to parse as CompilerTest*/
           Json.fromJson[JSON.CompilerTest](json) match {
-          case JsSuccess(value, _) => value
-          case e: JsError => sys.error("Json Parsing Error: \n" + JsError.toJson(e).fields.mkString("\n"))
+          case JsSuccess(value, _) =>
+            JSON.validate(value, json)
+          case e: JsError => sys.error("Json Parsing Error:\n" + JsError.toJson(e).fields.mkString("\n"))
         }
       }
     }
