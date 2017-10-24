@@ -33,5 +33,9 @@ object TesslaSource {
     new TesslaSource(source, path)
   }
 
+  def fromIterator(iterator: Iterator[Char], path: String) = {
+    new TesslaSource(new Source { override val iter = iterator }, path)
+  }
+
   val stdin = new TesslaSource(Source.stdin, "<stdin>")
 }
