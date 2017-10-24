@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors._
-import de.uni_luebeck.isp.tessla.TranslationPhase.{Result}
+import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.{Compiler, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types}
 
 import scala.collection.mutable
