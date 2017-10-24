@@ -45,4 +45,6 @@ object Types {
       throw TypeMismatch(expected, actual, loc)
     }
   }
+
+  abstract class CustomType extends ValueType
 }

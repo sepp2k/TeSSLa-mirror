@@ -26,6 +26,8 @@ object PrimitiveOperators {
     protected def doEval(values: Seq[TesslaCore.Value], loc: Location): Option[TesslaCore.Value]
   }
 
+  abstract class CustomBuiltIn extends PrimitiveOperator
+
   final case class Const(value: TesslaCore.Value) extends PrimitiveOperator {
     override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = value.typ
     def doEval(values: Seq[TesslaCore.Value], loc: Location) = Some(value)
@@ -43,7 +45,7 @@ object PrimitiveOperators {
     def doEval(values: Seq[TesslaCore.Value], loc: Location) = Some(values.head)
   }
 
-  sealed protected trait Monomorphic extends PrimitiveOperator {
+  trait Monomorphic {
     protected def argumentTypes: Seq[Types.ValueType]
     protected def returnType: Types.ValueType
 
@@ -54,7 +56,7 @@ object PrimitiveOperators {
       }
     }
 
-    override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = {
+    def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = {
       checkArgumentTypes(argTypes)
       returnType
     }

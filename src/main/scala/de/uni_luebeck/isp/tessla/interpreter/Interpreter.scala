@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
-import de.uni_luebeck.isp.tessla.{Compiler, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types}
+import de.uni_luebeck.isp.tessla.{Compiler, CustomBuiltIns, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types}
 
 import scala.collection.mutable
 
@@ -148,11 +148,12 @@ object Interpreter {
               traceSource: TesslaSource,
               stopOn: Option[String] = None,
               timeUnit: Option[TesslaSource] = None,
+              customBuiltIns: CustomBuiltIns = CustomBuiltIns.mapAndSet,
               printCore: Boolean = false
              ): Result[Trace] = {
     val inputTrace: Trace = TraceParser.parseTrace(traceSource)
     val tu = timeUnit.map(TimeUnit.parse).orElse(inputTrace.timeStampUnit)
-    val core = new Compiler().applyPasses(specSource, tu)
+    val core = new Compiler().applyPasses(specSource, tu, customBuiltIns)
     if (printCore) core.foreach(println)
     core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(inputTrace, stopOn))
   }
