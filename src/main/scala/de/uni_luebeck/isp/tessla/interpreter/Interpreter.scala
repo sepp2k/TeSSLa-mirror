@@ -84,14 +84,17 @@ object Interpreter {
     override def translateSpec(spec: Interpreter): Trace = {
       val eventIterator = new Iterator[Trace.Event] {
         var nextEvents = new mutable.Queue[Trace.Event]
-        var atEnd = false
+        var stopped = false
 
         spec.outStreams.foreach {
           case (name, stream) =>
             stream.addListener {
               case Some(value: TesslaCore.LiteralValue) =>
-                val timeStamp = Trace.TimeStamp(Location.unknown, spec.getTime)
-                nextEvents += Trace.Event(Location.unknown, timeStamp, Trace.Identifier(Location.unknown, name), value)
+                if (!stopped) {
+                  if (stopOn.contains(name)) stopped = true
+                  val timeStamp = Trace.TimeStamp(Location.unknown, spec.getTime)
+                  nextEvents += Trace.Event(Location.unknown, timeStamp, Trace.Identifier(Location.unknown, name), value)
+                }
               case Some(TesslaCore.ErrorValue(error)) =>
                 throw error
               case None =>
@@ -114,29 +117,24 @@ object Interpreter {
                   throw InputTypeMismatch(event.value, event.stream.name, elementType, event.loc)
                 }
                 inStream.provide(event.value)
-
+                if (stopped) return
               case None =>
                 throw UndeclaredInputStreamError(event.stream.name, event.stream.loc)
-            }
-            if (stopOn.contains(event.stream.name)) {
-              spec.step()
-              atEnd = true
-              return
             }
           }
           if (!inputTrace.events.hasNext) {
             spec.step()
-            atEnd = true
+            stopped = true
           }
         }
 
         override def hasNext = {
-          if(!atEnd) gatherValues()
+          if(!stopped) gatherValues()
           nextEvents.nonEmpty
         }
 
         override def next() = {
-          if(!atEnd) gatherValues()
+          if(!stopped) gatherValues()
           nextEvents.dequeue
         }
       }
