@@ -55,15 +55,22 @@ object TranslationPhase {
   sealed trait Result[+T] {
     def warnings: Seq[Diagnostic]
     def andThen[T2 >: T, U](f: TranslationPhase[T2, U]): Result[U]
+    def foreach(f: T => Unit): Unit
   }
+
   case class Success[+T](value: T, warnings: Seq[Diagnostic]) extends Result[T] {
     override def andThen[T2 >: T, U](t: TranslationPhase[T2, U]): Result[U] = t.translate(value) match {
       case Success(newValue, newWarnings) => Success(newValue, warnings ++ newWarnings)
       case Failure(errors, newWarnings) => Failure(errors, warnings ++ newWarnings)
     }
+
+    override def foreach(f: T => Unit) = f(value)
   }
+
   case class Failure(errors: Seq[Diagnostic], warnings: Seq[Diagnostic]) extends Result[Nothing] {
     override def andThen[T2, U](f: TranslationPhase[T2, U]) = this
+
+    override def foreach(f: Nothing => Unit) = ()
   }
 
   case class SimpleWarning(loc: Location, message: String) extends Diagnostic

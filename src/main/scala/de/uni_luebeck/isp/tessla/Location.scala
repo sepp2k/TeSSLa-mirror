@@ -30,6 +30,11 @@ object Location {
     SourceLoc(compacom.Location(from, to), path)
   }
 
+  def forWholeFile(fileContents: String, path: String): Location = {
+    val lines = fileContents.split("\\n")
+    Location(Position(0, 0), Position(lines.length - 1, lines.last.length), path)
+  }
+
   private case object Unknown extends Location {
     override def merge(other: Location) = other
 

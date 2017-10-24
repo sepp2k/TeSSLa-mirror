@@ -14,6 +14,11 @@ object TimeUnit {
     case _ => throw UnknownTimeUnit(str, loc)
   }
 
+  def parse(source: TesslaSource) = {
+    val unitString = source.src.mkString("")
+    fromString(unitString, Location.forWholeFile(unitString, source.path))
+  }
+
   sealed abstract class TimeUnit {
     val factor: BigInt
 

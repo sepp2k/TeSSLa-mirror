@@ -1,5 +1,0 @@
-in a: Events<Int>
-in b: Events<Int>
-
-def add := a+b
-out add

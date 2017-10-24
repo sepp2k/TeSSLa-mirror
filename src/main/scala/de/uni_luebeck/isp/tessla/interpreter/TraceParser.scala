@@ -4,13 +4,10 @@ import de.uni_luebeck.isp.tessla.{Location, TesslaCore, TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.tessla.Errors.{NotAnEventError, ParserError}
 import de.uni_luebeck.isp.tessla.TimeUnit._
-import de.uni_luebeck.isp.tessla.interpreter.Traces.Event
 
-import scala.io.Source
-
-object TracesParser extends Parsers {
-  def parseTraces(tesslaSource: TesslaSource): Traces = {
-    def eventsOnly(lines: Iterator[Either[TimeUnit, Event]]): Iterator[Event] =
+object TraceParser extends Parsers {
+  def parseTrace(tesslaSource: TesslaSource): Trace = {
+    def eventsOnly(lines: Iterator[Either[TimeUnit, Trace.Event]]): Iterator[Trace.Event] =
       lines.map{
         case Left(tu) => throw NotAnEventError(tu.toString, tu.loc)
         case Right(ev) => ev
@@ -22,9 +19,9 @@ object TracesParser extends Parsers {
     }
 
     input.take(1).toList.headOption match {
-      case Some(Left(tu)) => new Traces(Some(tu), eventsOnly(input))
-      case Some(Right(ev)) => new Traces(None, Iterator(ev) ++ eventsOnly(input))
-      case None => new Traces(None, Iterator())
+      case Some(Left(tu)) => new Trace(Some(tu), eventsOnly(input))
+      case Some(Right(ev)) => new Trace(None, Iterator(ev) ++ eventsOnly(input))
+      case None => new Trace(None, Iterator())
     }
   }
 
@@ -68,15 +65,15 @@ object TracesParser extends Parsers {
 
 
   class Parsers(path: String) {
-    def line: Parser[Either[TimeUnit, Traces.Event]] = (timeUnit | event) ^^ {
+    def line: Parser[Either[TimeUnit, Trace.Event]] = (timeUnit | event) ^^ {
       case tu: TimeUnit => Left(tu)
-      case ev: Event => Right(ev)
+      case ev: Trace.Event => Right(ev)
     }
 
-    def event: Parser[Traces.Event] =
-      (((bigInt <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
+    def event: Parser[Trace.Event] =
+      (((timeStamp <~ COLON) ~ identifier) ~ (EQ ~> value).?) ^^! {
         case (loc, ((time, id), v)) =>
-          Traces.Event(Location(loc, path), time, id, v.getOrElse(TesslaCore.Unit(Location(loc, path))))
+          Trace.Event(Location(loc, path), time, id, v.getOrElse(TesslaCore.Unit(Location(loc, path))))
       }
 
     def value: Parser[TesslaCore.LiteralValue] =
@@ -100,6 +97,11 @@ object TracesParser extends Parsers {
       case WithLocation(loc, STRING(name)) => TimeUnit.fromString(name, Location(loc, path))
     }
 
+    def timeStamp = bigInt ^^! {
+      case (loc, i) =>
+        Trace.TimeStamp(Location(loc, path), i)
+    }
+
     def bigInt: Parser[BigInt] =
       MINUS.? ~ bigNat ^^ {
         case (Some(_), nat) => -nat
@@ -111,8 +113,8 @@ object TracesParser extends Parsers {
         case WithLocation(_, INT(value)) => BigInt(value)
       }
 
-    def identifier: Parser[Traces.Identifier] = matchToken("identifier", Set("<identifier>")) {
-      case WithLocation(loc, ID(name)) => Traces.Identifier(Location(loc, path), name)
+    def identifier: Parser[Trace.Identifier] = matchToken("identifier", Set("<identifier>")) {
+      case WithLocation(loc, ID(name)) => Trace.Identifier(Location(loc, path), name)
     }
 
     def string: Parser[String] = matchToken("string", Set("<string>")) {

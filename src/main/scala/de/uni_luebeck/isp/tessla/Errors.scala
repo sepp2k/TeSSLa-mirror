@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 import de.uni_luebeck.isp.tessla.Types.Type
-import de.uni_luebeck.isp.tessla.interpreter.Traces
+import de.uni_luebeck.isp.tessla.interpreter.Trace
 
 object Errors {
 
