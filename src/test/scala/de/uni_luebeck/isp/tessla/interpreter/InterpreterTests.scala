@@ -11,7 +11,9 @@ import scala.io.Source
 class InterpreterTests extends FunSuite {
   def reSource(path: String): Source = Source.fromInputStream(getClass.getResourceAsStream(path))
 
-  def testFile(name: String, extension: String): Source = reSource(s"tests/$name.$extension")
+  def testFile(name: String, extension: String): TesslaSource = {
+    TesslaSource.fromScalaSource(reSource(s"tests/$name.$extension"), s"$name.$extension")
+  }
 
   def getFilesRecursively(root: String, path: String = ""): Stream[String] = {
     def isDir(filename: String) = !filename.contains(".")
@@ -62,31 +64,16 @@ class InterpreterTests extends FunSuite {
       test(name) {
         if (extensions.contains("tessla")) {
           try {
-            val traces = TracesParser.parseTraces(new TesslaSource(testFile(name, "input"), name+".input"))
-            val result = Interpreter.fromTesslaSource(new TesslaSource(testFile(name, "tessla"), name+".tessla"), traces.timeStampUnit)
+            val result = Interpreter.runSpec(testFile(name, "tessla"), testFile(name, "input"))
             result match {
-              case Success(spec, _) =>
+              case Success(output, _) =>
                 assert(!extensions.contains("errors"), "Expected: Compilation failure. Actual: Compilation success.")
 
-                def expectedOutput = testFile(name, "output").getLines.toSet
+                val expectedOutput = testFile(name, "output").getLines.toSet
+                val actualOutput = output.toSet
 
-                val actualOutput = mutable.Set[String]()
-                traces.timeStampUnit.foreach(unit => actualOutput += ("$timeunit = \"" + unit + "\""))
-
-                def runTraces(): Unit = {
-                  val threshold = 100000
-                  traces.feedInput(spec, threshold) {
-                    case (ts, n, value) => actualOutput += s"$ts: $n = $value"
-                  }
-                }
-
-                if (extensions.contains("runtime-errors")) {
-                  val ex = intercept[TesslaError](runTraces())
-                  assertEquals(ex.toString, testFile(name, "runtime-errors").mkString, "runtime error")
-                } else {
-                  runTraces()
-                }
-                assertEqualSets(actualOutput.map(splitOutput).toSet, expectedOutput.map(splitOutput), "output", unsplitOutput)
+                assertEqualSets(actualOutput.map(_.toString).map(splitOutput), expectedOutput.map(splitOutput),
+                  "output", unsplitOutput)
               case Failure(errors, _) =>
                 assert(extensions.contains("errors"),
                   s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")

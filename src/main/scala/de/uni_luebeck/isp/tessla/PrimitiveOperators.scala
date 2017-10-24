@@ -4,7 +4,7 @@ import de.uni_luebeck.isp.tessla.Errors.DivideByZero
 
 object PrimitiveOperators {
   def ArityError =
-    Errors.InternalError("Arity mismatch should have been caught during overload resolution", UnknownLoc)
+    Errors.InternalError("Arity mismatch should have been caught during overload resolution")
 
   sealed abstract class PrimitiveOperator {
     /** Return the return type of the result for the given types of the operands, or throw a TypeError if the provided

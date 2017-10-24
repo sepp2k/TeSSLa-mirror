@@ -16,18 +16,18 @@ object Types {
     override def toString = s"Events<$elementType>"
   }
 
-  def fromAst(ast: Ast.Type): Type = ast match {
-    case Ast.TypeName(Ast.Identifier("Int", _)) => Int
-    case Ast.TypeName(Ast.Identifier("String", _)) => String
-    case Ast.TypeName(Ast.Identifier("Bool", _)) => Bool
-    case Ast.TypeName(Ast.Identifier("Unit", _)) => Unit
-    case Ast.TypeName(Ast.Identifier(name, loc)) => throw UnknownType(name, loc)
-    case Ast.TypeApp(Ast.Identifier("Events", _), Seq(elementType), loc) =>
+  def fromAst(ast: Tessla.Type): Type = ast match {
+    case Tessla.SimpleType(Tessla.Identifier("Int", _)) => Int
+    case Tessla.SimpleType(Tessla.Identifier("String", _)) => String
+    case Tessla.SimpleType(Tessla.Identifier("Bool", _)) => Bool
+    case Tessla.SimpleType(Tessla.Identifier("Unit", _)) => Unit
+    case Tessla.SimpleType(Tessla.Identifier(name, loc)) => throw UnknownType(name, loc)
+    case Tessla.GenericType(Tessla.Identifier("Events", _), Seq(elementType), loc) =>
       fromAst(elementType) match {
         case Stream(_) => throw StreamOfStreams(loc)
         case t: ValueType => Stream(t)
       }
-    case Ast.TypeApp(name, _, _) => throw UnknownType(name.name, name.loc)
+    case Tessla.GenericType(name, _, _) => throw UnknownType(name.name, name.loc)
   }
 
   private def requireTypeOption[T <: Type](expected: T, actual: T): Option[T] = (expected, actual) match {

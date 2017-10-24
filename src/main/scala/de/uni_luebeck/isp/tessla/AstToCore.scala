@@ -5,13 +5,13 @@ import de.uni_luebeck.isp.tessla.Errors._
 
 import scala.collection.mutable
 
-class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[Ast.Spec, TesslaCore.Specification] {
-  override def translateSpec(spec: Ast.Spec) = {
+class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[Tessla.Spec, TesslaCore.Specification] {
+  override def translateSpec(spec: Tessla.Spec) = {
     var counter = 0
     val alreadyTranslated = mutable.Map[String, Arg]()
 
     val inStreams = spec.statements.collect {
-      case Ast.In(name, typAst, loc) =>
+      case Tessla.In(name, typAst, loc) =>
         val typ = tryWithDefault(Types.Stream(Types.Nothing)) {
           Types.fromAst(typAst) match {
             case s@Types.Stream(_) => s
@@ -22,11 +22,11 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
     }.toMap
 
     val outStreams = spec.statements.collect {
-      case out@Ast.Out(_, _, _) => Seq(out)
-      case Ast.OutAll(_) => spec.statements.collect {
-        case Ast.Def(name, Seq(), _, _, loc) => Ast.Out(Ast.ExprName(name), None, loc)
+      case out@Tessla.Out(_, _, _) => Seq(out)
+      case Tessla.OutAll(_) => spec.statements.collect {
+        case Tessla.Definition(name, Seq(), _, _, loc) => Tessla.Out(Tessla.Variable(name), None, loc)
       }
-    }.flatten : Seq[Ast.Out]
+    }.flatten : Seq[Tessla.Out]
 
 
     def mkId(name: String) = {
@@ -36,18 +36,18 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
 
     val builtIns = BuiltIns(mkId)
 
-    def mkEnv(statements: Seq[Ast.Statement], env: => Env) = {
+    def mkEnv(statements: Seq[Tessla.Statement], env: => Env) = {
       val previousDefs = mutable.Map[(String, Int), Location]()
       statements.flatMap {
-        case definition@Ast.Def(name, args, _, _, loc) =>
-          previousDefs.get((definition.name.name, args.length)) match {
+        case definition@Tessla.Definition(name, args, _, _, loc) =>
+          previousDefs.get((definition.id.name, args.length)) match {
             case Some(previousLoc) =>
-              error(MultipleDefinitionsError(definition.name, previousLoc))
+              error(MultipleDefinitionsError(definition.id, previousLoc))
               None
             case None =>
               previousDefs += (name.name, args.length) -> loc
-              val uniqueDef = definition.copy(name = definition.name.copy(name = mkId(definition.name.name)))
-              Some((name.name, definition.macroArgs.length) -> Definition(uniqueDef, env))
+              val uniqueDef = definition.copy(id = definition.id.copy(name = mkId(definition.id.name)))
+              Some((name.name, definition.parameters.length) -> Definition(uniqueDef, env))
           }
         case _ => None
       }
@@ -61,22 +61,22 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
       (exp._1, exp._2.withLoc(loc))
     }
 
-    val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", UnknownLoc)
+    val errorStream: TesslaCore.StreamRef = TesslaCore.Stream("$$$error$$$", Location.unknown)
 
-    def translateExpression(expr: Ast.Expr, name: String, env: Env): TranslatedExpression = {
+    def translateExpression(expr: Tessla.Expression, name: String, env: Env): TranslatedExpression = {
       val errorNode: TranslatedExpression = (Seq(), Stream(errorStream, Types.Nothing))
       tryWithDefault(errorNode) {
         if (alreadyTranslated.contains(name)) (Seq(), alreadyTranslated(name))
         else {
           // This value will be overridden later. This one will only be reached in case of recursion, in which case
           // it should be the correct one.
-          alreadyTranslated(name) = Stream(TesslaCore.Stream(name, UnknownLoc), Types.Nothing)
+          alreadyTranslated(name) = Stream(TesslaCore.Stream(name, Location.unknown), Types.Nothing)
           val (defs, arg): TranslatedExpression = expr match {
-            case Ast.ExprBoolLit(value, loc) =>
+            case Tessla.BoolLiteral(value, loc) =>
               (Seq(), Literal(TesslaCore.BoolLiteral(value, loc)))
-            case Ast.ExprIntLit(value, loc) =>
+            case Tessla.IntLiteral(value, loc) =>
               (Seq(), Literal(TesslaCore.IntLiteral(value, loc)))
-            case Ast.ExprTimeLit(value, unit2, loc) => unit match {
+            case Tessla.TimeLiteral(value, unit2, loc) => unit match {
               case Some(u) => if (unit2 < u) {
                 throw TimeUnitConversionError(unit2, u)
               } else {
@@ -84,14 +84,14 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
               }
               case None => throw UndefinedTimeUnit(loc)
             }
-            case Ast.ExprUnit(loc) =>
+            case Tessla.Unit(loc) =>
               (Seq(), Literal(TesslaCore.Unit(loc)))
-            case Ast.ExprStringLit(str, loc) =>
+            case Tessla.StringLiteral(str, loc) =>
               (Seq(), Literal(TesslaCore.StringLiteral(str, loc)))
-            case Ast.ExprName(id) =>
+            case Tessla.Variable(id) =>
               env.get((id.name, 0)) match {
                 case Some(Definition(d, closure)) =>
-                  updateLoc(translateExpression(d.body, d.name.name, closure), id.loc)
+                  updateLoc(translateExpression(d.body, d.id.name, closure), id.loc)
                 case Some(BuiltIn(b)) =>
                   b(Seq(), name, id.loc)
                 case None =>
@@ -101,47 +101,47 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
                     case None => throw UndefinedVariable(id)
                   }
               }
-            case Ast.ExprTypeAscr(e, t) =>
+            case Tessla.TypeAssertion(e, t) =>
               alreadyTranslated.remove(name)
               val (statements, arg) = translateExpression(e, name, env)
               Types.requireType(Types.fromAst(t), arg.typ, e.loc)
               (statements, arg)
-            case Ast.ExprBlock(definitions, expression, _) =>
+            case Tessla.Block(definitions, expression, _) =>
               lazy val scope: Env = env ++ mkEnv(definitions, scope)
               alreadyTranslated.remove(name)
               translateExpression(expression, name, scope)
-            case Ast.ExprApp(id, args, loc) =>
+            case Tessla.MacroCall(id, args, loc) =>
               env.get((id.name, args.length)) match {
                 case Some(Definition(d, closure)) =>
                   val namedArgs: Env = args.collect {
-                    case Ast.NamedArg(argName, expr) =>
-                      d.macroArgs.find(_.name.name == argName.name) match {
+                    case Tessla.NamedArgument(argName, expr) =>
+                      d.parameters.find(_.id.name == argName.name) match {
                         case Some(arg) =>
-                          val typedExpr = arg.typeAscr.map(t => Ast.ExprTypeAscr(expr, t.withLoc(arg.loc))).getOrElse(expr)
-                          val newName = Ast.Identifier(mkId(argName.name), argName.loc)
-                          (argName.name, 0) -> Definition(Ast.Def(newName, Seq(), None, typedExpr, argName.loc), env)
+                          val typedExpr = arg.parameterType.map(t => Tessla.TypeAssertion(expr, t.withLoc(arg.loc))).getOrElse(expr)
+                          val newName = Tessla.Identifier(mkId(argName.name), argName.loc)
+                          (argName.name, 0) -> Definition(Tessla.Definition(newName, Seq(), None, typedExpr, argName.loc), env)
                         case None =>
                           throw UndefinedNamedArg(argName)
                       }
                   }.toMap
-                  val posArgs: Env = d.macroArgs.filterNot { arg =>
-                    namedArgs.contains((arg.name.name, 0))
-                  }.zip(args.collect { case Ast.PosArg(expr) => expr }).map {
+                  val posArgs: Env = d.parameters.filterNot { arg =>
+                    namedArgs.contains((arg.id.name, 0))
+                  }.zip(args.collect { case Tessla.PositionalArgument(expr) => expr }).map {
                     case (arg, expr) =>
-                      val typedExpr = arg.typeAscr.map(t => Ast.ExprTypeAscr(expr, t.withLoc(arg.loc))).getOrElse(expr)
-                      val newName = Ast.Identifier(mkId(arg.name.name), arg.name.loc)
-                      (arg.name.name, 0) -> Definition(Ast.Def(newName, Seq(), None, typedExpr, arg.name.loc), env)
+                      val typedExpr = arg.parameterType.map(t => Tessla.TypeAssertion(expr, t.withLoc(arg.loc))).getOrElse(expr)
+                      val newName = Tessla.Identifier(mkId(arg.id.name), arg.id.loc)
+                      (arg.id.name, 0) -> Definition(Tessla.Definition(newName, Seq(), None, typedExpr, arg.id.loc), env)
                   }.toMap
                   alreadyTranslated.remove(name)
                   val result@(_, resultExp) = updateLoc(translateExpression(d.body, name, closure ++ posArgs ++ namedArgs), loc)
-                  d.typeAscr.foreach { t =>
+                  d.returnType.foreach { t =>
                     Types.requireType(Types.fromAst(t), resultExp.typ, resultExp.loc)
                   }
                   result
                 case Some(BuiltIn(b)) =>
                   val coreArgs = args.map {
-                    case Ast.PosArg(expr) => translateExpression(expr, mkId(name), env)
-                    case Ast.NamedArg(argName, _) => throw UndefinedNamedArg(argName)
+                    case Tessla.PositionalArgument(expr) => translateExpression(expr, mkId(name), env)
+                    case Tessla.NamedArgument(argName, _) => throw UndefinedNamedArg(argName)
                   }
                   val (defs, arg) = b(coreArgs.map(_._2), name, loc)
                   (coreArgs.flatMap(_._1) ++ defs, arg)
@@ -160,7 +160,7 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[As
       val loc = out.expr.loc
       tryWithDefault((Seq[(String, TesslaCore.Expression)](), name -> errorStream)) {
         val outName = mkId("out")
-        translateExpression(out.expr, out.nameOpt.map(_.name).getOrElse(outName), globalEnv) match {
+        translateExpression(out.expr, out.idOpt.map(_.name).getOrElse(outName), globalEnv) match {
           case (defs, Stream(s, _)) =>
             (defs, name -> s)
           case (_, lit) =>
@@ -205,14 +205,14 @@ object AstToCore {
 
   case class BuiltIn(apply: (Seq[Arg], String, Location) => TranslatedExpression) extends EnvEntry
 
-  class Definition(val definition: Ast.Def, _closure: => Env) extends EnvEntry {
+  class Definition(val definition: Tessla.Definition, _closure: => Env) extends EnvEntry {
     lazy val closure = _closure
   }
 
   object Definition {
-    def apply(definition: Ast.Def, _closure: => Env) = new Definition(definition, _closure)
+    def apply(definition: Tessla.Definition, _closure: => Env) = new Definition(definition, _closure)
 
-    def unapply(d: Definition): Option[(Ast.Def, Env)] = Some((d.definition, d.closure))
+    def unapply(d: Definition): Option[(Tessla.Definition, Env)] = Some((d.definition, d.closure))
   }
 
   type Env = Map[(String, Int), EnvEntry]
