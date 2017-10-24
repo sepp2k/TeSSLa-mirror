@@ -62,7 +62,7 @@ object Errors {
   }
 
   case class UndefinedTimeUnit(loc: Location) extends TesslaError {
-    def message = s"No time unit defined in trace file"
+    def message = s"No time unit set"
   }
 
   case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit) extends TesslaError {
