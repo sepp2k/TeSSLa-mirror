@@ -118,14 +118,8 @@ object PrimitiveOperators {
     }
 
     def doEval(args: Seq[TesslaCore.Value], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
-      case Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)) =>
-        Some(TesslaCore.BoolLiteral(op(lhs, rhs), loc))
-      case Seq(TesslaCore.BoolLiteral(lhs, _), TesslaCore.BoolLiteral(rhs, _)) =>
-        Some(TesslaCore.BoolLiteral(op(lhs, rhs), loc))
-      case Seq(TesslaCore.StringLiteral(lhs, _), TesslaCore.StringLiteral(rhs, _)) =>
-        Some(TesslaCore.BoolLiteral(op(lhs, rhs), loc))
-      case Seq(TesslaCore.Unit(_), TesslaCore.Unit(_)) =>
-        Some(TesslaCore.BoolLiteral(op((), ()), loc))
+      case Seq(lhs, rhs) =>
+        Some(TesslaCore.BoolLiteral(op(lhs.value, rhs.value), loc))
     }
   }
 

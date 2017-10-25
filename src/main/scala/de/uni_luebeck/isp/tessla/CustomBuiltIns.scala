@@ -14,12 +14,10 @@ object CustomBuiltIns {
   }
 
   val mapAndSet: CustomBuiltIns = new CustomBuiltIns {
-    case class IntIntMap(map: Map[BigInt, BigInt], loc: Location) extends TesslaCore.CustomValue {
+    case class IntIntMap(value: Map[BigInt, BigInt], loc: Location) extends TesslaCore.CustomValue {
       override def typ = IntIntMap.Type
 
-      override def withLoc(loc: Location) = IntIntMap(map, loc)
-
-      override def toString = map.toString
+      override def withLoc(loc: Location) = IntIntMap(value, loc)
     }
 
     object IntIntMap {
@@ -77,12 +75,10 @@ object CustomBuiltIns {
       }
     }
 
-    case class IntSet(set: Set[BigInt], loc: Location) extends TesslaCore.CustomValue {
+    case class IntSet(value: Set[BigInt], loc: Location) extends TesslaCore.CustomValue {
       override def typ = IntSet.Type
 
-      override def withLoc(loc: Location) = IntSet(set, loc)
-
-      override def toString = set.toString
+      override def withLoc(loc: Location) = IntSet(value, loc)
     }
 
     object IntSet {

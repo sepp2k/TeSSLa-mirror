@@ -76,43 +76,44 @@ object TesslaCore {
     def withLoc(loc: Location): Value
     def typ: Types.ValueType
     def toLiteral: LiteralValue
+    def value: Any
+
+    override def toString = value.toString
   }
 
   final case class ErrorValue(err: TesslaError) extends Value {
-    def loc = err.loc
-    def withLoc(loc: Location): ErrorValue = this
-    def toLiteral = throw err
-    def typ = Types.Nothing
-    override def toString = throw err
+    override def loc = err.loc
+    override def withLoc(loc: Location): ErrorValue = this
+    override def toLiteral = throw err
+    override def typ = Types.Nothing
+    override def value = throw err
   }
 
   sealed abstract class LiteralValue extends Value {
-    def toLiteral = this
-    def withLoc(loc: Location): LiteralValue
+    override def toLiteral = this
+    override def withLoc(loc: Location): LiteralValue
   }
 
   final case class IntLiteral(value: BigInt, loc: Location) extends LiteralValue {
-    override def toString = value.toString
-    def withLoc(loc: Location): IntLiteral = copy(loc = loc)
-    val typ = Types.Int
+    override def withLoc(loc: Location): IntLiteral = copy(loc = loc)
+    override val typ = Types.Int
   }
 
   final case class BoolLiteral(value: Boolean, loc: Location) extends LiteralValue {
-    override def toString = value.toString
-    def withLoc(loc: Location): BoolLiteral = copy(loc = loc)
-    val typ = Types.Bool
+    override def withLoc(loc: Location): BoolLiteral = copy(loc = loc)
+    override val typ = Types.Bool
   }
 
   final case class StringLiteral(value: String, loc: Location) extends LiteralValue {
     override def toString = s""""$value""""
-    def withLoc(loc: Location): StringLiteral = copy(loc = loc)
-    val typ = Types.String
+    override def withLoc(loc: Location): StringLiteral = copy(loc = loc)
+    override val typ = Types.String
   }
 
   final case class Unit(loc: Location) extends LiteralValue {
-    override def toString = "()"
-    def withLoc(loc: Location): Unit = copy(loc = loc)
-    val typ = Types.Unit
+    override def value = ()
+    override def withLoc(loc: Location): Unit = copy(loc = loc)
+    override val typ = Types.Unit
   }
 
   abstract class CustomValue extends LiteralValue
