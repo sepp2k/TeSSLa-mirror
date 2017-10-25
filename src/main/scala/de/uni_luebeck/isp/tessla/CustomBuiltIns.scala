@@ -23,7 +23,9 @@ object CustomBuiltIns {
     }
 
     object IntIntMap {
-      case object Type extends Types.CustomType
+      case object Type extends Types.CustomType {
+        override def toString = "Map<Int, Int>"
+      }
 
       case object Empty extends PrimitiveOperators.CustomBuiltIn with PrimitiveOperators.Monomorphic {
         override def argumentTypes = Seq()
@@ -84,7 +86,9 @@ object CustomBuiltIns {
     }
 
     object IntSet {
-      case object Type extends Types.CustomType
+      case object Type extends Types.CustomType {
+        override def toString = "Set<Int>"
+      }
 
       case object Empty extends PrimitiveOperators.CustomBuiltIn with PrimitiveOperators.Monomorphic {
         override def argumentTypes = Seq()
