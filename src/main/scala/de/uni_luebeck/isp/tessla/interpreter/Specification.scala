@@ -5,8 +5,13 @@ import de.uni_luebeck.isp.tessla.Errors._
 import scala.collection.immutable.SortedMap
 import de.uni_luebeck.isp.tessla.{Location, TesslaCore}
 
-class Specification() {
+object Specification {
   type Time = BigInt
+}
+
+import Specification._
+
+class Specification() {
   private var timeVar: Time = 0
   private var trigger: (Map[Any, Time], SortedMap[Time, Set[Any]]) = (Map(), SortedMap())
   private var acceptInput = true

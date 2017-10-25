@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 import de.uni_luebeck.isp.tessla.Types.Type
-import de.uni_luebeck.isp.tessla.interpreter.Traces
+import de.uni_luebeck.isp.tessla.interpreter.Trace
 
 object Errors {
 
@@ -28,31 +28,31 @@ object Errors {
     override def message = "Definition is infinitely recursive"
   }
 
-  case class UndefinedVariable(id: Ast.Identifier) extends TesslaError {
+  case class UndefinedVariable(id: Tessla.Identifier) extends TesslaError {
     override def loc = id.loc
 
     override def message = s"Undefined variable ${id.name}"
   }
 
-  case class UndefinedFunction(id: Ast.Identifier, arity: Int) extends TesslaError {
+  case class UndefinedFunction(id: Tessla.Identifier, arity: Int) extends TesslaError {
     override def loc = id.loc
 
     override def message = s"Undefined macro or operator ${id.name}/$arity"
   }
 
-  case class UndefinedNamedArg(id: Ast.Identifier) extends TesslaError {
+  case class UndefinedNamedArg(id: Tessla.Identifier) extends TesslaError {
     override def loc = id.loc
 
     override def message = s"Undefined keyword argument ${id.name}"
   }
 
-  case class MultipleDefinitionsError(id: Ast.Identifier, previousLoc: Location) extends TesslaError {
+  case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {
     override def loc = id.loc
 
     override def message = s"Multiple definitions of ${id.name} in same scope (previous definition at $previousLoc)"
   }
 
-  case class InternalError(m: String, loc: Location = UnknownLoc) extends TesslaError {
+  case class InternalError(m: String, loc: Location = Location.unknown) extends TesslaError {
     def message = s"Internal error: $m"
   }
 
@@ -94,7 +94,7 @@ object Errors {
     def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
-  def ProvideAfterPropagationError(time: BigInt, loc: Location = UnknownLoc) = {
+  def ProvideAfterPropagationError(time: BigInt, loc: Location = Location.unknown) = {
     InternalError(s"Tried to provide inputs after their propagation at time $time", loc)
   }
 

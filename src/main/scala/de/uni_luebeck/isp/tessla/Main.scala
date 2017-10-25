@@ -1,9 +1,8 @@
-package de.uni_luebeck.isp.tessla.interpreter
+package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.compacom.{Location, Position}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{SourceLoc, TesslaSource, TimeUnit}
-import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
+import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.interpreter.{BuildInfo, Interpreter}
 import sexyopt.SexyOpt
 
 import scala.io.Source
@@ -23,18 +22,18 @@ object Main extends SexyOpt {
 
   val printCore = flag("print-core", "Print the Tessla Core representation generated from the Tessla specification")
   val debug = flag("debug", "Print stack traces for runtime errors")
-  val threshold = option("threshold", "Allowed maximal difference between decreasing timestamps (default: 100,000)", "100000")
   val stopOn = option("stop-on", "Stop when the output stream with the given name generates its first event")
-  val listOutStreams = flag("list-out-streams", "Print a list of the output streams defined in the given tessla spec and then exit")
-  val listInStreams = flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
-  val timeunit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
+  val listOutStreams =
+    flag("list-out-streams", "Print a list of the output streams defined in the given tessla spec and then exit")
+  val listInStreams =
+    flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
+  val timeUnit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
 
   def main(args: Array[String]): Unit = {
-    def tesslaSpec(timeUnit: Option[TimeUnit.TimeUnit]) = Interpreter.fromFile(tesslaFile, timeUnit) match {
-      case Success(spec, warnings) =>
+    def unwrapResult[T](result: Result[T]): T = result match {
+      case Success(res, warnings) =>
         if (diagnostics) warnings.foreach(w => System.err.println(s"Warning: $w"))
-        if (printCore) println(spec.spec)
-        spec
+        res
       case Failure(errors, warnings) =>
         if (diagnostics) {
           warnings.foreach(w => System.err.println(s"Warning: $w"))
@@ -46,15 +45,12 @@ object Main extends SexyOpt {
 
     parse(args)
     try {
-      val tu = timeunit.map {
-        s =>
-          val lines = s.split("\\n")
-          TimeUnit.fromString(s, SourceLoc(Location(Position(0, 0), Position(lines.length - 1, lines.last.length)), "--timeunit"))
-      }
+      val specSource = TesslaSource.fromFile(tesslaFile)
+      val timeUnitSource = timeUnit.map(TesslaSource.fromString(_, "--timeunit"))
       if (verifyOnly || listInStreams || listOutStreams) {
-        val spec = tesslaSpec(tu)
+        val spec = unwrapResult(new Compiler().compile(specSource, timeUnitSource))
         if (listInStreams) {
-          spec.inStreams.foreach { case (name, _) => println(name) }
+          spec.inStreams.foreach { case (name, _, _) => println(name) }
           return
         }
         if (listOutStreams) {
@@ -62,15 +58,11 @@ object Main extends SexyOpt {
           return
         }
       } else {
-        val traces: Traces = TracesParser.parseTraces(traceFile.map(TesslaSource.fromFile).getOrElse(new TesslaSource(Source.stdin, "<stdin>")))
-        val tu2 = tu.orElse(traces.timeStampUnit)
-        val spec = tesslaSpec(tu2)
-        tu2.foreach(unit => println("$timeunit = \"" + unit + "\""))
-        traces.feedInput(spec, BigInt(threshold)) {
-          case (ts, name, value) =>
-            println(s"$ts: $name = $value")
-            if (stopOn.contains(name)) return
+        val traceSource = traceFile.map(TesslaSource.fromFile).getOrElse(TesslaSource.stdin)
+        val output = unwrapResult {
+          Interpreter.runSpec(specSource, traceSource, timeUnit = timeUnitSource, stopOn = stopOn, printCore = printCore)
         }
+        output.foreach(println)
       }
     } catch {
       case ex: TesslaError =>

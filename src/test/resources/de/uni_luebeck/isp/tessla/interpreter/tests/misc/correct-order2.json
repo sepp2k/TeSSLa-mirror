@@ -1,7 +1,0 @@
-{
-  "spec": "correct-order2.tessla",
-  "input": "correct-order2.input",
-  "expectedOutput": "correct-order2.output",
-  "threshold": 100000
-}
-            

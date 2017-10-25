@@ -1,14 +1,13 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{TesslaSource, TimeUnit, UnknownLoc}
+import de.uni_luebeck.isp.tessla.{Compiler, TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
 
-import scala.collection.mutable
 import scala.io.Source
 
 class InterpreterTests extends FunSuite {
@@ -125,7 +124,7 @@ class InterpreterTests extends FunSuite {
 
   testCases.foreach {
     case (path, name) =>
-      def testFile(file: String): Source = Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$file"))
+      def testSource(file: String): TesslaSource = TesslaSource.fromJavaStream(getClass.getResourceAsStream(s"$root/$path/$file"), s"$path/$file")
 
       val testCase = parseJson(s"$path/$name")
       testCase match {
@@ -133,42 +132,27 @@ class InterpreterTests extends FunSuite {
           /*Run Interpreter Test*/
           test(s"$path/$name (Interpreter)") {
             try {
-              val traces = TracesParser.parseTraces(new TesslaSource(testFile(input), s"$path/$input"))
-              val result = Interpreter.fromTesslaSource(new TesslaSource(testFile(spec), s"$path/$spec"), traces.timeStampUnit)
+              val result = Interpreter.runSpec(testSource(spec), testSource(input))
               result match {
-                case Success(compiledSpec, _) =>
+                case Success(output, _) =>
                   assert(expErr.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
+                  val expectedOutput = testSource(expOutput.get).getLines.toSet
+                  val actualOutput = output.toSet
 
-                  def expectedOutput = testFile(expOutput.get).getLines.toSet
-
-                  val actualOutput = mutable.Set[String]()
-                  traces.timeStampUnit.foreach(unit => actualOutput += ("$timeunit = \"" + unit + "\""))
-
-                  def runTraces(): Unit = {
-                    traces.feedInput(compiledSpec, BigInt(threshold.getOrElse(0))) {
-                      case (ts, n, value) => actualOutput += s"$ts: $n = $value"
-                    }
-                  }
-
-                  if (expRunErr.isDefined) {
-                    val ex = intercept[TesslaError](runTraces())
-                    assertEquals(ex.toString, testFile(expRunErr.get).mkString, "runtime error")
-                  } else {
-                    runTraces()
-                  }
-                  assertEqualSets(actualOutput.map(splitOutput).toSet, expectedOutput.map(splitOutput), "output", unsplitOutput)
+                  assertEqualSets(actualOutput.map(_.toString).map(splitOutput), expectedOutput.map(splitOutput),
+                    "output", unsplitOutput)
                 case Failure(errors, _) =>
                   assert(expErr.isDefined,
                     s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
-                  assertEqualSets(errors.map(_.toString).toSet, testFile(expErr.get).getLines.toSet, "errors")
+                  assertEqualSets(errors.map(_.toString).toSet, testSource(expErr.get).getLines.toSet, "errors")
               }
               if (expWarn.isDefined) {
-                assertEqualSets(result.warnings.map(_.toString).toSet, testFile(expWarn.get).getLines.toSet, "warnings")
+                assertEqualSets(result.warnings.map(_.toString).toSet, testSource(expWarn.get).getLines.toSet, "warnings")
               }
             } catch {
               case ex: TesslaError =>
                 assert(expRunErr.isDefined, s"Expected: success, Actual: Runtime error:\n${ex.message}")
-                assertEquals(ex.toString, testFile(expRunErr.get).mkString, "runtime error")
+                assertEquals(ex.toString, testSource(expRunErr.get).mkString, "runtime error")
             }
           }
         case JSON.PipelineTest(spec, expPipe, expErr, expWarn, timeUnit) =>
@@ -178,19 +162,18 @@ class InterpreterTests extends FunSuite {
           }
         case JSON.CompilerTest(spec, expErr, expWarn, timeUnit) =>
           /*Run Pipeline Test*/
-          println("Ctest")
           test(s"$path/$name (Compiler)") {
-            val result = Interpreter.fromTesslaSource(new TesslaSource(testFile(spec), s"$path/$spec"), timeUnit.map(TimeUnit.fromString(_, UnknownLoc)))
+            val result = new Compiler().applyPasses(testSource(spec), timeUnit.map(tu => TimeUnit.parse(TesslaSource.fromString(tu, s"$path/$name.json#timeunit"))))
             result match {
               case Success(_, _) =>
                 assert(expErr.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
               case Failure(errors, _) =>
                 assert(expErr.isDefined,
                   s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
-                assertEqualSets(errors.map(_.toString).toSet, testFile(expErr.get).getLines.toSet, "errors")
+                assertEqualSets(errors.map(_.toString).toSet, testSource(expErr.get).getLines.toSet, "errors")
             }
             if (expWarn.isDefined) {
-              assertEqualSets(result.warnings.map(_.toString).toSet, testFile(expWarn.get).getLines.toSet, "warnings")
+              assertEqualSets(result.warnings.map(_.toString).toSet, testSource(expWarn.get).getLines.toSet, "warnings")
             }
           }
       }
