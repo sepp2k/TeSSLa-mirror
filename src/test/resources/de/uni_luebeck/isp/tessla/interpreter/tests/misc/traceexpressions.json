@@ -1,0 +1,5 @@
+{
+  "spec": "traceexpressions.tessla",
+  "input": "traceexpressions.input",
+  "expectedOutput": "traceexpressions.output"
+}
