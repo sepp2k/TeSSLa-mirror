@@ -1,0 +1,5 @@
+{
+  "spec": "counting_map.tessla",
+  "input": "counting_map.input",
+  "expectedOutput": "counting_map.output"
+}

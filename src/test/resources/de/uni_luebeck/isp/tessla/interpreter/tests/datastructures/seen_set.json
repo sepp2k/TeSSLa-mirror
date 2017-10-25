@@ -1,0 +1,5 @@
+{
+  "spec": "seen_set.tessla",
+  "input": "counting_map.input",
+  "expectedOutput": "seen_set.output"
+}

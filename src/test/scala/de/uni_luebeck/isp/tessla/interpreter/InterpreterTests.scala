@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, TesslaSource, TimeUnit}
+import de.uni_luebeck.isp.tessla.{Compiler, CustomBuiltIns, TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
@@ -163,7 +163,8 @@ class InterpreterTests extends FunSuite {
         case JSON.CompilerTest(spec, expErr, expWarn, timeUnit) =>
           /*Run Pipeline Test*/
           test(s"$path/$name (Compiler)") {
-            val result = new Compiler().applyPasses(testSource(spec), timeUnit.map(tu => TimeUnit.parse(TesslaSource.fromString(tu, s"$path/$name.json#timeunit"))))
+            val result = new Compiler().applyPasses(testSource(spec),
+              timeUnit.map(tu => TimeUnit.parse(TesslaSource.fromString(tu, s"$path/$name.json#timeunit"))), CustomBuiltIns.mapAndSet)
             result match {
               case Success(_, _) =>
                 assert(expErr.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
