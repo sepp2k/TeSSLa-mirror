@@ -1,0 +1,6 @@
+{
+  "spec": "input-decreasing-timestamp.tessla",
+  "input": "input-decreasing-timestamp.input",
+  "expectedOutput": "input-decreasing-timestamp.output",
+  "expectedRuntimeErrors": "input-decreasing-timestamp.runtime-errors"
+}
