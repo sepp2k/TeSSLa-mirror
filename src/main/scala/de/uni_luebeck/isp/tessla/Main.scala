@@ -5,8 +5,6 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.interpreter.{BuildInfo, Interpreter}
 import sexyopt.SexyOpt
 
-import scala.io.Source
-
 object Main extends SexyOpt {
   override val programName = "tessla"
   override val version = Some(BuildInfo.version)
