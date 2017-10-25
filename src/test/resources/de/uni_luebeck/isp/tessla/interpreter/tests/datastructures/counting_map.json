@@ -1,5 +1,5 @@
 {
   "spec": "counting_map.tessla",
-  "input": "counting_map.input",
+  "input": "whole_lotta_xs.input",
   "expectedOutput": "counting_map.output"
 }

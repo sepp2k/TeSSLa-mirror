@@ -1,5 +1,5 @@
 {
   "spec": "seen_set.tessla",
-  "input": "counting_map.input",
+  "input": "whole_lotta_xs.input",
   "expectedOutput": "seen_set.output"
 }
