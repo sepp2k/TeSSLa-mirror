@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Tessla.Expression
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 
 object GenerateISL {
@@ -9,7 +10,7 @@ object GenerateISL {
       sys.exit(1)
     }
     val tesslaFile = args(0)
-    TesslaParser.translate(TesslaSource.fromFile(tesslaFile)) match {
+    TesslaParser.translateSpec(TesslaSource.fromFile(tesslaFile)) match {
       case Success(ast, _) =>
         generateForSpec(ast)
       case Failure(_, _) =>
@@ -17,33 +18,33 @@ object GenerateISL {
     }
   }
 
-  def generateForSpec(spec: Ast.Spec): Unit = {
+  def generateForSpec(spec: Tessla.Spec): Unit = {
     spec.statements.foreach(generateForStatement)
   }
 
-  def generateForStatement(statement: Ast.Statement): Unit = {
+  def generateForStatement(statement: Tessla.Statement): Unit = {
     statement match {
-      case Ast.Def(_, _, _, body, _) =>
+      case Tessla.Definition(_, _, _, body, _) =>
         generateForExpr(body)
-      case Ast.Out(expr, _, _) =>
+      case Tessla.Out(expr, _, _) =>
         generateForExpr(expr)
       case _ =>
         // Do nothing
     }
   }
 
-  def generateForExpr(expr: Ast.Expr): Unit = {
+  def generateForExpr(expr: Tessla.Expression): Unit = {
     expr match {
-      case Ast.MacroArg(name, typeAscr) =>
-        generateForMacro(name, typeAscr)
+      case Tessla.MacroCall(id, args, _) =>
+        generateForMacro(id, args)
       case _ =>
         // loop back
     }
   }
 
-  def generateForMacro(name: Ast.Identifier, typeAscr: Option[Ast.Type]): Unit = {
-    name match {
-      case Ast.Identifier("")
+  def generateForMacro(id: Tessla.Identifier, args: Seq[Tessla.Argument] ): Seq[String] = {
+    id match {
+      case Tessla.Identifier("code_line_exec",_) => List()
     }
   }
 }
