@@ -1,0 +1,31 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "spec": {
+      "type": "string"
+    },
+    "expectedErrors": {
+      "type": "string"
+    },
+    "expectedWarnings": {
+      "type": "string"
+    },
+    "timeunit": {
+      "type": "string",
+      "enum": [
+        "ns",
+        "us",
+        "ms",
+        "s",
+        "min",
+        "h",
+        "d"
+      ]
+    }
+  },
+  "required": [
+    "spec"
+  ]
+}
+            

@@ -1,12 +1,12 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import com.eclipsesource.schema.{SchemaType, SchemaValidator}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.TesslaSource
+import de.uni_luebeck.isp.tessla.{TesslaSource, TimeUnit, UnknownLoc}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
+import com.eclipsesource.schema._
 
 import scala.collection.mutable
 import scala.io.Source
@@ -16,6 +16,7 @@ class InterpreterTests extends FunSuite {
   object JSON {
 
     trait Test
+
     case class InterpreterTest(spec: String, input: String, expectedOutput: Option[String],
                                expectedErrors: Option[String], expectedWarnings: Option[String],
                                expectedRuntimeErrors: Option[String], threshold: Option[Int], abortAt: Option[Int]) extends Test
@@ -27,7 +28,7 @@ class InterpreterTests extends FunSuite {
     case class CompilerTest(spec: String, expectedErrors: Option[String], expectedWarnings: Option[String], timeunit: Option[String]) extends Test
 
 
-    implicit val timeunitReads: Reads[Option[String]] = (__ \ "timeunit").readNullable[String](verifying(List("ns","us","ms","s","min","h","d").contains))
+    implicit val timeunitReads: Reads[Option[String]] = (__ \ "timeunit").readNullable[String](verifying(List("ns", "us", "ms", "s", "min", "h", "d").contains))
     implicit val interpreterTestReads: Reads[InterpreterTest] = Json.reads[InterpreterTest]
     implicit val pipelineTestReads: Reads[PipelineTest] = Json.reads[PipelineTest]
     implicit val compilerTestReads: Reads[CompilerTest] = Json.reads[CompilerTest]
@@ -35,13 +36,21 @@ class InterpreterTests extends FunSuite {
     /*Validates a test of a given type using its json instance and a schema for that test type
     (Schema for type X must be named XSchema.json and located in the root directory).
     Returns the test if successful, throws an Exception otherwise.*/
-    def validate(test: Test, testjson: JsValue): Test = {
+    def validate(test: Test, testjson: JsValue): JsResult[Test] = {
       val fileName = test.getClass.getTypeName.substring(test.getClass.getTypeName.lastIndexOf("$") + 1) + "Schema"
       val schema = Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root/$fileName.json"))).get
-      SchemaValidator().validate(schema, testjson) match{
-        case JsSuccess(_, _) => test
-        case e: JsError => sys.error(s"Validation failed for\n$test:\n"+JsError.toJson(e).fields.mkString("\n"))
+      SchemaValidator().validate(schema, testjson) match {
+        case JsSuccess(_, path) => JsSuccess(test, path)
+        case e: JsError => e
       }
+    }
+
+    def jsErrorToString(jsError: JsError): String = {
+      jsError.errors.map {
+        case (jspath, errors) => errors.map {
+          case JsonValidationError(messages, _) => messages.mkString("\n")
+        }.mkString("\n")
+      }.mkString("\n")
     }
   }
 
@@ -97,30 +106,29 @@ class InterpreterTests extends FunSuite {
     val json = Json.parse(getClass.getResourceAsStream(s"$root/$path.json"))
 
     /*Try to parse it as InterpreterTest*/
-    Json.fromJson[JSON.InterpreterTest](json) match {
-      case JsSuccess(value, _) =>
-        JSON.validate(value, json)
-      case _ =>
-        /*If failed, try to parse as PipelineTest*/
-        Json.fromJson[JSON.PipelineTest](json) match {
-        case JsSuccess(value, _) =>
-          JSON.validate(value, json)
-        case _: JsError =>
-          /*If failed, try to parse as CompilerTest*/
-          Json.fromJson[JSON.CompilerTest](json) match {
-          case JsSuccess(value, _) =>
-            JSON.validate(value, json)
-          case e: JsError => sys.error("Json Parsing Error:\n" + JsError.toJson(e).fields.mkString("\n"))
+    val interpreterResult = Json.fromJson[JSON.InterpreterTest](json).flatMap(JSON.validate(_, json))
+    interpreterResult match {
+      case JsSuccess(value, _) => value
+      case _: JsError =>
+        val pipelineResult = Json.fromJson[JSON.PipelineTest](json).flatMap(JSON.validate(_, json))
+        pipelineResult match {
+          case JsSuccess(value, _) => value
+          case _: JsError =>
+            val compilerResult = Json.fromJson[JSON.CompilerTest](json).flatMap(JSON.validate(_, json))
+            compilerResult match {
+              case JsSuccess(value, _) => value
+              case e: JsError => sys.error(s"Error in Json parsing: ${JSON.jsErrorToString(e)}")
+            }
         }
-      }
     }
   }
 
   testCases.foreach {
     case (path, name) =>
       def testFile(file: String): Source = Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$file"))
+
       val testCase = parseJson(s"$path/$name")
-      testCase match{
+      testCase match {
         case JSON.InterpreterTest(spec, input, expOutput, expErr, expWarn, expRunErr, threshold, abortAt) =>
           /*Run Interpreter Test*/
           test(s"$path/$name (Interpreter)") {
@@ -167,6 +175,23 @@ class InterpreterTests extends FunSuite {
           /*Run Pipeline Test*/
           test(s"$path/$name (Pipeline)") {
             fail()
+          }
+        case JSON.CompilerTest(spec, expErr, expWarn, timeUnit) =>
+          /*Run Pipeline Test*/
+          println("Ctest")
+          test(s"$path/$name (Compiler)") {
+            val result = Interpreter.fromTesslaSource(new TesslaSource(testFile(spec), s"$path/$spec"), timeUnit.map(TimeUnit.fromString(_, UnknownLoc)))
+            result match {
+              case Success(_, _) =>
+                assert(expErr.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
+              case Failure(errors, _) =>
+                assert(expErr.isDefined,
+                  s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
+                assertEqualSets(errors.map(_.toString).toSet, testFile(expErr.get).getLines.toSet, "errors")
+            }
+            if (expWarn.isDefined) {
+              assertEqualSets(result.warnings.map(_.toString).toSet, testFile(expWarn.get).getLines.toSet, "warnings")
+            }
           }
       }
   }

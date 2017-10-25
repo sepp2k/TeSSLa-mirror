@@ -33,14 +33,22 @@
     "spec",
     "input"
   ],
-  "oneOf" : [{
-    "required" : ["expectedOutput"]
-  }, {
-    "required" : ["expectedErrors"]
-  }
+  "oneOf": [
+    {
+      "required": [
+        "expectedOutput"
+      ]
+    },
+    {
+      "required": [
+        "expectedErrors"
+      ]
+    }
   ],
   "dependencies": {
-    "expectedRuntimeErrors": ["expectedOutput"]
+    "expectedRuntimeErrors": [
+      "expectedOutput"
+    ]
   }
 }
             
