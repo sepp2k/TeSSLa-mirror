@@ -129,7 +129,6 @@ class InterpreterTests extends FunSuite {
       val testCase = parseJson(s"$path/$name")
       testCase match {
         case JSON.InterpreterTest(spec, input, expOutput, expErr, expWarn, expRunErr, threshold, abortAt) =>
-          /*Run Interpreter Test*/
           test(s"$path/$name (Interpreter)") {
             try {
               val result = Interpreter.runSpec(testSource(spec), testSource(input))
@@ -156,15 +155,13 @@ class InterpreterTests extends FunSuite {
             }
           }
         case JSON.PipelineTest(spec, expPipe, expErr, expWarn, timeUnit) =>
-          /*Run Pipeline Test*/
           test(s"$path/$name (Pipeline)") {
+            // This is a place holder until the pipeline branch is merged
             fail()
           }
         case JSON.CompilerTest(spec, expErr, expWarn, timeUnit) =>
-          /*Run Pipeline Test*/
           test(s"$path/$name (Compiler)") {
-            val result = new Compiler().applyPasses(testSource(spec),
-              timeUnit.map(tu => TimeUnit.parse(TesslaSource.fromString(tu, s"$path/$name.json#timeunit"))), CustomBuiltIns.mapAndSet)
+            val result = new Compiler().compile(testSource(spec), timeUnit.map(TesslaSource.fromString(_, s"$path/$name.json#timeunit")))
             result match {
               case Success(_, _) =>
                 assert(expErr.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
