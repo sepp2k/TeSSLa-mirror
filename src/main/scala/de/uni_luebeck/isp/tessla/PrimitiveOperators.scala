@@ -106,13 +106,9 @@ object PrimitiveOperators {
     }
   }
 
-  sealed abstract class BinaryBoolOperator(op: (Boolean, Boolean) => Boolean) extends InfixOperator with Monomorphic with Strict {
+  sealed abstract class BinaryBoolOperator(op: (Boolean, Boolean) => Boolean) extends InfixOperator with Monomorphic {
     override val argumentTypes = Seq(Types.Bool, Types.Bool)
     override val returnType = Types.Bool
-    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
-      case Seq(TesslaCore.BoolLiteral(lhs, _), TesslaCore.BoolLiteral(rhs, _)) =>
-        Some(TesslaCore.BoolLiteral(op(lhs, rhs), loc))
-    }
   }
 
   sealed abstract class AnyComparissonOperator(op: (Any, Any) => Boolean) extends InfixOperator with Strict {
@@ -200,10 +196,22 @@ object PrimitiveOperators {
 
   case object And extends BinaryBoolOperator(_&&_) {
     override def toString = "&&"
+
+    override protected def doEval(args: Seq[TesslaCore.Value], loc: Location) = args match {
+      case Seq(lhs: TesslaCore.BoolLiteral, rhs) =>
+        if (lhs.value) Some(rhs)
+        else Some(lhs)
+    }
   }
 
   case object Or extends BinaryBoolOperator(_||_) {
     override def toString = "||"
+
+    override protected def doEval(args: Seq[TesslaCore.Value], loc: Location) = args match {
+      case Seq(lhs: TesslaCore.BoolLiteral, rhs) =>
+        if (lhs.value) Some(lhs)
+        else Some(rhs)
+    }
   }
 
   case object Not extends PrefixOperator with Monomorphic with Strict {
