@@ -1,0 +1,7 @@
+{
+  "spec": "division-by-zero.tessla",
+  "input": "division-by-zero.input",
+  "expectedOutput": "division-by-zero.output",
+  "expectedRuntimeErrors": "division-by-zero.runtime-errors"
+}
+            

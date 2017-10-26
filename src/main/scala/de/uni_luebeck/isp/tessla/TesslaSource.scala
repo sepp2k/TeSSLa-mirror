@@ -1,15 +1,16 @@
 package de.uni_luebeck.isp.tessla
 
-import java.nio.file.Paths
+import java.io.InputStream
 
 import io.Source
 
 /**
   * Wrapper for tessla source code.
-  *
-  * @param src
   */
-class TesslaSource(val src: Source, val path: String) {}
+class TesslaSource private(val src: Source, val path: String) {
+  def getLines = src.getLines
+  def mkString = src.mkString
+}
 
 
 /**
@@ -23,4 +24,18 @@ object TesslaSource {
   def fromString(str: String, path: String): TesslaSource = {
     new TesslaSource(Source.fromString(str), path)
   }
+
+  def fromJavaStream(stream: InputStream, path: String): TesslaSource = {
+    new TesslaSource(Source.fromInputStream(stream), path)
+  }
+
+  def fromScalaSource(source: Source, path: String) = {
+    new TesslaSource(source, path)
+  }
+
+  def fromIterator(iterator: Iterator[Char], path: String) = {
+    new TesslaSource(new Source { override val iter = iterator }, path)
+  }
+
+  val stdin = new TesslaSource(Source.stdin, "<stdin>")
 }

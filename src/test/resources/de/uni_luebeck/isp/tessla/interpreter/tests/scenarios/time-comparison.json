@@ -1,0 +1,6 @@
+{
+  "spec": "time-comparison.tessla",
+  "input": "time-comparison.input",
+  "expectedOutput": "time-comparison.output"
+}
+            

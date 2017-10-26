@@ -1,0 +1,6 @@
+{
+  "spec": "reset-count.tessla",
+  "input": "reset-count.input",
+  "expectedOutput": "reset-count.output"
+}
+            

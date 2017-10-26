@@ -1,0 +1,13 @@
+in x: Events<Int>
+
+def seen := default(set_add(last(seen, x), x), set_empty)
+def new_or_old :=
+    if set_contains(last(seen), x)
+    then "old"
+    else "new"
+
+out x
+out *
+
+-- stdlib
+def last(s) := last(s, s)

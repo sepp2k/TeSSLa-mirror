@@ -1,0 +1,7 @@
+{
+  "spec": "warnings.tessla",
+  "input": "warnings.input",
+  "expectedOutput": "warnings.output",
+  "expectedWarnings": "warnings.warnings"
+}
+            

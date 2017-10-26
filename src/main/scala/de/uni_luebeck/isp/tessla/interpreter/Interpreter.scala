@@ -1,29 +1,29 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.Errors.{InternalError, TesslaError, TypeMismatch}
-import de.uni_luebeck.isp.tessla.{AstToCore, Compiler, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types, UnknownLoc}
+import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
-import shapeless.{::, HNil}
+import de.uni_luebeck.isp.tessla.{Compiler, CustomBuiltIns, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types}
 
-import scala.io.Source
+import scala.collection.mutable
 
-class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigInt] {
-  val inStreams: Map[String, (Input[TesslaCore.Value], Types.ValueType)] = spec.inStreams.map {
+class Interpreter(val spec: TesslaCore.Specification) extends Specification {
+  val inStreams: Map[String, (Input, Types.ValueType)] = spec.inStreams.map {
     case (name, typ, _) =>
-      name -> (Input[TesslaCore.Value](), typ.elementType)
+      name -> (new Input, typ.elementType)
   }.toMap
 
-  lazy val defs: Map[String, Lazy[Stream[TesslaCore.Value]]] = inStreams.mapValues {
+
+  lazy val defs: Map[String, Lazy[Stream]] = inStreams.mapValues {
     case (inputStream, _) => Lazy(inputStream)
   } ++ spec.streams.map {
     case (name, exp) => (name, Lazy(eval(exp)))
   }
 
-  lazy val outStreams: Map[String, Stream[TesslaCore.Value]] = spec.outStreams.map {
+  lazy val outStreams: Map[String, Stream] = spec.outStreams.map {
     case (name, streamRef) => name -> defs(streamRef.name).get
   }.toMap
 
-  private def evalStream(arg: TesslaCore.StreamRef): Stream[TesslaCore.Value] = arg match {
+  private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
     case TesslaCore.Stream(name, loc) =>
       defs.getOrElse(name, throw InternalError(s"Couldn't find stream named $name", loc)).get
     case TesslaCore.InputStream(name, loc) =>
@@ -31,7 +31,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
     case TesslaCore.Nil(_) => nil
   }
 
-  private def eval(exp: TesslaCore.Expression): Stream[TesslaCore.Value] = exp match {
+  private def eval(exp: TesslaCore.Expression): Stream = exp match {
     case TesslaCore.Lift(op, Seq(), loc) =>
       try {
         op.eval(Seq(), loc) match {
@@ -60,55 +60,105 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification[BigI
       last(evalStream(clock), evalStream(values))
     case TesslaCore.DelayedLast(values, delays, loc) =>
       delayedLast(intStream(evalStream(delays), loc), evalStream(values))
-    case TesslaCore.Time(values, _) =>
-      intStreamToValueStream(evalStream(values).time())
+    case TesslaCore.Time(values, loc) =>
+      evalStream(values).time(loc)
   }
 
-  def intStream(stream: Stream[TesslaCore.Value], loc: Location): Stream[BigInt] = {
-    lift(stream :: HNil) {
-      (args: TesslaCore.Value :: HNil) =>
-        args match {
-          case TesslaCore.IntLiteral(i, _) :: HNil => Some(i)
-          case value :: HNil => throw TypeMismatch(Types.Int, value.typ, loc)
+  def intStream(stream: Stream, loc: Location): Stream = {
+    lift(Seq(stream)) {
+      (args: Seq[TesslaCore.Value]) =>
+        args.head match {
+          case TesslaCore.IntLiteral(i, _) => Some(TesslaCore.IntLiteral(i, loc))
+          case value => throw TypeMismatch(Types.Int, value.typ, loc)
         }
-    }
-  }
-
-  def intStreamToValueStream(stream: Stream[BigInt]): Stream[TesslaCore.Value] = {
-    lift(stream :: HNil) {
-      (args: BigInt :: HNil) =>
-        args match {
-          case i :: HNil => Some(TesslaCore.IntLiteral(i, UnknownLoc))
-        }
-    }
-  }
-
-  def addOutStreamListener(callback: (BigInt, String, TesslaCore.Value) => Unit) : Unit = {
-    outStreams.foreach {
-      case (name, stream) => stream.addListener{_.foreach(callback(getTime, name, _))}
     }
   }
 }
 
 object Interpreter {
+
   class CoreToInterpreterSpec extends TranslationPhase[TesslaCore.Specification, Interpreter] {
     def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
   }
 
-  def fromTesslaSource(tesslaSource: TesslaSource, timeUnit: Option[TimeUnit.TimeUnit]): Result[Interpreter] = {
-    new Compiler().applyPasses(tesslaSource, timeUnit).andThen(new CoreToInterpreterSpec)
+  class RunInterpreter(inputTrace: RawTrace, stopOn: Option[String], abortAt: Option[Specification.Time]) extends TranslationPhase[Interpreter, Trace] {
+
+    override def translateSpec(spec: Interpreter): Trace = {
+      val eventIterator = new Iterator[Trace.Event] {
+        var nextEvents = new mutable.Queue[Trace.Event]
+        val eventQueue: EventQueue = new EventQueue(inputTrace.eventRanges)
+        var stopped = false
+var eventCounter = 0
+
+        spec.outStreams.foreach {
+          case (name, stream) =>
+            stream.addListener {
+              case Some(value: TesslaCore.LiteralValue) =>
+                if (!stopped) {
+                  if (stopOn.contains(name)) stopped = true
+                  val timeStamp = Trace.TimeStamp(Location.unknown, spec.getTime)
+                  nextEvents += Trace.Event(Location.unknown, timeStamp, Trace.Identifier(Location.unknown, name), value)
+                }
+              case Some(TesslaCore.ErrorValue(error)) =>
+                throw error
+              case None =>
+            }
+        }
+
+        def gatherValues(): Unit = {
+          while (nextEvents.isEmpty && eventQueue.hasNext && abortAt.forall(eventCounter < _)) {
+            eventCounter += 1
+            val specTime = spec.getTime
+            val event = eventQueue.next
+            val eventTime = event.timeStamp.time
+            if (eventTime > specTime) {
+              spec.step(eventTime - specTime)
+            }else if (eventTime < specTime){
+              throw DecreasingTimeStampsError(specTime, eventTime, event.timeStamp.loc)
+            }
+            spec.inStreams.get(event.stream.name) match {
+              case Some((inStream, elementType)) =>
+                if (event.value.typ != elementType) {
+                  throw InputTypeMismatch(event.value, event.stream.name, elementType, event.loc)
+                }
+                inStream.provide(event.value)
+                if (stopped) return
+              case None =>
+                throw UndeclaredInputStreamError(event.stream.name, event.stream.loc)
+            }
+          }
+          if (nextEvents.isEmpty) {
+            spec.step()
+            stopped = true
+          }
+        }
+
+        override def hasNext = {
+          if (!stopped) gatherValues()
+          nextEvents.nonEmpty
+        }
+
+        override def next = {
+          if (!stopped) gatherValues()
+          nextEvents.dequeue
+        }
+      }
+      new Trace(inputTrace.timeStampUnit, eventIterator)
+    }
   }
 
-  def fromSource(source: Source, path: String, timeUnit: Option[TimeUnit.TimeUnit]): Result[Interpreter] = {
-    fromTesslaSource(new TesslaSource(source, path), timeUnit)
+  def runSpec(specSource: TesslaSource,
+              traceSource: TesslaSource,
+              stopOn: Option[String] = None,
+              timeUnit: Option[TesslaSource] = None,
+              customBuiltIns: CustomBuiltIns = CustomBuiltIns.mapAndSet,
+              printCore: Boolean = false,
+              abortAt: Option[Specification.Time] = None,
+             ): Result[Trace] = {
+    val inputTrace: RawTrace = TraceParser.parseTrace(traceSource)
+    val tu = timeUnit.map(TimeUnit.parse).orElse(inputTrace.timeStampUnit)
+    val core = new Compiler().applyPasses(specSource, tu, customBuiltIns)
+    if (printCore) core.foreach(println)
+    core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(inputTrace, stopOn, abortAt))
   }
-
-  def fromString(tesslaSource: String, path: String, timeUnit: Option[TimeUnit.TimeUnit]): Result[Interpreter] = {
-    fromTesslaSource(TesslaSource.fromString(tesslaSource, path), timeUnit)
-  }
-
-  def fromFile(file: String, timeUnit: Option[TimeUnit.TimeUnit]): Result[Interpreter] = {
-    fromTesslaSource(TesslaSource.fromFile(file), timeUnit)
-  }
-
 }

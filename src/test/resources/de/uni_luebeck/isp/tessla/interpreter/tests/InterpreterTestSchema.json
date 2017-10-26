@@ -1,0 +1,54 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "spec": {
+      "type": "string"
+    },
+    "input": {
+      "type": "string"
+    },
+    "expectedOutput": {
+      "type": "string"
+    },
+    "expectedErrors": {
+      "type": "string"
+    },
+    "expectedRuntimeErrors": {
+      "type": "string"
+    },
+    "expectedWarnings": {
+      "type": "string"
+    },
+    "threshold": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "abortAt": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "spec",
+    "input"
+  ],
+  "oneOf": [
+    {
+      "required": [
+        "expectedOutput"
+      ]
+    },
+    {
+      "required": [
+        "expectedErrors"
+      ]
+    }
+  ],
+  "dependencies": {
+    "expectedRuntimeErrors": [
+      "expectedOutput"
+    ]
+  }
+}
+            

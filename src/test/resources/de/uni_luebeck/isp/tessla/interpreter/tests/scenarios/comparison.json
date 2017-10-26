@@ -1,0 +1,6 @@
+{
+  "spec": "comparison.tessla",
+  "input": "comparison.input",
+  "expectedOutput": "comparison.output"
+}
+            

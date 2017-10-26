@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.AstToCore.{TranslatedExpression, Arg, Stream, Literal}
 import Errors.TypeMismatch
 
-class BuiltIns private(mkId: String => String) {
+class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
   def primOp(op: PrimitiveOperators.PrimitiveOperator): (Seq[Arg], String, Location) => TranslatedExpression = {
     (args, name, loc) =>
       val literals = args.collect {
@@ -33,7 +33,9 @@ class BuiltIns private(mkId: String => String) {
       }
   }
 
-  val builtins: Map[(String, Int), (Seq[Arg], String, Location) => TranslatedExpression] = Map(
+  val custom = customBuiltIns.customOperators.mapValues(primOp)
+
+  val basicBuiltIns: Map[(String, Int), (Seq[Arg], String, Location) => TranslatedExpression] = Map(
     ("nil", 0) -> {
       case (Seq(), _, loc) => (Seq(), Stream(TesslaCore.Nil(loc), Types.Nothing))
     },
@@ -101,10 +103,12 @@ class BuiltIns private(mkId: String => String) {
     ("if then else", 3) -> primOp(PrimitiveOperators.IfThenElse),
     ("if then", 2) -> primOp(PrimitiveOperators.IfThen)
   )
+
+  val builtIns = basicBuiltIns ++ custom
 }
 
 object BuiltIns {
-  def apply(mkId: String => String) = {
-    new BuiltIns(mkId).builtins
+  def apply(mkId: String => String, customBuiltIns: CustomBuiltIns) = {
+    new BuiltIns(mkId, customBuiltIns).builtIns
   }
 }

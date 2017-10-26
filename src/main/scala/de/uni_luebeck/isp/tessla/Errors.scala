@@ -2,10 +2,8 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 import de.uni_luebeck.isp.tessla.Types.Type
-import de.uni_luebeck.isp.tessla.interpreter.Traces
 
 object Errors {
-
   abstract class TesslaError extends Exception with Diagnostic
 
   case class TypeMismatch(expected: Type, found: Type, loc: Location) extends TesslaError {
@@ -28,31 +26,31 @@ object Errors {
     override def message = "Definition is infinitely recursive"
   }
 
-  case class UndefinedVariable(id: Ast.Identifier) extends TesslaError {
+  case class UndefinedVariable(id: Tessla.Identifier) extends TesslaError {
     override def loc = id.loc
 
     override def message = s"Undefined variable ${id.name}"
   }
 
-  case class UndefinedFunction(id: Ast.Identifier, arity: Int) extends TesslaError {
+  case class UndefinedFunction(id: Tessla.Identifier, arity: Int) extends TesslaError {
     override def loc = id.loc
 
     override def message = s"Undefined macro or operator ${id.name}/$arity"
   }
 
-  case class UndefinedNamedArg(id: Ast.Identifier) extends TesslaError {
+  case class UndefinedNamedArg(id: Tessla.Identifier) extends TesslaError {
     override def loc = id.loc
 
     override def message = s"Undefined keyword argument ${id.name}"
   }
 
-  case class MultipleDefinitionsError(id: Ast.Identifier, previousLoc: Location) extends TesslaError {
+  case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {
     override def loc = id.loc
 
     override def message = s"Multiple definitions of ${id.name} in same scope (previous definition at $previousLoc)"
   }
 
-  case class InternalError(m: String, loc: Location = UnknownLoc) extends TesslaError {
+  case class InternalError(m: String, loc: Location = Location.unknown) extends TesslaError {
     def message = s"Internal error: $m"
   }
 
@@ -62,10 +60,15 @@ object Errors {
   }
 
   case class UndefinedTimeUnit(loc: Location) extends TesslaError {
-    def message = s"No time unit defined in trace file"
+    def message = s"No time unit set"
   }
 
-  case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit, loc: Location) extends TesslaError {
+  case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit) extends TesslaError {
+    // This error happens when applying the unit `from` to a number in a spec that uses the unit `to`
+    // (where `from` can't be converted to `to`), so we want to use `from`'s location to have it
+    // marked as the problem.
+    def loc = from.loc
+
     def message = s"Cannot convert from $from to $to"
   }
 
@@ -89,6 +92,14 @@ object Errors {
     def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
+  def ProvideAfterPropagationError(time: BigInt, loc: Location = Location.unknown) = {
+    InternalError(s"Tried to provide inputs after their propagation at time $time", loc)
+  }
+
+  case class NegativeDelayError(value: BigInt, loc: Location) extends TesslaError {
+    def message: String = s"Negative delay $value"
+  }
+
   case class InputTypeMismatch(value: TesslaCore.Value, streamName: String, streamType: Types.ValueType, loc: Location) extends TesslaError {
     def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
   }
@@ -99,5 +110,9 @@ object Errors {
 
   case class TracesUnknownIdentifierError(loc: Location, name: String) extends TesslaError {
     def message: String = s"Unknown identifier in traces: $name."
+  }
+
+  case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
+    def message: String = s"Key $key was not found in $map"
   }
 }

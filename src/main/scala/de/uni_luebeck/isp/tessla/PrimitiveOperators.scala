@@ -4,7 +4,7 @@ import de.uni_luebeck.isp.tessla.Errors.DivideByZero
 
 object PrimitiveOperators {
   def ArityError =
-    Errors.InternalError("Arity mismatch should have been caught during overload resolution", UnknownLoc)
+    Errors.InternalError("Arity mismatch should have been caught during overload resolution")
 
   sealed abstract class PrimitiveOperator {
     /** Return the return type of the result for the given types of the operands, or throw a TypeError if the provided
@@ -26,6 +26,8 @@ object PrimitiveOperators {
     protected def doEval(values: Seq[TesslaCore.Value], loc: Location): Option[TesslaCore.Value]
   }
 
+  abstract class CustomBuiltIn extends PrimitiveOperator
+
   final case class Const(value: TesslaCore.Value) extends PrimitiveOperator {
     override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = value.typ
     def doEval(values: Seq[TesslaCore.Value], loc: Location) = Some(value)
@@ -43,7 +45,7 @@ object PrimitiveOperators {
     def doEval(values: Seq[TesslaCore.Value], loc: Location) = Some(values.head)
   }
 
-  sealed protected trait Monomorphic extends PrimitiveOperator {
+  trait Monomorphic {
     protected def argumentTypes: Seq[Types.ValueType]
     protected def returnType: Types.ValueType
 
@@ -54,7 +56,7 @@ object PrimitiveOperators {
       }
     }
 
-    override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = {
+    def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = {
       checkArgumentTypes(argTypes)
       returnType
     }
@@ -116,14 +118,8 @@ object PrimitiveOperators {
     }
 
     def doEval(args: Seq[TesslaCore.Value], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
-      case Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)) =>
-        Some(TesslaCore.BoolLiteral(op(lhs, rhs), loc))
-      case Seq(TesslaCore.BoolLiteral(lhs, _), TesslaCore.BoolLiteral(rhs, _)) =>
-        Some(TesslaCore.BoolLiteral(op(lhs, rhs), loc))
-      case Seq(TesslaCore.StringLiteral(lhs, _), TesslaCore.StringLiteral(rhs, _)) =>
-        Some(TesslaCore.BoolLiteral(op(lhs, rhs), loc))
-      case Seq(TesslaCore.Unit(_), TesslaCore.Unit(_)) =>
-        Some(TesslaCore.BoolLiteral(op((), ()), loc))
+      case Seq(lhs, rhs) =>
+        Some(TesslaCore.BoolLiteral(op(lhs.value, rhs.value), loc))
     }
   }
 
