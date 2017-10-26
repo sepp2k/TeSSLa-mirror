@@ -201,6 +201,7 @@ object PrimitiveOperators {
       case Seq(lhs: TesslaCore.BoolLiteral, rhs) =>
         if (lhs.value) Some(rhs)
         else Some(lhs)
+      case Seq(lhs: TesslaCore.ErrorValue, _) => Some(lhs)
     }
   }
 
@@ -211,6 +212,7 @@ object PrimitiveOperators {
       case Seq(lhs: TesslaCore.BoolLiteral, rhs) =>
         if (lhs.value) Some(lhs)
         else Some(rhs)
+      case Seq(lhs: TesslaCore.ErrorValue, _) => Some(lhs)
     }
   }
 
@@ -235,6 +237,8 @@ object PrimitiveOperators {
     def doEval(args: Seq[TesslaCore.Value], loc: Location): Some[TesslaCore.Value] = args match {
       case Seq(TesslaCore.BoolLiteral(cond, _), thenCase, elseCase) =>
         Some(if (cond) thenCase else elseCase)
+      case Seq(error: TesslaCore.ErrorValue, _, _) =>
+        Some(error)
     }
   }
 
@@ -249,6 +253,8 @@ object PrimitiveOperators {
     def doEval(args: Seq[TesslaCore.Value], loc: Location): Option[TesslaCore.Value] = args match {
       case Seq(TesslaCore.BoolLiteral(cond, _), thenCase) =>
         if (cond) Some(thenCase) else None
+      case Seq(error: TesslaCore.ErrorValue, _) =>
+        Some(error)
     }
   }
 }
