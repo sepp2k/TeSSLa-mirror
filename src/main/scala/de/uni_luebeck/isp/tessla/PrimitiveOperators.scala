@@ -27,7 +27,7 @@ object PrimitiveOperators {
   }
 
   trait Strict {
-    def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location): Option[TesslaCore.Value]
+    protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location): Option[TesslaCore.Value]
     final def doEval(values: Seq[TesslaCore.Value], loc: Location) = {
       values.find(_.isError).orElse(strictEval(values.map(_.toLiteral), loc))
     }
