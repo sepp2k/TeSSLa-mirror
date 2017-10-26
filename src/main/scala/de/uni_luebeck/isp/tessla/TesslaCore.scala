@@ -77,6 +77,7 @@ object TesslaCore {
     def typ: Types.ValueType
     def toLiteral: LiteralValue
     def value: Any
+    def isError: Boolean
 
     override def toString = value.toString
   }
@@ -87,11 +88,13 @@ object TesslaCore {
     override def toLiteral = throw err
     override def typ = Types.Nothing
     override def value = throw err
+    override def isError = true
   }
 
   sealed abstract class LiteralValue extends Value {
     override def toLiteral = this
     override def withLoc(loc: Location): LiteralValue
+    override def isError = false
   }
 
   final case class IntLiteral(value: BigInt, loc: Location) extends LiteralValue {

@@ -26,23 +26,30 @@ object PrimitiveOperators {
     protected def doEval(values: Seq[TesslaCore.Value], loc: Location): Option[TesslaCore.Value]
   }
 
+  trait Strict {
+    def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location): Option[TesslaCore.Value]
+    final def doEval(values: Seq[TesslaCore.Value], loc: Location) = {
+      values.find(_.isError).orElse(strictEval(values.map(_.toLiteral), loc))
+    }
+  }
+
   abstract class CustomBuiltIn extends PrimitiveOperator
 
-  final case class Const(value: TesslaCore.Value) extends PrimitiveOperator {
+  final case class Const(value: TesslaCore.Value) extends PrimitiveOperator with Strict {
     override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = value.typ
-    def doEval(values: Seq[TesslaCore.Value], loc: Location) = Some(value)
+    override def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = Some(value)
   }
 
   /**
     * Take a variable amount of arguments and return the first one
     */
-  case object First extends PrimitiveOperator {
+  case object First extends PrimitiveOperator with Strict {
     override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = {
       require(argTypes.nonEmpty)
       argTypes.head._1
     }
 
-    def doEval(values: Seq[TesslaCore.Value], loc: Location) = Some(values.head)
+    override def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = Some(values.head)
   }
 
   trait Monomorphic {
@@ -66,19 +73,19 @@ object PrimitiveOperators {
 
   sealed abstract class InfixOperator extends PrimitiveOperator
 
-  sealed abstract class UnaryIntOperator(op: BigInt => BigInt) extends PrefixOperator with Monomorphic {
-    val argumentTypes = Seq(Types.Int)
-    val returnType = Types.Int
-    def doEval(args: Seq[TesslaCore.Value], loc: Location): Option[TesslaCore.Value] = args match {
+  sealed abstract class UnaryIntOperator(op: BigInt => BigInt) extends PrefixOperator with Monomorphic with Strict {
+    override val argumentTypes = Seq(Types.Int)
+    override val returnType = Types.Int
+    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Option[TesslaCore.Value] = args match {
       case Seq(TesslaCore.IntLiteral(arg, _)) =>
         Some(TesslaCore.IntLiteral(op(arg), loc))
     }
   }
 
-  sealed abstract class BinaryIntOperator(op: (BigInt, BigInt) => BigInt) extends InfixOperator with Monomorphic {
-    val argumentTypes = Seq(Types.Int, Types.Int)
-    val returnType = Types.Int
-    def doEval(args: Seq[TesslaCore.Value], loc: Location): Some[TesslaCore.Value] = args match {
+  sealed abstract class BinaryIntOperator(op: (BigInt, BigInt) => BigInt) extends InfixOperator with Monomorphic with Strict {
+    override val argumentTypes = Seq(Types.Int, Types.Int)
+    override val returnType = Types.Int
+    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.Value] = args match {
       case Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, rhsLoc)) =>
         try {
           Some(TesslaCore.IntLiteral(op(lhs, rhs), loc))
@@ -90,25 +97,25 @@ object PrimitiveOperators {
     }
   }
 
-  sealed abstract class IntComparissonOperator(op: (BigInt, BigInt) => Boolean) extends InfixOperator with Monomorphic {
-    val argumentTypes = Seq(Types.Int, Types.Int)
-    val returnType = Types.Bool
-    override def doEval(args: Seq[TesslaCore.Value], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
+  sealed abstract class IntComparissonOperator(op: (BigInt, BigInt) => Boolean) extends InfixOperator with Monomorphic with Strict {
+    override val argumentTypes = Seq(Types.Int, Types.Int)
+    override val returnType = Types.Bool
+    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
       case Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)) =>
         Some(TesslaCore.BoolLiteral(op(lhs, rhs), loc))
     }
   }
 
-  sealed abstract class BinaryBoolOperator(op: (Boolean, Boolean) => Boolean) extends InfixOperator with Monomorphic {
-    val argumentTypes = Seq(Types.Bool, Types.Bool)
-    val returnType = Types.Bool
-    def doEval(args: Seq[TesslaCore.Value], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
+  sealed abstract class BinaryBoolOperator(op: (Boolean, Boolean) => Boolean) extends InfixOperator with Monomorphic with Strict {
+    override val argumentTypes = Seq(Types.Bool, Types.Bool)
+    override val returnType = Types.Bool
+    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
       case Seq(TesslaCore.BoolLiteral(lhs, _), TesslaCore.BoolLiteral(rhs, _)) =>
         Some(TesslaCore.BoolLiteral(op(lhs, rhs), loc))
     }
   }
 
-  sealed abstract class AnyComparissonOperator(op: (Any, Any) => Boolean) extends InfixOperator {
+  sealed abstract class AnyComparissonOperator(op: (Any, Any) => Boolean) extends InfixOperator with Strict {
     override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = argTypes match {
       case Seq((t1, _), (t2, rhsLoc)) =>
         Types.requireType(t1, t2, rhsLoc)
@@ -117,7 +124,7 @@ object PrimitiveOperators {
         throw ArityError
     }
 
-    def doEval(args: Seq[TesslaCore.Value], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
+    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
       case Seq(lhs, rhs) =>
         Some(TesslaCore.BoolLiteral(op(lhs.value, rhs.value), loc))
     }
@@ -199,11 +206,11 @@ object PrimitiveOperators {
     override def toString = "||"
   }
 
-  case object Not extends PrefixOperator with Monomorphic {
+  case object Not extends PrefixOperator with Monomorphic with Strict {
     override def toString = "!"
-    val argumentTypes = Seq(Types.Bool)
-    val returnType = Types.Bool
-    def doEval(args: Seq[TesslaCore.Value], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
+    override val argumentTypes = Seq(Types.Bool)
+    override val returnType = Types.Bool
+    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
       case Seq(TesslaCore.BoolLiteral(arg, _)) =>
         Some(TesslaCore.BoolLiteral(!arg, loc))
     }
