@@ -44,7 +44,7 @@ object GenerateISL {
 
   def generateForMacro(id: Tessla.Identifier, args: Seq[Tessla.Argument] ): Seq[String] = {
     id match {
-      case Tessla.Identifier("code_line_exec",_) => List()
+      case Tessla.Identifier("code_line_exec",_) => List(s"line_reached:${args[0].toString}")
     }
   }
 }
