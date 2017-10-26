@@ -5,7 +5,9 @@ import de.uni_luebeck.isp.tessla.Errors._
 
 import scala.collection.mutable
 
-class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[Tessla.Spec, TesslaCore.Specification] {
+class AstToCore(val unit: Option[TimeUnit.TimeUnit], customBuiltIns: CustomBuiltIns)
+  extends TranslationPhase[Tessla.Spec, TesslaCore.Specification] {
+
   override def translateSpec(spec: Tessla.Spec) = {
     var counter = 0
     val alreadyTranslated = mutable.Map[String, Arg]()
@@ -34,7 +36,7 @@ class AstToCore(val unit: Option[TimeUnit.TimeUnit]) extends TranslationPhase[Te
       name.replaceFirst("\\$\\d+$", "") + "$" + counter
     }
 
-    val builtIns = BuiltIns(mkId)
+    val builtIns = BuiltIns(mkId, customBuiltIns)
 
     def mkEnv(statements: Seq[Tessla.Statement], env: => Env) = {
       val previousDefs = mutable.Map[(String, Int), Location]()

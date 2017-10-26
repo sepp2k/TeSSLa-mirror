@@ -1,0 +1,5 @@
+{
+  "spec": "allout.tessla",
+  "input": "allout.input",
+  "expectedOutput": "allout.output"
+}

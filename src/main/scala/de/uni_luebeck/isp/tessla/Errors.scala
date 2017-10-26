@@ -2,10 +2,8 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 import de.uni_luebeck.isp.tessla.Types.Type
-import de.uni_luebeck.isp.tessla.interpreter.Trace
 
 object Errors {
-
   abstract class TesslaError extends Exception with Diagnostic
 
   case class TypeMismatch(expected: Type, found: Type, loc: Location) extends TesslaError {
@@ -62,7 +60,7 @@ object Errors {
   }
 
   case class UndefinedTimeUnit(loc: Location) extends TesslaError {
-    def message = s"No time unit defined in trace file"
+    def message = s"No time unit set"
   }
 
   case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit) extends TesslaError {
@@ -106,4 +104,7 @@ object Errors {
     def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
   }
 
+  case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
+    def message: String = s"Key $key was not found in $map"
+  }
 }

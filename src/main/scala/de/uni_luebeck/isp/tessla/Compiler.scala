@@ -3,8 +3,8 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 
 class Compiler {
-  def applyPasses(src: TesslaSource, unit: Option[TimeUnit]): TranslationPhase.Result[TesslaCore.Specification] = {
-    new TesslaParser().translate(src).andThen(new AstToCore(unit))
+  def applyPasses(src: TesslaSource, unit: Option[TimeUnit], customBuiltIns: CustomBuiltIns): TranslationPhase.Result[TesslaCore.Specification] = {
+    new TesslaParser().translate(src).andThen(new AstToCore(unit, customBuiltIns))
   }
 
   class CorePrinter extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
@@ -14,9 +14,12 @@ class Compiler {
     }
   }
 
-  def compile(src: TesslaSource, timeUnitSource: Option[TesslaSource], printCore: Boolean = false) = {
+  def compile(src: TesslaSource,
+              timeUnitSource: Option[TesslaSource],
+              customBuiltIns: CustomBuiltIns = CustomBuiltIns.mapAndSet,
+              printCore: Boolean = false) = {
     val timeUnit = timeUnitSource.map(TimeUnit.parse)
-    val result = applyPasses(src, timeUnit)
+    val result = applyPasses(src, timeUnit, customBuiltIns)
     if (printCore) result.andThen(new CorePrinter)
     else result
   }

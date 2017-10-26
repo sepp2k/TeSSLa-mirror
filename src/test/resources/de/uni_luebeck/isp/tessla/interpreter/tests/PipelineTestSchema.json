@@ -1,0 +1,45 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "spec": {
+      "type": "string"
+    },
+    "expectedPipeline": {
+      "type": "string"
+    },
+    "expectedPipelineErrors": {
+      "type": "string"
+    },
+    "expectedPipelineWarnings": {
+      "type": "string"
+    },
+    "timeunit": {
+      "type": "string",
+      "enum": [
+        "ns",
+        "us",
+        "ms",
+        "s",
+        "min",
+        "h",
+        "d"
+      ]
+    }
+  },
+  "required": [
+    "spec"
+  ],
+  "oneOf": [
+    {
+      "required": [
+        "expectedPipelineOutput"
+      ]
+    },
+    {
+      "required": [
+        "expectedPipelineErrors"
+      ]
+    }
+  ]
+}

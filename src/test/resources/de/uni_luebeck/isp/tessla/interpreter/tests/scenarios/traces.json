@@ -1,0 +1,6 @@
+{
+  "spec": "traces.tessla",
+  "input": "traces.input",
+  "expectedOutput": "traces.output"
+}
+            
