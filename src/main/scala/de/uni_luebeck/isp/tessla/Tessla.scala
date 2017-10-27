@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 object Tessla {
-  case class Spec(statements: Seq[Statement]) {
+  case class Specification(statements: Seq[Statement]) {
     override def toString = statements.mkString("\n")
   }
 
@@ -130,7 +130,7 @@ object Tessla {
     def loc = id.loc.merge(expr.loc)
   }
 
-  abstract class Type {
+  sealed abstract class Type {
     def loc: Location
     def withLoc(loc: Location): Type
   }

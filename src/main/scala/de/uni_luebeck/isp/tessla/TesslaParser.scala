@@ -4,7 +4,7 @@ import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, With
 import de.uni_luebeck.isp.compacom
 import de.uni_luebeck.isp.tessla.Errors.ParserError
 
-class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Parsers {
+class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] with Parsers {
   override def translateSpec(source: TesslaSource) = {
     val p =  new Parsers(source.path)
     parseAll(p.spec, source.src) match {
@@ -119,9 +119,9 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
 
   class Parsers(path: String) {
 
-    def spec: Parser[Tessla.Spec] = include.* ~ statement.* ^^ {
+    def spec: Parser[Tessla.Specification] = include.* ~ statement.* ^^ {
       case (includes, statements) =>
-        Tessla.Spec(includes.flatMap(_.statements) ++ statements)
+        Tessla.Specification(includes.flatMap(_.statements) ++ statements)
     }
 
     def include = INCLUDE ~> stringLiteral ^^ { file =>

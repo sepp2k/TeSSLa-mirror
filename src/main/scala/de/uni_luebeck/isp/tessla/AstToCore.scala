@@ -6,9 +6,9 @@ import de.uni_luebeck.isp.tessla.Errors._
 import scala.collection.mutable
 
 class AstToCore(val unit: Option[TimeUnit.TimeUnit], customBuiltIns: CustomBuiltIns)
-  extends TranslationPhase[Tessla.Spec, TesslaCore.Specification] {
+  extends TranslationPhase[Tessla.Specification, TesslaCore.Specification] {
 
-  override def translateSpec(spec: Tessla.Spec) = {
+  override def translateSpec(spec: Tessla.Specification) = {
     var counter = 0
     val alreadyTranslated = mutable.Map[String, Arg]()
 
