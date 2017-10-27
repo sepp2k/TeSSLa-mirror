@@ -122,7 +122,10 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
 
     def include = INCLUDE ~> stringLiteral ^^ { file =>
       import java.nio.file.Paths
-      val includePath = Paths.get(path).getParent.resolve(file.value)
+      // getParent returns null for relative paths without subdirectories (i.e. just a file name), which is
+      // annoying and stupid. So we wrap the call in an option and fall back to "." as the default.
+      val dir = Option(Paths.get(path).getParent).getOrElse(Paths.get("."))
+      val includePath = dir.resolve(file.value)
       new TesslaParser().translateSpec(TesslaSource.fromFile(includePath.toString))
     }
 
