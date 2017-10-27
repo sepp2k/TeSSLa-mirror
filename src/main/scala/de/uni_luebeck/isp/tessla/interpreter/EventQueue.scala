@@ -4,10 +4,11 @@ import de.uni_luebeck.isp.tessla.interpreter.Trace.{EventRange, TimeRange}
 
 import scala.collection.mutable
 
-class EventQueue(eventRanges: Iterator[EventRange]) extends Iterator[Trace.Event] {
+class EventQueue(eventRanges: Iterator[EventRange], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
   val queue: mutable.PriorityQueue[Trace.EventRange] =
     new mutable.PriorityQueue[Trace.EventRange]()(Ordering.by(ev => ev.timeRange.from)).reverse
   var nextEvents = new mutable.Queue[Trace.Event]
+  var eventCounter = 0
 
   private def generateEvent : Option[Trace.Event] = {
     if (queue.nonEmpty) {
@@ -27,7 +28,8 @@ class EventQueue(eventRanges: Iterator[EventRange]) extends Iterator[Trace.Event
 
   def gatherValues(): Unit = {
     nextEvents ++= generateEvent.toList
-    while (nextEvents.isEmpty && eventRanges.hasNext){
+    while (abortAt.forall(eventCounter < _) && nextEvents.isEmpty && eventRanges.hasNext){
+      eventCounter += 1
       queue.enqueue(eventRanges.next)
       nextEvents ++= generateEvent.toList
     }

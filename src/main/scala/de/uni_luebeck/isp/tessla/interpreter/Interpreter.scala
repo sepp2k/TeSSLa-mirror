@@ -81,14 +81,12 @@ object Interpreter {
     def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
   }
 
-  class RunInterpreter(inputTrace: RawTrace, stopOn: Option[String], abortAt: Option[Specification.Time]) extends TranslationPhase[Interpreter, Trace] {
+  class RunInterpreter(inputTrace: Trace, stopOn: Option[String]) extends TranslationPhase[Interpreter, Trace] {
 
     override def translateSpec(spec: Interpreter): Trace = {
       val eventIterator = new Iterator[Trace.Event] {
         var nextEvents = new mutable.Queue[Trace.Event]
-        val eventQueue: EventQueue = new EventQueue(inputTrace.eventRanges)
         var stopped = false
-var eventCounter = 0
 
         spec.outStreams.foreach {
           case (name, stream) =>
@@ -106,10 +104,9 @@ var eventCounter = 0
         }
 
         def gatherValues(): Unit = {
-          while (nextEvents.isEmpty && eventQueue.hasNext && abortAt.forall(eventCounter < _)) {
-            eventCounter += 1
+          while (nextEvents.isEmpty && inputTrace.events.hasNext) {
             val specTime = spec.getTime
-            val event = eventQueue.next
+            val event = inputTrace.events.next
             val eventTime = event.timeStamp.time
             if (eventTime > specTime) {
               spec.step(eventTime - specTime)
@@ -153,12 +150,21 @@ var eventCounter = 0
               timeUnit: Option[TesslaSource] = None,
               customBuiltIns: CustomBuiltIns = CustomBuiltIns.mapAndSet,
               printCore: Boolean = false,
-              abortAt: Option[Specification.Time] = None,
+              abortAt: Option[BigInt] = None,
              ): Result[Trace] = {
-    val inputTrace: RawTrace = TraceParser.parseTrace(traceSource)
-    val tu = timeUnit.map(TimeUnit.parse).orElse(inputTrace.timeStampUnit)
-    val core = new Compiler().applyPasses(specSource, tu, customBuiltIns)
+    val flatTrace = flattenInput(traceSource, timeUnit, abortAt)
+    val core = new Compiler().applyPasses(specSource, flatTrace.timeStampUnit, customBuiltIns)
     if (printCore) core.foreach(println)
-    core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(inputTrace, stopOn, abortAt))
+    core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(flatTrace, stopOn))
+  }
+
+  def flattenInput(traceSource: TesslaSource,
+              timeUnit: Option[TesslaSource] = None,
+              abortAt: Option[BigInt] = None,
+             ): Trace = {
+    val rawTrace: RawTrace = TraceParser.parseTrace(traceSource)
+    val tu = timeUnit.map(TimeUnit.parse).orElse(rawTrace.timeStampUnit)
+
+    new Trace(tu, new EventQueue(rawTrace.eventRanges, abortAt))
   }
 }

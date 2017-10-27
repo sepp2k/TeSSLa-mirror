@@ -63,38 +63,8 @@ object Main extends SexyOpt {
         val abortAtValue = abortAt.map(BigInt(_))
         val traceSource = traceFile.map(TesslaSource.fromFile).getOrElse(TesslaSource.stdin)
         if (flattenInput) {
-          val inputTrace: RawTrace = TraceParser.parseTrace(traceSource)
-          val tu = timeUnitSource.map(TimeUnit.parse).orElse(inputTrace.timeStampUnit)
-          tu.foreach(unit => println("$timeunit = \"" + unit + "\""))
-          val eventIterator = new Iterator[Trace.Event] {
-            var nextEvents = new mutable.Queue[Trace.Event]
-            val eventQueue: EventQueue = new EventQueue(inputTrace.eventRanges)
-            var stopped = false
-            var eventCounter = 0
-
-            def gatherValues(): Unit = {
-              while (nextEvents.isEmpty && eventQueue.hasNext && abortAtValue.forall(eventCounter < _)) {
-                eventCounter += 1
-                nextEvents += eventQueue.next
-              }
-              if (eventQueue.isEmpty) {
-                stopped = true
-              }
-            }
-
-            override def hasNext = {
-              if (!stopped) gatherValues()
-              nextEvents.nonEmpty
-            }
-
-            override def next = {
-              if (!stopped) gatherValues()
-              nextEvents.dequeue
-            }
-          }
-          eventIterator.foreach(println)
+          Interpreter.flattenInput(traceSource, timeUnitSource, abortAtValue).foreach(println)
         } else {
-
           val output = unwrapResult {
             Interpreter.runSpec(specSource, traceSource, timeUnit = timeUnitSource, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
           }
