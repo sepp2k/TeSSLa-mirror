@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, CustomBuiltIns, TesslaSource, TimeUnit}
+import de.uni_luebeck.isp.tessla.{Compiler, TesslaSource}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
