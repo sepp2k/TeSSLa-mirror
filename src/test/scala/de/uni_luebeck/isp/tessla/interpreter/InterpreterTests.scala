@@ -18,7 +18,7 @@ class InterpreterTests extends FunSuite {
 
     case class InterpreterTest(spec: String, input: String, expectedOutput: Option[String],
                                expectedErrors: Option[String], expectedWarnings: Option[String],
-                               expectedRuntimeErrors: Option[String], threshold: Option[Int], abortAt: Option[Int]) extends Test
+                               expectedRuntimeErrors: Option[String], abortAt: Option[Int]) extends Test
 
     case class PipelineTest(spec: String, expectedPipeline: Option[String],
                             expectedPipelineErrors: Option[String], expectedPipelineWarnings: Option[String],
@@ -128,10 +128,10 @@ class InterpreterTests extends FunSuite {
 
       val testCase = parseJson(s"$path/$name")
       testCase match {
-        case JSON.InterpreterTest(spec, input, expOutput, expErr, expWarn, expRunErr, threshold, abortAt) =>
+        case JSON.InterpreterTest(spec, input, expOutput, expErr, expWarn, expRunErr, abortAt) =>
           test(s"$path/$name (Interpreter)") {
             try {
-              val result = Interpreter.runSpec(testSource(spec), testSource(input))
+              val result = Interpreter.runSpec(testSource(spec), testSource(input), abortAt = abortAt.map(BigInt(_)))
               result match {
                 case Success(output, _) =>
                   assert(expErr.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")

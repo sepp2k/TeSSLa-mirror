@@ -128,7 +128,7 @@ object Interpreter {
             spec.step()
             stopped = true
           }
-        }
+      }
 
         override def hasNext = {
           if (!stopped) gatherValues()
