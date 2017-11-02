@@ -4,6 +4,7 @@ import de.uni_luebeck.isp.tessla.Errors.{TracesOperationError, TracesUnknownIden
 import de.uni_luebeck.isp.tessla.TesslaCore
 import de.uni_luebeck.isp.tessla.Location
 import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
+import de.uni_luebeck.isp.tessla.interpreter.Trace.{Identifier, TimeRange, TraceOp}
 
 object Trace {
   sealed abstract class Item
@@ -28,18 +29,7 @@ object Trace {
     override def toString: String = s"$timeStamp: ${stream.name} = $value"
   }
 
-  case class EventRange(loc: Location, timeRange: TimeRange, stream: Identifier, value: TraceOp) extends Item{
-    override def toString: String = s"$timeRange: $stream = $value"
-
-    def evalValue: TesslaCore.LiteralValue =
-      value.eval(if (timeRange.id.isDefined) {
-        Map(timeRange.id.get.name -> timeRange.from)
-      } else {
-        Map()
-      })
-  }
-
-  case class TimeRange(id: Option[Identifier], from: BigInt, to: Option[BigInt], step: BigInt) {
+  case class TimeRange(loc: Location, id: Option[Identifier], from: BigInt, to: Option[BigInt], step: BigInt) {
     override def toString: String = s"$from <= ${id.getOrElse("\"_\"")} ${
       if (to.isDefined) {
         "<= " + to.get
@@ -179,9 +169,30 @@ class Trace(val timeStampUnit: Option[TimeUnit], val events: Iterator[Trace.Even
   override def next() = items.next()
 }
 
-class RawTrace(val timeStampUnit: Option[TimeUnit], val eventRanges: Iterator[Trace.EventRange]) extends Iterator[Trace.Item] {
-  val items: Iterator[Trace.Item] = timeStampUnit match {
-    case Some(timeUnit) => Iterator(Trace.TimeUnitDeclaration(timeUnit)) ++ eventRanges
+object RawTrace{
+  sealed abstract class Item
+
+  case class TimeUnitDeclaration(timeUnit: TimeUnit) extends Item {
+    override def toString = {
+      "$timeunit = \"" + timeUnit + "\""
+    }
+  }
+
+  case class EventRange(loc: Location, timeRange: TimeRange, stream: Identifier, value: TraceOp) extends Item{
+    override def toString: String = s"$timeRange: $stream = $value"
+
+    def evalValue: TesslaCore.LiteralValue =
+      value.eval(if (timeRange.id.isDefined) {
+        Map(timeRange.id.get.name -> timeRange.from)
+      } else {
+        Map()
+      })
+  }
+}
+
+class RawTrace(val timeStampUnit: Option[TimeUnit], val eventRanges: Iterator[RawTrace.EventRange]) extends Iterator[RawTrace.Item] {
+  val items: Iterator[RawTrace.Item] = timeStampUnit match {
+    case Some(timeUnit) => Iterator(RawTrace.TimeUnitDeclaration(timeUnit)) ++ eventRanges
     case None => eventRanges
   }
 

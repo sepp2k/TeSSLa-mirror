@@ -165,6 +165,6 @@ object Interpreter {
     val rawTrace: RawTrace = TraceParser.parseTrace(traceSource)
     val tu = timeUnit.map(TimeUnit.parse).orElse(rawTrace.timeStampUnit)
 
-    new Trace(tu, new EventQueue(rawTrace.eventRanges, abortAt))
+    new Trace(tu, new FlatEventIterator(rawTrace.eventRanges, abortAt))
   }
 }

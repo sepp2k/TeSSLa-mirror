@@ -1,13 +1,14 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.NegativeStepError
-import de.uni_luebeck.isp.tessla.interpreter.Trace.{EventRange, TimeRange}
+import de.uni_luebeck.isp.tessla.interpreter.RawTrace.EventRange
+import de.uni_luebeck.isp.tessla.interpreter.Trace.TimeRange
 
 import scala.collection.mutable
 
-class EventQueue(eventRanges: Iterator[EventRange], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
-  val queue: mutable.PriorityQueue[Trace.EventRange] =
-    new mutable.PriorityQueue[Trace.EventRange]()(Ordering.by(ev => ev.timeRange.from)).reverse
+class FlatEventIterator(eventRanges: Iterator[EventRange], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
+  val queue: mutable.PriorityQueue[EventRange] =
+    new mutable.PriorityQueue[EventRange]()(Ordering.by(ev => ev.timeRange.from)).reverse
   var nextEvents = new mutable.Queue[Trace.Event]
   var eventCounter = 0
 
@@ -21,12 +22,12 @@ class EventQueue(eventRanges: Iterator[EventRange], abortAt: Option[BigInt]) ext
       val diff = range.to.map(_ - range.from)
       if (diff.forall(_ >= 0) && abortAt.forall(eventCounter < _)) {
         if (diff.forall(_ >= range.step)) {
-          queue.enqueue(Trace.EventRange(generator.loc,
-            TimeRange(range.id, range.from + range.step, range.to, range.step),
+          queue.enqueue(EventRange(generator.loc,
+            TimeRange(range.loc, range.id, range.from + range.step, range.to, range.step),
             generator.stream, generator.value))
         }
         eventCounter += 1
-        Some(Trace.Event(generator.loc, Trace.TimeStamp(generator.loc, range.from),
+        Some(Trace.Event(generator.loc, Trace.TimeStamp(range.loc, range.from),
           generator.stream, generator.evalValue))
       } else {
         None
