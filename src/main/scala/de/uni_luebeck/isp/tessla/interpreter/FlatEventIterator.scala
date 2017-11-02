@@ -1,8 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.NegativeStepError
-import de.uni_luebeck.isp.tessla.interpreter.RawTrace.EventRange
-import de.uni_luebeck.isp.tessla.interpreter.Trace.TimeRange
+import de.uni_luebeck.isp.tessla.interpreter.RawTrace.{EventRange, TimeRange}
 
 import scala.collection.mutable
 

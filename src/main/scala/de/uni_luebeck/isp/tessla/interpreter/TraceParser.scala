@@ -4,9 +4,8 @@ import de.uni_luebeck.isp.tessla.{TesslaCore, TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.tessla.Errors.{NotAnEventError, ParserError}
 import de.uni_luebeck.isp.tessla.TimeUnit._
-import de.uni_luebeck.isp.tessla.interpreter.Trace._
 import de.uni_luebeck.isp.tessla.Location
-import de.uni_luebeck.isp.tessla.interpreter.RawTrace.EventRange
+import de.uni_luebeck.isp.tessla.interpreter.RawTrace._
 
 object TraceParser extends Parsers {
   def parseTrace(tesslaSource: TesslaSource): RawTrace = {
@@ -115,38 +114,38 @@ object TraceParser extends Parsers {
     def event: Parser[EventRange] =
       (((timeRange <~ COLON) ~ identifier) ~ (EQ ~> equivalence).?) ^^! {
         case (loc, ((time, id), v)) =>
-          EventRange(Location(loc, path), time, id, v.getOrElse(Trace.Literal(TesslaCore.Unit(Location(loc, path)), Location(loc, path))))
+          EventRange(Location(loc, path), time, id, v.getOrElse(RawTrace.Literal(TesslaCore.Unit(Location(loc, path)), Location(loc, path))))
       }
 
-    def equivalence: Parser[Trace.TraceOp] =
+    def equivalence: Parser[RawTrace.TraceOp] =
       rep1sep(implication, LRARROW) ^^! {
         case (loc, operands) => operands.reduceLeft {
-          (acc, elem) => Trace.Equiv(acc, elem, Location(loc, path))
+          (acc, elem) => RawTrace.Equiv(acc, elem, Location(loc, path))
         }
       }
 
-    def implication: Parser[Trace.TraceOp] =
+    def implication: Parser[RawTrace.TraceOp] =
       rep1sep(disjunction, RARROW) ^^! {
         case (loc, operands) => operands.reduceLeft {
-          (acc, elem) => Trace.Equiv(acc, elem, Location(loc, path))
+          (acc, elem) => RawTrace.Equiv(acc, elem, Location(loc, path))
         }
       }
 
-    def disjunction: Parser[Trace.TraceOp] =
+    def disjunction: Parser[RawTrace.TraceOp] =
       rep1sep(conjunction, DPIPE) ^^! {
         case (loc, operands) => operands.reduceLeft {
-          (acc, elem) => Trace.Equiv(acc, elem, Location(loc, path))
+          (acc, elem) => RawTrace.Equiv(acc, elem, Location(loc, path))
         }
       }
 
-    def conjunction: Parser[Trace.TraceOp] =
+    def conjunction: Parser[RawTrace.TraceOp] =
       rep1sep(mult, DAMPERSAND) ^^! {
         case (loc, operands) => operands.reduceLeft {
-          (acc, elem) => Trace.Equiv(acc, elem, Location(loc, path))
+          (acc, elem) => RawTrace.Equiv(acc, elem, Location(loc, path))
         }
       }
 
-    def mult: Parser[Trace.TraceOp] =
+    def mult: Parser[RawTrace.TraceOp] =
       add ~ (multArithOp ~ add).* ^^! {
         case (loc, (lhs, ops)) =>
           ops match {
@@ -157,7 +156,7 @@ object TraceParser extends Parsers {
           }
       }
 
-    def add: Parser[Trace.TraceOp] =
+    def add: Parser[RawTrace.TraceOp] =
       unaryOp ~ (addArithOp ~ unaryOp).* ^^! {
         case (loc, (lhs, ops)) =>
           ops match {
@@ -170,39 +169,39 @@ object TraceParser extends Parsers {
 
     def multArithOp: Parser[(TraceOp, TraceOp, Location) => TraceOp] =
       STAR ^^^ {
-        (lhs: TraceOp, rhs: TraceOp, loc: Location) => Trace.Mult(lhs, rhs, loc)
+        (lhs: TraceOp, rhs: TraceOp, loc: Location) => RawTrace.Mult(lhs, rhs, loc)
       } |
         SLASH ^^^ {
-          (lhs: TraceOp, rhs: TraceOp, loc: Location) => Trace.Div(lhs, rhs, loc)
+          (lhs: TraceOp, rhs: TraceOp, loc: Location) => RawTrace.Div(lhs, rhs, loc)
         } |
         PERCENT ^^^ {
-          (lhs: TraceOp, rhs: TraceOp, loc: Location) => Trace.Mod(lhs, rhs, loc)
+          (lhs: TraceOp, rhs: TraceOp, loc: Location) => RawTrace.Mod(lhs, rhs, loc)
         }
 
     def addArithOp: Parser[(TraceOp, TraceOp, Location) => TraceOp] =
       PLUS ^^^ {
-        (lhs: TraceOp, rhs: TraceOp, loc: Location) => Trace.Add(lhs, rhs, loc)
+        (lhs: TraceOp, rhs: TraceOp, loc: Location) => RawTrace.Add(lhs, rhs, loc)
       } |
         MINUS ^^^ {
-          (lhs: TraceOp, rhs: TraceOp, loc: Location) => Trace.Sub(lhs, rhs, loc)
+          (lhs: TraceOp, rhs: TraceOp, loc: Location) => RawTrace.Sub(lhs, rhs, loc)
         }
 
-    def unaryOp: Parser[Trace.TraceOp] =
+    def unaryOp: Parser[RawTrace.TraceOp] =
       EXCLMARK ~> atomic ^^! {
-        case (loc, v) => Trace.Not(v, Location(loc, path))
+        case (loc, v) => RawTrace.Not(v, Location(loc, path))
       } |
         MINUS ~> atomic ^^! {
-          case (loc, v) => Trace.Neg(v, Location(loc, path))
+          case (loc, v) => RawTrace.Neg(v, Location(loc, path))
         } |
         LPAREN ~> equivalence.? <~ RPAREN ^^! {
-          case (loc, None) => Trace.Literal(TesslaCore.Unit(Location(loc, path)), Location(loc, path))
+          case (loc, None) => RawTrace.Literal(TesslaCore.Unit(Location(loc, path)), Location(loc, path))
           case (_, Some(exp)) => exp
         } |
         atomic
 
-    def atomic: Parser[Trace.TraceOp] =
+    def atomic: Parser[RawTrace.TraceOp] =
       literal ^^! {
-        (loc, v) => Trace.Literal(v, Location(loc, path))
+        (loc, v) => RawTrace.Literal(v, Location(loc, path))
       } | identifier
 
     def literal: Parser[TesslaCore.LiteralValue] =
@@ -256,34 +255,34 @@ object TraceParser extends Parsers {
       } |
         identifier
 
-    def timeRange: Parser[Trace.TimeRange] = {
+    def timeRange: Parser[RawTrace.TimeRange] = {
       bigNat ~ (((COMMA ~> bigNat) ~ (DDOT ~> identifierOrWildcard.?)) | (DDOT ~> ((bigNat ~ step2.?) | identifierOrWildcard.?)) | ((((LEQ | LT) ~ identifierOrWildcard) ~ ((LEQ | LT) ~ bigNat).?) ~ step1.?)).? ^^! {
         case (loc, (value, None)) =>
           /*value*/
-          Trace.TimeRange(Location(loc, path), None, value, Some(value), 1)
+          RawTrace.TimeRange(Location(loc, path), None, value, Some(value), 1)
         case (loc, (from: BigInt, Some((rhs: BigInt, rrhs: Option[BigInt])))) =>
           /*
           from .. to
           from .. to-step, to
           */
-          Trace.TimeRange(Location(loc, path), None, from, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
-        case (loc, (from: BigInt, Some(idOpt: Option[Trace.Identifier]))) =>
+          RawTrace.TimeRange(Location(loc, path), None, from, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
+        case (loc, (from: BigInt, Some(idOpt: Option[RawTrace.Identifier]))) =>
           /*
           from .. (infinite)
           from .. id (infinite)
           */
-          Trace.TimeRange(Location(loc, path), idOpt, from, None, 1)
-        case (loc, (valLeft, Some((valLeft2: BigInt, Some(id: Trace.Identifier))))) =>
+          RawTrace.TimeRange(Location(loc, path), idOpt, from, None, 1)
+        case (loc, (valLeft, Some((valLeft2: BigInt, Some(id: RawTrace.Identifier))))) =>
           /*
           from, from+step .. id (infinite)
           */
-          Trace.TimeRange(Location(loc, path), Some(id), valLeft, None, valLeft2 - valLeft)
+          RawTrace.TimeRange(Location(loc, path), Some(id), valLeft, None, valLeft2 - valLeft)
         case (loc, (valLeft, Some((valLeft2: BigInt, None)))) =>
           /*
           from, from+step ..
           */
-          Trace.TimeRange(Location(loc, path), None, valLeft, None, valLeft2 - valLeft)
-        case (loc, (valLeft, Some((((op1: WithLocation[_], id: Trace.Identifier), rhs: Option[(WithLocation[_], BigInt)]), stepOpt: Option[(Option[Trace.Identifier], BigInt)])))) =>
+          RawTrace.TimeRange(Location(loc, path), None, valLeft, None, valLeft2 - valLeft)
+        case (loc, (valLeft, Some((((op1: WithLocation[_], id: RawTrace.Identifier), rhs: Option[(WithLocation[_], BigInt)]), stepOpt: Option[(Option[RawTrace.Identifier], BigInt)])))) =>
           /*
           from < id < to
           from < id <= to
@@ -323,21 +322,21 @@ object TraceParser extends Parsers {
               }
               value
           }
-          Trace.TimeRange(Location(loc, path), Some(id), from, to, step)
+          RawTrace.TimeRange(Location(loc, path), Some(id), from, to, step)
       } | identifierOrWildcard ~ ((((LEQ | LT | GEQ | GT) ~ bigNat) ~ step1.?) | (DDOT ~> (bigNat ~ step2.?)) | ((((IN ~> bigNat) <~ DDOT) ~ bigNat) ~ step2.?)) ^^! {
-        case (loc, (id: Trace.Identifier, (rhs: BigInt, rrhs: Option[BigInt]))) =>
+        case (loc, (id: RawTrace.Identifier, (rhs: BigInt, rrhs: Option[BigInt]))) =>
           /*
           id .. to
           id .. to-step, to
           * */
-          Trace.TimeRange(Location(loc, path), Some(id), 1, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
-        case (loc, (id: Trace.Identifier, ((from: BigInt, rhs: BigInt), rrhs: Option[BigInt]))) =>
+          RawTrace.TimeRange(Location(loc, path), Some(id), 1, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
+        case (loc, (id: RawTrace.Identifier, ((from: BigInt, rhs: BigInt), rrhs: Option[BigInt]))) =>
           /*
           id in from .. to
           id in from .. to-step, to
           */
-          Trace.TimeRange(Location(loc, path), Some(id), from, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
-        case (loc, (id: Trace.Identifier, (rhs: (WithLocation[_], BigInt), stepOpt: Option[(Option[Trace.Identifier], BigInt)]))) =>
+          RawTrace.TimeRange(Location(loc, path), Some(id), from, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
+        case (loc, (id: RawTrace.Identifier, (rhs: (WithLocation[_], BigInt), stepOpt: Option[(Option[RawTrace.Identifier], BigInt)]))) =>
           /*
           id < to
           id <= to
@@ -372,7 +371,7 @@ object TraceParser extends Parsers {
               }
               value
           }
-          Trace.TimeRange(Location(loc, path), Some(id), from, to, step)
+          RawTrace.TimeRange(Location(loc, path), Some(id), from, to, step)
       } | ((((LEQ | LT | GEQ | GT) ~ bigNat) ~ step1.?) | (DDOT ~> (bigNat ~ step2.?))) ^^! {
         case (loc, (rhs: (WithLocation[_], BigInt), stepOpt: Option[(Option[Trace.Identifier], BigInt)])) =>
           /*
@@ -402,13 +401,13 @@ object TraceParser extends Parsers {
               /*step with notation '+= 5'*/
               value
           }
-          Trace.TimeRange(Location(loc, path), None, from, to, step)
+          RawTrace.TimeRange(Location(loc, path), None, from, to, step)
         case (loc, (rhs: BigInt, rrhs: Option[BigInt])) =>
           /*
           .. to
           .. to-step, to
           */
-          Trace.TimeRange(Location(loc, path), None, 1, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
+          RawTrace.TimeRange(Location(loc, path), None, 1, rrhs.orElse(Some(rhs)), rrhs.getOrElse(rhs + 1) - rhs)
       }
     }
 
