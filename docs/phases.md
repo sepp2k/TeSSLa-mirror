@@ -3,9 +3,9 @@ The following is the plan of how to offer the current functionality (minus some 
 Source code  
 ———TesslaParser—>  
 Tessla  
-———Scoper—> (adds maps to the global and block scopes, which map IDs to expressions, (replacing the list of statements) and produces errors for conflicting definitions in the same scope)  
+———Scoper—> (adds scope objects to the global and block scopes, which map identifiers to a list of overloads (replacing the list of statements), and produces errors for conflicting definitions in the same scope)  
 ScopedTessla  
-———MacroExpander—> (expands macros, multiple definitions with the same arity expand to an overoad operator (we can't properly resolve overloads by type until the type checker runs))  
+———MacroExpander—> (expands macros, multiple definitions with the same arity expand to an overload operator (we can't properly resolve overloads by type until the type checker runs))  
 MacrolessTessla  
 ———Uniquifier—> (removes and replaces alpha-numeric identifiers with numeric IDs that are unique across the whole program; original names are kept around for error messages and debugging purposes; block-expressions are removed and their definitions hoisted into the global map)  
 UniqueTessla  

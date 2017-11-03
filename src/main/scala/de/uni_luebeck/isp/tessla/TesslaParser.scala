@@ -179,7 +179,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def typeArguments: Parser[Seq[Tessla.Type]] = LBRACKET ~> rep1sep(`type`, COMMA) <~ RBRACKET
 
-    def expression: Parser[Tessla.Expression] = ifThenElse | typeAssertion
+    def expression: Parser[Tessla.Expression] = ifThenElse | infixExpression
 
     def ifThenElse = (IF ~ expression) ~ (THEN ~> expression) ~ (ELSE ~> expression).? ^^! {
       case (loc, (((ifToken, cond), thenCase), Some(elseCase))) =>
@@ -190,11 +190,6 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
         Tessla.MacroCall(
           Tessla.Identifier("if then", Location(ifToken.loc, path)),
           List(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase)), Location(loc, path))
-    }
-
-    def typeAssertion: Parser[Tessla.Expression] = infixExpression ~ typeAnnotation.? ^^ {
-      case (expr, None) => expr
-      case (expr, Some(assertedType)) => Tessla.TypeAssertion(expr, assertedType)
     }
 
     def infixOp(loc: compacom.Location, lhs: Tessla.Expression, rhss: Seq[(WithLocation[Token], Tessla.Expression)]) = {
@@ -265,7 +260,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def group: Parser[Tessla.Expression] = (LPAREN ~> expression.? <~ RPAREN) ^^! {
       case (_, Some(expr)) => expr
-      case (loc, None) => Tessla.Unit(Location(loc, path))
+      case (loc, None) => Tessla.Literal(Tessla.Unit(Location(loc, path)))
     }
 
     def block = (LBRACE ~> definition.* ~ expression <~ RBRACE) ^^! {
@@ -278,7 +273,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
       case (loc, (name, Some(args))) => Tessla.MacroCall(name, args, Location(loc, path))
     }
 
-    def literal: Parser[Tessla.Expression] = intLiteral | stringLiteral | boolLiteral
+    def literal: Parser[Tessla.Expression] = (intLiteral | stringLiteral | boolLiteral) ^^ Tessla.Literal
 
     def boolLiteral: Parser[Tessla.BoolLiteral] =
       TRUE ^^^! {
@@ -288,7 +283,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
           loc => Tessla.BoolLiteral(false, Location(loc, path))
         }
 
-    def intLiteral: Parser[Tessla.Expression] = matchToken("integer", Set("<integer>")) {
+    def intLiteral: Parser[Tessla.LiteralValue] = matchToken("integer", Set("<integer>")) {
       case WithLocation(_, INT(value)) => BigInt(value)
     } ~ timeUnit.? ^^! {
       case (loc, (value, None)) => Tessla.IntLiteral(value, Location(loc, path))

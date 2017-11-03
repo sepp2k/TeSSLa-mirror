@@ -84,36 +84,35 @@ object Tessla {
     }
   }
 
-  case class TypeAssertion(expr: Expression, `type`: Type) extends Expression {
-    def loc = expr.loc.merge(`type`.loc)
-    override def toString(inner: Boolean) = {
-      if (inner) s"(${expr.toString(inner = true)})"
-      else s"${expr.toString(inner = true)}"
-    }
-  }
-
-  case class IntLiteral(value: BigInt, loc: Location) extends Expression {
-    override def toString(inner: Boolean) = value.toString
-  }
-
-  case class TimeLiteral(value: BigInt, unit: TimeUnit.TimeUnit, loc: Location) extends Expression {
-    override def toString(inner: Boolean) = value.toString
-  }
-
-  case class StringLiteral(value: String, loc: Location) extends Expression {
-    override def toString(inner: Boolean) = value.toString
-  }
-
-  case class BoolLiteral(value: Boolean, loc: Location) extends Expression {
-    override def toString(inner: Boolean) = value.toString
-  }
-
-  case class Unit(loc: Location) extends Expression {
-    override def toString(inner: Boolean) = "()"
-  }
-
   case class Block(definitions: Seq[Definition], expression: Expression, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
+  }
+
+  case class Literal(value: LiteralValue) extends Expression {
+    override def toString(inner: Boolean) = value.toString
+    override def loc = value.loc
+  }
+
+  sealed abstract class LiteralValue {
+    def value: Any
+    def loc: Location
+    override def toString = value.toString
+  }
+
+  case class IntLiteral(value: BigInt, loc: Location) extends LiteralValue
+
+  case class TimeLiteral(value: BigInt, unit: TimeUnit.TimeUnit, loc: Location) extends LiteralValue {
+    override def toString = s"$value $unit"
+  }
+
+  case class StringLiteral(value: String, loc: Location) extends LiteralValue {
+    override def toString = s""""$value""""
+  }
+
+  case class BoolLiteral(value: Boolean, loc: Location) extends LiteralValue
+
+  case class Unit(loc: Location) extends LiteralValue {
+    override def value = ()
   }
 
   abstract class Argument {

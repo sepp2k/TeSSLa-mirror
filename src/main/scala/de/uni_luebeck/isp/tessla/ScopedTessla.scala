@@ -1,16 +1,49 @@
 package de.uni_luebeck.isp.tessla
 
+import scala.collection.mutable
 import Tessla.Identifier
 
 object ScopedTessla {
-  type Scope = Map[String, Expression]
+  class Scope(val parent: Option[Scope] = None) {
+    private val entries = mutable.Map[String, Overloads]()
 
-  def scopeToString(scope: Scope) = ""
+    def addOverload(name: String, overload: Overload): Unit = {
+      val existingOverloads = entries.getOrElse(name, ScopedTessla.Overloads())
+      entries += name -> (existingOverloads + overload)
+    }
+
+    override def toString = {
+      entries.map {
+        case (name, overloads) =>
+          s"def $name = {\n$overloads\n}"
+      }.mkString("\n")
+    }
+  }
+
+  case class Overloads(byArity: Map[Int, Seq[Overload]] = Map()) {
+    def +(overload: Overload) = {
+      val existing = byArity.getOrElse(overload.arity, Seq())
+      // TODO: error checking
+      Overloads(byArity + (overload.arity -> (overload +: existing)))
+    }
+
+    override def toString = byArity.flatMap(_._2).mkString("\n")
+  }
+
+  case class Overload(parameters: Seq[(Identifier, Option[Type])], body: Expression, loc: Location) {
+    lazy val arity = parameters.size
+
+    override def toString = parameters.mkString("(", ", ", s") => $body")
+  }
 
   case class Specification(globalScope: Scope, outStreams: Seq[OutStream], outAllLocation: Option[Location]) {
     override def toString = {
       val outAllString = if (outAll) "\nout *" else ""
-      scopeToString(globalScope) + "\n" + outStreams.mkString("\n") + outAllString
+      s"$globalScope\n${outStreams.mkString("\n")}$outAllString"
+    }
+
+    def addGlobalOverload(name: String, overload: Overload): Unit = {
+      globalScope.addOverload(name, overload)
     }
 
     def outAll = outAllLocation.isDefined
@@ -46,47 +79,24 @@ object ScopedTessla {
     }
   }
 
-  case class Variable(id: Identifier, loc: Location) extends Expression {
+  case class Variable(id: Identifier) extends Expression {
     override def toString = id.toString
+    override def loc = id.loc
   }
 
-  // TODO: Document Overload and Overloads
-  case class Overload(parameters: Seq[(Identifier, Option[Type])], id: Identifier)
-
-  case class Overloads(overloads: Seq[Overload], loc: Location) extends Expression
-
-  case class MacroCall(macroID: Identifier, args: Map[Identifier, Expression], loc: Location) extends Expression {
+  case class MacroCall(macroID: Identifier, args: Seq[Argument], loc: Location) extends Expression {
     override def toString = args.mkString(s"$macroID(", ", ", ")")
   }
 
-  case class TypeAssertion(expr: Expression, `type`: Type) extends Expression {
-    def loc = expr.loc.merge(`type`.loc)
-    override def toString = s"(${expr.toString} : ${`type`})"
-  }
-
-  case class IntLiteral(value: BigInt, loc: Location) extends Expression {
-    override def toString = value.toString
-  }
-
-  case class TimeLiteral(value: BigInt, unit: TimeUnit.TimeUnit, loc: Location) extends Expression {
-    override def toString = value.toString
-  }
-
-  case class StringLiteral(value: String, loc: Location) extends Expression {
-    override def toString = value.toString
-  }
-
-  case class BoolLiteral(value: Boolean, loc: Location) extends Expression {
-    override def toString = value.toString
-  }
-
-  case class Unit(loc: Location) extends Expression {
-    override def toString = "()"
-  }
-
   case class Block(scope: Scope, expression: Expression, loc: Location) extends Expression {
-    override def toString = s"{\n${scopeToString(scope)}\n$expression\n}"
+    override def toString = s"{\n$scope\n$expression\n}"
   }
+
+  case class Literal(value: LiteralValue, loc: Location) extends Expression {
+    override def toString = value.toString
+  }
+
+  type LiteralValue = Tessla.LiteralValue
 
   abstract class Argument {
     def loc: Location
@@ -102,15 +112,5 @@ object ScopedTessla {
     def loc = id.loc.merge(expr.loc)
   }
 
-  sealed abstract class Type {
-    def loc: Location
-  }
-
-  case class SimpleType(id: Identifier, loc: Location) extends Type {
-    override def toString = id.name
-  }
-
-  case class GenericType(id: Identifier, args: Seq[Type], loc: Location) extends Type {
-    override def toString = s"$id<${args.mkString(", ")}>"
-  }
+  type Type = Tessla.Type
 }
