@@ -74,6 +74,17 @@ object CustomBuiltIns {
             Some(TesslaCore.BoolLiteral(map.contains(key), loc))
         }
       }
+
+      case object Remove extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
+        override def argumentTypes = Seq(Type, Types.Int)
+
+        override protected def returnType = Type
+
+        override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
+          case Seq(IntIntMap(map, _), TesslaCore.IntLiteral(key, _)) =>
+            Some(IntIntMap(map - key, loc))
+        }
+      }
     }
 
     case class IntSet(value: Set[BigInt], loc: Location) extends TesslaCore.CustomValue {
@@ -119,6 +130,17 @@ object CustomBuiltIns {
             Some(TesslaCore.BoolLiteral(set.contains(value), loc))
         }
       }
+
+      case object Remove extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
+        override def argumentTypes = Seq(Type, Types.Int)
+
+        override protected def returnType = Type
+
+        override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
+          case Seq(IntSet(set, _), TesslaCore.IntLiteral(key, _)) =>
+            Some(IntSet(set - key, loc))
+        }
+      }
     }
 
     override def customTypes = Map("IntIntMap" -> IntIntMap.Type, "IntSet" -> IntSet.Type)
@@ -128,9 +150,11 @@ object CustomBuiltIns {
       ("map_add", 3) -> IntIntMap.Add,
       ("map_get", 2) -> IntIntMap.Get,
       ("map_contains", 2) -> IntIntMap.Contains,
+      ("map_remove", 2) -> IntIntMap.Remove,
       ("set_empty", 0) -> IntSet.Empty,
       ("set_add", 2) -> IntSet.Add,
-      ("set_contains", 2) -> IntSet.Contains
+      ("set_contains", 2) -> IntSet.Contains,
+      ("set_remove", 2) -> IntSet.Remove,
     )
   }
 }
