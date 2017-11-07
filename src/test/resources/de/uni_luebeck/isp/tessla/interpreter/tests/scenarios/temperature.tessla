@@ -1,4 +1,4 @@
-in temperature: Events<Int>
+in temperature: Events[Int]
 
 def low := !(temperature > -10)
 def high := temperature > 10

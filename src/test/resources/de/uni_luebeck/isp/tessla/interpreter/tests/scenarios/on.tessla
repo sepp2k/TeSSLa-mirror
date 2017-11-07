@@ -9,7 +9,7 @@ def on(trigger, stream) :=
     if time(trigger) > time(stream) then last(stream, trigger)
   )
 
-in x: Events<Unit>
-in y: Events<Int>
+in x: Events[Unit]
+in y: Events[Int]
 
 out on(x,y) as z

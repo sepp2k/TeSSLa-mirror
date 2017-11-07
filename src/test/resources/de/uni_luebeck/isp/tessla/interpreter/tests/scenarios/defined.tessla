@@ -1,5 +1,5 @@
-in x: Events<Unit>
-in y: Events<Unit>
+in x: Events[Unit]
+in y: Events[Unit]
 
 def defined(a) := default(const(true, a), false)
 

@@ -1,6 +1,6 @@
-in x: Events<Int>
-in y: Events<Int>
-in z: Events<Int>
+in x: Events[Int]
+in y: Events[Int]
+in z: Events[Int]
 
 def merge(x,y) := if default(x==x, false) || default(y==y, false) then ()
 

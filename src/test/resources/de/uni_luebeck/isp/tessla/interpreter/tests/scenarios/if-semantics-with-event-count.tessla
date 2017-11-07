@@ -1,4 +1,4 @@
-in functioncall: Events<String>
+in functioncall: Events[String]
 def function_call(name) := if functioncall == name then ()
 
 def eventCount(e) := {

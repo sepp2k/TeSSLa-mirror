@@ -1,4 +1,4 @@
-in x: Events<Int>
+in x: Events[Int]
 
 -- This differs from counting_map.tessla in that the call to map_get is now
 -- nested directly in map_add (and the get_count macro is inlined)

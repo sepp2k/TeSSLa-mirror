@@ -1,7 +1,7 @@
-in instruction: Events<String>
-in function: Events<String>
-in line: Events<Int>
-in column: Events<Int>
+in instruction: Events[String]
+in function: Events[String]
+in line: Events[Int]
+in column: Events[Int]
 
 def last(s) := last(s,s)
 

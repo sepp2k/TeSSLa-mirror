@@ -47,6 +47,10 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
 
     case object RPAREN extends Token(")")
 
+    case object LBRACKET extends Token("[")
+
+    case object RBRACKET extends Token("]")
+
     case object LBRACE extends Token("{")
 
     case object RBRACE extends Token("}")
@@ -101,7 +105,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
     import tokens._
 
     override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
-    override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACE, RBRACE, PERCENT,
+    override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, LBRACE, RBRACE, PERCENT,
       LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS, MINUS, STAR,
       SLASH, BANG)
     override val comments = List("--" -> "\n", "#" -> "\n")
@@ -173,7 +177,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
       case (loc, (name, Some(args))) => Tessla.GenericType(name, args, Location(loc, path))
     }
 
-    def typeArguments: Parser[Seq[Tessla.Type]] = LT ~> rep1sep(`type`, COMMA) <~ GT
+    def typeArguments: Parser[Seq[Tessla.Type]] = LBRACKET ~> rep1sep(`type`, COMMA) <~ RBRACKET
 
     def expression: Parser[Tessla.Expression] = ifThenElse | typeAssertion
 

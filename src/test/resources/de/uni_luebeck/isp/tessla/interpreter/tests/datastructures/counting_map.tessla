@@ -1,4 +1,4 @@
-in x: Events<Int>
+in x: Events[Int]
 
 def get_count(counts, key) :=
     if map_contains(counts, key)

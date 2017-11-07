@@ -1,4 +1,4 @@
-in x: Events<Int>
-in y: Events<Int>
+in x: Events[Int]
+in y: Events[Int]
 
 out if x / y == 1 then 23 else 42 as z

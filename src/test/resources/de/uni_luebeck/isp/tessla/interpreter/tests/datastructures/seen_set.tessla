@@ -1,4 +1,4 @@
-in x: Events<Int>
+in x: Events[Int]
 
 def seen := default(set_add(last(seen, x), x), set_empty)
 def new_or_old :=

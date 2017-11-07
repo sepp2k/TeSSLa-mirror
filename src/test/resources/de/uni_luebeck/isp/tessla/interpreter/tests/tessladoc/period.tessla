@@ -3,6 +3,6 @@ def period(delay) := {
   const((), s)
 }
 
-in x: Events<Unit>
+in x: Events[Unit]
 def z := period(5)
 out z

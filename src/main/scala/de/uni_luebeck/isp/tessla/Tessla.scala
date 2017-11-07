@@ -142,7 +142,7 @@ object Tessla {
   }
 
   case class GenericType(id: Identifier, args: Seq[Type], loc: Location) extends Type {
-    override def toString = s"$id<${args.mkString(", ")}>"
+    override def toString = s"$id[${args.mkString(", ")}]"
     def withLoc(loc: Location): GenericType = copy(loc = loc)
   }
 }
