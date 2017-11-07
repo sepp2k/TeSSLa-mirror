@@ -38,8 +38,16 @@ object Location {
   private case object Unknown extends Location {
     override def merge(other: Location) = other
 
-    override def toString = "(unknown location)"
+    override def toString = "<unknown location>"
   }
 
   def unknown: Location = Unknown
+
+  private case object BuiltIn extends Location {
+    override def merge(other: Location) = other
+
+    override def toString = "<built-in>"
+  }
+
+  def builtIn: Location = BuiltIn
 }
