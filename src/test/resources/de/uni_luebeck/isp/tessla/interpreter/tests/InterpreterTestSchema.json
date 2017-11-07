@@ -20,10 +20,6 @@
     "expectedWarnings": {
       "type": "string"
     },
-    "threshold": {
-      "type": "integer",
-      "minimum": 0
-    },
     "abortAt": {
       "type": "integer",
       "minimum": 0

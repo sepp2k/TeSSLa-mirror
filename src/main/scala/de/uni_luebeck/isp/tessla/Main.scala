@@ -1,9 +1,11 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.Errors.{InputTypeMismatch, TesslaError, UndeclaredInputStreamError}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
-import de.uni_luebeck.isp.tessla.interpreter.{BuildInfo, Interpreter}
+import de.uni_luebeck.isp.tessla.interpreter._
 import sexyopt.SexyOpt
+
+import scala.collection.mutable
 
 object Main extends SexyOpt {
   override val programName = "tessla"
@@ -26,6 +28,8 @@ object Main extends SexyOpt {
   val listInStreams =
     flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
   val timeUnit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
+  val abortAt = option("abort-at", "Stop the interpreter after a given amount of events.")
+  val flattenInput = flag("flatten-input", "Print the input trace in a flattened form.")
 
   def main(args: Array[String]): Unit = {
     def unwrapResult[T](result: Result[T]): T = result match {
@@ -56,11 +60,16 @@ object Main extends SexyOpt {
           return
         }
       } else {
+        val abortAtValue = abortAt.map(BigInt(_))
         val traceSource = traceFile.map(TesslaSource.fromFile).getOrElse(TesslaSource.stdin)
-        val output = unwrapResult {
-          Interpreter.runSpec(specSource, traceSource, timeUnit = timeUnitSource, stopOn = stopOn, printCore = printCore)
+        if (flattenInput) {
+          Interpreter.flattenInput(traceSource, timeUnitSource, abortAtValue).foreach(println)
+        } else {
+          val output = unwrapResult {
+            Interpreter.runSpec(specSource, traceSource, timeUnit = timeUnitSource, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
+          }
+          output.foreach(println)
         }
-        output.foreach(println)
       }
     } catch {
       case ex: TesslaError =>

@@ -4,6 +4,7 @@ import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 import de.uni_luebeck.isp.tessla.Types.Type
 
 object Errors {
+
   abstract class TesslaError extends Exception with Diagnostic
 
   case class TypeMismatch(expected: Type, found: Type, loc: Location) extends TesslaError {
@@ -104,7 +105,20 @@ object Errors {
     def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
   }
 
+  case class TracesOperationError(loc: Location, op: String, args: TesslaCore.LiteralValue*) extends TesslaError {
+    def message: String = s"Operation $op not defined for ${args.mkString(", ")}."
+  }
+
+  case class TracesUnknownIdentifierError(loc: Location, name: String) extends TesslaError {
+    def message: String = s"Unknown identifier in traces: $name."
+  }
+
+  case class NegativeStepError(loc: Location, value: BigInt) extends TesslaError {
+    def message: String = s"Negative step in time stamp range: $value."
+  }
+
   case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
     def message: String = s"Key $key was not found in $map"
   }
+
 }

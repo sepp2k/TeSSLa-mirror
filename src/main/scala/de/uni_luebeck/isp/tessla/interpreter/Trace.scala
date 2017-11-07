@@ -1,11 +1,13 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.TesslaCore
-import de.uni_luebeck.isp.tessla.Location
+import de.uni_luebeck.isp.tessla.{Location, Tessla, TesslaCore}
 import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 
 object Trace {
   sealed abstract class Item
+
+  type Identifier = RawTrace.Identifier
+  val Identifier = RawTrace.Identifier
 
   case class Event(loc: Location, timeStamp: TimeStamp, stream: Identifier, value: TesslaCore.LiteralValue) extends Item {
     override def toString: String = s"$timeStamp: ${stream.name} = $value"
@@ -20,10 +22,6 @@ object Trace {
   case class TimeStamp(loc: Location, time: Specification.Time) {
     override def toString = time.toString
   }
-
-  case class Identifier(loc: Location, name: String) {
-    override def toString: String = "\"" + name + "\""
-  }
 }
 
 class Trace(val timeStampUnit: Option[TimeUnit], val events: Iterator[Trace.Event]) extends Iterator[Trace.Item] {
@@ -33,5 +31,6 @@ class Trace(val timeStampUnit: Option[TimeUnit], val events: Iterator[Trace.Even
   }
 
   override def hasNext = items.hasNext
+
   override def next() = items.next()
 }
