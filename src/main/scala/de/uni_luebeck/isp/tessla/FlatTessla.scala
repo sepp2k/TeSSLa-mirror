@@ -4,7 +4,7 @@ import de.uni_luebeck.isp.tessla.Errors.MultipleDefinitionsError
 
 import scala.collection.mutable
 
-object ScopedTessla {
+object FlatTessla {
   case class Specification(globalScope: Scope, outStreams: Seq[OutStream], outAllLocation: Option[Location]) {
     override def toString = {
       val outAllString = if (outAll) "\nout *" else ""
@@ -28,7 +28,7 @@ object ScopedTessla {
     val macros = mutable.Map[String, Overloads]()
 
     def addOverload(name: String, overload: Overload): Unit = {
-      val existingOverloads = macros.getOrElse(name, ScopedTessla.Overloads())
+      val existingOverloads = macros.getOrElse(name, FlatTessla.Overloads())
       macros += name -> (existingOverloads + overload)
     }
 

@@ -6,9 +6,9 @@ import Errors.InternalError
 class Compiler {
   def applyPasses(src: TesslaSource, unit: Option[TimeUnit], customBuiltIns: CustomBuiltIns): TranslationPhase.Result[TesslaCore.Specification] = {
     new TesslaParser().translate(src)
-      .andThen(new Scoper)
-      .andThen(new Printer[ScopedTessla.Specification])
-      .andThen(new DummyPhase[ScopedTessla.Specification, TesslaCore.Specification])
+      .andThen(new Flattener)
+      .andThen(new Printer[FlatTessla.Specification])
+      .andThen(new DummyPhase[FlatTessla.Specification, TesslaCore.Specification])
   }
 
   class DummyPhase[T,U] extends TranslationPhase[T, U] {
