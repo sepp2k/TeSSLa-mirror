@@ -12,44 +12,45 @@ object PrimitiveOperators {
       *
       * @param argTypes The types of the arguments and their locations (used for type error messages)
       */
-    def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]): Types.ValueType
+    def returnTypeFor(typeArgs: Seq[Types.ValueType], argTypes: Seq[(Types.ValueType, Location)]): Types.ValueType
 
-    private def checkTypes(argTypes: Seq[(Types.ValueType, Location)]): Unit = {
-      returnTypeFor(argTypes)
+    private def checkTypes(typeArgs: Seq[Types.ValueType], argTypes: Seq[(Types.ValueType, Location)]): Unit = {
+      returnTypeFor(typeArgs, argTypes)
     }
 
-    final def eval(args: Seq[TesslaCore.Value], loc: Location): Option[TesslaCore.Value] = {
-      checkTypes(args.map(arg => (arg.typ, arg.loc)))
-      doEval(args, loc)
+    final def eval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.Value], loc: Location): Option[TesslaCore.Value] = {
+      checkTypes(typeArgs, args.map(arg => (arg.typ, arg.loc)))
+      doEval(typeArgs, args, loc)
     }
 
-    protected def doEval(values: Seq[TesslaCore.Value], loc: Location): Option[TesslaCore.Value]
+    protected def doEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.Value], loc: Location): Option[TesslaCore.Value]
   }
 
   trait Strict {
-    protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location): Option[TesslaCore.Value]
-    final def doEval(values: Seq[TesslaCore.Value], loc: Location) = {
-      values.find(_.isError).orElse(strictEval(values.map(_.toLiteral), loc))
+    protected def strictEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.LiteralValue], loc: Location): Option[TesslaCore.Value]
+
+    final def doEval(typeArgs: Seq[Types.ValueType], values: Seq[TesslaCore.Value], loc: Location) = {
+      values.find(_.isError).orElse(strictEval(typeArgs, values.map(_.toLiteral), loc))
     }
   }
 
   abstract class CustomBuiltIn extends PrimitiveOperator
 
   final case class Const(value: TesslaCore.Value) extends PrimitiveOperator with Strict {
-    override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = value.typ
-    override def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = Some(value)
+    override def returnTypeFor(typeArgs: Seq[Types.ValueType], argTypes: Seq[(Types.ValueType, Location)]) = value.typ
+    protected override def strictEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.LiteralValue], loc: Location) = Some(value)
   }
 
   /**
     * Take a variable amount of arguments and return the first one
     */
   case object First extends PrimitiveOperator with Strict {
-    override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = {
+    override def returnTypeFor(typeArgs: Seq[Types.ValueType], argTypes: Seq[(Types.ValueType, Location)]) = {
       require(argTypes.nonEmpty)
       argTypes.head._1
     }
 
-    override def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = Some(values.head)
+    protected override def strictEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.LiteralValue], loc: Location) = Some(args.head)
   }
 
   trait Monomorphic {
@@ -63,7 +64,7 @@ object PrimitiveOperators {
       }
     }
 
-    def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = {
+    def returnTypeFor(typeArgs: Seq[Types.ValueType], argTypes: Seq[(Types.ValueType, Location)]) = {
       checkArgumentTypes(argTypes)
       returnType
     }
@@ -76,7 +77,7 @@ object PrimitiveOperators {
   sealed abstract class UnaryIntOperator(op: BigInt => BigInt) extends PrefixOperator with Monomorphic with Strict {
     override val argumentTypes = Seq(Types.Int)
     override val returnType = Types.Int
-    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Option[TesslaCore.Value] = args match {
+    protected override def strictEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.LiteralValue], loc: Location) = args match {
       case Seq(TesslaCore.IntLiteral(arg, _)) =>
         Some(TesslaCore.IntLiteral(op(arg), loc))
     }
@@ -85,7 +86,7 @@ object PrimitiveOperators {
   sealed abstract class BinaryIntOperator(op: (BigInt, BigInt) => BigInt) extends InfixOperator with Monomorphic with Strict {
     override val argumentTypes = Seq(Types.Int, Types.Int)
     override val returnType = Types.Int
-    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.Value] = args match {
+    protected override def strictEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.LiteralValue], loc: Location) = args match {
       case Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, rhsLoc)) =>
         try {
           Some(TesslaCore.IntLiteral(op(lhs, rhs), loc))
@@ -100,7 +101,7 @@ object PrimitiveOperators {
   sealed abstract class IntComparissonOperator(op: (BigInt, BigInt) => Boolean) extends InfixOperator with Monomorphic with Strict {
     override val argumentTypes = Seq(Types.Int, Types.Int)
     override val returnType = Types.Bool
-    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
+    protected override def strictEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.LiteralValue], loc: Location) = args match {
       case Seq(TesslaCore.IntLiteral(lhs, _), TesslaCore.IntLiteral(rhs, _)) =>
         Some(TesslaCore.BoolLiteral(op(lhs, rhs), loc))
     }
@@ -112,7 +113,7 @@ object PrimitiveOperators {
   }
 
   sealed abstract class AnyComparissonOperator(op: (Any, Any) => Boolean) extends InfixOperator with Strict {
-    override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = argTypes match {
+    override def returnTypeFor(typeArgs: Seq[Types.ValueType], argTypes: Seq[(Types.ValueType, Location)]) = argTypes match {
       case Seq((t1, _), (t2, rhsLoc)) =>
         Types.requireType(t1, t2, rhsLoc)
         Types.Bool
@@ -120,7 +121,7 @@ object PrimitiveOperators {
         throw ArityError
     }
 
-    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
+    protected override def strictEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.LiteralValue], loc: Location) = args match {
       case Seq(lhs, rhs) =>
         Some(TesslaCore.BoolLiteral(op(lhs.value, rhs.value), loc))
     }
@@ -197,7 +198,7 @@ object PrimitiveOperators {
   case object And extends BinaryBoolOperator(_&&_) {
     override def toString = "&&"
 
-    override protected def doEval(args: Seq[TesslaCore.Value], loc: Location) = args match {
+    override protected def doEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.Value], loc: Location) = args match {
       case Seq(lhs: TesslaCore.BoolLiteral, rhs) =>
         if (lhs.value) Some(rhs)
         else Some(lhs)
@@ -208,7 +209,7 @@ object PrimitiveOperators {
   case object Or extends BinaryBoolOperator(_||_) {
     override def toString = "||"
 
-    override protected def doEval(args: Seq[TesslaCore.Value], loc: Location) = args match {
+    override protected def doEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.Value], loc: Location) = args match {
       case Seq(lhs: TesslaCore.BoolLiteral, rhs) =>
         if (lhs.value) Some(lhs)
         else Some(rhs)
@@ -220,21 +221,21 @@ object PrimitiveOperators {
     override def toString = "!"
     override val argumentTypes = Seq(Types.Bool)
     override val returnType = Types.Bool
-    override def strictEval(args: Seq[TesslaCore.LiteralValue], loc: Location): Some[TesslaCore.BoolLiteral] = args match {
+    protected override def strictEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.LiteralValue], loc: Location) = args match {
       case Seq(TesslaCore.BoolLiteral(arg, _)) =>
         Some(TesslaCore.BoolLiteral(!arg, loc))
     }
   }
 
   case object IfThenElse extends PrimitiveOperator {
-    override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = argTypes match {
+    override def returnTypeFor(typeArgs: Seq[Types.ValueType], argTypes: Seq[(Types.ValueType, Location)]) = argTypes match {
       case Seq((condType, condLoc), (thenType, _), (elseType, elseLoc)) =>
         Types.requireType(Types.Bool, condType, condLoc)
         Types.requireType(thenType, elseType, elseLoc)
       case _ => throw ArityError
     }
 
-    def doEval(args: Seq[TesslaCore.Value], loc: Location): Some[TesslaCore.Value] = args match {
+    protected def doEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.Value], loc: Location) = args match {
       case Seq(TesslaCore.BoolLiteral(cond, _), thenCase, elseCase) =>
         Some(if (cond) thenCase else elseCase)
       case Seq(error: TesslaCore.ErrorValue, _, _) =>
@@ -243,14 +244,14 @@ object PrimitiveOperators {
   }
 
   case object IfThen extends PrimitiveOperator {
-    override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = argTypes match {
+    override def returnTypeFor(typeArgs: Seq[Types.ValueType], argTypes: Seq[(Types.ValueType, Location)]) = argTypes match {
       case Seq((condType, condLoc), (thenType, _)) =>
         Types.requireType(Types.Bool, condType, condLoc)
         thenType
       case _ => throw ArityError
     }
 
-    def doEval(args: Seq[TesslaCore.Value], loc: Location): Option[TesslaCore.Value] = args match {
+    protected def doEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.Value], loc: Location) = args match {
       case Seq(TesslaCore.BoolLiteral(cond, _), thenCase) =>
         if (cond) Some(thenCase) else None
       case Seq(error: TesslaCore.ErrorValue, _) =>

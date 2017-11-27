@@ -77,7 +77,7 @@ object ScopedTessla {
     override def toString = byArity.flatMap(_._2).mkString("\n")
   }
 
-  case class Overload(parameters: Seq[Parameter], definition: Definition) {
+  case class Overload(typeParameters: Seq[Identifier], parameters: Seq[Parameter], definition: Definition) {
     lazy val arity = parameters.size
 
     override def toString = parameters.mkString("(", ", ", s") => $definition")
@@ -94,7 +94,8 @@ object ScopedTessla {
 
   sealed abstract class Definition
 
-  case class Macro(parameters: Seq[Parameter],
+  case class Macro(typeParameters: Seq[Identifier],
+                   parameters: Seq[Parameter],
                    scope: Scope,
                    returnType: Option[Type],
                    body: Expression,

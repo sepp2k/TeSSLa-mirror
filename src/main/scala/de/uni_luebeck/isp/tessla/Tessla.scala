@@ -13,11 +13,15 @@ object Tessla {
 
   case class Definition(
                          id: Identifier,
+                         typeParameters: Seq[Identifier],
                          parameters: Seq[Parameter],
                          returnType: Option[Type],
                          body: Expression,
                          loc: Location) extends Statement {
     override def toString = {
+      val typeParameterList =
+        if (typeParameters.isEmpty) ""
+        else typeParameters.mkString("[", ", ", "]")
       val parameterList =
         if (parameters.isEmpty) ""
         else parameters.mkString("(", ", ", ")")
@@ -64,10 +68,14 @@ object Tessla {
 
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
-  case class MacroCall(macroID: Identifier, args: Seq[Argument], loc: Location) extends Expression {
+  case class MacroCall(macroID: Identifier, typeArgs: Seq[Type], args: Seq[Argument], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
+      val typeArgList =
+        if (typeArgs.isEmpty) ""
+        else typeArgs.mkString("[", ", ", "]")
+
       val str = (macroID.name, args) match {
-        case (ID_PATTERN(), _) | (_, Seq()) => s"${macroID.name}(${args.mkString(", ")})"
+        case (ID_PATTERN(), _) | (_, Seq()) => s"$macroID$typeArgList(${args.mkString(", ")})"
         case ("if then", Seq(cond, thenCase)) =>
           s"if $cond then $thenCase"
         case ("if then else", Seq(cond, thenCase, elseCase)) =>
@@ -78,7 +86,7 @@ object Tessla {
         case (name, Seq(PositionalArgument(lhs), PositionalArgument(rhs))) =>
           if (inner) s"(${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)})"
           else s"${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)}"
-        case (name, _) => s"$name(${args.mkString(", ")})"
+        case (name, _) => s"$name$typeArgList(${args.mkString(", ")})"
       }
       if (inner) s"($str)" else str
     }

@@ -59,7 +59,7 @@ object TesslaCore {
     override def toString = s"delayedLast($values, $delays)"
   }
 
-  final case class Lift(operator: PrimitiveOperators.PrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
+  final case class Lift(operator: PrimitiveOperators.PrimitiveOperator, typeArgs: Seq[Types.Type], args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = operator match {
       case _: PrimitiveOperators.PrefixOperator => s"$operator${args(0)}"
       case _: PrimitiveOperators.InfixOperator => s"${args(0)} $operator ${args(1)}"
@@ -67,7 +67,9 @@ object TesslaCore {
       case PrimitiveOperators.IfThenElse => s"if ${args(0)} then ${args(1)} else ${args(2)}"
       case PrimitiveOperators.Const(value) => args.mkString(s"const($value)(", ", ", ")")
       case PrimitiveOperators.First => args.mkString("first(", ", ", ")")
-      case custom: PrimitiveOperators.CustomBuiltIn => args.mkString(s"$custom(", ",", ")")
+      case custom: PrimitiveOperators.CustomBuiltIn =>
+        val targs = typeArgs.mkString("[", ", ", "]")
+        args.mkString(s"$custom$targs(", ", ", ")")
     }
   }
 

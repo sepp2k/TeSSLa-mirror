@@ -32,9 +32,13 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }
 
   private def eval(exp: TesslaCore.Expression): Stream = exp match {
-    case TesslaCore.Lift(op, Seq(), loc) =>
+    case TesslaCore.Lift(op, typeArgs, Seq(), loc) =>
       try {
-        op.eval(Seq(), loc) match {
+        val valueTypeArgs = typeArgs.map {
+          case valueType: Types.ValueType => valueType
+          case nonValueType => throw TypeMismatch(Types.Nothing, nonValueType, loc)
+        }
+        op.eval(valueTypeArgs, Seq(), loc) match {
           case None => nil
           case Some(x) =>
             nil.default(x)
@@ -43,10 +47,14 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         case c: TesslaError =>
           nil.default(TesslaCore.ErrorValue(c))
       }
-    case TesslaCore.Lift(op, argStreams, loc) =>
+    case TesslaCore.Lift(op, typeArgs, argStreams, loc) =>
       lift(argStreams.map(evalStream)) { args =>
         try {
-          op.eval((args, argStreams).zipped.map((arg, s) => arg.withLoc(s.loc)), loc)
+          val valueTypeArgs = typeArgs.map {
+            case valueType: Types.ValueType => valueType
+            case nonValueType => throw TypeMismatch(Types.Nothing, nonValueType, loc)
+          }
+          op.eval(valueTypeArgs, (args, argStreams).zipped.map((arg, s) => arg.withLoc(s.loc)), loc)
         } catch {
           case c: TesslaError =>
             Some(TesslaCore.ErrorValue(c))

@@ -9,7 +9,7 @@ class Scoper extends TranslationPhase[Tessla.Specification, ScopedTessla.Specifi
   }
 
   def builtIn(op: ScopedTessla.BuiltInOperator, params: String*) = {
-    ScopedTessla.Overload(params.map(param), op)
+    ScopedTessla.Overload(Seq(), params.map(param), op)
   }
 
   val stdlib = Seq(
@@ -60,8 +60,8 @@ class Scoper extends TranslationPhase[Tessla.Specification, ScopedTessla.Specifi
     if (parameters.isEmpty) {
       scope.addVariable(definition.id, body)
     } else {
-      val mac = ScopedTessla.Macro(parameters, parameterScope, definition.returnType, body, definition.loc)
-      scope.addOverload(definition.id.name, ScopedTessla.Overload(parameters, mac))
+      val mac = ScopedTessla.Macro(definition.typeParameters, parameters, parameterScope, definition.returnType, body, definition.loc)
+      scope.addOverload(definition.id.name, ScopedTessla.Overload(definition.typeParameters, parameters, mac))
     }
   }
 
