@@ -35,8 +35,7 @@ object FlatTessla extends HasUniqueIdentifiers {
     }
   }
 
-  case class OutStream(expr: Expression, nameOpt: Option[String], loc: Location) {
-    def name = nameOpt.getOrElse(expr.toString)
+  case class OutStream(expr: Expression, name: String, loc: Location) {
     override def toString = s"out $expr as $name"
   }
 
