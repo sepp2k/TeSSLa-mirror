@@ -9,7 +9,9 @@ object Tessla {
     override def toString = name
   }
 
-  abstract sealed class Statement
+  abstract sealed class Statement {
+    def loc: Location
+  }
 
   case class Definition(
                          id: Identifier,
@@ -25,7 +27,7 @@ object Tessla {
       val parameterList =
         if (parameters.isEmpty) ""
         else parameters.mkString("(", ", ", ")")
-      s"def $id$parameterList := $body"
+      s"def $id$typeParameterList$parameterList := $body"
     }
   }
 

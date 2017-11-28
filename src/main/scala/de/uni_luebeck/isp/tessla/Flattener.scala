@@ -1,32 +1,55 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Errors.{MultipleDefinitionsError, UndefinedVariable}
 import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
 
-class Flattener extends TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
-  def param(name: String) = {
-    val id = Tessla.Identifier(name, Location.builtIn)
-    FlatTessla.Parameter(Tessla.Parameter(id, None))
-  }
-
-  def builtIn(op: FlatTessla.BuiltInOperator, params: String*) = {
-    FlatTessla.Overload(Seq(), params.map(param), op)
-  }
+class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
+  type IdMap = Map[String, FlatTessla.Identifier]
 
   val stdlib = Seq(
-    "default" -> builtIn(FlatTessla.Default, "values", "default"),
-    "last" -> builtIn(FlatTessla.Last, "values", "clock"),
-    "delayedLast" -> builtIn(FlatTessla.DelayedLast, "values", "delays"),
-    "time" -> builtIn(FlatTessla.Time, "values")
+    "default" -> FlatTessla.VariableEntry(FlatTessla.Default, None),
+    "defaultFrom" -> FlatTessla.VariableEntry(FlatTessla.DefaultFrom, None),
+    "last" -> FlatTessla.VariableEntry(FlatTessla.Last, None),
+    "delayedLast" -> FlatTessla.VariableEntry(FlatTessla.DelayedLast, None),
+    "time" -> FlatTessla.VariableEntry(FlatTessla.Time, None)
     // TODO: Continue
   )
 
-  override def translateSpec(spec: Tessla.Specification) = {
-    val globalScope = new FlatTessla.Scope()
-    stdlib.foreach {
-      case (name, overload) =>
-        globalScope.addOverload(name, overload)
+  def createIdMap(names: Seq[String]): IdMap = {
+    names.map(name => name -> makeIdentifier(name)).toMap
+  }
+
+  def getId(statement: Tessla.Statement): Option[Tessla.Identifier] = statement match {
+    case definition: Tessla.Definition => Some(definition.id)
+    case in: Tessla.In => Some(in.id)
+    case _ => None
+  }
+
+  def getName(statement: Tessla.Statement): Option[String] = getId(statement).map(_.name)
+
+  def checkForDuplicates(statements: Seq[Tessla.Identifier]): Unit = {
+    statements.groupBy(_.name).foreach {
+      case (_, duplicates) if duplicates.size > 1 =>
+        val firstLoc = duplicates.head.loc
+        duplicates.tail.foreach { duplicate =>
+          error(MultipleDefinitionsError(duplicate, firstLoc))
+        }
+
+      case _ => /* Do nothing */
     }
+  }
+
+  override def translateSpec(spec: Tessla.Specification) = {
+    val stdlibScope = new FlatTessla.Scope(None)
+    val stdlibIdMap = createIdMap(stdlib.map(_._1))
+    stdlib.foreach {
+      case (name, entry) =>
+        stdlibScope.addVariable(stdlibIdMap(name), entry)
+    }
+    val globalScope = new FlatTessla.Scope(Some(stdlibScope))
+    val globalIdMap = stdlibIdMap ++ createIdMap(spec.statements.flatMap(getName))
     val emptySpec = FlatTessla.Specification(globalScope, Seq(), outAllLocation = None)
+    checkForDuplicates(spec.statements.flatMap(getId))
     spec.statements.foldLeft(emptySpec) {
       case (result, outAll : Tessla.OutAll) =>
         if(result.outAll) warn(ConflictingOut(outAll.loc, previous = result.outAllLocation.get))
@@ -37,37 +60,61 @@ class Flattener extends TranslationPhase[Tessla.Specification, FlatTessla.Specif
           previous =>
             warn(ConflictingOut(out.loc, previous = previous.loc))
         }
-        val newOut = FlatTessla.OutStream(translateExpression(out.expr, globalScope), out.idOpt, out.loc)
+        val newOut = FlatTessla.OutStream(translateExpression(out.expr, globalScope, globalIdMap), out.idOpt.map(_.name), out.loc)
         result.copy(outStreams = result.outStreams :+ newOut)
 
       case (result, definition: Tessla.Definition) =>
-        addDefinition(globalScope, definition)
+        addDefinition(definition, globalScope, globalIdMap)
         result
 
       case (result, in: Tessla.In) =>
-        result.addGlobalVariable(in.id, FlatTessla.InStream(in.id, in.streamType, in.loc))
+        val entry = FlatTessla.VariableEntry(FlatTessla.InStream(in.id.name, in.streamType, in.loc), Some(in.streamType))
+        globalScope.addVariable(globalIdMap(in.id.name), entry)
         result
     }
   }
 
-  def addDefinition(scope: FlatTessla.Scope, definition: Tessla.Definition): Unit = {
+  def addDefinition(definition: Tessla.Definition, scope: FlatTessla.Scope, idMap: IdMap): Unit = {
     val parameters = definition.parameters.map(FlatTessla.Parameter)
-    val parameterScope = new FlatTessla.Scope(Some(scope))
-    parameters.foreach { param =>
-      parameterScope.addVariable(param.id, param)
+    val (innerDefs, exp) = definition.body match {
+      case block: Tessla.Block => (block.definitions, block.expression)
+      case e => (Seq(), e)
     }
-    val body = translateExpression(definition.body, parameterScope)
+    checkForDuplicates(parameters.map(_.nameWithLoc) ++ innerDefs.map(_.id))
+    val innerScope = new FlatTessla.Scope(Some(scope))
+    val paramIdMap = createIdMap(parameters.map(_.name))
+    val innerIdMap = idMap ++ paramIdMap ++ createIdMap(innerDefs.map(_.id.name))
+    parameters.foreach { param =>
+      innerScope.addVariable(paramIdMap(param.name), FlatTessla.VariableEntry(param, param.parameterType))
+    }
+    innerDefs.foreach { innerDef =>
+      addDefinition(innerDef, innerScope, innerIdMap)
+    }
+    val body = translateExpression(exp, innerScope, innerIdMap)
     if (parameters.isEmpty) {
-      scope.addVariable(definition.id, body)
+      scope.addVariable(idMap(definition.id.name), FlatTessla.VariableEntry(body, definition.returnType))
     } else {
-      val mac = FlatTessla.Macro(definition.typeParameters, parameters, parameterScope, definition.returnType, body, definition.loc)
-      scope.addOverload(definition.id.name, FlatTessla.Overload(definition.typeParameters, parameters, mac))
+      // TODO: Handle type parameters by implementing a proper environment for them (different namespace)
+      val mac = FlatTessla.Macro(Seq(), parameters, innerScope, definition.returnType, body, definition.loc)
+      scope.addVariable(idMap(definition.id.name), FlatTessla.VariableEntry(mac, None))
     }
   }
 
-  def translateExpression(expr: Tessla.Expression, parentScope: FlatTessla.Scope): FlatTessla.Expression = expr match {
+  val errorExpression = FlatTessla.Variable(makeIdentifier("<<error>>"), Location.unknown)
+
+  def getExp(tesslaId: Tessla.Identifier, idMap: IdMap): FlatTessla.Variable = {
+    idMap.get(tesslaId.name) match {
+      case Some(id) =>
+        FlatTessla.Variable(id, tesslaId.loc)
+      case None =>
+        error(UndefinedVariable(tesslaId))
+        errorExpression
+    }
+  }
+
+  def translateExpression(expr: Tessla.Expression, scope: FlatTessla.Scope, idMap: IdMap): FlatTessla.Expression = expr match {
     case variable: Tessla.Variable =>
-      FlatTessla.Variable(variable.id)
+      getExp(variable.id, idMap)
 
     case literal: Tessla.Literal =>
       FlatTessla.Literal(literal.value, literal.loc)
@@ -75,17 +122,23 @@ class Flattener extends TranslationPhase[Tessla.Specification, FlatTessla.Specif
     case call: Tessla.MacroCall =>
       val args = call.args.map {
         case arg: Tessla.NamedArgument =>
-          FlatTessla.NamedArgument(arg.id, translateExpression(arg.expr, parentScope))
+          val id = makeIdentifier()
+          scope.addVariable(id, FlatTessla.VariableEntry(translateExpression(arg.expr, scope, idMap), None))
+          FlatTessla.NamedArgument(arg.id.name, id, arg.loc)
         case arg: Tessla.PositionalArgument =>
-          FlatTessla.PositionalArgument(translateExpression(arg.expr, parentScope))
+          val id = makeIdentifier()
+          scope.addVariable(id, FlatTessla.VariableEntry(translateExpression(arg.expr, scope, idMap), None))
+          FlatTessla.PositionalArgument(id, arg.loc)
       }
-      FlatTessla.MacroCall(call.macroID, args, call.loc)
+      FlatTessla.MacroCall(getExp(call.macroID, idMap).id, args, call.loc)
 
     case block: Tessla.Block =>
-      val innerScope = new FlatTessla.Scope(Some(parentScope))
+      val innerIdMap = idMap ++ createIdMap(block.definitions.map(_.id.name))
       block.definitions.foreach { definition =>
-        addDefinition(innerScope, definition)
+        addDefinition(definition, scope, innerIdMap)
       }
-      FlatTessla.Block(innerScope, translateExpression(block.expression, innerScope), block.loc)
+      val id = makeIdentifier()
+      scope.addVariable(id, FlatTessla.VariableEntry(translateExpression(block.expression, scope, innerIdMap), None))
+      FlatTessla.Variable(id, block.expression.loc)
   }
 }

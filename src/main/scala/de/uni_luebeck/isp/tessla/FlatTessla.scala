@@ -1,90 +1,42 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Errors.MultipleDefinitionsError
-
 import scala.collection.mutable
 
-object FlatTessla {
+object FlatTessla extends HasUniqueIdentifiers {
   case class Specification(globalScope: Scope, outStreams: Seq[OutStream], outAllLocation: Option[Location]) {
     override def toString = {
       val outAllString = if (outAll) "\nout *" else ""
       s"$globalScope\n${outStreams.mkString("\n")}$outAllString"
     }
 
-    def addGlobalVariable(id: Identifier, expression: Expression): Unit = {
-      globalScope.addVariable(id, expression)
-    }
-
     def outAll = outAllLocation.isDefined
   }
 
-  type Identifier = Tessla.Identifier
+  case class VariableEntry(expression: Expression, typeOpt: Option[Type])
 
-  class Scope(val parent: Option[Scope] = None) {
-    case class Var(id: Identifier, expression: Expression)
+  class Scope(parent: Option[Scope]) {
+    val variables = mutable.Map[Identifier, VariableEntry]()
 
-    val variables = mutable.Map[String, Var]()
-
-    val macros = mutable.Map[String, Overloads]()
-
-    def addOverload(name: String, overload: Overload): Unit = {
-      val existingOverloads = macros.getOrElse(name, FlatTessla.Overloads())
-      macros += name -> (existingOverloads + overload)
+    def addVariable(id: Identifier, entry: VariableEntry): Unit = {
+      require(!variables.contains(id), "addVariable should only ever be called with a fresh identifier!")
+      variables(id) = entry
     }
 
-    def addVariable(id: Identifier, expression: Expression): Unit = {
-      variables.get(id.name).foreach { existing =>
-        throw MultipleDefinitionsError(id, existing.id.loc)
-      }
-      variables(id.name) = Var(id, expression)
-    }
-
-    def resolveVariable(name: String): Option[Expression] = {
-      variables.get(name).map(_.expression).orElse(parent.flatMap(_.resolveVariable(name)))
-    }
-
-    def getMacroOverloads(name: String): Overloads = {
-      val parentOverloads = parent.map(_.getMacroOverloads(name)).getOrElse(Overloads())
-      parentOverloads ++ macros.getOrElse(name, Overloads())
+    def resolveVariable(id: Identifier): Option[VariableEntry] = {
+      variables.get(id).orElse(parent.flatMap(_.resolveVariable(id)))
     }
 
     override def toString = {
       s"-- Scope $hashCode\n" + variables.map {
-        case (name, Var(_, exp)) =>
-          s"def $name = $exp"
-      }.mkString("\n") + "\n" + macros.map {
-        case (name, overloads) =>
-          s"def $name = {\n$overloads\n}"
+        case (name, entry) =>
+          val typeAnnotation = entry.typeOpt.map(" : " + _).getOrElse("")
+          s"def $name$typeAnnotation = ${entry.expression}"
       }.mkString("\n") + parent.map(p => s"\n-- Parent = Scope ${p.hashCode}").getOrElse("")
     }
   }
 
-  case class Overloads(byArity: Map[Int, Seq[Overload]] = Map()) {
-    def +(overload: Overload) = {
-      val existing = byArity.getOrElse(overload.arity, Seq())
-      Overloads(byArity + (overload.arity -> (overload +: existing)))
-    }
-
-    def ++(overloads: Overloads) = {
-      Overloads(overloads.byArity.foldLeft(byArity) {
-        case (acc, (arity, entries)) =>
-          acc + (arity -> (byArity.getOrElse(arity, Seq()) ++ entries))
-      })
-    }
-
-    def getByArity(arity: Int) = byArity.getOrElse(arity, Seq())
-
-    override def toString = byArity.flatMap(_._2).mkString("\n")
-  }
-
-  case class Overload(typeParameters: Seq[Identifier], parameters: Seq[Parameter], definition: Definition) {
-    lazy val arity = parameters.size
-
-    override def toString = parameters.mkString("(", ", ", s") => $definition")
-  }
-
-  case class OutStream(expr: Expression, idOpt: Option[Identifier], loc: Location) {
-    def name = idOpt.map(_.name).getOrElse(expr.toString)
+  case class OutStream(expr: Expression, nameOpt: Option[String], loc: Location) {
+    def name = nameOpt.getOrElse(expr.toString)
     override def toString = s"out $expr as $name"
   }
 
@@ -92,20 +44,18 @@ object FlatTessla {
     def loc: Location
   }
 
-  sealed abstract class Definition
-
   case class Macro(typeParameters: Seq[Identifier],
                    parameters: Seq[Parameter],
                    scope: Scope,
                    returnType: Option[Type],
                    body: Expression,
-                   loc: Location) extends Definition {
+                   loc: Location) extends Expression {
     override def toString = {
-      s"$scope\n$body"
+      s"[${typeParameters.mkString(", ")}](${parameters.mkString(", ")}) => {\n$scope\n$body\n}"
     }
   }
 
-  sealed abstract class BuiltInOperator extends Definition {
+  sealed abstract class BuiltInOperator extends Expression {
     def loc = Location.builtIn
   }
 
@@ -118,35 +68,31 @@ object FlatTessla {
     override def toString = op.toString
   }
 
-
-  case class InStream(id: Identifier, streamType: Type, loc: Location) extends Expression {
-    override def toString = s"in $id: $streamType"
+  case class InStream(name: String, streamType: Type, loc: Location) extends Expression {
+    override def toString = s"in $name: $streamType"
   }
 
   case class Parameter(param: Tessla.Parameter) extends Expression {
     def parameterType = param.parameterType
 
-    def id = param.id
+    def name = param.id.name
+
+    def nameWithLoc = param.id
 
     override def loc = param.loc
 
     override def toString = parameterType match {
-      case Some(t) => s"param $id: $t"
-      case None => s"param $id"
+      case Some(t) => s"param $name: $t"
+      case None => s"param $name"
     }
   }
 
-  case class Variable(id: Identifier) extends Expression {
+  case class Variable(id: Identifier, loc: Location) extends Expression {
     override def toString = id.toString
-    override def loc = id.loc
   }
 
   case class MacroCall(macroID: Identifier, args: Seq[Argument], loc: Location) extends Expression {
     override def toString = args.mkString(s"$macroID(", ", ", ")")
-  }
-
-  case class Block(scope: Scope, expression: Expression, loc: Location) extends Expression {
-    override def toString = s"{\n$scope\n$expression\n}"
   }
 
   case class Literal(value: LiteralValue, loc: Location) extends Expression {
@@ -159,14 +105,12 @@ object FlatTessla {
     def loc: Location
   }
 
-  case class PositionalArgument(expr: Expression) extends Argument {
-    override def toString = expr.toString
-    def loc = expr.loc
+  case class PositionalArgument(id: Identifier, loc: Location) extends Argument {
+    override def toString = id.toString
   }
 
-  case class NamedArgument(id: Identifier, expr: Expression) extends Argument {
-    override def toString = s"$id = $expr"
-    def loc = id.loc.merge(expr.loc)
+  case class NamedArgument(name: String, id: Identifier, loc: Location) extends Argument {
+    override def toString = s"$name = $id"
   }
 
   type Type = Tessla.Type
