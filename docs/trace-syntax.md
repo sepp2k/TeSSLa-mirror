@@ -3,7 +3,7 @@
 ## Grammar
 
     trace    ::= timeunit? event*
-    timeunit ::= "$timeunit" "=" ("ns" | "us" | "ms" | "s" | "min" | "h" | "d")
+    timeunit ::= "$timeunit" "=" ("fs" | "ps" | "ns" | "us" | "ms" | "s" | "min" | "h" | "d")
     event    ::= INT ":" IDENTIFIER ("=" value)?
     value    ::= INT | STRING | "true" | "false" | "(" ")"
 

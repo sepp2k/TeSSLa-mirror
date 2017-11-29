@@ -57,7 +57,7 @@ object Errors {
 
   case class UnknownTimeUnit(name: String, loc: Location) extends TesslaError {
     def message = s"Unknown time unit: $name. " +
-      "Allowed time units: ns, us, ms, s, m, h, d"
+      "Allowed time units: fs, ps, ns, us, ms, s, m, h, d"
   }
 
   case class UndefinedTimeUnit(loc: Location) extends TesslaError {
