@@ -24,7 +24,7 @@
                     | "false"
     arg           ::= ID "=" expression
                     | expression
-    type          ::= ID "<" type ("," type)* ">"
+    type          ::= ID "[" type ("," type)* "]"
                     | ID
     infixOperator ::= "%" | "<<" | ">>" | ">=" | "<=" | "<" | ">" | "!=" | "==" | "&" | "|" | "^"
                     | "+" | "-" | "*" | "/" | "&&" | "||"
