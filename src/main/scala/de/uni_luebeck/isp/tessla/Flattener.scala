@@ -140,6 +140,18 @@ class Flattener(customBuiltIns: CustomBuiltIns) extends FlatTessla.IdentifierFac
     }
   }
 
+  /**
+    * Turn an arbitrary expression into an identifier by either creating a new identifier and making it point to the
+    * expression or, if the expression is a variable reference, returning the referenced identifier.
+    */
+  def expToId(exp: FlatTessla.Expression, scope: FlatTessla.Scope) = exp match {
+    case v: FlatTessla.Variable => v.id
+    case _ =>
+      val id = makeIdentifier()
+      scope.addVariable(id, FlatTessla.VariableEntry(exp, None))
+      id
+  }
+
   def translateExpression(expr: Tessla.Expression, scope: FlatTessla.Scope, idMap: IdMap): FlatTessla.Expression = expr match {
     case variable: Tessla.Variable =>
       getExp(variable.id, idMap)
@@ -150,12 +162,10 @@ class Flattener(customBuiltIns: CustomBuiltIns) extends FlatTessla.IdentifierFac
     case call: Tessla.MacroCall =>
       val args = call.args.map {
         case arg: Tessla.NamedArgument =>
-          val id = makeIdentifier()
-          scope.addVariable(id, FlatTessla.VariableEntry(translateExpression(arg.expr, scope, idMap), None))
+          val id = expToId(translateExpression(arg.expr, scope, idMap), scope)
           FlatTessla.NamedArgument(arg.id.name, id, arg.loc)
         case arg: Tessla.PositionalArgument =>
-          val id = makeIdentifier()
-          scope.addVariable(id, FlatTessla.VariableEntry(translateExpression(arg.expr, scope, idMap), None))
+          val id = expToId(translateExpression(arg.expr, scope, idMap), scope)
           FlatTessla.PositionalArgument(id, arg.loc)
       }
       FlatTessla.MacroCall(getExp(call.macroID, idMap).id, args, call.loc)
@@ -165,8 +175,7 @@ class Flattener(customBuiltIns: CustomBuiltIns) extends FlatTessla.IdentifierFac
       block.definitions.foreach { definition =>
         addDefinition(definition, scope, innerIdMap)
       }
-      val id = makeIdentifier()
-      scope.addVariable(id, FlatTessla.VariableEntry(translateExpression(block.expression, scope, innerIdMap), None))
+      val id = expToId(translateExpression(block.expression, scope, innerIdMap), scope)
       FlatTessla.Variable(id, block.expression.loc)
   }
 }
