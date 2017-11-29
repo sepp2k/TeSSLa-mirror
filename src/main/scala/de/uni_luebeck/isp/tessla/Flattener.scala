@@ -3,17 +3,45 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.{MultipleDefinitionsError, UndefinedVariable}
 import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
 
-class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
+class Flattener(customBuiltIns: CustomBuiltIns) extends FlatTessla.IdentifierFactory with TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
   type IdMap = Map[String, FlatTessla.Identifier]
+
+  val primitiveOperators = Seq(
+    "+" -> PrimitiveOperators.Add,
+    "-" -> PrimitiveOperators.Sub,
+    "unary -" -> PrimitiveOperators.Negate,
+    "*" -> PrimitiveOperators.Mul,
+    "/" -> PrimitiveOperators.Div,
+    "&" -> PrimitiveOperators.BitAnd,
+    "|" -> PrimitiveOperators.BitOr,
+    "^" -> PrimitiveOperators.BitXor,
+    "<<" -> PrimitiveOperators.LeftShift,
+    ">>" -> PrimitiveOperators.RightShift,
+    "~" -> PrimitiveOperators.BitFlip,
+    "<" -> PrimitiveOperators.Lt,
+    ">" -> PrimitiveOperators.Gt,
+    "<=" -> PrimitiveOperators.Lte,
+    ">=" -> PrimitiveOperators.Gte,
+    "==" -> PrimitiveOperators.Eq,
+    "!=" -> PrimitiveOperators.Neq,
+    "&&" -> PrimitiveOperators.And,
+    "||" -> PrimitiveOperators.Or,
+    "!" -> PrimitiveOperators.Not,
+    "first" -> PrimitiveOperators.First,
+    "if then else" -> PrimitiveOperators.IfThenElse,
+    "if then" -> PrimitiveOperators.IfThen
+  ) ++ customBuiltIns.customOperators
 
   val stdlib = Seq(
     "default" -> FlatTessla.VariableEntry(FlatTessla.Default, None),
     "defaultFrom" -> FlatTessla.VariableEntry(FlatTessla.DefaultFrom, None),
     "last" -> FlatTessla.VariableEntry(FlatTessla.Last, None),
     "delayedLast" -> FlatTessla.VariableEntry(FlatTessla.DelayedLast, None),
-    "time" -> FlatTessla.VariableEntry(FlatTessla.Time, None)
-    // TODO: Continue
-  )
+    "time" -> FlatTessla.VariableEntry(FlatTessla.Time, None),
+    "const" -> FlatTessla.VariableEntry(FlatTessla.Const, None)
+  ) ++ primitiveOperators.map {
+    case (name, primOp) => name -> FlatTessla.VariableEntry(FlatTessla.PrimitiveOperator(primOp), None)
+  }
 
   def createIdMap(names: Seq[String]): IdMap = {
     names.map(name => name -> makeIdentifier(name)).toMap

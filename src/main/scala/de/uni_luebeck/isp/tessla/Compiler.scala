@@ -6,7 +6,7 @@ import Errors.InternalError
 class Compiler {
   def applyPasses(src: TesslaSource, unit: Option[TimeUnit], customBuiltIns: CustomBuiltIns): TranslationPhase.Result[TesslaCore.Specification] = {
     new TesslaParser().translate(src)
-      .andThen(new Flattener)
+      .andThen(new Flattener(customBuiltIns))
       .andThen(new Printer[FlatTessla.Specification])
       .andThen(new DummyPhase[FlatTessla.Specification, TesslaCore.Specification])
   }

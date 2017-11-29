@@ -63,6 +63,7 @@ object FlatTessla extends HasUniqueIdentifiers {
   case object Last extends BuiltInOperator
   case object Time extends BuiltInOperator
   case object DelayedLast extends BuiltInOperator
+  case object Const extends BuiltInOperator
   case class PrimitiveOperator(op: PrimitiveOperators.PrimitiveOperator) extends BuiltInOperator {
     override def toString = op.toString
   }

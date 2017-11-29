@@ -6,7 +6,7 @@ import de.uni_luebeck.isp.tessla.PrimitiveOperators.{Monomorphic, Strict}
 trait CustomBuiltIns {
   // TODO: Explicit type name currently not supported
   // def customTypes: Map[String, Types.CustomType]
-  def customOperators: Map[(String, Int), PrimitiveOperators.CustomBuiltIn]
+  def customOperators: Map[String, PrimitiveOperators.CustomBuiltIn]
 }
 
 object CustomBuiltIns {
@@ -208,15 +208,15 @@ object CustomBuiltIns {
     // override def customTypes = Map("Map" -> TesslaMap.Type, "IntSet" -> IntSet.Type)
 
     override def customOperators = Map(
-      ("map_empty", 0) -> TesslaMap.Empty,
-      ("map_add", 3) -> TesslaMap.Add,
-      ("map_get", 2) -> TesslaMap.Get,
-      ("map_contains", 2) -> TesslaMap.Contains,
-      ("map_remove", 2) -> TesslaMap.Remove,
-      ("set_empty", 0) -> IntSet.Empty,
-      ("set_add", 2) -> IntSet.Add,
-      ("set_contains", 2) -> IntSet.Contains,
-      ("set_remove", 2) -> IntSet.Remove,
+      "map_empty" -> TesslaMap.Empty,
+      "map_add" -> TesslaMap.Add,
+      "map_get" -> TesslaMap.Get,
+      "map_contains" -> TesslaMap.Contains,
+      "map_remove" -> TesslaMap.Remove,
+      "set_empty" -> IntSet.Empty,
+      "set_add" -> IntSet.Add,
+      "set_contains" -> IntSet.Contains,
+      "set_remove" -> IntSet.Remove,
     )
   }
 }

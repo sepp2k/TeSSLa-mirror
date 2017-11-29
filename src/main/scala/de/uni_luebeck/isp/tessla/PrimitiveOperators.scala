@@ -36,11 +36,6 @@ object PrimitiveOperators {
 
   abstract class CustomBuiltIn extends PrimitiveOperator
 
-  final case class Const(value: TesslaCore.Value) extends PrimitiveOperator with Strict {
-    override def returnTypeFor(typeArgs: Seq[Types.ValueType], argTypes: Seq[(Types.ValueType, Location)]) = value.typ
-    protected override def strictEval(typeArgs: Seq[Types.ValueType], args: Seq[TesslaCore.LiteralValue], loc: Location) = Some(value)
-  }
-
   /**
     * Take a variable amount of arguments and return the first one
     */

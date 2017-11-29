@@ -257,7 +257,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
         } |
         MINUS ~ atomicExpression ^^! {
           case (loc, (op, expr)) =>
-            Tessla.MacroCall(Tessla.Identifier("-", Location(op.loc, path)),
+            Tessla.MacroCall(Tessla.Identifier("unary -", Location(op.loc, path)),
               Seq(),
               Seq(Tessla.PositionalArgument(expr)),
               Location(loc, path))
