@@ -10,10 +10,10 @@
 ## Example
 
     $timeunit = "s"
-    0: x
-    1: x = ()
-    2: y = 5
-    2: z = -5
-    3: b = true
-    5: b = false
-    5: s = "Hallo Welt"
+    1: x
+    2: x = ()
+    3: y = 5
+    3: z = -5
+    4: b = true
+    6: b = false
+    6: s = "Hallo Welt"
