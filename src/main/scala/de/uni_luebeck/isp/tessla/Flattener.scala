@@ -32,15 +32,19 @@ class Flattener(customBuiltIns: CustomBuiltIns) extends FlatTessla.IdentifierFac
     "if then" -> PrimitiveOperators.IfThen
   ) ++ customBuiltIns.customOperators
 
-  val stdlib = Seq(
-    "default" -> FlatTessla.VariableEntry(FlatTessla.Default, None),
-    "defaultFrom" -> FlatTessla.VariableEntry(FlatTessla.DefaultFrom, None),
-    "last" -> FlatTessla.VariableEntry(FlatTessla.Last, None),
-    "delayedLast" -> FlatTessla.VariableEntry(FlatTessla.DelayedLast, None),
-    "time" -> FlatTessla.VariableEntry(FlatTessla.Time, None),
-    "const" -> FlatTessla.VariableEntry(FlatTessla.Const, None)
+  val builtIns = Seq(
+    "default" -> FlatTessla.Default,
+    "defaultFrom" -> FlatTessla.DefaultFrom,
+    "last" -> FlatTessla.Last,
+    "delayedLast" -> FlatTessla.DelayedLast,
+    "time" -> FlatTessla.Time,
+    "const" -> FlatTessla.Const
   ) ++ primitiveOperators.map {
-    case (name, primOp) => name -> FlatTessla.VariableEntry(FlatTessla.PrimitiveOperator(primOp), None)
+    case (name, primOp) => name -> FlatTessla.PrimitiveOperator(primOp)
+  }
+
+  val stdlib = builtIns.map {
+    case (name, b) => name -> FlatTessla.VariableEntry(FlatTessla.BuiltInOperator(b), None)
   }
 
   def createIdMap(names: Seq[String]): IdMap = {

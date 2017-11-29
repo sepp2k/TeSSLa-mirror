@@ -6,9 +6,12 @@ import Errors.InternalError
 class Compiler {
   def applyPasses(src: TesslaSource, unit: Option[TimeUnit], customBuiltIns: CustomBuiltIns): TranslationPhase.Result[TesslaCore.Specification] = {
     new TesslaParser().translate(src)
+      .andThen(new Printer[Tessla.Specification])
       .andThen(new Flattener(customBuiltIns))
       .andThen(new Printer[FlatTessla.Specification])
-      .andThen(new DummyPhase[FlatTessla.Specification, TesslaCore.Specification])
+      .andThen(new TypeChecker)
+      .andThen(new Printer[TypedTessla.Specification])
+      .andThen(new DummyPhase[TypedTessla.Specification, TesslaCore.Specification])
   }
 
   class DummyPhase[T,U] extends TranslationPhase[T, U] {
@@ -17,6 +20,7 @@ class Compiler {
 
   class Printer[T] extends TranslationPhase[T, T] {
     override def translateSpec(spec: T) = {
+      println(s"=== ${spec.getClass.toString} ===")
       println(spec)
       spec
     }

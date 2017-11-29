@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import scala.collection.mutable
 
-object FlatTessla extends HasUniqueIdentifiers {
+abstract class FlatTessla {
   case class Specification(globalScope: Scope, outStreams: Seq[OutStream], outAllLocation: Option[Location]) {
     override def toString = {
       val outAllString = if (outAll) "\nout *" else ""
@@ -12,9 +12,15 @@ object FlatTessla extends HasUniqueIdentifiers {
     def outAll = outAllLocation.isDefined
   }
 
-  case class VariableEntry(expression: Expression, typeOpt: Option[Type])
+  type Type
+  type TypeAnnotation
+  def typeAnnotationToString(typeAnnotation: TypeAnnotation): String
 
-  class Scope(parent: Option[Scope]) {
+  type Identifier <: HasUniqueIdentifiers#Identifier
+
+  case class VariableEntry(expression: Expression, typeInfo: TypeAnnotation)
+
+  class Scope(val parent: Option[Scope]) {
     val variables = mutable.Map[Identifier, VariableEntry]()
 
     def addVariable(id: Identifier, entry: VariableEntry): Unit = {
@@ -29,7 +35,7 @@ object FlatTessla extends HasUniqueIdentifiers {
     override def toString = {
       s"-- Scope $hashCode\n" + variables.map {
         case (name, entry) =>
-          val typeAnnotation = entry.typeOpt.map(" : " + _).getOrElse("")
+          val typeAnnotation = typeAnnotationToString(entry.typeInfo)
           s"def $name$typeAnnotation = ${entry.expression}"
       }.mkString("\n") + parent.map(p => s"\n-- Parent = Scope ${p.hashCode}").getOrElse("")
     }
@@ -46,7 +52,7 @@ object FlatTessla extends HasUniqueIdentifiers {
   case class Macro(typeParameters: Seq[Identifier],
                    parameters: Seq[Parameter],
                    scope: Scope,
-                   returnType: Option[Type],
+                   returnType: TypeAnnotation,
                    body: Expression,
                    loc: Location) extends Expression {
     override def toString = {
@@ -54,18 +60,8 @@ object FlatTessla extends HasUniqueIdentifiers {
     }
   }
 
-  sealed abstract class BuiltInOperator extends Expression {
+  case class BuiltInOperator(builtIn: FlatTessla.BuiltIn) extends Expression {
     def loc = Location.builtIn
-  }
-
-  case object Default extends BuiltInOperator
-  case object DefaultFrom extends BuiltInOperator
-  case object Last extends BuiltInOperator
-  case object Time extends BuiltInOperator
-  case object DelayedLast extends BuiltInOperator
-  case object Const extends BuiltInOperator
-  case class PrimitiveOperator(op: PrimitiveOperators.PrimitiveOperator) extends BuiltInOperator {
-    override def toString = op.toString
   }
 
   case class InStream(name: String, streamType: Type, loc: Location) extends Expression {
@@ -101,7 +97,31 @@ object FlatTessla extends HasUniqueIdentifiers {
 
   type LiteralValue = Tessla.LiteralValue
 
-  abstract class Argument {
+  type Argument = FlatTessla.Arg
+}
+
+object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
+  type Type = Tessla.Type
+  type TypeAnnotation = Option[Type]
+
+  override def typeAnnotationToString(typeAnnotation: TypeAnnotation) = typeAnnotation match {
+    case None => ""
+    case Some(t) => s" : $t"
+  }
+
+  sealed abstract class BuiltIn
+  case object Default extends BuiltIn
+  case object DefaultFrom extends BuiltIn
+  case object Last extends BuiltIn
+  case object Time extends BuiltIn
+  case object DelayedLast extends BuiltIn
+  case object Const extends BuiltIn
+  case class PrimitiveOperator(op: PrimitiveOperators.PrimitiveOperator) extends BuiltIn {
+    override def toString = op.toString
+  }
+
+
+  sealed abstract class Arg {
     def loc: Location
   }
 
@@ -112,6 +132,4 @@ object FlatTessla extends HasUniqueIdentifiers {
   case class NamedArgument(name: String, id: Identifier, loc: Location) extends Argument {
     override def toString = s"$name = $id"
   }
-
-  type Type = Tessla.Type
 }

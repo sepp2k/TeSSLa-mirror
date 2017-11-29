@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 trait HasUniqueIdentifiers {
-  class Identifier private[HasUniqueIdentifiers](val uid: Int, val nameOpt: Option[String]) {
+  class Identifier private[HasUniqueIdentifiers](val uid: Long, val nameOpt: Option[String]) {
     override def equals(other: Any) = other match {
       case o: Identifier if o.uid == uid => true
       case _ => false
@@ -16,7 +16,7 @@ trait HasUniqueIdentifiers {
   }
 
   trait IdentifierFactory {
-    var counter = 0
+    var counter = 0l
     def makeIdentifier(nameOpt: Option[String]): Identifier = {
       counter += 1
       new Identifier(counter, nameOpt)
