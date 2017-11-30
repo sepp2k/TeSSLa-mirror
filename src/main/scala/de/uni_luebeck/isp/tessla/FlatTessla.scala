@@ -3,6 +3,8 @@ package de.uni_luebeck.isp.tessla
 import scala.collection.mutable
 
 abstract class FlatTessla {
+  import FlatTessla.{OutStream, Argument, BuiltIn}
+
   case class Specification(globalScope: Scope, outStreams: Seq[OutStream], outAllLocation: Option[Location]) {
     override def toString = {
       val outAllString = if (outAll) "\nout *" else ""
@@ -41,10 +43,6 @@ abstract class FlatTessla {
     }
   }
 
-  case class OutStream(expr: Expression, name: String, loc: Location) {
-    override def toString = s"out $expr as $name"
-  }
-
   sealed abstract class Expression {
     def loc: Location
   }
@@ -60,7 +58,7 @@ abstract class FlatTessla {
     }
   }
 
-  case class BuiltInOperator(builtIn: FlatTessla.BuiltIn) extends Expression {
+  case class BuiltInOperator(builtIn: BuiltIn) extends Expression {
     def loc = Location.builtIn
   }
 
@@ -96,8 +94,6 @@ abstract class FlatTessla {
   }
 
   type LiteralValue = Tessla.LiteralValue
-
-  type Argument = FlatTessla.Arg
 }
 
 object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
@@ -107,6 +103,10 @@ object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
   override def typeAnnotationToString(typeAnnotation: TypeAnnotation) = typeAnnotation match {
     case None => ""
     case Some(t) => s" : $t"
+  }
+
+  case class OutStream(id: Identifier, name: String, loc: Location) {
+    override def toString = s"out $id as $name"
   }
 
   sealed abstract class BuiltIn
@@ -120,8 +120,7 @@ object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
     override def toString = op.toString
   }
 
-
-  sealed abstract class Arg {
+  sealed abstract class Argument {
     def loc: Location
   }
 

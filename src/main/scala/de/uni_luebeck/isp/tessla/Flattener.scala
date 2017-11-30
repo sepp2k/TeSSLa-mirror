@@ -92,7 +92,8 @@ class Flattener(customBuiltIns: CustomBuiltIns) extends FlatTessla.IdentifierFac
           previous =>
             warn(ConflictingOut(out.loc, previous = previous.loc))
         }
-        val newOut = FlatTessla.OutStream(translateExpression(out.expr, globalScope, globalIdMap), out.name, out.loc)
+        val id = expToId(translateExpression(out.expr, globalScope, globalIdMap), globalScope)
+        val newOut = FlatTessla.OutStream(id, out.name, out.loc)
         result.copy(outStreams = result.outStreams :+ newOut)
 
       case (result, definition: Tessla.Definition) =>

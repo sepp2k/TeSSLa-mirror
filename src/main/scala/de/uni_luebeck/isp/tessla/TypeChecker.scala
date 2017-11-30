@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla
 class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla.Specification] {
   override def translateSpec(spec: FlatTessla.Specification): TypedTessla.Specification = {
     val scope = translateScope(spec.globalScope, None)
-    TypedTessla.Specification(scope, spec.outStreams.map(translateOutStream(_, scope)), spec.outAllLocation)
+    TypedTessla.Specification(scope, spec.outStreams, spec.outAllLocation)
   }
 
   def translateScope(scope: FlatTessla.Scope, parent: Option[TypedTessla.Scope]): TypedTessla.Scope = {
@@ -15,10 +15,6 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
         result.addVariable(name, TypedTessla.VariableEntry(exp, typ))
     }
     result
-  }
-
-  def translateOutStream(outStream: FlatTessla.OutStream, scope: TypedTessla.Scope): TypedTessla.OutStream = {
-    TypedTessla.OutStream(translateExpression(outStream.expr, scope), outStream.name, outStream.loc)
   }
 
   def translateExpression(expression: FlatTessla.Expression, scope: TypedTessla.Scope): TypedTessla.Expression = expression match {
