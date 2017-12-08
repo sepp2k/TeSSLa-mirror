@@ -30,7 +30,6 @@ publishTo := {
 credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials")
 
 libraryDependencies ++= Seq(
-  "com.chuusai" %% "shapeless" % "2.3.2",
   "com.github.sepp2k" %% "sexyopt" % "0.1.1",
   "de.uni_luebeck.isp" %% "compacom" % "0.2.8",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
