@@ -9,7 +9,7 @@ object Trace {
   type Identifier = RawTrace.Identifier
   val Identifier = RawTrace.Identifier
 
-  case class Event(loc: Location, timeStamp: TimeStamp, stream: Identifier, value: TesslaCore.LiteralValue) extends Item {
+  case class Event(loc: Location, timeStamp: TimeStamp, stream: Identifier, value: TesslaCore.Value) extends Item {
     override def toString: String = s"$timeStamp: ${stream.name} = $value"
   }
 

@@ -1,10 +1,8 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Errors.TesslaError
-
-object TesslaCore {
-  final case class Specification(streams: Map[String, Expression],
-                                 inStreams: Seq[(String, Types.Stream, Location)],
+object TesslaCore extends HasUniqueIdentifiers {
+  final case class Specification(streams: Map[Identifier, Expression],
+                                 inStreams: Seq[(Identifier, StreamType, Location)],
                                  outStreams: Seq[(String, StreamRef)]) {
     override def toString = {
       inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
@@ -19,27 +17,25 @@ object TesslaCore {
 
   sealed abstract class StreamRef {
     def loc: Location
-    def name: String
     def withLoc(loc: Location): StreamRef
   }
 
-  final case class Stream(name: String, loc: Location) extends StreamRef {
-    override def toString = name
+  final case class Stream(id: Identifier, loc: Location) extends StreamRef {
+    override def toString = id.toString
     def withLoc(loc: Location): Stream = copy(loc = loc)
   }
 
-  final case class InputStream(name: String, loc: Location) extends StreamRef {
-    override def toString = s"input($name)"
+  final case class InputStream(id: Identifier, loc: Location) extends StreamRef {
+    override def toString = s"input($id)"
     def withLoc(loc: Location): InputStream = copy(loc = loc)
   }
 
   final case class Nil(loc: Location) extends StreamRef {
-    override def name = "nil"
-    override def toString = name
+    override def toString = "nil"
     def withLoc(loc: Location): Nil = copy(loc = loc)
   }
 
-  final case class Default(stream: StreamRef, default: LiteralValue, loc: Location) extends Expression {
+  final case class Default(stream: StreamRef, default: Value, loc: Location) extends Expression {
     override def toString = s"default($stream, $default)"
   }
 
@@ -59,66 +55,86 @@ object TesslaCore {
     override def toString = s"delayedLast($values, $delays)"
   }
 
-  final case class Lift(operator: PrimitiveOperators.PrimitiveOperator, typeArgs: Seq[Types.Type], args: Seq[StreamRef], loc: Location) extends Expression {
+  final case class Lift(operator: PrimitiveOperators.PrimitiveOperator, typeArgs: Seq[Type], args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = operator match {
       case _: PrimitiveOperators.PrefixOperator => s"$operator${args(0)}"
       case _: PrimitiveOperators.InfixOperator => s"${args(0)} $operator ${args(1)}"
       case PrimitiveOperators.IfThen => s"if ${args(0)} then ${args(1)}"
       case PrimitiveOperators.IfThenElse => s"if ${args(0)} then ${args(1)} else ${args(2)}"
-      case PrimitiveOperators.First => args.mkString("first(", ", ", ")")
-      case custom: PrimitiveOperators.CustomBuiltIn =>
+      case _ =>
         val targs = typeArgs.mkString("[", ", ", "]")
-        args.mkString(s"$custom$targs(", ", ", ")")
+        args.mkString(s"$operator$targs(", ", ", ")")
     }
   }
 
   sealed abstract class Value {
     def loc: Location
     def withLoc(loc: Location): Value
-    def typ: Types.ValueType
-    def toLiteral: LiteralValue
+    def typ: Type
     def value: Any
-    def isError: Boolean
 
     override def toString = value.toString
   }
 
-  final case class ErrorValue(err: TesslaError) extends Value {
-    override def loc = err.loc
-    override def withLoc(loc: Location): ErrorValue = this
-    override def toLiteral = throw err
-    override def typ = Types.Nothing
-    override def value = throw err
-    override def isError = true
-  }
-
-  sealed abstract class LiteralValue extends Value {
-    override def toLiteral = this
-    override def withLoc(loc: Location): LiteralValue
-    override def isError = false
-  }
-
-  final case class IntLiteral(value: BigInt, loc: Location) extends LiteralValue {
+  final case class IntLiteral(value: BigInt, loc: Location) extends Value {
     override def withLoc(loc: Location): IntLiteral = copy(loc = loc)
-    override val typ = Types.Int
+    override def typ = IntType
   }
 
-  final case class BoolLiteral(value: Boolean, loc: Location) extends LiteralValue {
+  final case class BoolLiteral(value: Boolean, loc: Location) extends Value {
     override def withLoc(loc: Location): BoolLiteral = copy(loc = loc)
-    override val typ = Types.Bool
+    override def typ = BoolType
   }
 
-  final case class StringLiteral(value: String, loc: Location) extends LiteralValue {
+  final case class StringLiteral(value: String, loc: Location) extends Value {
     override def toString = s""""$value""""
     override def withLoc(loc: Location): StringLiteral = copy(loc = loc)
-    override val typ = Types.String
+    override def typ = StringType
   }
 
-  final case class Unit(loc: Location) extends LiteralValue {
+  final case class Unit(loc: Location) extends Value {
     override def value = ()
     override def withLoc(loc: Location): Unit = copy(loc = loc)
-    override val typ = Types.Unit
+    override def typ = UnitType
   }
 
-  abstract class CustomValue extends LiteralValue
+  final case class TesslaMap(value: Map[Value, Value], typ: MapType, loc: Location) extends Value {
+    override def withLoc(loc: Location): TesslaMap = copy(loc = loc)
+  }
+
+  final case class TesslaSet(value: Set[Value], typ: SetType, loc: Location) extends Value {
+    override def withLoc(loc: Location): TesslaSet = copy(loc = loc)
+  }
+
+  sealed abstract class Type
+
+  sealed abstract class ValueType extends Type
+
+  case object IntType extends ValueType {
+    override def toString = "Int"
+  }
+
+  case object BoolType extends ValueType {
+    override def toString = "Bool"
+  }
+
+  case object StringType extends ValueType {
+    override def toString = "String"
+  }
+
+  case object UnitType extends ValueType {
+    override def toString = "Unit"
+  }
+
+  case class MapType(keyType: ValueType, valueType: ValueType) extends ValueType {
+    override def toString = s"Map[$keyType, $valueType]"
+  }
+
+  case class SetType(elementType: ValueType) extends ValueType {
+    override def toString = s"Set[$elementType]"
+  }
+
+  case class StreamType(elementType: ValueType) extends Type {
+    override def toString = s"Events[$elementType]"
+  }
 }

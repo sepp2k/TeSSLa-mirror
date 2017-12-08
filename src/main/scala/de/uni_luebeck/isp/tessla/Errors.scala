@@ -1,13 +1,12 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
-import de.uni_luebeck.isp.tessla.Types.Type
 
 object Errors {
 
   abstract class TesslaError extends Exception with Diagnostic
 
-  case class TypeMismatch(expected: Type, found: Type, loc: Location) extends TesslaError {
+  case class TypeMismatch(expected: TypedTessla.Type, found: TypedTessla.Type, loc: Location) extends TesslaError {
     override def message = s"Type mismatch: Expected $expected, found $found"
   }
 
@@ -101,11 +100,11 @@ object Errors {
     def message: String = s"Negative delay $value"
   }
 
-  case class InputTypeMismatch(value: TesslaCore.Value, streamName: String, streamType: Types.ValueType, loc: Location) extends TesslaError {
+  case class InputTypeMismatch(value: TesslaCore.Value, streamName: String, streamType: TesslaCore.Type, loc: Location) extends TesslaError {
     def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
   }
 
-  case class TracesOperationError(loc: Location, op: String, args: TesslaCore.LiteralValue*) extends TesslaError {
+  case class TracesOperationError(loc: Location, op: String, args: TesslaCore.Value*) extends TesslaError {
     def message: String = s"Operation $op not defined for ${args.mkString(", ")}."
   }
 

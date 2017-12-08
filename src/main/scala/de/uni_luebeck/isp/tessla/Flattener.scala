@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.{MultipleDefinitionsError, UndefinedVariable}
 import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
 
-class Flattener(customBuiltIns: CustomBuiltIns) extends FlatTessla.IdentifierFactory with TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
+class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
   type IdMap = Map[String, FlatTessla.Identifier]
 
   val primitiveOperators = Seq(
@@ -30,7 +30,8 @@ class Flattener(customBuiltIns: CustomBuiltIns) extends FlatTessla.IdentifierFac
     "first" -> PrimitiveOperators.First,
     "if then else" -> PrimitiveOperators.IfThenElse,
     "if then" -> PrimitiveOperators.IfThen
-  ) ++ customBuiltIns.customOperators
+    // TODO: Add set and map operators
+  )
 
   val builtIns = Seq(
     "default" -> FlatTessla.Default,

@@ -4,10 +4,10 @@ import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 import Errors.InternalError
 
 class Compiler {
-  def applyPasses(src: TesslaSource, unit: Option[TimeUnit], customBuiltIns: CustomBuiltIns): TranslationPhase.Result[TesslaCore.Specification] = {
+  def applyPasses(src: TesslaSource, unit: Option[TimeUnit]): TranslationPhase.Result[TesslaCore.Specification] = {
     new TesslaParser().translate(src)
       .andThen(new Printer[Tessla.Specification])
-      .andThen(new Flattener(customBuiltIns))
+      .andThen(new Flattener)
       .andThen(new Printer[FlatTessla.Specification])
       .andThen(new TypeChecker)
       .andThen(new Printer[TypedTessla.Specification])
@@ -28,10 +28,9 @@ class Compiler {
 
   def compile(src: TesslaSource,
               timeUnitSource: Option[TesslaSource],
-              customBuiltIns: CustomBuiltIns = CustomBuiltIns.mapAndSet,
               printCore: Boolean = false) = {
     val timeUnit = timeUnitSource.map(TimeUnit.parse)
-    val result = applyPasses(src, timeUnit, customBuiltIns)
+    val result = applyPasses(src, timeUnit)
     if (printCore) result.andThen(new Printer[TesslaCore.Specification])
     else result
   }
