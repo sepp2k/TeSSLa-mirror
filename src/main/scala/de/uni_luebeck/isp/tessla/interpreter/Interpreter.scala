@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.{Compiler, CustomBuiltIns, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase, Types}
+import de.uni_luebeck.isp.tessla.util.Lazy
 
 import scala.collection.mutable
 
