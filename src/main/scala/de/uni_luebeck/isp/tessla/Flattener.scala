@@ -29,8 +29,16 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     "!" -> PrimitiveOperators.Not,
     "first" -> PrimitiveOperators.First,
     "if then else" -> PrimitiveOperators.IfThenElse,
-    "if then" -> PrimitiveOperators.IfThen
-    // TODO: Add set and map operators
+    "if then" -> PrimitiveOperators.IfThen,
+    "map_empty" -> PrimitiveOperators.MapEmpty,
+    "map_add" -> PrimitiveOperators.MapAdd,
+    "map_get" -> PrimitiveOperators.MapGet,
+    "map_contains" -> PrimitiveOperators.MapContains,
+    "map_remove" -> PrimitiveOperators.MapRemove,
+    "set_empty" -> PrimitiveOperators.SetEmpty,
+    "set_add" -> PrimitiveOperators.SetAdd,
+    "set_contains" -> PrimitiveOperators.SetContains,
+    "set_remove" -> PrimitiveOperators.SetRemove
   )
 
   val builtIns = Seq(

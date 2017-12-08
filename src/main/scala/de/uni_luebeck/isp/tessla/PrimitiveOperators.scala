@@ -101,5 +101,41 @@ object PrimitiveOperators {
 
   case object IfThen extends PrimitiveOperator
 
-  // TODO: Add map and set operators
+  // Map operators
+  case object MapEmpty extends PrimitiveOperator {
+    override def toString = "map_empty"
+  }
+
+  case object MapAdd extends PrimitiveOperator {
+    override def toString = "map_add"
+  }
+
+  case object MapGet extends PrimitiveOperator {
+    override def toString = "map_get"
+  }
+
+  case object MapContains extends PrimitiveOperator {
+    override def toString = "map_contains"
+  }
+
+  case object MapRemove extends PrimitiveOperator {
+    override def toString = "map_remove"
+  }
+
+  // Set operators
+  case object SetEmpty extends PrimitiveOperator {
+    override def toString = "set_empty"
+  }
+
+  case object SetAdd extends PrimitiveOperator {
+    override def toString = "set_add"
+  }
+
+  case object SetContains extends PrimitiveOperator {
+    override def toString = "set_contains"
+  }
+
+  case object SetRemove extends PrimitiveOperator {
+    override def toString = "set_remove"
+  }
 }
