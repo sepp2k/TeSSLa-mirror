@@ -15,7 +15,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
 
 
   lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map {
-    case (name, exp) => (name, Lazy(eval(exp)))
+    case (name, exp) => (name, Lazy(eval(exp.expression)))
   }
 
   lazy val outStreams: Map[String, Stream] = spec.outStreams.map {

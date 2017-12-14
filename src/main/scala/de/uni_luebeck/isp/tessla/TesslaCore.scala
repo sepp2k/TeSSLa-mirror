@@ -1,7 +1,9 @@
 package de.uni_luebeck.isp.tessla
 
 object TesslaCore extends HasUniqueIdentifiers {
-  final case class Specification(streams: Map[Identifier, Expression],
+  final case class StreamDefinition(expression: Expression, typ: Type)
+
+  final case class Specification(streams: Map[Identifier, StreamDefinition],
                                  inStreams: Seq[(Identifier, StreamType, Location)],
                                  outStreams: Seq[(String, StreamRef)]) {
     override def toString = {
