@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.{TracesOperationError, TracesUnknownIdentifierError}
 import de.uni_luebeck.isp.tessla.{Location, TesslaCore}
-import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
+import de.uni_luebeck.isp.tessla.TimeUnit
 
 object RawTrace{
   sealed abstract class Item

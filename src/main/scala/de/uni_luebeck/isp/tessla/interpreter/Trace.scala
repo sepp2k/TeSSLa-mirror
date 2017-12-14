@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{Location, Tessla, TesslaCore}
-import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
+import de.uni_luebeck.isp.tessla.{Location, TesslaCore}
+import de.uni_luebeck.isp.tessla.TimeUnit
 
 object Trace {
   sealed abstract class Item

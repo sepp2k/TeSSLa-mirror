@@ -226,7 +226,7 @@ object TraceParser extends Parsers {
 
     def literalWithUnit: Parser[TesslaCore.Value] = literal | unit
 
-    def timeUnit: Parser[TimeUnit.TimeUnit] = DOLLAR ~> ID("timeunit") ~> EQ ~> matchToken("string", Set("<string>")) {
+    def timeUnit: Parser[TimeUnit] = DOLLAR ~> ID("timeunit") ~> EQ ~> matchToken("string", Set("<string>")) {
       case WithLocation(loc, STRING(name)) => TimeUnit.fromString(name, Location(loc, path))
     }
 

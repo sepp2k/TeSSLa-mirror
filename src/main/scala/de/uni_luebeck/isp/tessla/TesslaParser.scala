@@ -268,7 +268,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def group: Parser[Tessla.Expression] = (LPAREN ~> expression.? <~ RPAREN) ^^! {
       case (_, Some(expr)) => expr
-      case (loc, None) => Tessla.Literal(Tessla.Unit(Location(loc, path)))
+      case (loc, None) => Tessla.Literal(Tessla.Unit, Location(loc, path))
     }
 
     def block = (LBRACE ~> definition.* ~ expression <~ RBRACE) ^^! {
@@ -283,29 +283,27 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
         Tessla.MacroCall(name, typeArgs.getOrElse(Seq()), args.getOrElse(Seq()), Location(loc, path))
     }
 
-    def literal: Parser[Tessla.Expression] = (intLiteral | stringLiteral | boolLiteral) ^^ Tessla.Literal
+    def literal: Parser[Tessla.Expression] = (intLiteral | stringLiteral | boolLiteral) ^^! {
+      case (loc, lit) => Tessla.Literal(lit, Location(loc, path))
+    }
 
     def boolLiteral: Parser[Tessla.BoolLiteral] =
-      TRUE ^^^! {
-        loc => Tessla.BoolLiteral(true, Location(loc, path))
-      } |
-        FALSE ^^^! {
-          loc => Tessla.BoolLiteral(false, Location(loc, path))
-        }
+      TRUE ^^^ Tessla.BoolLiteral(true) |
+      FALSE ^^^ Tessla.BoolLiteral(false)
 
     def intLiteral: Parser[Tessla.LiteralValue] = matchToken("integer", Set("<integer>")) {
       case WithLocation(_, INT(value)) => BigInt(value)
-    } ~ timeUnit.? ^^! {
-      case (loc, (value, None)) => Tessla.IntLiteral(value, Location(loc, path))
-      case (loc, (value, Some(unit))) => Tessla.TimeLiteral(value, unit, Location(loc, path))
+    } ~ timeUnit.? ^^ {
+      case (value, None) => Tessla.IntLiteral(value)
+      case (value, Some(unit)) => Tessla.TimeLiteral(value, unit)
     }
 
-    def timeUnit: Parser[TimeUnit.TimeUnit] = matchToken("identifier", Set("<identifier>")) {
+    def timeUnit: Parser[TimeUnit] = matchToken("identifier", Set("<identifier>")) {
       case WithLocation(loc, ID(name)) => TimeUnit.fromString(name, Location(loc, path))
     }
 
     def stringLiteral: Parser[Tessla.StringLiteral] = matchToken("string", Set("<string>")) {
-      case WithLocation(loc, STRING(value)) => Tessla.StringLiteral(value, Location(loc, path))
+      case WithLocation(_, STRING(value)) => Tessla.StringLiteral(value)
     }
 
     def arguments: Parser[Seq[Tessla.Argument]] = LPAREN ~> rep1sep(argument, COMMA) <~ RPAREN

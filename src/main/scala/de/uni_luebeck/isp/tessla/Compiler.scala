@@ -1,6 +1,5 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
 import Errors.InternalError
 
 class Compiler {

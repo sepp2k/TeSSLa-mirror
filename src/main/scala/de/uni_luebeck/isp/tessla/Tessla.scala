@@ -98,30 +98,28 @@ object Tessla {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
   }
 
-  case class Literal(value: LiteralValue) extends Expression {
+  case class Literal(value: LiteralValue, loc: Location) extends Expression {
     override def toString(inner: Boolean) = value.toString
-    override def loc = value.loc
   }
 
   sealed abstract class LiteralValue {
     def value: Any
-    def loc: Location
     override def toString = value.toString
   }
 
-  case class IntLiteral(value: BigInt, loc: Location) extends LiteralValue
+  case class IntLiteral(value: BigInt) extends LiteralValue
 
-  case class TimeLiteral(value: BigInt, unit: TimeUnit.TimeUnit, loc: Location) extends LiteralValue {
+  case class TimeLiteral(value: BigInt, unit: TimeUnit) extends LiteralValue {
     override def toString = s"$value $unit"
   }
 
-  case class StringLiteral(value: String, loc: Location) extends LiteralValue {
+  case class StringLiteral(value: String) extends LiteralValue {
     override def toString = s""""$value""""
   }
 
-  case class BoolLiteral(value: Boolean, loc: Location) extends LiteralValue
+  case class BoolLiteral(value: Boolean) extends LiteralValue
 
-  case class Unit(loc: Location) extends LiteralValue {
+  case object Unit extends LiteralValue {
     override def value = ()
   }
 

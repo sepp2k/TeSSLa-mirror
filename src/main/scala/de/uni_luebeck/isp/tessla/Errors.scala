@@ -1,7 +1,5 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
-
 object Errors {
 
   abstract class TesslaError extends Exception with Diagnostic
