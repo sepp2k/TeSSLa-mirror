@@ -58,7 +58,7 @@ object Errors {
   }
 
   case class UndefinedTimeUnit(loc: Location) extends TesslaError {
-    def message = s"No time unit set"
+    def message = s"Use of time units is only allowed when a base time unit is set for the data"
   }
 
   case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit) extends TesslaError {
