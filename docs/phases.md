@@ -7,7 +7,7 @@ Tessla
 FlatTessla  
 ———TypeChecker—> (finds type errors, annotates every sub-expression with its type and auto-converts constant expressions to `default(nil, value)`-streams where needed)  
 TypedTessla  
-———ConstantFolder—> (evaluates constant expressions and expands macros)  
+———ConstantEvaluator—> (evaluates constant expressions and expands macros)  
 TesslaCore  
 ———DeadStreamEliminator—> (removes streams not used by outstreams)  
 TesslaCore
@@ -25,7 +25,7 @@ TypedTessla
 MacrolessTessla  
 ———ObjectRemover—> (turns objects into separate variables)  
 PrimitiveTessla  
-———ConstantFolder—>  
+———ConstantEvaluator—>  
 TesslaCore  
 ———DeadStreamEliminator—>  
 TesslaCore

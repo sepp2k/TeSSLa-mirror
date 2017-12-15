@@ -62,11 +62,11 @@ abstract class FlatTessla {
     def loc = Location.builtIn
   }
 
-  case class InStream(name: String, streamType: Type, loc: Location) extends Expression {
+  case class InputStream(name: String, streamType: Type, loc: Location) extends Expression {
     override def toString = s"in $name: $streamType"
   }
 
-  case class Parameter(param: Tessla.Parameter) extends Expression {
+  case class Parameter(param: Tessla.Parameter, id: Identifier) extends Expression {
     def parameterType = param.parameterType
 
     def name = param.id.name

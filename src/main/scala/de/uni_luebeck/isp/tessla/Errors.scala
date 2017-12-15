@@ -36,10 +36,9 @@ object Errors {
     override def message = s"Undefined macro or operator ${id.name}/$arity"
   }
 
-  case class UndefinedNamedArg(id: Tessla.Identifier) extends TesslaError {
-    override def loc = id.loc
+  case class UndefinedNamedArg(name: String, loc: Location) extends TesslaError {
 
-    override def message = s"Undefined keyword argument ${id.name}"
+    override def message = s"Undefined keyword argument ${name}"
   }
 
   case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {

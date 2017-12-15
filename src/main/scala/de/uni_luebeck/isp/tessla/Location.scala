@@ -3,11 +3,22 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.compacom
 import de.uni_luebeck.isp.compacom.Position
 
+import Location._
+
 sealed abstract class Location {
   def merge(other: Location): Location
+  def stackTrace: Seq[Location] = Seq()
+  def withStackTrace(stackStrace: Seq[Location]) = LocationWithStackTrace(this, stackStrace)
 }
 
 object Location {
+  case class LocationWithStackTrace(loc: Location, override val stackTrace: Seq[Location]) extends Location {
+    def merge(other: Location) = {
+      require(stackTrace == other.stackTrace)
+      LocationWithStackTrace(loc.merge(other.asInstanceOf[LocationWithStackTrace].loc), stackTrace)
+    }
+  }
+
   private case class SourceLoc(loc: compacom.Location, path: String) extends Location {
     override def merge(other: Location) = other match {
       case SourceLoc(loc2, path2) =>

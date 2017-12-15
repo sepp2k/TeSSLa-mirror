@@ -70,7 +70,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
 
   def checkForDuplicates(statements: Seq[Tessla.Identifier]): Unit = {
     statements.groupBy(_.name).foreach {
-      case (_, duplicates) if duplicates.size > 1 =>
+      case (_, duplicates) if duplicates.lengthCompare(1) > 0 =>
         val firstLoc = duplicates.head.loc
         duplicates.tail.foreach { duplicate =>
           error(MultipleDefinitionsError(duplicate, firstLoc))
@@ -110,14 +110,15 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
         result
 
       case (result, in: Tessla.In) =>
-        val entry = FlatTessla.VariableEntry(FlatTessla.InStream(in.id.name, in.streamType, in.loc), Some(in.streamType))
+        val inputStream = FlatTessla.InputStream(in.id.name, in.streamType, in.loc)
+        val entry = FlatTessla.VariableEntry(inputStream, Some(in.streamType))
         globalScope.addVariable(globalIdMap(in.id.name), entry)
         result
     }
   }
 
   def addDefinition(definition: Tessla.Definition, scope: FlatTessla.Scope, idMap: IdMap): Unit = {
-    val parameters = definition.parameters.map(FlatTessla.Parameter)
+    val parameters = definition.parameters.map(p => FlatTessla.Parameter(p, makeIdentifier(p.id.name)))
     val (innerDefs, exp) = definition.body match {
       case block: Tessla.Block => (block.definitions, block.expression)
       case e => (Seq(), e)

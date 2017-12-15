@@ -9,8 +9,8 @@ import scala.collection.mutable
 
 class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.inStreams.map {
-    case (id, typ, _) =>
-      id.nameOpt.get -> (new Input, typ.elementType)
+    case (name, typ, _) =>
+      name -> (new Input, typ.elementType)
   }.toMap
 
 
@@ -20,15 +20,15 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
 
   lazy val outStreams: Map[String, Stream] = spec.outStreams.map {
     case (name, streamRef: TesslaCore.Stream) => name -> defs(streamRef.id).get
-    case (name, streamRef: TesslaCore.InputStream) => name -> inStreams(streamRef.id.nameOpt.get)._1
+    case (name, streamRef: TesslaCore.InputStream) => name -> inStreams(streamRef.name)._1
     case (name, _: TesslaCore.Nil) => name -> nil
   }.toMap
 
   private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
-    case TesslaCore.Stream(name, loc) =>
-      defs.getOrElse(name, throw InternalError(s"Couldn't find stream named $name", loc)).get
+    case TesslaCore.Stream(id, loc) =>
+      defs.getOrElse(id, throw InternalError(s"Couldn't find stream named $id", loc)).get
     case TesslaCore.InputStream(name, loc) =>
-      inStreams.getOrElse(name.nameOpt.get, throw InternalError(s"Couldn't find stream named $name", loc))._1
+      inStreams.getOrElse(name, throw InternalError(s"Couldn't find input stream named $name", loc))._1
     case TesslaCore.Nil(_) => nil
   }
 

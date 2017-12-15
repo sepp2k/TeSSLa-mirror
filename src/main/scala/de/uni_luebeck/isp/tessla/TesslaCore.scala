@@ -4,7 +4,7 @@ object TesslaCore extends HasUniqueIdentifiers {
   final case class StreamDefinition(expression: Expression, typ: Type)
 
   final case class Specification(streams: Map[Identifier, StreamDefinition],
-                                 inStreams: Seq[(Identifier, StreamType, Location)],
+                                 inStreams: Seq[(String, StreamType, Location)],
                                  outStreams: Seq[(String, StreamRef)]) {
     override def toString = {
       inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
@@ -27,8 +27,8 @@ object TesslaCore extends HasUniqueIdentifiers {
     def withLoc(loc: Location): Stream = copy(loc = loc)
   }
 
-  final case class InputStream(id: Identifier, loc: Location) extends StreamRef {
-    override def toString = s"input($id)"
+  final case class InputStream(name: String, loc: Location) extends StreamRef {
+    override def toString = s"input($name)"
     def withLoc(loc: Location): InputStream = copy(loc = loc)
   }
 
