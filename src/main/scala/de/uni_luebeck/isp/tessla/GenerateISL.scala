@@ -9,7 +9,7 @@ object GenerateISL {
           case TrueCond => thenBody.flatMap{ p => p.toStringSeq() }
           case StringCond(s) => (s"if ${s} then " +: thenBody.flatMap{ p => p.toStringSeq() }) ++
             (elseBody match {
-              case Seq.empty => Seq("fi")
+              case Seq() => Seq("fi")
               case _ => ("else" +: elseBody.flatMap{ p => p.toStringSeq() }) ++ Seq("fi")
             })
         }
@@ -22,7 +22,11 @@ object GenerateISL {
       case (_, CondAst(TrueCond,body2,_)) => CondAst(TrueCond, other +: body2, Seq())
       case (_, _) => CondAst(TrueCond, Seq(this, other), Seq())
     }
-    abstract def insertOnLog(l:LogAst):IslAst
+    def insertOnLog(l:LogAst):IslAst = this match {
+      case ast :CondAst => ast.insertOnLog(l)
+      case ast :LogAst => ast.insertOnLog(l)
+      case _ => l
+    }
   }
   sealed abstract class IslCond
   case class StringCond(string:String) extends IslCond
@@ -155,7 +159,7 @@ object GenerateISL {
         }
       case Tessla.Identifier("thread_id_on",_) =>
         args match {
-          case Seq(Tessla.MacroCall(macroID, macroArgs)) =>
+          case Seq(Tessla.PositionalArgument(Tessla.MacroCall(macroID, macroArgs, _))) =>
             generateForMacro(macroID, macroArgs).insertOnLog(LogAst("thread_id"))
         }
       case _ =>
