@@ -59,6 +59,14 @@ class TimeQueue[D] (private[builtins] val list: List[Element[D]]) {
       s.mkString(", ")
     } else "empty"
   }
+
+  def dataTimeout = {
+    if (list.size >= 2) {
+      Some(list(2).time)
+    } else {
+      None
+    }
+  }
 }
 
 object TimeQueue {

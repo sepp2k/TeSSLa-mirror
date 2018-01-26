@@ -164,6 +164,17 @@ object CustomBuiltIns {
             Some(TesslaCore.IntLiteral(queue.fold(0: BigInt){(t1, t2, d, acc) => acc + (t2 - t1) * d}, loc))
         }
       }
+
+      case object DataTimeout extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
+        override def argumentTypes = Seq(Type)
+
+        override protected def returnType = Types.Int
+
+        override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
+          case Seq(IntTimeQueue(queue, _)) =>
+            queue.dataTimeout.map(to => TesslaCore.IntLiteral(to, loc))
+        }
+      }
     }
 
     case class IntSet(value: Set[BigInt], loc: Location) extends TesslaCore.CustomValue {
