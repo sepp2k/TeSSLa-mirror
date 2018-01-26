@@ -16,7 +16,7 @@ class Compiler {
 
   def compile(src: TesslaSource,
               timeUnitSource: Option[TesslaSource],
-              customBuiltIns: CustomBuiltIns = CustomBuiltIns.mapAndSet,
+              customBuiltIns: CustomBuiltIns = CustomBuiltIns.mapSetAndQueue,
               printCore: Boolean = false) = {
     val timeUnit = timeUnitSource.map(TimeUnit.parse)
     val result = applyPasses(src, timeUnit, customBuiltIns)

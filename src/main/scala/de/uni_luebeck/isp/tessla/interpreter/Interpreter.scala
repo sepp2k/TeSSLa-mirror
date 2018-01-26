@@ -148,7 +148,7 @@ object Interpreter {
               traceSource: TesslaSource,
               stopOn: Option[String] = None,
               timeUnit: Option[TesslaSource] = None,
-              customBuiltIns: CustomBuiltIns = CustomBuiltIns.mapAndSet,
+              customBuiltIns: CustomBuiltIns = CustomBuiltIns.mapSetAndQueue,
               printCore: Boolean = false,
               abortAt: Option[BigInt] = None,
              ): Result[Trace] = {
