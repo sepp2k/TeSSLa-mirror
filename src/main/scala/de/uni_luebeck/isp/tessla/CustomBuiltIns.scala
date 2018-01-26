@@ -24,7 +24,7 @@ object CustomBuiltIns {
 
     object IntIntMap {
       case object Type extends Types.CustomType {
-        override def toString = "Map<Int, Int>"
+        override def toString = "Map[Int, Int]"
       }
 
       case object Empty extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict{
@@ -174,7 +174,7 @@ object CustomBuiltIns {
 
     object IntSet {
       case object Type extends Types.CustomType {
-        override def toString = "Set<Int>"
+        override def toString = "Set[Int]"
       }
 
       case object Empty extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
@@ -225,15 +225,15 @@ object CustomBuiltIns {
     override def customTypes = Map("IntIntMap" -> IntIntMap.Type, "IntSet" -> IntSet.Type)
 
     override def customOperators = Map(
-      ("map_empty", 0) -> IntIntMap.Empty,
-      ("map_add", 3) -> IntIntMap.Add,
-      ("map_get", 2) -> IntIntMap.Get,
-      ("map_contains", 2) -> IntIntMap.Contains,
-      ("map_remove", 2) -> IntIntMap.Remove,
-      ("set_empty", 0) -> IntSet.Empty,
-      ("set_add", 2) -> IntSet.Add,
-      ("set_contains", 2) -> IntSet.Contains,
-      ("set_remove", 2) -> IntSet.Remove,
+      ("Map_empty", 0) -> IntIntMap.Empty,
+      ("Map_add", 3) -> IntIntMap.Add,
+      ("Map_get", 2) -> IntIntMap.Get,
+      ("Map_contains", 2) -> IntIntMap.Contains,
+      ("Map_remove", 2) -> IntIntMap.Remove,
+      ("Set_empty", 0) -> IntSet.Empty,
+      ("Set_add", 2) -> IntSet.Add,
+      ("Set_contains", 2) -> IntSet.Contains,
+      ("Set_remove", 2) -> IntSet.Remove,
       ("TimeQueue_empty", 0) -> IntTimeQueue.Empty,
       ("TimeQueue_enqueue", 3) -> IntTimeQueue.Enqueue,
       ("TimeQueue_removeOlder", 2) -> IntTimeQueue.RemoveOlder,

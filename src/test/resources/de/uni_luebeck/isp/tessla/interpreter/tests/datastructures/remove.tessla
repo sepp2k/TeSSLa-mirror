@@ -1,23 +1,23 @@
 in x: Events[Int]
 
-def get_count(counts, key) :=
-    if map_contains(counts, key)
-    then map_get(counts, key)
+def getCount(counts, key) :=
+    if Map_contains(counts, key)
+    then Map_get(counts, key)
     else 0
 
-def inc_count(counts, key) :=
+def incCount(counts, key) :=
     if key < 0
-    then map_remove(counts, -key)
-    else map_add(counts, key, get_count(counts, key) + 1)
+    then Map_remove(counts, -key)
+    else Map_add(counts, key, getCount(counts, key) + 1)
 
 def add(set, key) :=
     if key < 0
-    then set_remove(set, -key)
-    else set_add(set, key)
+    then Set_remove(set, -key)
+    else Set_add(set, key)
 
-def counts := default(inc_count(last(counts, x), x), map_empty)
+def counts := default(incCount(last(counts, x), x), Map_empty)
 
-def seen := default(add(last(seen, x), x), set_empty)
+def seen := default(add(last(seen, x), x), Set_empty)
 
 out x
 out counts

@@ -1,8 +1,8 @@
 in x: Events[Int]
 
-def seen := default(set_add(last(seen, x), x), set_empty)
+def seen := default(Set_add(last(seen, x), x), Set_empty)
 def new_or_old :=
-    if set_contains(last(seen), x)
+    if Set_contains(last(seen), x)
     then "old"
     else "new"
 
