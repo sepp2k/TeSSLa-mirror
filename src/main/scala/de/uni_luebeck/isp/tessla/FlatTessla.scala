@@ -59,7 +59,12 @@ abstract class FlatTessla {
   }
 
   case class BuiltInOperator(builtIn: BuiltIn) extends Expression {
-    def loc = Location.builtIn
+    override def loc = Location.builtIn
+  }
+
+  case object Nil extends Expression {
+    override def toString = "nil"
+    override def loc = Location.builtIn
   }
 
   case class InputStream(name: String, streamType: Type, loc: Location) extends Expression {

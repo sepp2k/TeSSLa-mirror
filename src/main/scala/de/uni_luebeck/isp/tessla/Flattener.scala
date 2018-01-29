@@ -52,7 +52,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     case (name, primOp) => name -> FlatTessla.PrimitiveOperator(primOp)
   }
 
-  val stdlib = builtIns.map {
+  val stdlib = ("nil" -> FlatTessla.VariableEntry(FlatTessla.Nil, None)) +: builtIns.map {
     case (name, b) => name -> FlatTessla.VariableEntry(FlatTessla.BuiltInOperator(b), None)
   }
 
