@@ -39,7 +39,7 @@ abstract class FlatTessla {
         case (name, entry) =>
           val typeAnnotation = typeAnnotationToString(entry.typeInfo)
           s"def $name$typeAnnotation = ${entry.expression}"
-      }.mkString("\n") + parent.map(p => s"\n-- Parent = Scope ${p.hashCode}").getOrElse("")
+      }.mkString("\n") + parent.map(p => s"\n-- Parent = Scope ${p.hashCode}\n").getOrElse("") ++ "-- /Scope"
     }
   }
 
