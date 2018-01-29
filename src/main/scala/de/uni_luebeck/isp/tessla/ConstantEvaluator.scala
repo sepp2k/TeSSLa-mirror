@@ -168,7 +168,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case FlatTessla.Merge => stream(TesslaCore.Merge(getStream(arguments(0)), getStream(arguments(1)), loc))
       case FlatTessla.PrimitiveOperator(op) =>
         if (arguments.forall(_.isInstanceOf[ValueEntry])) {
-          ValueEntry(evalPrimitiveOperator(op, arguments.map(_.asInstanceOf[ValueEntry].value)))
+          ValueEntry(evalPrimitiveOperator(op, arguments.map(_.asInstanceOf[ValueEntry].value), loc).map(_.get))
         } else {
           val typeArgs = Seq() // TODO: type args
           stream(TesslaCore.Lift(op, typeArgs, arguments.map(_.asInstanceOf[StreamEntry].stream), loc))
@@ -187,5 +187,24 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
 }
 
 object ConstantEvaluator {
-  def evalPrimitiveOperator(op: PrimitiveOperators.PrimitiveOperator, arguments: Seq[Lazy[TesslaCore.Value]]) = ???
+  private def getInt(v: TesslaCore.Value): BigInt = v match {
+    case intLit: TesslaCore.IntLiteral => intLit.value
+    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Int, got: $v", v.loc)
+  }
+
+  def evalPrimitiveOperator(op: PrimitiveOperators.PrimitiveOperator,
+                            arguments: Seq[Lazy[TesslaCore.Value]],
+                            loc: Location): Lazy[Option[TesslaCore.Value]] = Lazy {
+    def binIntOp(op: (BigInt, BigInt) => BigInt) = {
+      Some(TesslaCore.IntLiteral(op(getInt(arguments(0)), getInt(arguments(1))), loc))
+    }
+
+    op match {
+      case PrimitiveOperators.Add => binIntOp(_ + _)
+      case PrimitiveOperators.Sub => binIntOp(_ - _)
+      case PrimitiveOperators.Mul => binIntOp(_ * _)
+      case PrimitiveOperators.Div => binIntOp(_ / _)
+      case _ => ???
+    }
+  }
 }

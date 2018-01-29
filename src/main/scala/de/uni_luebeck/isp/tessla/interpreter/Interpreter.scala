@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.util.Lazy
-import de.uni_luebeck.isp.tessla.{Compiler, Errors, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{Compiler, ConstantEvaluator, Errors, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase}
 
 import scala.collection.mutable
 
@@ -36,9 +36,12 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.Lift(op, typeArgs, Seq(), loc) =>
       throw Errors.InternalError("Lift without arguments should be impossible")
     case TesslaCore.Lift(op, typeArgs, argStreams, loc) =>
-      ???
+      lift(argStreams.map(evalStream)) { arguments =>
+        // TODO: Make this actually lazy
+        ConstantEvaluator.evalPrimitiveOperator(op, arguments.map(Lazy(_)), exp.loc)
+      }
     case TesslaCore.Default(values, defaultValue, _) =>
-      evalStream(values).default(defaultValue)
+      evalStream(values).default(Lazy(defaultValue))
     case TesslaCore.DefaultFrom(values, defaults, _) =>
       evalStream(values).default(evalStream(defaults))
     case TesslaCore.Last(values, clock, _) =>
