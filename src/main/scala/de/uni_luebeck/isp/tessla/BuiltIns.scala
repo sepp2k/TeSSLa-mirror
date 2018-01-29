@@ -76,7 +76,7 @@ class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
         (Seq(name -> TesslaCore.DelayedLast(values, delays, loc)), Stream(TesslaCore.Stream(name, loc), valueType))
       case (Seq(values @ Literal(_), _), _, _) =>
         throw TypeMismatch(Types.Stream(Types.Nothing), values.typ, values.loc)
-      case (Seq(_, delays @ Literal(_), _), _, _) =>
+      case (Seq(_, delays @ Literal(_)), _, _) =>
         throw TypeMismatch(Types.Stream(Types.Nothing), delays.typ, delays.loc)
     },
     ("+", 2) -> primOp(PrimitiveOperators.Add),
