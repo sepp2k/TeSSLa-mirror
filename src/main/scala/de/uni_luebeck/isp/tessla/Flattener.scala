@@ -124,19 +124,27 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       case e => (Seq(), e)
     }
     checkForDuplicates(parameters.map(_.nameWithLoc) ++ innerDefs.map(_.id))
-    val innerScope = new FlatTessla.Scope(Some(scope))
-    val paramIdMap = createIdMap(parameters.map(_.name))
-    val innerIdMap = idMap ++ paramIdMap ++ createIdMap(innerDefs.map(_.id.name))
-    parameters.foreach { param =>
-      innerScope.addVariable(paramIdMap(param.name), FlatTessla.VariableEntry(param, param.parameterType))
-    }
-    innerDefs.foreach { innerDef =>
-      addDefinition(innerDef, innerScope, innerIdMap)
-    }
-    val body = translateExpression(exp, innerScope, innerIdMap)
     if (parameters.isEmpty) {
+      // For parameterless definitions, inner definitions become part of the global scope in flat tessla.
+      // Flat tessla only has distinct scope for macros with parameters (as those need to be instantiated
+      // multiple times
+      val innerIdMap = idMap ++ createIdMap(innerDefs.map(_.id.name))
+      innerDefs.foreach { innerDef =>
+        addDefinition(innerDef, scope, innerIdMap)
+      }
+      val body = translateExpression(exp, scope, innerIdMap)
       scope.addVariable(idMap(definition.id.name), FlatTessla.VariableEntry(body, definition.returnType))
     } else {
+      val innerScope = new FlatTessla.Scope(Some(scope))
+      val paramIdMap = createIdMap(parameters.map(_.name))
+      val innerIdMap = idMap ++ paramIdMap ++ createIdMap(innerDefs.map(_.id.name))
+      parameters.foreach { param =>
+        innerScope.addVariable(paramIdMap(param.name), FlatTessla.VariableEntry(param, param.parameterType))
+      }
+      innerDefs.foreach { innerDef =>
+        addDefinition(innerDef, innerScope, innerIdMap)
+      }
+      val body = translateExpression(exp, innerScope, innerIdMap)
       // TODO: Handle type parameters by implementing a proper environment for them (different namespace)
       val mac = FlatTessla.Macro(Seq(), parameters, innerScope, definition.returnType, body, definition.loc)
       scope.addVariable(idMap(definition.id.name), FlatTessla.VariableEntry(mac, None))
