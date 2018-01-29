@@ -53,7 +53,7 @@ object PrimitiveOperators {
   }
 
   trait Monomorphic {
-    protected def argumentTypes: Seq[Types.ValueType]
+    def argumentTypes: Seq[Types.ValueType]
     protected def returnType: Types.ValueType
 
     private def checkArgumentTypes(argTypes: Seq[(Types.ValueType, Location)]) = {

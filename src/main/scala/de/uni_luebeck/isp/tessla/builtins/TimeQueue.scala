@@ -26,8 +26,6 @@ class TimeQueue[D] (private[builtins] val list: List[Element[D]]) {
 
   def enqueue(time: BigInt, value: D): TimeQueue[D] = TimeQueue(list, time, value)
 
-  def newest(default: D) = if (list.isEmpty) default else list(list.length - 1).value
-
   def removeNewer(time: BigInt): TimeQueue[D] = {
     if (list.isEmpty) {
       this
