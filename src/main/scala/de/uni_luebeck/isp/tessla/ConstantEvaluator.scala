@@ -1,9 +1,11 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Errors.{UndefinedNamedArg, UndefinedTimeUnit}
+import de.uni_luebeck.isp.tessla.Errors.{InternalError, UndefinedTimeUnit}
 import de.uni_luebeck.isp.tessla.util.Lazy
 
 import scala.collection.mutable
+
+import ConstantEvaluator._
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.IdentifierFactory with TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
   type Env = Map[TypedTessla.Identifier, EnvEntryWrapper]
@@ -22,8 +24,15 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
 
   override def translateSpec(spec: TypedTessla.Specification): TesslaCore.Specification = {
     val env = createEnvForScopeWithParents(spec.globalScope)
-    translateEnv(env)
-    TesslaCore.Specification(translatedStreams.toMap, ???, ???)
+    translateEnv(env, None)
+    def inputStreams = spec.globalScope.variables.collect {
+      case (name, TypedTessla.VariableEntry(is: TypedTessla.InputStream, typ)) =>
+        (is.name, translateStreamType(typ), is.loc)
+    }.toSeq
+    def outputStreams = spec.outStreams.map { os =>
+      (os.name, getStream(env(os.id).entry))
+    }
+    TesslaCore.Specification(translatedStreams.toMap, inputStreams, outputStreams)
   }
 
   def createEnvForScope(scope: TypedTessla.Scope): Env = {
@@ -36,17 +45,17 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     outerEnv ++ innerEnv
   }
 
-  def translateEnv(env: Env): Unit = {
+  def translateEnv(env: Env, overrideLoc: Option[Location]): Unit = {
     env.foreach {
       case (_, entryWrapper) =>
-        translateEntry(env, entryWrapper)
+        translateEntry(env, entryWrapper, overrideLoc)
     }
   }
 
-  def translateEntry(env: Env, wrapper: EnvEntryWrapper): Unit = wrapper.entry match {
+  def translateEntry(env: Env, wrapper: EnvEntryWrapper, overrideLoc: Option[Location]): Unit = wrapper.entry match {
     case NotYetTranslated(entry) =>
       wrapper.entry = Translating
-      wrapper.entry = translateExpression(env, entry.expression)
+      wrapper.entry = translateExpression(env, entry.expression, entry.typeInfo, overrideLoc)
     case Translating =>
       // TODO Proper loc with stack trace
       throw Errors.InfiniteRecursion(Location.unknown)
@@ -54,10 +63,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       /* do nothing */
   }
 
-  def translateType(typ: TypedTessla.Type) = typ match {
+  def translateStreamType(typ: TypedTessla.Type) = typ match {
     case TypedTessla.UnknownType =>
       // TODO: Placeholder. Will be replaced once TypedTessla has proper types
-      TesslaCore.IntType
+      TesslaCore.StreamType(TesslaCore.IntType)
   }
 
   def translateLiteral(literal: Tessla.LiteralValue, loc: Location): TesslaCore.Value = literal match {
@@ -78,39 +87,105 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       TesslaCore.Unit(loc)
   }
 
-  def translateExpression(env: Env, expression: TypedTessla.Expression): EnvEntry = expression match {
+  /**
+    * @param overrideLoc If a definition is inlined, this is the location of the original variable use, so the locs
+    *                    don't point to the expression that the variable refers to, but to where the variable used to
+    *                    be.
+    */
+  def translateExpression(env: Env, expression: TypedTessla.Expression, typ: TypedTessla.Type, overrideLoc: Option[Location]): EnvEntry = expression match {
+    case TypedTessla.Nil =>
+      // Nil should only appear directly in the definition of the built-in "nil" and always be referred to through
+      // the "nil" variable otherwise. So the location we set here, will only be used for the built-in definition
+      // and be overridden by the variable's loc otherwise
+      StreamEntry(TesslaCore.Nil(overrideLoc.getOrElse(Location.builtIn)))
     case TypedTessla.BuiltInOperator(builtIn) => BuiltInEntry(builtIn)
     case mac: TypedTessla.Macro => MacroEntry(mac)
     case TypedTessla.Literal(lit, loc) =>
       // Evaluate the literal outside of the Lazy because we want TimeUnit-errors to appear even if
       // the expression is not used
       // TimeUnit-errors inside of macros *are* swallowed if the macro is never called, which is what
-      // we want because a library might define macros using timeunits and, as long as you don't call
+      // we want because a library might define macros using time units and, as long as you don't call
       // those macros, you should still be able to use the library when you don't have a time unit set.
-      val translatedLit = translateLiteral(lit, loc)
+      val translatedLit = translateLiteral(lit, overrideLoc.getOrElse(loc))
       ValueEntry(Lazy(translatedLit))
     case p: TypedTessla.Parameter =>
-      translateVar(env, p.id)
+      translateVar(env, p.id, p.loc)
     case v: TypedTessla.Variable =>
-      translateVar(env, v.id)
+      translateVar(env, v.id, v.loc)
     case i: TypedTessla.InputStream =>
-      StreamEntry(TesslaCore.InputStream(i.name, i.loc))
+      StreamEntry(TesslaCore.InputStream(i.name, overrideLoc.getOrElse(i.loc)))
     case call: TypedTessla.MacroCall =>
-      translateVar(env, call.macroID) match {
+      // No checks regarding arity or non-existing or duplicate named arguments because those mistakes
+      // would be caught by the type checker
+      translateVar(env, call.macroID, call.macroLoc) match {
         case BuiltInEntry(builtIn) =>
           val args = call.args.map {
             case FlatTessla.PositionalArgument(id, loc) =>
-              translateVar(env, id)
+              translateVar(env, id, loc)
             case FlatTessla.NamedArgument(name, _, loc) =>
-              throw UndefinedNamedArg(name, loc)
+              throw InternalError(s"Undefined keyword arg $name for built-in should've been caught by type checker", loc)
           }
-          ???
-        case MacroEntry(mac) => ???
+          translateBuiltIn(builtIn, args, typ, call.loc)
+        case MacroEntry(mac) =>
+          var posArgIdx = 0
+          val args = call.args.map {
+            case FlatTessla.PositionalArgument(id, _) =>
+              val param = mac.parameters(posArgIdx)
+              posArgIdx += 1
+              param -> translateVar(env, id, param.loc)
+            case FlatTessla.NamedArgument(name, id, loc) =>
+              mac.parameters.find(_.name == name).get -> translateVar(env, id, loc)
+          }.toMap
+          translateMacro(mac, args, call.loc)
+        case _ =>
+          throw InternalError("Applying non-macro/builtin - should have been caught by the type checker.")
       }
   }
 
-  def translateVar(env: Env, id: TypedTessla.Identifier): EnvEntry = {
-    translateEntry(env, env(id))
+  def getStream(envEntry: EnvEntry) = envEntry match {
+    case StreamEntry(s) => s
+    case other => throw InternalError(s"Wrong type of environment entry: Expected StreamEntry, found: $other")
+  }
+
+  def getValue(envEntry: EnvEntry) = envEntry match {
+    case ValueEntry(s) => s
+    case other => throw InternalError(s"Wrong type of environment entry: Expected ValueEntry, found: $other")
+  }
+
+  def translateBuiltIn(builtIn: FlatTessla.BuiltIn, arguments: Seq[EnvEntry], typ: TypedTessla.Type, loc: Location): EnvEntry = {
+    def stream(coreExp: TesslaCore.Expression) = {
+      val id = makeIdentifier()
+      translatedStreams(id) = TesslaCore.StreamDefinition(coreExp, translateStreamType(typ))
+      StreamEntry(TesslaCore.Stream(id, loc))
+    }
+    builtIn match {
+      case FlatTessla.Default => stream(TesslaCore.Default(getStream(arguments(0)), getValue(arguments(1)), loc))
+      case FlatTessla.DefaultFrom => stream(TesslaCore.DefaultFrom(getStream(arguments(0)), getStream(arguments(1)), loc))
+      case FlatTessla.Last => stream(TesslaCore.Last(getStream(arguments(0)), getStream(arguments(1)), loc))
+      case FlatTessla.DelayedLast => stream(TesslaCore.DelayedLast(getStream(arguments(0)), getStream(arguments(1)), loc))
+      case FlatTessla.Const => stream(TesslaCore.Const(getStream(arguments(0)), getValue(arguments(1)), loc))
+      case FlatTessla.Time => stream(TesslaCore.Time(getStream(arguments(0)), loc))
+      case FlatTessla.Merge => stream(TesslaCore.Merge(getStream(arguments(0)), getStream(arguments(1)), loc))
+      case FlatTessla.PrimitiveOperator(op) =>
+        if (arguments.forall(_.isInstanceOf[ValueEntry])) {
+          ValueEntry(evalPrimitiveOperator(op, arguments.map(_.asInstanceOf[ValueEntry].value)))
+        } else {
+          val typeArgs = Seq() // TODO: type args
+          stream(TesslaCore.Lift(op, typeArgs, arguments.map(_.asInstanceOf[StreamEntry].stream), loc))
+        }
+    }
+  }
+
+  def translateMacro(mac: TypedTessla.Macro, arguments: Map[TypedTessla.Parameter, EnvEntry], loc: Location): EnvEntry = {
+    ???
+  }
+
+  def translateVar(env: Env, id: TypedTessla.Identifier, loc: Location): EnvEntry = {
+    translateEntry(env, env(id), Some(loc))
     env(id).entry
   }
+}
+
+object ConstantEvaluator {
+  def evalPrimitiveOperator(op: PrimitiveOperators.PrimitiveOperator, arguments: Seq[Lazy[TesslaCore.Value]]) = ???
 }

@@ -10,7 +10,8 @@ class Compiler {
       .andThen(new Printer[FlatTessla.Specification])
       .andThen(new TypeChecker)
       .andThen(new Printer[TypedTessla.Specification])
-      .andThen(new DummyPhase[TypedTessla.Specification, TesslaCore.Specification])
+      .andThen(new ConstantEvaluator(unit))
+      .andThen(new Printer[TesslaCore.Specification])
   }
 
   class DummyPhase[T,U] extends TranslationPhase[T, U] {

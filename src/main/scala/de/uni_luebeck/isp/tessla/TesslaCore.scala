@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 object TesslaCore extends HasUniqueIdentifiers {
-  final case class StreamDefinition(expression: Expression, typ: Type)
+  final case class StreamDefinition(expression: Expression, typ: StreamType)
 
   final case class Specification(streams: Map[Identifier, StreamDefinition],
                                  inStreams: Seq[(String, StreamType, Location)],
@@ -43,6 +43,10 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   final case class DefaultFrom(valueStream: StreamRef, defaultStream: StreamRef, loc: Location) extends Expression {
     override def toString = s"defaultFrom($valueStream, $defaultStream)"
+  }
+
+  final case class Const(stream: StreamRef, value: Value, loc: Location) extends Expression {
+    override def toString = s"const($stream, $value)"
   }
 
   final case class Time(stream: StreamRef, loc: Location) extends Expression {
