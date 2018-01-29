@@ -57,6 +57,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"delayedLast($values, $delays)"
   }
 
+  final case class Merge(stream1: StreamRef, stream2: StreamRef, loc: Location) extends Expression {
+    override def toString = s"merge($stream1, $stream2)"
+  }
+
   final case class Lift(operator: PrimitiveOperators.PrimitiveOperator, typeArgs: Seq[Type], args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = operator match {
       case _: PrimitiveOperators.PrefixOperator => s"$operator${args(0)}"

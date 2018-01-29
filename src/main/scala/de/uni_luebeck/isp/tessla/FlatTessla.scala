@@ -121,6 +121,7 @@ object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
   case object Time extends BuiltIn
   case object DelayedLast extends BuiltIn
   case object Const extends BuiltIn
+  case object Merge extends BuiltIn
   case class PrimitiveOperator(op: PrimitiveOperators.PrimitiveOperator) extends BuiltIn {
     override def toString = op.toString
   }

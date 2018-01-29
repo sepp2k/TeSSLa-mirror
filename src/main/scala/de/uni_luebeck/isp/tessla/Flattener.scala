@@ -47,7 +47,8 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     "last" -> FlatTessla.Last,
     "delayedLast" -> FlatTessla.DelayedLast,
     "time" -> FlatTessla.Time,
-    "const" -> FlatTessla.Const
+    "const" -> FlatTessla.Const,
+    "merge" -> FlatTessla.Merge
   ) ++ primitiveOperators.map {
     case (name, primOp) => name -> FlatTessla.PrimitiveOperator(primOp)
   }
