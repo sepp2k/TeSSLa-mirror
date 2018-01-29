@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla.Specification] {
   override def translateSpec(spec: FlatTessla.Specification): TypedTessla.Specification = {
-    val scope = translateScope(spec.globalScope, None)
+    val scope = translateScopeWithParents(spec.globalScope)
     TypedTessla.Specification(scope, spec.outStreams, spec.outAllLocation)
   }
 
@@ -17,7 +17,14 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
     result
   }
 
+  def translateScopeWithParents(scope: FlatTessla.Scope): TypedTessla.Scope = {
+    val parent = scope.parent.map(translateScopeWithParents)
+    translateScope(scope, parent)
+  }
+
   def translateExpression(expression: FlatTessla.Expression, scope: TypedTessla.Scope): TypedTessla.Expression = expression match {
+    case FlatTessla.Nil =>
+      TypedTessla.Nil
     case v: FlatTessla.Variable =>
       TypedTessla.Variable(v.id, v.loc)
     case lit: FlatTessla.Literal =>
@@ -27,7 +34,7 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
     case param: FlatTessla.Parameter =>
       TypedTessla.Parameter(param.param, param.id)
     case call: FlatTessla.MacroCall =>
-      TypedTessla.MacroCall(call.macroID, call.args, call.loc)
+      TypedTessla.MacroCall(call.macroID, call.macroLoc, call.args, call.loc)
     case FlatTessla.BuiltInOperator(b) =>
       TypedTessla.BuiltInOperator(b)
     case mac: FlatTessla.Macro =>
