@@ -90,7 +90,7 @@ abstract class FlatTessla {
     override def toString = id.toString
   }
 
-  case class MacroCall(macroID: Identifier, args: Seq[Argument], loc: Location) extends Expression {
+  case class MacroCall(macroID: Identifier, macroLoc: Location, args: Seq[Argument], loc: Location) extends Expression {
     override def toString = args.mkString(s"$macroID(", ", ", ")")
   }
 

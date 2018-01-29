@@ -192,7 +192,8 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
           val id = expToId(translateExpression(arg.expr, scope, idMap), scope)
           FlatTessla.PositionalArgument(id, arg.loc)
       }
-      FlatTessla.MacroCall(getExp(call.macroID, idMap).id, args, call.loc)
+      val mac = getExp(call.macroID, idMap)
+      FlatTessla.MacroCall(mac.id, mac.loc, args, call.loc)
 
     case block: Tessla.Block =>
       val innerIdMap = idMap ++ createIdMap(block.definitions.map(_.id.name))
