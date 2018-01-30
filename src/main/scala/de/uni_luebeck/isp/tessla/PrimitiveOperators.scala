@@ -35,21 +35,21 @@ object PrimitiveOperators {
 
   abstract class CustomBuiltIn extends PrimitiveOperator
 
-  final case class Const(value: TesslaCore.Value) extends PrimitiveOperator with Strict {
+  final case class Const(value: TesslaCore.Value) extends PrimitiveOperator {
     override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = value.typ
-    override def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = Some(value)
+    override def doEval(values: Seq[TesslaCore.Value], loc: Location) = Some(value)
   }
 
   /**
     * Take a variable amount of arguments and return the first one
     */
-  case object First extends PrimitiveOperator with Strict {
+  case object First extends PrimitiveOperator {
     override def returnTypeFor(argTypes: Seq[(Types.ValueType, Location)]) = {
       require(argTypes.nonEmpty)
       argTypes.head._1
     }
 
-    override def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = Some(values.head)
+    override def doEval(values: Seq[TesslaCore.Value], loc: Location) = Some(values.head)
   }
 
   trait Monomorphic {
