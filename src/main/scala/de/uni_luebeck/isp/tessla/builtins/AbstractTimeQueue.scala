@@ -79,4 +79,9 @@ class AbstractTimeQueue(private[builtins] val unknownBefore: BigIntInfinity, pri
       queue.fold(BigInterval.top)(f)
 
   override def toString() = (if (unknownBefore.isZero) "" else s"< $unknownBefore: T, ") + queue.toString
+
+  override def equals(obj: scala.Any) = obj match {
+    case that: AbstractTimeQueue => unknownBefore == that.unknownBefore && queue == that.queue
+    case _ => false
+  }
 }

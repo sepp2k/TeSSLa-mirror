@@ -65,6 +65,11 @@ class TimeQueue[D] (private[builtins] val list: List[Element[D]]) {
       None
     }
   }
+
+  override def equals(obj: scala.Any) = obj match {
+    case that: TimeQueue[D] => list == that.list
+    case _ => false
+  }
 }
 
 object TimeQueue {
