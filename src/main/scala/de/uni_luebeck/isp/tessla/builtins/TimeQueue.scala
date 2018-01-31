@@ -59,7 +59,8 @@ class TimeQueue[D] (private[builtins] val list: List[Element[D]]) {
 
   def dataTimeout = {
     if (list.size >= 2) {
-      Some(list(2).time)
+      val second = list(1)
+      Some(second.time)
     } else {
       None
     }
