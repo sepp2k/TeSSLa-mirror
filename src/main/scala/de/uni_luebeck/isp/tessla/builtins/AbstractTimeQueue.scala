@@ -88,11 +88,11 @@ class AbstractTimeQueue(private[builtins] val unknownBefore: BigIntInfinity, pri
 
   def removeNewer(time: BigInt) = new AbstractTimeQueue(unknownBefore.min(BigIntInfinity(time)), queue.removeNewer(time))
 
-  def fold(acc: BigInterval)(f: (BigInt, BigInt, BigInterval, BigInterval) => BigInterval): BigInterval =
+  def fold(acc: BigInterval, until: BigInt)(f: (BigInt, BigInt, BigInterval, BigInterval) => BigInterval): BigInterval =
     if (unknownBefore.isZero)
-      queue.fold(acc)(f)
+      queue.fold(acc, until)(f)
     else
-      queue.fold(BigInterval.top)(f)
+      queue.fold(BigInterval.top, until)(f)
 
   override def toString() = (if (unknownBefore.isZero) "" else s"< $unknownBefore: T, ") + queue.toString
 

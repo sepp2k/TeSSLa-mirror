@@ -39,22 +39,21 @@ class TimeQueue[D] (private[builtins] val list: List[Element[D]]) {
     }
   }
 
-  def fold[R](acc: R)(f: (BigInt, BigInt, D, R) => R): R = {
-    if (list.length <= 1) {
-      acc
-    } else {
-      val first = list(0)
-      val second = list(1)
-      TimeQueue(list.tail).fold(f(first.time, second.time, first.value, acc))(f)
-    }
+  def fold[R](acc: R, until: BigInt)(f: (BigInt, BigInt, D, R) => R): R = list match {
+    case Nil => acc
+    case Element(t1, value)::Nil => f(t1, until, value, acc)
+    case Element(t1, value)::Element(t2, _)::tail => TimeQueue(list.tail).fold(f(t1, t2, value, acc), until)(f)
   }
 
   override def toString = {
     if (list.nonEmpty) {
-      val last = list(list.length - 1)
-      val s = fold(List.empty[String]){(t1, t2, d, acc) => acc :+ s"[$t1, $t2) -> $d"} :+
-        s"${last.time} -> ${last.value}"
-      s.mkString(", ")
+      fold(List.empty[String], list.last.time){(t1, t2, d, acc) =>
+        if (t1 == t2) {
+          acc :+ s"$t1 -> $d"
+        } else {
+          acc :+ s"[$t1, $t2) -> $d"
+        }
+      }.mkString(", ")
     } else "empty"
   }
 

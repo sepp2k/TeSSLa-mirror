@@ -21,7 +21,7 @@ class TimeQueueTests extends FunSuite {
   }
 
   test("fold") {
-    val q = TimeQueue.empty.enqueue(4, 4).enqueue(8,2).enqueue(10,987656940)
-    assert(q.fold(0){(t1, t2, d, acc) => acc + (t2.intValue() - t1.intValue()) * d} == 20)
+    val q = TimeQueue.empty.enqueue(4, 4).enqueue(8, 2).enqueue(10, 987656940)
+    assert(q.fold(0, 10){(t1, t2, d, acc) => acc + (t2.intValue() - t1.intValue()) * d} == 20)
   }
 }

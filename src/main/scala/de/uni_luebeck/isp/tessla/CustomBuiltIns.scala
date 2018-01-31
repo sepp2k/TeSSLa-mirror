@@ -144,13 +144,13 @@ object CustomBuiltIns {
       }
 
       case object WeightedSum extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
-        override def argumentTypes = Seq(Type)
+        override def argumentTypes = Seq(Type, Types.Int)
 
         override protected def returnType = Types.Int
 
         override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
-          case Seq(IntTimeQueue(queue, _)) =>
-            Some(TesslaCore.IntLiteral(queue.fold(0: BigInt){(t1, t2, d, acc) => acc + (t2 - t1) * d}, loc))
+          case Seq(IntTimeQueue(queue, _), TesslaCore.IntLiteral(until, _)) =>
+            Some(TesslaCore.IntLiteral(queue.fold(0: BigInt, until){(t1, t2, d, acc) => acc + (t2 - t1) * d}, loc))
         }
       }
 
@@ -249,13 +249,13 @@ object CustomBuiltIns {
         (acc.limit(0, (a - startTime) * 1000) + v.limit(0, 1000) * BigInterval(b-a))
 
       case object WeightedSum1 extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
-        override def argumentTypes = Seq(Type, Types.Int)
+        override def argumentTypes = Seq(Type, Types.Int, Types.Int)
 
         override protected def returnType = Types.Int
 
         override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
-          case Seq(AbstractIntTimeQueue(queue, _), TesslaCore.IntLiteral(startTime, _)) =>
-            val value = queue.fold(BigInterval(0))(weightedSum(startTime)).left
+          case Seq(AbstractIntTimeQueue(queue, _), TesslaCore.IntLiteral(startTime, _), TesslaCore.IntLiteral(until, _)) =>
+            val value = queue.fold(BigInterval(0), until)(weightedSum(startTime)).left
             val v = value.value match {
               case None => INFINITY
               case Some(x) => x
@@ -265,13 +265,13 @@ object CustomBuiltIns {
       }
 
       case object WeightedSum2 extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
-        override def argumentTypes = Seq(Type, Types.Int)
+        override def argumentTypes = Seq(Type, Types.Int, Types.Int)
 
         override protected def returnType = Types.Int
 
         override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
-          case Seq(AbstractIntTimeQueue(queue, _), TesslaCore.IntLiteral(startTime, _)) =>
-            val value = queue.fold(BigInterval(0))(weightedSum(startTime)).right
+          case Seq(AbstractIntTimeQueue(queue, _), TesslaCore.IntLiteral(startTime, _), TesslaCore.IntLiteral(until, _)) =>
+            val value = queue.fold(BigInterval(0), until)(weightedSum(startTime)).right
             val v = value.value match {
               case None => INFINITY
               case Some(x) => x

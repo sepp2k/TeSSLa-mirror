@@ -7,7 +7,7 @@ def queue := TimeQueue_removeOlder(
     load),
   time(load) - 5)
 def s := max(time(load) - 5, time(firstEvent(load)))
-def avg := if (time(load) - s) > 0 then TimeQueue_weightedSum(queue) / (time(load) - s) else 0
+def avg := if (time(load) - s) > 0 then TimeQueue_weightedSum(queue, time(load)) / (time(load) - s) else 0
 
 out avg
 

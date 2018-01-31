@@ -9,8 +9,8 @@ def queue := AbstractTimeQueue_removeOlder(
     load),
   time(load) - 5)
 def s := max(time(load) - 5, time(firstEvent(load)))
-def avg1 := if (time(load) - s) > 0 then limit(0, 1000, AbstractTimeQueue_weightedSum1(queue, s) / (time(load) - s)) else 0
-def avg2 := if (time(load) - s) > 0 then limit(0, 1000, AbstractTimeQueue_weightedSum2(queue, s) / (time(load) - s)) else 0
+def avg1 := if (time(load) - s) > 0 then limit(0, 1000, AbstractTimeQueue_weightedSum1(queue, s, time(load)) / (time(load) - s)) else 0
+def avg2 := if (time(load) - s) > 0 then limit(0, 1000, AbstractTimeQueue_weightedSum2(queue, s, time(load)) / (time(load) - s)) else 0
 
 out avg1
 out avg2
