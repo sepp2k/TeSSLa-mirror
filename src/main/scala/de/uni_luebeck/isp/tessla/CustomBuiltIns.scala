@@ -210,6 +210,17 @@ object CustomBuiltIns {
         }
       }
 
+      case object EnqueueFinite extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
+        override def argumentTypes = Seq(Type, Types.Int, Types.Int, Types.Int)
+
+        override protected def returnType = Type
+
+        override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
+          case Seq(AbstractIntTimeQueue(queue, _), TesslaCore.IntLiteral(time, _), TesslaCore.IntLiteral(value, _), TesslaCore.IntLiteral(limit, _)) =>
+            Some(AbstractIntTimeQueue(queue.enqueueFinite(time, BigInterval(value), limit.intValue()), loc))
+        }
+      }
+
       case object RemoveOlder extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
         override def argumentTypes = Seq(Type, Types.Int)
 
@@ -350,6 +361,7 @@ object CustomBuiltIns {
       "AbstractTimeQueue_empty" -> AbstractIntTimeQueue.Empty,
       "AbstractTimeQueue_top" -> AbstractIntTimeQueue.Top,
       "AbstractTimeQueue_enqueue" -> AbstractIntTimeQueue.Enqueue,
+      "AbstractTimeQueue_enqueueFinite" -> AbstractIntTimeQueue.EnqueueFinite,
       "AbstractTimeQueue_removeOlder" -> AbstractIntTimeQueue.RemoveOlder,
       "AbstractTimeQueue_removeNewer" -> AbstractIntTimeQueue.RemoveNewer,
       "AbstractTimeQueue_weightedSum1" -> AbstractIntTimeQueue.WeightedSum1,

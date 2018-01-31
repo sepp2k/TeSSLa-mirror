@@ -28,6 +28,11 @@ class BigIntInfinity(val value: Option[BigInt]) extends Ordered[BigIntInfinity]{
     case (_, None) => new BigIntInfinity(None)
     case (Some(x), Some(y)) => new BigIntInfinity(Some(x + y))
   }
+  def max(that: BigIntInfinity) = (value, that.value) match {
+    case (None, _) => new BigIntInfinity(None)
+    case (_, None) => new BigIntInfinity(None)
+    case (Some(x), Some(y)) => BigIntInfinity(x.max(y))
+  }
 
   override def toString = value match {
     case None => "∞"
@@ -69,6 +74,17 @@ class AbstractTimeQueue(private[builtins] val unknownBefore: BigIntInfinity, pri
     new AbstractTimeQueue(BigIntInfinity(0), queue.removeOlder(time))
 
   def enqueue(time: BigInt, value: BigInterval) = new AbstractTimeQueue(unknownBefore, queue.enqueue(time, value))
+
+  def enqueueFinite(time: BigInt, value: BigInterval, limit: Int): AbstractTimeQueue = {
+    require(limit >= 2)
+    if (queue.list.length < limit) {
+      new AbstractTimeQueue(unknownBefore, queue.enqueue(time, value))
+    } else {
+      val first = queue.list(0)
+      val second = queue.list(1)
+      new AbstractTimeQueue(unknownBefore.max(BigIntInfinity(second.time)), TimeQueue(queue.list.tail)).enqueueFinite(time, value, limit)
+    }
+  }
 
   def removeNewer(time: BigInt) = new AbstractTimeQueue(unknownBefore.min(BigIntInfinity(time)), queue.removeNewer(time))
 

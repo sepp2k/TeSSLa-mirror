@@ -75,8 +75,8 @@ class TimeQueue[D] (private[builtins] val list: List[Element[D]]) {
 object TimeQueue {
   def apply[D]() = new TimeQueue[D](List())
   def empty[D] = new TimeQueue[D](List.empty)
-  private def apply[D](list: List[Element[D]]) = new TimeQueue[D](list)
-  private def apply[D](time: BigInt, value: D) = new TimeQueue[D](List(Element(time, value)))
-  private def apply[D](time: BigInt, value: D, list: List[Element[D]]) = new TimeQueue[D](List(Element(time, value)) ++ list)
-  private def apply[D](list: List[Element[D]], time: BigInt, value: D) = new TimeQueue[D](list ++ List(Element(time, value)))
+  private[builtins] def apply[D](list: List[Element[D]]) = new TimeQueue[D](list)
+  private[builtins] def apply[D](time: BigInt, value: D) = new TimeQueue[D](List(Element(time, value)))
+  private[builtins] def apply[D](time: BigInt, value: D, list: List[Element[D]]) = new TimeQueue[D](List(Element(time, value)) ++ list)
+  private[builtins] def apply[D](list: List[Element[D]], time: BigInt, value: D) = new TimeQueue[D](list ++ List(Element(time, value)))
 }
