@@ -67,7 +67,7 @@ class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
         (Seq(name -> TesslaCore.Last(values, clock, loc)), Stream(TesslaCore.Stream(name, loc), t))
       case (Seq(values @ Literal(_), _), _, _) =>
         throw TypeMismatch(Types.Stream(Types.Nothing), values.typ, values.loc)
-      case (Seq(_, clock @ Literal(_), _), _, _) =>
+      case (Seq(_, clock @ Literal(_)), _, _) =>
         throw TypeMismatch(Types.Stream(Types.Nothing), clock.typ, clock.loc)
     },
     ("delayedLast", 2) -> {
