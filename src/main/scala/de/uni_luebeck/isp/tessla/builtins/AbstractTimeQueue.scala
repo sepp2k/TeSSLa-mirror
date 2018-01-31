@@ -100,4 +100,6 @@ class AbstractTimeQueue(private[builtins] val unknownBefore: BigIntInfinity, pri
     case that: AbstractTimeQueue => unknownBefore == that.unknownBefore && queue == that.queue
     case _ => false
   }
+
+  def dataTimeout = queue.dataTimeout
 }

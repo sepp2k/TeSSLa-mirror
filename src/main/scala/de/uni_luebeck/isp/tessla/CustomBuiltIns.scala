@@ -279,6 +279,17 @@ object CustomBuiltIns {
             Some(TesslaCore.IntLiteral(v, loc))
         }
       }
+
+      case object DataTimeout extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
+        override def argumentTypes = Seq(Type)
+
+        override protected def returnType = Types.Int
+
+        override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
+          case Seq(AbstractIntTimeQueue(queue, _)) =>
+            queue.dataTimeout.map(to => TesslaCore.IntLiteral(to, loc))
+        }
+      }
     }
 
     case class IntSet(value: Set[BigInt], loc: Location) extends TesslaCore.CustomValue {
@@ -358,6 +369,7 @@ object CustomBuiltIns {
       "TimeQueue_removeOlder" -> IntTimeQueue.RemoveOlder,
       "TimeQueue_removeNewer" -> IntTimeQueue.RemoveNewer,
       "TimeQueue_weightedSum" -> IntTimeQueue.WeightedSum,
+      "TimeQueue_dataTimeout" -> IntTimeQueue.DataTimeout,
       "AbstractTimeQueue_empty" -> AbstractIntTimeQueue.Empty,
       "AbstractTimeQueue_top" -> AbstractIntTimeQueue.Top,
       "AbstractTimeQueue_enqueue" -> AbstractIntTimeQueue.Enqueue,
@@ -365,7 +377,8 @@ object CustomBuiltIns {
       "AbstractTimeQueue_removeOlder" -> AbstractIntTimeQueue.RemoveOlder,
       "AbstractTimeQueue_removeNewer" -> AbstractIntTimeQueue.RemoveNewer,
       "AbstractTimeQueue_weightedSum1" -> AbstractIntTimeQueue.WeightedSum1,
-      "AbstractTimeQueue_weightedSum2" -> AbstractIntTimeQueue.WeightedSum2
+      "AbstractTimeQueue_weightedSum2" -> AbstractIntTimeQueue.WeightedSum2,
+      "AbstractTimeQueue_dataTimeout" -> AbstractIntTimeQueue.DataTimeout
     ))
   }
 }
