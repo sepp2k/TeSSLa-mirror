@@ -11,6 +11,10 @@ object Errors {
     override def message = s"Type mismatch: Expected $expected, found $found"
   }
 
+  case class UnliftedUseOfPartialFunction(name: String, loc: Location) extends TesslaError {
+    override def message = s"The partial function $name was used unlifted"
+  }
+
   case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
     def message = s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
   }

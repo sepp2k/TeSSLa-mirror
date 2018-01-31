@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.AstToCore.{TranslatedExpression, Arg, Stream, Literal}
-import Errors.TypeMismatch
+import de.uni_luebeck.isp.tessla.AstToCore.{Arg, Literal, Stream, TranslatedExpression}
+import Errors.{TypeMismatch, UnliftedUseOfPartialFunction}
 
 class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
   def primOp(op: PrimitiveOperators.PrimitiveOperator): (Seq[Arg], String, Location) => TranslatedExpression = {
@@ -10,7 +10,11 @@ class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
         case Literal(lit) => lit
       }
       if (literals.length == args.length) {
-        (Seq(), Literal(op.eval(literals, loc).get.toLiteral))
+        op.eval(literals, loc) match {
+          case Some(result) => (Seq(), Literal(result.toLiteral))
+          // TODO: op.toString is not always the TeSSLa name of the function
+          case None => throw UnliftedUseOfPartialFunction(op.toString, loc)
+        }
       } else {
         val streams: Seq[(Seq[(String, TesslaCore.Expression)], Stream)] = args.map {
           case s @ Stream(_, _) =>
