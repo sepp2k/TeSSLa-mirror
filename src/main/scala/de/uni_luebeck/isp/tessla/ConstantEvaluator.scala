@@ -1,10 +1,9 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Errors.{InternalError, UndefinedTimeUnit}
+import de.uni_luebeck.isp.tessla.Errors.{DivideByZero, InternalError, UndefinedTimeUnit}
 import de.uni_luebeck.isp.tessla.util.Lazy
 
 import scala.collection.mutable
-
 import ConstantEvaluator._
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.IdentifierFactory with TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
@@ -199,11 +198,18 @@ object ConstantEvaluator {
       Some(TesslaCore.IntLiteral(op(getInt(arguments(0)), getInt(arguments(1))), loc))
     }
 
+    def div(x: BigInt, y: BigInt): BigInt = {
+      // This is a bit dirty because we hard-code the fact that y corresponds to arguments(1),
+      // but since this is only a local function, it should be fine.
+      if (y == 0) throw DivideByZero(arguments(1).loc)
+      else x/y
+    }
+
     op match {
       case PrimitiveOperators.Add => binIntOp(_ + _)
       case PrimitiveOperators.Sub => binIntOp(_ - _)
       case PrimitiveOperators.Mul => binIntOp(_ * _)
-      case PrimitiveOperators.Div => binIntOp(_ / _)
+      case PrimitiveOperators.Div => binIntOp(div)
       case _ => ???
     }
   }
