@@ -47,24 +47,13 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.Last(values, clock, _) =>
       last(evalStream(clock), evalStream(values))
     case TesslaCore.DelayedLast(values, delays, loc) =>
-      delayedLast(intStream(evalStream(delays), loc), evalStream(values))
+      delayedLast(evalStream(delays), evalStream(values))
     case TesslaCore.Time(values, loc) =>
       evalStream(values).time(loc)
-  }
-
-  def intStream(stream: Stream, loc: Location): Stream = {
-    lift(Seq(stream)) {
-      (args: Seq[TesslaCore.Value]) =>
-        args.head match {
-          case TesslaCore.IntLiteral(i, _) => Some(TesslaCore.IntLiteral(i, loc))
-          case value => throw InternalError("Type error (expected: Int) should've been caught by type checker", value.loc)
-        }
-    }
   }
 }
 
 object Interpreter {
-
   class CoreToInterpreterSpec extends TranslationPhase[TesslaCore.Specification, Interpreter] {
     def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
   }
