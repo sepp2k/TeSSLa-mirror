@@ -37,11 +37,11 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       throw Errors.InternalError("Lift without arguments should be impossible")
     case TesslaCore.Lift(op, typeArgs, argStreams, loc) =>
       lift(argStreams.map(evalStream)) { arguments =>
-        // TODO: Make this actually lazy
-        ConstantEvaluator.evalPrimitiveOperator(op, arguments.map(Lazy(_)), exp.loc)
+        val result = ConstantEvaluator.evalPrimitiveOperator(op, arguments.map(arg => Lazy(arg.forceValue)), exp.loc)
+        TesslaCore.ValueOrError.fromLazyOption(result)
       }
     case TesslaCore.Default(values, defaultValue, _) =>
-      evalStream(values).default(Lazy(defaultValue))
+      evalStream(values).default(defaultValue)
     case TesslaCore.DefaultFrom(values, defaults, _) =>
       evalStream(values).default(evalStream(defaults))
     case TesslaCore.Last(values, clock, _) =>
@@ -83,7 +83,8 @@ object Interpreter {
                 if (!stopped) {
                   if (stopOn.contains(name)) stopped = true
                   val timeStamp = Trace.TimeStamp(Location.unknown, spec.getTime)
-                  nextEvents += Trace.Event(Location.unknown, timeStamp, Trace.Identifier(Location.unknown, name), value)
+                  val id = Trace.Identifier(Location.unknown, name)
+                  nextEvents += Trace.Event(Location.unknown, timeStamp, id, value.forceValue)
                 }
               case None =>
             }

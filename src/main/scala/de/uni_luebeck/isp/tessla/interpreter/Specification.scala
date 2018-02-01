@@ -85,10 +85,10 @@ class Specification() {
   }
 
   def lift(streams: Seq[Stream])
-          (op: Seq[TesslaCore.Value] => Option[TesslaCore.Value]): Stream =
+          (op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream =
     new Stream {
-      private var state: Seq[Option[TesslaCore.Value]] = streams.map(_ => None)
-      private var inputs: Array[Option[TesslaCore.Value]] = streams.map(_ => None).toArray
+      private var state: Seq[Option[TesslaCore.ValueOrError]] = streams.map(_ => None)
+      private var inputs: Array[Option[TesslaCore.ValueOrError]] = streams.map(_ => None).toArray
       private var counter = 0
 
       override protected def init(): Unit = {
@@ -102,7 +102,7 @@ class Specification() {
               }
               val newOutput =
                 if (inputs.exists(_.isDefined)) {
-                  val tmp = newState.foldLeft(Some(Nil): Option[Seq[TesslaCore.Value]]) {
+                  val tmp = newState.foldLeft(Some(Nil): Option[Seq[TesslaCore.ValueOrError]]) {
                     case (Some(list), Some(v)) => Some(v +: list)
                     case _ => None
                   }
@@ -121,8 +121,8 @@ class Specification() {
   def last(times: Stream, values: => Stream): Stream =
     new Stream {
       private var done = false
-      private var oldValue: Option[TesslaCore.Value] = None
-      private var newValue: Option[TesslaCore.Value] = None
+      private var oldValue: Option[TesslaCore.ValueOrError] = None
+      private var newValue: Option[TesslaCore.ValueOrError] = None
 
       def update(): Unit = {
         if (done) {
@@ -151,8 +151,8 @@ class Specification() {
 
   def delayedLast(delays: => Stream, values: => Stream): Stream =
     new Triggered {
-      private var oldValue: Option[TesslaCore.Value] = None
-      private var newValue: Option[TesslaCore.Value] = None
+      private var oldValue: Option[TesslaCore.ValueOrError] = None
+      private var newValue: Option[TesslaCore.ValueOrError] = None
       private var newDelay: Option[Time] = None
       private var targetTime: Option[Time] = None
       private var counter = 0
@@ -175,7 +175,7 @@ class Specification() {
 
       override def init(): Unit = {
         delays.addListener(delay => {
-          newDelay = delay.map {
+          newDelay = delay.map(_.forceValue).map {
             case TesslaCore.IntLiteral(value, loc) =>
               if (value > 0) {
                 value
@@ -217,10 +217,10 @@ class Specification() {
     self =>
 
     /*List of listeners which get invoked on every single value propagation*/
-    private var listeners: Seq[Option[TesslaCore.Value] => Unit] = Nil
+    private var listeners: Seq[Option[TesslaCore.ValueOrError] => Unit] = Nil
 
     /*Register a new listener*/
-    def addListener(listener: Option[TesslaCore.Value] => Unit): Unit = {
+    def addListener(listener: Option[TesslaCore.ValueOrError] => Unit): Unit = {
       if (listeners.isEmpty) {
         listeners +:= listener
         init()
@@ -231,7 +231,7 @@ class Specification() {
 
     protected def init(): Unit = {}
 
-    def propagate(value: Option[TesslaCore.Value]): Unit = {
+    def propagate(value: Option[TesslaCore.ValueOrError]): Unit = {
       for (listener <- listeners) {
         listener(value)
       }
@@ -246,7 +246,7 @@ class Specification() {
         }
       }
 
-    def default(defaultValue: TesslaCore.Value): Stream =
+    def default(defaultValue: TesslaCore.ValueOrError): Stream =
       new Stream {
         override protected def init(): Unit = {
           self.addListener {
@@ -259,10 +259,10 @@ class Specification() {
     def default(when: Stream): Stream = {
       new Stream {
         override protected def init(): Unit = {
-          var other: Option[Option[TesslaCore.Value]] = None
+          var other: Option[Option[TesslaCore.ValueOrError]] = None
           var hasValue = false
 
-          def listener(flip: Boolean)(value: Option[TesslaCore.Value]) = {
+          def listener(flip: Boolean)(value: Option[TesslaCore.ValueOrError]) = {
             other match {
               case Some(otherValue) =>
                 val (newHasValue, result) =
@@ -293,13 +293,13 @@ class Specification() {
   }
 
   final class Input extends Triggered {
-    private var value: Option[TesslaCore.Value] = None
+    private var value: Option[TesslaCore.ValueOrError] = None
 
-    def provide(value: TesslaCore.Value): Unit = {
+    def provide(value: TesslaCore.ValueOrError): Unit = {
       if (acceptInput) {
         this.value = Some(value)
       } else {
-        throw ProvideAfterPropagationError(timeVar, value.loc)
+        throw ProvideAfterPropagationError(timeVar, value.forceValue.loc)
       }
     }
 

@@ -25,7 +25,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     val env = createEnvForScopeWithParents(spec.globalScope)
     translateEnv(env, None)
     def inputStreams = spec.globalScope.variables.collect {
-      case (name, TypedTessla.VariableEntry(is: TypedTessla.InputStream, typ)) =>
+      case (_, TypedTessla.VariableEntry(is: TypedTessla.InputStream, typ)) =>
         (is.name, translateStreamType(typ), is.loc)
     }.toSeq
     def outputStreams = spec.outStreams.map { os =>
@@ -146,8 +146,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     case other => throw InternalError(s"Wrong type of environment entry: Expected StreamEntry, found: $other")
   }
 
-  def getValue(envEntry: EnvEntry) = envEntry match {
-    case ValueEntry(s) => s
+  def getValue(envEntry: EnvEntry): TesslaCore.ValueOrError = envEntry match {
+    case ValueEntry(s) => TesslaCore.ValueOrError.fromLazy(s)
     case other => throw InternalError(s"Wrong type of environment entry: Expected ValueEntry, found: $other")
   }
 
@@ -191,17 +191,22 @@ object ConstantEvaluator {
     case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Int, got: $v", v.loc)
   }
 
+  private def getBool(v: TesslaCore.Value): Boolean = v match {
+    case boolLit: TesslaCore.BoolLiteral => boolLit.value
+    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
+  }
+
   def evalPrimitiveOperator(op: PrimitiveOperators.PrimitiveOperator,
                             arguments: Seq[Lazy[TesslaCore.Value]],
                             loc: Location): Lazy[Option[TesslaCore.Value]] = Lazy {
     def binIntOp(op: (BigInt, BigInt) => BigInt) = {
-      Some(TesslaCore.IntLiteral(op(getInt(arguments(0)), getInt(arguments(1))), loc))
+      Some(TesslaCore.IntLiteral(op(getInt(arguments(0).get), getInt(arguments(1).get)), loc))
     }
 
     def div(x: BigInt, y: BigInt): BigInt = {
       // This is a bit dirty because we hard-code the fact that y corresponds to arguments(1),
       // but since this is only a local function, it should be fine.
-      if (y == 0) throw DivideByZero(arguments(1).loc)
+      if (y == 0) throw DivideByZero(arguments(1).get.loc)
       else x/y
     }
 

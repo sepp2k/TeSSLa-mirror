@@ -1,5 +1,8 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.util.Lazy
+
 object TesslaCore extends HasUniqueIdentifiers {
   final case class StreamDefinition(expression: Expression, typ: StreamType)
 
@@ -37,7 +40,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     def withLoc(loc: Location): Nil = copy(loc = loc)
   }
 
-  final case class Default(stream: StreamRef, default: Value, loc: Location) extends Expression {
+  final case class Default(stream: StreamRef, default: ValueOrError, loc: Location) extends Expression {
     override def toString = s"default($stream, $default)"
   }
 
@@ -45,7 +48,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"defaultFrom($valueStream, $defaultStream)"
   }
 
-  final case class Const(stream: StreamRef, value: Value, loc: Location) extends Expression {
+  final case class Const(stream: StreamRef, value: ValueOrError, loc: Location) extends Expression {
     override def toString = s"const($stream, $value)"
   }
 
@@ -77,11 +80,35 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  sealed abstract class Value {
+  object ValueOrError {
+    def fromLazyOption(lazyValueOption: Lazy[Option[Value]]): Option[ValueOrError] = {
+      try {
+        lazyValueOption.get
+      } catch {
+        case error: TesslaError =>
+          Some(Error(error))
+      }
+    }
+
+    def fromLazy(lazyValue: Lazy[Value]): ValueOrError = {
+      fromLazyOption(lazyValue.map(Some(_))).get
+    }
+  }
+
+  sealed abstract class ValueOrError {
+    def forceValue: Value
+  }
+
+  final case class Error(error: TesslaError) extends ValueOrError {
+    override def forceValue = throw error
+  }
+
+  sealed abstract class Value extends ValueOrError {
     def loc: Location
     def withLoc(loc: Location): Value
     def typ: Type
     def value: Any
+    override def forceValue = this
 
     override def toString = value.toString
   }

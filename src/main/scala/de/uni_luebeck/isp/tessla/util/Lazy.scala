@@ -11,8 +11,5 @@ class Lazy[+A](a: => A) {
 object Lazy {
   def apply[A](a: => A): Lazy[A] =
     new Lazy(a)
-
-  implicit def forceLazy[A](l: Lazy[A]): A =
-    l.get
 }
 
