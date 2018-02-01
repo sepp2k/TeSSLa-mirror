@@ -215,6 +215,9 @@ object ConstantEvaluator {
       case PrimitiveOperators.Sub => binIntOp(_ - _)
       case PrimitiveOperators.Mul => binIntOp(_ * _)
       case PrimitiveOperators.Div => binIntOp(div)
+      case PrimitiveOperators.IfThenElse =>
+        if (getBool(arguments(0).get)) Some(arguments(1).get)
+        else Some(arguments(2).get)
       case _ => ???
     }
   }
