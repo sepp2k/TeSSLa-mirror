@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Errors.{InputTypeMismatch, TesslaError, UndeclaredInputStreamError}
+import de.uni_luebeck.isp.tessla.Errors.{InputTypeMismatch, TesslaError, TesslaErrorWithTimestamp, UndeclaredInputStreamError}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.interpreter._
 import sexyopt.SexyOpt

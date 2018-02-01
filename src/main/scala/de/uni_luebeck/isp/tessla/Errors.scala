@@ -5,6 +5,12 @@ import de.uni_luebeck.isp.tessla.Types.Type
 
 object Errors {
 
+  case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends TesslaError {
+    override def loc: Location = error.loc
+
+    override def message: String = s"${error.message} (t = $timestamp)"
+  }
+
   abstract class TesslaError extends Exception with Diagnostic
 
   case class TypeMismatch(expected: Type, found: Type, loc: Location) extends TesslaError {
