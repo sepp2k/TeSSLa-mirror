@@ -15,7 +15,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   case class StreamEntry(stream: TesslaCore.StreamRef) extends EnvEntry
   case class ValueEntry(value: Lazy[TesslaCore.Value]) extends EnvEntry
   case class MacroEntry(mac: TypedTessla.Macro) extends EnvEntry
-  case class BuiltInEntry(builtIn: FlatTessla.BuiltIn) extends EnvEntry
+  case class BuiltInEntry(builtIn: BuiltIn) extends EnvEntry
   case object Translating extends EnvEntry
   case class NotYetTranslated(entry: TypedTessla.VariableEntry) extends EnvEntry
 
@@ -151,21 +151,21 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     case other => throw InternalError(s"Wrong type of environment entry: Expected ValueEntry, found: $other")
   }
 
-  def translateBuiltIn(builtIn: FlatTessla.BuiltIn, arguments: Seq[EnvEntry], typ: TypedTessla.Type, loc: Location): EnvEntry = {
+  def translateBuiltIn(builtIn: BuiltIn, arguments: Seq[EnvEntry], typ: TypedTessla.Type, loc: Location): EnvEntry = {
     def stream(coreExp: TesslaCore.Expression) = {
       val id = makeIdentifier()
       translatedStreams(id) = TesslaCore.StreamDefinition(coreExp, translateStreamType(typ))
       StreamEntry(TesslaCore.Stream(id, loc))
     }
     builtIn match {
-      case FlatTessla.Default => stream(TesslaCore.Default(getStream(arguments(0)), getValue(arguments(1)), loc))
-      case FlatTessla.DefaultFrom => stream(TesslaCore.DefaultFrom(getStream(arguments(0)), getStream(arguments(1)), loc))
-      case FlatTessla.Last => stream(TesslaCore.Last(getStream(arguments(0)), getStream(arguments(1)), loc))
-      case FlatTessla.DelayedLast => stream(TesslaCore.DelayedLast(getStream(arguments(0)), getStream(arguments(1)), loc))
-      case FlatTessla.Const => stream(TesslaCore.Const(getStream(arguments(0)), getValue(arguments(1)), loc))
-      case FlatTessla.Time => stream(TesslaCore.Time(getStream(arguments(0)), loc))
-      case FlatTessla.Merge => stream(TesslaCore.Merge(getStream(arguments(0)), getStream(arguments(1)), loc))
-      case FlatTessla.PrimitiveOperator(op) =>
+      case BuiltIn.Default => stream(TesslaCore.Default(getStream(arguments(0)), getValue(arguments(1)), loc))
+      case BuiltIn.DefaultFrom => stream(TesslaCore.DefaultFrom(getStream(arguments(0)), getStream(arguments(1)), loc))
+      case BuiltIn.Last => stream(TesslaCore.Last(getStream(arguments(0)), getStream(arguments(1)), loc))
+      case BuiltIn.DelayedLast => stream(TesslaCore.DelayedLast(getStream(arguments(0)), getStream(arguments(1)), loc))
+      case BuiltIn.Const => stream(TesslaCore.Const(getStream(arguments(0)), getValue(arguments(1)), loc))
+      case BuiltIn.Time => stream(TesslaCore.Time(getStream(arguments(0)), loc))
+      case BuiltIn.Merge => stream(TesslaCore.Merge(getStream(arguments(0)), getStream(arguments(1)), loc))
+      case op: BuiltIn.PrimitiveOperator =>
         if (arguments.forall(_.isInstanceOf[ValueEntry])) {
           ValueEntry(evalPrimitiveOperator(op, arguments.map(_.asInstanceOf[ValueEntry].value), loc).map(_.get))
         } else {
@@ -196,7 +196,7 @@ object ConstantEvaluator {
     case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
   }
 
-  def evalPrimitiveOperator(op: PrimitiveOperators.PrimitiveOperator,
+  def evalPrimitiveOperator(op: BuiltIn.PrimitiveOperator,
                             arguments: Seq[Lazy[TesslaCore.Value]],
                             loc: Location): Lazy[Option[TesslaCore.Value]] = Lazy {
     def binIntOp(op: (BigInt, BigInt) => BigInt) = {
@@ -211,11 +211,11 @@ object ConstantEvaluator {
     }
 
     op match {
-      case PrimitiveOperators.Add => binIntOp(_ + _)
-      case PrimitiveOperators.Sub => binIntOp(_ - _)
-      case PrimitiveOperators.Mul => binIntOp(_ * _)
-      case PrimitiveOperators.Div => binIntOp(div)
-      case PrimitiveOperators.IfThenElse =>
+      case BuiltIn.Add => binIntOp(_ + _)
+      case BuiltIn.Sub => binIntOp(_ - _)
+      case BuiltIn.Mul => binIntOp(_ * _)
+      case BuiltIn.Div => binIntOp(div)
+      case BuiltIn.IfThenElse =>
         if (getBool(arguments(0).get)) Some(arguments(1).get)
         else Some(arguments(2).get)
       case _ => ???

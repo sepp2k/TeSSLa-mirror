@@ -68,12 +68,12 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"merge($stream1, $stream2)"
   }
 
-  final case class Lift(operator: PrimitiveOperators.PrimitiveOperator, typeArgs: Seq[Type], args: Seq[StreamRef], loc: Location) extends Expression {
+  final case class Lift(operator: BuiltIn.PrimitiveOperator, typeArgs: Seq[Type], args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = operator match {
-      case _: PrimitiveOperators.PrefixOperator => s"$operator${args(0)}"
-      case _: PrimitiveOperators.InfixOperator => s"${args(0)} $operator ${args(1)}"
-      case PrimitiveOperators.IfThen => s"if ${args(0)} then ${args(1)}"
-      case PrimitiveOperators.IfThenElse => s"if ${args(0)} then ${args(1)} else ${args(2)}"
+      case _: BuiltIn.PrefixOperator => s"$operator${args(0)}"
+      case _: BuiltIn.InfixOperator => s"${args(0)} $operator ${args(1)}"
+      case BuiltIn.IfThen => s"if ${args(0)} then ${args(1)}"
+      case BuiltIn.IfThenElse => s"if ${args(0)} then ${args(1)} else ${args(2)}"
       case _ =>
         val targs = typeArgs.mkString("[", ", ", "]")
         args.mkString(s"$operator$targs(", ", ", ")")

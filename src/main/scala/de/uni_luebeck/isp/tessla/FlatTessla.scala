@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla
 import scala.collection.mutable
 
 abstract class FlatTessla {
-  import FlatTessla.{OutStream, Argument, BuiltIn}
+  import FlatTessla._
 
   case class Specification(globalScope: Scope, outStreams: Seq[OutStream], outAllLocation: Option[Location]) {
     override def toString = {
@@ -112,18 +112,6 @@ object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
 
   case class OutStream(id: Identifier, name: String, loc: Location) {
     override def toString = s"out $id as $name"
-  }
-
-  sealed abstract class BuiltIn
-  case object Default extends BuiltIn
-  case object DefaultFrom extends BuiltIn
-  case object Last extends BuiltIn
-  case object Time extends BuiltIn
-  case object DelayedLast extends BuiltIn
-  case object Const extends BuiltIn
-  case object Merge extends BuiltIn
-  case class PrimitiveOperator(op: PrimitiveOperators.PrimitiveOperator) extends BuiltIn {
-    override def toString = op.toString
   }
 
   sealed abstract class Argument {

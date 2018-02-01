@@ -6,58 +6,11 @@ import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
 class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
   type IdMap = Map[String, FlatTessla.Identifier]
 
-  val primitiveOperators = Seq(
-    "+" -> PrimitiveOperators.Add,
-    "-" -> PrimitiveOperators.Sub,
-    "unary -" -> PrimitiveOperators.Negate,
-    "*" -> PrimitiveOperators.Mul,
-    "/" -> PrimitiveOperators.Div,
-    "&" -> PrimitiveOperators.BitAnd,
-    "|" -> PrimitiveOperators.BitOr,
-    "^" -> PrimitiveOperators.BitXor,
-    "<<" -> PrimitiveOperators.LeftShift,
-    ">>" -> PrimitiveOperators.RightShift,
-    "~" -> PrimitiveOperators.BitFlip,
-    "<" -> PrimitiveOperators.Lt,
-    ">" -> PrimitiveOperators.Gt,
-    "<=" -> PrimitiveOperators.Lte,
-    ">=" -> PrimitiveOperators.Gte,
-    "==" -> PrimitiveOperators.Eq,
-    "!=" -> PrimitiveOperators.Neq,
-    "&&" -> PrimitiveOperators.And,
-    "||" -> PrimitiveOperators.Or,
-    "!" -> PrimitiveOperators.Not,
-    "first" -> PrimitiveOperators.First,
-    "if then else" -> PrimitiveOperators.IfThenElse,
-    "if then" -> PrimitiveOperators.IfThen,
-    "map_empty" -> PrimitiveOperators.MapEmpty,
-    "map_add" -> PrimitiveOperators.MapAdd,
-    "map_get" -> PrimitiveOperators.MapGet,
-    "map_contains" -> PrimitiveOperators.MapContains,
-    "map_remove" -> PrimitiveOperators.MapRemove,
-    "set_empty" -> PrimitiveOperators.SetEmpty,
-    "set_add" -> PrimitiveOperators.SetAdd,
-    "set_contains" -> PrimitiveOperators.SetContains,
-    "set_remove" -> PrimitiveOperators.SetRemove
-  )
-
-  val builtIns = Seq(
-    "default" -> FlatTessla.Default,
-    "defaultFrom" -> FlatTessla.DefaultFrom,
-    "last" -> FlatTessla.Last,
-    "delayedLast" -> FlatTessla.DelayedLast,
-    "time" -> FlatTessla.Time,
-    "const" -> FlatTessla.Const,
-    "merge" -> FlatTessla.Merge
-  ) ++ primitiveOperators.map {
-    case (name, primOp) => name -> FlatTessla.PrimitiveOperator(primOp)
-  }
-
-  val stdlib = ("nil" -> FlatTessla.VariableEntry(FlatTessla.Nil, None)) +: builtIns.map {
+  val stdlib = BuiltIn.builtIns.map {
     case (name, b) => name -> FlatTessla.VariableEntry(FlatTessla.BuiltInOperator(b), None)
-  }
+  } + ("nil" -> FlatTessla.VariableEntry(FlatTessla.Nil, None))
 
-  def createIdMap(names: Seq[String]): IdMap = {
+  def createIdMap(names: Iterable[String]): IdMap = {
     names.map(name => name -> makeIdentifier(name)).toMap
   }
 
@@ -83,7 +36,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
 
   override def translateSpec(spec: Tessla.Specification) = {
     val stdlibScope = new FlatTessla.Scope(None)
-    val stdlibIdMap = createIdMap(stdlib.map(_._1))
+    val stdlibIdMap = createIdMap(stdlib.keys)
     stdlib.foreach {
       case (name, entry) =>
         stdlibScope.addVariable(stdlibIdMap(name), entry)
