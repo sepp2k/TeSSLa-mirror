@@ -250,7 +250,7 @@ object CustomBuiltIns {
       }
 
       val weightedSum = (startTime: BigInt) => (a: BigInt, b: BigInt, v: BigInterval, acc: BigInterval) =>
-        (acc.limit(0, (a - startTime) * 1000) + v.limit(0, 1000) * BigInterval(b-a))
+        (acc.limit(0, (a - startTime) * 1000) + v.limit(0, 1) * BigInterval(b-a))
 
       case object WeightedSum1 extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
         override def argumentTypes = Seq(Type, Types.Int, Types.Int)
@@ -290,7 +290,7 @@ object CustomBuiltIns {
         override protected def returnType = Types.Int
 
         override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
-          case Seq(IntTimeQueue(queue, _)) => {
+          case Seq(AbstractIntTimeQueue(queue, _)) => {
             queue.dataTimeout.value match {
               case Some(result) => Some(TesslaCore.IntLiteral(result, loc))
               case None => Some(TesslaCore.IntLiteral(INFINITY, loc))
