@@ -250,7 +250,7 @@ object CustomBuiltIns {
       }
 
       val weightedSum = (startTime: BigInt) => (a: BigInt, b: BigInt, v: BigInterval, acc: BigInterval) =>
-        (acc.limit(0, (a - startTime) * 1000) + v.limit(0, 1) * BigInterval(b-a))
+        (acc.limit(0, (a - startTime) * 1000) + v.limit(0, 1000) * BigInterval(b-a))
 
       case object WeightedSum1 extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
         override def argumentTypes = Seq(Type, Types.Int, Types.Int)
