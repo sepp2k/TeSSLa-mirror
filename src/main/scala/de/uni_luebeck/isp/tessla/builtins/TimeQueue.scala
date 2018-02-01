@@ -1,5 +1,53 @@
 package de.uni_luebeck.isp.tessla.builtins
 
+
+class BigIntInfinity(val value: Option[BigInt]) extends Ordered[BigIntInfinity]{
+  override def compare(that: BigIntInfinity) = (value, that.value) match {
+    case (None, None) => throw new RuntimeException("Torben hat gesagt: Das passiert eh nicht.")
+    case (None, _) => 1
+    case (_, None) => -1
+    case (Some(x), Some(y)) => (x-y).signum
+  }
+  override def equals(other: scala.Any) = other match {
+    case that: BigIntInfinity => that.value == value
+    case _ => false
+  }
+  def min(that: BigIntInfinity) = if (this < that) this else that
+  def isZero = value == Some(0)
+  def isInfinity = value == None
+  def limit(a: BigInt, b: BigInt) = {
+    val aa = BigIntInfinity(a)
+    val bb = BigIntInfinity(b)
+    if (this < aa) aa else if (this > bb) bb else this
+  }
+  def *(that: BigIntInfinity) = (value, that.value) match {
+    case (None, _) => new BigIntInfinity(None)
+    case (_, None) => new BigIntInfinity(None)
+    case (Some(x), Some(y)) => new BigIntInfinity(Some(x * y))
+  }
+  def +(that: BigIntInfinity) = (value, that.value) match {
+    case (None, _) => new BigIntInfinity(None)
+    case (_, None) => new BigIntInfinity(None)
+    case (Some(x), Some(y)) => new BigIntInfinity(Some(x + y))
+  }
+  def max(that: BigIntInfinity) = (value, that.value) match {
+    case (None, _) => new BigIntInfinity(None)
+    case (_, None) => new BigIntInfinity(None)
+    case (Some(x), Some(y)) => BigIntInfinity(x.max(y))
+  }
+
+  override def toString = value match {
+    case None => "∞"
+    case Some(x) => x.toString
+  }
+}
+
+object BigIntInfinity {
+  def apply(value: BigInt) = new BigIntInfinity(Some(value))
+  def infinity = new BigIntInfinity(None)
+  def zero = BigIntInfinity(0)
+}
+
 private case class Element[D](time: BigInt, value: D)
 
 class TimeQueue[D] (private[builtins] val list: List[Element[D]]) {
@@ -60,9 +108,9 @@ class TimeQueue[D] (private[builtins] val list: List[Element[D]]) {
   def dataTimeout = {
     if (list.size >= 2) {
       val second = list(1)
-      Some(second.time)
+      BigIntInfinity(second.time)
     } else {
-      None
+      BigIntInfinity.infinity
     }
   }
 

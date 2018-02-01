@@ -88,6 +88,8 @@ object CustomBuiltIns {
       }
     }
 
+    val INFINITY = BigInt("99999999999999999999")
+
     case class IntTimeQueue(value: TimeQueue[BigInt], loc: Location) extends TesslaCore.CustomValue {
       override def typ = IntTimeQueue.Type
 
@@ -160,8 +162,12 @@ object CustomBuiltIns {
         override protected def returnType = Types.Int
 
         override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
-          case Seq(IntTimeQueue(queue, _)) =>
-            queue.dataTimeout.map(to => TesslaCore.IntLiteral(to, loc))
+          case Seq(IntTimeQueue(queue, _)) => {
+            queue.dataTimeout.value match {
+              case Some(result) => Some(TesslaCore.IntLiteral(result, loc))
+              case None => Some(TesslaCore.IntLiteral(INFINITY, loc))
+            }
+          }
         }
       }
     }
@@ -243,8 +249,6 @@ object CustomBuiltIns {
         }
       }
 
-      val INFINITY = BigInt("99999999999999999999")
-
       val weightedSum = (startTime: BigInt) => (a: BigInt, b: BigInt, v: BigInterval, acc: BigInterval) =>
         (acc.limit(0, (a - startTime) * 1000) + v.limit(0, 1000) * BigInterval(b-a))
 
@@ -286,8 +290,12 @@ object CustomBuiltIns {
         override protected def returnType = Types.Int
 
         override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
-          case Seq(AbstractIntTimeQueue(queue, _)) =>
-            queue.dataTimeout.map(to => TesslaCore.IntLiteral(to, loc))
+          case Seq(IntTimeQueue(queue, _)) => {
+            queue.dataTimeout.value match {
+              case Some(result) => Some(TesslaCore.IntLiteral(result, loc))
+              case None => Some(TesslaCore.IntLiteral(INFINITY, loc))
+            }
+          }
         }
       }
     }

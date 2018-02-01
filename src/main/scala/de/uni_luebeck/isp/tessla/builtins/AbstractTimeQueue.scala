@@ -1,51 +1,5 @@
 package de.uni_luebeck.isp.tessla.builtins
 
-class BigIntInfinity(val value: Option[BigInt]) extends Ordered[BigIntInfinity]{
-  override def compare(that: BigIntInfinity) = (value, that.value) match {
-    case (None, None) => throw new RuntimeException("Torben hat gesagt: Das passiert eh nicht.")
-    case (None, _) => 1
-    case (_, None) => -1
-    case (Some(x), Some(y)) => (x-y).signum
-  }
-  override def equals(other: scala.Any) = other match {
-    case that: BigIntInfinity => that.value == value
-    case _ => false
-  }
-  def min(that: BigIntInfinity) = if (this < that) this else that
-  def isZero = value == Some(0)
-  def limit(a: BigInt, b: BigInt) = {
-    val aa = BigIntInfinity(a)
-    val bb = BigIntInfinity(b)
-    if (this < aa) aa else if (this > bb) bb else this
-  }
-  def *(that: BigIntInfinity) = (value, that.value) match {
-    case (None, _) => new BigIntInfinity(None)
-    case (_, None) => new BigIntInfinity(None)
-    case (Some(x), Some(y)) => new BigIntInfinity(Some(x * y))
-  }
-  def +(that: BigIntInfinity) = (value, that.value) match {
-    case (None, _) => new BigIntInfinity(None)
-    case (_, None) => new BigIntInfinity(None)
-    case (Some(x), Some(y)) => new BigIntInfinity(Some(x + y))
-  }
-  def max(that: BigIntInfinity) = (value, that.value) match {
-    case (None, _) => new BigIntInfinity(None)
-    case (_, None) => new BigIntInfinity(None)
-    case (Some(x), Some(y)) => BigIntInfinity(x.max(y))
-  }
-
-  override def toString = value match {
-    case None => "∞"
-    case Some(x) => x.toString
-  }
-}
-
-object BigIntInfinity {
-  def apply(value: BigInt) = new BigIntInfinity(Some(value))
-  def infinity = new BigIntInfinity(None)
-  def zero = BigIntInfinity(0)
-}
-
 case class BigInterval(left: BigIntInfinity, right: BigIntInfinity){
   def limit(a: BigInt, b: BigInt) = BigInterval(left.limit(a,b), right.limit(a,b))
   def *(that: BigInterval) = BigInterval(left * that.left, right * that.right)
