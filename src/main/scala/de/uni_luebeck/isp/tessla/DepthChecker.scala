@@ -2,10 +2,17 @@ package de.uni_luebeck.isp.tessla
 
 object DepthChecker {
   def nestingDepth(spec: TesslaCore.Specification): Int = {
-    spec.outStreams.map {
+    (spec.outStreams.map {
       case (_, stream) =>
         nestingDepth(spec.streams, stream, Set())
-    }.max
+    } ++ spec.streams.collect {
+      case (name, l: TesslaCore.Last) =>
+        nestingDepth(spec.streams, l.values, Set())
+      case (name, dl: TesslaCore.DelayedLast) =>
+        Math.max(
+          nestingDepth(spec.streams, dl.values, Set()),
+          nestingDepth(spec.streams, dl.delays, Set()))
+    }).max
   }
 
   def nestingDepth(streams: Map[String, TesslaCore.Expression], stream: TesslaCore.StreamRef, visited: Set[String]): Int = {
@@ -28,9 +35,9 @@ object DepthChecker {
           case d: TesslaCore.DefaultFrom =>
             Math.max(visitChild(d.valueStream), visitChild(d.defaultStream))
           case l: TesslaCore.Last =>
-            Math.max(visitChild(l.values), visitChild(l.clock))
+            visitChild(l.clock)
           case dl: TesslaCore.DelayedLast =>
-            Math.max(visitChild(dl.values), visitChild(dl.delays))
+            0
         }
         1 + childDepth
     }
