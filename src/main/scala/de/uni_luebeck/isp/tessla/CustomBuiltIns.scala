@@ -89,6 +89,7 @@ object CustomBuiltIns {
     }
 
     val INFINITY = BigInt("99999999999999999999")
+    val TOP = BigInt("-1")
 
     case class IntTimeQueue(value: TimeQueue[BigInt], loc: Location) extends TesslaCore.CustomValue {
       override def typ = IntTimeQueue.Type
@@ -291,10 +292,14 @@ object CustomBuiltIns {
 
         override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
           case Seq(AbstractIntTimeQueue(queue, _)) => {
-            queue.dataTimeout.value match {
-              case Some(result) => Some(TesslaCore.IntLiteral(result, loc))
-              case None => Some(TesslaCore.IntLiteral(INFINITY, loc))
+            val intResult = queue.dataTimeout match {
+              case Some(value) => value.value match {
+                case Some(result) => result
+                case None => INFINITY
+              }
+              case None => TOP
             }
+            Some(TesslaCore.IntLiteral(intResult, loc))
           }
         }
       }

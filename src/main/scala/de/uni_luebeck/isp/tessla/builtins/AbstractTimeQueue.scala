@@ -55,5 +55,5 @@ class AbstractTimeQueue(private[builtins] val unknownBefore: BigIntInfinity, pri
     case _ => false
   }
 
-  def dataTimeout = queue.dataTimeout
+  def dataTimeout = if (unknownBefore.isZero) Some(queue.dataTimeout) else None
 }
