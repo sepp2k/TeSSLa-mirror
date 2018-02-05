@@ -30,6 +30,7 @@ object Main extends SexyOpt {
   val timeUnit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
   val abortAt = option("abort-at", "Stop the interpreter after a given amount of events.")
   val flattenInput = flag("flatten-input", "Print the input trace in a flattened form.")
+  val computationDepth = flag("print-computation-depth", "Print the length of the longest path in the Tessla Core graph")
 
   def main(args: Array[String]): Unit = {
     def unwrapResult[T](result: Result[T]): T = result match {
@@ -49,7 +50,7 @@ object Main extends SexyOpt {
     try {
       val specSource = TesslaSource.fromFile(tesslaFile)
       val timeUnitSource = timeUnit.map(TesslaSource.fromString(_, "--timeunit"))
-      if (verifyOnly || listInStreams || listOutStreams) {
+      if (verifyOnly || listInStreams || listOutStreams || computationDepth) {
         val spec = unwrapResult(new Compiler().compile(specSource, timeUnitSource))
         if (listInStreams) {
           spec.inStreams.foreach { case (name, _, _) => println(name) }
@@ -57,6 +58,10 @@ object Main extends SexyOpt {
         }
         if (listOutStreams) {
           spec.outStreams.foreach { case (name, _) => println(name) }
+          return
+        }
+        if (computationDepth) {
+          println(DepthChecker.nestingDepth(spec))
           return
         }
       } else {
