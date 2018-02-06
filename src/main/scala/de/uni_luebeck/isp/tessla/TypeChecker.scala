@@ -6,12 +6,14 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
     TypedTessla.Specification(scope, spec.outStreams, spec.outAllLocation)
   }
 
+  @Deprecated
+  def placeholderType = TypedTessla.StreamType(TypedTessla.IntType) // TODO: Properly determine type
+
   def translateScope(scope: FlatTessla.Scope, parent: Option[TypedTessla.Scope]): TypedTessla.Scope = {
     val result = new TypedTessla.Scope(parent)
     scope.variables.foreach {
       case (name, entry) =>
-        val exp = translateExpression(entry.expression, result)
-        val typ = TypedTessla.UnknownType
+        val (exp, typ) = translateExpression(entry.expression, result)
         result.addVariable(name, TypedTessla.VariableEntry(exp, typ))
     }
     result
@@ -22,26 +24,28 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
     translateScope(scope, parent)
   }
 
-  def translateExpression(expression: FlatTessla.Expression, scope: TypedTessla.Scope): TypedTessla.Expression = expression match {
-    case FlatTessla.Nil =>
-      TypedTessla.Nil
-    case v: FlatTessla.Variable =>
-      TypedTessla.Variable(v.id, v.loc)
-    case lit: FlatTessla.Literal =>
-      TypedTessla.Literal(lit.value, lit.loc)
-    case inStream: FlatTessla.InputStream =>
-      TypedTessla.InputStream(inStream.name, TypedTessla.UnknownType, inStream.loc)
-    case param: FlatTessla.Parameter =>
-      TypedTessla.Parameter(param.param, param.id)
-    case call: FlatTessla.MacroCall =>
-      TypedTessla.MacroCall(call.macroID, call.macroLoc, call.args, call.loc)
-    case FlatTessla.BuiltInOperator(b) =>
-      TypedTessla.BuiltInOperator(b)
-    case mac: FlatTessla.Macro =>
-      val parameters = mac.parameters.map(p => TypedTessla.Parameter(p.param, p.id))
-      val innerScope = translateScope(mac.scope, Some(scope))
-      val returnType = TypedTessla.UnknownType
-      val body = translateExpression(mac.body, innerScope)
-      TypedTessla.Macro(mac.typeParameters, parameters, innerScope, returnType, body, mac.loc)
+  def translateExpression(expression: FlatTessla.Expression,
+                          scope: TypedTessla.Scope): (TypedTessla.Expression, TypedTessla.Type) = {
+    expression match {
+      case FlatTessla.Nil =>
+        TypedTessla.Nil -> placeholderType
+      case v: FlatTessla.Variable =>
+        TypedTessla.Variable(v.id, v.loc) -> placeholderType
+      case lit: FlatTessla.Literal =>
+        TypedTessla.Literal(lit.value, lit.loc) -> placeholderType
+      case inStream: FlatTessla.InputStream =>
+        TypedTessla.InputStream(inStream.name, placeholderType, inStream.loc) -> placeholderType
+      case param: FlatTessla.Parameter =>
+        TypedTessla.Parameter(param.param, param.id) -> placeholderType
+      case call: FlatTessla.MacroCall =>
+        TypedTessla.MacroCall(call.macroID, call.macroLoc, call.args, call.loc) -> placeholderType
+      case FlatTessla.BuiltInOperator(b) =>
+        TypedTessla.BuiltInOperator(b) -> placeholderType
+      case mac: FlatTessla.Macro =>
+        val parameters = mac.parameters.map(p => TypedTessla.Parameter(p.param, p.id))
+        val innerScope = translateScope(mac.scope, Some(scope))
+        val (body, returnType) = translateExpression(mac.body, innerScope)
+        TypedTessla.Macro(mac.typeParameters, parameters, innerScope, returnType, body, mac.loc) -> placeholderType
+    }
   }
 }

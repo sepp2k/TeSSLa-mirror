@@ -63,9 +63,23 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   }
 
   def translateStreamType(typ: TypedTessla.Type) = typ match {
-    case TypedTessla.UnknownType =>
-      // TODO: Placeholder. Will be replaced once TypedTessla has proper types
-      TesslaCore.StreamType(TesslaCore.IntType)
+    case TypedTessla.StreamType(elementType) =>
+      TesslaCore.StreamType(translateValueType(elementType))
+    case _ =>
+      throw InternalError(s"Expected stream type, got $typ - should have been caught by type checker")
+  }
+
+  def translateValueType(typ: TypedTessla.Type) = typ match {
+    case TypedTessla.IntType => TesslaCore.IntType
+    // Times are just seen as ints in tessla core
+    case TypedTessla.TimeType => TesslaCore.IntType
+    case TypedTessla.StringType => TesslaCore.StringType
+    case TypedTessla.BoolType => TesslaCore.BoolType
+    case TypedTessla.UnitType => TesslaCore.UnitType
+    case _ : TypedTessla.FunctionType =>
+      throw InternalError(s"Function type where value type expected - should have been caught by type checker")
+    case TypedTessla.StreamType(_) =>
+      throw InternalError(s"Stream type where value type expected - should have been caught by type checker")
   }
 
   def translateLiteral(literal: Tessla.LiteralValue, loc: Location): TesslaCore.Value = literal match {
