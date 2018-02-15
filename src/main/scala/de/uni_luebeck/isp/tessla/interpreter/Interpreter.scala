@@ -109,7 +109,11 @@ object Interpreter {
             val event = inputTrace.events.next
             val eventTime = event.timeStamp.time
             if (eventTime > specTime) {
-              spec.step(eventTime - specTime)
+              try {
+                spec.step(eventTime - specTime)
+              } catch {
+                case err: TesslaError => throw TesslaErrorWithTimestamp(err, specTime)
+              }
             }else if (eventTime < specTime){
               throw DecreasingTimeStampsError(specTime, eventTime, event.timeStamp.loc)
             }
@@ -125,7 +129,11 @@ object Interpreter {
             }
           }
           if (nextEvents.isEmpty) {
-            spec.step()
+            try {
+              spec.step()
+            } catch {
+              case err: TesslaError => throw TesslaErrorWithTimestamp(err, spec.getTime)
+            }
             stopped = true
           }
       }
