@@ -26,6 +26,7 @@ object Main extends SexyOpt {
   val listInStreams =
     flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
   val timeUnit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
+  val generateOsl = flag("generate-osl", "Print the corresponding osl file")
 
   def main(args: Array[String]): Unit = {
     def unwrapResult[T](result: Result[T]): T = result match {
@@ -43,6 +44,9 @@ object Main extends SexyOpt {
 
     parse(args)
     try {
+      if (generateOsl) {
+        GenerateISL.generateOsl(tesslaFile)
+      }
       val specSource = TesslaSource.fromFile(tesslaFile)
       val timeUnitSource = timeUnit.map(TesslaSource.fromString(_, "--timeunit"))
       if (verifyOnly || listInStreams || listOutStreams) {

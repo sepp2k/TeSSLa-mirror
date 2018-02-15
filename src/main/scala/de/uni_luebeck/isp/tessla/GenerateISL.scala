@@ -56,12 +56,7 @@ object GenerateISL {
   case class LogAst(log:String) extends IslAst {
     override def insertOnLog(l:LogAst): IslAst = CondAst(TrueCond, Seq(this, l), Seq())
   }
-  def main(args: Array[String]): Unit = {
-    if (args.length != 1) {
-      System.err.println("Usage: generate-isl spec.tessla")
-      sys.exit(1)
-    }
-    val tesslaFile = args(0)
+  def generateOsl(tesslaFile:String): Unit = {
     val ast = new TesslaParser().translateSpec(TesslaSource.fromFile(tesslaFile))
     println(generateForSpec(ast))
   }
