@@ -104,6 +104,15 @@ class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
     ("||", 2) -> primOp(PrimitiveOperators.Or),
     ("!", 1) -> primOp(PrimitiveOperators.Not),
     ("first", 2) -> primOp(PrimitiveOperators.First),
+    ("first", 3) -> primOp(PrimitiveOperators.First),
+    ("first", 4) -> primOp(PrimitiveOperators.First),
+    ("first", 5) -> primOp(PrimitiveOperators.First),
+    ("first", 6) -> primOp(PrimitiveOperators.First),
+    ("first", 7) -> primOp(PrimitiveOperators.First),
+    ("first", 8) -> primOp(PrimitiveOperators.First),
+    ("first", 9) -> primOp(PrimitiveOperators.First),
+    ("first", 10) -> primOp(PrimitiveOperators.First),
+
     ("if then else", 3) -> primOp(PrimitiveOperators.IfThenElse),
     ("if then", 2) -> primOp(PrimitiveOperators.IfThen)
   )
