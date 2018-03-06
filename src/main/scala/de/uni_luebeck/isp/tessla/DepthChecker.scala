@@ -15,7 +15,7 @@ object DepthChecker {
         Math.max(
           nestingDepth(spec.streams, dl.values, memTable),
           nestingDepth(spec.streams, dl.delays, memTable))
-    }).max
+    }).fold(0)(math.max)
   }
 
   def nestingDepth(streams: Map[String, TesslaCore.Expression], stream: TesslaCore.StreamRef, memoized: mutable.Map[String, Int]): Int = {

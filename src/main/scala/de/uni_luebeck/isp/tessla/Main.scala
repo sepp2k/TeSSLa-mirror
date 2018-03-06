@@ -31,6 +31,7 @@ object Main extends SexyOpt {
   val abortAt = option("abort-at", "Stop the interpreter after a given amount of events.")
   val flattenInput = flag("flatten-input", "Print the input trace in a flattened form.")
   val computationDepth = flag("print-computation-depth", "Print the length of the longest path a propagation message travels")
+  val recursionDepth = flag("print-recursion-depth", "Print the length of the longest recursion")
 
   def main(args: Array[String]): Unit = {
     def unwrapResult[T](result: Result[T]): T = result match {
@@ -50,7 +51,7 @@ object Main extends SexyOpt {
     try {
       val specSource = TesslaSource.fromFile(tesslaFile)
       val timeUnitSource = timeUnit.map(TesslaSource.fromString(_, "--timeunit"))
-      if (verifyOnly || listInStreams || listOutStreams || computationDepth) {
+      if (verifyOnly || listInStreams || listOutStreams || computationDepth || recursionDepth) {
         val spec = unwrapResult(new Compiler().compile(specSource, timeUnitSource))
         if (listInStreams) {
           spec.inStreams.foreach { case (name, _, _) => println(name) }
@@ -62,6 +63,10 @@ object Main extends SexyOpt {
         }
         if (computationDepth) {
           println(DepthChecker.nestingDepth(spec))
+          return
+        }
+        if (recursionDepth) {
+          println(RecursiveDepthChecker.nestingDepth(spec))
           return
         }
       } else {
