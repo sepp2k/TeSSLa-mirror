@@ -20,14 +20,14 @@ abstract class FlatTessla {
 
   type Identifier <: HasUniqueIdentifiers#Identifier
 
-  case class VariableEntry(expression: Expression, typeInfo: TypeAnnotation)
+  case class VariableEntry(id: Identifier, expression: Expression, typeInfo: TypeAnnotation, loc: Location)
 
   class Scope(val parent: Option[Scope]) {
     val variables = mutable.Map[Identifier, VariableEntry]()
 
-    def addVariable(id: Identifier, entry: VariableEntry): Unit = {
-      require(!variables.contains(id), "addVariable should only ever be called with a fresh identifier!")
-      variables(id) = entry
+    def addVariable(entry: VariableEntry): Unit = {
+      require(!variables.contains(entry.id), "addVariable should only ever be called with a fresh identifier!")
+      variables(entry.id) = entry
     }
 
     def resolveVariable(id: Identifier): Option[VariableEntry] = {
@@ -116,6 +116,7 @@ object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
 
   sealed abstract class Argument {
     def loc: Location
+    def id: Identifier
   }
 
   case class PositionalArgument(id: Identifier, loc: Location) extends Argument {

@@ -109,7 +109,7 @@ object Tessla {
 
   case class IntLiteral(value: BigInt) extends LiteralValue
 
-  case class TimeLiteral(value: BigInt, unit: TimeUnit) extends LiteralValue {
+  case class TimeSpanLiteral(value: BigInt, unit: TimeUnit) extends LiteralValue {
     override def toString = s"$value $unit"
   }
 
@@ -148,8 +148,8 @@ object Tessla {
     def withLoc(loc: Location): SimpleType = SimpleType(id.copy(loc = loc))
   }
 
-  case class GenericType(id: Identifier, args: Seq[Type], loc: Location) extends Type {
+  case class TypeApplication(id: Identifier, args: Seq[Type], loc: Location) extends Type {
     override def toString = s"$id[${args.mkString(", ")}]"
-    def withLoc(loc: Location): GenericType = copy(loc = loc)
+    def withLoc(loc: Location): TypeApplication = copy(loc = loc)
   }
 }

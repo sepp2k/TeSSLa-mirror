@@ -4,16 +4,38 @@ object Errors {
 
   abstract class TesslaError extends Exception with Diagnostic
 
-  case class TypeMismatch(expected: TypedTessla.Type, found: TypedTessla.Type, loc: Location) extends TesslaError {
+  case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location) extends TesslaError {
     override def message = s"Type mismatch: Expected $expected, found $found"
+  }
+
+  object TypeMismatch {
+    def apply(expected: TypedTessla.Type, found: TypedTessla.Type, loc: Location): TypeMismatch = {
+      TypeMismatch(expected.toString, found, loc)
+    }
   }
 
   case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
     def message = s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
   }
 
-  case class UnknownType(name: String, loc: Location) extends TesslaError {
-    def message = s"Unknown type: $name"
+  case class ArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
+    def message = s"Wrong number of arguments for $name. Expected: $expected, actual: $actual"
+  }
+
+  case class UndefinedType(name: String, loc: Location) extends TesslaError {
+    def message = s"Undefined type: $name"
+  }
+
+  case class UndefinedTypeConstructor(name: String, loc: Location) extends TesslaError {
+    def message = s"Undefined type constructor: $name"
+  }
+
+  case class MissingTypeAnnotationRec(name: String, loc: Location) extends TesslaError {
+    override def message = s"Recursive definition $name needs a type annotation"
+  }
+
+  case class MissingTypeAnnotationParam(name: String, loc: Location) extends TesslaError {
+    override def message = s"Parameter $name needs a type annotation"
   }
 
   case class StreamOfStreams(loc: Location) extends TesslaError {
@@ -38,7 +60,7 @@ object Errors {
 
   case class UndefinedNamedArg(name: String, loc: Location) extends TesslaError {
 
-    override def message = s"Undefined keyword argument ${name}"
+    override def message = s"Undefined keyword argument $name"
   }
 
   case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {
@@ -116,5 +138,4 @@ object Errors {
   case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
     def message: String = s"Key $key was not found in $map"
   }
-
 }

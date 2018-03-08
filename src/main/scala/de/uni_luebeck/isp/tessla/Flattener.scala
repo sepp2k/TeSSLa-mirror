@@ -7,8 +7,9 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
   type IdMap = Map[String, FlatTessla.Identifier]
 
   val stdlib = BuiltIn.builtIns.map {
-    case (name, b) => name -> FlatTessla.VariableEntry(FlatTessla.BuiltInOperator(b), None)
-  } + ("nil" -> FlatTessla.VariableEntry(FlatTessla.Nil, None))
+    case (name, b) =>
+      name -> FlatTessla.VariableEntry(makeIdentifier(name), FlatTessla.BuiltInOperator(b), None, Location.builtIn)
+  } + ("nil" -> FlatTessla.VariableEntry(makeIdentifier("nil"), FlatTessla.Nil, None, Location.builtIn))
 
   def createIdMap(names: Iterable[String]): IdMap = {
     names.map(name => name -> makeIdentifier(name)).toMap
@@ -36,13 +37,12 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
 
   override def translateSpec(spec: Tessla.Specification) = {
     val stdlibScope = new FlatTessla.Scope(None)
-    val stdlibIdMap = createIdMap(stdlib.keys)
     stdlib.foreach {
-      case (name, entry) =>
-        stdlibScope.addVariable(stdlibIdMap(name), entry)
+      case (_, entry) =>
+        stdlibScope.addVariable(entry)
     }
     val globalScope = new FlatTessla.Scope(Some(stdlibScope))
-    val globalIdMap = stdlibIdMap ++ createIdMap(spec.statements.flatMap(getName))
+    val globalIdMap = stdlib.mapValues(_.id) ++ createIdMap(spec.statements.flatMap(getName))
     val emptySpec = FlatTessla.Specification(globalScope, Seq(), outAllLocation = None)
     checkForDuplicates(spec.statements.flatMap(getId))
     spec.statements.foldLeft(emptySpec) {
@@ -65,8 +65,8 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
 
       case (result, in: Tessla.In) =>
         val inputStream = FlatTessla.InputStream(in.id.name, in.streamType, in.loc)
-        val entry = FlatTessla.VariableEntry(inputStream, Some(in.streamType))
-        globalScope.addVariable(globalIdMap(in.id.name), entry)
+        val entry = FlatTessla.VariableEntry(globalIdMap(in.id.name), inputStream, Some(in.streamType), in.loc)
+        globalScope.addVariable(entry)
         result
     }
   }
@@ -87,13 +87,13 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
         addDefinition(innerDef, scope, innerIdMap)
       }
       val body = translateExpression(exp, scope, innerIdMap)
-      scope.addVariable(idMap(definition.id.name), FlatTessla.VariableEntry(body, definition.returnType))
+      scope.addVariable(FlatTessla.VariableEntry(idMap(definition.id.name), body, definition.returnType, definition.loc))
     } else {
       val innerScope = new FlatTessla.Scope(Some(scope))
       val paramIdMap = createIdMap(parameters.map(_.name))
       val innerIdMap = idMap ++ paramIdMap ++ createIdMap(innerDefs.map(_.id.name))
       parameters.foreach { param =>
-        innerScope.addVariable(paramIdMap(param.name), FlatTessla.VariableEntry(param, param.parameterType))
+        innerScope.addVariable(FlatTessla.VariableEntry(paramIdMap(param.name), param, param.parameterType, param.loc))
       }
       innerDefs.foreach { innerDef =>
         addDefinition(innerDef, innerScope, innerIdMap)
@@ -101,7 +101,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       val body = translateExpression(exp, innerScope, innerIdMap)
       // TODO: Handle type parameters by implementing a proper environment for them (different namespace)
       val mac = FlatTessla.Macro(Seq(), parameters, innerScope, definition.returnType, body, definition.loc)
-      scope.addVariable(idMap(definition.id.name), FlatTessla.VariableEntry(mac, None))
+      scope.addVariable(FlatTessla.VariableEntry(idMap(definition.id.name), mac, None, definition.loc))
     }
   }
 
@@ -125,7 +125,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     case v: FlatTessla.Variable => v.id
     case _ =>
       val id = makeIdentifier()
-      scope.addVariable(id, FlatTessla.VariableEntry(exp, None))
+      scope.addVariable(FlatTessla.VariableEntry(id, exp, None, exp.loc))
       id
   }
 

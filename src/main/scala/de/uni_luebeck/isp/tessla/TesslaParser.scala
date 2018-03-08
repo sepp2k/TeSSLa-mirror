@@ -143,9 +143,12 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
         loc => warn(Location(loc, path), "The keyword 'define' is deprecated, use 'def' instead.")
       } | DEF
 
+    def definitionHeader =
+      (define ~> identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.?) ^^! { (loc, ast) => (loc, ast) }
+
     def definition =
-      (define ~> identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.? ~ (COLONEQ ~> expression)) ^^! {
-        case (loc, ((((name, typeParams), params), returnType), expr)) =>
+      (definitionHeader ~ (COLONEQ ~> expression)) ^^ {
+        case ((loc, (((name, typeParams), params), returnType)), expr) =>
           Tessla.Definition(name, typeParams.getOrElse(Seq()), params.getOrElse(Seq()), returnType, expr, Location(loc, path))
       }
 
@@ -174,7 +177,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def `type`: Parser[Tessla.Type] = identifier ~ typeArguments.? ^^! {
       case (_, (name, None)) => Tessla.SimpleType(name)
-      case (loc, (name, Some(args))) => Tessla.GenericType(name, args, Location(loc, path))
+      case (loc, (name, Some(args))) => Tessla.TypeApplication(name, args, Location(loc, path))
     }
 
     def typeArguments: Parser[Seq[Tessla.Type]] = LBRACKET ~> rep1sep(`type`, COMMA) <~ RBRACKET
@@ -295,7 +298,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
       case WithLocation(_, INT(value)) => BigInt(value)
     } ~ timeUnit.? ^^ {
       case (value, None) => Tessla.IntLiteral(value)
-      case (value, Some(unit)) => Tessla.TimeLiteral(value, unit)
+      case (value, Some(unit)) => Tessla.TimeSpanLiteral(value, unit)
     }
 
     def timeUnit: Parser[TimeUnit] = matchToken("identifier", Set("<identifier>")) {

@@ -7,19 +7,35 @@ object TypedTessla extends FlatTessla {
 
   override type Identifier = FlatTessla.Identifier
 
-  sealed abstract class Type
+  sealed abstract class Type {
+    def isValueType: Boolean
+  }
 
-  case object IntType extends Type
+  case object IntType extends Type {
+    override def isValueType = true
+  }
 
-  case object TimeType extends Type
+  case object TimeSpanType extends Type {
+    override def isValueType = true
+  }
 
-  case object StringType extends Type
+  case object StringType extends Type {
+    override def isValueType = true
+  }
 
-  case object BoolType extends Type
+  case object BoolType extends Type {
+    override def isValueType = true
+  }
 
-  case object UnitType extends Type
+  case object UnitType extends Type {
+    override def isValueType = true
+  }
 
-  case class StreamType(elementType: Type) extends Type
+  case class StreamType(elementType: Type) extends Type {
+    override def isValueType = false
+  }
 
-  case class FunctionType(parameterTypes: Seq[Type], returnType: Seq[Type]) extends Type
+  case class FunctionType(typeParameters: Seq[Identifier], parameterTypes: Seq[Type], returnType: Type) extends Type {
+    override def isValueType = false
+  }
 }

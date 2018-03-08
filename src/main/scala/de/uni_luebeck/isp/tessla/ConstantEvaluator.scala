@@ -25,7 +25,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     val env = createEnvForScopeWithParents(spec.globalScope)
     translateEnv(env, None)
     def inputStreams = spec.globalScope.variables.collect {
-      case (_, TypedTessla.VariableEntry(is: TypedTessla.InputStream, typ)) =>
+      case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
         (is.name, translateStreamType(typ), is.loc)
     }.toSeq
     def outputStreams = spec.outStreams.map { os =>
@@ -71,8 +71,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
 
   def translateValueType(typ: TypedTessla.Type) = typ match {
     case TypedTessla.IntType => TesslaCore.IntType
-    // Times are just seen as ints in tessla core
-    case TypedTessla.TimeType => TesslaCore.IntType
+    // Time spans are just seen as ints in tessla core
+    case TypedTessla.TimeSpanType => TesslaCore.IntType
     case TypedTessla.StringType => TesslaCore.StringType
     case TypedTessla.BoolType => TesslaCore.BoolType
     case TypedTessla.UnitType => TesslaCore.UnitType
@@ -85,7 +85,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   def translateLiteral(literal: Tessla.LiteralValue, loc: Location): TesslaCore.Value = literal match {
     case Tessla.IntLiteral(x) =>
       TesslaCore.IntLiteral(x, loc)
-    case Tessla.TimeLiteral(x, tu) =>
+    case Tessla.TimeSpanLiteral(x, tu) =>
       baseTimeUnit match {
         case Some(base) =>
           TesslaCore.IntLiteral(tu.convertTo(base) * x, loc)
