@@ -14,31 +14,44 @@ abstract class FlatTessla {
     def outAll = outAllLocation.isDefined
   }
 
-  type Type
   type TypeAnnotation
   def typeAnnotationToString(typeAnnotation: TypeAnnotation): String
 
   type Identifier <: HasUniqueIdentifiers#Identifier
 
   case class VariableEntry(id: Identifier, expression: Expression, typeInfo: TypeAnnotation, loc: Location)
+  case class TypeEntry(id: Identifier, arity: Int, typeConstructor: Seq[Type] => Type, loc: Location)
 
   class Scope(val parent: Option[Scope]) {
     val variables = mutable.Map[Identifier, VariableEntry]()
+    val types = mutable.Map[Identifier, TypeEntry]()
 
     def addVariable(entry: VariableEntry): Unit = {
       require(!variables.contains(entry.id), "addVariable should only ever be called with a fresh identifier!")
       variables(entry.id) = entry
     }
 
+    def addType(entry: TypeEntry): Unit = {
+      require(!types.contains(entry.id), "addType should only ever be called with a fresh identifier!")
+      types(entry.id) = entry
+    }
+
     def resolveVariable(id: Identifier): Option[VariableEntry] = {
       variables.get(id).orElse(parent.flatMap(_.resolveVariable(id)))
     }
 
+    def resolveType(id: Identifier): Option[TypeEntry] = {
+      types.get(id).orElse(parent.flatMap(_.resolveType(id)))
+    }
+
     override def toString = {
       s"-- Scope $hashCode\n" + variables.map {
-        case (name, entry) =>
+        case (id, entry) =>
           val typeAnnotation = typeAnnotationToString(entry.typeInfo)
-          s"def $name$typeAnnotation = ${entry.expression}"
+          s"def $id$typeAnnotation = ${entry.expression}"
+      }.mkString("\n") + types.map {
+        case (id, entry) =>
+          s"type $id[${entry.arity}] = ${entry.id}"
       }.mkString("\n") + parent.map(p => s"\n-- Parent = Scope ${p.hashCode}\n").getOrElse("") ++ "-- /Scope"
     }
   }
@@ -71,26 +84,21 @@ abstract class FlatTessla {
     override def toString = s"in $name: $streamType"
   }
 
-  case class Parameter(param: Tessla.Parameter, id: Identifier) extends Expression {
-    def parameterType = param.parameterType
-
+  case class Parameter(param: Tessla.Parameter, parameterType: TypeAnnotation, id: Identifier) extends Expression {
     def name = param.id.name
 
     def nameWithLoc = param.id
 
     override def loc = param.loc
 
-    override def toString = parameterType match {
-      case Some(t) => s"param $name: $t"
-      case None => s"param $name"
-    }
+    override def toString = s"param $name: $parameterType"
   }
 
   case class Variable(id: Identifier, loc: Location) extends Expression {
     override def toString = id.toString
   }
 
-  case class MacroCall(macroID: Identifier, macroLoc: Location, args: Seq[Argument], loc: Location) extends Expression {
+  case class MacroCall(macroID: Identifier, macroLoc: Location, typeArgs: Seq[Type], args: Seq[Argument], loc: Location) extends Expression {
     override def toString = args.mkString(s"$macroID(", ", ", ")")
   }
 
@@ -102,7 +110,46 @@ abstract class FlatTessla {
 }
 
 object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
-  type Type = Tessla.Type
+  sealed abstract class Type {
+    def isValueType: Boolean
+  }
+
+  case object IntType extends Type {
+    override def isValueType = true
+  }
+
+  case object TimeSpanType extends Type {
+    override def isValueType = true
+  }
+
+  case object StringType extends Type {
+    override def isValueType = true
+  }
+
+  case object BoolType extends Type {
+    override def isValueType = true
+  }
+
+  case object UnitType extends Type {
+    override def isValueType = true
+  }
+
+  case class StreamType(elementType: Type) extends Type {
+    override def isValueType = false
+  }
+
+  case class FunctionType(typeParameters: Seq[Identifier], parameterTypes: Seq[Type], returnType: Type) extends Type {
+    override def isValueType = false
+  }
+
+  case class TypeParameter(id: Identifier, loc: Location) extends Type {
+    // TODO: Handle this properly via constraints instead of restricting all type variables to only stand for
+    //       value types.
+    //       This will entail removing the isValueType method and instead handling this in the type checker
+    //       where the type environment is available
+    override def isValueType = true
+  }
+
   type TypeAnnotation = Option[Type]
 
   override def typeAnnotationToString(typeAnnotation: TypeAnnotation) = typeAnnotation match {

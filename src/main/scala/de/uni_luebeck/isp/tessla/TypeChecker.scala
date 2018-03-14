@@ -14,37 +14,11 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
   }
 
   @Deprecated
-  def placeholderType = TypedTessla.StreamType(TypedTessla.IntType) // TODO: Properly determine type
-
-  def translateType(typ: FlatTessla.Type): TypedTessla.Type = typ match {
-    case Tessla.SimpleType(id) =>
-      id.name match {
-        case "Int" => TypedTessla.IntType
-        case "Bool" => TypedTessla.BoolType
-        case "Unit" => TypedTessla.UnitType
-        case "String" => TypedTessla.StringType
-        case "TimeSpan" => TypedTessla.TimeSpanType
-        case name => throw UndefinedType(name, id.loc)
-      }
-    case Tessla.TypeApplication(id, typeArgs, loc) =>
-      val translatedArgs = typeArgs.map(translateType)
-      (id.name, translatedArgs) match {
-        case ("Events", Seq(typeArg)) =>
-          if (typeArg.isValueType) {
-            TypedTessla.StreamType(typeArg)
-          } else {
-            throw StreamOfStreams(loc)
-          }
-        case ("Events", args) =>
-          throw TypeArityMismatch("Events", 1, args.length, loc)
-        case (name, _) =>
-          throw UndefinedTypeConstructor(name, id.loc)
-      }
-  }
+  def placeholderType = FlatTessla.StreamType(FlatTessla.IntType) // TODO: Properly determine type
 
   def processTypeAnnotation(entry: FlatTessla.VariableEntry) = entry.typeInfo match {
     case Some(typ) =>
-      typeMap(entry.id) = translateType(typ)
+      typeMap(entry.id) = typ
     case None =>
   }
 
@@ -64,21 +38,23 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
     translateScope(scope, parent)
   }
 
+  def getParameterType(param: FlatTessla.Parameter): TypedTessla.Type = {
+    param.parameterType.getOrElse(throw MissingTypeAnnotationParam(param.name, param.loc))
+  }
+
   def parameterTypes(mac: FlatTessla.Macro): Seq[TypedTessla.Type] = {
-    mac.parameters.map { param =>
-      param.parameterType.map(translateType).getOrElse(throw MissingTypeAnnotationParam(param.name, param.loc))
-    }
+    mac.parameters.map(getParameterType)
   }
 
   def declaredType(entry: VariableEntry): Option[TypedTessla.Type] = {
-    entry.typeInfo.map(translateType).orElse {
+    entry.typeInfo.orElse {
       entry.expression match {
         case m: FlatTessla.Macro =>
           m.returnType.map { returnType =>
-            TypedTessla.FunctionType(m.typeParameters, parameterTypes(m), translateType(returnType))
+            FlatTessla.FunctionType(m.typeParameters, parameterTypes(m), returnType)
           }
         case _ =>
-          entry.typeInfo.map(translateType)
+          entry.typeInfo
       }
     }
   }
@@ -138,6 +114,26 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
     TypedTessla.VariableEntry(entry.id, exp, typ, entry.loc)
   }
 
+  def typeSubst(typ: TypedTessla.Type, typeEnv: Map[TypedTessla.Identifier, TypedTessla.Type]): TypedTessla.Type = typ match {
+    case tvar: FlatTessla.TypeParameter =>
+      typeEnv.getOrElse(tvar.id, throw UndefinedType(tvar.id.nameOpt.getOrElse(tvar.id.toString), tvar.loc))
+    case functionType: FlatTessla.FunctionType =>
+      typeSubst(functionType, typeEnv)
+    case _ => typ
+  }
+
+  // Overload for function types to encode the fact that typeSubst on a function type always produces another function
+  // type
+  def typeSubst(typ: FlatTessla.FunctionType, typeEnv: Map[TypedTessla.Identifier, TypedTessla.Type]): FlatTessla.FunctionType = {
+    // Since we don't support higher-order types, i.e. function types that appear as a subtype can't be generic
+    // themselves, we know that none of the function types, except the initial one that was used to generated the
+    // type environment, will have type parameters, so we don't need to update the type envrionment with new type
+    // variables.
+    val parameterTypes = typ.parameterTypes.map(typeSubst(_, typeEnv))
+    val returnType = typeSubst(typ.returnType, typeEnv)
+    FlatTessla.FunctionType(Seq(), parameterTypes, returnType)
+  }
+
   def translateExpression(expression: FlatTessla.Expression, scope: TypedTessla.Scope): (TypedTessla.Expression, TypedTessla.Type) = {
     expression match {
       case FlatTessla.Nil =>
@@ -146,38 +142,39 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
         TypedTessla.Variable(v.id, v.loc) -> typeMap(v.id)
       case lit: FlatTessla.Literal =>
         val t = lit.value match {
-          case _: Tessla.IntLiteral => TypedTessla.IntType
-          case _: Tessla.TimeSpanLiteral => TypedTessla.TimeSpanType
-          case Tessla.Unit => TypedTessla.UnitType
-          case _: Tessla.BoolLiteral => TypedTessla.BoolType
-          case _: Tessla.StringLiteral => TypedTessla.StringType
+          case _: Tessla.IntLiteral => FlatTessla.IntType
+          case _: Tessla.TimeSpanLiteral => FlatTessla.TimeSpanType
+          case Tessla.Unit => FlatTessla.UnitType
+          case _: Tessla.BoolLiteral => FlatTessla.BoolType
+          case _: Tessla.StringLiteral => FlatTessla.StringType
         }
         TypedTessla.Literal(lit.value, lit.loc) -> t
       case inStream: FlatTessla.InputStream =>
-        val t = translateType(inStream.streamType)
-        TypedTessla.InputStream(inStream.name, t, inStream.loc) -> t
+        TypedTessla.InputStream(inStream.name, inStream.streamType, inStream.loc) -> inStream.streamType
       case param: FlatTessla.Parameter =>
-        param.parameterType match {
-          case Some(t) =>
-            TypedTessla.Parameter(param.param, param.id) -> translateType(t)
-          case None =>
-            throw MissingTypeAnnotationParam(param.name, param.loc)
-        }
+        val t = getParameterType(param)
+        TypedTessla.Parameter(param.param, t, param.id) -> t
       case call: FlatTessla.MacroCall =>
         typeMap(call.macroID) match {
-          case t: TypedTessla.FunctionType =>
+          case t: FlatTessla.FunctionType =>
+            val name = call.macroID.nameOpt.getOrElse("<macro>")
             if (call.args.length != t.parameterTypes.length) {
-              val name = call.macroID.nameOpt.getOrElse("<macro>")
               throw ArityMismatch(name, t.parameterTypes.length, call.args.length, call.loc)
             }
-            call.args.zip(t.parameterTypes).foreach {
+            if (call.typeArgs.length != t.typeParameters.length) {
+              throw TypeArityMismatch(name, t.typeParameters.length, call.typeArgs.length, call.loc)
+            }
+            val typeArgs = call.typeArgs
+            val typeEnv = t.typeParameters.zip(typeArgs).toMap
+            val concreteType = typeSubst(t, typeEnv)
+            call.args.zip(concreteType.parameterTypes).foreach {
               case (arg, expected) =>
                 val actual = typeMap(arg.id)
                 if (actual != expected) {
                   throw TypeMismatch(expected, actual, arg.loc)
                 }
             }
-            TypedTessla.MacroCall(call.macroID, call.macroLoc, call.args, call.loc) -> t.returnType
+            TypedTessla.MacroCall(call.macroID, call.macroLoc, typeArgs, call.args, call.loc) -> concreteType.returnType
           case other =>
             throw TypeMismatch("function", other, call.macroLoc)
         }
@@ -185,11 +182,11 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
       case FlatTessla.BuiltInOperator(b) =>
         TypedTessla.BuiltInOperator(b) -> placeholderType
       case mac: FlatTessla.Macro =>
-        val parameters = mac.parameters.map(p => TypedTessla.Parameter(p.param, p.id))
+        val parameters = mac.parameters.map(p => TypedTessla.Parameter(p.param, getParameterType(p), p.id))
         val innerScope = translateScope(mac.scope, Some(scope))
         val (body, returnType) = translateExpression(mac.body, innerScope)
         // TODO: Add type parameters to type environment
-        val macroType = TypedTessla.FunctionType(mac.typeParameters, parameterTypes(mac), returnType)
+        val macroType = FlatTessla.FunctionType(mac.typeParameters, parameterTypes(mac), returnType)
         TypedTessla.Macro(mac.typeParameters, parameters, innerScope, returnType, body, mac.loc) -> macroType
     }
   }

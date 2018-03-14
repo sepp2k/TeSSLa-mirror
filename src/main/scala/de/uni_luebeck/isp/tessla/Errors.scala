@@ -26,10 +26,6 @@ object Errors {
     def message = s"Undefined type: $name"
   }
 
-  case class UndefinedTypeConstructor(name: String, loc: Location) extends TesslaError {
-    def message = s"Undefined type constructor: $name"
-  }
-
   case class MissingTypeAnnotationRec(name: String, loc: Location) extends TesslaError {
     override def message = s"Recursive definition $name needs a type annotation"
   }
@@ -38,8 +34,8 @@ object Errors {
     override def message = s"Parameter $name needs a type annotation"
   }
 
-  case class StreamOfStreams(loc: Location) extends TesslaError {
-    def message = "Streams may not contain other streams"
+  case class StreamOfNonValueType(loc: Location) extends TesslaError {
+    def message = "Streams may only contain value types; not other streams or functions"
   }
 
   case class InfiniteRecursion(loc: Location) extends TesslaError {
