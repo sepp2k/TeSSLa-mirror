@@ -46,6 +46,7 @@ object Main extends SexyOpt {
     try {
       if (generateOsl) {
         GenerateISL.generateOsl(tesslaFile)
+        return
       }
       val specSource = TesslaSource.fromFile(tesslaFile)
       val timeUnitSource = timeUnit.map(TesslaSource.fromString(_, "--timeunit"))

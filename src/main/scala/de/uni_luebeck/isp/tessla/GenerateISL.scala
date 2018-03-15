@@ -62,7 +62,7 @@ object GenerateISL {
   }
 
   def generateForSpec(spec: Tessla.Spec): String = {
-    spec.statements.map(generateForStatement).reduce(_++_).toStringSeq().mkString("\n")
+    spec.statements.map(generateForStatement).reduce(_++_).toStringSeq().filter(x => x != "").mkString("\n")
   }
 
   def generateForStatement(statement: Tessla.Statement): IslAst= {
@@ -109,52 +109,64 @@ object GenerateISL {
     case "line_reached" => "line_reached"
     case _ => ""
   }
+  def getIntValue(args: Seq[Tessla.Argument]): BigInt = args match {
+    case Seq(Tessla.PositionalArgument(Tessla.IntLiteral(value, _))) => value
+    case Seq(Tessla.NamedArgument(_,Tessla.IntLiteral(value, _))) => value
+    case _ => null
+  }
+  def getStringValue(args: Seq[Tessla.Argument]): String = args match {
+    case Seq(Tessla.PositionalArgument(Tessla.StringLiteral(value, _))) => value
+    case Seq(Tessla.NamedArgument(_,Tessla.StringLiteral(value, _))) => value
+    case _ => null
+  }
   def generateForMacro(id: Tessla.Identifier, args: Seq[Tessla.Argument] ): IslAst = {
     id match {
       case Tessla.Identifier("code_line_exec",_) =>
-        args match {
-          case Seq(Tessla.PositionalArgument(Tessla.IntLiteral(value, _))) =>
-            CondAst(StringCond(s"[line_reached:${value}]"), Seq(LogAst("line_reached")), Seq())
-          case _ =>
+        getIntValue(args) match {
+          case null =>
             LogAst("line_reached")
+          case value =>
+            CondAst(StringCond(s"[line_reached:${value}]"), Seq(LogAst("line_reached")), Seq())
         }
       case Tessla.Identifier("function_call",_) =>
-        args match {
+        getStringValue(args) match {
           // This wont work because we are already in that function when functions evaluates
-          //case Seq(Tessla.PositionalArgument(Tessla.StringLiteral(value, _))) =>
-          //  Seq(s"if [functions:${value}] then function_call fi")
-          case _ =>
+          case null =>
             LogAst("function_call")
+          case value =>
+            CondAst(StringCond(s"[function_call:${value}]"), Seq(LogAst("function_call")), Seq())
         }
       case Tessla.Identifier("function_return",_) =>
-        args match {
-          case Seq(Tessla.PositionalArgument(Tessla.StringLiteral(value, _))) =>
-            CondAst(StringCond(s"&([functions:${value}], [opcodes: ret])"), Seq(LogAst("functions"), LogAst("opcodes")), Seq())
-          case _ =>
+        getStringValue(args) match {
+          case null =>
             LogAst("functions")
+          case value =>
+            CondAst(StringCond(s"&([functions:${value}], [opcodes: ret])"), Seq(LogAst("functions"), LogAst("opcodes")), Seq())
         }
       case Tessla.Identifier("runtime",_) =>
-        args match {
-          case Seq(Tessla.PositionalArgument(Tessla.StringLiteral(value, _))) =>
+        getStringValue(args) match {
+          case value =>
             CondAst( TrueCond,
             Seq(CondAst(StringCond(s"&([functions:${value}], [opcodes: ret]"), Seq(LogAst("functions"), LogAst("opcodes")), Seq()),
               LogAst("function_calls")),
               Seq())
-
+          // why is there no default case?
         }
       case Tessla.Identifier("store_exec",_) =>
-        args match {
-          case Seq(Tessla.PositionalArgument(Tessla.IntLiteral(value, _))) =>
+        getIntValue(args) match {
+          case value =>
             CondAst(StringCond(s"if &([lines: ${value}], [opcodes: store])"), Seq(LogAst("line"), LogAst("opcode")), Seq())
         }
       case Tessla.Identifier("load_exec",_) =>
-        args match {
-          case Seq(Tessla.PositionalArgument(Tessla.IntLiteral(value, _))) =>
+        getIntValue(args) match {
+          case value =>
             CondAst(StringCond(s"if &([lines: ${value}], [opcodes: load])"), Seq(LogAst("line"), LogAst("opcode")), Seq())
         }
       case Tessla.Identifier("thread_id_on",_) =>
         args match {
           case Seq(Tessla.PositionalArgument(Tessla.MacroCall(macroID, macroArgs, _))) =>
+            generateForMacro(macroID, macroArgs).insertOnLog(LogAst("thread_id"))
+          case Seq(Tessla.NamedArgument(_, Tessla.MacroCall(macroID, macroArgs, _))) =>
             generateForMacro(macroID, macroArgs).insertOnLog(LogAst("thread_id"))
         }
       case _ =>
