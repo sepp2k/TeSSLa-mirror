@@ -1,4 +1,4 @@
-in a: Events<Int>
+in a: Events[Int]
 
 def f(x) := x
 

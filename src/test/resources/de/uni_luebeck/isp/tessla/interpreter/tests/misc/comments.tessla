@@ -1,5 +1,5 @@
 -- I'm a comment
-in x: Events<Unit> -- comments go until the end of the line
+in x: Events[Unit] -- comments go until the end of the line
 
 --- I'm a doc comment
 --- with multiple lines

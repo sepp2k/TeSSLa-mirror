@@ -1,2 +1,2 @@
-in ints: Events<Int>
+in ints: Events[Int]
 out ints

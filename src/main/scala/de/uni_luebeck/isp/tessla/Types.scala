@@ -13,7 +13,7 @@ object Types {
     override def toString = "?"
   }
   final case class Stream(elementType: ValueType) extends Type {
-    override def toString = s"Events<$elementType>"
+    override def toString = s"Events[$elementType]"
   }
 
   def fromAst(ast: Tessla.Type): Type = ast match {

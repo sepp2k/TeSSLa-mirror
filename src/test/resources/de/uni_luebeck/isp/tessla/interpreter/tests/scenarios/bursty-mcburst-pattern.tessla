@@ -16,11 +16,11 @@ def trigger(condition) :=
 def countSince(e, condition) :=
     resetCount(e, trigger(condition))
 
-in a: Events<Int>
+in a: Events[Int]
 out a
-in b: Events<Int>
+in b: Events[Int]
 out b
-in e: Events<Unit>
+in e: Events[Unit]
 out e
 
 def esSinceAGreaterThanB := countSince(e, a > b)

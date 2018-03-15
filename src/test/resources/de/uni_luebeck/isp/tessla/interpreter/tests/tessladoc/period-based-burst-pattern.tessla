@@ -15,7 +15,7 @@ def period(delay) := {
   const((), s)
 }
 
-in x: Events<Unit>
+in x: Events[Unit]
 def p := period(5)
 out p
 def c := resetCount(x, p)

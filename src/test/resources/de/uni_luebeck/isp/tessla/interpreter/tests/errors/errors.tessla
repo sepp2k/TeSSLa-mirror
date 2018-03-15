@@ -3,8 +3,8 @@ def y := 15 + true
 def z := 1
 def z := 2
 
-in ints: Events<Int>
-in strings: Events<String>
+in ints: Events[Int]
+in strings: Events[String]
 
 def bla := ints + ints
 def blubb := ints + strings
@@ -15,17 +15,17 @@ out z
 out bla
 out blubb
 
-def bla(x: Int, y: String, z: Events<Bool>): Events<Bool> := x==x && y==y && z==z
+def bla(x: Int, y: String, z: Events[Bool]): Events[Bool] := x==x && y==y && z==z
 
 out bla(1, "la", default(nil, true))
 out bla(1, y = "la", z = default(nil, true))
-out default(nil: Events<Int>, 42: Int)
+out default(nil: Events[Int], 42: Int)
 out bla(1, 2, default(nil, 42))
 out bla(1, y = "lala", z = default(nil, 42))
 out default(nil, 1: String)
-out default(nil, 1): Events<String>
+out default(nil, 1): Events[String]
 
-in bools: Events<Bool>
+in bools: Events[Bool]
 out if ints then 42 else 23
 out if ints then 42
 out if bools then 42 else "23"

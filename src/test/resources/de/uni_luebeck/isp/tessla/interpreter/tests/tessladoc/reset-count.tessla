@@ -10,7 +10,7 @@ def resetCount(events, reset) := {
   sum
 }
 
-in x: Events<Unit>
-in y: Events<Unit>
+in x: Events[Unit]
+in y: Events[Unit]
 def z := resetCount(x,y)
 out z

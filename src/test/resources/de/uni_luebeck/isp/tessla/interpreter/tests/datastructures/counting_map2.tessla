@@ -1,0 +1,15 @@
+in x: Events[Int]
+
+-- This differs from counting_map.tessla in that the call to Map_get is now
+-- nested directly in Map_add (and the getCount macro is inlined)
+-- In previous versions this nesting caused an error value-related bug to surface.
+-- So this is the regression test for that bug.
+def incCount(counts, key) :=
+    if Map_contains(counts, key)
+    then Map_add(counts, key, Map_get(counts, key) + 1)
+    else Map_add(counts, key, 1)
+
+def counts := default(incCount(last(counts, x), x), Map_empty)
+
+out x
+out counts

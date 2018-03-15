@@ -1,5 +1,5 @@
-in x: Events<Int>
-in y: Events<Int>
+in x: Events[Int]
+in y: Events[Int]
 def equal := x == y
 def notEqual := !equal
 def greater := x > y

@@ -1,14 +1,14 @@
-in x: Events<Int>
+in x: Events[Int]
 
-def get_count(counts, key) :=
-    if map_contains(counts, key)
-    then map_get(counts, key)
+def getCount(counts, key) :=
+    if Map_contains(counts, key)
+    then Map_get(counts, key)
     else 0
 
-def inc_count(counts, key) :=
-    map_add(counts, key, get_count(counts, key) + 1)
+def incCount(counts, key) :=
+    Map_add(counts, key, getCount(counts, key) + 1)
 
-def counts := default(inc_count(last(counts, x), x), map_empty)
+def counts := default(incCount(last(counts, x), x), Map_empty)
 
 out x
 out counts

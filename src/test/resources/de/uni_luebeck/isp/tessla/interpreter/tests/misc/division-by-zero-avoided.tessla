@@ -1,5 +1,5 @@
-in x: Events<Int>
-in y: Events<Int>
+in x: Events[Int]
+in y: Events[Int]
 
 def result :=
     if y == 0

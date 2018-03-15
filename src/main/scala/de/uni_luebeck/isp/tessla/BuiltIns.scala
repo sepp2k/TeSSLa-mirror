@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.AstToCore.{TranslatedExpression, Arg, Stream, Literal}
-import Errors.TypeMismatch
+import de.uni_luebeck.isp.tessla.AstToCore.{Arg, Literal, Stream, TranslatedExpression}
+import Errors.{TypeMismatch, UnliftedUseOfPartialFunction}
 
 class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
   def primOp(op: PrimitiveOperators.PrimitiveOperator): (Seq[Arg], String, Location) => TranslatedExpression = {
@@ -10,7 +10,11 @@ class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
         case Literal(lit) => lit
       }
       if (literals.length == args.length) {
-        (Seq(), Literal(op.eval(literals, loc).get.toLiteral))
+        op.eval(literals, loc) match {
+          case Some(result) => (Seq(), Literal(result.toLiteral))
+          // TODO: op.toString is not always the TeSSLa name of the function
+          case None => throw UnliftedUseOfPartialFunction(op.toString, loc)
+        }
       } else {
         val streams: Seq[(Seq[(String, TesslaCore.Expression)], Stream)] = args.map {
           case s @ Stream(_, _) =>
@@ -67,7 +71,7 @@ class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
         (Seq(name -> TesslaCore.Last(values, clock, loc)), Stream(TesslaCore.Stream(name, loc), t))
       case (Seq(values @ Literal(_), _), _, _) =>
         throw TypeMismatch(Types.Stream(Types.Nothing), values.typ, values.loc)
-      case (Seq(_, clock @ Literal(_), _), _, _) =>
+      case (Seq(_, clock @ Literal(_)), _, _) =>
         throw TypeMismatch(Types.Stream(Types.Nothing), clock.typ, clock.loc)
     },
     ("delayedLast", 2) -> {
@@ -76,7 +80,7 @@ class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
         (Seq(name -> TesslaCore.DelayedLast(values, delays, loc)), Stream(TesslaCore.Stream(name, loc), valueType))
       case (Seq(values @ Literal(_), _), _, _) =>
         throw TypeMismatch(Types.Stream(Types.Nothing), values.typ, values.loc)
-      case (Seq(_, delays @ Literal(_), _), _, _) =>
+      case (Seq(_, delays @ Literal(_)), _, _) =>
         throw TypeMismatch(Types.Stream(Types.Nothing), delays.typ, delays.loc)
     },
     ("+", 2) -> primOp(PrimitiveOperators.Add),
@@ -100,6 +104,15 @@ class BuiltIns private(mkId: String => String, customBuiltIns: CustomBuiltIns) {
     ("||", 2) -> primOp(PrimitiveOperators.Or),
     ("!", 1) -> primOp(PrimitiveOperators.Not),
     ("first", 2) -> primOp(PrimitiveOperators.First),
+    ("first", 3) -> primOp(PrimitiveOperators.First),
+    ("first", 4) -> primOp(PrimitiveOperators.First),
+    ("first", 5) -> primOp(PrimitiveOperators.First),
+    ("first", 6) -> primOp(PrimitiveOperators.First),
+    ("first", 7) -> primOp(PrimitiveOperators.First),
+    ("first", 8) -> primOp(PrimitiveOperators.First),
+    ("first", 9) -> primOp(PrimitiveOperators.First),
+    ("first", 10) -> primOp(PrimitiveOperators.First),
+
     ("if then else", 3) -> primOp(PrimitiveOperators.IfThenElse),
     ("if then", 2) -> primOp(PrimitiveOperators.IfThen)
   )

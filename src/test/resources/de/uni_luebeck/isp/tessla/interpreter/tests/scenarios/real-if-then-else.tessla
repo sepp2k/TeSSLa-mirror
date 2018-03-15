@@ -9,9 +9,9 @@ def mergeValues(a,b) :=
 -- of the corresponding stream. (signal semantics!)
 def ifThenElse(a,b,c) := mergeValues(if a then b, if !a then c)
 
-in a: Events<Bool>
-in b: Events<Int>
-in c: Events<Int>
-in z: Events<Int>
+in a: Events[Bool]
+in b: Events[Int]
+in c: Events[Int]
+in z: Events[Int]
 
 out ifThenElse(a,b,c) as z

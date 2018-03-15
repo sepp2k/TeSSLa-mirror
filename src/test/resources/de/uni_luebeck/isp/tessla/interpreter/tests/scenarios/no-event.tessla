@@ -1,6 +1,6 @@
-in a: Events<Unit>
-in b: Events<Unit>
-in z: Events<Unit>
+in a: Events[Unit]
+in b: Events[Unit]
+in z: Events[Unit]
 
 def merge(x,y) := if default(x==x, false) || default(y==y, false) then ()
 

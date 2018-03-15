@@ -1,4 +1,4 @@
-in a: Events<Int>
+in a: Events[Int]
 def x := last(z, a)
 def y := default(x, 0)
 def z := y + a

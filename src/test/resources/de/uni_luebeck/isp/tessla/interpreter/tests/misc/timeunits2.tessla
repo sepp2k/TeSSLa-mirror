@@ -1,0 +1,8 @@
+in a: Events[Int]
+
+def oneFemtoSecLater := time(a) + 1fs
+def onePicoSecLater := time(a) + 1ps
+def oneNanoSecLater := time(a) + 1ns
+def oneMicroSecLater := time(a) + 1µs
+
+out *
