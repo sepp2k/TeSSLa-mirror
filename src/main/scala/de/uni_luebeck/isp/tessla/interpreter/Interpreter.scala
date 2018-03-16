@@ -33,9 +33,9 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }
 
   private def eval(exp: TesslaCore.Expression): Stream = exp match {
-    case TesslaCore.Lift(op, typeArgs, Seq(), loc) =>
-      throw Errors.InternalError("Lift without arguments should be impossible")
-    case TesslaCore.Lift(op, typeArgs, argStreams, loc) =>
+    case TesslaCore.Lift(_, _, Seq(), loc) =>
+      throw Errors.InternalError("Lift without arguments should be impossible", loc)
+    case TesslaCore.Lift(op, _, argStreams, _) =>
       lift(argStreams.map(evalStream)) { arguments =>
         val result = ConstantEvaluator.evalPrimitiveOperator(op, arguments.map(arg => Lazy(arg.forceValue)), exp.loc)
         TesslaCore.ValueOrError.fromLazyOption(result)
@@ -44,9 +44,13 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       evalStream(values).default(defaultValue)
     case TesslaCore.DefaultFrom(values, defaults, _) =>
       evalStream(values).default(evalStream(defaults))
+    case TesslaCore.Const(stream, value, _) =>
+      lift(Seq(evalStream(stream))) { _ =>
+        Some(value)
+      }
     case TesslaCore.Last(values, clock, _) =>
       last(evalStream(clock), evalStream(values))
-    case TesslaCore.DelayedLast(values, delays, loc) =>
+    case TesslaCore.DelayedLast(values, delays, _) =>
       delayedLast(evalStream(delays), evalStream(values))
     case TesslaCore.Time(values, loc) =>
       evalStream(values).time(loc)
