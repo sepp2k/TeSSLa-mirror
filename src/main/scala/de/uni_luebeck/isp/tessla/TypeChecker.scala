@@ -5,16 +5,13 @@ import de.uni_luebeck.isp.tessla.FlatTessla.VariableEntry
 
 import scala.collection.mutable
 
-class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla.Specification] {
+class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[FlatTessla.Specification, TypedTessla.Specification] {
   val typeMap = mutable.Map[TypedTessla.Identifier, TypedTessla.Type]()
 
   override def translateSpec(spec: FlatTessla.Specification): TypedTessla.Specification = {
     val scope = translateScopeWithParents(spec.globalScope)
     TypedTessla.Specification(scope, spec.outStreams, spec.outAllLocation)
   }
-
-  @Deprecated
-  def placeholderType = FlatTessla.StreamType(FlatTessla.IntType) // TODO: Properly determine type
 
   def processTypeAnnotation(entry: FlatTessla.VariableEntry) = entry.typeInfo match {
     case Some(typ) =>
@@ -98,9 +95,11 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
               case Some(name) =>
                 error(MissingTypeAnnotationRec(name, entry.loc))
               case None =>
+                error(InternalError("Cycle detected at anonymous node (should be impossible)", entry.loc))
             }
         }
       case ReverseTopologicalSort.Sorted(sorted) =>
+        println(s"Sorted: ${sorted.map(_.id)}")
         sorted.foreach { entry =>
           resultingScope.addVariable(translateEntry(entry, resultingScope))
         }
@@ -141,10 +140,124 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
     FlatTessla.FunctionType(Seq(), parameterTypes, returnType)
   }
 
+  def mkTVar(name: String) = FlatTessla.TypeParameter(makeIdentifier(name), Location.builtIn)
+
+  val nilType = {
+    val t = mkTVar("T")
+    FlatTessla.FunctionType(Seq(t.id), Seq(), FlatTessla.StreamType(t))
+  }
+
+  val typesOfBuiltIns: Map[BuiltIn, TypedTessla.Type] = BuiltIn.builtIns.map {
+    case (_, builtIn) =>
+      import FlatTessla._
+      val typ = builtIn match {
+        case BuiltIn.Add | BuiltIn.Sub | BuiltIn.Mul | BuiltIn.Div | BuiltIn.BitAnd | BuiltIn.BitOr | BuiltIn.BitXor
+           | BuiltIn.BitFlip | BuiltIn.LeftShift | BuiltIn.RightShift =>
+          FunctionType(Seq(), Seq(IntType, IntType), IntType)
+
+        case BuiltIn.Negate =>
+          FunctionType(Seq(), Seq(IntType), IntType)
+
+        case BuiltIn.Lt | BuiltIn.Gt | BuiltIn.Gte | BuiltIn.Lte =>
+          FunctionType(Seq(), Seq(IntType, IntType), BoolType)
+
+        case BuiltIn.Eq | BuiltIn.Neq =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(t, t), BoolType)
+
+        case BuiltIn.And | BuiltIn.Or =>
+          FunctionType(Seq(), Seq(BoolType, BoolType), BoolType)
+
+        case BuiltIn.Not =>
+          FunctionType(Seq(), Seq(BoolType), BoolType)
+
+        case BuiltIn.First =>
+          val t1 = mkTVar("First")
+          val t2 = mkTVar("Second")
+          FunctionType(Seq(t1.id, t2.id), Seq(t1, t2), t1)
+
+        case BuiltIn.IfThenElse =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(BoolType, t, t), t)
+
+        case BuiltIn.IfThen =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(StreamType(BoolType), StreamType(t)), StreamType(t))
+
+        case BuiltIn.Default =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(StreamType(t), t), StreamType(t))
+
+        case BuiltIn.DefaultFrom | BuiltIn.Merge =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(StreamType(t), StreamType(t)), StreamType(t))
+
+        case BuiltIn.Last =>
+          val t1 = mkTVar("Value")
+          val t2 = mkTVar("Clock")
+          FunctionType(Seq(t1.id, t2.id), Seq(StreamType(t1), StreamType(t2)), StreamType(t1))
+
+        case BuiltIn.DelayedLast =>
+          val t = mkTVar("Value")
+          FunctionType(Seq(t.id), Seq(StreamType(t), StreamType(IntType)), StreamType(t))
+
+        case BuiltIn.Const =>
+          val t1 = mkTVar("Old")
+          val t2 = mkTVar("New")
+          FunctionType(Seq(t1.id, t2.id), Seq(StreamType(t1), t2), StreamType(t2))
+
+        case BuiltIn.Time =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(StreamType(t)), StreamType(IntType))
+
+        case BuiltIn.MapEmpty =>
+          val k = mkTVar("Key")
+          val v = mkTVar("Value")
+          FunctionType(Seq(k.id, v.id), Seq(), MapType(k, v))
+
+        case BuiltIn.MapAdd =>
+          val k = mkTVar("Key")
+          val v = mkTVar("Value")
+          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k, v), MapType(k, v))
+
+        case BuiltIn.MapGet =>
+          val k = mkTVar("Key")
+          val v = mkTVar("Value")
+          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k), v)
+
+        case BuiltIn.MapContains =>
+          val k = mkTVar("Key")
+          val v = mkTVar("Value")
+          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k), BoolType)
+
+        case BuiltIn.MapRemove =>
+          val k = mkTVar("Key")
+          val v = mkTVar("Value")
+          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k), MapType(k, v))
+
+        case BuiltIn.SetEmpty =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(), SetType(t))
+
+        case BuiltIn.SetAdd =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(SetType(t), t), SetType(t))
+
+        case BuiltIn.SetContains =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(SetType(t), t), BoolType)
+
+        case BuiltIn.SetRemove =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(SetType(t), t), SetType(t))
+      }
+      builtIn -> typ
+  }
+
   def translateExpression(expression: FlatTessla.Expression, scope: TypedTessla.Scope): (TypedTessla.Expression, TypedTessla.Type) = {
     expression match {
       case FlatTessla.Nil =>
-        TypedTessla.Nil -> placeholderType
+        TypedTessla.Nil -> nilType
       case v: FlatTessla.Variable =>
         TypedTessla.Variable(v.id, v.loc) -> typeMap(v.id)
       case lit: FlatTessla.Literal =>
@@ -189,12 +302,11 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
         }
 
       case FlatTessla.BuiltInOperator(b) =>
-        TypedTessla.BuiltInOperator(b) -> placeholderType
+        TypedTessla.BuiltInOperator(b) -> typesOfBuiltIns(b)
       case mac: FlatTessla.Macro =>
         val parameters = mac.parameters.map(p => TypedTessla.Parameter(p.param, getParameterType(p), p.id))
         val innerScope = translateScope(mac.scope, Some(scope))
         val (body, returnType) = translateExpression(mac.body, innerScope)
-        // TODO: Add type parameters to type environment
         val macroType = FlatTessla.FunctionType(mac.typeParameters, parameterTypes(mac), returnType)
         TypedTessla.Macro(mac.typeParameters, parameters, innerScope, returnType, body, mac.loc) -> macroType
     }
