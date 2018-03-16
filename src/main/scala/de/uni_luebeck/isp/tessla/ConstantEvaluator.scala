@@ -69,25 +69,25 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       throw InternalError(s"Expected stream type, got $typ - should have been caught by type checker")
   }
 
-  def translateValueType(typ: TypedTessla.Type) = typ match {
+  def translateValueType(typ: TypedTessla.Type): TesslaCore.ValueType = typ match {
     case FlatTessla.IntType => TesslaCore.IntType
-    // Time spans are just seen as ints in tessla core
-    case FlatTessla.TimeSpanType => TesslaCore.IntType
     case FlatTessla.StringType => TesslaCore.StringType
     case FlatTessla.BoolType => TesslaCore.BoolType
     case FlatTessla.UnitType => TesslaCore.UnitType
+    case FlatTessla.MapType(k, v) => TesslaCore.MapType(translateValueType(k), translateValueType(v))
+    case FlatTessla.SetType(t) => TesslaCore.SetType(translateValueType(t))
     case _ : FlatTessla.FunctionType =>
       throw InternalError(s"Function type where value type expected - should have been caught by type checker")
     case FlatTessla.StreamType(_) =>
       throw InternalError(s"Stream type where value type expected - should have been caught by type checker")
     case _: FlatTessla.TypeParameter =>
-      ???
+      throw InternalError(s"Left-over type variable in type")
   }
 
   def translateLiteral(literal: Tessla.LiteralValue, loc: Location): TesslaCore.Value = literal match {
     case Tessla.IntLiteral(x) =>
       TesslaCore.IntLiteral(x, loc)
-    case Tessla.TimeSpanLiteral(x, tu) =>
+    case Tessla.TimeLiteral(x, tu) =>
       baseTimeUnit match {
         case Some(base) =>
           TesslaCore.IntLiteral(tu.convertTo(base) * x, loc)

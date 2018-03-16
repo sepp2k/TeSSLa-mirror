@@ -118,10 +118,6 @@ object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
     override def isValueType = true
   }
 
-  case object TimeSpanType extends Type {
-    override def isValueType = true
-  }
-
   case object StringType extends Type {
     override def isValueType = true
   }
@@ -131,6 +127,14 @@ object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
   }
 
   case object UnitType extends Type {
+    override def isValueType = true
+  }
+
+  case class MapType(keyType: Type, valueType: Type) extends Type {
+    override def isValueType = true
+  }
+
+  case class SetType(elementType: Type) extends Type {
     override def isValueType = true
   }
 

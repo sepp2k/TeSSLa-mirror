@@ -109,7 +109,7 @@ object Tessla {
 
   case class IntLiteral(value: BigInt) extends LiteralValue
 
-  case class TimeSpanLiteral(value: BigInt, unit: TimeUnit) extends LiteralValue {
+  case class TimeLiteral(value: BigInt, unit: TimeUnit) extends LiteralValue {
     override def toString = s"$value $unit"
   }
 

@@ -298,7 +298,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
       case WithLocation(_, INT(value)) => BigInt(value)
     } ~ timeUnit.? ^^ {
       case (value, None) => Tessla.IntLiteral(value)
-      case (value, Some(unit)) => Tessla.TimeSpanLiteral(value, unit)
+      case (value, Some(unit)) => Tessla.TimeLiteral(value, unit)
     }
 
     def timeUnit: Parser[TimeUnit] = matchToken("identifier", Set("<identifier>")) {

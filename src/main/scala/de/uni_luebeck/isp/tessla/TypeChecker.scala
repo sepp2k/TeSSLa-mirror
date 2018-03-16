@@ -119,7 +119,14 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
       typeEnv.getOrElse(tvar.id, throw UndefinedType(tvar.id.nameOpt.getOrElse(tvar.id.toString), tvar.loc))
     case functionType: FlatTessla.FunctionType =>
       typeSubst(functionType, typeEnv)
-    case _ => typ
+    case FlatTessla.StreamType(elementType) =>
+      FlatTessla.StreamType(typeSubst(elementType, typeEnv))
+    case FlatTessla.SetType(elementType) =>
+      FlatTessla.SetType(typeSubst(elementType, typeEnv))
+    case FlatTessla.MapType(k, v) =>
+      FlatTessla.MapType(typeSubst(k, typeEnv), typeSubst(k, typeEnv))
+    case FlatTessla.IntType | FlatTessla.BoolType | FlatTessla.StringType | FlatTessla.UnitType =>
+      typ
   }
 
   // Overload for function types to encode the fact that typeSubst on a function type always produces another function
@@ -143,7 +150,9 @@ class TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla
       case lit: FlatTessla.Literal =>
         val t = lit.value match {
           case _: Tessla.IntLiteral => FlatTessla.IntType
-          case _: Tessla.TimeSpanLiteral => FlatTessla.TimeSpanType
+          case _: Tessla.TimeLiteral =>
+            // TODO: Implement units of measure, this should contain the appropriate unit
+            FlatTessla.IntType
           case Tessla.Unit => FlatTessla.UnitType
           case _: Tessla.BoolLiteral => FlatTessla.BoolType
           case _: Tessla.StringLiteral => FlatTessla.StringType
