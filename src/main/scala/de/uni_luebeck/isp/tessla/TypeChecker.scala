@@ -88,18 +88,16 @@ class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[Fla
     val resultingScope = new TypedTessla.Scope(parent)
     scope.variables.values.foreach(processTypeAnnotation)
     ReverseTopologicalSort.sort(scope.variables.values)(requiredEntries(scope, _)) match {
-      case ReverseTopologicalSort.Cycles(cycleStarts) =>
-        cycleStarts.foreach {
+      case ReverseTopologicalSort.Cycles(nodesInCycles) =>
+        nodesInCycles.foreach {
           case (entry) =>
             entry.id.nameOpt match {
               case Some(name) =>
                 error(MissingTypeAnnotationRec(name, entry.loc))
               case None =>
-                error(InternalError("Cycle detected at anonymous node (should be impossible)", entry.loc))
             }
         }
       case ReverseTopologicalSort.Sorted(sorted) =>
-        println(s"Sorted: ${sorted.map(_.id)}")
         sorted.foreach { entry =>
           resultingScope.addVariable(translateEntry(entry, resultingScope))
         }

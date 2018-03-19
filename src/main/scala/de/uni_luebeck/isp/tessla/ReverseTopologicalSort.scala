@@ -5,30 +5,30 @@ import scala.collection.mutable
 object ReverseTopologicalSort {
   sealed abstract class Result[Node]
   final case class Sorted[Node](nodes: Iterable[Node]) extends Result[Node]
-  final case class Cycles[Node](cycleStarts: Seq[Node]) extends Result[Node]
+  final case class Cycles[Node](nodesInCycles: Seq[Node]) extends Result[Node]
 
   def sort[Node](startNodes: Iterable[Node])(getChildren: Node => Seq[Node]): Result[Node] = {
     val visited = mutable.Set[Node]()
-    var cyclesStarts: Seq[Node] = Seq()
-    def go(current: Node, stack: Set[Node]): Seq[Node] = {
+    val nodesInCycles = mutable.ArrayBuffer[Node]()
+    def go(current: Node, stack: Seq[Node]): Seq[Node] = {
       if (stack.contains(current)) {
-        cyclesStarts = current +: cyclesStarts
+        nodesInCycles ++= stack.slice(0, stack.indexOf(current) + 1)
         Seq()
       } else if (visited.contains(current)) {
         Seq()
       } else {
         visited += current
-        current +: getChildren(current).flatMap(go(_, stack + current))
+        current +: getChildren(current).flatMap(go(_, current +: stack))
       }
     }
     val nodes = startNodes.flatMap { startNode =>
       if (visited(startNode)) Seq()
-      else go(startNode, Set()).reverse
+      else go(startNode, Seq()).reverse
     }
-    if (cyclesStarts.isEmpty) {
+    if (nodesInCycles.isEmpty) {
       Sorted(nodes)
     } else {
-      Cycles(cyclesStarts)
+      Cycles(nodesInCycles)
     }
   }
 }
