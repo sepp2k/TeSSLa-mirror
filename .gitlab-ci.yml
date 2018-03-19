@@ -6,12 +6,16 @@ before_script:
   - sbt sbtVersion
 
 test:
+  only:
+    - master
   tags:
     - docker
   script:
     - sbt clean test
 
 deploy:
+  only:
+    - master
   tags:
     - docker
   script:
