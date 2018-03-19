@@ -1,4 +1,4 @@
-# Tessla Interpreter
+# TeSSLa Compiler and Interpreter
 
 ## Download
 
