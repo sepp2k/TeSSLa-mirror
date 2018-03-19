@@ -125,7 +125,7 @@ class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[Fla
     case FlatTessla.SetType(elementType) =>
       FlatTessla.SetType(typeSubst(elementType, typeEnv))
     case FlatTessla.MapType(k, v) =>
-      FlatTessla.MapType(typeSubst(k, typeEnv), typeSubst(k, typeEnv))
+      FlatTessla.MapType(typeSubst(k, typeEnv), typeSubst(v, typeEnv))
     case FlatTessla.IntType | FlatTessla.BoolType | FlatTessla.StringType | FlatTessla.UnitType =>
       typ
   }
