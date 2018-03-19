@@ -86,6 +86,17 @@ object CustomBuiltIns {
             Some(IntIntMap(map - key, loc))
         }
       }
+
+      case object Size extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
+        override def argumentTypes = Seq(Type)
+
+        override protected def returnType = Types.Int
+
+        override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
+          case Seq(IntIntMap(map, _)) =>
+            Some(TesslaCore.IntLiteral(map.size, loc))
+        }
+      }
     }
 
     val INFINITY = BigInt("99999999999999999999")
@@ -359,6 +370,39 @@ object CustomBuiltIns {
             Some(IntSet(set - key, loc))
         }
       }
+
+      case object Size extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
+        override def argumentTypes = Seq(Type)
+
+        override protected def returnType = Types.Int
+
+        override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
+          case Seq(IntSet(set, _)) =>
+            Some(TesslaCore.IntLiteral(set.size, loc))
+        }
+      }
+
+      case object Intersection extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
+        override def argumentTypes = Seq(Type, Type)
+
+        override protected def returnType = Type
+
+        override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
+          case Seq(IntSet(set, _), IntSet(otherSet, _)) =>
+            Some(IntSet(set & otherSet, loc))
+        }
+      }
+
+      case object Union extends PrimitiveOperators.CustomBuiltIn with Monomorphic with Strict {
+        override def argumentTypes = Seq(Type, Type)
+
+        override protected def returnType = Type
+
+        override protected def strictEval(values: Seq[TesslaCore.LiteralValue], loc: Location) = values match {
+          case Seq(IntSet(set, _), IntSet(otherSet, _)) =>
+            Some(IntSet(set | otherSet, loc))
+        }
+      }
     }
 
     override def customTypes = Map("IntIntMap" -> IntIntMap.Type, "IntSet" -> IntSet.Type)
@@ -373,10 +417,14 @@ object CustomBuiltIns {
       "Map_get" -> IntIntMap.Get,
       "Map_contains" -> IntIntMap.Contains,
       "Map_remove" -> IntIntMap.Remove,
+      "Map_size" -> IntIntMap.Size,
       "Set_empty" -> IntSet.Empty,
       "Set_add" -> IntSet.Add,
       "Set_contains" -> IntSet.Contains,
       "Set_remove" -> IntSet.Remove,
+      "Set_size" -> IntSet.Size,
+      "Set_intersection" -> IntSet.Intersection,
+      "Set_union" -> IntSet.Union,
       "TimeQueue_empty" -> IntTimeQueue.Empty,
       "TimeQueue_enqueue" -> IntTimeQueue.Enqueue,
       "TimeQueue_removeOlder" -> IntTimeQueue.RemoveOlder,

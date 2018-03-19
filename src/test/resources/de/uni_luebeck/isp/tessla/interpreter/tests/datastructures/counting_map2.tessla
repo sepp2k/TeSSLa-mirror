@@ -10,6 +10,8 @@ def incCount(counts, key) :=
     else Map_add(counts, key, 1)
 
 def counts := default(incCount(last(counts, x), x), Map_empty)
+def size := Map_size(counts)
 
 out x
 out counts
+out size

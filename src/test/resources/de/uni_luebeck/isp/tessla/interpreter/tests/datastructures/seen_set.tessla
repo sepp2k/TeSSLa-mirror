@@ -1,6 +1,7 @@
 in x: Events[Int]
 
 def seen := default(Set_add(last(seen, x), x), Set_empty)
+def size := Set_size(seen)
 def new_or_old :=
     if Set_contains(last(seen), x)
     then "old"

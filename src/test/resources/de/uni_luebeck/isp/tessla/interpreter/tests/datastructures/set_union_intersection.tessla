@@ -1,0 +1,15 @@
+in x: Events[Int]
+in y: Events[Int]
+
+def xSet := Set_collect(x)
+def ySet := Set_collect(y)
+def union := Set_union(xSet, ySet)
+def intersection := Set_intersection(xSet, ySet)
+out union
+out intersection
+
+-- stdlib
+def Set_collect(x) := {
+  def set := default(Set_add(last(set, x), x), Set_empty)
+  set
+}
