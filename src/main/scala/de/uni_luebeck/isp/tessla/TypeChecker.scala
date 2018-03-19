@@ -273,6 +273,18 @@ class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[Fla
     liftedId
   }
 
+  def isLiftable(functionType: FlatTessla.FunctionType) = {
+    functionType.parameterTypes.forall(_.isValueType) && functionType.returnType.isValueType
+  }
+
+  def liftFunctionType(functionType: FlatTessla.FunctionType) = {
+    FlatTessla.FunctionType(
+      functionType.typeParameters,
+      functionType.parameterTypes.map(FlatTessla.StreamType),
+      FlatTessla.StreamType(functionType.returnType)
+    )
+  }
+
   def translateExpression(expression: FlatTessla.Expression, scope: TypedTessla.Scope): (TypedTessla.Expression, TypedTessla.Type) = {
     expression match {
       case v: FlatTessla.Variable =>
@@ -305,7 +317,10 @@ class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[Fla
             }
             val typeArgs = call.typeArgs
             val typeEnv = t.typeParameters.zip(typeArgs).toMap
-            val concreteType = typeSubst(t, typeEnv)
+            var concreteType = typeSubst(t, typeEnv)
+            if (isLiftable(concreteType) && call.args.exists(arg => !typeMap(arg.id).isValueType)) {
+              concreteType = liftFunctionType(concreteType)
+            }
             val args = call.args.zip(concreteType.parameterTypes).map {
               case (arg, expected) =>
                 val actual = typeMap(arg.id)
