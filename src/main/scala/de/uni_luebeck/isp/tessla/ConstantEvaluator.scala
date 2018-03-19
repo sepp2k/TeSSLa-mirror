@@ -108,11 +108,6 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     *                    be.
     */
   def translateExpression(env: Env, expression: TypedTessla.Expression, typ: TypedTessla.Type, overrideLoc: Option[Location]): EnvEntry = expression match {
-    case TypedTessla.Nil =>
-      // Nil should only appear directly in the definition of the built-in "nil" and always be referred to through
-      // the "nil" variable otherwise. So the location we set here, will only be used for the built-in definition
-      // and be overridden by the variable's loc otherwise
-      StreamEntry(TesslaCore.Nil(overrideLoc.getOrElse(Location.builtIn)))
     case TypedTessla.BuiltInOperator(builtIn) => BuiltInEntry(builtIn)
     case mac: TypedTessla.Macro => MacroEntry(mac)
     case TypedTessla.Literal(lit, loc) =>
@@ -174,6 +169,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       StreamEntry(TesslaCore.Stream(id, loc))
     }
     builtIn match {
+      case BuiltIn.Nil => StreamEntry(TesslaCore.Nil(loc))
       case BuiltIn.Default => stream(TesslaCore.Default(getStream(arguments(0)), getValue(arguments(1)), loc))
       case BuiltIn.DefaultFrom => stream(TesslaCore.DefaultFrom(getStream(arguments(0)), getStream(arguments(1)), loc))
       case BuiltIn.Last => stream(TesslaCore.Last(getStream(arguments(0)), getStream(arguments(1)), loc))

@@ -66,7 +66,7 @@ class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[Fla
 
   def requiredEntries(scope: FlatTessla.Scope, expression: FlatTessla.Expression): Seq[FlatTessla.VariableEntry] = {
     expression match {
-      case FlatTessla.Nil| _: FlatTessla.Variable | _: FlatTessla.Literal | _: FlatTessla.InputStream
+      case _: FlatTessla.Variable | _: FlatTessla.Literal | _: FlatTessla.InputStream
            | _ : FlatTessla.Parameter | _ : FlatTessla.BuiltInOperator =>
         Seq()
 
@@ -142,11 +142,6 @@ class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[Fla
 
   def mkTVar(name: String) = FlatTessla.TypeParameter(makeIdentifier(name), Location.builtIn)
 
-  val nilType = {
-    val t = mkTVar("T")
-    FlatTessla.FunctionType(Seq(t.id), Seq(), FlatTessla.StreamType(t))
-  }
-
   val typesOfBuiltIns: Map[BuiltIn, TypedTessla.Type] = BuiltIn.builtIns.map {
     case (_, builtIn) =>
       import FlatTessla._
@@ -183,6 +178,10 @@ class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[Fla
         case BuiltIn.IfThen =>
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(StreamType(BoolType), StreamType(t)), StreamType(t))
+
+        case BuiltIn.Nil =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(), StreamType(t))
 
         case BuiltIn.Default =>
           val t = mkTVar("T")
@@ -256,8 +255,6 @@ class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[Fla
 
   def translateExpression(expression: FlatTessla.Expression, scope: TypedTessla.Scope): (TypedTessla.Expression, TypedTessla.Type) = {
     expression match {
-      case FlatTessla.Nil =>
-        TypedTessla.Nil -> nilType
       case v: FlatTessla.Variable =>
         TypedTessla.Variable(v.id, v.loc) -> typeMap(v.id)
       case lit: FlatTessla.Literal =>

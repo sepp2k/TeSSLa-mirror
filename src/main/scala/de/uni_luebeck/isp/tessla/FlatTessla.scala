@@ -75,11 +75,6 @@ abstract class FlatTessla {
     override def loc = Location.builtIn
   }
 
-  case object Nil extends Expression {
-    override def toString = "nil"
-    override def loc = Location.builtIn
-  }
-
   case class InputStream(name: String, streamType: Type, loc: Location) extends Expression {
     override def toString = s"in $name: $streamType"
   }

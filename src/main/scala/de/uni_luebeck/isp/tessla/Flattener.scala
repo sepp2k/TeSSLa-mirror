@@ -13,7 +13,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
   val stdlib = BuiltIn.builtIns.map {
     case (name, b) =>
       name -> FlatTessla.VariableEntry(makeIdentifier(name), FlatTessla.BuiltInOperator(b), None, Location.builtIn)
-  } + ("nil" -> FlatTessla.VariableEntry(makeIdentifier("nil"), FlatTessla.Nil, None, Location.builtIn))
+  }
 
   val eventsType = FlatTessla.TypeEntry(
     makeIdentifier("Events"), 1, { case Seq(t) => FlatTessla.StreamType(t)}, Location.builtIn

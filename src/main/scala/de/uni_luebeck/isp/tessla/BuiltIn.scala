@@ -7,6 +7,10 @@ sealed abstract class BuiltIn {
 }
 
 object BuiltIn {
+  case object Nil extends BuiltIn {
+    override def name = "nil"
+  }
+
   case object Default extends BuiltIn {
     override def name = "default"
   }
@@ -183,6 +187,7 @@ object BuiltIn {
   }
 
   def builtIns: Map[String, BuiltIn] = Set(
+    Nil,
     Default,
     DefaultFrom,
     Last,
