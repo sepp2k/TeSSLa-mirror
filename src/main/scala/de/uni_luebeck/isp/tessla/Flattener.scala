@@ -74,12 +74,15 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     // TODO: Once we have a way to define global types, those need to be handled here
     val globalTypeIdMap = builtInTypes.mapValues(_.id)
     val globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
-    val emptySpec = FlatTessla.Specification(globalScope, Seq(), outAllLocation = None)
+    val emptySpec = FlatTessla.Specification(
+      globalScope, Seq(), outAllLocation = None,
+      stdlibNames = stdlib.mapValues(_.id), idCount = identifierCounter
+    )
     checkForDuplicates(spec.statements.flatMap(getId))
     spec.statements.foldLeft(emptySpec) {
       case (result, outAll : Tessla.OutAll) =>
         if(result.outAll) warn(ConflictingOut(outAll.loc, previous = result.outAllLocation.get))
-        result.copy(outAllLocation = Some(outAll.loc))
+        result.copy(outAllLocation = Some(outAll.loc), idCount = identifierCounter)
 
       case (result, out: Tessla.Out) =>
         result.outStreams.find(_.name == out.name).foreach {
@@ -88,18 +91,18 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
         }
         val id = expToId(translateExpression(out.expr, globalScope, globalEnv), globalScope)
         val newOut = FlatTessla.OutStream(id, out.name, out.loc)
-        result.copy(outStreams = result.outStreams :+ newOut)
+        result.copy(outStreams = result.outStreams :+ newOut, idCount = identifierCounter)
 
       case (result, definition: Tessla.Definition) =>
         addDefinition(definition, globalScope, globalEnv)
-        result
+        result.copy(idCount = identifierCounter)
 
       case (result, in: Tessla.In) =>
         val streamType = translateType(in.streamType, globalScope, globalEnv)
         val inputStream = FlatTessla.InputStream(in.id.name, streamType, in.loc)
         val entry = FlatTessla.VariableEntry(globalEnv.variables(in.id.name), inputStream, Some(streamType), in.loc)
         globalScope.addVariable(entry)
-        result
+        result.copy(idCount = identifierCounter)
     }
   }
 

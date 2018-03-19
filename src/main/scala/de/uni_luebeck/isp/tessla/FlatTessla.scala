@@ -5,7 +5,8 @@ import scala.collection.mutable
 abstract class FlatTessla {
   import FlatTessla._
 
-  case class Specification(globalScope: Scope, outStreams: Seq[OutStream], outAllLocation: Option[Location]) {
+  case class Specification(globalScope: Scope, outStreams: Seq[OutStream], outAllLocation: Option[Location],
+                           stdlibNames: Map[String, Identifier], idCount: Long) {
     override def toString = {
       val outAllString = if (outAll) "\nout *" else ""
       s"$globalScope\n${outStreams.mkString("\n")}$outAllString"

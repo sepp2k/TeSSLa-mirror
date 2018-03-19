@@ -16,10 +16,10 @@ trait HasUniqueIdentifiers {
   }
 
   trait IdentifierFactory {
-    var counter = 0l
+    var identifierCounter = 0l
     def makeIdentifier(nameOpt: Option[String]): Identifier = {
-      counter += 1
-      new Identifier(counter, nameOpt)
+      identifierCounter += 1
+      new Identifier(identifierCounter, nameOpt)
     }
 
     def makeIdentifier(): Identifier = makeIdentifier(None)

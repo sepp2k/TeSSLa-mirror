@@ -6,11 +6,15 @@ import de.uni_luebeck.isp.tessla.FlatTessla.VariableEntry
 import scala.collection.mutable
 
 class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[FlatTessla.Specification, TypedTessla.Specification] {
-  val typeMap = mutable.Map[TypedTessla.Identifier, TypedTessla.Type]()
+  private val typeMap = mutable.Map[TypedTessla.Identifier, TypedTessla.Type]()
+  private var stdlibNames: Map[String, FlatTessla.Identifier] = _
 
   override def translateSpec(spec: FlatTessla.Specification): TypedTessla.Specification = {
+    stdlibNames = spec.stdlibNames
+    // Initialize ID-generation counter, so that newly created Identifiers won't conflict with old ones
+    identifierCounter = spec.idCount
     val scope = translateScopeWithParents(spec.globalScope)
-    TypedTessla.Specification(scope, spec.outStreams, spec.outAllLocation)
+    TypedTessla.Specification(scope, spec.outStreams, spec.outAllLocation, spec.stdlibNames, identifierCounter)
   }
 
   def processTypeAnnotation(entry: FlatTessla.VariableEntry) = entry.typeInfo match {
@@ -251,6 +255,24 @@ class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[Fla
       builtIn -> typ
   }
 
+  def liftConstant(constant: FlatTessla.Identifier, scope: TypedTessla.Scope, loc: Location) = {
+    val typeOfConstant = typeMap(constant)
+    val streamType = FlatTessla.StreamType(typeOfConstant)
+    val liftedId = makeIdentifier()
+    val nilCall = TypedTessla.MacroCall(stdlibNames("nil"), loc, Seq(typeOfConstant), Seq(), loc)
+    val nilId = makeIdentifier("nil")
+    val nilEntry = TypedTessla.VariableEntry(nilId, nilCall, streamType, loc)
+    scope.addVariable(nilEntry)
+    val defaultArgs = Seq(
+      FlatTessla.PositionalArgument(nilId, loc),
+      FlatTessla.PositionalArgument(constant, loc)
+    )
+    val defaultCall = TypedTessla.MacroCall(stdlibNames("default"), loc, Seq(typeOfConstant), defaultArgs, loc)
+    val entry = TypedTessla.VariableEntry(liftedId, defaultCall, streamType, loc)
+    scope.addVariable(entry)
+    liftedId
+  }
+
   def translateExpression(expression: FlatTessla.Expression, scope: TypedTessla.Scope): (TypedTessla.Expression, TypedTessla.Type) = {
     expression match {
       case v: FlatTessla.Variable =>
@@ -284,14 +306,22 @@ class TypeChecker extends FlatTessla.IdentifierFactory with TranslationPhase[Fla
             val typeArgs = call.typeArgs
             val typeEnv = t.typeParameters.zip(typeArgs).toMap
             val concreteType = typeSubst(t, typeEnv)
-            call.args.zip(concreteType.parameterTypes).foreach {
+            val args = call.args.zip(concreteType.parameterTypes).map {
               case (arg, expected) =>
                 val actual = typeMap(arg.id)
-                if (actual != expected) {
+                if (actual == expected) {
+                  arg
+                } else if(FlatTessla.StreamType(actual) == expected) {
+                  val lifted = liftConstant(arg.id, scope, arg.loc)
+                  arg match {
+                    case _: FlatTessla.PositionalArgument => FlatTessla.PositionalArgument(lifted, arg.loc)
+                    case named: FlatTessla.NamedArgument => FlatTessla.NamedArgument(named.name, lifted, named.loc)
+                  }
+                } else {
                   throw TypeMismatch(expected, actual, arg.loc)
                 }
             }
-            TypedTessla.MacroCall(call.macroID, call.macroLoc, typeArgs, call.args, call.loc) -> concreteType.returnType
+            TypedTessla.MacroCall(call.macroID, call.macroLoc, typeArgs, args, call.loc) -> concreteType.returnType
           case other =>
             throw TypeMismatch("function", other, call.macroLoc)
         }
