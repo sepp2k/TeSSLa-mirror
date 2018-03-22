@@ -71,6 +71,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     case object EQEQ extends Token("==")
 
+    case object ROCKET extends Token("=>")
+
     case object EQ extends Token("=")
 
     case object ANDAND extends Token("&&")
@@ -106,8 +108,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, LBRACE, RBRACE, PERCENT,
-      LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS, MINUS, STAR,
-      SLASH, BANG)
+      LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, ROCKET, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS, MINUS,
+      STAR, SLASH, BANG)
     override val comments = List("--" -> "\n", "#" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c) || c == '.'
@@ -175,10 +177,16 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def typeAnnotation: Parser[Tessla.Type] = COLON ~> `type`
 
-    def `type`: Parser[Tessla.Type] = identifier ~ typeArguments.? ^^! {
-      case (_, (name, None)) => Tessla.SimpleType(name)
-      case (loc, (name, Some(args))) => Tessla.TypeApplication(name, args, Location(loc, path))
-    }
+    def `type`: Parser[Tessla.Type] =
+      identifier ~ typeArguments.? ^^! {
+        case (_, (name, None)) => Tessla.SimpleType(name)
+        case (loc, (name, Some(args))) => Tessla.TypeApplication(name, args, Location(loc, path))
+      } |
+        (LPAREN ~> repsep(`type`, COMMA) <~ RPAREN) ~ (ROCKET ~> `type`) ^^! {
+          case (loc, (parameterTypes, returnType)) =>
+            Tessla.FunctionType(parameterTypes, returnType, Location(loc, path))
+        }
+
 
     def typeArguments: Parser[Seq[Tessla.Type]] = LBRACKET ~> rep1sep(`type`, COMMA) <~ RBRACKET
 

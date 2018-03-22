@@ -152,4 +152,9 @@ object Tessla {
     override def toString = s"$id[${args.mkString(", ")}]"
     def withLoc(loc: Location): TypeApplication = copy(loc = loc)
   }
+
+  case class FunctionType(parameterTypes: Seq[Type], returnType: Type, loc: Location) extends Type {
+    override def toString = s"(${parameterTypes.mkString(", ")}) => $returnType]"
+    def withLoc(loc: Location): FunctionType = copy(loc = loc)
+  }
 }

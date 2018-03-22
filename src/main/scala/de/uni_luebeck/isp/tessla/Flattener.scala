@@ -192,6 +192,14 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       val typeEntry = scope.resolveType(env.types(id.name)).getOrElse(throw UndefinedType(id.name, id.loc))
       if (typeEntry.arity == translatedArgs.length) typeEntry.typeConstructor(translatedArgs)
       else throw TypeArityMismatch(id.name, typeEntry.arity, translatedArgs.length, id.loc)
+
+    case Tessla.FunctionType(parameterTypes, returnType, loc) =>
+      FlatTessla.FunctionType(
+        // Explicitly written function types never have any type arguments because we don't support higher rank types
+        Seq(),
+        parameterTypes.map(translateType(_, scope, env)),
+        translateType(returnType, scope, env)
+      )
   }
 
   def translateExpression(expr: Tessla.Expression, scope: FlatTessla.Scope, env: Env): FlatTessla.Expression = expr match {
