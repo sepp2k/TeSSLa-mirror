@@ -126,7 +126,7 @@ object GenerateISL {
           case null =>
             LogAst("line_reached")
           case value =>
-            CondAst(StringCond(s"[line_reached:${value}]"), Seq(LogAst("line_reached")), Seq())
+            CondAst(StringCond(s"[line:${value}]"), Seq(LogAst("line_reached")), Seq())
         }
       case Tessla.Identifier("function_call",_) =>
         getStringValue(args) match {
