@@ -135,7 +135,7 @@ object GenerateISL {
         getStringValue(args) match {
           // This wont work because we are already in that function when functions evaluates
           case null =>
-            LogAst("function_call")
+            LogAst("function_calls")
           case value =>
             CondAst(StringCond(s"""[function_calls:"${value}"]"""), Seq(LogAst("function_calls")), Seq())
         }
@@ -144,13 +144,13 @@ object GenerateISL {
           case null =>
             LogAst("functions")
           case value =>
-            CondAst(StringCond(s"""&([functions:"${value}"]], [opcodes: "ret"])"""), Seq(LogAst("functions"), LogAst("opcodes")), Seq())
+            CondAst(StringCond(s"""&([functions:"${value}"], [opcodes: "ret"])"""), Seq(LogAst("functions"), LogAst("opcodes")), Seq())
         }
       case Tessla.Identifier("runtime",_) =>
         getStringValue(args) match {
           case value =>
             CondAst( TrueCond,
-            Seq(CondAst(StringCond(s"""&([functions:"${value}"]], [opcodes: "ret"]"""), Seq(LogAst("functions"), LogAst("opcodes")), Seq()),
+            Seq(CondAst(StringCond(s"""&([functions:"${value}"], [opcodes: "ret"])"""), Seq(LogAst("functions"), LogAst("opcodes")), Seq()),
               LogAst("function_calls")),
               Seq())
           // why is there no default case?
