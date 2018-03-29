@@ -14,7 +14,10 @@ object GenerateISL {
             })
         }
       }
-      case LogAst(log) => Seq(log)
+      case LogAst(log) => if(!log.matches("^\\s*$"))
+        "log" +: Seq(log)
+      else
+        Seq()
     }
     def ++(other:IslAst) = (this, other) match {
       case (CondAst(TrueCond,body1,_), CondAst(TrueCond,body2,_)) => CondAst(TrueCond, body1 ++ body2, Seq())
@@ -126,7 +129,7 @@ object GenerateISL {
           case null =>
             LogAst("line_reached")
           case value =>
-            CondAst(StringCond(s"[line_reached:${value}]"), Seq(LogAst("line_reached")), Seq())
+            CondAst(StringCond(s"""[lines:${value}]"""), Seq(LogAst("line_reached")), Seq())
         }
       case Tessla.Identifier("function_call",_) =>
         getStringValue(args) match {
@@ -134,20 +137,20 @@ object GenerateISL {
           case null =>
             LogAst("function_call")
           case value =>
-            CondAst(StringCond(s"[function_call:${value}]"), Seq(LogAst("function_call")), Seq())
+            CondAst(StringCond(s"""[function_calls:"${value}"]"""), Seq(LogAst("function_calls")), Seq())
         }
       case Tessla.Identifier("function_return",_) =>
         getStringValue(args) match {
           case null =>
             LogAst("functions")
           case value =>
-            CondAst(StringCond(s"&([functions:${value}], [opcodes: ret])"), Seq(LogAst("functions"), LogAst("opcodes")), Seq())
+            CondAst(StringCond(s"""&([functions:"${value}"]], [opcodes: "ret"])"""), Seq(LogAst("functions"), LogAst("opcodes")), Seq())
         }
       case Tessla.Identifier("runtime",_) =>
         getStringValue(args) match {
           case value =>
             CondAst( TrueCond,
-            Seq(CondAst(StringCond(s"&([functions:${value}], [opcodes: ret]"), Seq(LogAst("functions"), LogAst("opcodes")), Seq()),
+            Seq(CondAst(StringCond(s"""&([functions:"${value}"]], [opcodes: "ret"]"""), Seq(LogAst("functions"), LogAst("opcodes")), Seq()),
               LogAst("function_calls")),
               Seq())
           // why is there no default case?
@@ -155,12 +158,12 @@ object GenerateISL {
       case Tessla.Identifier("store_exec",_) =>
         getIntValue(args) match {
           case value =>
-            CondAst(StringCond(s"if &([lines: ${value}], [opcodes: store])"), Seq(LogAst("line"), LogAst("opcode")), Seq())
+            CondAst(StringCond(s"""if &([lines: ${value}], [opcodes: "store"])"""), Seq(LogAst("line"), LogAst("opcode")), Seq())
         }
       case Tessla.Identifier("load_exec",_) =>
         getIntValue(args) match {
           case value =>
-            CondAst(StringCond(s"if &([lines: ${value}], [opcodes: load])"), Seq(LogAst("line"), LogAst("opcode")), Seq())
+            CondAst(StringCond(s"""if &([lines: ${value}], [opcodes: "load"])"""), Seq(LogAst("line"), LogAst("opcode")), Seq())
         }
       case Tessla.Identifier("thread_id_on",_) =>
         args match {
