@@ -14,10 +14,6 @@ class Compiler {
       .andThen(new Printer[TesslaCore.Specification])
   }
 
-  class DummyPhase[T,U] extends TranslationPhase[T, U] {
-    override def translateSpec(spec: T) = throw InternalError("Unimplemented translation")
-  }
-
   class Printer[T] extends TranslationPhase[T, T] {
     override def translateSpec(spec: T) = {
       println(s"=== ${spec.getClass.toString} ===")
