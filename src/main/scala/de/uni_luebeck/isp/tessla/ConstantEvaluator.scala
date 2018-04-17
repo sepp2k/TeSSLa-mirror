@@ -25,13 +25,14 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   case class NotYetTranslated(entry: TypedTessla.VariableEntry, var closure: Env) extends EnvEntry {
     override def toString = s"NotYetTranslated($entry, ...)"
   }
+  case class TypeEntry(typ: TesslaCore.ValueType) extends EnvEntry
 
   override def translateSpec(spec: TypedTessla.Specification): TesslaCore.Specification = {
     val env = createEnvForScopeWithParents(spec.globalScope)
     translateEnv(env, None)
     def inputStreams = spec.globalScope.variables.collect {
       case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
-        (is.name, translateStreamType(typ), is.loc)
+        (is.name, translateStreamType(typ, env), is.loc)
     }.toSeq
     def outputStreams = spec.outStreams.map { os =>
       (os.name, getStream(env(os.id).entry))
@@ -58,26 +59,31 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     }
   }
 
-  def translateStreamType(typ: TypedTessla.Type) = typ match {
-    case FlatTessla.StreamType(elementType) =>
-      TesslaCore.StreamType(translateValueType(elementType))
+  def translateStreamType(typ: TypedTessla.Type, env: Env) = typ match {
+    case TypedTessla.StreamType(elementType) =>
+      TesslaCore.StreamType(translateValueType(elementType, env))
     case _ =>
       throw InternalError(s"Expected stream type, got $typ - should have been caught by type checker")
   }
 
-  def translateValueType(typ: TypedTessla.Type): TesslaCore.ValueType = typ match {
-    case FlatTessla.IntType => TesslaCore.IntType
-    case FlatTessla.StringType => TesslaCore.StringType
-    case FlatTessla.BoolType => TesslaCore.BoolType
-    case FlatTessla.UnitType => TesslaCore.UnitType
-    case FlatTessla.MapType(k, v) => TesslaCore.MapType(translateValueType(k), translateValueType(v))
-    case FlatTessla.SetType(t) => TesslaCore.SetType(translateValueType(t))
-    case _ : FlatTessla.FunctionType =>
+  def getType(env: Env, id: TypedTessla.Identifier) = env(id).entry match {
+    case TypeEntry(typ) => typ
+    case other => throw InternalError(s"Expected type entry, found $other")
+  }
+
+  def translateValueType(typ: TypedTessla.Type, env: Env): TesslaCore.ValueType = typ match {
+    case TypedTessla.IntType => TesslaCore.IntType
+    case TypedTessla.StringType => TesslaCore.StringType
+    case TypedTessla.BoolType => TesslaCore.BoolType
+    case TypedTessla.UnitType => TesslaCore.UnitType
+    case TypedTessla.MapType(k, v) => TesslaCore.MapType(translateValueType(k, env), translateValueType(v, env))
+    case TypedTessla.SetType(t) => TesslaCore.SetType(translateValueType(t, env))
+    case _ : TypedTessla.FunctionType =>
       throw InternalError(s"Function type where value type expected - should have been caught by type checker")
-    case FlatTessla.StreamType(_) =>
+    case TypedTessla.StreamType(_) =>
       throw InternalError(s"Stream type where value type expected - should have been caught by type checker")
-    case _: FlatTessla.TypeParameter =>
-      throw InternalError(s"Left-over type variable in type")
+    case tvar: TypedTessla.TypeParameter =>
+      getType(env, tvar.id)
   }
 
   def translateLiteral(literal: Tessla.LiteralValue, loc: Location): TesslaCore.Value = literal match {
@@ -138,7 +144,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case call: TypedTessla.MacroCall =>
         def stream(coreExp: => TesslaCore.Expression) = {
           val id = makeIdentifier()
-          val translatedType = translateStreamType(typ)
+          val translatedType = translateStreamType(typ, env)
           wrapper.entry = StreamEntry(TesslaCore.Stream(id, call.loc), translatedType)
           translatedStreams(id) = TesslaCore.StreamDefinition(coreExp, translatedType)
           wrapper.entry
@@ -151,9 +157,9 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
             // This is lazy, so the arguments don't get evaluated until they're used below, allowing us to
             // initialize entries where appropriate before the evaluation takes place
             lazy val args = call.args.map {
-              case FlatTessla.PositionalArgument(id, loc) =>
+              case TypedTessla.PositionalArgument(id, loc) =>
                 translateVar(env, id, loc)
-              case FlatTessla.NamedArgument(name, _, loc) =>
+              case TypedTessla.NamedArgument(name, _, loc) =>
                 throw InternalError(s"Undefined keyword arg $name for built-in should've been caught by type checker", loc)
             }
             builtIn match {
@@ -189,17 +195,18 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 }
               case op: BuiltIn.PrimitiveOperator =>
                 typ match {
-                  case _ : FlatTessla.StreamType =>
+                  case _ : TypedTessla.StreamType =>
                     // TODO: Currently type parameters can only be instantiated to value types. Once that changes,
                     //       this code needs to be adjusted
-                    val typeArgs = call.typeArgs.map(translateValueType)
+                    val typeArgs = call.typeArgs.map(translateValueType(_, env))
                     stream {
                       TesslaCore.Lift(op, typeArgs, args.map(getStream), call.loc)
                     }
                   case _ =>
-                    val value = evalPrimitiveOperator(op, args.map(arg =>
-                      arg.asInstanceOf[ValueEntry].value
-                    ), call.loc)
+                    val value = evalPrimitiveOperator(op, args.map {
+                      case ValueEntry(v) => v
+                      case other => throw InternalError(s"Expected value entry, found $other")
+                    }, call.loc)
                     wrapper.entry = ValueEntry(value.map(_.get))
                 }
             }
@@ -207,11 +214,11 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
           case MacroEntry(mac, closure) =>
             var posArgIdx = 0
             val args = call.args.map {
-              case arg: FlatTessla.PositionalArgument =>
+              case arg: TypedTessla.PositionalArgument =>
                 val param = mac.parameters(posArgIdx)
                 posArgIdx += 1
                 param.id -> env(arg.id)
-              case arg: FlatTessla.NamedArgument =>
+              case arg: TypedTessla.NamedArgument =>
                 mac.parameters.find(_.name == arg.name).get.id -> env(arg.id)
             }.toMap
             val scopeWithoutParameters = new TypedTessla.Scope(mac.scope.parent)
@@ -223,7 +230,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 }
             }
             val innerEnv = createEnvForScope(scopeWithoutParameters, closure ++ args)
-            translateExpression(innerEnv, wrapper, mac.body, mac.returnType, Some(call.loc))
+            translateExpression(innerEnv, wrapper, mac.body, typ, Some(call.loc))
           case other =>
             throw InternalError(s"Applying non-macro/builtin (${other.getClass.getSimpleName}) - should have been caught by the type checker.")
         }

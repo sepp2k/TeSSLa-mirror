@@ -16,7 +16,8 @@ trait HasUniqueIdentifiers {
   }
 
   trait IdentifierFactory {
-    var identifierCounter = 0l
+    private var identifierCounter = 0l
+
     def makeIdentifier(nameOpt: Option[String]): Identifier = {
       identifierCounter += 1
       new Identifier(identifierCounter, nameOpt)

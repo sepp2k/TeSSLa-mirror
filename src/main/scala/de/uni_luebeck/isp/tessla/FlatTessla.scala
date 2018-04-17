@@ -2,11 +2,9 @@ package de.uni_luebeck.isp.tessla
 
 import scala.collection.mutable
 
-abstract class FlatTessla {
-  import FlatTessla._
-
+abstract class FlatTessla extends HasUniqueIdentifiers {
   case class Specification(globalScope: Scope, outStreams: Seq[OutStream], outAllLocation: Option[Location],
-                           stdlibNames: Map[String, Identifier], idCount: Long) {
+                           stdlibNames: Map[String, Identifier]) {
     override def toString = {
       val outAllString = if (outAll) "\nout *" else ""
       s"$globalScope\n${outStreams.mkString("\n")}$outAllString"
@@ -17,8 +15,6 @@ abstract class FlatTessla {
 
   type TypeAnnotation
   def typeAnnotationToString(typeAnnotation: TypeAnnotation): String
-
-  type Identifier <: HasUniqueIdentifiers#Identifier
 
   case class VariableEntry(id: Identifier, expression: Expression, typeInfo: TypeAnnotation, loc: Location)
   case class TypeEntry(id: Identifier, arity: Int, typeConstructor: Seq[Type] => Type, loc: Location)
@@ -103,9 +99,7 @@ abstract class FlatTessla {
   }
 
   type LiteralValue = Tessla.LiteralValue
-}
 
-object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
   sealed abstract class Type {
     def isValueType: Boolean
   }
@@ -148,13 +142,13 @@ object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
     //       This will entail removing the isValueType method and instead handling this in the type checker
     //       where the type environment is available
     override def isValueType = true
-  }
 
-  type TypeAnnotation = Option[Type]
+    override def equals(other: Any) = other match {
+      case tvar: TypeParameter => id == tvar.id
+      case _ => false
+    }
 
-  override def typeAnnotationToString(typeAnnotation: TypeAnnotation) = typeAnnotation match {
-    case None => ""
-    case Some(t) => s" : $t"
+    override def hashCode() = id.hashCode()
   }
 
   case class OutStream(id: Identifier, name: String, loc: Location) {
@@ -172,5 +166,14 @@ object FlatTessla extends FlatTessla with HasUniqueIdentifiers {
 
   case class NamedArgument(name: String, id: Identifier, loc: Location) extends Argument {
     override def toString = s"$name = $id"
+  }
+}
+
+object FlatTessla extends FlatTessla {
+  type TypeAnnotation = Option[Type]
+
+  override def typeAnnotationToString(typeAnnotation: TypeAnnotation) = typeAnnotation match {
+    case None => ""
+    case Some(t) => s" : $t"
   }
 }

@@ -74,15 +74,13 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     // TODO: Once we have a way to define global types, those need to be handled here
     val globalTypeIdMap = builtInTypes.mapValues(_.id)
     val globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
-    val emptySpec = FlatTessla.Specification(
-      globalScope, Seq(), outAllLocation = None,
-      stdlibNames = stdlib.mapValues(_.id), idCount = identifierCounter
-    )
+    val stdlibNames = stdlib.mapValues(_.id)
+    val emptySpec = FlatTessla.Specification(globalScope, Seq(), outAllLocation = None, stdlibNames)
     checkForDuplicates(spec.statements.flatMap(getId))
     spec.statements.foldLeft(emptySpec) {
       case (result, outAll : Tessla.OutAll) =>
         if(result.outAll) warn(ConflictingOut(outAll.loc, previous = result.outAllLocation.get))
-        result.copy(outAllLocation = Some(outAll.loc), idCount = identifierCounter)
+        result.copy(outAllLocation = Some(outAll.loc))
 
       case (result, out: Tessla.Out) =>
         result.outStreams.find(_.name == out.name).foreach {
@@ -91,18 +89,18 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
         }
         val id = expToId(translateExpression(out.expr, globalScope, globalEnv), globalScope)
         val newOut = FlatTessla.OutStream(id, out.name, out.loc)
-        result.copy(outStreams = result.outStreams :+ newOut, idCount = identifierCounter)
+        result.copy(outStreams = result.outStreams :+ newOut)
 
       case (result, definition: Tessla.Definition) =>
         addDefinition(definition, globalScope, globalEnv)
-        result.copy(idCount = identifierCounter)
+        result
 
       case (result, in: Tessla.In) =>
         val streamType = translateType(in.streamType, globalScope, globalEnv)
         val inputStream = FlatTessla.InputStream(in.id.name, streamType, in.loc)
         val entry = FlatTessla.VariableEntry(globalEnv.variables(in.id.name), inputStream, Some(streamType), in.loc)
         globalScope.addVariable(entry)
-        result.copy(idCount = identifierCounter)
+        result
     }
   }
 
@@ -128,7 +126,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       val innerScope = new FlatTessla.Scope(Some(scope))
       val paramIdMap = createIdMap(definition.parameters.map(_.id.name))
       val typeParamIdMap = createIdMap(definition.typeParameters.map(_.name))
-      // Ennvironment that contains the macro's parameters and type parameters, but not any of its inner definitions
+      // Environment that contains the macro's parameters and type parameters, but not any of its inner definitions
       // This is used to process the type signature as we want to be able to use type arguments there,
       // but not any type definitions that are inside the macro (once we have those)
       val paramEnv = env ++ Env(variables = paramIdMap, types = typeParamIdMap)
@@ -150,8 +148,8 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       }
       val body = translateExpression(exp, innerScope, innerEnv)
       // Get the values of the type map in the order in which they appeared in the type parameter list
-      val typeParameters = definition.typeParameters.map(tp => env.types(tp.name))
-      val returnType = definition.returnType.map(translateType(_, scope, paramEnv))
+      val typeParameters = definition.typeParameters.map(tp => paramEnv.types(tp.name))
+      val returnType = definition.returnType.map(translateType(_, innerScope, paramEnv))
       val mac = FlatTessla.Macro(typeParameters, parameters, innerScope, returnType, body, definition.loc)
       scope.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), mac, None, definition.loc))
     }
@@ -183,7 +181,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
 
   def translateType(typ: Tessla.Type, scope: FlatTessla.Scope, env: Env): FlatTessla.Type = typ match {
     case Tessla.SimpleType(id) =>
-      val typeEntry = scope.resolveType(env.types(id.name)).getOrElse(throw UndefinedType(id.name, id.loc))
+      val typeEntry = env.types.get(id.name).flatMap(scope.resolveType).getOrElse(throw UndefinedType(id.name, id.loc))
       if (typeEntry.arity == 0) typeEntry.typeConstructor(Seq())
       else throw TypeArityMismatch(id.name, typeEntry.arity, 0, id.loc)
 
