@@ -361,11 +361,9 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
             val typeSubstitutions = t.typeParameters.zip(typeArgs).toMap
             var concreteType = typeSubst(t, typeSubstitutions)
             var macroID = env(call.macroID)
-            if (isLiftable(concreteType) && call.args.exists(arg => !typeMap(env(arg.id)).isValueType)) {
+            if (isLiftable(concreteType) && liftedMacros.contains(macroID) && call.args.exists(arg => !typeMap(env(arg.id)).isValueType)) {
               concreteType = liftFunctionType(concreteType)
-              if (liftedMacros.contains(macroID)) {
-                macroID = liftedMacros(macroID)
-              }
+              macroID = liftedMacros(macroID)
             }
             val args = call.args.zip(concreteType.parameterTypes).map {
               case (arg, expected) =>
@@ -377,7 +375,13 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
                   } else if(TypedTessla.StreamType(actual) == expected) {
                     liftConstant(id, scope, env, arg.loc)
                   } else {
-                    throw TypeMismatch(expected, actual, arg.loc)
+                    (actual, expected) match {
+                      case (a: TypedTessla.FunctionType, e: TypedTessla.FunctionType)
+                        if isLiftable(a) && liftFunctionType(a) == e && liftedMacros.contains(id) =>
+                        liftedMacros(id)
+                      case _ =>
+                        throw TypeMismatch(expected, actual, arg.loc)
+                    }
                   }
                 arg match {
                   case _: FlatTessla.PositionalArgument =>
@@ -392,7 +396,13 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         }
 
       case FlatTessla.BuiltInOperator(b) =>
-        TypedTessla.BuiltInOperator(b) -> typesOfBuiltIns(b)
+        val t = typesOfBuiltIns(b)
+        // Register each builtin as its own lifted version, so things just work when looking up the lifted version
+        // of a built-in.
+        id.foreach { id =>
+          liftedMacros(id) = id
+        }
+        TypedTessla.BuiltInOperator(b) -> t
       case mac: FlatTessla.Macro =>
         val (tvarIDs, expectedReturnType) = declaredType match {
           case Some(f: TypedTessla.FunctionType) =>
