@@ -66,9 +66,11 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       throw InternalError(s"Expected stream type, got $typ - should have been caught by type checker")
   }
 
-  def getType(env: Env, id: TypedTessla.Identifier) = env(id).entry match {
-    case TypeEntry(typ) => typ
-    case other => throw InternalError(s"Expected type entry, found $other")
+  def getType(env: Env, id: TypedTessla.Identifier) = env.get(id).map(_.entry) match {
+    case Some(TypeEntry(typ)) => typ
+    case other =>
+      warn(InternalError(s"Expected type entry, found $other"))
+      TesslaCore.IntType
   }
 
   def translateValueType(typ: TypedTessla.Type, env: Env): TesslaCore.ValueType = typ match {
