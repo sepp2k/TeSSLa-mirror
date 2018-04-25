@@ -18,6 +18,10 @@ object Errors {
     def message = s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
   }
 
+  case class TypeArgumentsNotInferred(name: String, loc: Location) extends TesslaError {
+    def message = s"Explicit type arguments needed for $name"
+  }
+
   case class ArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
     def message = s"Wrong number of arguments for $name. Expected: $expected, actual: $actual"
   }

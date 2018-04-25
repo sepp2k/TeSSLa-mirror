@@ -152,31 +152,38 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     TypedTessla.VariableEntry(id, exp, typ, entry.loc)
   }
 
-  def typeSubst(typ: TypedTessla.Type, substitutions: Map[TypedTessla.Identifier, TypedTessla.Type]): TypedTessla.Type = typ match {
-    case tvar: TypedTessla.TypeParameter =>
-      substitutions.getOrElse(tvar.id, tvar)
-    case functionType: TypedTessla.FunctionType =>
-      typeSubst(functionType, substitutions)
-    case TypedTessla.StreamType(elementType) =>
-      TypedTessla.StreamType(typeSubst(elementType, substitutions))
-    case TypedTessla.SetType(elementType) =>
-      TypedTessla.SetType(typeSubst(elementType, substitutions))
-    case TypedTessla.MapType(k, v) =>
-      TypedTessla.MapType(typeSubst(k, substitutions), typeSubst(v, substitutions))
-    case TypedTessla.IntType | TypedTessla.BoolType | TypedTessla.StringType | TypedTessla.UnitType =>
-      typ
-  }
-
-  // Overload for function types to encode the fact that typeSubst on a function type always produces another function
-  // type
-  def typeSubst(typ: TypedTessla.FunctionType, typeEnv: Map[TypedTessla.Identifier, TypedTessla.Type]): TypedTessla.FunctionType = {
-    // Since we don't support higher-order types, i.e. function types that appear as a subtype can't be generic
-    // themselves, we know that none of the function types, except the initial one that was used to generated the
-    // type environment, will have type parameters, so we don't need to update the type envrionment with new type
-    // variables.
-    val parameterTypes = typ.parameterTypes.map(typeSubst(_, typeEnv))
-    val returnType = typeSubst(typ.returnType, typeEnv)
-    TypedTessla.FunctionType(Seq(), parameterTypes, returnType)
+  def typeSubst(expected: TypedTessla.Type, actual: TypedTessla.Type, typeParams: Set[TypedTessla.Identifier],
+                substitutions: mutable.Map[TypedTessla.Identifier, TypedTessla.Type]): TypedTessla.Type = {
+    (expected, actual) match {
+      case (tparam: TypedTessla.TypeParameter, _) =>
+        if (typeParams.contains(tparam.id)) {
+          substitutions.getOrElseUpdate(tparam.id, actual)
+        } else {
+          tparam
+        }
+      case (expectedFunctionType: TypedTessla.FunctionType, actualFunctionType: TypedTessla.FunctionType) =>
+        // Since we don't support higher-order types, i.e. function types that appear as a subtype can't be generic
+        // themselves, we know that none of the function types, except the initial one that was used to generated the
+        // type environment, will have type parameters, so we don't need to update the type envrionment with new type
+        // variables.
+        val parameterTypes = expectedFunctionType.parameterTypes.zip(actualFunctionType.parameterTypes).map {
+          case (expectedParamType, actualParamType) =>
+            typeSubst(expectedParamType, actualParamType, typeParams, substitutions)
+        }
+        val returnType = typeSubst(expectedFunctionType.returnType, actualFunctionType.returnType, typeParams, substitutions)
+        TypedTessla.FunctionType(Seq(), parameterTypes, returnType)
+      case (TypedTessla.StreamType(expectedElementType), TypedTessla.StreamType(actualElementType)) =>
+        TypedTessla.StreamType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions))
+      // Allow for auto-lifting of values
+      case (TypedTessla.StreamType(expectedElementType), actualElementType) =>
+        TypedTessla.StreamType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions))
+      case (TypedTessla.SetType(expectedElementType), TypedTessla.SetType(actualElementType)) =>
+        TypedTessla.SetType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions))
+      case (TypedTessla.MapType(k, v), TypedTessla.MapType(k2, v2)) =>
+        TypedTessla.MapType(typeSubst(k, k2, typeParams, substitutions), typeSubst(v, v2, typeParams, substitutions))
+      case _ =>
+        expected
+    }
   }
 
   def mkTVar(name: String) = TypedTessla.TypeParameter(makeIdentifier(name), Location.builtIn)
@@ -354,21 +361,23 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
             if (call.args.length != t.parameterTypes.length) {
               throw ArityMismatch(name, t.parameterTypes.length, call.args.length, call.loc)
             }
-            if (call.typeArgs.length != t.typeParameters.length) {
+            val typeArgs = call.typeArgs.map(translateType(_, env))
+            if (typeArgs.nonEmpty && typeArgs.length != t.typeParameters.length) {
               throw TypeArityMismatch(name, t.typeParameters.length, call.typeArgs.length, call.loc)
             }
-            val typeArgs = call.typeArgs.map(translateType(_, env))
-            val typeSubstitutions = t.typeParameters.zip(typeArgs).toMap
-            var concreteType = typeSubst(t, typeSubstitutions)
             var macroID = env(call.macroID)
-            if (isLiftable(concreteType) && liftedMacros.contains(macroID) && call.args.exists(arg => !typeMap(env(arg.id)).isValueType)) {
-              concreteType = liftFunctionType(concreteType)
+            var possiblyLiftedType = t
+            if (isLiftable(t) && liftedMacros.contains(macroID) && call.args.exists(arg => !typeMap(env(arg.id)).isValueType)) {
+              possiblyLiftedType = liftFunctionType(t)
               macroID = liftedMacros(macroID)
             }
-            val args = call.args.zip(concreteType.parameterTypes).map {
-              case (arg, expected) =>
+            val typeSubstitutions = mutable.Map(t.typeParameters.zip(typeArgs): _*)
+            val typeParams = t.typeParameters.toSet
+            val args = call.args.zip(possiblyLiftedType.parameterTypes).map {
+              case (arg, genericExpected) =>
                 val id = env(arg.id)
                 val actual = typeMap(id)
+                val expected = typeSubst(genericExpected, actual, typeParams, typeSubstitutions)
                 val possiblyLifted =
                   if (actual == expected) {
                     id
@@ -390,7 +399,14 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
                     TypedTessla.NamedArgument(named.name, possiblyLifted, named.loc)
                 }
             }
-            TypedTessla.MacroCall(macroID, call.macroLoc, typeArgs, args, call.loc) -> concreteType.returnType
+            val leftOverTypeParameters = typeParams.diff(typeSubstitutions.keySet)
+            println(typeSubstitutions)
+            if (leftOverTypeParameters.nonEmpty) {
+              throw TypeArgumentsNotInferred(name, call.macroLoc)
+            }
+            val returnType = typeSubst(possiblyLiftedType.returnType, possiblyLiftedType.returnType,
+              typeParams, typeSubstitutions)
+            TypedTessla.MacroCall(macroID, call.macroLoc, typeArgs, args, call.loc) -> returnType
           case other =>
             throw TypeMismatch("function", other, call.macroLoc)
         }
