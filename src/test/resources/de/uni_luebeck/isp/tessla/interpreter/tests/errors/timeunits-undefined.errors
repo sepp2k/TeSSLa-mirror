@@ -1,2 +1,2 @@
-/errors/timeunits-undefined.tessla(3,34 - 3,38): No time unit set
-/errors/timeunits-undefined.tessla(4,30 - 4,32): No time unit set
+/errors/timeunits-undefined.tessla(3,37 - 3,38): Use of time units is only allowed when a base time unit is set for the data
+/errors/timeunits-undefined.tessla(4,31 - 4,32): Use of time units is only allowed when a base time unit is set for the data
