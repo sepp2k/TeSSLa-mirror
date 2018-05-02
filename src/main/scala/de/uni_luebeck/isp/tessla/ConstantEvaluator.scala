@@ -317,12 +317,14 @@ object ConstantEvaluator {
       case BuiltIn.Sub => binIntOp(_ - _)
       case BuiltIn.Mul => binIntOp(_ * _)
       case BuiltIn.Div => binIntOp(div)
+      case BuiltIn.Negate => Some(TesslaCore.IntLiteral(-getInt(arguments(0).get), loc))
       case BuiltIn.Eq => Some(TesslaCore.BoolLiteral(arguments(0).get.value == arguments(1).get.value, loc))
       case BuiltIn.Neq => Some(TesslaCore.BoolLiteral(arguments(0).get.value != arguments(1).get.value, loc))
       case BuiltIn.Lt => binIntComp(_ < _)
       case BuiltIn.Lte => binIntComp(_ <= _)
       case BuiltIn.Gt => binIntComp(_ > _)
       case BuiltIn.Gte => binIntComp(_ >= _)
+      case BuiltIn.Not => Some(TesslaCore.BoolLiteral(!getBool(arguments(0).get), loc))
       case BuiltIn.IfThen =>
         if (getBool(arguments(0).get)) Some(arguments(1).get)
         else None
@@ -330,7 +332,7 @@ object ConstantEvaluator {
         if (getBool(arguments(0).get)) Some(arguments(1).get)
         else Some(arguments(2).get)
       case BuiltIn.First =>
-        Some(arguments.head.get)
+        Some(arguments(0).get)
       case _ => ???
     }
   }
