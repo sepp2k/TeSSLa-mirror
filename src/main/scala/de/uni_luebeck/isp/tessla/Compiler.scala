@@ -5,13 +5,9 @@ import Errors.InternalError
 class Compiler {
   def applyPasses(src: TesslaSource, unit: Option[TimeUnit]): TranslationPhase.Result[TesslaCore.Specification] = {
     new TesslaParser().translate(src)
-      .andThen(new Printer[Tessla.Specification])
       .andThen(new Flattener)
-      .andThen(new Printer[FlatTessla.Specification])
       .andThen(new TypeChecker)
-      .andThen(new Printer[TypedTessla.Specification])
       .andThen(new ConstantEvaluator(unit))
-      .andThen(new Printer[TesslaCore.Specification])
   }
 
   class Printer[T] extends TranslationPhase[T, T] {

@@ -403,7 +403,6 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
                 }
             }
             val leftOverTypeParameters = typeParams.diff(typeSubstitutions.keySet)
-            println(typeSubstitutions)
             if (leftOverTypeParameters.nonEmpty) {
               throw TypeArgumentsNotInferred(name, call.macroLoc)
             }
