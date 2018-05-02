@@ -96,7 +96,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         case Some(base) =>
           TesslaCore.IntLiteral(tu.convertTo(base) * x, loc)
         case None =>
-          throw UndefinedTimeUnit(tu.loc)
+          error(UndefinedTimeUnit(tu.loc))
+          TesslaCore.IntLiteral(x, loc)
       }
     case Tessla.StringLiteral(str) =>
       TesslaCore.StringLiteral(str, loc)
