@@ -114,7 +114,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     */
   def translateEntry(env: Env, wrapper: EnvEntryWrapper, overrideLoc: Option[Location]): Unit = wrapper.entry match {
     case NotYetTranslated(entry, closure) =>
-      translateExpression(closure, wrapper, entry.expression, entry.typeInfo, overrideLoc)
+      translateExpression(closure, wrapper, entry.expression, entry.id.nameOpt, entry.typeInfo, overrideLoc)
     case Translating =>
       // TODO Proper loc with stack trace
       throw InfiniteRecursion(Location.unknown)
@@ -122,7 +122,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       /* Do nothing */
   }
 
-  def translateExpression(env: Env, wrapper: EnvEntryWrapper, expression: TypedTessla.Expression,
+  def translateExpression(env: Env, wrapper: EnvEntryWrapper, expression: TypedTessla.Expression, nameOpt: Option[String],
                           typ: TypedTessla.Type, overrideLoc: Option[Location]): Unit = {
     wrapper.entry = Translating
     expression match {
@@ -146,7 +146,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         wrapper.entry = InputStreamEntry(TesslaCore.InputStream(i.name, overrideLoc.getOrElse(i.loc)))
       case call: TypedTessla.MacroCall =>
         def stream(coreExp: => TesslaCore.Expression) = {
-          val id = makeIdentifier()
+          val id = makeIdentifier(nameOpt)
           val translatedType = translateStreamType(typ, env)
           wrapper.entry = StreamEntry(TesslaCore.Stream(id, call.loc), translatedType)
           translatedStreams(id) = TesslaCore.StreamDefinition(coreExp, translatedType)
@@ -233,7 +233,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 }
             }
             val innerEnv = createEnvForScope(scopeWithoutParameters, closure ++ args)
-            translateExpression(innerEnv, wrapper, mac.body, typ, Some(call.loc))
+            translateExpression(innerEnv, wrapper, mac.body, None, typ, Some(call.loc))
           case other =>
             throw InternalError(s"Applying non-macro/builtin (${other.getClass.getSimpleName}) - should have been caught by the type checker.")
         }
