@@ -44,7 +44,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       evalStream(values).default(defaultValue)
     case TesslaCore.DefaultFrom(values, defaults, _) =>
       evalStream(values).default(evalStream(defaults))
-    case TesslaCore.Const(stream, value, _) =>
+    case TesslaCore.Const(value, stream, _) =>
       lift(Seq(evalStream(stream))) { _ =>
         Some(value)
       }

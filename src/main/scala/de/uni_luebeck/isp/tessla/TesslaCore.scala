@@ -48,8 +48,8 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"defaultFrom($valueStream, $defaultStream)"
   }
 
-  final case class Const(stream: StreamRef, value: ValueOrError, loc: Location) extends Expression {
-    override def toString = s"const($stream, $value)"
+  final case class Const(value: ValueOrError, stream: StreamRef, loc: Location) extends Expression {
+    override def toString = s"const($value, $stream)"
   }
 
   final case class Time(stream: StreamRef, loc: Location) extends Expression {
