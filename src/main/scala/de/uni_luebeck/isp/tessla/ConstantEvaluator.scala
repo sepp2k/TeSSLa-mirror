@@ -264,7 +264,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     while (loop) {
       if (visited.contains(currentId)) throw InfiniteRecursion(loc)
       visited += currentId
-      currentEnv(id).entry match {
+      currentEnv(currentId).entry match {
         case NotYetTranslated(entry, closure) =>
           entry.expression match {
             case v: TypedTessla.Variable =>
