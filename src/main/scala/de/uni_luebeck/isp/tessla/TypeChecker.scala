@@ -129,14 +129,17 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     scope.variables.values.foreach(processTypeAnnotation(_, env))
     ReverseTopologicalSort.sort(scope.variables.values)(requiredEntries(scope, _)) match {
       case ReverseTopologicalSort.Cycles(nodesInCycles) =>
-        nodesInCycles.foreach {
-          case (entry) =>
-            entry.id.nameOpt match {
-              case Some(name) =>
-                error(MissingTypeAnnotationRec(name, entry.loc))
-              case None =>
-            }
+        val errors = nodesInCycles.flatMap { entry =>
+            entry.id.nameOpt.map(MissingTypeAnnotationRec(_, entry.loc))
+        }.toIndexedSeq
+        // Add all but the last error to the error list and then throw the last.
+        // We need to throw one of them, so the execution does not continue (possibly leading to missing key exceptions
+        // later), but we also want to record the others. We exclude the last from iteration, so it isn't reported twice
+        // (once in the loop and then again when throwing it afterwards)
+        errors.init.foreach { err =>
+          error(err)
         }
+        throw errors.last
       case ReverseTopologicalSort.Sorted(sorted) =>
         sorted.foreach { entry =>
           resultingScope.addVariable(translateEntry(entry, resultingScope, env))
