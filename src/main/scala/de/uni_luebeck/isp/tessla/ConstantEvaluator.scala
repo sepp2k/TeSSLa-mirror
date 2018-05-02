@@ -313,9 +313,14 @@ object ConstantEvaluator {
       case BuiltIn.Sub => binIntOp(_ - _)
       case BuiltIn.Mul => binIntOp(_ * _)
       case BuiltIn.Div => binIntOp(div)
+      case BuiltIn.IfThen =>
+        if (getBool(arguments(0).get)) Some(arguments(1).get)
+        else None
       case BuiltIn.IfThenElse =>
         if (getBool(arguments(0).get)) Some(arguments(1).get)
         else Some(arguments(2).get)
+      case BuiltIn.First =>
+        Some(arguments.head.get)
       case _ => ???
     }
   }
