@@ -3,7 +3,6 @@ package de.uni_luebeck.isp.tessla
 import scala.collection.mutable
 import de.uni_luebeck.isp.tessla.Errors.{DivideByZero, InfiniteRecursion, InternalError, UndefinedTimeUnit}
 import de.uni_luebeck.isp.tessla.util.Lazy
-
 import ConstantEvaluator._
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.IdentifierFactory with TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
@@ -30,12 +29,17 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   override def translateSpec(spec: TypedTessla.Specification): TesslaCore.Specification = {
     val env = createEnvForScopeWithParents(spec.globalScope)
     translateEnv(env, None)
-    def inputStreams = spec.globalScope.variables.collect {
+    val inputStreams = spec.globalScope.variables.collect {
       case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
         (is.name, translateStreamType(typ, env), is.loc)
     }.toSeq
-    def outputStreams = spec.outStreams.map { os =>
+    var outputStreams = spec.outStreams.map { os =>
       (os.name, getStream(env(os.id).entry))
+    }
+    if (spec.outAll) {
+      outputStreams ++= translatedStreams.keys.flatMap { id =>
+        id.nameOpt.map( name => (name, TesslaCore.Stream(id, Location.unknown)) )
+      }
     }
     TesslaCore.Specification(translatedStreams.toMap, inputStreams, outputStreams)
   }
