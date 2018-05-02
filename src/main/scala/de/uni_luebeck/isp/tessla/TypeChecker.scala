@@ -18,11 +18,19 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
   override def translateSpec(spec: FlatTessla.Specification): TypedTessla.Specification = {
     stdlibNames = spec.stdlibNames
     val (scope, env) = translateScopeWithParents(spec.globalScope)
-    TypedTessla.Specification(scope, spec.outStreams.map(translateOutStream(_, env)), spec.outAllLocation, stdlibNames.mapValues(env))
+    TypedTessla.Specification(scope, spec.outStreams.map(translateOutStream(_, scope, env)), spec.outAllLocation, stdlibNames.mapValues(env))
   }
 
-  def translateOutStream(stream: FlatTessla.OutStream, env: Env): TypedTessla.OutStream = {
-    TypedTessla.OutStream(env(stream.id), stream.name, stream.loc)
+  def translateOutStream(stream: FlatTessla.OutStream, scope: TypedTessla.Scope, env: Env): TypedTessla.OutStream = {
+    val id = env(stream.id)
+    typeMap(id) match {
+      case _: TypedTessla.StreamType =>
+        TypedTessla.OutStream(id, stream.name, stream.loc)
+      case t if t.isValueType =>
+        TypedTessla.OutStream(liftConstant(id, scope, env, stream.loc), stream.name, stream.loc)
+      case other =>
+        throw TypeMismatch("stream or value type", other, stream.loc)
+    }
   }
 
   def processTypeAnnotation(entry: FlatTessla.VariableEntry, env: Env) = declaredType(entry) match {
