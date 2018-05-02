@@ -301,6 +301,10 @@ object ConstantEvaluator {
       Some(TesslaCore.IntLiteral(op(getInt(arguments(0).get), getInt(arguments(1).get)), loc))
     }
 
+    def binIntComp(op: (BigInt, BigInt) => Boolean) = {
+      Some(TesslaCore.BoolLiteral(op(getInt(arguments(0).get), getInt(arguments(1).get)), loc))
+    }
+
     def div(x: BigInt, y: BigInt): BigInt = {
       // This is a bit dirty because we hard-code the fact that y corresponds to arguments(1),
       // but since this is only a local function, it should be fine.
@@ -313,6 +317,12 @@ object ConstantEvaluator {
       case BuiltIn.Sub => binIntOp(_ - _)
       case BuiltIn.Mul => binIntOp(_ * _)
       case BuiltIn.Div => binIntOp(div)
+      case BuiltIn.Eq => Some(TesslaCore.BoolLiteral(arguments(0).get.value == arguments(1).get.value, loc))
+      case BuiltIn.Neq => Some(TesslaCore.BoolLiteral(arguments(0).get.value != arguments(1).get.value, loc))
+      case BuiltIn.Lt => binIntComp(_ < _)
+      case BuiltIn.Lte => binIntComp(_ <= _)
+      case BuiltIn.Gt => binIntComp(_ > _)
+      case BuiltIn.Gte => binIntComp(_ >= _)
       case BuiltIn.IfThen =>
         if (getBool(arguments(0).get)) Some(arguments(1).get)
         else None
