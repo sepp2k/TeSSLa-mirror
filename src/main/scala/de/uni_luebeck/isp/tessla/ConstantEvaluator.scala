@@ -190,7 +190,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 }
               case BuiltIn.Const =>
                 stream {
-                  TesslaCore.Const(getStream(args(0)), getValue(args(1)), call.loc)
+                  TesslaCore.Const(getValue(args(0)), getStream(args(1)), call.loc)
                 }
               case BuiltIn.Time =>
                 stream {
