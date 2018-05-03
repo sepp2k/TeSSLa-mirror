@@ -111,16 +111,21 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
   }
 
   def requiredEntries(scope: FlatTessla.Scope, expression: FlatTessla.Expression): Seq[FlatTessla.VariableEntry] = {
+    def resolve(id: FlatTessla.Identifier) = {
+      scope.resolveVariable(id).toList.filterNot(arg => declaredType(arg).isDefined)
+    }
     expression match {
-      case _: FlatTessla.Variable | _: FlatTessla.Literal | _: FlatTessla.InputStream
-           | _ : FlatTessla.Parameter | _ : FlatTessla.BuiltInOperator =>
+      case v: FlatTessla.Variable =>
+        resolve(v.id)
+      case _: FlatTessla.Literal | _: FlatTessla.InputStream | _ : FlatTessla.Parameter
+           | _ : FlatTessla.BuiltInOperator =>
         Seq()
 
       case call: FlatTessla.MacroCall =>
         // Since we invoke requiredEntries* with an outer scope in the macro case (see below), we might encounter
         // identifiers that aren't defined in the scope we see, so we use flatMap to discard the Nones.
         val args = call.args.flatMap(arg => scope.resolveVariable(arg.id)).filterNot(arg => declaredType(arg).isDefined)
-        scope.resolveVariable(call.macroID).toList ++ args
+        resolve(call.macroID).toList ++ args
 
       case mac: FlatTessla.Macro =>
         // Since identifiers used in the macro may either be defined inside or outside the
