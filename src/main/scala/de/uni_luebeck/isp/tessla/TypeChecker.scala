@@ -125,7 +125,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         // Since we invoke requiredEntries* with an outer scope in the macro case (see below), we might encounter
         // identifiers that aren't defined in the scope we see, so we use flatMap to discard the Nones.
         val args = call.args.flatMap(arg => scope.resolveVariable(arg.id)).filterNot(arg => declaredType(arg).isDefined)
-        resolve(call.macroID).toList ++ args
+        resolve(call.macroID) ++ args
 
       case mac: FlatTessla.Macro =>
         // Since identifiers used in the macro may either be defined inside or outside the
@@ -140,18 +140,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     val env = parentEnv ++ scope.variables.mapValues(entry => makeIdentifier(entry.id.nameOpt))
     val resultingScope = new TypedTessla.Scope(parent)
     scope.variables.values.foreach(processTypeAnnotation(_, env))
-    var errors: IndexedSeq[Errors.TesslaError] = IndexedSeq()
-    ReverseTopologicalSort.sort(scope.variables.values)(requiredEntries(scope, _)) match {
-      case ReverseTopologicalSort.Cycles(nodesInCycles) =>
-        errors = nodesInCycles.flatMap { entry =>
-            entry.id.nameOpt.map(MissingTypeAnnotationRec(_, entry.loc))
-        }.toIndexedSeq
-      case ReverseTopologicalSort.Sorted(sorted) =>
-        sorted.foreach { entry =>
-          resultingScope.addVariable(translateEntry(entry, resultingScope, env))
-        }
-    }
-    errors ++= scope.variables.values.flatMap { entry =>
+    var errors: IndexedSeq[TesslaError] = scope.variables.values.flatMap { entry =>
       entry.expression match {
         case m: FlatTessla.Macro =>
           m.parameters.flatMap { param =>
@@ -161,6 +150,19 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
             }
           }
         case _ => None
+      }
+    }.toIndexedSeq
+
+    if (errors.isEmpty) {
+      ReverseTopologicalSort.sort(scope.variables.values)(requiredEntries(scope, _)) match {
+        case ReverseTopologicalSort.Cycles(nodesInCycles) =>
+          errors ++= nodesInCycles.flatMap { entry =>
+            entry.id.nameOpt.map(MissingTypeAnnotationRec(_, entry.loc))
+          }.toIndexedSeq
+        case ReverseTopologicalSort.Sorted(sorted) =>
+          sorted.foreach { entry =>
+            resultingScope.addVariable(translateEntry(entry, resultingScope, env))
+          }
       }
     }
     if (errors.nonEmpty) {
