@@ -106,34 +106,53 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
   case object IntType extends Type {
     override def isValueType = true
+
+    override def toString = "Int"
   }
 
   case object StringType extends Type {
     override def isValueType = true
+
+    override def toString = "String"
   }
 
   case object BoolType extends Type {
     override def isValueType = true
+
+    override def toString = "Bool"
   }
 
   case object UnitType extends Type {
     override def isValueType = true
+
+    override def toString = "Unit"
   }
 
   case class MapType(keyType: Type, valueType: Type) extends Type {
     override def isValueType = true
+
+    override def toString = s"Map[$keyType, $valueType]"
   }
 
   case class SetType(elementType: Type) extends Type {
     override def isValueType = true
+
+    override def toString = s"Set[$elementType]"
   }
 
   case class StreamType(elementType: Type) extends Type {
     override def isValueType = false
+
+    override def toString = s"Events[$elementType]"
   }
 
   case class FunctionType(typeParameters: Seq[Identifier], parameterTypes: Seq[Type], returnType: Type) extends Type {
     override def isValueType = false
+
+    override def toString = {
+      val typeParamString = typeParameters.map(id => id.nameOpt.getOrElse(id.toString)).mkString(", ")
+      s"[$typeParamString](${parameterTypes.mkString(",")}) => $returnType"
+    }
   }
 
   case class TypeParameter(id: Identifier, loc: Location) extends Type {
@@ -142,6 +161,8 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     //       This will entail removing the isValueType method and instead handling this in the type checker
     //       where the type environment is available
     override def isValueType = true
+
+    override def toString = id.nameOpt.getOrElse(id.toString)
 
     override def equals(other: Any) = other match {
       case tvar: TypeParameter => id == tvar.id
