@@ -13,8 +13,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   case class EnvEntryWrapper(var entry: EnvEntry)
 
   sealed abstract class EnvEntry
-  case class StreamEntry(stream: TesslaCore.Stream, typ: TesslaCore.StreamType) extends EnvEntry
-  case class InputStreamEntry(stream: TesslaCore.InputStream) extends EnvEntry
+  case class StreamEntry(streamId: TesslaCore.Identifier, typ: TesslaCore.StreamType) extends EnvEntry
+  case class InputStreamEntry(name: String) extends EnvEntry
   case class NilEntry(nil: TesslaCore.Nil) extends EnvEntry
   case class ValueEntry(value: Lazy[TesslaCore.Value]) extends EnvEntry
   case class MacroEntry(mac: TypedTessla.Macro, closure: Env) extends EnvEntry {
@@ -30,13 +30,13 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   override def translateSpec(spec: TypedTessla.Specification): TesslaCore.Specification = {
     try {
       val env = createEnvForScopeWithParents(spec.globalScope)
-      translateEnv(env, None)
+      translateEnv(env)
       val inputStreams = spec.globalScope.variables.collect {
         case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
           (is.name, translateStreamType(typ, env), is.loc)
       }.toSeq
       var outputStreams = spec.outStreams.map { os =>
-        (os.name, getStream(env(os.id).entry))
+        (os.name, getStream(env(os.id).entry, os.loc))
       }
       if (spec.outAll) {
         outputStreams ++= translatedStreams.keys.flatMap { id =>
@@ -64,10 +64,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     createEnvForScope(scope, outerEnv)
   }
 
-  def translateEnv(env: Env, overrideLoc: Option[Location]): Unit = {
+  def translateEnv(env: Env): Unit = {
     env.foreach {
       case (_, entryWrapper) =>
-        translateEntry(env, entryWrapper, overrideLoc)
+        translateEntry(env, entryWrapper, None)
     }
   }
 
@@ -155,12 +155,13 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case v: TypedTessla.Variable =>
         wrapper.entry = translateVar(env, v.id, v.loc)
       case i: TypedTessla.InputStream =>
-        wrapper.entry = InputStreamEntry(TesslaCore.InputStream(i.name, overrideLoc.getOrElse(i.loc)))
+        val loc = overrideLoc.getOrElse(i.loc)
+        wrapper.entry = InputStreamEntry(i.name)
       case call: TypedTessla.MacroCall =>
         def stream(coreExp: => TesslaCore.Expression) = {
           val id = makeIdentifier(nameOpt)
           val translatedType = translateStreamType(typ, env)
-          wrapper.entry = StreamEntry(TesslaCore.Stream(id, call.loc), translatedType)
+          wrapper.entry = StreamEntry(id, translatedType)
           translatedStreams(id) = TesslaCore.StreamDefinition(coreExp, translatedType)
           wrapper.entry
         }
@@ -177,36 +178,37 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
               case TypedTessla.NamedArgument(name, _, loc) =>
                 throw InternalError(s"Undefined keyword arg $name for built-in should've been caught by type checker", loc)
             }
+            def streamArg(i: Int) = getStream(args(i), call.args(i).loc)
             builtIn match {
               case BuiltIn.Nil =>
                 wrapper.entry = NilEntry(TesslaCore.Nil(call.loc))
               case BuiltIn.Default =>
                 stream {
-                  TesslaCore.Default(getStream(args(0)), getValue(args(1)), call.loc)
+                  TesslaCore.Default(streamArg(0), getValue(args(1)), call.loc)
                 }
               case BuiltIn.DefaultFrom =>
                 stream {
-                  TesslaCore.DefaultFrom(getStream(args(0)), getStream(args(1)), call.loc)
+                  TesslaCore.DefaultFrom(streamArg(0), streamArg(1), call.loc)
                 }
               case BuiltIn.Last =>
                 stream {
-                  TesslaCore.Last(getStream(args(0)), getStream(args(1)), call.loc)
+                  TesslaCore.Last(streamArg(0), streamArg(1), call.loc)
                 }
               case BuiltIn.DelayedLast =>
                 stream {
-                  TesslaCore.DelayedLast(getStream(args(0)), getStream(args(1)), call.loc)
+                  TesslaCore.DelayedLast(streamArg(0), streamArg(1), call.loc)
                 }
               case BuiltIn.Const =>
                 stream {
-                  TesslaCore.Const(getValue(args(0)), getStream(args(1)), call.loc)
+                  TesslaCore.Const(getValue(args(0)), streamArg(1), call.loc)
                 }
               case BuiltIn.Time =>
                 stream {
-                  TesslaCore.Time(getStream(args(0)), call.loc)
+                  TesslaCore.Time(streamArg(0), call.loc)
                 }
               case BuiltIn.Merge =>
                 stream {
-                  TesslaCore.Merge(getStream(args(0)), getStream(args(1)), call.loc)
+                  TesslaCore.Merge(streamArg(0), streamArg(1), call.loc)
                 }
               case op: BuiltIn.PrimitiveOperator =>
                 typ match {
@@ -215,7 +217,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                     //       this code needs to be adjusted
                     val typeArgs = call.typeArgs.map(translateValueType(_, env))
                     stream {
-                      TesslaCore.Lift(op, typeArgs, args.map(getStream), call.loc)
+                      TesslaCore.Lift(op, typeArgs, args.indices.map(streamArg), call.loc)
                     }
                   case _ =>
                     val value = evalPrimitiveOperator(op, args.map {
@@ -254,10 +256,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     }
   }
 
-  def getStream(envEntry: EnvEntry): TesslaCore.StreamRef = envEntry match {
-    case s : StreamEntry => s.stream
+  def getStream(envEntry: EnvEntry, loc: Location): TesslaCore.StreamRef = envEntry match {
+    case s : StreamEntry => TesslaCore.Stream(s.streamId, loc)
     case NilEntry(nil) => nil
-    case i : InputStreamEntry => i.stream
+    case i : InputStreamEntry => TesslaCore.InputStream(i.name, loc)
     case other => throw InternalError(s"Wrong type of environment entry: Expected StreamEntry, found: $other")
   }
 
