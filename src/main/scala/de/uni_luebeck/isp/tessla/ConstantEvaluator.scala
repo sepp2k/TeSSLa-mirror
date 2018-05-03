@@ -1,13 +1,14 @@
 package de.uni_luebeck.isp.tessla
 
 import scala.collection.mutable
-import de.uni_luebeck.isp.tessla.Errors.{DivideByZero, InfiniteRecursion, InternalError, UndefinedTimeUnit}
+import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.util.Lazy
 import ConstantEvaluator._
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.IdentifierFactory with TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
   type Env = Map[TypedTessla.Identifier, EnvEntryWrapper]
-  val translatedStreams = mutable.Map[TesslaCore.Identifier, TesslaCore.StreamDefinition]()
+  private val translatedStreams = mutable.Map[TesslaCore.Identifier, TesslaCore.StreamDefinition]()
+  private val stack = mutable.ArrayStack[Location]()
 
   case class EnvEntryWrapper(var entry: EnvEntry)
 
@@ -20,28 +21,35 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     override def toString = s"MacroEntry($mac, ...)"
   }
   case class BuiltInEntry(builtIn: BuiltIn) extends EnvEntry
-  case object Translating extends EnvEntry
+  case class Translating(loc: Location) extends EnvEntry
   case class NotYetTranslated(entry: TypedTessla.VariableEntry, var closure: Env) extends EnvEntry {
     override def toString = s"NotYetTranslated($entry, ...)"
   }
   case class TypeEntry(typ: TesslaCore.ValueType) extends EnvEntry
 
   override def translateSpec(spec: TypedTessla.Specification): TesslaCore.Specification = {
-    val env = createEnvForScopeWithParents(spec.globalScope)
-    translateEnv(env, None)
-    val inputStreams = spec.globalScope.variables.collect {
-      case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
-        (is.name, translateStreamType(typ, env), is.loc)
-    }.toSeq
-    var outputStreams = spec.outStreams.map { os =>
-      (os.name, getStream(env(os.id).entry))
-    }
-    if (spec.outAll) {
-      outputStreams ++= translatedStreams.keys.flatMap { id =>
-        id.nameOpt.map( name => (name, TesslaCore.Stream(id, Location.unknown)) )
+    try {
+      val env = createEnvForScopeWithParents(spec.globalScope)
+      translateEnv(env, None)
+      val inputStreams = spec.globalScope.variables.collect {
+        case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
+          (is.name, translateStreamType(typ, env), is.loc)
+      }.toSeq
+      var outputStreams = spec.outStreams.map { os =>
+        (os.name, getStream(env(os.id).entry))
       }
+      if (spec.outAll) {
+        outputStreams ++= translatedStreams.keys.flatMap { id =>
+          id.nameOpt.map(name => (name, TesslaCore.Stream(id, Location.unknown)))
+        }
+      }
+      TesslaCore.Specification(translatedStreams.toMap, inputStreams, outputStreams)
+    } catch {
+      case err: TesslaError =>
+        throw WithStackTrace(err, stack)
+      case so: StackOverflowError =>
+        throw WithStackTrace(Errors.StackOverflow(stack.pop()), stack)
     }
-    TesslaCore.Specification(translatedStreams.toMap, inputStreams, outputStreams)
   }
 
   def createEnvForScope(scope: TypedTessla.Scope, parent: Env): Env = {
@@ -120,16 +128,15 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   def translateEntry(env: Env, wrapper: EnvEntryWrapper, overrideLoc: Option[Location]): Unit = wrapper.entry match {
     case NotYetTranslated(entry, closure) =>
       translateExpression(closure, wrapper, entry.expression, entry.id.nameOpt, entry.typeInfo, overrideLoc)
-    case Translating =>
-      // TODO Proper loc with stack trace
-      throw InfiniteRecursion(Location.unknown)
+    case Translating(loc) =>
+      throw InfiniteRecursion(loc)
     case _ =>
       /* Do nothing */
   }
 
   def translateExpression(env: Env, wrapper: EnvEntryWrapper, expression: TypedTessla.Expression, nameOpt: Option[String],
                           typ: TypedTessla.Type, overrideLoc: Option[Location]): Unit = {
-    wrapper.entry = Translating
+    wrapper.entry = Translating(expression.loc)
     expression match {
       case TypedTessla.BuiltInOperator(builtIn) =>
         wrapper.entry = BuiltInEntry(builtIn)
@@ -237,8 +244,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                   case _ => scopeWithoutParameters.addVariable(entry)
                 }
             }
+            stack.push(call.loc)
             val innerEnv = createEnvForScope(scopeWithoutParameters, closure ++ args)
             translateExpression(innerEnv, wrapper, mac.body, None, typ, Some(call.loc))
+            stack.pop()
           case other =>
             throw InternalError(s"Applying non-macro/builtin (${other.getClass.getSimpleName}) - should have been caught by the type checker.")
         }
@@ -260,10 +269,16 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   def translateVar(env: Env, id: TypedTessla.Identifier, loc: Location): EnvEntry = {
     val visited = mutable.Set[TypedTessla.Identifier]()
     var currentId = id
+    var currentLoc = loc
+    var stackPushes = 0
     var currentEnv = env
     var loop = true
     while (loop) {
-      if (visited.contains(currentId)) throw InfiniteRecursion(loc)
+      if (currentId.nameOpt.isDefined) {
+        stack.push(currentLoc)
+        stackPushes += 1
+      }
+      if (visited.contains(currentId)) throw InfiniteRecursion(currentLoc)
       visited += currentId
       currentEnv(currentId).entry match {
         case NotYetTranslated(entry, closure) =>
@@ -280,6 +295,9 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     }
     val wrapper = currentEnv(currentId)
     translateEntry(currentEnv, wrapper, Some(loc))
+    for (i <- 0 until stackPushes) {
+      stack.pop()
+    }
     wrapper.entry
   }
 }

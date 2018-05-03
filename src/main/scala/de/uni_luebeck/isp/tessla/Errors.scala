@@ -4,6 +4,16 @@ object Errors {
 
   abstract class TesslaError extends Exception with Diagnostic
 
+  case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location]) extends TesslaError {
+    override def loc = inner.loc
+
+    override def message = inner.message
+
+    def stackTraceString = stackTrace.map(loc => s"\n    called from $loc").mkString("")
+
+    override def toString = super.toString() + stackTraceString
+  }
+
   case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location) extends TesslaError {
     override def message = s"Type mismatch: Expected $expected, found $found"
   }
@@ -15,19 +25,19 @@ object Errors {
   }
 
   case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
-    def message = s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
+    override def message = s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
   }
 
   case class TypeArgumentsNotInferred(name: String, loc: Location) extends TesslaError {
-    def message = s"Explicit type arguments needed for $name"
+    override def message = s"Explicit type arguments needed for $name"
   }
 
   case class ArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
-    def message = s"Wrong number of arguments for $name. Expected: $expected, actual: $actual"
+    override def message = s"Wrong number of arguments for $name. Expected: $expected, actual: $actual"
   }
 
   case class UndefinedType(name: String, loc: Location) extends TesslaError {
-    def message = s"Undefined type: $name"
+    override def message = s"Undefined type: $name"
   }
 
   case class MissingTypeAnnotationRec(name: String, loc: Location) extends TesslaError {
@@ -39,11 +49,11 @@ object Errors {
   }
 
   case class StreamOfNonValueType(loc: Location) extends TesslaError {
-    def message = "Streams may only contain value types; not other streams or functions"
+    override def message = "Streams may only contain value types; not other streams or functions"
   }
 
   case class InfiniteRecursion(loc: Location) extends TesslaError {
-    override def message = "Definition is infinitely recursive"
+    override def message = "Infinite recursion detected"
   }
 
   case class UndefinedVariable(id: Tessla.Identifier) extends TesslaError {
@@ -70,45 +80,45 @@ object Errors {
   }
 
   case class InternalError(m: String, loc: Location = Location.unknown) extends TesslaError {
-    def message = s"Internal error: $m"
+    override def message = s"Internal error: $m"
   }
 
   case class UnknownTimeUnit(name: String, loc: Location) extends TesslaError {
-    def message = s"Unknown time unit: $name. " +
+    override def message = s"Unknown time unit: $name. " +
       "Allowed time units: fs, ps, ns, us, ms, s, m, h, d"
   }
 
   case class UndefinedTimeUnit(loc: Location) extends TesslaError {
-    def message = s"Use of time units is only allowed when a base time unit is set for the data"
+    override def message = s"Use of time units is only allowed when a base time unit is set for the data"
   }
 
   case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit) extends TesslaError {
     // This error happens when applying the unit `from` to a number in a spec that uses the unit `to`
     // (where `from` can't be converted to `to`), so we want to use `from`'s location to have it
     // marked as the problem.
-    def loc = from.loc
+    override def loc = from.loc
 
-    def message = s"Cannot convert from $from to $to"
+    override def message = s"Cannot convert from $from to $to"
   }
 
   case class DivideByZero(loc: Location) extends TesslaError {
-    def message = "Division by zero"
+    override def message = "Division by zero"
   }
 
   case class ParserError(m: String, loc: Location) extends TesslaError {
-    def message = s"Invalid syntax: $m"
+    override def message = s"Invalid syntax: $m"
   }
 
   case class NotAnEventError(line: String, loc: Location) extends TesslaError {
-    def message: String = s"Input $line is not an event"
+    override def message: String = s"Input $line is not an event"
   }
 
   case class UndeclaredInputStreamError(streamName: String, loc: Location) extends TesslaError {
-    def message: String = s"Undeclared input stream: $streamName"
+    override def message: String = s"Undeclared input stream: $streamName"
   }
 
   case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location) extends TesslaError {
-    def message: String = s"Decreasing time stamps: first = $first, second = $second"
+    override def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
   def ProvideAfterPropagationError(time: BigInt, loc: Location = Location.unknown) = {
@@ -116,26 +126,31 @@ object Errors {
   }
 
   case class NegativeDelayError(value: BigInt, loc: Location) extends TesslaError {
-    def message: String = s"Negative delay $value"
+    override def message: String = s"Negative delay $value"
   }
 
   case class InputTypeMismatch(value: TesslaCore.Value, streamName: String, streamType: TesslaCore.Type, loc: Location) extends TesslaError {
-    def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
+    override def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
   }
 
   case class TracesOperationError(loc: Location, op: String, args: TesslaCore.Value*) extends TesslaError {
-    def message: String = s"Operation $op not defined for ${args.mkString(", ")}."
+    override def message: String = s"Operation $op not defined for ${args.mkString(", ")}."
   }
 
   case class TracesUnknownIdentifierError(loc: Location, name: String) extends TesslaError {
-    def message: String = s"Unknown identifier in traces: $name."
+    override def message: String = s"Unknown identifier in traces: $name."
   }
 
   case class NegativeStepError(loc: Location, value: BigInt) extends TesslaError {
-    def message: String = s"Negative step in time stamp range: $value."
+    override def message: String = s"Negative step in time stamp range: $value."
   }
 
   case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
-    def message: String = s"Key $key was not found in $map"
+    override def message: String = s"Key $key was not found in $map"
   }
+
+  case class StackOverflow(loc: Location) extends TesslaError {
+    override def message = "Stack overflow"
+  }
+
 }
