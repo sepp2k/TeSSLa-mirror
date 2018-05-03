@@ -226,10 +226,10 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       import TypedTessla._
       val typ = builtIn match {
         case BuiltIn.Add | BuiltIn.Sub | BuiltIn.Mul | BuiltIn.Div | BuiltIn.BitAnd | BuiltIn.BitOr | BuiltIn.BitXor
-           | BuiltIn.BitFlip | BuiltIn.LeftShift | BuiltIn.RightShift =>
+           | BuiltIn.LeftShift | BuiltIn.RightShift =>
           FunctionType(Seq(), Seq(IntType, IntType), IntType)
 
-        case BuiltIn.Negate =>
+        case BuiltIn.Negate | BuiltIn.BitFlip =>
           FunctionType(Seq(), Seq(IntType), IntType)
 
         case BuiltIn.Lt | BuiltIn.Gt | BuiltIn.Gte | BuiltIn.Lte =>
