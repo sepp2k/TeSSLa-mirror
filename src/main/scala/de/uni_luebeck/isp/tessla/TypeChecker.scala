@@ -468,37 +468,46 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         }
         val parameterIDs = mac.parameters.map(_.id).toSet
         if (isLiftable(macroType)) {
-          val liftedType = liftFunctionType(macroType)
-          val liftedScope = new FlatTessla.Scope(mac.scope.parent)
-          mac.scope.types.values.foreach { entry =>
-            liftedScope.addType(entry)
-          }
-          mac.scope.variables.values.foreach { entry =>
-            if (parameterIDs.contains(entry.id)) {
-              liftedScope.addVariable(entry.copy(typeInfo = entry.typeInfo.map(FlatTessla.StreamType)))
-            } else {
-              liftedScope.addVariable(entry)
+          try {
+            val liftedType = liftFunctionType(macroType)
+            val liftedScope = new FlatTessla.Scope(mac.scope.parent)
+            mac.scope.types.values.foreach { entry =>
+              liftedScope.addType(entry)
             }
+            mac.scope.variables.values.foreach { entry =>
+              if (parameterIDs.contains(entry.id)) {
+                liftedScope.addVariable(entry.copy(typeInfo = entry.typeInfo.map(FlatTessla.StreamType)))
+              } else {
+                liftedScope.addVariable(entry)
+              }
+            }
+            val (innerScope, innerEnv) = translateScope(liftedScope, Some(scope), env ++ tvarEnv)
+            val expected = expectedReturnType.map(TypedTessla.StreamType)
+            val (body, returnType) = translateExpression(mac.body, expected, None, innerScope, innerEnv)
+            val parameters = mac.parameters.map { p =>
+              val t = translateType(getParameterType(p), innerEnv)
+              TypedTessla.Parameter(p.param, t, innerEnv(p.id))
+            }
+            // Add a lifted projection operator so that there is a new event whenever any of the parameters get a new
+            // event (as per the lift semantics)
+            val resultId = makeIdentifier()
+            val resultEntry = TypedTessla.VariableEntry(resultId, body, liftedType.returnType, mac.loc)
+            innerScope.addVariable(resultEntry)
+            val firstParams = (resultId +: parameters.map(_.id)).map(TypedTessla.PositionalArgument(_, body.loc))
+            val firstCall = TypedTessla.MacroCall(env(stdlibNames("first")), Location.builtIn, Seq(), firstParams, body.loc)
+            val lifted = TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, firstCall, mac.loc)
+            val liftedId = makeIdentifier(id.get.nameOpt)
+            val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, mac.loc)
+            scope.addVariable(liftedEntry)
+            liftedMacros(id.get) = liftedId
+          } catch {
+            case _: TesslaError =>
+              // If the translation of the lifted macro resulted in an error, we simply do not create a lifted version
+              // and otherwise ignore the error. Not all macros with a liftable type are actually liftable (recursive
+              // ones aren't) and type checking shouldn't error out because of that.
+              // TODO: Implement a `@liftable` annotation and only lift macros with that annotation and then do treat
+              //       it as an error if an annotated macro can't be lifted
           }
-          val (innerScope, innerEnv) = translateScope(liftedScope, Some(scope), env ++ tvarEnv)
-          val expected = expectedReturnType.map(TypedTessla.StreamType)
-          val (body, returnType) = translateExpression(mac.body, expected, None, innerScope, innerEnv)
-          val parameters = mac.parameters.map { p =>
-            val t = translateType(getParameterType(p), innerEnv)
-            TypedTessla.Parameter(p.param, t, innerEnv(p.id))
-          }
-          // Add a lifted projection operator so that there is a new event whenever any of the parameters get a new
-          // event (as per the lift semantics)
-          val resultId = makeIdentifier()
-          val resultEntry = TypedTessla.VariableEntry(resultId, body, liftedType.returnType, mac.loc)
-          innerScope.addVariable(resultEntry)
-          val firstParams = (resultId +: parameters.map(_.id)).map(TypedTessla.PositionalArgument(_, body.loc))
-          val firstCall = TypedTessla.MacroCall(env(stdlibNames("first")), Location.builtIn, Seq(), firstParams, body.loc)
-          val lifted = TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, firstCall, mac.loc)
-          val liftedId = makeIdentifier(id.get.nameOpt)
-          val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, mac.loc)
-          scope.addVariable(liftedEntry)
-          liftedMacros(id.get) = liftedId
         }
         TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, body, mac.loc) -> macroType
     }
