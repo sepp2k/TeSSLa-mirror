@@ -9,7 +9,10 @@ sealed abstract class TimeUnit {
 
   def <(that: TimeUnit): Boolean = factor < that.factor
 
-  def convertTo(that: TimeUnit): BigInt = factor / that.factor
+  def convertTo(that: TimeUnit): Option[BigInt] = {
+    if (factor >= that.factor) Some(factor / that.factor)
+    else None
+  }
 }
 
 object TimeUnit {

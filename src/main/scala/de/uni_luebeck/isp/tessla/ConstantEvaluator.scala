@@ -98,7 +98,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     case Tessla.TimeLiteral(x, tu) =>
       baseTimeUnit match {
         case Some(base) =>
-          TesslaCore.IntLiteral(tu.convertTo(base) * x, loc)
+          val conversionFactor = tu.convertTo(base).getOrElse(throw Errors.TimeUnitConversionError(tu, base))
+          TesslaCore.IntLiteral(conversionFactor * x, loc)
         case None =>
           error(UndefinedTimeUnit(tu.loc))
           TesslaCore.IntLiteral(x, loc)
