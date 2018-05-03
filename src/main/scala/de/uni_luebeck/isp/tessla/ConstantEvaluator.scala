@@ -333,7 +333,7 @@ object ConstantEvaluator {
         else Some(arguments(2).get)
       case BuiltIn.First =>
         Some(arguments(0).get)
-      case _ => ???
+      case _ => throw InternalError(s"Unimplemented operator: $op")
     }
   }
 }
