@@ -37,7 +37,10 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       throw Errors.InternalError("Lift without arguments should be impossible", loc)
     case TesslaCore.Lift(op, _, argStreams, _) =>
       lift(argStreams.map(evalStream)) { arguments =>
-        val result = ConstantEvaluator.evalPrimitiveOperator(op, arguments.map(arg => Lazy(arg.forceValue)), exp.loc)
+        val args = arguments.zip(argStreams).map {
+          case (arg, stream) => Lazy(arg.forceValue.withLoc(stream.loc))
+        }
+        val result = ConstantEvaluator.evalPrimitiveOperator(op, args, exp.loc)
         TesslaCore.ValueOrError.fromLazyOption(result)
       }
     case TesslaCore.Default(values, defaultValue, _) =>
