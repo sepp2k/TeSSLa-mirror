@@ -135,23 +135,38 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     val env = parentEnv ++ scope.variables.mapValues(entry => makeIdentifier(entry.id.nameOpt))
     val resultingScope = new TypedTessla.Scope(parent)
     scope.variables.values.foreach(processTypeAnnotation(_, env))
+    var errors: IndexedSeq[Errors.TesslaError] = IndexedSeq()
     ReverseTopologicalSort.sort(scope.variables.values)(requiredEntries(scope, _)) match {
       case ReverseTopologicalSort.Cycles(nodesInCycles) =>
-        val errors = nodesInCycles.flatMap { entry =>
+        errors = nodesInCycles.flatMap { entry =>
             entry.id.nameOpt.map(MissingTypeAnnotationRec(_, entry.loc))
         }.toIndexedSeq
-        // Add all but the last error to the error list and then throw the last.
-        // We need to throw one of them, so the execution does not continue (possibly leading to missing key exceptions
-        // later), but we also want to record the others. We exclude the last from iteration, so it isn't reported twice
-        // (once in the loop and then again when throwing it afterwards)
-        errors.init.foreach { err =>
-          error(err)
-        }
-        throw errors.last
       case ReverseTopologicalSort.Sorted(sorted) =>
         sorted.foreach { entry =>
           resultingScope.addVariable(translateEntry(entry, resultingScope, env))
         }
+    }
+    errors ++= scope.variables.values.flatMap { entry =>
+      entry.expression match {
+        case m: FlatTessla.Macro =>
+          m.parameters.flatMap { param =>
+            param.parameterType match {
+              case Some(_) => None
+              case None => Some(MissingTypeAnnotationParam(param.name, param.loc))
+            }
+          }
+        case _ => None
+      }
+    }
+    if (errors.nonEmpty) {
+      // Add all but the last error to the error list and then throw the last.
+      // We need to throw one of them, so the execution does not continue (possibly leading to missing key exceptions
+      // later), but we also want to record the others. We exclude the last from iteration, so it isn't reported twice
+      // (once in the loop and then again when throwing it afterwards)
+      errors.init.foreach { err =>
+        error(err)
+      }
+      throw errors.last
     }
     (resultingScope, env)
   }
