@@ -111,7 +111,16 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     }
     checkForDuplicates(definition.parameters.map(_.id) ++ innerDefs.map(_.id))
     checkForDuplicates(definition.typeParameters)
+    definition.annotations.foreach {annotation =>
+      if (annotation.name != "liftable") {
+        error(UndefinedAnnotation(annotation))
+      }
+    }
+    val liftableAnnotation = definition.annotations.find(_.name == "liftable")
     if (definition.parameters.isEmpty && definition.typeParameters.isEmpty) {
+      liftableAnnotation.foreach { annotationId =>
+        throw MacroAnnotationOnNonMacro(annotationId, definition.id.name)
+      }
       // For parameterless definitions, inner definitions become part of the global scope in flat tessla.
       // Flat tessla only has distinct scope for macros with parameters (as those need to be instantiated
       // multiple times)
@@ -150,7 +159,10 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       // Get the values of the type map in the order in which they appeared in the type parameter list
       val typeParameters = definition.typeParameters.map(tp => paramEnv.types(tp.name))
       val returnType = definition.returnType.map(translateType(_, innerScope, paramEnv))
-      val mac = FlatTessla.Macro(typeParameters, parameters, innerScope, returnType, body, definition.loc)
+      val mac = FlatTessla.Macro(
+        typeParameters, parameters, innerScope, returnType, body, definition.loc,
+        isLiftable = liftableAnnotation.isDefined
+      )
       scope.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), mac, None, definition.loc))
     }
   }
@@ -196,7 +208,9 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
         // Explicitly written function types never have any type arguments because we don't support higher rank types
         Seq(),
         parameterTypes.map(translateType(_, scope, env)),
-        translateType(returnType, scope, env)
+        translateType(returnType, scope, env),
+        // Explicitly written function types are never liftable because we have no syntax for that
+        isLiftable = false
       )
   }
 

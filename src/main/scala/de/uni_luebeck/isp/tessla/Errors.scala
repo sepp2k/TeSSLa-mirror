@@ -153,4 +153,20 @@ object Errors {
     override def message = "Stack overflow"
   }
 
+  case class UndefinedAnnotation(id: Tessla.Identifier) extends TesslaError {
+    override def message = s"Undefined annotation $id; currently the only supported annotation is @liftable"
+
+    override def loc = id.loc
+  }
+
+  case class MacroAnnotationOnNonMacro(annotationId: Tessla.Identifier, defName: String) extends TesslaError {
+    override def message = s"The annotation $annotationId can only be applied to macro definitions, which $defName is not"
+
+    override def loc = annotationId.loc
+  }
+
+  case class UnliftableMacroType(loc: Location) extends TesslaError {
+    override def message = "Macro has been annotated with @liftable, but its type does not allow being lifted"
+  }
+
 }

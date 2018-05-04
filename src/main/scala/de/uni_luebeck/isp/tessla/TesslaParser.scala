@@ -97,6 +97,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     case object BANG extends Token("!")
 
+    case object AT extends Token("@")
+
     case object INCLUDE extends Token("include")
 
   }
@@ -109,7 +111,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
     override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, LBRACE, RBRACE, PERCENT,
       LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, ROCKET, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS, MINUS,
-      STAR, SLASH, BANG)
+      STAR, SLASH, BANG, AT)
     override val comments = List("--" -> "\n", "#" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c) || c == '.'
@@ -145,13 +147,16 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
         loc => warn(Location(loc, path), "The keyword 'define' is deprecated, use 'def' instead.")
       } | DEF
 
+    def annotation = AT ~> identifier
+
     def definitionHeader =
-      (define ~> identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.?) ^^! { (loc, ast) => (loc, ast) }
+      ((annotation.* <~ define) ~ identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.?) ^^! { (loc, ast) => (loc, ast) }
 
     def definition =
       (definitionHeader ~ (COLONEQ ~> expression)) ^^ {
-        case ((loc, (((name, typeParams), params), returnType)), expr) =>
-          Tessla.Definition(name, typeParams.getOrElse(Seq()), params.getOrElse(Seq()), returnType, expr, Location(loc, path))
+        case ((loc, ((((annotations, name), typeParams), params), returnType)), expr) =>
+          Tessla.Definition(annotations, name, typeParams.getOrElse(Seq()), params.getOrElse(Seq()),
+            returnType, expr, Location(loc, path))
       }
 
     def statement: Parser[Tessla.Statement] =

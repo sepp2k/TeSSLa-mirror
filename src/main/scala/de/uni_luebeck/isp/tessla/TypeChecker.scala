@@ -50,7 +50,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       val typeParams = f.typeParameters.map(tvar => makeIdentifier(tvar.nameOpt))
       val innerEnv = env ++ f.typeParameters.zip(typeParams).toMap
       val paramTypes = f.parameterTypes.map(translateType(_, innerEnv))
-      TypedTessla.FunctionType(typeParams, paramTypes, translateType(f.returnType, innerEnv))
+      TypedTessla.FunctionType(typeParams, paramTypes, translateType(f.returnType, innerEnv), f.isLiftable)
     case s: FlatTessla.SetType =>
       TypedTessla.SetType(translateType(s.elementType, env))
     case m: FlatTessla.MapType =>
@@ -94,7 +94,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           m.returnType.map { returnType =>
             val typeParameters = m.typeParameters
             val paramTypes = parameterTypes(m)
-            FlatTessla.FunctionType(typeParameters, paramTypes, returnType)
+            FlatTessla.FunctionType(typeParameters, paramTypes, returnType, m.isLiftable)
           }
         case _ =>
           entry.typeInfo
@@ -110,9 +110,16 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     requiredEntries(scope, entry.expression)
   }
 
+  def isLiftableMacro(entry: FlatTessla.Expression) = entry match {
+    case m: FlatTessla.Macro => m.isLiftable
+    case _ => false
+  }
+
   def requiredEntries(scope: FlatTessla.Scope, expression: FlatTessla.Expression): Seq[FlatTessla.VariableEntry] = {
     def resolve(id: FlatTessla.Identifier) = {
-      scope.resolveVariable(id).toList.filterNot(arg => declaredType(arg).isDefined)
+      // An entry needs to be processed before this one iff this one uses it and it either has no type annotation or
+      // it is a liftable macro (in which case the lifting needs to happen before it is used)
+      scope.resolveVariable(id).toList.filter(arg => declaredType(arg).isEmpty || isLiftableMacro(arg.expression))
     }
     expression match {
       case v: FlatTessla.Variable =>
@@ -204,7 +211,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
             typeSubst(expectedParamType, actualParamType, typeParams, substitutions)
         }
         val returnType = typeSubst(expectedFunctionType.returnType, actualFunctionType.returnType, typeParams, substitutions)
-        TypedTessla.FunctionType(Seq(), parameterTypes, returnType)
+        TypedTessla.FunctionType(Seq(), parameterTypes, returnType, expectedFunctionType.isLiftable)
       case (TypedTessla.StreamType(expectedElementType), TypedTessla.StreamType(actualElementType)) =>
         TypedTessla.StreamType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions))
       // Allow for auto-lifting of values
@@ -227,107 +234,107 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       val typ = builtIn match {
         case BuiltIn.Add | BuiltIn.Sub | BuiltIn.Mul | BuiltIn.Div | BuiltIn.BitAnd | BuiltIn.BitOr | BuiltIn.BitXor
            | BuiltIn.LeftShift | BuiltIn.RightShift =>
-          FunctionType(Seq(), Seq(IntType, IntType), IntType)
+          FunctionType(Seq(), Seq(IntType, IntType), IntType, isLiftable = true)
 
         case BuiltIn.Negate | BuiltIn.BitFlip =>
-          FunctionType(Seq(), Seq(IntType), IntType)
+          FunctionType(Seq(), Seq(IntType), IntType, isLiftable = true)
 
         case BuiltIn.Lt | BuiltIn.Gt | BuiltIn.Gte | BuiltIn.Lte =>
-          FunctionType(Seq(), Seq(IntType, IntType), BoolType)
+          FunctionType(Seq(), Seq(IntType, IntType), BoolType, isLiftable = true)
 
         case BuiltIn.Eq | BuiltIn.Neq =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(t, t), BoolType)
+          FunctionType(Seq(t.id), Seq(t, t), BoolType, isLiftable = true)
 
         case BuiltIn.And | BuiltIn.Or =>
-          FunctionType(Seq(), Seq(BoolType, BoolType), BoolType)
+          FunctionType(Seq(), Seq(BoolType, BoolType), BoolType, isLiftable = true)
 
         case BuiltIn.Not =>
-          FunctionType(Seq(), Seq(BoolType), BoolType)
+          FunctionType(Seq(), Seq(BoolType), BoolType, isLiftable = true)
 
         case BuiltIn.First =>
           val t1 = mkTVar("First")
           val t2 = mkTVar("Second")
-          FunctionType(Seq(t1.id, t2.id), Seq(t1, t2), t1)
+          FunctionType(Seq(t1.id, t2.id), Seq(t1, t2), t1, isLiftable = true)
 
         case BuiltIn.IfThenElse =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(BoolType, t, t), t)
+          FunctionType(Seq(t.id), Seq(BoolType, t, t), t, isLiftable = true)
 
         case BuiltIn.IfThen =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(StreamType(BoolType), StreamType(t)), StreamType(t))
+          FunctionType(Seq(t.id), Seq(StreamType(BoolType), StreamType(t)), StreamType(t), isLiftable = false)
 
         case BuiltIn.Nil =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(), StreamType(t))
+          FunctionType(Seq(t.id), Seq(), StreamType(t), isLiftable = false)
 
         case BuiltIn.Default =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(StreamType(t), t), StreamType(t))
+          FunctionType(Seq(t.id), Seq(StreamType(t), t), StreamType(t), isLiftable = false)
 
         case BuiltIn.DefaultFrom | BuiltIn.Merge =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(StreamType(t), StreamType(t)), StreamType(t))
+          FunctionType(Seq(t.id), Seq(StreamType(t), StreamType(t)), StreamType(t), isLiftable = false)
 
         case BuiltIn.Last =>
           val t1 = mkTVar("Value")
           val t2 = mkTVar("Clock")
-          FunctionType(Seq(t1.id, t2.id), Seq(StreamType(t1), StreamType(t2)), StreamType(t1))
+          FunctionType(Seq(t1.id, t2.id), Seq(StreamType(t1), StreamType(t2)), StreamType(t1), isLiftable = false)
 
         case BuiltIn.DelayedLast =>
           val t = mkTVar("Value")
-          FunctionType(Seq(t.id), Seq(StreamType(t), StreamType(IntType)), StreamType(t))
+          FunctionType(Seq(t.id), Seq(StreamType(t), StreamType(IntType)), StreamType(t), isLiftable = false)
 
         case BuiltIn.Const =>
           val t1 = mkTVar("Old")
           val t2 = mkTVar("New")
-          FunctionType(Seq(t1.id, t2.id), Seq(t1, StreamType(t2)), StreamType(t1))
+          FunctionType(Seq(t1.id, t2.id), Seq(t1, StreamType(t2)), StreamType(t1), isLiftable = false)
 
         case BuiltIn.Time =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(StreamType(t)), StreamType(IntType))
+          FunctionType(Seq(t.id), Seq(StreamType(t)), StreamType(IntType), isLiftable = false)
 
         case BuiltIn.MapEmpty =>
           val k = mkTVar("Key")
           val v = mkTVar("Value")
-          FunctionType(Seq(k.id, v.id), Seq(), MapType(k, v))
+          FunctionType(Seq(k.id, v.id), Seq(), MapType(k, v), isLiftable = false)
 
         case BuiltIn.MapAdd =>
           val k = mkTVar("Key")
           val v = mkTVar("Value")
-          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k, v), MapType(k, v))
+          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k, v), MapType(k, v), isLiftable = true)
 
         case BuiltIn.MapGet =>
           val k = mkTVar("Key")
           val v = mkTVar("Value")
-          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k), v)
+          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k), v, isLiftable = true)
 
         case BuiltIn.MapContains =>
           val k = mkTVar("Key")
           val v = mkTVar("Value")
-          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k), BoolType)
+          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k), BoolType, isLiftable = true)
 
         case BuiltIn.MapRemove =>
           val k = mkTVar("Key")
           val v = mkTVar("Value")
-          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k), MapType(k, v))
+          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k), MapType(k, v), isLiftable = true)
 
         case BuiltIn.SetEmpty =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(), SetType(t))
+          FunctionType(Seq(t.id), Seq(), SetType(t), isLiftable = false)
 
         case BuiltIn.SetAdd =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(SetType(t), t), SetType(t))
+          FunctionType(Seq(t.id), Seq(SetType(t), t), SetType(t), isLiftable = true)
 
         case BuiltIn.SetContains =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(SetType(t), t), BoolType)
+          FunctionType(Seq(t.id), Seq(SetType(t), t), BoolType, isLiftable = true)
 
         case BuiltIn.SetRemove =>
           val t = mkTVar("T")
-          FunctionType(Seq(t.id), Seq(SetType(t), t), SetType(t))
+          FunctionType(Seq(t.id), Seq(SetType(t), t), SetType(t), isLiftable = true)
       }
       builtIn -> typ
   }
@@ -350,7 +357,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     liftedId
   }
 
-  def isLiftable(functionType: TypedTessla.FunctionType) = {
+  def checkLiftability(functionType: TypedTessla.FunctionType) = {
     functionType.parameterTypes.forall(_.isValueType) && functionType.returnType.isValueType
   }
 
@@ -358,7 +365,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     TypedTessla.FunctionType(
       functionType.typeParameters,
       functionType.parameterTypes.map(TypedTessla.StreamType),
-      TypedTessla.StreamType(functionType.returnType)
+      TypedTessla.StreamType(functionType.returnType),
+      isLiftable = false
     )
   }
 
@@ -400,7 +408,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
             }
             var macroID = env(call.macroID)
             var possiblyLiftedType = t
-            if (isLiftable(t) && liftedMacros.contains(macroID) && call.args.exists(arg => !typeMap(env(arg.id)).isValueType)) {
+            if (t.isLiftable && call.args.exists(arg => !typeMap(env(arg.id)).isValueType)) {
               possiblyLiftedType = liftFunctionType(t)
               macroID = liftedMacros(macroID)
             }
@@ -419,7 +427,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
                   } else {
                     (actual, expected) match {
                       case (a: TypedTessla.FunctionType, e: TypedTessla.FunctionType)
-                        if isLiftable(a) && liftFunctionType(a) == e && liftedMacros.contains(id) =>
+                        if a.isLiftable && liftFunctionType(a) == e && liftedMacros.contains(id) =>
                         liftedMacros(id)
                       case _ =>
                         throw TypeMismatch(expected, actual, arg.loc)
@@ -463,55 +471,49 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         val (innerScope, innerEnv) = translateScope(mac.scope, Some(scope), env ++ tvarEnv)
         val (body, returnType) = translateExpression(mac.body, expectedReturnType, None, innerScope, innerEnv)
         val paramTypes = parameterTypes(mac).map(translateType(_, env ++ tvarEnv))
-        val macroType = TypedTessla.FunctionType(tvarIDs, paramTypes, returnType)
+        val macroType = TypedTessla.FunctionType(tvarIDs, paramTypes, returnType, isLiftable = mac.isLiftable)
         val parameters = mac.parameters.map { p =>
           val t = translateType(getParameterType(p), innerEnv)
           TypedTessla.Parameter(p.param, t, innerEnv(p.id))
         }
         val parameterIDs = mac.parameters.map(_.id).toSet
-        if (isLiftable(macroType)) {
-          try {
-            val liftedType = liftFunctionType(macroType)
-            val liftedScope = new FlatTessla.Scope(mac.scope.parent)
-            mac.scope.types.values.foreach { entry =>
-              liftedScope.addType(entry)
-            }
-            mac.scope.variables.values.foreach { entry =>
-              if (parameterIDs.contains(entry.id)) {
-                liftedScope.addVariable(entry.copy(typeInfo = entry.typeInfo.map(FlatTessla.StreamType)))
-              } else {
-                liftedScope.addVariable(entry)
-              }
-            }
-            val (innerScope, innerEnv) = translateScope(liftedScope, Some(scope), env ++ tvarEnv)
-            val expected = expectedReturnType.map(TypedTessla.StreamType)
-            val (body, returnType) = translateExpression(mac.body, expected, None, innerScope, innerEnv)
-            val parameters = mac.parameters.map { p =>
-              val t = translateType(getParameterType(p), innerEnv)
-              TypedTessla.Parameter(p.param, t, innerEnv(p.id))
-            }
-            // Add a lifted projection operator so that there is a new event whenever any of the parameters get a new
-            // event (as per the lift semantics)
-            val resultId = makeIdentifier()
-            val resultEntry = TypedTessla.VariableEntry(resultId, body, liftedType.returnType, mac.loc)
-            innerScope.addVariable(resultEntry)
-            val firstParams = (resultId +: parameters.map(_.id)).map(TypedTessla.PositionalArgument(_, body.loc))
-            val firstCall = TypedTessla.MacroCall(env(stdlibNames("first")), Location.builtIn, Seq(), firstParams, body.loc)
-            val lifted = TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, firstCall, mac.loc)
-            val liftedId = makeIdentifier(id.get.nameOpt)
-            val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, mac.loc)
-            scope.addVariable(liftedEntry)
-            liftedMacros(id.get) = liftedId
-          } catch {
-            case _: TesslaError =>
-              // If the translation of the lifted macro resulted in an error, we simply do not create a lifted version
-              // and otherwise ignore the error. Not all macros with a liftable type are actually liftable (recursive
-              // ones aren't) and type checking shouldn't error out because of that.
-              // TODO: Implement a `@liftable` annotation and only lift macros with that annotation and then do treat
-              //       it as an error if an annotated macro can't be lifted
+        if (mac.isLiftable) {
+          if (!checkLiftability(macroType)) {
+            throw UnliftableMacroType(mac.loc)
           }
+          val liftedType = liftFunctionType(macroType)
+          val liftedScope = new FlatTessla.Scope(mac.scope.parent)
+          mac.scope.types.values.foreach { entry =>
+            liftedScope.addType(entry)
+          }
+          mac.scope.variables.values.foreach { entry =>
+            if (parameterIDs.contains(entry.id)) {
+              liftedScope.addVariable(entry.copy(typeInfo = entry.typeInfo.map(FlatTessla.StreamType)))
+            } else {
+              liftedScope.addVariable(entry)
+            }
+          }
+          val (innerScope, innerEnv) = translateScope(liftedScope, Some(scope), env ++ tvarEnv)
+          val expected = expectedReturnType.map(TypedTessla.StreamType)
+          val (body, returnType) = translateExpression(mac.body, expected, None, innerScope, innerEnv)
+          val parameters = mac.parameters.map { p =>
+            val t = translateType(getParameterType(p), innerEnv)
+            TypedTessla.Parameter(p.param, t, innerEnv(p.id))
+          }
+          // Add a lifted projection operator so that there is a new event whenever any of the parameters get a new
+          // event (as per the lift semantics)
+          val resultId = makeIdentifier()
+          val resultEntry = TypedTessla.VariableEntry(resultId, body, liftedType.returnType, mac.loc)
+          innerScope.addVariable(resultEntry)
+          val firstParams = (resultId +: parameters.map(_.id)).map(TypedTessla.PositionalArgument(_, body.loc))
+          val firstCall = TypedTessla.MacroCall(env(stdlibNames("first")), Location.builtIn, Seq(), firstParams, body.loc)
+          val lifted = TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, firstCall, mac.loc, mac.isLiftable)
+          val liftedId = makeIdentifier(id.get.nameOpt)
+          val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, mac.loc)
+          scope.addVariable(liftedEntry)
+          liftedMacros(id.get) = liftedId
         }
-        TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, body, mac.loc) -> macroType
+        TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, body, mac.loc, mac.isLiftable) -> macroType
     }
   }
 }

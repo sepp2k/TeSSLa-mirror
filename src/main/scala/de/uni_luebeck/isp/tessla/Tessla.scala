@@ -13,7 +13,7 @@ object Tessla {
     def loc: Location
   }
 
-  case class Definition(
+  case class Definition( annotations: Seq[Identifier],
                          id: Identifier,
                          typeParameters: Seq[Identifier],
                          parameters: Seq[Parameter],
@@ -21,13 +21,14 @@ object Tessla {
                          body: Expression,
                          loc: Location) extends Statement {
     override def toString = {
+      val annotationList = annotations.map("@" + _ + "\n").mkString
       val typeParameterList =
         if (typeParameters.isEmpty) ""
         else typeParameters.mkString("[", ", ", "]")
       val parameterList =
         if (parameters.isEmpty) ""
         else parameters.mkString("(", ", ", ")")
-      s"def $id$typeParameterList$parameterList := $body"
+      s"${annotationList}def $id$typeParameterList$parameterList := $body"
     }
   }
 

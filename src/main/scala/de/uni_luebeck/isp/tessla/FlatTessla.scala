@@ -62,9 +62,11 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
                    scope: Scope,
                    returnType: TypeAnnotation,
                    body: Expression,
-                   loc: Location) extends Expression {
+                   loc: Location,
+                   isLiftable: Boolean) extends Expression {
     override def toString = {
-      s"[${typeParameters.mkString(", ")}](${parameters.mkString(", ")}) => {\n$scope\n$body\n}"
+      val annotationString = if (isLiftable) "@liftable " else ""
+      s"$annotationString[${typeParameters.mkString(", ")}](${parameters.mkString(", ")}) => {\n$scope\n$body\n}"
     }
   }
 
@@ -146,12 +148,14 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = s"Events[$elementType]"
   }
 
-  case class FunctionType(typeParameters: Seq[Identifier], parameterTypes: Seq[Type], returnType: Type) extends Type {
+  case class FunctionType(typeParameters: Seq[Identifier], parameterTypes: Seq[Type], returnType: Type,
+                          isLiftable: Boolean) extends Type {
     override def isValueType = false
 
     override def toString = {
+      val annotationString = if (isLiftable) "@liftable " else ""
       val typeParamString = typeParameters.map(id => id.nameOpt.getOrElse(id.toString)).mkString(", ")
-      s"[$typeParamString](${parameterTypes.mkString(",")}) => $returnType"
+      s"$annotationString[$typeParamString](${parameterTypes.mkString(",")}) => $returnType"
     }
   }
 
