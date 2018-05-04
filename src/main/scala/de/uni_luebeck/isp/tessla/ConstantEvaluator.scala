@@ -351,6 +351,8 @@ object ConstantEvaluator {
       case BuiltIn.Lte => binIntComp(_ <= _)
       case BuiltIn.Gt => binIntComp(_ > _)
       case BuiltIn.Gte => binIntComp(_ >= _)
+      case BuiltIn.And => Some(TesslaCore.BoolLiteral(getBool(arguments(0).get) && getBool(arguments(1).get), loc))
+      case BuiltIn.Or => Some(TesslaCore.BoolLiteral(getBool(arguments(0).get) || getBool(arguments(1).get), loc))
       case BuiltIn.Not => Some(TesslaCore.BoolLiteral(!getBool(arguments(0).get), loc))
       case BuiltIn.IfThen =>
         if (getBool(arguments(0).get)) Some(arguments(1).get)
