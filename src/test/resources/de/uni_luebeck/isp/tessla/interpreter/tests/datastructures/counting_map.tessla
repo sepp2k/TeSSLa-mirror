@@ -1,10 +1,12 @@
 in x: Events[Int]
 
+@liftable
 def get_count(counts: Map[Int, Int], key: Int) :=
     if map_contains(counts, key)
     then map_get(counts, key)
     else 0
 
+@liftable
 def inc_count(counts: Map[Int, Int], key: Int) :=
     map_add(counts, key, get_count(counts, key) + 1)
 

@@ -111,6 +111,13 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def forceValue = this
 
     override def toString = value.toString
+
+    override def equals(obj: Any) = obj match {
+      case other: Value => value == other.value
+      case _ => false
+    }
+
+    override def hashCode() = value.hashCode()
   }
 
   final case class IntLiteral(value: BigInt, loc: Location) extends Value {

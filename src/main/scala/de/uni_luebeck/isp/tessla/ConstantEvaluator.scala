@@ -220,7 +220,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                       TesslaCore.Lift(op, typeArgs, args.indices.map(streamArg), call.loc)
                     }
                   case _ =>
-                    val value = evalPrimitiveOperator(op, args.map {
+                    val value = evalPrimitiveOperator(op, call.typeArgs.map(translateValueType(_, env)), args.map {
                       case ValueEntry(v) => v
                       case other => throw InternalError(s"Expected value entry, found $other")
                     }, call.loc)
@@ -315,7 +315,17 @@ object ConstantEvaluator {
     case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
   }
 
-  def evalPrimitiveOperator(op: BuiltIn.PrimitiveOperator,
+  private def getMap(v: TesslaCore.Value): TesslaCore.TesslaMap = v match {
+    case mapLit: TesslaCore.TesslaMap => mapLit
+    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
+  }
+
+  private def getSet(v: TesslaCore.Value): TesslaCore.TesslaSet = v match {
+    case setLit: TesslaCore.TesslaSet => setLit
+    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
+  }
+
+  def evalPrimitiveOperator(op: BuiltIn.PrimitiveOperator, typeArguments: Seq[TesslaCore.ValueType],
                             arguments: Seq[Lazy[TesslaCore.Value]],
                             loc: Location): Lazy[Option[TesslaCore.Value]] = Lazy {
     def binIntOp(op: (BigInt, BigInt) => BigInt) = {
@@ -362,6 +372,35 @@ object ConstantEvaluator {
         else Some(arguments(2).get)
       case BuiltIn.First =>
         Some(arguments(0).get)
+      case BuiltIn.MapEmpty =>
+        Some(TesslaCore.TesslaMap(Map(), TesslaCore.MapType(typeArguments(0), typeArguments(1)), loc))
+      case BuiltIn.MapAdd =>
+        val map = getMap(arguments(0).get)
+        Some(TesslaCore.TesslaMap(map.value + (arguments(1).get -> arguments(2).get), map.typ, loc))
+      case BuiltIn.MapGet =>
+        val map = getMap(arguments(0).get)
+        val key = arguments(1).get
+        try {
+          Some(map.value(key).withLoc(loc))
+        } catch {
+          case keyNotFound: NoSuchElementException =>
+            throw KeyNotFound(key, map.value, loc)
+        }
+      case BuiltIn.MapContains =>
+        Some(TesslaCore.BoolLiteral(getMap(arguments(0).get).value.contains(arguments(1).get), loc))
+      case BuiltIn.MapRemove =>
+        val map = getMap(arguments(0).get)
+        Some(TesslaCore.TesslaMap(map.value - arguments(1).get, map.typ, loc))
+      case BuiltIn.SetEmpty =>
+        Some(TesslaCore.TesslaSet(Set(), TesslaCore.SetType(typeArguments(0)), loc))
+      case BuiltIn.SetAdd =>
+        val set = getSet(arguments(0).get)
+        Some(TesslaCore.TesslaSet(set.value + arguments(1).get, set.typ, loc))
+      case BuiltIn.SetContains =>
+        Some(TesslaCore.BoolLiteral(getSet(arguments(0).get).value.contains(arguments(1).get), loc))
+      case BuiltIn.SetRemove =>
+        val set = getSet(arguments(0).get)
+        Some(TesslaCore.TesslaSet(set.value - arguments(1).get, set.typ, loc))
       case _ => throw InternalError(s"Unimplemented operator: $op")
     }
   }

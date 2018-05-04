@@ -40,7 +40,10 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => Lazy(arg.forceValue.withLoc(stream.loc))
         }
-        val result = ConstantEvaluator.evalPrimitiveOperator(op, args, exp.loc)
+        // We can pass the empty sequence for the type parameters because the only operators that require type
+        // parameters to be evaluated are the constructors for empty data structures and those will already have
+        // been turned into values by the constant folder, so no such operator can occur here.
+        val result = ConstantEvaluator.evalPrimitiveOperator(op, Seq(), args, exp.loc)
         TesslaCore.ValueOrError.fromLazyOption(result)
       }
     case TesslaCore.Default(values, defaultValue, _) =>
