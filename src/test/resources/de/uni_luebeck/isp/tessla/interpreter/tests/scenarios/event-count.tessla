@@ -1,5 +1,5 @@
-def eventCount(e) := {
-    def ec := default(last(ec, e) + 1, 0)
+def eventCount[T](e: Events[T]) := {
+    def ec: Events[Int] := default(last(ec, e) + 1, 0)
     ec
 }
 

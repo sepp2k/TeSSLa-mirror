@@ -1,8 +1,8 @@
 in functioncall: Events[String]
-def function_call(name) := if functioncall == name then ()
+def function_call(name: String) := if functioncall == name then ()
 
-def eventCount(e) := {
-  def count := default(last(count, e) + 1, 0)
+def eventCount[T](e: Events[T]) := {
+  def count: Events[Int] := default(last(count, e) + 1, 0)
   count
 }
 

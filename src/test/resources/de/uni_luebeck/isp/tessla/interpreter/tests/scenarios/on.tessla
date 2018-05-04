@@ -1,9 +1,9 @@
-def mergeValues(a,b) :=
+def mergeValues[T](a: Events[T], b: Events[T]) :=
   if default(time(a), 0) >= default(time(b), 0)
-  then default(a,b)
-  else default(b,a)
+  then defaultFrom(a,b)
+  else defaultFrom(b,a)
 
-def on(trigger, stream) :=
+def on[T](trigger: Events[Unit], stream: Events[T]) :=
   mergeValues(
     if time(trigger) == time(stream) then stream,
     if time(trigger) > time(stream) then last(stream, trigger)

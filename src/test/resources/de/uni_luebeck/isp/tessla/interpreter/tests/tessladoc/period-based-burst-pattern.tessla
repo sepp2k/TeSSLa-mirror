@@ -1,5 +1,5 @@
-def resetCount(events, reset) := {
-  def s :=
+def resetCount[T](events: Events[T], reset: Events[Unit]) := {
+  def s: Events[Int] :=
     if time(events) == default(time(reset),0) then
       1
     else if time(events) > default(time(reset),0) then
@@ -10,8 +10,8 @@ def resetCount(events, reset) := {
   sum
 }
 
-def period(delay) := {
-  def s := default(delayedLast(s, s), delay)
+def period(delay: Int) := {
+  def s: Events[Int] := default(delayedLast(s, s), delay)
   const((), s)
 }
 

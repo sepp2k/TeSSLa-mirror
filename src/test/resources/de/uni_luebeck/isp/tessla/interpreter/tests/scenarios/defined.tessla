@@ -1,7 +1,7 @@
 in x: Events[Unit]
 in y: Events[Unit]
 
-def defined(a) := default(const(true, a), false)
+def defined[T](a: Events[T]) := default(const(true, a), false)
 
 def a := defined(x)
 def b := defined(y)
