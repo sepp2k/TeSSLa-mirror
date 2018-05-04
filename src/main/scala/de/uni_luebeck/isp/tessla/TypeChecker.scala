@@ -102,17 +102,17 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     }
   }
 
+  def isLiftableMacro(entry: FlatTessla.Expression) = entry match {
+    case m: FlatTessla.Macro => m.isLiftable
+    case _ => false
+  }
+
   /**
     * Return all the entries that need to be type inferred before the current entry, i.e.
     * all the entries that are used by this entry and do not have an explicit type annotation.
     */
   def requiredEntries(scope: FlatTessla.Scope, entry: FlatTessla.VariableEntry): Seq[FlatTessla.VariableEntry] = {
     requiredEntries(scope, entry.expression)
-  }
-
-  def isLiftableMacro(entry: FlatTessla.Expression) = entry match {
-    case m: FlatTessla.Macro => m.isLiftable
-    case _ => false
   }
 
   def requiredEntries(scope: FlatTessla.Scope, expression: FlatTessla.Expression): Seq[FlatTessla.VariableEntry] = {

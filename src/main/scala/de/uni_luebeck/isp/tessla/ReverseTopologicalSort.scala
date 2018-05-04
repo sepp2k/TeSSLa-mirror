@@ -7,26 +7,35 @@ object ReverseTopologicalSort {
   final case class Sorted[Node](nodes: Iterable[Node]) extends Result[Node]
   final case class Cycles[Node](nodesInCycles: Seq[Node]) extends Result[Node]
 
+  sealed abstract class Mark
+  case object Permanent extends Mark
+  case object Temporary extends Mark
+
   def sort[Node](startNodes: Iterable[Node])(getChildren: Node => Seq[Node]): Result[Node] = {
-    val visited = mutable.Set[Node]()
+    val marks = mutable.Map[Node, Mark]()
     val nodesInCycles = mutable.ArrayBuffer[Node]()
-    def go(current: Node, stack: Seq[Node]): Seq[Node] = {
-      if (stack.contains(current)) {
-        nodesInCycles ++= stack.slice(0, stack.indexOf(current) + 1)
-        Seq()
-      } else if (visited.contains(current)) {
-        Seq()
-      } else {
-        visited += current
-        current +: getChildren(current).flatMap(go(_, current +: stack))
+
+    var nodes = List[Node]()
+
+    def go(current: Node, stack: List[Node]): Unit = {
+      marks.get(current) match {
+        case Some(Temporary) =>
+          nodesInCycles ++= stack.slice(0, stack.indexOf(current) + 1)
+        case Some(Permanent) =>
+          // do nothing
+        case None =>
+          marks(current) = Temporary
+          getChildren(current).foreach(go(_, current :: stack))
+          marks(current) = Permanent
+          nodes = current :: nodes
       }
     }
-    val nodes = startNodes.flatMap { startNode =>
-      if (visited(startNode)) Seq()
-      else go(startNode, Seq()).reverse
+    startNodes.foreach { startNode =>
+      if (!marks.contains(startNode))
+        go(startNode, List())
     }
     if (nodesInCycles.isEmpty) {
-      Sorted(nodes)
+      Sorted(nodes.reverse)
     } else {
       Cycles(nodesInCycles)
     }
