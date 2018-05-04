@@ -386,7 +386,7 @@ object ConstantEvaluator {
         try {
           Some(map.value(key).withLoc(loc))
         } catch {
-          case keyNotFound: NoSuchElementException =>
+          case _: NoSuchElementException =>
             throw KeyNotFound(key, map.value, loc)
         }
       case BuiltIn.MapContains =>
@@ -404,7 +404,6 @@ object ConstantEvaluator {
       case BuiltIn.SetRemove =>
         val set = getSet(arguments(0).get)
         Some(TesslaCore.TesslaSet(set.value - arguments(1).get, set.typ, loc))
-      case _ => throw InternalError(s"Unimplemented operator: $op")
     }
   }
 }
