@@ -42,6 +42,9 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         outputStreams ++= translatedStreams.keys.flatMap { id =>
           id.nameOpt.map(name => (name, TesslaCore.Stream(id, Location.unknown)))
         }
+        outputStreams ++= inputStreams.map {
+          case (name, _, loc) => (name, TesslaCore.InputStream(name, loc))
+        }
       }
       TesslaCore.Specification(translatedStreams.toMap, inputStreams, outputStreams)
     } catch {
