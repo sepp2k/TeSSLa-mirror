@@ -50,7 +50,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     } catch {
       case err: TesslaError =>
         throw WithStackTrace(err, stack)
-      case so: StackOverflowError =>
+      case _: StackOverflowError =>
         throw WithStackTrace(Errors.StackOverflow(stack.pop()), stack)
     }
   }
@@ -70,7 +70,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   def translateEnv(env: Env): Unit = {
     env.foreach {
       case (_, entryWrapper) =>
-        translateEntry(env, entryWrapper, None)
+        translateEntry(env, entryWrapper)
     }
   }
 
@@ -123,14 +123,9 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       TesslaCore.Unit(loc)
   }
 
-  /**
-    * @param overrideLoc If a definition is inlined, this is the location of the original variable use, so the locs
-    *                    don't point to the expression that the variable refers to, but to where the variable used to
-    *                    be.
-    */
-  def translateEntry(env: Env, wrapper: EnvEntryWrapper, overrideLoc: Option[Location]): Unit = wrapper.entry match {
+  def translateEntry(env: Env, wrapper: EnvEntryWrapper): Unit = wrapper.entry match {
     case NotYetTranslated(entry, closure) =>
-      translateExpression(closure, wrapper, entry.expression, entry.id.nameOpt, entry.typeInfo, overrideLoc)
+      translateExpression(closure, wrapper, entry.expression, entry.id.nameOpt, entry.typeInfo)
     case Translating(loc) =>
       throw InfiniteRecursion(loc)
     case _ =>
@@ -138,7 +133,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   }
 
   def translateExpression(env: Env, wrapper: EnvEntryWrapper, expression: TypedTessla.Expression, nameOpt: Option[String],
-                          typ: TypedTessla.Type, overrideLoc: Option[Location]): Unit = {
+                          typ: TypedTessla.Type): Unit = {
     wrapper.entry = Translating(expression.loc)
     expression match {
       case TypedTessla.BuiltInOperator(builtIn) =>
@@ -151,14 +146,13 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         // TimeUnit-errors inside of macros *are* swallowed if the macro is never called, which is what
         // we want because a library might define macros using time units and, as long as you don't call
         // those macros, you should still be able to use the library when you don't have a time unit set.
-        val translatedLit = translateLiteral(lit, overrideLoc.getOrElse(loc))
+        val translatedLit = translateLiteral(lit, loc)
         wrapper.entry = ValueEntry(Lazy(translatedLit))
       case p: TypedTessla.Parameter =>
         wrapper.entry = translateVar(env, p.id, p.loc)
       case v: TypedTessla.Variable =>
         wrapper.entry = translateVar(env, v.id, v.loc)
       case i: TypedTessla.InputStream =>
-        val loc = overrideLoc.getOrElse(i.loc)
         wrapper.entry = InputStreamEntry(i.name)
       case call: TypedTessla.MacroCall =>
         def stream(coreExp: => TesslaCore.Expression) = {
@@ -251,7 +245,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
             }
             stack.push(call.loc)
             val innerEnv = createEnvForScope(scopeWithoutParameters, closure ++ args)
-            translateExpression(innerEnv, wrapper, mac.body, None, typ, Some(call.loc))
+            translateExpression(innerEnv, wrapper, mac.body, None, typ)
             stack.pop()
           case other =>
             throw InternalError(s"Applying non-macro/builtin (${other.getClass.getSimpleName}) - should have been caught by the type checker.")
@@ -299,7 +293,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       }
     }
     val wrapper = currentEnv(currentId)
-    translateEntry(currentEnv, wrapper, Some(loc))
+    translateEntry(currentEnv, wrapper)
     for (i <- 0 until stackPushes) {
       stack.pop()
     }
