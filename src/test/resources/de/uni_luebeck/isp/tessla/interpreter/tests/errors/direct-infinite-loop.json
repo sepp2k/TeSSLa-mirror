@@ -1,0 +1,4 @@
+{
+    "spec": "direct-infinite-loop.tessla",
+    "expectedErrors": "direct-infinite-loop.errors"
+}
