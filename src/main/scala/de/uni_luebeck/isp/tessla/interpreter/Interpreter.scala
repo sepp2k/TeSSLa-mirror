@@ -33,9 +33,10 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }
 
   private def eval(exp: TesslaCore.Expression): Stream = exp match {
-    case TesslaCore.Lift(_, _, Seq(), loc) =>
-      throw Errors.InternalError("Lift without arguments should be impossible", loc)
-    case TesslaCore.Lift(op, _, argStreams, _) =>
+    case TesslaCore.Lift(op, _, argStreams, loc) =>
+      if (argStreams.isEmpty) {
+        throw Errors.InternalError("Lift without arguments should be impossible", loc)
+      }
       lift(argStreams.map(evalStream)) { arguments =>
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => Lazy(arg.forceValue.withLoc(stream.loc))
@@ -60,6 +61,25 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       delayedLast(evalStream(delays), evalStream(values))
     case TesslaCore.Time(values, loc) =>
       evalStream(values).time(loc)
+    case TesslaCore.Merge(arg1, arg2, loc) =>
+      val stream1 = evalStream(arg1)
+      val stream2 = evalStream(arg2)
+      val zero = TesslaCore.IntLiteral(0, loc)
+      lift(Seq(
+        stream1.time(loc).default(zero),
+        stream2.time(loc).default(zero),
+        stream1.default(stream2),
+        stream2.default(stream1)
+      )) {
+        case Seq(time1, time2, value1, value2) =>
+          if (getInt(time1.forceValue) >= getInt(time2.forceValue)) Some(value1)
+          else Some(value2)
+      }
+  }
+
+  def getInt(value: TesslaCore.Value): BigInt = value match {
+    case TesslaCore.IntLiteral(i, _) => i
+    case _ => throw InternalError(s"Int expected, but $value found", value.loc)
   }
 }
 
