@@ -9,6 +9,8 @@ class Lazy[+A](a: => A) {
 }
 
 object Lazy {
+  def unapply[T](value: Lazy[T]) = Some(value.get)
+
   def apply[A](a: => A): Lazy[A] =
     new Lazy(a)
 }

@@ -23,6 +23,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     case object IN extends Token("in")
 
+    case object STATIC extends Token("static")
+
     case object IF extends Token("if")
 
     case object THEN extends Token("then")
@@ -108,7 +110,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     import tokens._
 
-    override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
+    override val keywords = List(DEFINE, DEF, OUT, IN, STATIC, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, LBRACE, RBRACE, PERCENT,
       LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, ROCKET, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS, MINUS,
       STAR, SLASH, BANG, AT)
@@ -197,7 +199,12 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def typeParameters: Parser[Seq[Tessla.Identifier]] = LBRACKET ~> rep1sep(identifier, COMMA) <~ RBRACKET
 
-    def expression: Parser[Tessla.Expression] = ifThenElse | infixExpression
+    def expression: Parser[Tessla.Expression] = ifThenElse | staticIfThenElse | infixExpression
+
+    def staticIfThenElse = (STATIC ~> IF ~> expression) ~ (THEN ~> expression) ~ (ELSE ~> expression) ^^! {
+      case (loc, ((cond, thenCase), elseCase)) =>
+        Tessla.StaticIfThenElse(cond, thenCase, elseCase, Location(loc, path))
+    }
 
     def ifThenElse = (IF ~ expression) ~ (THEN ~> expression) ~ (ELSE ~> expression).? ^^! {
       case (loc, (((ifToken, cond), thenCase), Some(elseCase))) =>

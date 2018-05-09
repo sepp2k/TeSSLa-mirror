@@ -81,16 +81,19 @@ object Tessla {
         case (ID_PATTERN(), _) | (_, Seq()) => s"$macroID$typeArgList(${args.mkString(", ")})"
         case ("if then", Seq(cond, thenCase)) =>
           s"if $cond then $thenCase"
-        case ("if then else", Seq(cond, thenCase, elseCase)) =>
-          s"if $cond then $thenCase else $elseCase"
         case (name, Seq(PositionalArgument(arg))) =>
-          if (inner) s"($name${arg.toString(inner = true)})"
-          else s"$name${arg.toString(inner = true)}"
+          s"$name${arg.toString(inner = true)}"
         case (name, Seq(PositionalArgument(lhs), PositionalArgument(rhs))) =>
-          if (inner) s"(${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)})"
-          else s"${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)}"
+          s"${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)}"
         case (name, _) => s"$name$typeArgList(${args.mkString(", ")})"
       }
+      if (inner) s"($str)" else str
+    }
+  }
+
+  case class StaticIfThenElse(condition: Expression, thenCase: Expression, elseCase: Expression, loc: Location) extends Expression {
+    override def toString(inner: Boolean) = {
+      val str = s"if $condition then $thenCase else $elseCase"
       if (inner) s"($str)" else str
     }
   }

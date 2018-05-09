@@ -197,13 +197,13 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       if (typeEntry.arity == 0) typeEntry.typeConstructor(Seq())
       else throw TypeArityMismatch(id.name, typeEntry.arity, 0, id.loc)
 
-    case Tessla.TypeApplication(id, typeArgs, loc) =>
+    case Tessla.TypeApplication(id, typeArgs, _) =>
       val translatedArgs = typeArgs.map(translateType(_, scope, env))
       val typeEntry = scope.resolveType(env.types(id.name)).getOrElse(throw UndefinedType(id.name, id.loc))
       if (typeEntry.arity == translatedArgs.length) typeEntry.typeConstructor(translatedArgs)
       else throw TypeArityMismatch(id.name, typeEntry.arity, translatedArgs.length, id.loc)
 
-    case Tessla.FunctionType(parameterTypes, returnType, loc) =>
+    case Tessla.FunctionType(parameterTypes, returnType, _) =>
       FlatTessla.FunctionType(
         // Explicitly written function types never have any type arguments because we don't support higher rank types
         Seq(),
@@ -232,6 +232,13 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       }
       val mac = getExp(call.macroID, env)
       FlatTessla.MacroCall(mac.id, mac.loc, call.typeArgs.map(translateType(_, scope, env)), args, call.loc)
+
+    case ite: Tessla.StaticIfThenElse =>
+      FlatTessla.StaticIfThenElse(
+        FlatTessla.IdLoc(expToId(translateExpression(ite.condition, scope, env), scope), ite.condition.loc),
+        FlatTessla.IdLoc(expToId(translateExpression(ite.thenCase, scope, env), scope), ite.thenCase.loc),
+        FlatTessla.IdLoc(expToId(translateExpression(ite.elseCase, scope, env), scope), ite.elseCase.loc),
+        ite.loc)
 
     case block: Tessla.Block =>
       val innerEnv = env ++ Env(variables = createIdMap(block.definitions.map(_.id.name)), types = Map())

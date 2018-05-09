@@ -96,6 +96,12 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = args.mkString(s"$macroID(", ", ", ")")
   }
 
+  case class IdLoc(id: Identifier, loc: Location)
+
+  case class StaticIfThenElse(condition: IdLoc, thenCase: IdLoc, elseCase: IdLoc, loc: Location) extends Expression {
+    override def toString = s"if $condition then $thenCase else $elseCase"
+  }
+
   case class Literal(value: LiteralValue, loc: Location) extends Expression {
     override def toString = value.toString
   }
