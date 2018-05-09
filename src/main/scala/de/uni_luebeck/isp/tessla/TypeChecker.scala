@@ -370,6 +370,11 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     )
   }
 
+  def isStreamType(typ: TypedTessla.Type): Boolean = typ match {
+    case _: TypedTessla.StreamType => true
+    case _ => false
+  }
+
   def translateExpression(expression: FlatTessla.Expression, declaredType: Option[TypedTessla.Type],
                           id: Option[TypedTessla.Identifier], scope: TypedTessla.Scope, env: Env)
   : (TypedTessla.Expression, TypedTessla.Type) = {
@@ -408,7 +413,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
             }
             var macroID = env(call.macroID)
             var possiblyLiftedType = t
-            if (t.isLiftable && call.args.exists(arg => !typeMap(env(arg.id)).isValueType)) {
+            if (t.isLiftable && call.args.exists(arg => isStreamType(typeMap(env(arg.id))))) {
               possiblyLiftedType = liftFunctionType(t)
               macroID = liftedMacros(macroID)
             }
