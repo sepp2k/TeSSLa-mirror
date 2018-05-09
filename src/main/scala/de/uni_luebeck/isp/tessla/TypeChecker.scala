@@ -469,7 +469,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
                   } else {
                     (actual, expected) match {
                       case (a: TypedTessla.FunctionType, e: TypedTessla.FunctionType)
-                        if a.isLiftable && liftFunctionType(a) == e && liftedMacros.contains(id) =>
+                        if a.isLiftable && liftFunctionType(a) == e =>
                         liftedMacros(id)
                       case _ =>
                         throw TypeMismatch(expected, actual, arg.loc)
