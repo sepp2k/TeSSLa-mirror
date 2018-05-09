@@ -284,6 +284,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
           entry.expression match {
             case v: TypedTessla.Variable =>
               currentId = v.id
+              currentLoc = v.loc
               currentEnv = closure
             case _ =>
               loop = false
@@ -294,7 +295,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     }
     val wrapper = currentEnv(currentId)
     translateEntry(currentEnv, wrapper)
-    for (i <- 0 until stackPushes) {
+    for (_ <- 0 until stackPushes) {
       stack.pop()
     }
     wrapper.entry
