@@ -1,0 +1,2 @@
+def x: Events[Int] := y
+def y: Events[Int] := x
