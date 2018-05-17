@@ -49,7 +49,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
           case (name, _, loc) => (name, TesslaCore.InputStream(name, loc))
         }
       }
-      TesslaCore.Specification(translatedStreams.toMap, inputStreams, outputStreams)
+      TesslaCore.Specification(translatedStreams.toSeq, inputStreams, outputStreams)
     } catch {
       case err: TesslaError =>
         throw WithStackTrace(err, stack)

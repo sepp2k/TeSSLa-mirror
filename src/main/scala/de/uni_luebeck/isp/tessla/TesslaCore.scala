@@ -6,7 +6,7 @@ import de.uni_luebeck.isp.tessla.util.Lazy
 object TesslaCore extends HasUniqueIdentifiers {
   final case class StreamDefinition(expression: Expression, typ: StreamType)
 
-  final case class Specification(streams: Map[Identifier, StreamDefinition],
+  final case class Specification(streams: Seq[(Identifier, StreamDefinition)],
                                  inStreams: Seq[(String, StreamType, Location)],
                                  outStreams: Seq[(String, StreamRef)]) {
     override def toString = {

@@ -8,6 +8,7 @@ class Compiler {
       .andThen(new Flattener)
       .andThen(new TypeChecker)
       .andThen(new ConstantEvaluator(unit))
+      .andThen(new CycleDetection)
   }
 
   class Printer[T] extends TranslationPhase[T, T] {
