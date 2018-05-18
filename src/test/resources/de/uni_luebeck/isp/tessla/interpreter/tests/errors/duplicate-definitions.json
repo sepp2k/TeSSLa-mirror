@@ -1,0 +1,4 @@
+{
+  "spec": "duplicate-definitions.tessla",
+  "expectedErrors": "duplicate-definitions.errors"
+}

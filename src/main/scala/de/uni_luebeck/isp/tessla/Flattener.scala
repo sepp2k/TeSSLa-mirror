@@ -49,8 +49,8 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
 
   def getName(statement: Tessla.Statement): Option[String] = getId(statement).map(_.name)
 
-  def checkForDuplicates(statements: Seq[Tessla.Identifier]): Unit = {
-    statements.groupBy(_.name).foreach {
+  def checkForDuplicates(identifiers: Seq[Tessla.Identifier]): Unit = {
+    identifiers.groupBy(_.name).foreach {
       case (_, duplicates) if duplicates.lengthCompare(1) > 0 =>
         val firstLoc = duplicates.head.loc
         duplicates.tail.foreach { duplicate =>

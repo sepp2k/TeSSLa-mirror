@@ -24,12 +24,10 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     val types = mutable.Map[Identifier, TypeEntry]()
 
     def addVariable(entry: VariableEntry): Unit = {
-      require(!variables.contains(entry.id), "addVariable should only ever be called with a fresh identifier!")
       variables(entry.id) = entry
     }
 
     def addType(entry: TypeEntry): Unit = {
-      require(!types.contains(entry.id), "addType should only ever be called with a fresh identifier!")
       types(entry.id) = entry
     }
 

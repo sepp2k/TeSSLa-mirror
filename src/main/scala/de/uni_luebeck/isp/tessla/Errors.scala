@@ -76,7 +76,9 @@ object Errors {
   case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {
     override def loc = id.loc
 
-    override def message = s"Multiple definitions of ${id.name} in same scope (previous definition at $previousLoc)"
+    override def message =
+      s"Multiple definitions of ${id.name} in same scope\n" +
+        s"    Previous definition at: $previousLoc"
   }
 
   case class InternalError(m: String, loc: Location = Location.unknown) extends TesslaError {
