@@ -12,9 +12,6 @@ package de.uni_luebeck.isp.tessla
 class CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
   override def translateSpec(spec: TesslaCore.Specification): TesslaCore.Specification = {
     val streams = spec.streams.toMap
-    val outStreams = spec.outStreams.collect {
-      case (_, s: TesslaCore.Stream) => s.id -> streams(s.id)
-    }
 
     def resolveStream(s: TesslaCore.StreamRef): Seq[(TesslaCore.Identifier, TesslaCore.StreamDefinition)] = s match {
       case _: TesslaCore.Nil | _: TesslaCore.InputStream => Seq()
