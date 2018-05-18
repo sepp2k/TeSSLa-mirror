@@ -145,20 +145,25 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
     }
 
     def define =
-      DEFINE ^^^! {
-        loc => warn(Location(loc, path), "The keyword 'define' is deprecated, use 'def' instead.")
+      DEFINE ^^! { (loc, tok) =>
+        warn(Location(loc, path), "The keyword 'define' is deprecated, use 'def' instead.")
+        tok
       } | DEF
 
     def annotation = AT ~> identifier
 
     def definitionHeader =
-      ((annotation.* <~ define) ~ identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.?) ^^! { (loc, ast) => (loc, ast) }
+      (annotation.* ~ define) ~ identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.?
 
     def definition =
       (definitionHeader ~ (COLONEQ ~> expression)) ^^ {
-        case ((loc, ((((annotations, name), typeParams), params), returnType)), expr) =>
+        case ((((((annotations, defToken), name), typeParams), params), returnType), expr) =>
+          val loc = annotations match {
+            case Seq() => Location(defToken.loc, path).merge(expr.loc)
+            case firstAnnotation +: _ => firstAnnotation.loc.merge(expr.loc)
+          }
           Tessla.Definition(annotations, name, typeParams.getOrElse(Seq()), params.getOrElse(Seq()),
-            returnType, expr, Location(loc, path))
+            returnType, expr, loc)
       }
 
     def statement: Parser[Tessla.Statement] =
