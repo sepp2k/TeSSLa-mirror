@@ -150,7 +150,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
         tok
       } | DEF
 
-    def annotation = AT ~> identifier
+    def annotation = AT ~> identifier ^^! { (loc, id) => Tessla.Identifier(id.name, Location(loc, path)) }
 
     def definitionHeader =
       (annotation.* ~ define) ~ identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.?
