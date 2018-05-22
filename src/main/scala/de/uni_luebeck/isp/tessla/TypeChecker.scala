@@ -552,13 +552,13 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           innerScope.addVariable(resultEntry)
           val firstParams = (resultId +: parameters.map(_.id)).map(TypedTessla.PositionalArgument(_, body.loc))
           val firstCall = TypedTessla.MacroCall(env(stdlibNames("first")), Location.builtIn, Seq(), firstParams, body.loc)
-          val lifted = TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, firstCall, mac.loc, mac.isLiftable)
+          val lifted = TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, mac.headerLoc, firstCall, mac.loc, mac.isLiftable)
           val liftedId = makeIdentifier(id.get.nameOpt)
           val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, mac.loc)
           scope.addVariable(liftedEntry)
           liftedMacros(id.get) = liftedId
         }
-        TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, body, mac.loc, mac.isLiftable) -> macroType
+        TypedTessla.Macro(tvarIDs, parameters, innerScope, returnType, mac.headerLoc, body, mac.loc, mac.isLiftable) -> macroType
     }
   }
 }

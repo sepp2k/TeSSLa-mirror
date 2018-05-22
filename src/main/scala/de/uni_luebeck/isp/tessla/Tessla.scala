@@ -18,6 +18,7 @@ object Tessla {
                          typeParameters: Seq[Identifier],
                          parameters: Seq[Parameter],
                          returnType: Option[Type],
+                         headerLoc: Location,
                          body: Expression,
                          loc: Location) extends Statement {
     override def toString = {

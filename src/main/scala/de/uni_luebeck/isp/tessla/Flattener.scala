@@ -130,7 +130,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       }
       val body = translateExpression(exp, scope, innerEnv)
       val typ = definition.returnType.map(translateType(_, scope, innerEnv))
-      scope.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), body, typ, definition.loc))
+      scope.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), body, typ, definition.headerLoc))
     } else {
       val innerScope = new FlatTessla.Scope(Some(scope))
       val paramIdMap = createIdMap(definition.parameters.map(_.id.name))
@@ -160,10 +160,10 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       val typeParameters = definition.typeParameters.map(tp => paramEnv.types(tp.name))
       val returnType = definition.returnType.map(translateType(_, innerScope, paramEnv))
       val mac = FlatTessla.Macro(
-        typeParameters, parameters, innerScope, returnType, body, definition.loc,
+        typeParameters, parameters, innerScope, returnType, definition.headerLoc, body, definition.loc,
         isLiftable = liftableAnnotation.isDefined
       )
-      scope.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), mac, None, definition.loc))
+      scope.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), mac, None, definition.headerLoc))
     }
   }
 

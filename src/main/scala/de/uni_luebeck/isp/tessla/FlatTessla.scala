@@ -59,6 +59,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
                    parameters: Seq[Parameter],
                    scope: Scope,
                    returnType: TypeAnnotation,
+                   headerLoc: Location,
                    body: Expression,
                    loc: Location,
                    isLiftable: Boolean) extends Expression {

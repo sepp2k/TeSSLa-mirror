@@ -153,17 +153,21 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
     def annotation = AT ~> identifier ^^! { (loc, id) => Tessla.Identifier(id.name, Location(loc, path)) }
 
     def definitionHeader =
-      (annotation.* ~ define) ~ identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.?
+      (annotation.* ~ define) ~ identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.? ^^! {(loc, ast) =>
+        (loc, ast)
+      }
 
     def definition =
       (definitionHeader ~ (COLONEQ ~> expression)) ^^ {
-        case ((((((annotations, defToken), name), typeParams), params), returnType), expr) =>
-          val loc = annotations match {
-            case Seq() => Location(defToken.loc, path).merge(expr.loc)
-            case firstAnnotation +: _ => firstAnnotation.loc.merge(expr.loc)
+        case ((brokenHeaderLoc, (((((annotations, defToken), name), typeParams), params), returnType)), expr) =>
+          val startLoc = annotations match {
+            case Seq() => Location(defToken.loc, path)
+            case firstAnnotation +: _ => firstAnnotation.loc
           }
+          val loc = startLoc.merge(expr.loc)
+          val headerLoc = startLoc.merge(Location(compacom.Location(brokenHeaderLoc.to, brokenHeaderLoc.to), path))
           Tessla.Definition(annotations, name, typeParams.getOrElse(Seq()), params.getOrElse(Seq()),
-            returnType, expr, loc)
+            returnType, headerLoc, expr, loc)
       }
 
     def statement: Parser[Tessla.Statement] =
