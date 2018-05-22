@@ -1,0 +1,4 @@
+{
+  "spec": "unliftable-macro-type.tessla",
+  "expectedErrors": "unliftable-macro-type.errors"
+}
