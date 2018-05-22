@@ -15,5 +15,5 @@ def generic[T](x: T, y: T): T := x
 out generic(42, "string")
 
 -- Coming soon: Violating implicit value type constraint
--- out generic(nil[Int], nil[Int])
--- out generic(g, g)
+out generic(nil[Int], nil[Int])
+out generic(g, g)

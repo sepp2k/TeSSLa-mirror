@@ -197,9 +197,12 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
   }
 
   def typeSubst(expected: TypedTessla.Type, actual: TypedTessla.Type, typeParams: Set[TypedTessla.Identifier],
-                substitutions: mutable.Map[TypedTessla.Identifier, TypedTessla.Type]): TypedTessla.Type = {
+                substitutions: mutable.Map[TypedTessla.Identifier, TypedTessla.Type], loc: Location): TypedTessla.Type = {
     (expected, actual) match {
       case (tparam: TypedTessla.TypeParameter, _) =>
+        if (!actual.isValueType) {
+          error(TypeMismatch("value type", actual, loc))
+        }
         if (typeParams.contains(tparam.id)) {
           substitutions.getOrElseUpdate(tparam.id, actual)
         } else {
@@ -212,19 +215,19 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         // variables.
         val parameterTypes = expectedFunctionType.parameterTypes.zip(actualFunctionType.parameterTypes).map {
           case (expectedParamType, actualParamType) =>
-            typeSubst(expectedParamType, actualParamType, typeParams, substitutions)
+            typeSubst(expectedParamType, actualParamType, typeParams, substitutions, loc)
         }
-        val returnType = typeSubst(expectedFunctionType.returnType, actualFunctionType.returnType, typeParams, substitutions)
+        val returnType = typeSubst(expectedFunctionType.returnType, actualFunctionType.returnType, typeParams, substitutions, loc)
         TypedTessla.FunctionType(Seq(), parameterTypes, returnType, expectedFunctionType.isLiftable)
       case (TypedTessla.StreamType(expectedElementType), TypedTessla.StreamType(actualElementType)) =>
-        TypedTessla.StreamType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions))
+        TypedTessla.StreamType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       // Allow for auto-lifting of values
       case (TypedTessla.StreamType(expectedElementType), actualElementType) =>
-        TypedTessla.StreamType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions))
+        TypedTessla.StreamType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.SetType(expectedElementType), TypedTessla.SetType(actualElementType)) =>
-        TypedTessla.SetType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions))
+        TypedTessla.SetType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.MapType(k, v), TypedTessla.MapType(k2, v2)) =>
-        TypedTessla.MapType(typeSubst(k, k2, typeParams, substitutions), typeSubst(v, v2, typeParams, substitutions))
+        TypedTessla.MapType(typeSubst(k, k2, typeParams, substitutions, loc), typeSubst(v, v2, typeParams, substitutions, loc))
       case _ =>
         expected
     }
@@ -459,7 +462,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
               case (arg, genericExpected) =>
                 val id = env(arg.id)
                 val actual = typeMap(id)
-                val expected = typeSubst(genericExpected, actual, typeParams, typeSubstitutions)
+                val expected = typeSubst(genericExpected, actual, typeParams, typeSubstitutions, arg.loc)
                 val possiblyLifted =
                   if (actual == expected) {
                     id
@@ -487,7 +490,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
               throw TypeArgumentsNotInferred(name, call.macroLoc)
             }
             val returnType = typeSubst(possiblyLiftedType.returnType, possiblyLiftedType.returnType,
-              typeParams, typeSubstitutions)
+              typeParams, typeSubstitutions, call.loc)
             TypedTessla.MacroCall(macroID, call.macroLoc, typeArgs, args, call.loc) -> returnType
           case other =>
             throw TypeMismatch("function", other, call.macroLoc)
