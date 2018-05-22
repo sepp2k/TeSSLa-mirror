@@ -524,7 +524,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         val parameterIDs = mac.parameters.map(_.id).toSet
         if (mac.isLiftable) {
           if (!checkLiftability(macroType)) {
-            throw UnliftableMacroType(mac.loc)
+            error(UnliftableMacroType(mac.headerLoc))
           }
           val liftedType = liftFunctionType(macroType)
           val liftedScope = new FlatTessla.Scope(mac.scope.parent)
