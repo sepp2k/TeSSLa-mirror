@@ -194,6 +194,14 @@ object BuiltIn {
     override def name = "Set_size"
   }
 
+  case object SetUnion extends PrimitiveOperator {
+    override def name = "Set_union"
+  }
+
+  case object SetIntersection extends PrimitiveOperator {
+    override def name = "Set_intersection"
+  }
+
   def builtIns: Map[String, BuiltIn] = Set(
     Nil,
     Default,
@@ -236,6 +244,8 @@ object BuiltIn {
     SetAdd,
     SetContains,
     SetRemove,
-    SetSize
+    SetSize,
+    SetUnion,
+    SetIntersection
   ).map(op => op.name -> op).toMap
 }

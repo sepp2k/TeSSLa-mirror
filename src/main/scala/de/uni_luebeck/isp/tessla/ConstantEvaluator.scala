@@ -432,6 +432,14 @@ object ConstantEvaluator {
       case BuiltIn.SetSize =>
         val set = getSet(arguments(0).get)
         Some(TesslaCore.IntLiteral(set.value.size, loc))
+      case BuiltIn.SetUnion =>
+        val set1 = getSet(arguments(0).get)
+        val set2 = getSet(arguments(1).get)
+        Some(TesslaCore.TesslaSet(set1.value | set2.value, set1.typ, loc))
+      case BuiltIn.SetIntersection =>
+        val set1 = getSet(arguments(0).get)
+        val set2 = getSet(arguments(1).get)
+        Some(TesslaCore.TesslaSet(set1.value & set2.value, set1.typ, loc))
     }
   }
 }
