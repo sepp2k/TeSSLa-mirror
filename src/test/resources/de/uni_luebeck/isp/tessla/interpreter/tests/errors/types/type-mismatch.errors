@@ -10,3 +10,4 @@
 /errors/types/type-mismatch.tessla(19,13 - 19,14): Type mismatch: Expected value type, found [](Int) => Int
 /errors/types/type-mismatch.tessla(19,16 - 19,17): Type mismatch: Expected value type, found [](Int) => Int
 /errors/types/type-mismatch.tessla(19,5 - 19,18): Type mismatch: Expected stream or value type, found [](Int) => Int
+/errors/types/type-mismatch.tessla(22,15 - 22,30): Type mismatch: Expected Int, found Events[Int]

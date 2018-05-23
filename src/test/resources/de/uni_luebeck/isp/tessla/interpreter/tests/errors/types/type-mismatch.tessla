@@ -14,6 +14,9 @@ out hof(g)
 def generic[T](x: T, y: T): T := x
 out generic(42, "string")
 
--- Coming soon: Violating implicit value type constraint
+-- Violating implicit value type constraint
 out generic(nil[Int], nil[Int])
 out generic(g, g)
+
+-- No if-then for values
+def i: Int := if true then 42
