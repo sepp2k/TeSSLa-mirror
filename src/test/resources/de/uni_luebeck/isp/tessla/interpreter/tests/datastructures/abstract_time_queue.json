@@ -1,0 +1,5 @@
+{
+  "spec": "abstract_time_queue.tessla",
+  "input": "time_queue.input",
+  "expectedOutput": "abstract_time_queue.output"
+}

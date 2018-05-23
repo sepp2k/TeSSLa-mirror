@@ -1,7 +1,5 @@
 package de.uni_luebeck.isp.tessla
 
-import Errors.InternalError
-
 class Compiler {
   def applyPasses(src: TesslaSource, unit: Option[TimeUnit]): TranslationPhase.Result[TesslaCore.Specification] = {
     new TesslaParser().translate(src)

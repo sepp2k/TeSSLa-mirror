@@ -256,6 +256,12 @@ object TraceParser extends Parsers {
       } |
         identifier
 
+    def identifierWildcardOrNumber: Parser[(Option[Trace.Identifier], Option[BigInt])] =
+      identifierOrWildcard ^^ {
+        value => (Some(value), None)
+      } | bigNat ^^ {
+        value => (None, Some(value))
+      }
 
     def leftBoundRangeTail: Parser[(compacom.Location, BigInt) => RawTrace.TimeRange] = {
       def leftSideOp = LEQ ^^^ {
@@ -270,21 +276,24 @@ object TraceParser extends Parsers {
         case value => value - 1
       }
 
-      ((COMMA ~> bigNat) ~ (DDOT ~> identifierOrWildcard.?)) ^^ {
+      ((COMMA ~> bigNat) ~ (DDOT ~> identifierWildcardOrNumber.?)) ^^ {
         /*
         from, from+step .. id (infinite)
-        from, from+step ..
+        from, from+step .. (infinite)
+        from, from+step .. to
         */
-        case (fromStep, idOpt) =>
+        case (fromStep, None) =>
           (loc: compacom.Location, from: BigInt) =>
-            RawTrace.TimeRange(Location(loc, path), idOpt, from, None, fromStep - from)
-      } | DDOT ~> (bigNat ~ step2.? ^^ {
+            RawTrace.TimeRange(Location(loc, path), None, from, None, fromStep - from)
+        case (fromStep, Some((idOpt, toOpt))) =>
+          (loc: compacom.Location, from: BigInt) =>
+            RawTrace.TimeRange(Location(loc, path), idOpt, from, toOpt, fromStep - from)
+      } | DDOT ~> (bigNat^^ {
         /*
         from .. to
-        from .. to-step, to
         */
-        case (to, toOpt) =>
-          (loc: compacom.Location, from: BigInt) => RawTrace.TimeRange(Location(loc, path), None, from, toOpt.orElse(Some(to)), toOpt.getOrElse(to + 1) - to)
+        to =>
+          (loc: compacom.Location, from: BigInt) => RawTrace.TimeRange(Location(loc, path), None, from, Some(to), 1)
       } | identifierOrWildcard.? ^^ {
         /*
         from .. (infinite)

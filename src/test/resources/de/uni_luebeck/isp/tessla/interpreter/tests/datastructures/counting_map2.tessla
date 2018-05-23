@@ -1,16 +1,19 @@
 in x: Events[Int]
 
--- This differs from counting_map.tessla in that the call to map_get is now
--- nested directly in map_add (and the get_count macro is inlined)
+-- This differs from counting_map.tessla in that the call to Map_get is now
+-- nested directly in Map_add (and the getCount macro is inlined)
 -- In previous versions this nesting caused an error value-related bug to surface.
 -- So this is the regression test for that bug.
 @liftable
 def inc_count(counts: Map[Int, Int], key: Int) :=
-    if map_contains(counts, key)
-    then map_add(counts, key, map_get(counts, key) + 1)
-    else map_add(counts, key, 1)
+    if Map_contains(counts, key)
+    then Map_add(counts, key, Map_get(counts, key) + 1)
+    else Map_add(counts, key, 1)
 
-def counts: Events[Map[Int, Int]] := default(inc_count(last(counts, x), x), map_empty[Int, Int])
+def counts: Events[Map[Int, Int]] := default(inc_count(last(counts, x), x), Map_empty[Int, Int])
+
+def size := Map_size(counts)
 
 out x
 out counts
+out size

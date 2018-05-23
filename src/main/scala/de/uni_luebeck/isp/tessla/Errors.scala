@@ -2,6 +2,12 @@ package de.uni_luebeck.isp.tessla
 
 object Errors {
 
+  case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends TesslaError {
+    override def loc: Location = error.loc
+
+    override def message: String = s"${error.message} (t = $timestamp)"
+  }
+
   abstract class TesslaError extends Exception with Diagnostic
 
   case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location]) extends TesslaError {
