@@ -13,8 +13,8 @@ class BigIntInfinity(val value: Option[BigInt]) extends Ordered[BigIntInfinity]{
     case _ => false
   }
   def min(that: BigIntInfinity) = if (this < that) this else that
-  def isZero = value == Some(0)
-  def isInfinity = value == None
+  def isZero = value.contains(0)
+  def isInfinity = value.isEmpty
   def limit(a: BigInt, b: BigInt) = {
     val aa = BigIntInfinity(a)
     val bb = BigIntInfinity(b)
@@ -78,7 +78,7 @@ class TimeQueue[D] (private[builtins] val list: List[Element[D]]) {
     if (list.isEmpty) {
       this
     } else {
-      val last = list(list.length - 1)
+      val last = list.last
       if (last.time > time) {
         TimeQueue(list.dropRight(1)).removeNewer(time)
       } else {
@@ -90,7 +90,7 @@ class TimeQueue[D] (private[builtins] val list: List[Element[D]]) {
   def fold[R](acc: R, until: BigInt)(f: (BigInt, BigInt, D, R) => R): R = list match {
     case Nil => acc
     case Element(t1, value)::Nil => f(t1, until, value, acc)
-    case Element(t1, value)::Element(t2, _)::tail => TimeQueue(list.tail).fold(f(t1, t2, value, acc), until)(f)
+    case Element(t1, value)::Element(t2, _)::_ => TimeQueue(list.tail).fold(f(t1, t2, value, acc), until)(f)
   }
 
   override def toString = {

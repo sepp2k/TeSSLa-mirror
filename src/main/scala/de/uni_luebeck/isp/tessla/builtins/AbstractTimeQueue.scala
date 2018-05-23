@@ -34,7 +34,6 @@ class AbstractTimeQueue(private[builtins] val unknownBefore: BigIntInfinity, pri
     if (queue.list.length < limit) {
       new AbstractTimeQueue(unknownBefore, queue.enqueue(time, value))
     } else {
-      val first = queue.list(0)
       val second = queue.list(1)
       new AbstractTimeQueue(unknownBefore.max(BigIntInfinity(second.time)), TimeQueue(queue.list.tail)).enqueueFinite(time, value, limit)
     }
@@ -48,7 +47,7 @@ class AbstractTimeQueue(private[builtins] val unknownBefore: BigIntInfinity, pri
     else
       queue.fold(BigInterval.top, until)(f)
 
-  override def toString() = (if (unknownBefore.isZero) "" else s"< $unknownBefore: T, ") + queue.toString
+  override def toString = (if (unknownBefore.isZero) "" else s"< $unknownBefore: T, ") + queue.toString
 
   override def equals(obj: scala.Any) = obj match {
     case that: AbstractTimeQueue => unknownBefore == that.unknownBefore && queue == that.queue
