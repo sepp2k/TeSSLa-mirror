@@ -342,12 +342,12 @@ object ConstantEvaluator {
 
   private def getMap(v: TesslaCore.Value): TesslaCore.TesslaMap = v match {
     case mapLit: TesslaCore.TesslaMap => mapLit
-    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
+    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Map, got: $v", v.loc)
   }
 
   private def getSet(v: TesslaCore.Value): TesslaCore.TesslaSet = v match {
     case setLit: TesslaCore.TesslaSet => setLit
-    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
+    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Set, got: $v", v.loc)
   }
 
   def evalPrimitiveOperator(op: BuiltIn.PrimitiveOperator, typeArguments: Seq[TesslaCore.ValueType],
@@ -416,6 +416,9 @@ object ConstantEvaluator {
       case BuiltIn.MapRemove =>
         val map = getMap(arguments(0).get)
         Some(TesslaCore.TesslaMap(map.value - arguments(1).get, map.typ, loc))
+      case BuiltIn.MapSize =>
+        val map = getMap(arguments(0).get)
+        Some(TesslaCore.IntLiteral(map.value.size, loc))
       case BuiltIn.SetEmpty =>
         Some(TesslaCore.TesslaSet(Set(), TesslaCore.SetType(typeArguments(0)), loc))
       case BuiltIn.SetAdd =>
@@ -426,6 +429,9 @@ object ConstantEvaluator {
       case BuiltIn.SetRemove =>
         val set = getSet(arguments(0).get)
         Some(TesslaCore.TesslaSet(set.value - arguments(1).get, set.typ, loc))
+      case BuiltIn.SetSize =>
+        val set = getSet(arguments(0).get)
+        Some(TesslaCore.IntLiteral(set.value.size, loc))
     }
   }
 }

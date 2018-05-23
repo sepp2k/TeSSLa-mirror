@@ -150,40 +150,48 @@ object BuiltIn {
 
   // Map operators
   case object MapEmpty extends PrimitiveOperator {
-    override def name = "map_empty"
+    override def name = "Map_empty"
   }
 
   case object MapAdd extends PrimitiveOperator {
-    override def name = "map_add"
+    override def name = "Map_add"
   }
 
   case object MapGet extends PrimitiveOperator {
-    override def name = "map_get"
+    override def name = "Map_get"
   }
 
   case object MapContains extends PrimitiveOperator {
-    override def name = "map_contains"
+    override def name = "Map_contains"
   }
 
   case object MapRemove extends PrimitiveOperator {
-    override def name = "map_remove"
+    override def name = "Map_remove"
+  }
+
+  case object MapSize extends PrimitiveOperator {
+    override def name = "Map_size"
   }
 
   // Set operators
   case object SetEmpty extends PrimitiveOperator {
-    override def name = "set_empty"
+    override def name = "Set_empty"
   }
 
   case object SetAdd extends PrimitiveOperator {
-    override def name = "set_add"
+    override def name = "Set_add"
   }
 
   case object SetContains extends PrimitiveOperator {
-    override def name = "set_contains"
+    override def name = "Set_contains"
   }
 
   case object SetRemove extends PrimitiveOperator {
-    override def name = "set_remove"
+    override def name = "Set_remove"
+  }
+
+  case object SetSize extends PrimitiveOperator {
+    override def name = "Set_size"
   }
 
   def builtIns: Map[String, BuiltIn] = Set(
@@ -223,9 +231,11 @@ object BuiltIn {
     MapGet,
     MapContains,
     MapRemove,
+    MapSize,
     SetEmpty,
     SetAdd,
     SetContains,
-    SetRemove
+    SetRemove,
+    SetSize
   ).map(op => op.name -> op).toMap
 }

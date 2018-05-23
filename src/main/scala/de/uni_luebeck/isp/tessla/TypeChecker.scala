@@ -327,6 +327,11 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           val v = mkTVar("Value")
           FunctionType(Seq(k.id, v.id), Seq(MapType(k, v), k), MapType(k, v), isLiftable = true)
 
+        case BuiltIn.MapSize =>
+          val k = mkTVar("Key")
+          val v = mkTVar("Value")
+          FunctionType(Seq(k.id, v.id), Seq(MapType(k, v)), IntType, isLiftable = true)
+
         case BuiltIn.SetEmpty =>
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(), SetType(t), isLiftable = false)
@@ -342,6 +347,11 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         case BuiltIn.SetRemove =>
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(SetType(t), t), SetType(t), isLiftable = true)
+
+        case BuiltIn.SetSize =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(SetType(t)), IntType, isLiftable = true)
+
       }
       builtIn -> typ
   }

@@ -2,12 +2,11 @@ in x: Events[Int]
 
 def seen: Events[Set[Int]] := default(Set_add(last(seen, x), x), Set_empty[Int])
 
-def new_or_old :=
-    if Set_contains(last(seen), x)
+def newOrOld :=
+    if Set_contains(last(seen, seen), x)
     then "old"
     else "new"
 
 def size := Set_size(seen)
-
 
 out *
