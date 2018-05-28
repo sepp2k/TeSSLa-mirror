@@ -4,8 +4,6 @@ import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.util.Lazy
 
 object TesslaCore extends HasUniqueIdentifiers {
-  final case class StreamDefinition(expression: Expression, typ: StreamType)
-
   final case class Specification(streams: Seq[(Identifier, StreamDefinition)],
                                  inStreams: Seq[(String, StreamType, Location)],
                                  outStreams: Seq[(String, StreamRef)]) {
@@ -14,6 +12,10 @@ object TesslaCore extends HasUniqueIdentifiers {
         streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +
         outStreams.map { case (name, stream) => s"out $stream as $name\n" }.mkString
     }
+  }
+
+  final case class StreamDefinition(expression: Expression, typ: StreamType) {
+    override def toString = s"$expression : $typ"
   }
 
   sealed abstract class Expression {
