@@ -10,12 +10,12 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   private val translatedStreams = mutable.Map[TesslaCore.Identifier, TesslaCore.StreamDefinition]()
   private val stack = mutable.ArrayStack[Location]()
 
-  case class EnvEntryWrapper(var entry: EnvEntry)
+  class EnvEntryWrapper(var entry: EnvEntry, val id: TypedTessla.Identifier)
 
   sealed abstract class EnvEntry
   case class Translated(result: Lazy[TranslationResult]) extends EnvEntry
-  case class Translating(loc: Location) extends EnvEntry
-  case class NotYetTranslated(entry: TypedTessla.VariableEntry, var closure: Env) extends EnvEntry {
+  class Translating(val loc: Location) extends EnvEntry
+  class NotYetTranslated(val entry: TypedTessla.VariableEntry, var closure: Env) extends EnvEntry {
     override def toString = s"NotYetTranslated($entry, ...)"
   }
 
@@ -25,6 +25,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   case class NilEntry(nil: TesslaCore.Nil) extends TranslationResult
   case class ValueEntry(value: TesslaCore.Value) extends TranslationResult
   case class MacroEntry(mac: TypedTessla.Macro, closure: Env) extends TranslationResult {
+    val memoized = mutable.Map[Map[TypedTessla.Identifier, TypedTessla.Identifier], Lazy[TranslationResult]]()
     override def toString = s"MacroEntry($mac, ...)"
   }
   case class BuiltInEntry(builtIn: BuiltIn) extends TranslationResult
@@ -54,13 +55,16 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case err: TesslaError =>
         throw WithStackTrace(err, stack)
       case _: StackOverflowError =>
-        throw WithStackTrace(Errors.StackOverflow(stack.pop()), stack)
+        throw WithStackTrace(StackOverflow(stack.pop()), stack)
     }
   }
 
   def createEnvForScope(scope: TypedTessla.Scope, parent: Env): Env = {
-    val entries = scope.variables.mapValues(entry => NotYetTranslated(entry, null)).toMap
-    val env = parent ++ entries.mapValues(EnvEntryWrapper)
+    val entries = scope.variables.mapValues(entry => new NotYetTranslated(entry, null)).toMap
+    val env = parent ++ entries.map {
+      case (id, entry) =>
+        id -> new EnvEntryWrapper(entry, id)
+    }
     entries.values.foreach(_.closure = env)
     env
   }
@@ -127,17 +131,17 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   }
 
   def translateEntry(env: Env, wrapper: EnvEntryWrapper): Unit = wrapper.entry match {
-    case NotYetTranslated(entry, closure) =>
-      translateExpression(closure, wrapper, entry.expression, entry.id.nameOpt, entry.typeInfo)
-    case Translating(loc) =>
-      throw InfiniteRecursion(loc)
+    case nyt: NotYetTranslated =>
+      translateExpression(nyt.closure, wrapper, nyt.entry.expression, nyt.entry.id.nameOpt, nyt.entry.typeInfo)
+    case t: Translating =>
+      throw InfiniteRecursion(t.loc)
     case _ =>
       /* Do nothing */
   }
 
   def translateExpression(env: Env, wrapper: EnvEntryWrapper, expression: TypedTessla.Expression, nameOpt: Option[String],
                           typ: TypedTessla.Type): Unit = {
-    wrapper.entry = Translating(expression.loc)
+    wrapper.entry = new Translating(expression.loc)
     expression match {
       case TypedTessla.BuiltInOperator(builtIn) =>
         wrapper.entry = Translated(Lazy(BuiltInEntry(builtIn)))
@@ -243,27 +247,39 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 }
             }
 
-          case Translated(Lazy(MacroEntry(mac, closure))) =>
+          case Translated(Lazy(entry: MacroEntry)) =>
             var posArgIdx = 0
             val args = call.args.map {
               case arg: TypedTessla.PositionalArgument =>
-                val param = mac.parameters(posArgIdx)
+                val param = entry.mac.parameters(posArgIdx)
                 posArgIdx += 1
                 param.id -> env(arg.id)
               case arg: TypedTessla.NamedArgument =>
-                mac.parameters.find(_.name == arg.name).get.id -> env(arg.id)
+                entry.mac.parameters.find(_.name == arg.name).get.id -> env(arg.id)
             }.toMap
-            val scopeWithoutParameters = new TypedTessla.Scope(mac.scope.parent)
-            mac.scope.variables.foreach {
-              case (_, entry) =>
-                entry.expression match {
+            val scopeWithoutParameters = new TypedTessla.Scope(entry.mac.scope.parent)
+            entry.mac.scope.variables.foreach {
+              case (_, variableEntry) =>
+                variableEntry.expression match {
                   case _: TypedTessla.Parameter => // do nothing
-                  case _ => scopeWithoutParameters.addVariable(entry)
+                  case _ => scopeWithoutParameters.addVariable(variableEntry)
                 }
             }
             stack.push(call.loc)
-            val innerEnv = createEnvForScope(scopeWithoutParameters, closure ++ args)
-            translateExpression(innerEnv, wrapper, mac.body, None, typ)
+            val argIds = args.mapValues(_.id)
+            println(s"$argIds --- ${entry.memoized}")
+            entry.memoized.get(argIds) match {
+              case Some(result) => wrapper.entry = Translated(result)
+              case None =>
+                val innerEnv = createEnvForScope(scopeWithoutParameters, entry.closure ++ args)
+                translateExpression(innerEnv, wrapper, entry.mac.body, None, typ)
+                wrapper.entry match {
+                  case Translated(result) =>
+                    entry.memoized(argIds) = result
+                  case _ =>
+                    throw InternalError("Result should have been translated")
+                }
+            }
             stack.pop()
           case other =>
             throw InternalError(s"Applying non-macro/builtin (${other.getClass.getSimpleName}) - should have been caught by the type checker.")
@@ -307,12 +323,12 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       if (visited.contains(currentId)) throw InfiniteRecursion(currentLoc)
       visited += currentId
       currentEnv(currentId).entry match {
-        case NotYetTranslated(entry, closure) =>
-          entry.expression match {
+        case nyt: NotYetTranslated =>
+          nyt.entry.expression match {
             case v: TypedTessla.Variable =>
               currentId = v.id
               currentLoc = v.loc
-              currentEnv = closure
+              currentEnv = nyt.closure
             case _ =>
               loop = false
           }
