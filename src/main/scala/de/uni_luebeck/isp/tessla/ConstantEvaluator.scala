@@ -267,12 +267,11 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
             }
             stack.push(call.loc)
             val argIds = args.mapValues(_.id)
-            println(s"$argIds --- ${entry.memoized}")
             entry.memoized.get(argIds) match {
               case Some(result) => wrapper.entry = Translated(result)
               case None =>
                 val innerEnv = createEnvForScope(scopeWithoutParameters, entry.closure ++ args)
-                translateExpression(innerEnv, wrapper, entry.mac.body, None, typ)
+                translateExpression(innerEnv, wrapper, entry.mac.body, nameOpt, typ)
                 wrapper.entry match {
                   case Translated(result) =>
                     entry.memoized(argIds) = result
