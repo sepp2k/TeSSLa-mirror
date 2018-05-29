@@ -9,7 +9,7 @@ out union
 out intersection
 
 -- stdlib
-def Set_collect(x) := {
-  def set := default(Set_add(last(set, x), x), Set_empty)
+def Set_collect[T](x: Events[T]) := {
+  def set: Events[Set[T]] := default(Set_add(last(set, x), x), Set_empty[T])
   set
 }

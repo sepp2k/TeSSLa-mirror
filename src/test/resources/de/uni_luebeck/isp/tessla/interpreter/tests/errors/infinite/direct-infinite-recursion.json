@@ -1,0 +1,4 @@
+{
+    "spec": "direct-infinite-recursion.tessla",
+    "expectedErrors": "direct-infinite-recursion.errors"
+}

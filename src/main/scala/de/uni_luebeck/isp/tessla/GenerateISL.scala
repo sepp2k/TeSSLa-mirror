@@ -1,19 +1,17 @@
 package de.uni_luebeck.isp.tessla
 
-
 object GenerateISL {
   sealed abstract class IslAst {
-    def toStringSeq(): Seq[String] = this match {
-      case CondAst(cond, thenBody, elseBody) => {
+    def toStringSeq: Seq[String] = this match {
+      case CondAst(cond, thenBody, elseBody) =>
         cond match {
-          case TrueCond => thenBody.flatMap{ p => p.toStringSeq() }
-          case StringCond(s) => (s"if ${s} then " +: thenBody.flatMap{ p => p.toStringSeq() }) ++
+          case TrueCond => thenBody.flatMap{ p => p.toStringSeq }
+          case StringCond(s) => (s"if $s then " +: thenBody.flatMap{ p => p.toStringSeq }) ++
             (elseBody match {
               case Seq() => Seq("fi")
-              case _ => ("else" +: elseBody.flatMap{ p => p.toStringSeq() }) ++ Seq("fi")
+              case _ => ("else" +: elseBody.flatMap{ p => p.toStringSeq }) ++ Seq("fi")
             })
         }
-      }
       case LogAst(log) => if(!log.matches("^\\s*$"))
         "log" +: Seq(log)
       else
@@ -64,16 +62,16 @@ object GenerateISL {
     println(generateForSpec(ast))
   }
 
-  def generateForSpec(spec: Tessla.Spec): String = {
-    spec.statements.map(generateForStatement).reduce(_++_).toStringSeq().filter(x => x != "").mkString("\n")
+  def generateForSpec(spec: Tessla.Specification): String = {
+    spec.statements.map(generateForStatement).reduce(_++_).toStringSeq.filter(_.nonEmpty).mkString("\n")
   }
 
   def generateForStatement(statement: Tessla.Statement): IslAst= {
     statement match {
-      case Tessla.Definition(_, _, _, body, _) =>
-        generateForExpr(body)
-      case Tessla.Out(expr, _, _) =>
-        generateForExpr(expr)
+      case d: Tessla.Definition =>
+        generateForExpr(d.body)
+      case o: Tessla.Out =>
+        generateForExpr(o.expr)
       case _ =>
         LogAst("")
     }
@@ -81,19 +79,16 @@ object GenerateISL {
 
   def generateForExpr(expr: Tessla.Expression): IslAst = {
     expr match {
-      case Tessla.MacroCall(id, args, _) =>
-        generateForMacro(id, args) ++ args.map {
+      case call: Tessla.MacroCall =>
+        generateForMacro(call.macroID, call.args) ++ call.args.map {
             case Tessla.NamedArgument(_, argExpr) =>
               generateForExpr(argExpr)
             case Tessla.PositionalArgument(argExpr) =>
               generateForExpr(argExpr)
           }.reduceLeft(_++_)
-      case Tessla.TypeAssertion(exprArg, _) =>
-        generateForExpr(exprArg)
-      case Tessla.Block(defs, exprArg,_) =>
-        generateForExpr(exprArg) ++ defs.map{
-          case Tessla.Definition(_, _, _, body, _) =>
-            generateForExpr(body)
+      case block: Tessla.Block =>
+        generateForExpr(block.expression) ++ block.definitions.map{ d =>
+          generateForExpr(d.body)
         }.reduce(_++_)
       case Tessla.Variable(id) => LogAst(generateForVariable(id))
       case _ =>
@@ -113,13 +108,13 @@ object GenerateISL {
     case _ => ""
   }
   def getIntValue(args: Seq[Tessla.Argument]): BigInt = args match {
-    case Seq(Tessla.PositionalArgument(Tessla.IntLiteral(value, _))) => value
-    case Seq(Tessla.NamedArgument(_,Tessla.IntLiteral(value, _))) => value
+    case Seq(Tessla.PositionalArgument(Tessla.Literal(Tessla.IntLiteral(value), _))) => value
+    case Seq(Tessla.NamedArgument(_, Tessla.Literal(Tessla.IntLiteral(value), _))) => value
     case _ => null
   }
   def getStringValue(args: Seq[Tessla.Argument]): String = args match {
-    case Seq(Tessla.PositionalArgument(Tessla.StringLiteral(value, _))) => value
-    case Seq(Tessla.NamedArgument(_,Tessla.StringLiteral(value, _))) => value
+    case Seq(Tessla.PositionalArgument(Tessla.Literal(Tessla.StringLiteral(value), _))) => value
+    case Seq(Tessla.NamedArgument(_, Tessla.Literal(Tessla.StringLiteral(value), _))) => value
     case _ => null
   }
   def generateForMacro(id: Tessla.Identifier, args: Seq[Tessla.Argument] ): IslAst = {
@@ -129,7 +124,7 @@ object GenerateISL {
           case null =>
             LogAst("line_reached")
           case value =>
-            CondAst(StringCond(s"""[lines:${value}]"""), Seq(LogAst("line_reached")), Seq())
+            CondAst(StringCond(s"""[lines:$value]"""), Seq(LogAst("line_reached")), Seq())
         }
       case Tessla.Identifier("function_call",_) =>
         getStringValue(args) match {
@@ -137,20 +132,20 @@ object GenerateISL {
           case null =>
             LogAst("function_calls")
           case value =>
-            CondAst(StringCond(s"""[function_calls:"${value}"]"""), Seq(LogAst("function_calls")), Seq())
+            CondAst(StringCond(s"""[function_calls:"$value"]"""), Seq(LogAst("function_calls")), Seq())
         }
       case Tessla.Identifier("function_return",_) =>
         getStringValue(args) match {
           case null =>
             LogAst("functions")
           case value =>
-            CondAst(StringCond(s"""&([functions:"${value}"], [opcodes: "ret"])"""), Seq(LogAst("functions"), LogAst("opcodes")), Seq())
+            CondAst(StringCond(s"""&([functions:"$value"], [opcodes: "ret"])"""), Seq(LogAst("functions"), LogAst("opcodes")), Seq())
         }
       case Tessla.Identifier("runtime",_) =>
         getStringValue(args) match {
           case value =>
             CondAst( TrueCond,
-            Seq(CondAst(StringCond(s"""&([functions:"${value}"], [opcodes: "ret"])"""), Seq(LogAst("functions"), LogAst("opcodes")), Seq()),
+            Seq(CondAst(StringCond(s"""&([functions:"$value"], [opcodes: "ret"])"""), Seq(LogAst("functions"), LogAst("opcodes")), Seq()),
               LogAst("function_calls")),
               Seq())
           // why is there no default case?
@@ -158,19 +153,19 @@ object GenerateISL {
       case Tessla.Identifier("store_exec",_) =>
         getIntValue(args) match {
           case value =>
-            CondAst(StringCond(s"""if &([lines: ${value}], [opcodes: "store"])"""), Seq(LogAst("line"), LogAst("opcode")), Seq())
+            CondAst(StringCond(s"""if &([lines: $value], [opcodes: "store"])"""), Seq(LogAst("line"), LogAst("opcode")), Seq())
         }
       case Tessla.Identifier("load_exec",_) =>
         getIntValue(args) match {
           case value =>
-            CondAst(StringCond(s"""if &([lines: ${value}], [opcodes: "load"])"""), Seq(LogAst("line"), LogAst("opcode")), Seq())
+            CondAst(StringCond(s"""if &([lines: $value], [opcodes: "load"])"""), Seq(LogAst("line"), LogAst("opcode")), Seq())
         }
       case Tessla.Identifier("thread_id_on",_) =>
         args match {
-          case Seq(Tessla.PositionalArgument(Tessla.MacroCall(macroID, macroArgs, _))) =>
-            generateForMacro(macroID, macroArgs).insertOnLog(LogAst("thread_id"))
-          case Seq(Tessla.NamedArgument(_, Tessla.MacroCall(macroID, macroArgs, _))) =>
-            generateForMacro(macroID, macroArgs).insertOnLog(LogAst("thread_id"))
+          case Seq(Tessla.PositionalArgument(call: Tessla.MacroCall)) =>
+            generateForMacro(call.macroID, call.args).insertOnLog(LogAst("thread_id"))
+          case Seq(Tessla.NamedArgument(_, call: Tessla.MacroCall)) =>
+            generateForMacro(call.macroID, call.args).insertOnLog(LogAst("thread_id"))
         }
       case _ =>
         LogAst("")

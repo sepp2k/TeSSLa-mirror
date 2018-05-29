@@ -1,5 +1,0 @@
-{
-  "spec": "abstract_finite_time_queue.tessla",
-  "input": "abstract_finite_time_queue.input",
-  "expectedOutput": "abstract_finite_time_queue.output"
-}

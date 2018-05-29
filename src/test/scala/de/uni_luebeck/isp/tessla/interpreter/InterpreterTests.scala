@@ -143,7 +143,10 @@ class InterpreterTests extends FunSuite {
                 case Failure(errors, _) =>
                   assert(expErr.isDefined,
                     s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
-                  assertEqualSets(errors.map(_.toString).toSet, testSource(expErr.get).getLines.toSet, "errors")
+                  // Only split on new lines if the next line is not indented because otherwise it's a continuation
+                  // and still part of the same error message (e.g. a stack trace)
+                  val expectedErrors = testSource(expErr.get).mkString.split("\n(?! )").toSet
+                  assertEqualSets(errors.map(_.toString).toSet, expectedErrors, "errors")
               }
               if (expWarn.isDefined) {
                 assertEqualSets(result.warnings.map(_.toString).toSet, testSource(expWarn.get).getLines.toSet, "warnings")
@@ -168,7 +171,10 @@ class InterpreterTests extends FunSuite {
               case Failure(errors, _) =>
                 assert(expErr.isDefined,
                   s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
-                assertEqualSets(errors.map(_.toString).toSet, testSource(expErr.get).getLines.toSet, "errors")
+                // Only split on new lines if the next line is not indented because otherwise it's a continuation
+                // and still part of the same error message (e.g. a stack trace)
+                val expectedErrors = testSource(expErr.get).mkString.split("\n(?! )").toSet
+                assertEqualSets(errors.map(_.toString).toSet, expectedErrors, "errors")
             }
             if (expWarn.isDefined) {
               assertEqualSets(result.warnings.map(_.toString).toSet, testSource(expWarn.get).getLines.toSet, "warnings")

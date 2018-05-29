@@ -6,7 +6,7 @@ def mult := a * b
 def sum := a + b
 def sub := a - b
 def diff := if (a < b) then b - a else a - b
-def defined(a) := default(const(true, a), false)
+def defined[T](a: Events[T]) := default(const(true, a), false)
 
 out defined(a)
 out *

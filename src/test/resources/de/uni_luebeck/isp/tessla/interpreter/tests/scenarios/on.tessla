@@ -1,4 +1,4 @@
-def on(trigger, stream) :=
+def on[T](trigger: Events[Unit], stream: Events[T]) :=
   if time(trigger) >= time(stream) then stream
 
 in x: Events[Unit]

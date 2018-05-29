@@ -10,7 +10,7 @@ name := "tessla"
 
 organization := "de.uni_luebeck.isp"
 
-version := s"0.4.8-SNAPSHOT"
+version := s"0.5.0-SNAPSHOT"
 
 scalaVersion := "2.12.3"
 
@@ -30,7 +30,6 @@ publishTo := {
 credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials")
 
 libraryDependencies ++= Seq(
-  "com.chuusai" %% "shapeless" % "2.3.2",
   "com.github.sepp2k" %% "sexyopt" % "0.1.1",
   "de.uni_luebeck.isp" %% "compacom" % "0.2.8",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",

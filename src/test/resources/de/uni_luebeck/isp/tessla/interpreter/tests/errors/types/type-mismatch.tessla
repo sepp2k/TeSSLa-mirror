@@ -1,0 +1,22 @@
+def x: Int := "hello"
+def y: String := 42
+
+def f(x: Int): String := x
+
+def g(x: Int): Int := x
+out g("string")
+
+out g
+
+def hof(f: (Int) => Unit) := f(23)
+out hof(g)
+
+def generic[T](x: T, y: T): T := x
+out generic(42, "string")
+
+-- Violating implicit value type constraint
+out generic(nil[Int], nil[Int])
+out generic(g, g)
+
+-- No if-then for values
+def i: Int := if true then 42

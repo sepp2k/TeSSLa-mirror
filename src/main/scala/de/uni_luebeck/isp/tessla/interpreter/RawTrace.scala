@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.{TracesOperationError, TracesUnknownIdentifierError}
 import de.uni_luebeck.isp.tessla.{Location, TesslaCore}
-import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
+import de.uni_luebeck.isp.tessla.TimeUnit
 
 object RawTrace{
   sealed abstract class Item
@@ -16,7 +16,7 @@ object RawTrace{
   trait TraceOp {
     def loc: Location
 
-    def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue
+    def eval(env: Map[String, BigInt]): TesslaCore.Value
   }
 
   trait TracesUnaryOp extends TraceOp {
@@ -48,7 +48,7 @@ object RawTrace{
   case class EventRange(loc: Location, timeRange: TimeRange, stream: Identifier, value: TraceOp) extends Item{
     override def toString: String = s"$timeRange: $stream = $value"
 
-    def evalValue: TesslaCore.LiteralValue =
+    def evalValue: TesslaCore.Value =
       value.eval(if (timeRange.id.isDefined) {
         Map(timeRange.id.get.name -> timeRange.from)
       } else {
@@ -57,84 +57,84 @@ object RawTrace{
   }
 
   case class Add(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = (lhs.eval(env), rhs.eval(env)) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
       case (TesslaCore.IntLiteral(val1, _), TesslaCore.IntLiteral(val2, _)) => TesslaCore.IntLiteral(val1 + val2, loc)
       case (l, r) => throw TracesOperationError(loc, "+", l, r)
     }
   }
 
   case class Sub(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = (lhs.eval(env), rhs.eval(env)) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
       case (TesslaCore.IntLiteral(val1, _), TesslaCore.IntLiteral(val2, _)) => TesslaCore.IntLiteral(val1 - val2, loc)
       case (l, r) => throw TracesOperationError(loc, "-", l, r)
     }
   }
 
   case class Mult(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = (lhs.eval(env), rhs.eval(env)) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
       case (TesslaCore.IntLiteral(val1, _), TesslaCore.IntLiteral(val2, _)) => TesslaCore.IntLiteral(val1 * val2, loc)
       case (l, r) => throw TracesOperationError(loc, "*", l, r)
     }
   }
 
   case class Div(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = (lhs.eval(env), rhs.eval(env)) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
       case (TesslaCore.IntLiteral(val1, _), TesslaCore.IntLiteral(val2, _)) => TesslaCore.IntLiteral(val1 / val2, loc)
       case (l, r) => throw TracesOperationError(loc, "/", l, r)
     }
   }
 
   case class Mod(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = (lhs.eval(env), rhs.eval(env)) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
       case (TesslaCore.IntLiteral(val1, _), TesslaCore.IntLiteral(val2, _)) => TesslaCore.IntLiteral(val1 % val2, loc)
       case (l, r) => throw TracesOperationError(loc, "%", l, r)
     }
   }
 
   case class Neg(exp: TraceOp, loc: Location) extends TracesUnaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = exp.eval(env) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = exp.eval(env) match {
       case TesslaCore.IntLiteral(v, _) => TesslaCore.IntLiteral(-v, loc)
       case transExp => throw TracesOperationError(loc, "-", transExp)
     }
   }
 
   case class And(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = (lhs.eval(env), rhs.eval(env)) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
       case (TesslaCore.BoolLiteral(val1, _), TesslaCore.BoolLiteral(val2, _)) => TesslaCore.BoolLiteral(val1 && val2, loc)
       case (l, r) => throw TracesOperationError(loc, "&&", l, r)
     }
   }
 
   case class Implies(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = (lhs.eval(env), rhs.eval(env)) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
       case (TesslaCore.BoolLiteral(val1, _), TesslaCore.BoolLiteral(val2, _)) => TesslaCore.BoolLiteral(!val1 || val2, loc)
       case (l, r) => throw TracesOperationError(loc, "->", l, r)
     }
   }
 
   case class Equiv(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = (lhs.eval(env), rhs.eval(env)) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
       case (TesslaCore.BoolLiteral(val1, _), TesslaCore.BoolLiteral(val2, _)) => TesslaCore.BoolLiteral(val1 == val2, loc)
       case (l, r) => throw TracesOperationError(loc, "<->", l, r)
     }
   }
 
   case class Or(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = (lhs.eval(env), rhs.eval(env)) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
       case (TesslaCore.BoolLiteral(val1, _), TesslaCore.BoolLiteral(val2, _)) => TesslaCore.BoolLiteral(val1 || val2, loc)
       case (l, r) => throw TracesOperationError(loc, "||", l, r)
     }
   }
 
   case class Xor(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = (lhs.eval(env), rhs.eval(env)) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
       case (TesslaCore.BoolLiteral(val1, _), TesslaCore.BoolLiteral(val2, _)) => TesslaCore.BoolLiteral((val1 && !val2) || (!val1 && val2), loc)
       case (l, r) => throw TracesOperationError(loc, "^", l, r)
     }
   }
 
   case class Not(exp: TraceOp, loc: Location) extends TracesUnaryOp {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = exp.eval(env) match {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = exp.eval(env) match {
       case TesslaCore.BoolLiteral(v, _) => TesslaCore.BoolLiteral(!v, loc)
       case transExp => throw TracesOperationError(loc, "!", transExp)
     }
@@ -142,14 +142,14 @@ object RawTrace{
 
   trait Atomic extends TraceOp
 
-  case class Literal(v: TesslaCore.LiteralValue, loc: Location) extends Atomic {
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue = v
+  case class Literal(v: TesslaCore.Value, loc: Location) extends Atomic {
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value = v
   }
 
   case class Identifier(loc: Location, name: String) extends Atomic {
     override def toString: String = "\"" + name + "\""
 
-    override def eval(env: Map[String, BigInt]): TesslaCore.LiteralValue =
+    override def eval(env: Map[String, BigInt]): TesslaCore.Value =
       if (env.isDefinedAt(name)) {
         TesslaCore.IntLiteral(env(name), loc)
       } else {

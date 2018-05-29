@@ -1,0 +1,2 @@
+def x: Int := y + 1
+def y: Int := x * 2

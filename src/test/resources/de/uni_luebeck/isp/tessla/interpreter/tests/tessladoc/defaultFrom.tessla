@@ -1,4 +1,4 @@
 in x: Events[Int]
 in y: Events[Int]
-def z := default(x,y)
+def z := defaultFrom(x,y)
 out z

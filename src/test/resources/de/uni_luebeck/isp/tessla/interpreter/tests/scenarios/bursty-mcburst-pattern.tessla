@@ -1,5 +1,5 @@
-def resetCount(values, reset) := {
-    def rc :=
+def resetCount[T](values: Events[T], reset: Events[Unit]) := {
+    def rc: Events[Int] :=
         default(
             if default(time(reset) > time(values), false)
             then 0
@@ -10,10 +10,10 @@ def resetCount(values, reset) := {
     rc
 }
 
-def trigger(condition) :=
+def trigger(condition: Events[Bool]) :=
     if condition && !last(condition, condition) then ()
 
-def countSince(e, condition) :=
+def countSince[T](e: Events[T], condition: Events[Bool]) :=
     resetCount(e, trigger(condition))
 
 in a: Events[Int]
@@ -26,8 +26,8 @@ out e
 def esSinceAGreaterThanB := countSince(e, a > b)
 
 -- burstLength = 5, wait = 4, burstAmount = 3
-def burstStarts :=
-    default(
+def burstStarts: Events[Unit] :=
+    defaultFrom(
         if time(e) - last(time(burstStarts), e) >= 9
         then e,
         e)

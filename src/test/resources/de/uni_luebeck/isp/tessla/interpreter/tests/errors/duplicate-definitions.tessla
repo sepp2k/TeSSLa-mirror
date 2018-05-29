@@ -1,0 +1,6 @@
+in x: Events[Int]
+in x: Events[Int]
+
+def y := 42
+def y := 42
+def y := 42

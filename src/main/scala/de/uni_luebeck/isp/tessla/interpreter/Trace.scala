@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{Location, Tessla, TesslaCore}
-import de.uni_luebeck.isp.tessla.TimeUnit.TimeUnit
+import de.uni_luebeck.isp.tessla.{Location, TesslaCore}
+import de.uni_luebeck.isp.tessla.TimeUnit
 
 object Trace {
   sealed abstract class Item
@@ -9,7 +9,7 @@ object Trace {
   type Identifier = RawTrace.Identifier
   val Identifier = RawTrace.Identifier
 
-  case class Event(loc: Location, timeStamp: TimeStamp, stream: Identifier, value: TesslaCore.LiteralValue) extends Item {
+  case class Event(loc: Location, timeStamp: TimeStamp, stream: Identifier, value: TesslaCore.Value) extends Item {
     override def toString: String = s"$timeStamp: ${stream.name} = $value"
   }
 

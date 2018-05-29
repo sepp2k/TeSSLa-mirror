@@ -4,7 +4,7 @@ import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, With
 import de.uni_luebeck.isp.compacom
 import de.uni_luebeck.isp.tessla.Errors.ParserError
 
-class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Parsers {
+class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] with Parsers {
   override def translateSpec(source: TesslaSource) = {
     val p =  new Parsers(source.path)
     parseAll(p.spec, source.src) match {
@@ -22,6 +22,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
     case object OUT extends Token("out")
 
     case object IN extends Token("in")
+
+    case object STATIC extends Token("static")
 
     case object IF extends Token("if")
 
@@ -71,6 +73,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
 
     case object EQEQ extends Token("==")
 
+    case object ROCKET extends Token("=>")
+
     case object EQ extends Token("=")
 
     case object ANDAND extends Token("&&")
@@ -95,6 +99,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
 
     case object BANG extends Token("!")
 
+    case object AT extends Token("@")
+
     case object INCLUDE extends Token("include")
 
   }
@@ -104,10 +110,10 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
 
     import tokens._
 
-    override val keywords = List(DEFINE, DEF, OUT, IN, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
+    override val keywords = List(DEFINE, DEF, OUT, IN, STATIC, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, LBRACE, RBRACE, PERCENT,
-      LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS, MINUS, STAR,
-      SLASH, BANG)
+      LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, ROCKET, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS, MINUS,
+      STAR, SLASH, BANG, AT)
     override val comments = List("--" -> "\n", "#" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c) || c == '.'
@@ -119,9 +125,9 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
 
   class Parsers(path: String) {
 
-    def spec: Parser[Tessla.Spec] = include.* ~ statement.* ^^ {
+    def spec: Parser[Tessla.Specification] = include.* ~ statement.* ^^ {
       case (includes, statements) =>
-        Tessla.Spec(includes.flatMap(_.statements) ++ statements)
+        Tessla.Specification(includes.flatMap(_.statements) ++ statements)
     }
 
     def include = INCLUDE ~> stringLiteral ^^ { file =>
@@ -139,14 +145,29 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
     }
 
     def define =
-      DEFINE ^^^! {
-        loc => warn(Location(loc, path), "The keyword 'define' is deprecated, use 'def' instead.")
+      DEFINE ^^! { (loc, tok) =>
+        warn(Location(loc, path), "The keyword 'define' is deprecated, use 'def' instead.")
+        tok
       } | DEF
 
+    def annotation = AT ~> identifier ^^! { (loc, id) => Tessla.Identifier(id.name, Location(loc, path)) }
+
+    def definitionHeader =
+      (annotation.* ~ define) ~ identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.? ^^! {(loc, ast) =>
+        (loc, ast)
+      }
+
     def definition =
-      (define ~> identifier ~ parameters.? ~ typeAnnotation.? ~ (COLONEQ ~> expression)) ^^! {
-        case (loc, (((name, args), returnType), expr)) =>
-          Tessla.Definition(name, args getOrElse Seq(), returnType, expr, Location(loc, path))
+      (definitionHeader ~ (COLONEQ ~> expression)) ^^ {
+        case ((brokenHeaderLoc, (((((annotations, defToken), name), typeParams), params), returnType)), expr) =>
+          val startLoc = annotations match {
+            case Seq() => Location(defToken.loc, path)
+            case firstAnnotation +: _ => firstAnnotation.loc
+          }
+          val loc = startLoc.merge(expr.loc)
+          val headerLoc = startLoc.merge(Location(compacom.Location(brokenHeaderLoc.to, brokenHeaderLoc.to), path))
+          Tessla.Definition(annotations, name, typeParams.getOrElse(Seq()), params.getOrElse(Seq()),
+            returnType, headerLoc, expr, loc)
       }
 
     def statement: Parser[Tessla.Statement] =
@@ -172,36 +193,47 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
 
     def typeAnnotation: Parser[Tessla.Type] = COLON ~> `type`
 
-    def `type`: Parser[Tessla.Type] = identifier ~ typeArguments.? ^^! {
-      case (_, (name, None)) => Tessla.SimpleType(name)
-      case (loc, (name, Some(args))) => Tessla.GenericType(name, args, Location(loc, path))
-    }
+    def `type`: Parser[Tessla.Type] =
+      identifier ~ typeArguments.? ^^! {
+        case (_, (name, None)) => Tessla.SimpleType(name)
+        case (loc, (name, Some(args))) => Tessla.TypeApplication(name, args, Location(loc, path))
+      } |
+        (LPAREN ~> repsep(`type`, COMMA) <~ RPAREN) ~ (ROCKET ~> `type`) ^^! {
+          case (loc, (parameterTypes, returnType)) =>
+            Tessla.FunctionType(parameterTypes, returnType, Location(loc, path))
+        }
+
 
     def typeArguments: Parser[Seq[Tessla.Type]] = LBRACKET ~> rep1sep(`type`, COMMA) <~ RBRACKET
 
-    def expression: Parser[Tessla.Expression] = ifThenElse | typeAssertion
+    def typeParameters: Parser[Seq[Tessla.Identifier]] = LBRACKET ~> rep1sep(identifier, COMMA) <~ RBRACKET
+
+    def expression: Parser[Tessla.Expression] = ifThenElse | staticIfThenElse | infixExpression
+
+    def staticIfThenElse = (STATIC ~> IF ~> expression) ~ (THEN ~> expression) ~ (ELSE ~> expression) ^^! {
+      case (loc, ((cond, thenCase), elseCase)) =>
+        Tessla.StaticIfThenElse(cond, thenCase, elseCase, Location(loc, path))
+    }
 
     def ifThenElse = (IF ~ expression) ~ (THEN ~> expression) ~ (ELSE ~> expression).? ^^! {
       case (loc, (((ifToken, cond), thenCase), Some(elseCase))) =>
         Tessla.MacroCall(Tessla.Identifier("if then else", Location(ifToken.loc, path)),
-          List(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
+          Seq(),
+          Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
           Location(loc, path))
       case (loc, (((ifToken, cond), thenCase), None)) =>
         Tessla.MacroCall(
           Tessla.Identifier("if then", Location(ifToken.loc, path)),
-          List(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase)), Location(loc, path))
-    }
-
-    def typeAssertion: Parser[Tessla.Expression] = infixExpression ~ typeAnnotation.? ^^ {
-      case (expr, None) => expr
-      case (expr, Some(assertedType)) => Tessla.TypeAssertion(expr, assertedType)
+          Seq(),
+          Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase)), Location(loc, path))
     }
 
     def infixOp(loc: compacom.Location, lhs: Tessla.Expression, rhss: Seq[(WithLocation[Token], Tessla.Expression)]) = {
       rhss.foldLeft(lhs) {
         case (l, (op, r)) =>
           Tessla.MacroCall(Tessla.Identifier(op.value.string, Location(op.loc, path)),
-            List(Tessla.PositionalArgument(l), Tessla.PositionalArgument(r)),
+            Seq(),
+            Seq(Tessla.PositionalArgument(l), Tessla.PositionalArgument(r)),
             Location(loc, path))
       }
     }
@@ -244,19 +276,22 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
       BANG ~ atomicExpression ^^! {
         case (loc, (op, expr)) =>
           Tessla.MacroCall(Tessla.Identifier("!", Location(op.loc, path)),
-            List(Tessla.PositionalArgument(expr)),
+            Seq(),
+            Seq(Tessla.PositionalArgument(expr)),
             Location(loc, path))
       } |
         TILDE ~ atomicExpression ^^! {
           case (loc, (op, expr)) =>
             Tessla.MacroCall(Tessla.Identifier("~", Location(op.loc, path)),
-              List(Tessla.PositionalArgument(expr)),
+              Seq(),
+              Seq(Tessla.PositionalArgument(expr)),
               Location(loc, path))
         } |
         MINUS ~ atomicExpression ^^! {
           case (loc, (op, expr)) =>
-            Tessla.MacroCall(Tessla.Identifier("-", Location(op.loc, path)),
-              List(Tessla.PositionalArgument(expr)),
+            Tessla.MacroCall(Tessla.Identifier("unary -", Location(op.loc, path)),
+              Seq(),
+              Seq(Tessla.PositionalArgument(expr)),
               Location(loc, path))
         } |
         atomicExpression
@@ -265,7 +300,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
 
     def group: Parser[Tessla.Expression] = (LPAREN ~> expression.? <~ RPAREN) ^^! {
       case (_, Some(expr)) => expr
-      case (loc, None) => Tessla.Unit(Location(loc, path))
+      case (loc, None) => Tessla.Literal(Tessla.Unit, Location(loc, path))
     }
 
     def block = (LBRACE ~> definition.* ~ expression <~ RBRACE) ^^! {
@@ -273,34 +308,34 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Spec] with Pars
         Tessla.Block(statements, expr, Location(loc, path))
     }
 
-    def variableOrMacroCall: Parser[Tessla.Expression] = identifier ~ arguments.? ^^! {
-      case (_, (name, None)) => Tessla.Variable(name)
-      case (loc, (name, Some(args))) => Tessla.MacroCall(name, args, Location(loc, path))
+    def variableOrMacroCall: Parser[Tessla.Expression] = identifier ~ typeArguments.? ~ arguments.? ^^! {
+      case (_, ((name, None), None)) =>
+        Tessla.Variable(name)
+      case (loc, ((name, typeArgs), args)) =>
+        Tessla.MacroCall(name, typeArgs.getOrElse(Seq()), args.getOrElse(Seq()), Location(loc, path))
     }
 
-    def literal: Parser[Tessla.Expression] = intLiteral | stringLiteral | boolLiteral
+    def literal: Parser[Tessla.Expression] = (intLiteral | stringLiteral | boolLiteral) ^^! {
+      case (loc, lit) => Tessla.Literal(lit, Location(loc, path))
+    }
 
     def boolLiteral: Parser[Tessla.BoolLiteral] =
-      TRUE ^^^! {
-        loc => Tessla.BoolLiteral(true, Location(loc, path))
-      } |
-        FALSE ^^^! {
-          loc => Tessla.BoolLiteral(false, Location(loc, path))
-        }
+      TRUE ^^^ Tessla.BoolLiteral(true) |
+      FALSE ^^^ Tessla.BoolLiteral(false)
 
-    def intLiteral: Parser[Tessla.Expression] = matchToken("integer", Set("<integer>")) {
+    def intLiteral: Parser[Tessla.LiteralValue] = matchToken("integer", Set("<integer>")) {
       case WithLocation(_, INT(value)) => BigInt(value)
-    } ~ timeUnit.? ^^! {
-      case (loc, (value, None)) => Tessla.IntLiteral(value, Location(loc, path))
-      case (loc, (value, Some(unit))) => Tessla.TimeLiteral(value, unit, Location(loc, path))
+    } ~ timeUnit.? ^^ {
+      case (value, None) => Tessla.IntLiteral(value)
+      case (value, Some(unit)) => Tessla.TimeLiteral(value, unit)
     }
 
-    def timeUnit: Parser[TimeUnit.TimeUnit] = matchToken("identifier", Set("<identifier>")) {
+    def timeUnit: Parser[TimeUnit] = matchToken("identifier", Set("<identifier>")) {
       case WithLocation(loc, ID(name)) => TimeUnit.fromString(name, Location(loc, path))
     }
 
     def stringLiteral: Parser[Tessla.StringLiteral] = matchToken("string", Set("<string>")) {
-      case WithLocation(loc, STRING(value)) => Tessla.StringLiteral(value, Location(loc, path))
+      case WithLocation(_, STRING(value)) => Tessla.StringLiteral(value)
     }
 
     def arguments: Parser[Seq[Tessla.Argument]] = LPAREN ~> rep1sep(argument, COMMA) <~ RPAREN

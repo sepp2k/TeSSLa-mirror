@@ -2,6 +2,19 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors.UnknownTimeUnit
 
+sealed abstract class TimeUnit {
+  val factor: BigInt
+
+  def loc: Location
+
+  def <(that: TimeUnit): Boolean = factor < that.factor
+
+  def convertTo(that: TimeUnit): Option[BigInt] = {
+    if (factor >= that.factor) Some(factor / that.factor)
+    else None
+  }
+}
+
 object TimeUnit {
   def fromString(str: String, loc: Location): TimeUnit = str.replaceAll("\"", "") match {
     case "fs" => Femtos(loc)
@@ -20,16 +33,6 @@ object TimeUnit {
   def parse(source: TesslaSource) = {
     val unitString = source.src.mkString("")
     fromString(unitString, Location.forWholeFile(unitString, source.path))
-  }
-
-  sealed abstract class TimeUnit {
-    val factor: BigInt
-
-    def loc: Location
-
-    def <(that: TimeUnit): Boolean = factor < that.factor
-
-    def convertTo(that: TimeUnit): BigInt = factor / that.factor
   }
 
   case class Femtos(loc: Location) extends TimeUnit {

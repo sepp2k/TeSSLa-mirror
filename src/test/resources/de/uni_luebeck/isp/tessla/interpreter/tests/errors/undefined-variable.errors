@@ -1,0 +1,3 @@
+/errors/undefined-variable.tessla(1,5 - 1,6): Undefined variable a
+/errors/undefined-variable.tessla(2,5 - 2,6): Undefined variable b
+/errors/undefined-variable.tessla(3,5 - 3,6): Undefined variable c

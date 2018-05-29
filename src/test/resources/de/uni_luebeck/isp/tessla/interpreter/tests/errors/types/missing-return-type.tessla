@@ -1,0 +1,4 @@
+def lastn[T, U](values: Events[T], trigger: Events[U], n: Int) :=
+  static if n == 0
+  then values
+  else last(lastn(values, trigger, n-1), trigger)

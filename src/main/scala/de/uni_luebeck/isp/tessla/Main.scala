@@ -1,11 +1,9 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Errors.{InputTypeMismatch, TesslaError, TesslaErrorWithTimestamp, UndeclaredInputStreamError}
+import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.interpreter._
 import sexyopt.SexyOpt
-
-import scala.collection.mutable
 
 object Main extends SexyOpt {
   override val programName = "tessla"
@@ -45,7 +43,10 @@ object Main extends SexyOpt {
       case Failure(errors, warnings) =>
         if (diagnostics) {
           warnings.foreach(w => System.err.println(s"Warning: $w"))
-          errors.foreach(e => System.err.println(s"Error: $e"))
+          errors.foreach { e =>
+            System.err.println(s"Error: $e")
+            if (debug) e.printStackTrace()
+          }
           System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors")
         }
         sys.exit(1)

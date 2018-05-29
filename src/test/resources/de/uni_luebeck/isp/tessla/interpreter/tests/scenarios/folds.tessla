@@ -1,0 +1,15 @@
+in x: Events[Int]
+
+def fold[T,U](f: (Events[T], Events[U]) => Events[T], start: T, stream: Events[U]): Events[T] := {
+  def result: Events[T] := default(f(last(result, stream), stream), start)
+  result
+}
+
+@liftable
+def add(x: Int, y: Int) := x+y
+
+@liftable
+def add1(x: Int, y: Int) := x+1
+
+out fold(add, 0, x) as sum
+out fold(add1, 0, x) as eventCount

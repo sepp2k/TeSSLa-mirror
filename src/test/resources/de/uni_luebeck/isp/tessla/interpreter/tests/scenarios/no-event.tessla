@@ -2,7 +2,8 @@ in a: Events[Unit]
 in b: Events[Unit]
 in z: Events[Unit]
 
-def merge(x,y) := if default(x==x, false) || default(y==y, false) then ()
+def merge[T, U](x: Events[T], y: Events[U]) :=
+  if default(x==x, false) || default(y==y, false) then ()
 
 def c := merge(a,b)
 

@@ -1,0 +1,9 @@
+0: add(1, 2) = 3
+2: add(x, y) = 65
+2: second(x, y) = 42
+3: add(x, y) = 36
+3: second(x, y) = 13
+4: add(x, y) = 3
+4: second(x, y) = 2
+5: add(x, y) = 7
+5: second(x, y) = 4

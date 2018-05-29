@@ -4,23 +4,22 @@ import scala.collection.mutable
 
 object DepthChecker {
   def nestingDepth(spec: TesslaCore.Specification): Int = {
-    val memTable: mutable.Map[String, Int] = mutable.Map()
+    val memTable: mutable.Map[TesslaCore.Identifier, Int] = mutable.Map()
+    val streams = spec.streams.toMap
     (spec.outStreams.map {
       case (_, stream) =>
-        nestingDepth(spec.streams, stream, memTable)
+        nestingDepth(streams, stream, memTable)
     } ++ spec.streams.collect {
-      case (name, l: TesslaCore.Last) =>
-        nestingDepth(spec.streams, l.values, memTable)
-      case (name, dl: TesslaCore.DelayedLast) =>
+      case (_, TesslaCore.StreamDefinition(l: TesslaCore.Last, _)) =>
+        nestingDepth(streams, l.values, memTable)
+      case (_, TesslaCore.StreamDefinition(dl: TesslaCore.DelayedLast, _)) =>
         Math.max(
-          nestingDepth(spec.streams, dl.values, memTable),
-          nestingDepth(spec.streams, dl.delays, memTable))
+          nestingDepth(streams, dl.values, memTable),
+          nestingDepth(streams, dl.delays, memTable))
     }).fold(0)(math.max)
   }
 
-  def nestingDepth(streams: Map[String, TesslaCore.Expression], stream: TesslaCore.StreamRef, memoized: mutable.Map[String, Int]): Int = {
-    if (memoized.contains(stream.name)) return memoized(stream.name)
-
+  def nestingDepth(streams: Map[TesslaCore.Identifier, TesslaCore.StreamDefinition], stream: TesslaCore.StreamRef, memoized: mutable.Map[TesslaCore.Identifier, Int]): Int = {
     def visitChild(child: TesslaCore.StreamRef): Int = {
       nestingDepth(streams, child, memoized)
     }
@@ -28,7 +27,9 @@ object DepthChecker {
     stream match {
       case _: TesslaCore.Nil | _: TesslaCore.InputStream => 0
       case s: TesslaCore.Stream =>
-        val childDepth = streams(s.name) match {
+        if (memoized.contains(s.id)) return memoized(s.id)
+
+        val childDepth = streams(s.id).expression match {
           case l: TesslaCore.Lift =>
             l.args.map(visitChild).max
           case t: TesslaCore.Time =>
@@ -39,10 +40,14 @@ object DepthChecker {
             Math.max(visitChild(d.valueStream), visitChild(d.defaultStream))
           case l: TesslaCore.Last =>
             visitChild(l.clock)
+          case m: TesslaCore.Merge =>
+            Math.max(visitChild(m.stream1), visitChild(m.stream2))
+          case c: TesslaCore.Const =>
+            visitChild(c.stream)
           case dl: TesslaCore.DelayedLast =>
             0
         }
-        memoized(s.name) = 1 + childDepth
+        memoized(s.id) = 1 + childDepth
         1 + childDepth
     }
   }

@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 object Tessla {
-  case class Spec(statements: Seq[Statement]) {
+  case class Specification(statements: Seq[Statement]) {
     override def toString = statements.mkString("\n")
   }
 
@@ -9,19 +9,27 @@ object Tessla {
     override def toString = name
   }
 
-  abstract sealed class Statement
+  abstract sealed class Statement {
+    def loc: Location
+  }
 
-  case class Definition(
+  case class Definition( annotations: Seq[Identifier],
                          id: Identifier,
+                         typeParameters: Seq[Identifier],
                          parameters: Seq[Parameter],
                          returnType: Option[Type],
+                         headerLoc: Location,
                          body: Expression,
                          loc: Location) extends Statement {
     override def toString = {
+      val annotationList = annotations.map("@" + _ + "\n").mkString
+      val typeParameterList =
+        if (typeParameters.isEmpty) ""
+        else typeParameters.mkString("[", ", ", "]")
       val parameterList =
         if (parameters.isEmpty) ""
         else parameters.mkString("(", ", ", ")")
-      s"def $id$parameterList := $body"
+      s"${annotationList}def $id$typeParameterList$parameterList := $body"
     }
   }
 
@@ -64,56 +72,60 @@ object Tessla {
 
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
-  case class MacroCall(macroID: Identifier, args: Seq[Argument], loc: Location) extends Expression {
+  case class MacroCall(macroID: Identifier, typeArgs: Seq[Type], args: Seq[Argument], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
+      val typeArgList =
+        if (typeArgs.isEmpty) ""
+        else typeArgs.mkString("[", ", ", "]")
+
       val str = (macroID.name, args) match {
-        case (ID_PATTERN(), _) | (_, Seq()) => s"${macroID.name}(${args.mkString(", ")})"
+        case (ID_PATTERN(), _) | (_, Seq()) => s"$macroID$typeArgList(${args.mkString(", ")})"
         case ("if then", Seq(cond, thenCase)) =>
           s"if $cond then $thenCase"
-        case ("if then else", Seq(cond, thenCase, elseCase)) =>
-          s"if $cond then $thenCase else $elseCase"
         case (name, Seq(PositionalArgument(arg))) =>
-          if (inner) s"($name${arg.toString(inner = true)})"
-          else s"$name${arg.toString(inner = true)}"
+          s"$name${arg.toString(inner = true)}"
         case (name, Seq(PositionalArgument(lhs), PositionalArgument(rhs))) =>
-          if (inner) s"(${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)})"
-          else s"${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)}"
-        case (name, _) => s"$name(${args.mkString(", ")})"
+          s"${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)}"
+        case (name, _) => s"$name$typeArgList(${args.mkString(", ")})"
       }
       if (inner) s"($str)" else str
     }
   }
 
-  case class TypeAssertion(expr: Expression, `type`: Type) extends Expression {
-    def loc = expr.loc.merge(`type`.loc)
+  case class StaticIfThenElse(condition: Expression, thenCase: Expression, elseCase: Expression, loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
-      if (inner) s"(${expr.toString(inner = true)})"
-      else s"${expr.toString(inner = true)}"
+      val str = s"if $condition then $thenCase else $elseCase"
+      if (inner) s"($str)" else str
     }
-  }
-
-  case class IntLiteral(value: BigInt, loc: Location) extends Expression {
-    override def toString(inner: Boolean) = value.toString
-  }
-
-  case class TimeLiteral(value: BigInt, unit: TimeUnit.TimeUnit, loc: Location) extends Expression {
-    override def toString(inner: Boolean) = value.toString
-  }
-
-  case class StringLiteral(value: String, loc: Location) extends Expression {
-    override def toString(inner: Boolean) = value.toString
-  }
-
-  case class BoolLiteral(value: Boolean, loc: Location) extends Expression {
-    override def toString(inner: Boolean) = value.toString
-  }
-
-  case class Unit(loc: Location) extends Expression {
-    override def toString(inner: Boolean) = "()"
   }
 
   case class Block(definitions: Seq[Definition], expression: Expression, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
+  }
+
+  case class Literal(value: LiteralValue, loc: Location) extends Expression {
+    override def toString(inner: Boolean) = value.toString
+  }
+
+  sealed abstract class LiteralValue {
+    def value: Any
+    override def toString = value.toString
+  }
+
+  case class IntLiteral(value: BigInt) extends LiteralValue
+
+  case class TimeLiteral(value: BigInt, unit: TimeUnit) extends LiteralValue {
+    override def toString = s"$value $unit"
+  }
+
+  case class StringLiteral(value: String) extends LiteralValue {
+    override def toString = s""""$value""""
+  }
+
+  case class BoolLiteral(value: Boolean) extends LiteralValue
+
+  case object Unit extends LiteralValue {
+    override def value = ()
   }
 
   abstract class Argument {
@@ -130,7 +142,7 @@ object Tessla {
     def loc = id.loc.merge(expr.loc)
   }
 
-  abstract class Type {
+  sealed abstract class Type {
     def loc: Location
     def withLoc(loc: Location): Type
   }
@@ -141,8 +153,13 @@ object Tessla {
     def withLoc(loc: Location): SimpleType = SimpleType(id.copy(loc = loc))
   }
 
-  case class GenericType(id: Identifier, args: Seq[Type], loc: Location) extends Type {
+  case class TypeApplication(id: Identifier, args: Seq[Type], loc: Location) extends Type {
     override def toString = s"$id[${args.mkString(", ")}]"
-    def withLoc(loc: Location): GenericType = copy(loc = loc)
+    def withLoc(loc: Location): TypeApplication = copy(loc = loc)
+  }
+
+  case class FunctionType(parameterTypes: Seq[Type], returnType: Type, loc: Location) extends Type {
+    override def toString = s"(${parameterTypes.mkString(", ")}) => $returnType]"
+    def withLoc(loc: Location): FunctionType = copy(loc = loc)
   }
 }

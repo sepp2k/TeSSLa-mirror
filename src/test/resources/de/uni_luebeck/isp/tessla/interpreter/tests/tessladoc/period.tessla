@@ -1,5 +1,5 @@
-def period(delay) := {
-  def s := default(delayedLast(s, s), delay)
+def period(delay: Int) := {
+  def s: Events[Int] := default(delayedLast(s, s), delay)
   const((), s)
 }
 

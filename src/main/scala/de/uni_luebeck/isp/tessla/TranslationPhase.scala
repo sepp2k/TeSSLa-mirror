@@ -67,7 +67,7 @@ object TranslationPhase {
     override def foreach(f: T => Unit) = f(value)
   }
 
-  case class Failure(errors: Seq[Diagnostic], warnings: Seq[Diagnostic]) extends Result[Nothing] {
+  case class Failure(errors: Seq[TesslaError], warnings: Seq[Diagnostic]) extends Result[Nothing] {
     override def andThen[T2, U](f: TranslationPhase[T2, U]) = this
 
     override def foreach(f: Nothing => Unit) = ()

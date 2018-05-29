@@ -1,14 +1,17 @@
 in x: Events[Int]
 
-def getCount(counts, key) :=
+@liftable
+def get_count(counts: Map[Int, Int], key: Int) :=
     if Map_contains(counts, key)
     then Map_get(counts, key)
     else 0
 
-def incCount(counts, key) :=
-    Map_add(counts, key, getCount(counts, key) + 1)
+@liftable
+def inc_count(counts: Map[Int, Int], key: Int) :=
+    Map_add(counts, key, get_count(counts, key) + 1)
 
-def counts := default(incCount(last(counts, x), x), Map_empty)
+def counts: Events[Map[Int, Int]] := default(inc_count(last(counts, x), x), Map_empty[Int,Int])
+
 def size := Map_size(counts)
 
 out x

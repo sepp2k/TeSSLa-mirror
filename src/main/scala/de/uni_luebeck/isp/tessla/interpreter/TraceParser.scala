@@ -205,7 +205,7 @@ object TraceParser extends Parsers {
         (loc, v) => RawTrace.Literal(v, Location(loc, path))
       } | identifier
 
-    def literal: Parser[TesslaCore.LiteralValue] =
+    def literal: Parser[TesslaCore.Value] =
       TRUE ^^^! {
         loc => TesslaCore.BoolLiteral(true, Location(loc, path))
       } |
@@ -219,14 +219,14 @@ object TraceParser extends Parsers {
           case (loc, value) => TesslaCore.IntLiteral(value, Location(loc, path))
         }
 
-    def unit: Parser[TesslaCore.LiteralValue] =
+    def unit: Parser[TesslaCore.Value] =
       LPAREN ~ RPAREN ^^^! {
         loc => TesslaCore.Unit(Location(loc, path))
       }
 
-    def literalWithUnit: Parser[TesslaCore.LiteralValue] = literal | unit
+    def literalWithUnit: Parser[TesslaCore.Value] = literal | unit
 
-    def timeUnit: Parser[TimeUnit.TimeUnit] = DOLLAR ~> ID("timeunit") ~> EQ ~> matchToken("string", Set("<string>")) {
+    def timeUnit: Parser[TimeUnit] = DOLLAR ~> ID("timeunit") ~> EQ ~> matchToken("string", Set("<string>")) {
       case WithLocation(loc, STRING(name)) => TimeUnit.fromString(name, Location(loc, path))
     }
 
