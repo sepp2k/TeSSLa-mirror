@@ -9,10 +9,12 @@ FlatTessla
 TypedTessla  
 ———ConstantEvaluator—> (evaluates constant expressions and expands macros)  
 TesslaCore  
-———DeadStreamEliminator—> (removes streams not used by outstreams)  
+———Cycle detection—> (produces error for recursive streams without last or delayedLast)  
 TesslaCore
 
-After the current functionality is implemented, objects and a standard library + module system based on objects will be implemented next. Then the phases should look like this:
+Additional optimizations (such as common subexpression elimination and dead code elimination) will be added as a TesslaCore->TesslaCore phase after cycle detection.
+
+To implement objects and a standard library + module system based on objects, the phases will be ammended as follows:
 
 Source code  
 ———TesslaParser—>  
@@ -21,11 +23,9 @@ Tessla
 FlatTessla  
 ———TypeChecker—>  
 TypedTessla  
-———MacroExpander—>  
+———ConstantEvaluator—>  
 MacrolessTessla  
 ———ObjectRemover—> (turns objects into separate variables)  
-PrimitiveTessla  
-———ConstantEvaluator—>  
 TesslaCore  
-———DeadStreamEliminator—>  
+———CycleDetection—>  
 TesslaCore
