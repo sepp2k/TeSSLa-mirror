@@ -77,7 +77,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = s"in $name: $streamType"
   }
 
-  case class Parameter(param: Tessla.Parameter, parameterType: TypeAnnotation, id: Identifier) extends Expression {
+  case class Parameter(param: Tessla.Parameter, parameterType: Type, id: Identifier) extends Expression {
     def name = param.id.name
 
     def nameWithLoc = param.id

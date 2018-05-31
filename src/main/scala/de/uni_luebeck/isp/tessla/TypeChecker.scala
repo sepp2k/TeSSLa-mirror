@@ -80,12 +80,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     }
   }
 
-  def getParameterType(param: FlatTessla.Parameter): FlatTessla.Type = {
-    param.parameterType.getOrElse(throw MissingTypeAnnotationParam(param.name, param.loc))
-  }
-
   def parameterTypes(mac: FlatTessla.Macro): Seq[FlatTessla.Type] = {
-    mac.parameters.map(getParameterType)
+    mac.parameters.map(_.parameterType)
   }
 
   def declaredType(entry: VariableEntry): Option[FlatTessla.Type] = {
@@ -151,40 +147,24 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     val env = parentEnv ++ scope.variables.mapValues(entry => makeIdentifier(entry.id.nameOpt))
     val resultingScope = new TypedTessla.Scope(parent)
     scope.variables.values.foreach(processTypeAnnotation(_, env))
-    var errors: IndexedSeq[TesslaError] = scope.variables.values.flatMap { entry =>
-      entry.expression match {
-        case m: FlatTessla.Macro =>
-          m.parameters.flatMap { param =>
-            param.parameterType match {
-              case Some(_) => None
-              case None => Some(MissingTypeAnnotationParam(param.name, param.loc))
-            }
-          }
-        case _ => None
-      }
-    }.toIndexedSeq
 
-    if (errors.isEmpty) {
-      ReverseTopologicalSort.sort(scope.variables.values)(requiredEntries(scope, _)) match {
-        case ReverseTopologicalSort.Cycles(nodesInCycles) =>
-          errors ++= nodesInCycles.flatMap { entry =>
-            entry.id.nameOpt.map(MissingTypeAnnotationRec(_, entry.loc))
-          }.toIndexedSeq
-        case ReverseTopologicalSort.Sorted(sorted) =>
-          sorted.foreach { entry =>
-            resultingScope.addVariable(translateEntry(entry, resultingScope, env))
-          }
-      }
-    }
-    if (errors.nonEmpty) {
-      // Add all but the last error to the error list and then throw the last.
-      // We need to throw one of them, so the execution does not continue (possibly leading to missing key exceptions
-      // later), but we also want to record the others. We exclude the last from iteration, so it isn't reported twice
-      // (once in the loop and then again when throwing it afterwards)
-      errors.init.foreach { err =>
-        error(err)
-      }
-      throw errors.last
+    ReverseTopologicalSort.sort(scope.variables.values)(requiredEntries(scope, _)) match {
+      case ReverseTopologicalSort.Cycles(nodesInCycles) =>
+        val errors = nodesInCycles.flatMap { entry =>
+          entry.id.nameOpt.map(MissingTypeAnnotationRec(_, entry.loc))
+        }.toIndexedSeq
+        // Add all but the last error to the error list and then throw the last.
+        // We need to throw one of them, so the execution does not continue (possibly leading to missing key exceptions
+        // later), but we also want to record the others. We exclude the last from iteration, so it isn't reported twice
+        // (once in the loop and then again when throwing it afterwards)
+        errors.init.foreach { err =>
+          error(err)
+        }
+        throw errors.last
+      case ReverseTopologicalSort.Sorted(sorted) =>
+        sorted.foreach { entry =>
+          resultingScope.addVariable(translateEntry(entry, resultingScope, env))
+        }
     }
     (resultingScope, env)
   }
@@ -530,7 +510,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         val paramTypes = parameterTypes(mac).map(translateType(_, env ++ tvarEnv))
         val macroType = TypedTessla.FunctionType(tvarIDs, paramTypes, returnType, isLiftable = mac.isLiftable)
         val parameters = mac.parameters.map { p =>
-          val t = translateType(getParameterType(p), innerEnv)
+          val t = translateType(p.parameterType, innerEnv)
           TypedTessla.Parameter(p.param, t, innerEnv(p.id))
         }
         val parameterIDs = mac.parameters.map(_.id).toSet
@@ -554,7 +534,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           val expected = expectedReturnType.map(TypedTessla.StreamType)
           val (body, returnType) = translateExpression(mac.body, expected, None, innerScope, innerEnv)
           val parameters = mac.parameters.map { p =>
-            val t = translateType(getParameterType(p), innerEnv)
+            val t = translateType(p.parameterType, innerEnv)
             TypedTessla.Parameter(p.param, t, innerEnv(p.id))
           }
           // Add a lifted projection operator so that there is a new event whenever any of the parameters get a new

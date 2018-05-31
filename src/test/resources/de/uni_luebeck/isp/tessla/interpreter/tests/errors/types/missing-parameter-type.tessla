@@ -1,1 +1,5 @@
-def f(x) := x
+def f(x, y) := x
+def g(x) := {
+  def h(x) := x
+  h(x)
+}

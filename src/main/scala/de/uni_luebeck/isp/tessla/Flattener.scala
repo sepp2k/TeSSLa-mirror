@@ -145,12 +145,21 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
         innerScope.addType(FlatTessla.TypeEntry(tp.id, 0, _ => tp, tp.loc))
       }
       val parameters = definition.parameters.map { param =>
-        val typ = param.parameterType.map(translateType(_, innerScope, paramEnv))
+        val typ = param.parameterType match {
+          case Some(t) =>
+            translateType(t, innerScope, paramEnv)
+          case None =>
+            error(MissingTypeAnnotationParam(param.id.name, param.id.loc))
+            // Since we call error here, the compilation will abort after this phase and the result will never be used.
+            // Therefore it's okay to insert a null here (once we extend the system to keep compiling after errors, the
+            // null should be replaced by a proper error node)
+            null
+        }
         FlatTessla.Parameter(param, typ, paramIdMap(param.id.name))
       }
       parameters.foreach { param =>
         val typ = param.parameterType
-        innerScope.addVariable(FlatTessla.VariableEntry(paramIdMap(param.name), param, typ, param.loc))
+        innerScope.addVariable(FlatTessla.VariableEntry(paramIdMap(param.name), param, Some(typ), param.loc))
       }
       innerDefs.foreach { innerDef =>
         addDefinition(innerDef, innerScope, innerEnv)
