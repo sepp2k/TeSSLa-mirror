@@ -49,14 +49,14 @@ object BuiltIn {
   }
 
   /**
-    * Marker "interface" that makes applications of this operator be printed as "$name $operand" instead of
-    * "$name($operand)"
+    * Marker "interface" that makes applications of this operator be printed as "\$name \$operand" instead of
+    * "\$name(\$operand)"
     */
   sealed abstract class PrefixOperator extends PrimitiveOperator
 
   /**
-    * Marker "interface" that makes applications of this operator be printed as "$operand1 $name $operand2"
-    * instead of "$name($operand1, $operand2)"
+    * Marker "interface" that makes applications of this operator be printed as "\$operand1 \$name \$operand2"
+    * instead of "\$name(\$operand1, \$operand2)"
     */
   sealed abstract class InfixOperator extends PrimitiveOperator
 
