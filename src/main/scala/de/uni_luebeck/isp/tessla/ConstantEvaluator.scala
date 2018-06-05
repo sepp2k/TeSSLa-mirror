@@ -87,7 +87,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   def getType(env: Env, id: TypedTessla.Identifier) = env.get(id).map(_.entry) match {
     case Some(Translated(Lazy(TypeEntry(typ)))) => typ
     case _ =>
-      warn(InternalError("Possibly incorrect type information in generated TesslaCore"))
+      // TODO: Possibly incorrect type information in generated TesslaCore
       TesslaCore.IntType
   }
 
