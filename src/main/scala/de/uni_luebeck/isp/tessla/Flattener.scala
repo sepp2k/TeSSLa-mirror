@@ -208,7 +208,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
 
     case Tessla.TypeApplication(id, typeArgs, _) =>
       val translatedArgs = typeArgs.map(translateType(_, scope, env))
-      val typeEntry = scope.resolveType(env.types(id.name)).getOrElse(throw UndefinedType(id.name, id.loc))
+      val typeEntry = scope.resolveType(env.types.getOrElse(id.name, throw UndefinedType(id.name, id.loc))).getOrElse(throw UndefinedType(id.name, id.loc))
       if (typeEntry.arity == translatedArgs.length) typeEntry.typeConstructor(translatedArgs)
       else throw TypeArityMismatch(id.name, typeEntry.arity, translatedArgs.length, id.loc)
 
