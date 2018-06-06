@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
+import java.io.IOException
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.interpreter._
@@ -93,6 +94,9 @@ object Main extends SexyOpt {
     } catch {
       case ex: TesslaError =>
         System.err.println(s"Runtime error: $ex")
+        if (debug) ex.printStackTrace()
+      case ex: IOException =>
+        System.err.println(s"IO Error: ${ex.getMessage}")
         if (debug) ex.printStackTrace()
     }
   }
