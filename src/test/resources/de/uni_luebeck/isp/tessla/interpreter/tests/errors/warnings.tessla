@@ -1,3 +1,7 @@
 define f(x: Int) := default(nil[Int], x + 19)
 
 out f(x = 23)
+out 42
+out 42
+out 1 as a
+out 2 as a
