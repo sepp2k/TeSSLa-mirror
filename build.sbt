@@ -5,6 +5,8 @@ val privateReleases = "ISP Private Releases" at nexus + "content/repositories/pr
 val releases = "ISP Releases" at nexus + "content/repositories/releases"
 val playResolver = "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
 val validatorResolver = "emueller-bintray" at "http://dl.bintray.com/emueller/maven"
+val efficiosSnapshots = "efficios-snapshots" at "https://mvn.efficios.com/repository/snapshots"
+val efficiosReleases = "efficios-releases" at "https://mvn.efficios.com/repository/releases"
 
 name := "tessla"
 
@@ -17,7 +19,8 @@ scalaVersion := "2.12.3"
 resolvers ++= Seq(
   releases, snapshots,
   privateSnapshots, privateReleases,
-  playResolver, validatorResolver
+  playResolver, validatorResolver,
+  efficiosSnapshots, efficiosReleases
 )
 
 publishTo := {
@@ -34,7 +37,8 @@ libraryDependencies ++= Seq(
   "de.uni_luebeck.isp" %% "compacom" % "0.2.8",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "com.typesafe.play" %% "play-json" % "2.6.6" % "test",
-  "com.eclipsesource" %% "play-json-schema-validator" % "0.9.4" % "test"
+  "com.eclipsesource" %% "play-json-schema-validator" % "0.9.4" % "test",
+  "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT"
 )
 
 scalacOptions += "-feature"
