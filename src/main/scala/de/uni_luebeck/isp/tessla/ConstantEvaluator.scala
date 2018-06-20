@@ -96,6 +96,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     case TypedTessla.StringType => TesslaCore.StringType
     case TypedTessla.BoolType => TesslaCore.BoolType
     case TypedTessla.UnitType => TesslaCore.UnitType
+    case TypedTessla.CtfType => TesslaCore.CtfType
     case TypedTessla.MapType(k, v) => TesslaCore.MapType(translateValueType(k, env), translateValueType(v, env))
     case TypedTessla.SetType(t) => TesslaCore.SetType(translateValueType(t, env))
     case _ : TypedTessla.FunctionType =>

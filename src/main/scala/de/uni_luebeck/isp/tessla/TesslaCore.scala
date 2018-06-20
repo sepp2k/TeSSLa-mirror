@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.IEventDefinition
+import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
   final case class Specification(streams: Seq[(Identifier, StreamDefinition)],
@@ -153,7 +154,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def withLoc(loc: Location): TesslaSet = copy(loc = loc)
   }
 
-  final case class Ctf(value: IEventDefinition, loc: Location) extends Value {
+  final case class Ctf(value: ICompositeDefinition, loc: Location) extends Value {
     override def withLoc(loc: Location): Ctf = copy(loc = loc)
     override def typ = CtfType
   }

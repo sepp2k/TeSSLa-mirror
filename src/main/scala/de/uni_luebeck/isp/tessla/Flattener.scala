@@ -31,7 +31,8 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     "Int" -> FlatTessla.IntType,
     "String" -> FlatTessla.StringType,
     "Unit" -> FlatTessla.UnitType,
-    "Bool" -> FlatTessla.BoolType
+    "Bool" -> FlatTessla.BoolType,
+    "CTF" -> FlatTessla.CtfType
   ).map {
     case (name, t) =>
       name -> FlatTessla.TypeEntry(makeIdentifier(name), 0, _ => t, Location.builtIn)

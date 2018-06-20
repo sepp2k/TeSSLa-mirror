@@ -45,6 +45,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     case FlatTessla.BoolType => TypedTessla.BoolType
     case FlatTessla.StringType => TypedTessla.StringType
     case FlatTessla.UnitType => TypedTessla.UnitType
+    case FlatTessla.CtfType => TypedTessla.CtfType
     case s: FlatTessla.StreamType =>
       TypedTessla.StreamType(translateType(s.elementType, env))
     case f: FlatTessla.FunctionType =>

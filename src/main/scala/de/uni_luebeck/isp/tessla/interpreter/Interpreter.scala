@@ -1,9 +1,14 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors._
+import de.uni_luebeck.isp.tessla.TesslaCore.Ctf
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
+import de.uni_luebeck.isp.tessla.interpreter.Trace.TimeStamp
 import de.uni_luebeck.isp.tessla.util.Lazy
 import de.uni_luebeck.isp.tessla.{Compiler, ConstantEvaluator, Errors, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase}
+import org.eclipse.tracecompass.ctf.core.CTFException
+import org.eclipse.tracecompass.ctf.core.event.IEventDefinition
+import org.eclipse.tracecompass.ctf.core.trace.{CTFTrace, CTFTraceReader}
 
 import scala.collection.mutable
 
@@ -185,5 +190,46 @@ object Interpreter {
     val tu = timeUnit.map(TimeUnit.parse).orElse(rawTrace.timeStampUnit)
 
     new Trace(tu, new FlatEventIterator(rawTrace.eventRanges, abortAt))
+  }
+
+  def traceFromCtfFile(ctfFileName: String, abortAt: Option[BigInt]) = {
+    val reader = new CTFTraceReader(new CTFTrace(ctfFileName))
+
+    val iterator = new Iterator[Trace.Event] {
+      private var eventCounter = 0
+
+      override def hasNext = reader.hasMoreEvents && abortAt.forall(eventCounter < _)
+
+      override def next() = {
+        val event = reader.getCurrentEventDef
+        try {
+          reader.advance
+        } catch {
+          case e: CTFException =>
+            throw new RuntimeException(e)
+        }
+        val ts = TimeStamp(Location.unknown, BigInt(event.getTimestamp))
+        val stream = Trace.Identifier(Location.unknown, event.getDeclaration.getName)
+        val value = Ctf(event.getFields, Location.unknown)
+        eventCounter += 1
+        Trace.Event(Location.unknown, ts, stream, value)
+      }
+    }
+
+    new Trace(None, iterator)
+  }
+
+  def runCtf(specSource: TesslaSource,
+             ctfFileName: String,
+             stopOn: Option[String] = None,
+             timeUnit: Option[TesslaSource] = None,
+             printCore: Boolean = false,
+             abortAt: Option[BigInt] = None,
+            ): Result[Trace] = {
+    val tu = timeUnit.map(TimeUnit.parse)
+    val core = new Compiler().applyPasses(specSource, tu)
+    if (printCore) core.foreach(println)
+    val trace = traceFromCtfFile(ctfFileName, abortAt)
+    core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(trace, stopOn))
   }
 }

@@ -135,6 +135,12 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = "Unit"
   }
 
+  case object CtfType extends Type {
+    override def isValueType = true
+
+    override def toString = "CTF"
+  }
+
   case class MapType(keyType: Type, valueType: Type) extends Type {
     override def isValueType = true
 
@@ -206,4 +212,5 @@ object FlatTessla extends FlatTessla {
     case None => ""
     case Some(t) => s" : $t"
   }
+
 }
