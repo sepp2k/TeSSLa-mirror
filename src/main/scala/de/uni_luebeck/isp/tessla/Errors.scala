@@ -121,10 +121,6 @@ object Errors {
     override def message: String = s"Input $line is not an event"
   }
 
-  case class UndeclaredInputStreamError(streamName: String, loc: Location) extends TesslaError {
-    override def message: String = s"Undeclared input stream: $streamName"
-  }
-
   case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location) extends TesslaError {
     override def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }

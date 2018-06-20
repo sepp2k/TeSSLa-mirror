@@ -137,7 +137,7 @@ object Interpreter {
                 seen += event.stream.name
                 if (stopped) return
               case None =>
-                throw UndeclaredInputStreamError(event.stream.name, event.stream.loc)
+                // ignore undeclared input streams
             }
           }
           if (nextEvents.isEmpty) {
