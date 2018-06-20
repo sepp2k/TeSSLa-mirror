@@ -202,6 +202,14 @@ object BuiltIn {
     override def name = "Set_intersection"
   }
 
+  case object CtfGetString extends PrimitiveOperator {
+    override def name = "CTF_getString"
+  }
+
+  case object CtfGetInt extends PrimitiveOperator {
+    override def name = "CTF_getInt"
+  }
+
   def builtIns: Map[String, BuiltIn] = Set(
     Nil,
     Default,
@@ -246,6 +254,8 @@ object BuiltIn {
     SetRemove,
     SetSize,
     SetUnion,
-    SetIntersection
+    SetIntersection,
+    CtfGetString,
+    CtfGetInt
   ).map(op => op.name -> op).toMap
 }

@@ -4,6 +4,7 @@ import scala.collection.mutable
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.util.Lazy
 import ConstantEvaluator._
+import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.IdentifierFactory with TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
   type Env = Map[TypedTessla.Identifier, EnvEntryWrapper]
@@ -341,6 +342,16 @@ object ConstantEvaluator {
     case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
   }
 
+  private def getString(v: TesslaCore.Value): String = v match {
+    case stringLit: TesslaCore.StringLiteral => stringLit.value
+    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: String, got: $v", v.loc)
+  }
+
+  private def getCtf(v: TesslaCore.Value): ICompositeDefinition = v match {
+    case ctfLit: TesslaCore.Ctf => ctfLit.value
+    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: CTF, got: $v", v.loc)
+  }
+
   private def getMap(v: TesslaCore.Value): TesslaCore.TesslaMap = v match {
     case mapLit: TesslaCore.TesslaMap => mapLit
     case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Map, got: $v", v.loc)
@@ -441,6 +452,14 @@ object ConstantEvaluator {
         val set1 = getSet(arguments(0).get)
         val set2 = getSet(arguments(1).get)
         Some(TesslaCore.TesslaSet(set1.value & set2.value, set1.typ, loc))
+      case BuiltIn.CtfGetInt =>
+        val composite = getCtf(arguments(0).get)
+        val key = getString(arguments(1).get)
+        Some(TesslaCore.IntLiteral(Ctf.getInt(composite, key), loc))
+      case BuiltIn.CtfGetString =>
+        val composite = getCtf(arguments(0).get)
+        val key = getString(arguments(1).get)
+        Some(TesslaCore.StringLiteral(Ctf.getString(composite, key), loc))
     }
   }
 }

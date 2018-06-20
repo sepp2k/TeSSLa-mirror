@@ -332,9 +332,16 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         case BuiltIn.SetSize =>
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(SetType(t)), IntType, isLiftable = true)
+
         case BuiltIn.SetUnion | BuiltIn.SetIntersection =>
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(SetType(t), SetType(t)), SetType(t), isLiftable = true)
+
+        case BuiltIn.CtfGetInt =>
+          FunctionType(Seq(), Seq(CtfType, StringType), IntType, isLiftable = true)
+
+        case BuiltIn.CtfGetString =>
+          FunctionType(Seq(), Seq(CtfType, StringType), StringType, isLiftable = true)
       }
       builtIn -> typ
   }
