@@ -129,6 +129,10 @@ object Errors {
     override def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
+  case class SameTimeStampError(timestamp: BigInt, eventName: String, loc: Location) extends TesslaError {
+    override def message: String = s"Multiple events $eventName at timestamp $timestamp"
+  }
+
   def ProvideAfterPropagationError(time: BigInt, loc: Location = Location.unknown) = {
     InternalError(s"Tried to provide inputs after their propagation at time $time", loc)
   }

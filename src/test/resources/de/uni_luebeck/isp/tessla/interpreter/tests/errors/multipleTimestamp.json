@@ -1,0 +1,6 @@
+{
+  "spec": "multipleTimestamp.tessla",
+  "input": "multipleTimestamp.input",
+  "expectedOutput": "multipleTimestamp.output",
+  "expectedRuntimeErrors": "multipleTimestamp.runtime-errors"
+}

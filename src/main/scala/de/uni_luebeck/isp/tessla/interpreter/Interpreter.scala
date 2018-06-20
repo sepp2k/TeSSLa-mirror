@@ -94,6 +94,7 @@ object Interpreter {
       val eventIterator = new Iterator[Trace.Event] {
         var nextEvents = new mutable.Queue[Trace.Event]
         var stopped = false
+        val seen = mutable.Set.empty[String]
 
         spec.outStreams.foreach {
           case (name, stream) =>
@@ -117,6 +118,7 @@ object Interpreter {
             if (eventTime > specTime) {
               try {
                 spec.step(eventTime - specTime)
+                seen.clear()
               } catch {
                 case err: TesslaError => throw TesslaErrorWithTimestamp(err, specTime)
               }
@@ -128,7 +130,11 @@ object Interpreter {
                 if (event.value.typ != elementType) {
                   throw InputTypeMismatch(event.value, event.stream.name, elementType, event.loc)
                 }
+                if (seen.contains(event.stream.name)) {
+                  throw SameTimeStampError(eventTime, event.stream.name, event.timeStamp.loc)
+                }
                 inStream.provide(event.value)
+                seen += event.stream.name
                 if (stopped) return
               case None =>
                 throw UndeclaredInputStreamError(event.stream.name, event.stream.loc)
