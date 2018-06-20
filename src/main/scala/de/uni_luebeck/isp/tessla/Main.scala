@@ -35,8 +35,8 @@ object Main extends SexyOpt {
   val computationDepth = flag("print-computation-depth", "Print the length of the longest path a propagation message travels")
   val recursionDepth = flag("print-recursion-depth", "Print the length of the longest recursion")
 
-  val ctfTraceFile = option("ctf", "Use this CTF file as input for the specification. If specified no other trace " +
-    "data input is considered.")
+  val ctfTrace = flag("ctf", "The trace-file with the input data is in CTF format. With this option you must specify " +
+    "a trace-file. stdin is not supported.")
 
   def main(args: Array[String]): Unit = {
     def unwrapResult[T](result: Result[T]): T = result match {
@@ -81,10 +81,14 @@ object Main extends SexyOpt {
           println(RecursiveDepthChecker.nestingDepth(spec))
           return
         }
-      } else if (ctfTraceFile.isDefined) {
+      } else if (ctfTrace) {
+        if (!traceFile.isDefined) {
+          System.err.println("No CTF trace input given")
+          sys.exit(17)
+        }
         val abortAtValue = abortAt.map(BigInt(_))
         val output = unwrapResult {
-          Interpreter.runCtf(specSource, ctfTraceFile.get, timeUnit = timeUnitSource, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
+          Interpreter.runCtf(specSource, traceFile.get, timeUnit = timeUnitSource, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
         }
         output.foreach(println)
       } else {
