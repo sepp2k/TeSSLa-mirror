@@ -295,36 +295,12 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   }
 
   def translateVar(env: Env, id: TypedTessla.Identifier, loc: Location): EnvEntry = {
-    val visited = mutable.Set[TypedTessla.Identifier]()
-    var currentId = id
-    var currentLoc = loc
-    var stackPushes = 0
-    var currentEnv = env
-    var loop = true
-    while (loop) {
-      if (currentId.nameOpt.isDefined) {
-        stack.push(currentLoc)
-        stackPushes += 1
-      }
-      if (visited.contains(currentId)) throw InfiniteRecursion(currentLoc)
-      visited += currentId
-      currentEnv(currentId).entry match {
-        case NotYetTranslated(entry, closure) =>
-          entry.expression match {
-            case v: TypedTessla.Variable =>
-              currentId = v.id
-              currentLoc = v.loc
-              currentEnv = closure
-            case _ =>
-              loop = false
-          }
-        case _ =>
-          loop = false
-      }
+    if (id.nameOpt.isDefined) {
+      stack.push(loc)
     }
-    val wrapper = currentEnv(currentId)
-    translateEntry(currentEnv, wrapper)
-    for (_ <- 0 until stackPushes) {
+    val wrapper = env(id)
+    translateEntry(env, wrapper)
+    if (id.nameOpt.isDefined) {
       stack.pop()
     }
     wrapper.entry
