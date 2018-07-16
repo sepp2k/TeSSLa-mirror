@@ -7,6 +7,16 @@ def sum := a + b
 def sub := a - b
 def diff := if (a < b) then b - a else a - b
 def defined[T](a: Events[T]) := default(const(true, a), false)
+def sum2 := sum
+
+@liftable
+def inc(x: Int) := {
+  def y := 1+x
+  y
+}
+
+def inca := inc(a)
+def incb := inc(b)
 
 out defined(a)
 out *

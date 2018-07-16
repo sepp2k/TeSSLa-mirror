@@ -42,14 +42,6 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       var outputStreams = spec.outStreams.map { os =>
         (os.name, getStream(env(os.id).entry, os.loc))
       }
-      if (spec.outAll) {
-        outputStreams ++= translatedStreams.keys.flatMap { id =>
-          id.nameOpt.map(name => (name, TesslaCore.Stream(id, Location.unknown)))
-        }
-        outputStreams ++= inputStreams.map {
-          case (name, _, loc) => (name, TesslaCore.InputStream(name, loc))
-        }
-      }
       TesslaCore.Specification(translatedStreams.toSeq, inputStreams, outputStreams)
     } catch {
       case err: TesslaError =>

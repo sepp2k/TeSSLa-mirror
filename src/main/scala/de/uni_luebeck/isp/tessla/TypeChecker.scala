@@ -18,7 +18,14 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
   override def translateSpec(spec: FlatTessla.Specification): TypedTessla.Specification = {
     stdlibNames = spec.stdlibNames
     val (scope, env) = translateScopeWithParents(spec.globalScope)
-    TypedTessla.Specification(scope, spec.outStreams.map(translateOutStream(_, scope, env)), spec.outAllLocation, stdlibNames.mapValues(env))
+    var outputStreams = spec.outStreams.map(translateOutStream(_, scope, env))
+    if (spec.outAll) {
+      val streams = scope.variables.values.filter(entry => isStreamType(entry.typeInfo))
+      outputStreams ++= streams.flatMap { entry =>
+        entry.id.nameOpt.map(name => TypedTessla.OutStream(entry.id, name, entry.loc))
+      }
+    }
+    TypedTessla.Specification(scope, outputStreams, spec.outAllLocation, stdlibNames.mapValues(env))
   }
 
   def translateOutStream(stream: FlatTessla.OutStream, scope: TypedTessla.Scope, env: Env): TypedTessla.OutStream = {
