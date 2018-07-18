@@ -45,6 +45,8 @@ scalacOptions += "-feature"
 scalacOptions += "-unchecked"
 scalacOptions += "-deprecation"
 
+cancelable in Global := true
+
 enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion)
 buildInfoPackage := "de.uni_luebeck.isp.tessla.interpreter"
