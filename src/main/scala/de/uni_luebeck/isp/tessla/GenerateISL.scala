@@ -89,7 +89,7 @@ object GenerateISL {
       case block: Tessla.Block =>
         generateForExpr(block.expression) ++ block.definitions.map{ d =>
           generateForExpr(d.body)
-        }.reduce(_++_)
+        }.fold(CondAst(TrueCond, Seq(), Seq()))(_++_)
       case Tessla.Variable(id) => LogAst(generateForVariable(id))
       case _ =>
         LogAst("")
