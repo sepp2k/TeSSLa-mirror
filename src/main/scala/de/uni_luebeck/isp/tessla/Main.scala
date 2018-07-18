@@ -57,14 +57,16 @@ object Main extends SexyOpt {
 
     parse(args)
     try {
-      if (generateOsl) {
-        GenerateISL.generateOsl(tesslaFile)
-        return
-      }
       val specSource = TesslaSource.fromFile(tesslaFile)
       val timeUnitSource = timeUnit.map(TesslaSource.fromString(_, "--timeunit"))
-      if (verifyOnly || listInStreams || listOutStreams || computationDepth || recursionDepth) {
-        val spec = unwrapResult(new Compiler().compile(specSource, timeUnitSource))
+      if (verifyOnly || generateOsl || listInStreams || listOutStreams || computationDepth || recursionDepth) {
+        val result = new Compiler().compile(specSource, timeUnitSource)
+        if (generateOsl) {
+          println(unwrapResult(result.andThen(new OSL.Generator)))
+          return
+        }
+
+        val spec = unwrapResult(result)
         if (listInStreams) {
           spec.inStreams.foreach { case (name, _, _) => println(name) }
           return
