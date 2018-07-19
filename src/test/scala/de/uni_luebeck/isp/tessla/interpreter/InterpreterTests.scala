@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, TesslaSource}
+import de.uni_luebeck.isp.tessla.{Compiler, TesslaSource, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
@@ -14,28 +14,18 @@ class InterpreterTests extends FunSuite {
 
   object JSON {
 
-    trait Test
+    case class TestCase(spec: String, input: Option[String], expectedOutput: Option[String],
+                        expectedErrors: Option[String], expectedWarnings: Option[String],
+                        expectedRuntimeErrors: Option[String], abortAt: Option[Int],
+                        timeUnit: Option[String])
 
-    case class InterpreterTest(spec: String, input: String, expectedOutput: Option[String],
-                               expectedErrors: Option[String], expectedWarnings: Option[String],
-                               expectedRuntimeErrors: Option[String], abortAt: Option[Int]) extends Test
-
-    case class PipelineTest(spec: String, expectedPipeline: Option[String],
-                            expectedPipelineErrors: Option[String], expectedPipelineWarnings: Option[String],
-                            timeunit: Option[String]) extends Test
-
-    case class CompilerTest(spec: String, expectedErrors: Option[String], expectedWarnings: Option[String], timeunit: Option[String]) extends Test
-
-
-    implicit val timeunitReads: Reads[Option[String]] = (__ \ "timeunit").readNullable[String](verifying(List("ns", "us", "ms", "s", "min", "h", "d").contains))
-    implicit val interpreterTestReads: Reads[InterpreterTest] = Json.reads[InterpreterTest]
-    implicit val pipelineTestReads: Reads[PipelineTest] = Json.reads[PipelineTest]
-    implicit val compilerTestReads: Reads[CompilerTest] = Json.reads[CompilerTest]
+    implicit val timeUnitReads: Reads[Option[String]] = (__ \ "timeunit").readNullable[String](verifying(List("ns", "us", "ms", "s", "min", "h", "d").contains))
+    implicit val interpreterTestReads: Reads[TestCase] = Json.reads[TestCase]
 
     /*Validates a test of a given type using its json instance and a schema for that test type
     (Schema for type X must be named XSchema.json and located in the root directory).
     Returns the test if successful, throws an Exception otherwise.*/
-    def validate(test: Test, testjson: JsValue): JsResult[Test] = {
+    def validate(test: TestCase, testjson: JsValue): JsResult[TestCase] = {
       val fileName = test.getClass.getTypeName.substring(test.getClass.getTypeName.lastIndexOf("$") + 1) + "Schema"
       val schema = Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root/$fileName.json"))).get
       SchemaValidator().validate(schema, testjson) match {
@@ -101,24 +91,11 @@ class InterpreterTests extends FunSuite {
   def unsplitOutput(pair: (BigInt, String)): String = s"${pair._1}:${pair._2}"
 
   /*Parse the given file specified by the given relative path as json file, and convert it to a 'Tests' instance.*/
-  def parseJson(path: String): JSON.Test = {
+  def parseJson(path: String): JSON.TestCase = {
     val json = Json.parse(getClass.getResourceAsStream(s"$root/$path.json"))
-
-    /*Try to parse it as InterpreterTest*/
-    val interpreterResult = Json.fromJson[JSON.InterpreterTest](json).flatMap(JSON.validate(_, json))
-    interpreterResult match {
+    Json.fromJson[JSON.TestCase](json).flatMap(JSON.validate(_, json)) match {
       case JsSuccess(value, _) => value
-      case _: JsError =>
-        val pipelineResult = Json.fromJson[JSON.PipelineTest](json).flatMap(JSON.validate(_, json))
-        pipelineResult match {
-          case JsSuccess(value, _) => value
-          case _: JsError =>
-            val compilerResult = Json.fromJson[JSON.CompilerTest](json).flatMap(JSON.validate(_, json))
-            compilerResult match {
-              case JsSuccess(value, _) => value
-              case e: JsError => sys.error(s"Error in Json parsing: ${JSON.jsErrorToString(e)}")
-            }
-        }
+      case e: JsError => sys.error(s"Error in Json parsing: ${JSON.jsErrorToString(e)}")
     }
   }
 
@@ -127,59 +104,62 @@ class InterpreterTests extends FunSuite {
       def testSource(file: String): TesslaSource = TesslaSource.fromJavaStream(getClass.getResourceAsStream(s"$root/$path/$file"), s"$path/$file")
 
       val testCase = parseJson(s"$path/$name")
-      testCase match {
-        case JSON.InterpreterTest(spec, input, expOutput, expErr, expWarn, expRunErr, abortAt) =>
-          test(s"$path/$name (Interpreter)") {
-            try {
-              val result = Interpreter.runSpec(testSource(spec), testSource(input), abortAt = abortAt.map(BigInt(_)))
-              result match {
-                case Success(output, _) =>
-                  assert(expErr.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
-                  val expectedOutput = testSource(expOutput.get).getLines.toSet
-                  val actualOutput = output.toSet
-
-                  assertEqualSets(actualOutput.map(_.toString).map(splitOutput), expectedOutput.map(splitOutput),
-                    "output", unsplitOutput)
-                case Failure(errors, _) =>
-                  assert(expErr.isDefined,
-                    s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
+      test(s"$path/$name (Interpreter)") {
+        def handleResult[T](result: TranslationPhase.Result[T])(onSuccess: T => Unit): Unit = {
+          result match {
+            case Success(output, _) =>
+              assert(testCase.expectedErrors.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
+              onSuccess(output)
+            case Failure(errors, _) =>
+              testCase.expectedErrors match {
+                case None =>
+                  fail(s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
+                case Some(expectedErrorsFile) =>
                   // Only split on new lines if the next line is not indented because otherwise it's a continuation
                   // and still part of the same error message (e.g. a stack trace)
-                  val expectedErrors = testSource(expErr.get).mkString.split("\n(?! )").toSet
+                  val expectedErrors = testSource(expectedErrorsFile).mkString.split("\n(?! )").toSet
                   assertEqualSets(errors.map(_.toString).toSet, expectedErrors, "errors")
               }
-              if (expWarn.isDefined) {
-                assertEqualSets(result.warnings.map(_.toString).toSet, testSource(expWarn.get).getLines.toSet, "warnings")
+          }
+          testCase.expectedWarnings match {
+            case Some(expectedWarnings) =>
+              assertEqualSets(result.warnings.map(_.toString).toSet, testSource(expectedWarnings).getLines.toSet, "warnings")
+            case None =>
+              // If there is no expected warnings file, we don't care whether there were warnings or not.
+              // To assert that there should be no warnings, one should create an empty expected warnings file.
+          }
+        }
+
+
+        val timeUnit = testCase.timeUnit.map(TesslaSource.fromString(_, s"$path/$name.json#timeunit"))
+        val src = testSource(testCase.spec)
+        testCase.input match {
+          case Some(input) =>
+            try {
+              val result = Interpreter.runSpec(src, testSource(input),
+                abortAt = testCase.abortAt.map(BigInt(_)),
+                timeUnit = timeUnit
+              )
+              handleResult(result) { output =>
+                val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
+                val actualOutput = output.toSet
+
+                assert(testCase.expectedRuntimeErrors.isEmpty, "Expected: Runtime error. Actual: success")
+                assertEqualSets(actualOutput.map(_.toString).map(splitOutput), expectedOutput.map(splitOutput),
+                  "output", unsplitOutput)
               }
             } catch {
               case ex: TesslaError =>
-                assert(expRunErr.isDefined, s"Expected: success, Actual: Runtime error:\n${ex.message}")
-                assertEquals(ex.toString, testSource(expRunErr.get).mkString, "runtime error")
+                testCase.expectedRuntimeErrors match {
+                  case Some(errors) =>
+                    assertEquals(ex.toString, testSource(errors).mkString, "runtime error")
+                  case None =>
+                    fail(s"Expected: success, Actual: Runtime error:\n${ex.message}")
+                }
             }
-          }
-        case JSON.PipelineTest(spec, expPipe, expErr, expWarn, timeUnit) =>
-          test(s"$path/$name (Pipeline)") {
-            // This is a place holder until the pipeline branch is merged
-            fail()
-          }
-        case JSON.CompilerTest(spec, expErr, expWarn, timeUnit) =>
-          test(s"$path/$name (Compiler)") {
-            val result = new Compiler().compile(testSource(spec), timeUnit.map(TesslaSource.fromString(_, s"$path/$name.json#timeunit")))
-            result match {
-              case Success(_, _) =>
-                assert(expErr.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
-              case Failure(errors, _) =>
-                assert(expErr.isDefined,
-                  s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
-                // Only split on new lines if the next line is not indented because otherwise it's a continuation
-                // and still part of the same error message (e.g. a stack trace)
-                val expectedErrors = testSource(expErr.get).mkString.split("\n(?! )").toSet
-                assertEqualSets(errors.map(_.toString).toSet, expectedErrors, "errors")
-            }
-            if (expWarn.isDefined) {
-              assertEqualSets(result.warnings.map(_.toString).toSet, testSource(expWarn.get).getLines.toSet, "warnings")
-            }
-          }
+          case None =>
+            handleResult(new Compiler().compile(src, timeUnit))(_ => ())
+        }
       }
   }
 }

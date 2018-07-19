@@ -5,14 +5,24 @@
     "spec": {
       "type": "string"
     },
-    "expectedPipeline": {
+    "input": {
       "type": "string"
     },
-    "expectedPipelineErrors": {
+    "expectedOutput": {
       "type": "string"
     },
-    "expectedPipelineWarnings": {
+    "expectedErrors": {
       "type": "string"
+    },
+    "expectedRuntimeErrors": {
+      "type": "string"
+    },
+    "expectedWarnings": {
+      "type": "string"
+    },
+    "abortAt": {
+      "type": "integer",
+      "minimum": 0
     },
     "timeunit": {
       "type": "string",
@@ -33,13 +43,17 @@
   "oneOf": [
     {
       "required": [
-        "expectedPipelineOutput"
+        "input",
+        "expectedOutput"
       ]
     },
     {
-      "required": [
-        "expectedPipelineErrors"
-      ]
+      "required": ["expectedErrors"]
     }
-  ]
+  ],
+  "dependencies": {
+    "expectedRuntimeErrors": ["input"],
+    "abortAt": ["input"]
+  }
 }
+            
