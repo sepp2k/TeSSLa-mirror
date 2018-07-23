@@ -2,6 +2,8 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.{Location, TesslaCore}
 import de.uni_luebeck.isp.tessla.TimeUnit
+import org.eclipse.tracecompass.ctf.core.CTFException
+import org.eclipse.tracecompass.ctf.core.trace.{CTFTrace, CTFTraceReader}
 
 object Trace {
   sealed abstract class Item
@@ -22,6 +24,34 @@ object Trace {
   case class TimeStamp(loc: Location, time: Specification.Time) {
     override def toString = time.toString
   }
+
+  def fromCtfFile(ctfFileName: String, abortAt: Option[BigInt]) = {
+    val reader = new CTFTraceReader(new CTFTrace(ctfFileName))
+
+    val iterator = new Iterator[Trace.Event] {
+      private var eventCounter = 0
+
+      override def hasNext = reader.hasMoreEvents && abortAt.forall(eventCounter < _)
+
+      override def next() = {
+        val event = reader.getCurrentEventDef
+        try {
+          reader.advance
+        } catch {
+          case e: CTFException =>
+            throw new RuntimeException(e)
+        }
+        val ts = TimeStamp(Location.unknown, BigInt(event.getTimestamp))
+        val stream = Trace.Identifier(Location.unknown, event.getDeclaration.getName)
+        val value = TesslaCore.Ctf(event.getFields, Location.unknown)
+        eventCounter += 1
+        Trace.Event(Location.unknown, ts, stream, value)
+      }
+    }
+
+    new Trace(None, iterator)
+  }
+
 }
 
 class Trace(val timeStampUnit: Option[TimeUnit], val events: Iterator[Trace.Event]) extends Iterator[Trace.Item] {
