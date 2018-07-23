@@ -2,7 +2,6 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.util.Lazy
-import org.eclipse.tracecompass.ctf.core.event.IEventDefinition
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {

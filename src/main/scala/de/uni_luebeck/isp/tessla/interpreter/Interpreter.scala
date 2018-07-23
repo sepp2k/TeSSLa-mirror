@@ -23,11 +23,11 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case (name, exp) => (name, Lazy(eval(exp.expression)))
   }.toMap
 
-  lazy val outStreams: Map[String, Stream] = spec.outStreams.map {
+  lazy val outStreams: Seq[(String, Stream)] = spec.outStreams.map {
     case (name, streamRef: TesslaCore.Stream) => name -> defs(streamRef.id).get
     case (name, streamRef: TesslaCore.InputStream) => name -> inStreams(streamRef.name)._1
     case (name, _: TesslaCore.Nil) => name -> nil
-  }.toMap
+  }
 
   private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
     case TesslaCore.Stream(id, loc) =>
