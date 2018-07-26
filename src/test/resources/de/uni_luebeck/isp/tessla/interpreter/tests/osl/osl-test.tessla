@@ -1,0 +1,12 @@
+in functioncall: Events[String]
+in line: Events[Int]
+in column: Events[Int]
+in function: Events[String]
+in instruction: Events[String]
+
+out if line == column then ()
+out functioncall == "foo" || function == "bar" && instruction == "ret"
+
+-- This should not affect the OSL
+in bla: Events[String]
+out if bla == "hello" then ()

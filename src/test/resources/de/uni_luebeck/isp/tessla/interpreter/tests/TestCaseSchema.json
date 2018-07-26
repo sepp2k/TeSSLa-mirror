@@ -35,6 +35,9 @@
         "h",
         "d"
       ]
+    },
+    "expectedOsl": {
+      "type": "string"
     }
   },
   "required": [
@@ -49,6 +52,9 @@
     },
     {
       "required": ["expectedErrors"]
+    },
+    {
+      "required": ["expectedOsl"]
     }
   ],
   "dependencies": {
