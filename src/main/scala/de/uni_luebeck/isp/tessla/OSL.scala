@@ -7,21 +7,7 @@ case class OSL(statements: Seq[OSL.Statement]) {
 }
 
 object OSL {
-  sealed abstract class Statement {
-    def and(rhs: Statement): Statement = (this, rhs) match {
-      case (l1: Logs, l2: Logs) => Logs(l1.properties ++ l2.properties)
-      case (l: Logs, i: If) => If(i.condition, Logs(l.properties ++ i.thenCase.properties))
-      case (i: If, l: Logs) => If(i.condition, Logs(i.thenCase.properties ++ l.properties))
-      case (i1: If, i2: If) => If(And(i1.condition, i2.condition), Logs(i1.thenCase.properties ++ i2.thenCase.properties))
-    }
-
-    def or(rhs: Statement): Statement = (this, rhs) match {
-      case (l1: Logs, l2: Logs) => Logs(l1.properties ++ l2.properties)
-      case (l: Logs, i: If) => If(i.condition, Logs(l.properties ++ i.thenCase.properties))
-      case (i: If, l: Logs) => If(i.condition, Logs(i.thenCase.properties ++ l.properties))
-      case (i1: If, i2: If) => If(Or(i1.condition, i2.condition), Logs(i1.thenCase.properties ++ i2.thenCase.properties))
-    }
-  }
+  sealed abstract class Statement
 
   case class If(condition: Condition, thenCase: Logs) extends Statement {
     override def toString = {
@@ -29,43 +15,75 @@ object OSL {
     }
   }
 
-  case class Logs(properties: Seq[String]) extends Statement {
+  case class Logs(properties: Set[String]) extends Statement {
     override def toString = properties.map(p => s"log $p").mkString("\n")
   }
 
-  sealed abstract class Condition
+  sealed abstract class Condition {
+    def properties: Set[String]
+  }
 
   case class Equals(property: String, value: TesslaCore.Value) extends Condition {
     override def toString = s"[$property: $value]"
+
+    override lazy val properties = Set(property)
   }
 
   case class And(lhs: Condition, rhs: Condition) extends Condition {
     override def toString = s"&($lhs, $rhs)"
+
+    override lazy val properties = lhs.properties ++ rhs.properties
   }
 
   case class Or(lhs: Condition, rhs: Condition) extends Condition {
     override def toString = s"|($lhs, $rhs)"
+
+    override lazy val properties = lhs.properties ++ rhs.properties
   }
 
   class Generator extends TranslationPhase[TesslaCore.Specification, OSL] {
     var streams: Map[TesslaCore.Identifier, TesslaCore.StreamDefinition] = _
     val visited = mutable.Set[TesslaCore.Identifier]()
 
+    sealed abstract class ProtoStatement
+    case class Uncond(property: String) extends ProtoStatement
+    case class Cond(conditions: Condition) extends ProtoStatement
+
     override def translateSpec(spec: TesslaCore.Specification) = {
       streams = spec.streams.toMap
-      val statements = spec.outStreams.map(_._2).flatMap(translateStreamRef)
+      val protoStatements = spec.outStreams.map(_._2).flatMap(translateStreamRef)
+      val mergedConditions = protoStatements.foldLeft(Map[Option[String], Set[String]]()) {
+        case (m, Cond(cond)) =>
+          val props = cond.properties
+          props.foldLeft(m) { (m, prop) =>
+              m + (Some(prop) -> (m.getOrElse(Some(prop), Set()) ++ props))
+          }
+        case (m, Uncond(prop)) =>
+          m + (None -> (m.getOrElse(None, Set[String]()) + prop))
+      }
+      var alreadyUncond = false
+      val statements = protoStatements.flatMap {
+        case Cond(cond) =>
+          Some(If(cond, Logs(mergedConditions(Some(cond.properties.head)))))
+        case Uncond(_) =>
+          if (alreadyUncond) None
+          else {
+            alreadyUncond = true
+            Some(Logs(mergedConditions(None)))
+          }
+      }
       OSL(statements)
     }
 
-    def translateStreamRef(streamRef: TesslaCore.StreamRef): Seq[Statement] = streamRef match {
+    def translateStreamRef(streamRef: TesslaCore.StreamRef): Seq[ProtoStatement] = streamRef match {
       case _: TesslaCore.Nil => Seq()
-      case is: TesslaCore.InputStream => translateInputStreamName(is.name).map(name => Logs(Seq(name))).toSeq
+      case is: TesslaCore.InputStream => translateInputStreamName(is.name).map(name => Uncond(name)).toSeq
       case s: TesslaCore.Stream =>
         if (visited(s.id)) Seq()
         else {
           visited += s.id
           val exp = streams(s.id).expression
-          findBasicCondition(exp).map(Seq(_)).getOrElse(translateExpression(exp))
+          findBasicCondition(exp).map(c => Seq(Cond(c))).getOrElse(translateExpression(exp))
         }
     }
 
@@ -76,23 +94,23 @@ object OSL {
         Some(streams(s.id).expression)
     }
 
-    def findBasicCondition(streamRef: TesslaCore.StreamRef): Option[Statement] = {
+    def findBasicCondition(streamRef: TesslaCore.StreamRef): Option[Condition] = {
       getExp(streamRef).flatMap(findBasicCondition)
     }
 
-    def findBasicCondition(exp: TesslaCore.Expression): Option[Statement] = exp match {
+    def findBasicCondition(exp: TesslaCore.Expression): Option[Condition] = exp match {
       case l: TesslaCore.Lift =>
         l.operator match {
           case BuiltIn.And =>
             findBasicCondition(l.args(0)).flatMap { lhs =>
               findBasicCondition(l.args(1)).map { rhs =>
-                lhs.and(rhs)
+                And(lhs,rhs)
               }
             }
           case BuiltIn.Or =>
             findBasicCondition(l.args(0)).flatMap { lhs =>
               findBasicCondition(l.args(1)).map { rhs =>
-                lhs.or(rhs)
+                Or(lhs, rhs)
               }
             }
           case BuiltIn.Eq =>
@@ -101,7 +119,7 @@ object OSL {
                 translateInputStreamName(i.name).flatMap { name =>
                   getExp(s).flatMap {
                     case TesslaCore.Default(_, v: TesslaCore.Value, _) =>
-                      Some(If(Equals(name, v), Logs(Seq(name))))
+                      Some(Equals(name, v))
                     case _ => None
                   }
                 }
@@ -112,7 +130,7 @@ object OSL {
       case _ => None
     }
 
-    def translateExpression(expression: TesslaCore.Expression): Seq[Statement] = expression match {
+    def translateExpression(expression: TesslaCore.Expression): Seq[ProtoStatement] = expression match {
       case l: TesslaCore.Lift => l.args.flatMap(translateStreamRef)
       case d: TesslaCore.Default => translateStreamRef(d.stream)
       case d: TesslaCore.DefaultFrom => translateStreamRef(d.valueStream) ++ translateStreamRef(d.defaultStream)
