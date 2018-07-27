@@ -1,0 +1,44 @@
+def duration := runtime("compute")
+out duration
+
+def error := if duration > 45ms then ()
+out error # unit events
+
+out maximum(duration) as max
+
+
+
+-- Standard Library
+def runtime(name: String) := {
+  def call := function_call(name)
+  def return := function_return(name)
+  at(return, time(return) - time(call))
+}
+
+def at[A,B](x: Events[A], y: Events[B]) :=
+  if time(x) == time(y) then y
+
+@liftable
+def max(a: Int, b: Int) := if a > b then a else b
+
+def maximum(x: Events[Int]) := fold(max, x, 0)
+
+def fold[T,R](f: (Events[R],Events[T]) => Events[R], stream: Events[T], init: R) := {
+  def result: Events[R] := default(f(last(result, stream), stream), init)
+  result
+}
+
+in line: Events[Int]
+in column: Events[Int]
+in thread_id: Events[Int]
+in instruction: Events[String]
+in function: Events[String]
+in functioncall: Events[String]
+in operandcount: Events[Int]
+
+in debug_slot: Events[Int]
+in debug_value: Events[Int]
+
+def code_line_exec(l: Int) := if line == l && last(line, line) != l then ()
+def function_call(name: String) := if functioncall == name then ()
+def function_return(name: String) := if function == name && instruction == "ret" then ()

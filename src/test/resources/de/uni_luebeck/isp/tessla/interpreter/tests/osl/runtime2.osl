@@ -1,0 +1,7 @@
+if [function_calls: "check_valid"] then
+log function_calls
+fi
+if &([functions: "check_valid"], [opcodes: "ret"]) then
+log functions
+log opcodes
+fi

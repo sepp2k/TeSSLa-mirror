@@ -1,0 +1,42 @@
+def checkValidCall := function_call("check_valid")
+
+def checkValidReturn := function_return("check_valid")
+
+def checkValidRuntime := runtime(checkValidCall, checkValidReturn)
+
+def maxCheckValidRuntime := max(checkValidRuntime)
+
+def runtime(call: Events[Unit], return: Events[Unit]) := {
+  at(return, time(return) - time(call))
+}
+
+def at[A,B](trigger: Events[A], values: Events[B]) :=
+  if time(trigger) == time(values) then values
+
+def fold[T,R](f: (Events[R], Events[T]) => Events[R], stream: Events[T], init: R) := {
+  def result: Events[R] := merge(f(last(result, stream), stream), init)
+  result
+}
+
+@liftable
+def maximum(a: Int, b: Int) := if a > b then a else b
+
+def max(x: Events[Int]) := fold(maximum, x, 0)
+
+out checkValidCall
+out checkValidReturn
+
+in line: Events[Int]
+in column: Events[Int]
+in thread_id: Events[Int]
+in instruction: Events[String]
+in function: Events[String]
+in functioncall: Events[String]
+in operandcount: Events[Int]
+
+in debug_slot: Events[Int]
+in debug_value: Events[Int]
+
+def code_line_exec(l: Int) := if line == l && last(line, line) != l then ()
+def function_call(name: String) := if functioncall == name then ()
+def function_return(name: String) := if function == name && instruction == "ret" then ()

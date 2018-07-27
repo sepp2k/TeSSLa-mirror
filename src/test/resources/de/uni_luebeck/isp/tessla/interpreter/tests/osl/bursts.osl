@@ -1,0 +1,3 @@
+if [function_calls: "sendValue"] then
+log function_calls
+fi
