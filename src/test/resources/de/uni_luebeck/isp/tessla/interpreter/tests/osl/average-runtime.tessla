@@ -1,0 +1,58 @@
+def foo := average(runtime("foo"))
+out foo
+
+def bar := average(runtime("bar"))
+out bar
+
+def baz := average(runtime("baz"))
+out baz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Standard Library
+def runtime(name: String) := {
+  def call := function_call(name)
+  def return := function_return(name)
+  at(return, time(return) - time(call))
+}
+
+def at[A,B](trigger: Events[A], values: Events[B]) :=
+  if time(trigger) == time(values) then values
+
+def sum(x: Events[Int]) := {
+  def s: Events[Int] := default(last(s,x) + x, 0)
+  s
+}
+
+def average(x: Events[Int]) := {
+  def c := count(x)
+  if c != 0 then sum(x) / c
+}
+
+def count[A](x: Events[A]) := {
+  def s: Events[Int] := default(last(s,x) + 1, 0)
+  s
+}
+in line: Events[Int]
+in column: Events[Int]
+in thread_id: Events[Int]
+in instruction: Events[String]
+in function: Events[String]
+in functioncall: Events[String]
+in operandcount: Events[Int]
+
+def code_line_exec(l: Int) := if line == l && last(line, line) != l then ()
+def function_call(name: String) := if functioncall == name then ()
+def function_return(name: String) := if function == name && instruction == "ret" then ()

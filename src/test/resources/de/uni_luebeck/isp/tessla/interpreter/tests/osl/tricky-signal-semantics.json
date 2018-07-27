@@ -1,0 +1,4 @@
+{
+  "spec": "tricky-signal-semantics.tessla",
+  "expectedOsl": "tricky-signal-semantics.osl"
+}

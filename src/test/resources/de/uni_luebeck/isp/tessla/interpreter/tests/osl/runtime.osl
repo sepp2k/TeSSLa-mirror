@@ -1,0 +1,7 @@
+if [function_calls: "compute"] then
+log function_calls
+fi
+if &([functions: "compute"], [opcodes: "ret"]) then
+log functions
+log opcodes
+fi

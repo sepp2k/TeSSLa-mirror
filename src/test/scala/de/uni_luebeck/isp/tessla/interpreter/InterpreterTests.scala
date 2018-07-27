@@ -1,13 +1,14 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, TesslaSource, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{Compiler, OSL, TesslaSource, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
 
+import scala.collection.mutable
 import scala.io.Source
 
 class InterpreterTests extends FunSuite {
@@ -16,8 +17,8 @@ class InterpreterTests extends FunSuite {
 
     case class TestCase(spec: String, input: Option[String], expectedOutput: Option[String],
                         expectedErrors: Option[String], expectedWarnings: Option[String],
-                        expectedRuntimeErrors: Option[String], abortAt: Option[Int],
-                        timeUnit: Option[String])
+                        expectedRuntimeErrors: Option[String], expectedOsl: Option[String],
+                        abortAt: Option[Int], timeUnit: Option[String])
 
     implicit val timeUnitReads: Reads[Option[String]] = (__ \ "timeunit").readNullable[String](verifying(List("ns", "us", "ms", "s", "min", "h", "d").contains))
     implicit val interpreterTestReads: Reads[TestCase] = Json.reads[TestCase]
@@ -45,7 +46,7 @@ class InterpreterTests extends FunSuite {
 
   val root = "tests"
   val testCases: Stream[(String, String)] = getFilesRecursively().filter {
-    case ((path, file)) => file.endsWith(".json") && !(file.endsWith("Schema.json") && path.isEmpty)
+    case (path, file) => file.endsWith(".json") && !(file.endsWith("Schema.json") && path.isEmpty)
   }.map {
     case (path, file) => (path, stripExtension(file))
   }
@@ -99,6 +100,39 @@ class InterpreterTests extends FunSuite {
     }
   }
 
+
+  // A small, partial OSL parser so we can meaningfully compare the contents of the expected OSL files with the
+  // actual results
+  case class SemiOsl(ifs: Set[SemiIf], logs: Set[String]) {
+    override def toString = ifs.mkString("\n") + "\n" + logs.map("log " + _ + "\n").mkString
+  }
+  case class SemiIf(condition: String, thenCase: Set[String]) {
+    override def toString = s"if $condition then\n${thenCase.mkString("\n")}\nfi"
+  }
+
+  val logPattern = "log (.+)".r
+  val ifPattern = "if (.+) then".r
+
+  def semiParseOsl(lines: Iterator[String]): SemiOsl = {
+    val globalLogs = mutable.ArrayBuffer[String]()
+    val ifs = mutable.ArrayBuffer[SemiIf]()
+    var currentCondition: Option[String] = None
+    var currentLogs = globalLogs
+    lines.foreach {
+      case logPattern(prop) =>
+        currentLogs += prop
+      case ifPattern(cond) =>
+        currentCondition = Some(cond)
+        currentLogs = mutable.ArrayBuffer[String]()
+      case "fi" =>
+        ifs += SemiIf(currentCondition.get, currentLogs.toSet)
+        currentCondition = None
+        currentLogs = globalLogs
+    }
+    SemiOsl(ifs.toSet, globalLogs.toSet)
+  }
+
+
   testCases.foreach {
     case (path, name) =>
       def testSource(file: String): TesslaSource = TesslaSource.fromJavaStream(getClass.getResourceAsStream(s"$root/$path/$file"), s"$path/$file")
@@ -130,9 +164,15 @@ class InterpreterTests extends FunSuite {
           }
         }
 
-
-        val timeUnit = testCase.timeUnit.map(TesslaSource.fromString(_, s"$path/$name.json#timeunit"))
+        def timeUnit = testCase.timeUnit.map(TesslaSource.fromString(_, s"$path/$name.json#timeunit"))
         val src = testSource(testCase.spec)
+        testCase.expectedOsl.foreach { oslFile =>
+          val expectedOSL = semiParseOsl(testSource(oslFile).getLines)
+          handleResult(new Compiler().compile(src, timeUnit).andThen(new OSL.Generator)) { osl =>
+            val actualOSL = semiParseOsl(osl.toString.lines)
+            assertEquals(actualOSL, expectedOSL, "OSL")
+          }
+        }
         testCase.input match {
           case Some(input) =>
             try {
