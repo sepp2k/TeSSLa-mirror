@@ -164,7 +164,7 @@ class InterpreterTests extends FunSuite {
           }
         }
 
-        val timeUnit = testCase.timeUnit.map(TesslaSource.fromString(_, s"$path/$name.json#timeunit"))
+        def timeUnit = testCase.timeUnit.map(TesslaSource.fromString(_, s"$path/$name.json#timeunit"))
         val src = testSource(testCase.spec)
         testCase.expectedOsl.foreach { oslFile =>
           val expectedOSL = semiParseOsl(testSource(oslFile).getLines)
