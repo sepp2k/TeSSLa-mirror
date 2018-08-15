@@ -21,7 +21,9 @@ object Tessla {
                          headerLoc: Location,
                          body: Expression,
                          loc: Location) extends Statement {
-    override def toString = {
+    override def toString = toString(objectNotation = false)
+
+    def toString(objectNotation: Boolean) = {
       val annotationList = annotations.map("@" + _ + "\n").mkString
       val typeParameterList =
         if (typeParameters.isEmpty) ""
@@ -29,7 +31,9 @@ object Tessla {
       val parameterList =
         if (parameters.isEmpty) ""
         else parameters.mkString("(", ", ", ")")
-      s"${annotationList}def $id$typeParameterList$parameterList := $body"
+      val defString = if (objectNotation) "" else "def "
+      val assign = if (objectNotation) "=" else ":="
+      s"$annotationList$defString$id$typeParameterList$parameterList $assign $body"
     }
   }
 
@@ -101,6 +105,13 @@ object Tessla {
 
   case class Block(definitions: Seq[Definition], expression: Expression, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
+  }
+
+  case class ObjectLiteral(members: Seq[Definition], loc: Location) extends Expression {
+    override def toString(inner: Boolean) = {
+      val memberStrings = members.map(_.toString(objectNotation = true))
+      memberStrings.mkString("${", ",", "}")
+    }
   }
 
   case class Literal(value: LiteralValue, loc: Location) extends Expression {

@@ -53,6 +53,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     case object RBRACKET extends Token("]")
 
+    case object DOLLARBRACE extends Token("${")
+
     case object LBRACE extends Token("{")
 
     case object RBRACE extends Token("}")
@@ -111,12 +113,12 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
     import tokens._
 
     override val keywords = List(DEFINE, DEF, OUT, IN, STATIC, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
-    override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, LBRACE, RBRACE, PERCENT,
-      LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, ROCKET, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS, MINUS,
-      STAR, SLASH, BANG, AT)
+    override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, DOLLARBRACE, LBRACE, RBRACE,
+      PERCENT, LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, ROCKET, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS,
+      MINUS, STAR, SLASH, BANG, AT)
     override val comments = List("--" -> "\n", "#" -> "\n")
 
-    override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c) || c == '.'
+    override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c)
   }
 
   import Tokens._
@@ -296,7 +298,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
         } |
         atomicExpression
 
-    def atomicExpression: Parser[Tessla.Expression] = literal | group | block | variableOrMacroCall
+    def atomicExpression: Parser[Tessla.Expression] = literal | group | block | objectLiteral | variableOrMacroCall
 
     def group: Parser[Tessla.Expression] = (LPAREN ~> expression.? <~ RPAREN) ^^! {
       case (_, Some(expr)) => expr
@@ -306,6 +308,21 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
     def block = (LBRACE ~> definition.* ~ expression <~ RBRACE) ^^! {
       case (loc, (statements, expr)) =>
         Tessla.Block(statements, expr, Location(loc, path))
+    }
+
+    def objectLiteral = DOLLARBRACE ~> repsep(memberDefinition, COMMA) <~ COMMA.? <~ RBRACE ^^! { (loc, members) =>
+        Tessla.ObjectLiteral(members, Location(loc, path))
+    }
+
+    def memberHeader = annotation.* ~ identifier ~ typeParameters.? ~ parameters.? ~ typeAnnotation.? ^^! { (loc, ast) =>
+      (loc, ast)
+    }
+
+    def memberDefinition = memberHeader ~ (EQ ~> expression) ^^! {
+      case (loc, ((headerLoc, ((((annotations, id), typeParams), params), typeOpt)), body)) =>
+        Tessla.Definition(
+          annotations, id, typeParams.getOrElse(Seq()), params.getOrElse(Seq()), typeOpt, Location(headerLoc, path),
+          body, Location(loc, path))
     }
 
     def variableOrMacroCall: Parser[Tessla.Expression] = identifier ~ typeArguments.? ~ arguments.? ^^! {
@@ -341,7 +358,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
     def arguments: Parser[Seq[Tessla.Argument]] = LPAREN ~> rep1sep(argument, COMMA) <~ RPAREN
 
     def argument: Parser[Tessla.Argument] = expression ~^ {
-      case (x@Tessla.Variable(name)) =>
+      case x@Tessla.Variable(name) =>
         EQ ~> expression ^^ (Tessla.NamedArgument(name, _)) | success(Tessla.PositionalArgument(x))
       case x => success(Tessla.PositionalArgument(x))
     }
