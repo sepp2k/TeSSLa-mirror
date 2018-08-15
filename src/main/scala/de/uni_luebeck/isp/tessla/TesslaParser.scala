@@ -228,48 +228,48 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
           Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase)), Location(loc, path))
     }
 
-    def infixOp(loc: compacom.Location, lhs: Tessla.Expression, rhss: Seq[(WithLocation[Token], Tessla.Expression)]) = {
+    def infixOp(lhs: Tessla.Expression, rhss: Seq[(WithLocation[Token], Tessla.Expression)]) = {
       rhss.foldLeft(lhs) {
         case (l, (op, r)) =>
           Tessla.MacroCall(Tessla.Identifier(op.value.string, Location(op.loc, path)),
             Seq(),
             Seq(Tessla.PositionalArgument(l), Tessla.PositionalArgument(r)),
-            Location(loc, path))
+            l.loc.merge(r.loc))
       }
     }
 
-    def infixExpression: Parser[Tessla.Expression] = conjunction ~ (PIPEPIPE ~ conjunction).* ^^! {
-      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    def infixExpression: Parser[Tessla.Expression] = conjunction ~ (PIPEPIPE ~ conjunction).* ^^ {
+      case (lhs, rhss) => infixOp(lhs, rhss)
     }
 
-    def conjunction: Parser[Tessla.Expression] = comparison ~ (ANDAND ~ comparison).* ^^! {
-      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    def conjunction: Parser[Tessla.Expression] = comparison ~ (ANDAND ~ comparison).* ^^ {
+      case (lhs, rhss) => infixOp(lhs, rhss)
     }
 
     def comparisonOperator: Parser[WithLocation[Token]] = EQEQ | LT | GT | LEQ | GEQ | NEQ
 
-    def comparison: Parser[Tessla.Expression] = bitOrExpression ~ (comparisonOperator ~ bitOrExpression).* ^^! {
-      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    def comparison: Parser[Tessla.Expression] = bitOrExpression ~ (comparisonOperator ~ bitOrExpression).* ^^ {
+      case (lhs, rhss) => infixOp(lhs, rhss)
     }
 
-    def bitOrExpression: Parser[Tessla.Expression] = bitAndExpression ~ ((PIPE | HAT) ~ bitAndExpression).* ^^! {
-      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    def bitOrExpression: Parser[Tessla.Expression] = bitAndExpression ~ ((PIPE | HAT) ~ bitAndExpression).* ^^ {
+      case (lhs, rhss) => infixOp(lhs, rhss)
     }
 
-    def bitAndExpression: Parser[Tessla.Expression] = bitShiftExpression ~ (AND ~ bitShiftExpression).* ^^! {
-      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    def bitAndExpression: Parser[Tessla.Expression] = bitShiftExpression ~ (AND ~ bitShiftExpression).* ^^ {
+      case (lhs, rhss) => infixOp(lhs, rhss)
     }
 
-    def bitShiftExpression: Parser[Tessla.Expression] = additiveExpression ~ ((LSHIFT | RSHIFT) ~ additiveExpression).* ^^! {
-      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    def bitShiftExpression: Parser[Tessla.Expression] = additiveExpression ~ ((LSHIFT | RSHIFT) ~ additiveExpression).* ^^ {
+      case (lhs, rhss) => infixOp(lhs, rhss)
     }
 
-    def additiveExpression: Parser[Tessla.Expression] = multiplicativeExpression ~ ((PLUS | MINUS) ~ multiplicativeExpression).* ^^! {
-      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    def additiveExpression: Parser[Tessla.Expression] = multiplicativeExpression ~ ((PLUS | MINUS) ~ multiplicativeExpression).* ^^ {
+      case (lhs, rhss) => infixOp(lhs, rhss)
     }
 
-    def multiplicativeExpression: Parser[Tessla.Expression] = unaryExpression ~ ((STAR | SLASH) ~ unaryExpression).* ^^! {
-      case (loc, (lhs, rhss)) => infixOp(loc, lhs, rhss)
+    def multiplicativeExpression: Parser[Tessla.Expression] = unaryExpression ~ ((STAR | SLASH) ~ unaryExpression).* ^^ {
+      case (lhs, rhss) => infixOp(lhs, rhss)
     }
 
     def unaryExpression: Parser[Tessla.Expression] =
