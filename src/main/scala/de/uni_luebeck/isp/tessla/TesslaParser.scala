@@ -273,21 +273,21 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
     }
 
     def unaryExpression: Parser[Tessla.Expression] =
-      BANG ~ atomicExpression ^^! {
+      BANG ~ unaryExpression ^^! {
         case (loc, (op, expr)) =>
           Tessla.MacroCall(Tessla.Identifier("!", Location(op.loc, path)),
             Seq(),
             Seq(Tessla.PositionalArgument(expr)),
             Location(loc, path))
       } |
-        TILDE ~ atomicExpression ^^! {
+        TILDE ~ unaryExpression ^^! {
           case (loc, (op, expr)) =>
             Tessla.MacroCall(Tessla.Identifier("~", Location(op.loc, path)),
               Seq(),
               Seq(Tessla.PositionalArgument(expr)),
               Location(loc, path))
         } |
-        MINUS ~ atomicExpression ^^! {
+        MINUS ~ unaryExpression ^^! {
           case (loc, (op, expr)) =>
             Tessla.MacroCall(Tessla.Identifier("unary -", Location(op.loc, path)),
               Seq(),
