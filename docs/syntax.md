@@ -65,9 +65,9 @@ The IDs in a type parameter list of a definition, name types during the scope of
 
 For any types T, T1 through Tn `(T1, ..., TN) => T` is also a type.
 
-For any type T, `Events<T>` and `Set<T>` are also types.
+For any type T, `Events[T]` and `Set[T]` are also types.
 
-For any types T1, T2, `Map<T1, T2>` is also a type.
+For any types T1, T2, `Map[T1, T2]` is also a type.
 
 The primitive types, maps, sets and type parameters are value types (later this will be changed, so type parameters will only be value types when declared with that constraint).
 
@@ -81,14 +81,15 @@ None of these type names are keywords and type names have their own namespace, s
 
 The following builtins exist in Tessla:
 
- * `nil: Events<D>`
- * `default(stream: Events<D>, value: D): Events<D>`
- * `default(stream: Events<D>, value: Events<D>): Events<D>`
- * `last(values: Events<D>, clock: Events<E>): Events<D>`
- * `const(stream: Events<D>, value: D): Events<D>`
- * `time(stream: Events<D>): Events<Int>`
- * `delayedLast(values: Events<D>, delay: Events<Int>): Events<D>`
+ * `nil[T]: Events[T]`
+ * `default[T](stream: Events[T], value: T): Events[T]`
+ * `defaultFrom[T](stream: Events[T], value: Events[T]): Events[T]`
+ * `last[T1, T2](values: Events[T1], clock: Events[T2]): Events[T1]`
+ * `const[T](stream: Events[T], value: T): Events[T]`
+ * `time[T](stream: Events[T]): Events[Int]`
+ * `delayedLast[T](values: Events[T], delay: Events[Int]): Events[T]`
  * `first[T1, T2](x: T1, x: T2): T1`
+ * `merge[T](stream1: Events[T], stream2: Events[T]): Events[T]`
 
 Again, these are not keywords.
 
