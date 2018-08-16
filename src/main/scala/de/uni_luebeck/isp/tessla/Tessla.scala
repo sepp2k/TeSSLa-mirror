@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
+import java.beans.Expression
+
 object Tessla {
   case class Specification(statements: Seq[Statement]) {
     override def toString = statements.mkString("\n")
@@ -72,23 +74,33 @@ object Tessla {
 
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
-  case class MacroCall(macroID: Identifier, typeArgs: Seq[Type], args: Seq[Argument], loc: Location) extends Expression {
+  case class MacroCall(mac: Expression, typeArgs: Seq[Type], args: Seq[Argument], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
       val typeArgList =
         if (typeArgs.isEmpty) ""
         else typeArgs.mkString("[", ", ", "]")
 
-      val str = (macroID.name, args) match {
-        case (ID_PATTERN(), _) | (_, Seq()) => s"$macroID$typeArgList(${args.mkString(", ")})"
-        case ("if then", Seq(cond, thenCase)) =>
-          s"if $cond then $thenCase"
-        case (name, Seq(PositionalArgument(arg))) =>
-          s"$name${arg.toString(inner = true)}"
-        case (name, Seq(PositionalArgument(lhs), PositionalArgument(rhs))) =>
-          s"${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)}"
-        case (name, _) => s"$name$typeArgList(${args.mkString(", ")})"
+      var atomic = true
+      val str = mac match {
+        case Variable(id) =>
+          (id.name, args) match {
+            case (ID_PATTERN(), _) | (_, Seq()) =>
+              s"$mac$typeArgList(${args.mkString(", ")})"
+            case ("if then", Seq(cond, thenCase)) =>
+              atomic = false
+              s"if $cond then $thenCase"
+            case (name, Seq(PositionalArgument(arg))) =>
+              s"$name${arg.toString(inner = true)}"
+            case (name, Seq(PositionalArgument(lhs), PositionalArgument(rhs))) =>
+              atomic = false
+              s"${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)}"
+            case (name, _) =>
+              s"$name$typeArgList(${args.mkString(", ")})"
+          }
+        case _ =>
+          s"${mac.toString(inner = true)}$typeArgList(${args.mkString(", ")})"
       }
-      if (inner) s"($str)" else str
+      if (inner && !atomic) s"($str)" else str
     }
   }
 
