@@ -232,6 +232,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       FlatTessla.Literal(literal.value, literal.loc)
 
     case call: Tessla.MacroCall =>
+      val mac = expToId(translateExpression(call.mac, scope, env), scope)
       val args = call.args.map {
         case arg: Tessla.NamedArgument =>
           val id = expToId(translateExpression(arg.expr, scope, env), scope)
@@ -240,8 +241,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
           val id = expToId(translateExpression(arg.expr, scope, env), scope)
           FlatTessla.PositionalArgument(id, arg.loc)
       }
-      val mac = getExp(call.macroID, env)
-      FlatTessla.MacroCall(mac.id, mac.loc, call.typeArgs.map(translateType(_, scope, env)), args, call.loc)
+      FlatTessla.MacroCall(mac, call.mac.loc, call.typeArgs.map(translateType(_, scope, env)), args, call.loc)
 
     case ite: Tessla.StaticIfThenElse =>
       FlatTessla.StaticIfThenElse(
