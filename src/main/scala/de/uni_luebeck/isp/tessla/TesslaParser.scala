@@ -37,6 +37,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     case object FALSE extends Token("false")
 
+    case object INCLUDE extends Token("include")
+
     case object COLON extends Token(":")
 
     case object PERCENT extends Token("%")
@@ -103,7 +105,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     case object AT extends Token("@")
 
-    case object INCLUDE extends Token("include")
+    case object DOT extends Token(".")
 
   }
 
@@ -115,7 +117,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
     override val keywords = List(DEFINE, DEF, OUT, IN, STATIC, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, DOLLARBRACE, LBRACE, RBRACE,
       PERCENT, LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, ROCKET, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS,
-      MINUS, STAR, SLASH, BANG, AT)
+      MINUS, STAR, SLASH, BANG, AT, DOT)
     override val comments = List("--" -> "\n", "#" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = super.isIdentifierCont(c)
@@ -310,8 +312,12 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
             Tessla.MacroCall(exp, typeArgs, argsOpt.getOrElse(Seq()), exp.loc.merge(Location(loc, path)))
       } |
         arguments ^^! {
-          case (loc, args) => (exp: Tessla.Expression) =>
+          (loc, args) => (exp: Tessla.Expression) =>
             Tessla.MacroCall(exp, Seq(), args, exp.loc.merge(Location(loc, path)))
+        } |
+        DOT ~> identifier ^^ {
+          id => (exp: Tessla.Expression) =>
+            Tessla.MemberAccess(exp, id, exp.loc.merge(id.loc))
         }
 
     def atomicExpression: Parser[Tessla.Expression] = literal | group | block | objectLiteral | variable

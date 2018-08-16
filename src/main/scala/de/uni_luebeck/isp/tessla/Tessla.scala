@@ -126,6 +126,10 @@ object Tessla {
     }
   }
 
+  case class MemberAccess(receiver: Expression, member: Identifier, loc: Location) extends Expression {
+    override def toString(inner: Boolean) = s"${receiver.toString(inner = true)}.$member"
+  }
+
   case class Literal(value: LiteralValue, loc: Location) extends Expression {
     override def toString(inner: Boolean) = value.toString
   }
