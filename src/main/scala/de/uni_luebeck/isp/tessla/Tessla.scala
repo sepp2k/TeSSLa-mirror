@@ -122,8 +122,12 @@ object Tessla {
   case class ObjectLiteral(members: Seq[Definition], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
       val memberStrings = members.map(_.toString(objectNotation = true))
-      memberStrings.mkString("${", ",", "}")
+      memberStrings.mkString("${", ", ", "}")
     }
+  }
+
+  case class Tuple(elements: Seq[Expression], loc: Location) extends Expression {
+    override def toString(inner: Boolean) = elements.mkString("(", ", ", ")")
   }
 
   case class MemberAccess(receiver: Expression, member: Identifier, loc: Location) extends Expression {

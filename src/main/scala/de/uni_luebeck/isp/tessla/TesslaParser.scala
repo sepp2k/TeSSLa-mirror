@@ -322,9 +322,10 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def atomicExpression: Parser[Tessla.Expression] = literal | group | block | objectLiteral | variable
 
-    def group: Parser[Tessla.Expression] = (LPAREN ~> expression.? <~ RPAREN) ^^! {
-      case (_, Some(expr)) => expr
-      case (loc, None) => Tessla.Literal(Tessla.Unit, Location(loc, path))
+    def group: Parser[Tessla.Expression] = LPAREN ~> (repsep(expression, COMMA) ~ COMMA.?) <~ RPAREN ^^! {
+      case (_, (Seq(expr), None)) => expr
+      case (loc, (Seq(), _)) => Tessla.Literal(Tessla.Unit, Location(loc, path))
+      case (loc, (elements, _)) => Tessla.Tuple(elements, Location(loc, path))
     }
 
     def block = (LBRACE ~> definition.* ~ expression <~ RBRACE) ^^! {
