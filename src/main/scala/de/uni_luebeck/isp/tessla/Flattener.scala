@@ -257,5 +257,18 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       }
       val id = expToId(translateExpression(block.expression, scope, innerEnv), scope)
       FlatTessla.Variable(id, block.expression.loc)
+
+    case objectLit: Tessla.ObjectLiteral =>
+      checkForDuplicates(objectLit.members.map(_.id))
+      val innerEnv = env ++ Env(variables = createIdMap(objectLit.members.map(_.id.name)), types = Map())
+      val members = objectLit.members.map { definition =>
+        addDefinition(definition, scope, innerEnv)
+        definition.id.name -> env.variables(definition.id.name)
+      }
+      FlatTessla.ObjectLiteral(members.toMap, objectLit.loc)
+
+    case memberAccess: Tessla.MemberAccess =>
+      val receiver = expToId(translateExpression(memberAccess.receiver, scope, env), scope)
+      FlatTessla.MemberAccess(receiver, memberAccess.member.name, memberAccess.member.loc, memberAccess.loc)
   }
 }
