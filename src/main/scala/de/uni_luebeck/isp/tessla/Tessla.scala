@@ -193,4 +193,14 @@ object Tessla {
     override def toString = s"(${parameterTypes.mkString(", ")}) => $returnType]"
     def withLoc(loc: Location): FunctionType = copy(loc = loc)
   }
+
+  case class ObjectType(memberTypes: Seq[(Identifier, Type)], loc: Location) extends Type {
+    override def toString = memberTypes.map {case (name, t) => s"$name : $t"}.mkString("${", ", ", "}")
+    def withLoc(loc: Location): ObjectType = copy(loc = loc)
+  }
+
+  case class TupleType(elementTypes: Seq[Type], loc: Location) extends Type {
+    override def toString = elementTypes.mkString("(", ", ", ")")
+    def withLoc(loc: Location): TupleType = copy(loc = loc)
+  }
 }

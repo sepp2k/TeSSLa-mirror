@@ -202,9 +202,15 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
         case (_, (name, None)) => Tessla.SimpleType(name)
         case (loc, (name, Some(args))) => Tessla.TypeApplication(name, args, Location(loc, path))
       } |
-        (LPAREN ~> repsep(`type`, COMMA) <~ RPAREN) ~ (ROCKET ~> `type`) ^^! {
-          case (loc, (parameterTypes, returnType)) =>
+        (LPAREN ~> repsep(`type`, COMMA) <~ RPAREN) ~ (ROCKET ~> `type`).? ^^! {
+          case (loc, (parameterTypes, Some(returnType))) =>
             Tessla.FunctionType(parameterTypes, returnType, Location(loc, path))
+          case (loc, (elementTypes, None)) =>
+            Tessla.TupleType(elementTypes, Location(loc, path))
+        } |
+        DOLLARBRACE ~> repsep(identifier ~ (COLON ~> `type`), COMMA) <~ RBRACE ^^! {
+          (loc, members) =>
+            Tessla.ObjectType(members, Location(loc, path))
         }
 
 
