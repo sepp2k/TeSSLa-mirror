@@ -222,6 +222,21 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
         // Explicitly written function types are never liftable because we have no syntax for that
         isLiftable = false
       )
+
+    case ot: Tessla.ObjectType =>
+      checkForDuplicates(ot.memberTypes.map(_._1))
+      val memberTypes = ot.memberTypes.map {
+        case (id, t) =>
+          id.name -> translateType(t, scope, env)
+      }
+      FlatTessla.ObjectType(memberTypes.toMap)
+
+    case tt: Tessla.TupleType =>
+      val memberTypes = tt.elementTypes.zipWithIndex.map {
+        case (t, idx) =>
+          s"_$idx" -> translateType(t, scope, env)
+      }
+      FlatTessla.ObjectType(memberTypes.toMap)
   }
 
   def translateExpression(expr: Tessla.Expression, scope: FlatTessla.Scope, env: Env): FlatTessla.Expression = expr match {

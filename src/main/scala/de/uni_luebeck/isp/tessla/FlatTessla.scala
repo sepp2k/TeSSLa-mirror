@@ -163,6 +163,12 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = s"Events[$elementType]"
   }
 
+  case class ObjectType(memberTypes: Map[String, Type]) extends Type {
+    override def isValueType = memberTypes.values.forall(_.isValueType)
+
+    override def toString = memberTypes.map {case (name, t) => s"$name : $t"}.mkString("${", ", ", "}")
+  }
+
   case class FunctionType(typeParameters: Seq[Identifier], parameterTypes: Seq[Type], returnType: Type,
                           isLiftable: Boolean) extends Type {
     override def isValueType = false
