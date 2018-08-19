@@ -290,7 +290,8 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       FlatTessla.ObjectLiteral(members.toMap, tuple.loc)
 
     case memberAccess: Tessla.MemberAccess =>
-      val receiver = expToId(translateExpression(memberAccess.receiver, scope, env), scope)
+      val receiverId = expToId(translateExpression(memberAccess.receiver, scope, env), scope)
+      val receiver = FlatTessla.IdLoc(receiverId, memberAccess.receiver.loc)
       FlatTessla.MemberAccess(receiver, memberAccess.member.name, memberAccess.member.loc, memberAccess.loc)
   }
 }

@@ -64,6 +64,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       TypedTessla.SetType(translateType(s.elementType, env))
     case m: FlatTessla.MapType =>
       TypedTessla.MapType(keyType = translateType(m.keyType, env), valueType = translateType(m.valueType, env))
+    case o: FlatTessla.ObjectType =>
+      TypedTessla.ObjectType(o.memberTypes.mapValues(translateType(_, env)))
     case tvar: FlatTessla.TypeParameter =>
       TypedTessla.TypeParameter(env(tvar.id), tvar.loc)
   }
@@ -148,6 +150,12 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         // Note that identifiers are unique at this stage, so we won't run into a situation
         // where the macro contains a local identifier that shadows an outer one.
         requiredEntries(scope, mac.body) ++ mac.scope.variables.values.flatMap(requiredEntries(scope, _))
+
+      case obj: FlatTessla.ObjectLiteral =>
+        obj.members.values.flatMap(resolve).toSeq
+
+      case acc: FlatTessla.MemberAccess =>
+        resolve(acc.receiver.id)
     }
   }
 
@@ -503,6 +511,21 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
             throw TypeMismatch("function", other, call.macroLoc)
         }
 
+      case o: FlatTessla.ObjectLiteral =>
+        val members = o.members.mapValues(env)
+        val memberTypes = members.mapValues(typeMap)
+        TypedTessla.ObjectLiteral(members, o.loc) -> TypedTessla.ObjectType(memberTypes)
+
+      case acc: FlatTessla.MemberAccess =>
+        val receiver = env(acc.receiver.id)
+        val t = typeMap(receiver) match {
+          case ot: TypedTessla.ObjectType =>
+            ot.memberTypes.getOrElse(acc.member, throw MemberNotDefined(ot, acc.member, acc.memberLoc))
+          case other =>
+            throw TypeMismatch("object", other, acc.receiver.loc)
+        }
+        TypedTessla.MemberAccess(TypedTessla.IdLoc(receiver, acc.receiver.loc), acc.member, acc.memberLoc, acc.loc) -> t
+
       case FlatTessla.BuiltInOperator(b) =>
         val t = typesOfBuiltIns(b)
         // Register each builtin as its own lifted version, so things just work when looking up the lifted version
@@ -511,6 +534,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           liftedMacros(id) = id
         }
         TypedTessla.BuiltInOperator(b) -> t
+
       case mac: FlatTessla.Macro =>
         val (tvarIDs, expectedReturnType) = declaredType match {
           case Some(f: TypedTessla.FunctionType) =>

@@ -177,4 +177,7 @@ object Errors {
     override def message = "Macro has been annotated with @liftable, but its type does not allow being lifted"
   }
 
+  case class MemberNotDefined(ot: TypedTessla.ObjectType, member: String, loc: Location) extends TesslaError {
+    override def message = s"Object of type $ot does not have a member named $member"
+  }
 }
