@@ -1,0 +1,11 @@
+in a: Events[Int]
+in b: Events[Int]
+
+def o1 := ${x = a, y = b}
+
+def o2 := ${x = a-1, y = a+2}
+
+def sumXY(o: ${x: Events[Int], y: Events[Int]}) := o.x + o.y
+
+out sumXY(o1)
+out sumXY(o2)

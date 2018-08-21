@@ -278,7 +278,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       val innerEnv = env ++ Env(variables = createIdMap(objectLit.members.map(_.id.name)), types = Map())
       val members = objectLit.members.map { definition =>
         addDefinition(definition, scope, innerEnv)
-        definition.id.name -> innerEnv.variables(definition.id.name)
+        definition.id.name -> FlatTessla.IdLoc(innerEnv.variables(definition.id.name), definition.body.loc)
       }
       FlatTessla.ObjectLiteral(members.toMap, objectLit.loc)
 

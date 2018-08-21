@@ -4,3 +4,7 @@
     Previous definition at: /errors/duplicate-definitions.tessla(4,5 - 4,6)
 /errors/duplicate-definitions.tessla(2,4 - 2,5): Multiple definitions of x in same scope
     Previous definition at: /errors/duplicate-definitions.tessla(1,4 - 1,5)
+/errors/duplicate-definitions.tessla(8,18 - 8,19): Multiple definitions of x in same scope
+    Previous definition at: /errors/duplicate-definitions.tessla(8,10 - 8,11)
+/errors/duplicate-definitions.tessla(8,38 - 8,39): Multiple definitions of x in same scope
+    Previous definition at: /errors/duplicate-definitions.tessla(8,31 - 8,32)

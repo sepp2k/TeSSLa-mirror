@@ -4,3 +4,5 @@ in x: Events[Int]
 def y := 42
 def y := 42
 def y := 42
+
+def o: ${x: Int, x: Int} := ${x = 1, x = 2}

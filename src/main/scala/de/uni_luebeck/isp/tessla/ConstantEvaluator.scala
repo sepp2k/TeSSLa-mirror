@@ -25,6 +25,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   case class InputStreamEntry(name: String) extends TranslationResult
   case class NilEntry(nil: TesslaCore.Nil) extends TranslationResult
   case class ValueEntry(value: TesslaCore.Value) extends TranslationResult
+  case class ObjectEntry(members: Map[String, Lazy[TranslationResult]]) extends TranslationResult
   case class MacroEntry(mac: TypedTessla.Macro, closure: Env) extends TranslationResult {
     override def toString = s"MacroEntry($mac, ...)"
   }
@@ -39,7 +40,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
           (is.name, translateStreamType(typ, env), is.loc)
       }.toSeq
-      var outputStreams = spec.outStreams.map { os =>
+      val outputStreams = spec.outStreams.map { os =>
         (os.name, getStream(env(os.id).entry, os.loc))
       }
       TesslaCore.Specification(translatedStreams.toSeq, inputStreams, outputStreams)
@@ -92,6 +93,9 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     case TypedTessla.CtfType => TesslaCore.CtfType
     case TypedTessla.MapType(k, v) => TesslaCore.MapType(translateValueType(k, env), translateValueType(v, env))
     case TypedTessla.SetType(t) => TesslaCore.SetType(translateValueType(t, env))
+    case _ : TypedTessla.ObjectType =>
+      // TODO
+      throw InternalError(s"Objects aren't yet supported as value types")
     case _ : TypedTessla.FunctionType =>
       throw InternalError(s"Function type where value type expected - should have been caught by type checker")
     case TypedTessla.StreamType(_) =>
@@ -160,6 +164,22 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
           } else {
             val elseCase = translateVar(env, ite.elseCase.id, ite.elseCase.loc)
             getResult(elseCase).get
+          }
+        })
+      case obj: TypedTessla.ObjectLiteral =>
+        wrapper.entry = Translated(Lazy {
+          ObjectEntry(obj.members.map {
+            case (name, member) =>
+              name -> getResult(translateVar(env, member.id, member.loc))
+          })
+        })
+      case acc: TypedTessla.MemberAccess =>
+        wrapper.entry = Translated(Lazy {
+          getResult(translateVar(env, acc.receiver.id, acc.loc)).get match {
+            case obj: ObjectEntry =>
+              obj.members(acc.member).get
+            case _ =>
+              throw InternalError("Member access on non-object should've been caught by type checker", acc.receiver.loc)
           }
         })
       case call: TypedTessla.MacroCall =>

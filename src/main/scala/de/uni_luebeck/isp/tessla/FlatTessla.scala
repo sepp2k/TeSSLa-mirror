@@ -101,7 +101,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = s"if $condition then $thenCase else $elseCase"
   }
 
-  case class ObjectLiteral(members: Map[String, Identifier], loc: Location) extends Expression
+  case class ObjectLiteral(members: Map[String, IdLoc], loc: Location) extends Expression
 
   case class MemberAccess(receiver: IdLoc, member: String, memberLoc: Location, loc: Location) extends Expression
 
@@ -164,7 +164,8 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   }
 
   case class ObjectType(memberTypes: Map[String, Type]) extends Type {
-    override def isValueType = memberTypes.values.forall(_.isValueType)
+    // TODO change to `memberTypes.values.forall(_.isValueType)` once objects as values are supported
+    override def isValueType = false
 
     override def toString = memberTypes.map {case (name, t) => s"$name : $t"}.mkString("${", ", ", "}")
   }

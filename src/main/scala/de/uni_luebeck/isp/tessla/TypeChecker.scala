@@ -152,7 +152,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         requiredEntries(scope, mac.body) ++ mac.scope.variables.values.flatMap(requiredEntries(scope, _))
 
       case obj: FlatTessla.ObjectLiteral =>
-        obj.members.values.flatMap(resolve).toSeq
+        obj.members.values.flatMap(member => resolve(member.id)).toSeq
 
       case acc: FlatTessla.MemberAccess =>
         resolve(acc.receiver.id)
@@ -512,8 +512,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         }
 
       case o: FlatTessla.ObjectLiteral =>
-        val members = o.members.mapValues(env)
-        val memberTypes = members.mapValues(typeMap)
+        val members = o.members.mapValues(member => TypedTessla.IdLoc(env(member.id), member.loc))
+        val memberTypes = members.mapValues(member => typeMap(member.id))
         TypedTessla.ObjectLiteral(members, o.loc) -> TypedTessla.ObjectType(memberTypes)
 
       case acc: FlatTessla.MemberAccess =>

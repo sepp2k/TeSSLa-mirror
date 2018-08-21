@@ -1,0 +1,13 @@
+in a: Events[Int]
+in b: Events[Int]
+
+def t1: (Events[Int], Events[Int]) := ${_1 = a, _2 = b}
+
+def t2: ${_1: Events[Int], _2: Events[Int]} := (a-1, a+2)
+
+def sumPair(t: (Events[Int], Events[Int])) := t._1 + t._2
+
+out sumPair(t1)
+out sumPair(t2)
+
+out (1,"lala",())._2
