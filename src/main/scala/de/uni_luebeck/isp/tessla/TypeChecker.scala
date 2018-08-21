@@ -75,7 +75,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       case None =>
         typeMap(id) = inferredType
       case Some(declaredType) =>
-        if (inferredType != declaredType) {
+        if (!isSubtypeOrEqual(parent = declaredType, child = inferredType)) {
           error(TypeMismatch(declaredType, inferredType, loc))
         }
     }
@@ -397,6 +397,16 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     case _ => false
   }
 
+  def isSubtypeOrEqual(parent: TypedTessla.Type, child: TypedTessla.Type): Boolean = (parent, child) match {
+    case (parent: TypedTessla.ObjectType, child: TypedTessla.ObjectType) =>
+      parent.memberTypes.forall {
+        case (name, typ) =>
+          child.memberTypes.get(name).exists(childTyp => isSubtypeOrEqual(parent = typ, child = childTyp))
+      }
+    case _ =>
+      parent == child
+  }
+
   def translateExpression(expression: FlatTessla.Expression, declaredType: Option[TypedTessla.Type],
                           id: Option[TypedTessla.Identifier], scope: TypedTessla.Scope, env: Env)
   : (TypedTessla.Expression, TypedTessla.Type) = {
@@ -479,7 +489,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
                 val actual = typeMap(id)
                 val expected = typeSubst(genericExpected, actual, typeParams, typeSubstitutions, arg.loc)
                 val possiblyLifted =
-                  if (actual == expected) {
+                  if (isSubtypeOrEqual(parent = expected, child = actual)) {
                     id
                   } else if(TypedTessla.StreamType(actual) == expected) {
                     liftConstant(id, scope, env, arg.loc)
