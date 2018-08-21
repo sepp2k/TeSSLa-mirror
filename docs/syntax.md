@@ -15,18 +15,24 @@
                     | unaryOperator expression
                     | "(" expression ")"
                     | "{" statement* expression "}"
+                    | "${" (memberDef ("," memberDef)*)? "}"
+                    | "(" (expression ("," expression)*)? ")"
+                    | expression "." ID
                     | ID typeArguments? arguments?
                     | STRING
                     | INT
-                    | "()"
                     | "true"
                     | "false"
+    memberDef     ::= annotation* ID typeParamList? paramList? (":" type)? "=" expression
     arguments     ::= "(" arg ("," arg)? ")"
     typeArguments ::= "[" type ("," type)* "]"
     arg           ::= ID "=" expression
                     | expression
     type          ::= ID "[" type ("," type)* "]"
                     | ID
+                    | "(" (type ("," type)*)? ")" ("=>" type)?
+                    | "${" (memberType ("," memberType)*)? "}"
+    memberType    ::= ID ":" type
     infixOperator ::= "<<" | ">>" | ">=" | "<=" | "<" | ">" | "!=" | "==" | "&" | "|" | "^"
                     | "+" | "-" | "*" | "/" | "&&" | "||"
     unaryOperator ::= "~" | "-" | "!"
@@ -68,6 +74,8 @@ For any types T, T1 through Tn `(T1, ..., TN) => T` is also a type.
 For any type T, `Events[T]` and `Set[T]` are also types.
 
 For any types T1, T2, `Map[T1, T2]` is also a type.
+
+For any types T1 through Tn and distinct identifiers id1 through idn `${id1: T1, ..., idn: Tn}` is also a type.
 
 The primitive types, maps, sets and type parameters are value types (later this will be changed, so type parameters will only be value types when declared with that constraint).
 
