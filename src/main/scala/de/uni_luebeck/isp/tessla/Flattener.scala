@@ -234,7 +234,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     case tt: Tessla.TupleType =>
       val memberTypes = tt.elementTypes.zipWithIndex.map {
         case (t, idx) =>
-          s"_$idx" -> translateType(t, scope, env)
+          s"_${idx+1}" -> translateType(t, scope, env)
       }
       FlatTessla.ObjectType(memberTypes.toMap)
   }
@@ -285,7 +285,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     case tuple: Tessla.Tuple =>
       val members = tuple.elements.zipWithIndex.map {
         case (element, index) =>
-          s"_$index" -> expToId(translateExpression(element, scope, env), scope)
+          s"_${index+1}" -> FlatTessla.IdLoc(expToId(translateExpression(element, scope, env), scope), element.loc)
       }
       FlatTessla.ObjectLiteral(members.toMap, tuple.loc)
 
