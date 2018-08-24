@@ -225,11 +225,11 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       case (TypedTessla.MapType(k, v), TypedTessla.MapType(k2, v2)) =>
         TypedTessla.MapType(typeSubst(k, k2, typeParams, substitutions, loc), typeSubst(v, v2, typeParams, substitutions, loc))
       case (TypedTessla.ObjectType(expectedMembers), TypedTessla.ObjectType(actualMembers)) =>
-        val members = actualMembers.map {
-          case (name, memberType) =>
-            name -> expectedMembers.get(name).map { expectedMemberType =>
-              typeSubst(expectedMemberType, memberType, typeParams, substitutions, loc)
-            }.getOrElse(memberType)
+        val members = expectedMembers.map {
+          case (name, expectedMemberType) =>
+            name -> actualMembers.get(name).map { actualMemberType =>
+              typeSubst(expectedMemberType, actualMemberType, typeParams, substitutions, loc)
+            }.getOrElse(expectedMemberType)
         }
         TypedTessla.ObjectType(members)
       case _ =>
