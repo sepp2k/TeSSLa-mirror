@@ -3,7 +3,9 @@ in b: Events[Int]
 
 def t1: (Events[Int], Events[Int]) := ${_1 = a, _2 = b}
 
-def t2: ${_1: Events[Int], _2: Events[Int]} := (a-1, a+2)
+def t2: ${_1: Events[Int], _2: Events[Int]} := mkPair(a-1, a+2)
+
+def mkPair(x: Events[Int], y: Events[Int]) := (x, y)
 
 def sumPair(t: (Events[Int], Events[Int])) := t._1 + t._2
 
