@@ -51,7 +51,7 @@ def add_entry(json, key, extension, comma = true)
     puts "#{f} already exists, skipping."
   else
     File.open(f, "w") do
-      puts "Created #{f}."
+      puts "Created #{f}"
     end
   end
   basename = File.basename "#{TestCase}.#{extension}"
