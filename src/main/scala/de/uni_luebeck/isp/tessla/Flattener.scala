@@ -72,8 +72,9 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     }
     val globalScope = new FlatTessla.Scope(Some(stdlibScope))
     val globalVariableIdMap = stdlib.mapValues(_.id) ++ createIdMap(spec.statements.flatMap(getName))
-    // TODO: Once we have a way to define global types, those need to be handled here
-    val globalTypeIdMap = builtInTypes.mapValues(_.id)
+    val globalTypeIdMap = builtInTypes.mapValues(_.id) ++ createIdMap(spec.statements.collect {
+      case typeDef: Tessla.TypeDefinition => typeDef.id.name
+    })
     val globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
     val stdlibNames = stdlib.mapValues(_.id)
     val emptySpec = FlatTessla.Specification(globalScope, Seq(), outAllLocation = None, stdlibNames)
@@ -94,6 +95,10 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
 
       case (result, definition: Tessla.Definition) =>
         addDefinition(definition, globalScope, globalEnv)
+        result
+
+      case (result, typeDef: Tessla.TypeDefinition) =>
+        addTypeDefinition(typeDef, globalScope, globalEnv)
         result
 
       case (result, in: Tessla.In) =>
@@ -175,6 +180,22 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       )
       scope.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), mac, None, definition.headerLoc))
     }
+  }
+
+  def addTypeDefinition(definition: Tessla.TypeDefinition, scope: FlatTessla.Scope, env: Env): Unit = {
+    checkForDuplicates(definition.typeParameters)
+    def constructType(typeArgs: Seq[FlatTessla.Type]) = {
+      val innerScope = new FlatTessla.Scope(Some(scope))
+      val typeParamIdMap = createIdMap(definition.typeParameters.map(_.name))
+      val innerEnv = env ++ Env(variables = Map(), types = typeParamIdMap)
+      definition.typeParameters.zip(typeArgs).foreach {
+        case (typeParameter, typeArg) =>
+          val id = typeParamIdMap(typeParameter.name)
+          innerScope.addType(FlatTessla.TypeEntry(id, 0, _ => typeArg, typeParameter.loc))
+      }
+      translateType(definition.body, innerScope, innerEnv)
+    }
+    scope.addType(FlatTessla.TypeEntry(env.types(definition.id.name), definition.typeParameters.length, constructType, definition.loc))
   }
 
   val errorExpression = FlatTessla.Variable(makeIdentifier("<<error>>"), Location.unknown)

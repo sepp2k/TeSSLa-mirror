@@ -19,6 +19,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     case object DEF extends Token("def")
 
+    case object TYPE extends Token("type")
+
     case object OUT extends Token("out")
 
     case object IN extends Token("in")
@@ -114,7 +116,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     import tokens._
 
-    override val keywords = List(DEFINE, DEF, OUT, IN, STATIC, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
+    override val keywords = List(DEFINE, DEF, TYPE, OUT, IN, STATIC, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, DOLLARBRACE, LBRACE, RBRACE,
       PERCENT, LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, ROCKET, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS,
       MINUS, STAR, SLASH, BANG, AT, DOT)
@@ -174,8 +176,14 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
             returnType, headerLoc, expr, loc)
       }
 
+    def typeDefinition = TYPE ~> (identifier ~ typeParameters.?) ~ (COLONEQ ~> `type`) ^^! {
+      case (loc, ((id, typeParametersOpt), body)) =>
+        Tessla.TypeDefinition(id, typeParametersOpt.getOrElse(Seq()), body, Location(loc, path))
+    }
+
     def statement: Parser[Tessla.Statement] =
       definition |
+        typeDefinition |
         OUT ~> outStatement |
         IN ~> identifier ~ typeAnnotation ^^! {
           case (loc, (name, streamType)) =>

@@ -39,6 +39,15 @@ object Tessla {
     }
   }
 
+  case class TypeDefinition(id: Identifier, typeParameters: Seq[Identifier], body: Type, loc: Location) extends Statement {
+    override def toString = {
+      val typeParameterList =
+        if (typeParameters.isEmpty) ""
+        else typeParameters.mkString("[", ", ", "]")
+      s"type $id$typeParameterList = $body"
+    }
+  }
+
   case class In(id: Identifier, streamType: Type, loc: Location) extends Statement {
     override def toString = s"in $id: $streamType"
   }
