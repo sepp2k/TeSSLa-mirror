@@ -5,6 +5,7 @@ import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.util.Lazy
 import ConstantEvaluator._
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
+import de.uni_luebeck.isp.tessla.interpreter.BuildInfo
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.IdentifierFactory with TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
   type Env = Map[TypedTessla.Identifier, EnvEntryWrapper]
@@ -448,6 +449,8 @@ object ConstantEvaluator {
         val composite = getCtf(arguments(0).get)
         val key = getString(arguments(1).get)
         Some(TesslaCore.StringLiteral(Ctf.getString(composite, key), loc))
+      case BuiltIn.TesslaVersion =>
+        Some(TesslaCore.StringLiteral(BuildInfo.version, loc))
     }
   }
 }

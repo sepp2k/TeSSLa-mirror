@@ -210,6 +210,12 @@ object BuiltIn {
     override def name = "CTF_getInt"
   }
 
+  // TeSSLa version string
+
+  case object TesslaVersion extends PrimitiveOperator {
+    override def name = "tessla"
+  }
+
   def builtIns: Map[String, BuiltIn] = Set(
     Nil,
     Default,
@@ -256,6 +262,7 @@ object BuiltIn {
     SetUnion,
     SetIntersection,
     CtfGetString,
-    CtfGetInt
+    CtfGetInt,
+    TesslaVersion
   ).map(op => op.name -> op).toMap
 }

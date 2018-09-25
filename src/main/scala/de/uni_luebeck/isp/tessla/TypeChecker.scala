@@ -365,6 +365,9 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
 
         case BuiltIn.CtfGetString =>
           FunctionType(Seq(), Seq(CtfType, StringType), StringType, isLiftable = true)
+
+        case BuiltIn.TesslaVersion =>
+          FunctionType(Seq(), Seq(), StringType, isLiftable = false)
       }
       builtIn -> typ
   }
