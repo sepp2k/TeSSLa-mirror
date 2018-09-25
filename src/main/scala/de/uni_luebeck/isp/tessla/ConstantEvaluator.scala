@@ -138,6 +138,11 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                           typ: TypedTessla.Type): Unit = {
     wrapper.entry = Translating(expression.loc)
     expression match {
+      case TypedTessla.BuiltInOperator(BuiltIn.TesslaInfo) =>
+        val members = Map(
+          "version" -> Lazy(ValueEntry(TesslaCore.StringLiteral(BuildInfo.version, expression.loc)))
+        )
+        wrapper.entry = Translated(Lazy(ObjectEntry(members)))
       case TypedTessla.BuiltInOperator(builtIn) =>
         wrapper.entry = Translated(Lazy(BuiltInEntry(builtIn)))
       case mac: TypedTessla.Macro =>
@@ -256,6 +261,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                     }, call.loc)
                     wrapper.entry = Translated(value.map(v => ValueEntry(v.get)))
                 }
+              case other =>
+                throw InternalError(s"Applying non-macro/builtin (${other.getClass.getSimpleName}) - should have been caught by the type checker.")
             }
 
           case Translated(Lazy(MacroEntry(mac, closure))) =>
@@ -449,8 +456,6 @@ object ConstantEvaluator {
         val composite = getCtf(arguments(0).get)
         val key = getString(arguments(1).get)
         Some(TesslaCore.StringLiteral(Ctf.getString(composite, key), loc))
-      case BuiltIn.TesslaVersion =>
-        Some(TesslaCore.StringLiteral(BuildInfo.version, loc))
     }
   }
 }

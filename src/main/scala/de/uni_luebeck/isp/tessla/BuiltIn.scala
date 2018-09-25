@@ -210,9 +210,8 @@ object BuiltIn {
     override def name = "CTF_getInt"
   }
 
-  // TeSSLa version string
-
-  case object TesslaVersion extends PrimitiveOperator {
+  // TeSSLa info object
+  case object TesslaInfo extends BuiltIn {
     override def name = "tessla"
   }
 
@@ -263,6 +262,6 @@ object BuiltIn {
     SetIntersection,
     CtfGetString,
     CtfGetInt,
-    TesslaVersion
+    TesslaInfo
   ).map(op => op.name -> op).toMap
 }
