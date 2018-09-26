@@ -169,7 +169,7 @@ class InterpreterTests extends FunSuite {
         testCase.expectedOsl.foreach { oslFile =>
           val expectedOSL = semiParseOsl(testSource(oslFile).getLines)
           handleResult(new Compiler().compile(src, timeUnit).andThen(new OSL.Generator)) { osl =>
-            val actualOSL = semiParseOsl(osl.toString.lines)
+            val actualOSL = semiParseOsl(osl.toString.linesIterator)
             assertEquals(actualOSL, expectedOSL, "OSL")
           }
         }
