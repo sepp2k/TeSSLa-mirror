@@ -41,6 +41,10 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     case object INCLUDE extends Token("include")
 
+    case object WHERE extends Token("where")
+
+    case object RETURN extends Token("return")
+
     case object COLON extends Token(":")
 
     case object PERCENT extends Token("%")
@@ -116,7 +120,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     import tokens._
 
-    override val keywords = List(DEFINE, DEF, TYPE, OUT, IN, STATIC, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE)
+    override val keywords = List(DEFINE, DEF, TYPE, OUT, IN, STATIC, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE, WHERE,
+      RETURN)
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, DOLLARBRACE, LBRACE, RBRACE,
       PERCENT, LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, ROCKET, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS,
       MINUS, STAR, SLASH, BANG, AT, DOT)
@@ -152,7 +157,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def define =
       DEFINE ^^! { (loc, tok) =>
-        warn(Location(loc, path), "The keyword 'define' is deprecated, use 'def' instead.")
+        warn(Location(loc, path), "The keyword 'define' is deprecated, use 'def' instead")
         tok
       } | DEF
 
@@ -226,7 +231,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def typeParameters: Parser[Seq[Tessla.Identifier]] = LBRACKET ~> rep1sep(identifier, COMMA) <~ RBRACKET
 
-    def expression: Parser[Tessla.Expression] = ifThenElse | staticIfThenElse | infixExpression
+    def expression: Parser[Tessla.Expression] = ifThenElse | staticIfThenElse | whereExpression
 
     def staticIfThenElse = (STATIC ~> IF ~> expression) ~ (THEN ~> expression) ~ (ELSE ~> expression) ^^! {
       case (loc, ((cond, thenCase), elseCase)) =>
@@ -246,6 +251,12 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
           Seq(),
           Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase)), Location(loc, path))
     }
+
+    def whereExpression =
+      infixExpression ~ (WHERE ~> LBRACE ~> definition.* <~ RBRACE).? ^^! {
+        case (_, (exp, None)) => exp
+        case (loc, (exp, Some(definitions))) => Tessla.Block(definitions, exp, Location(loc, path))
+      }
 
     def infixOp(lhs: Tessla.Expression, rhss: Seq[(WithLocation[Token], Tessla.Expression)]) = {
       rhss.foldLeft(lhs) {
@@ -342,8 +353,11 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
       case (loc, (elements, _)) => Tessla.Tuple(elements, Location(loc, path))
     }
 
-    def block = (LBRACE ~> definition.* ~ expression <~ RBRACE) ^^! {
-      case (loc, (statements, expr)) =>
+    def block = (LBRACE ~> definition.* ~ RETURN.? ~ expression <~ RBRACE) ^^! {
+      case (loc, ((statements, ret), expr)) =>
+        if (ret.isEmpty) {
+          warn(expr.loc, "Expressions at the end of a block are deprecated - use where or return instead")
+        }
         Tessla.Block(statements, expr, Location(loc, path))
     }
 

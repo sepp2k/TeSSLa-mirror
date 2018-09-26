@@ -6,16 +6,14 @@ def checkValidRuntime := runtime(checkValidCall, checkValidReturn)
 
 def maxCheckValidRuntime := max(checkValidRuntime)
 
-def runtime(call: Events[Unit], return: Events[Unit]) := {
-  at(return, time(return) - time(call))
-}
+def runtime(call: Events[Unit], ret: Events[Unit]) :=
+  at(ret, time(ret) - time(call))
 
 def at[A,B](trigger: Events[A], values: Events[B]) :=
   if time(trigger) == time(values) then values
 
-def fold[T,R](f: (Events[R], Events[T]) => Events[R], stream: Events[T], init: R) := {
+def fold[T,R](f: (Events[R], Events[T]) => Events[R], stream: Events[T], init: R) := result where {
   def result: Events[R] := merge(f(last(result, stream), stream), init)
-  result
 }
 
 @liftable

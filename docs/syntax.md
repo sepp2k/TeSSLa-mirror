@@ -14,7 +14,8 @@
                     | expression infixOperator expression
                     | unaryOperator expression
                     | "(" expression ")"
-                    | "{" statement* expression "}"
+                    | "{" definition* "return"? expression "}"
+                    | expression where "{" definition* "}"
                     | "${" (memberDef ("," memberDef)*)? "}"
                     | "(" (expression ("," expression)*)? ")"
                     | expression "." ID
@@ -24,6 +25,7 @@
                     | "true"
                     | "false"
     memberDef     ::= annotation* ID typeParamList? paramList? (":" type)? "=" expression
+                    | ID
     arguments     ::= "(" arg ("," arg)? ")"
     typeArguments ::= "[" type ("," type)* "]"
     arg           ::= ID "=" expression
@@ -38,6 +40,8 @@
     unaryOperator ::= "~" | "-" | "!"
     
     ID            ::= [a-zA-Z_][a-zA-Z_0-9]*
+
+Use of the `define` keyword over `def` is deprecated. So is using blocks without using `return` or `where` (as this can lead to ambiguities).
 
 Anything that appears within quotes in the grammar is a keyword and can not be used as an identifier.
 

@@ -5,3 +5,8 @@ out 42
 out 42
 out 1 as a
 out 2 as a
+
+def eventCount[T](e: Events[T]) := {
+    def ec: Events[Int] := default(last(ec, e) + 1, 0)
+    ec
+}

@@ -24,16 +24,15 @@ out baz
 -- Standard Library
 def runtime(name: String) := {
   def call := function_call(name)
-  def return := function_return(name)
-  at(return, time(return) - time(call))
+  def ret := function_return(name)
+  return at(ret, time(ret) - time(call))
 }
 
 def at[A,B](trigger: Events[A], values: Events[B]) :=
   if time(trigger) == time(values) then values
 
-def sum(x: Events[Int]) := {
+def sum(x: Events[Int]) := s where {
   def s: Events[Int] := default(last(s,x) + x, 0)
-  s
 }
 
 def average(x: Events[Int]) := {
@@ -41,10 +40,10 @@ def average(x: Events[Int]) := {
   if c != 0 then sum(x) / c
 }
 
-def count[A](x: Events[A]) := {
-  def s: Events[Int] := default(last(s,x) + 1, 0)
-  s
+def count[A](x: Events[A]) := c where {
+  def c: Events[Int] := default(last(c,x) + 1, 0)
 }
+
 in line: Events[Int]
 in column: Events[Int]
 in thread_id: Events[Int]

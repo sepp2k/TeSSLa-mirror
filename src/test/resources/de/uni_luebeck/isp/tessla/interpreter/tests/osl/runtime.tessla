@@ -11,8 +11,8 @@ out maximum(duration) as max
 -- Standard Library
 def runtime(name: String) := {
   def call := function_call(name)
-  def return := function_return(name)
-  at(return, time(return) - time(call))
+  def ret := function_return(name)
+  return at(ret, time(ret) - time(call))
 }
 
 def at[A,B](x: Events[A], y: Events[B]) :=
@@ -23,9 +23,8 @@ def max(a: Int, b: Int) := if a > b then a else b
 
 def maximum(x: Events[Int]) := fold(max, x, 0)
 
-def fold[T,R](f: (Events[R],Events[T]) => Events[R], stream: Events[T], init: R) := {
+def fold[T,R](f: (Events[R],Events[T]) => Events[R], stream: Events[T], init: R) := result where {
   def result: Events[R] := default(f(last(result, stream), stream), init)
-  result
 }
 
 in line: Events[Int]
