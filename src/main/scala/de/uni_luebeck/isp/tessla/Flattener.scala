@@ -297,9 +297,17 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     case objectLit: Tessla.ObjectLiteral =>
       checkForDuplicates(objectLit.members.map(_.id))
       val innerEnv = env ++ Env(variables = createIdMap(objectLit.members.map(_.id.name)), types = Map())
-      val members = objectLit.members.map { definition =>
-        addDefinition(definition, scope, innerEnv)
-        definition.id.name -> FlatTessla.IdLoc(innerEnv.variables(definition.id.name), definition.body.loc)
+      val members = objectLit.members.map {
+        case Tessla.MemberDefinition.Full(definition) =>
+          addDefinition(definition, scope, innerEnv)
+          definition.id.name -> FlatTessla.IdLoc(innerEnv.variables(definition.id.name), definition.body.loc)
+        case Tessla.MemberDefinition.Simple(id) =>
+          // Use env instead of innerEnv here because for `${x, y}` we specifically want to look up the values
+          // of x and y in the scope outside of the object, not inside the object, which would just lead to infinite
+          // recursion.
+          val body = translateExpression(Tessla.Variable(id), scope, env)
+          scope.addVariable(FlatTessla.VariableEntry(innerEnv.variables(id.name), body, None, id.loc))
+          id.name -> FlatTessla.IdLoc(innerEnv.variables(id.name), id.loc)
       }
       FlatTessla.ObjectLiteral(members.toMap, objectLit.loc)
 

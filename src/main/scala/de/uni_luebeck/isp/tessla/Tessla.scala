@@ -1,7 +1,5 @@
 package de.uni_luebeck.isp.tessla
 
-import java.beans.Expression
-
 object Tessla {
   case class Specification(statements: Seq[Statement]) {
     override def toString = statements.mkString("\n")
@@ -128,10 +126,25 @@ object Tessla {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
   }
 
-  case class ObjectLiteral(members: Seq[Definition], loc: Location) extends Expression {
+  case class ObjectLiteral(members: Seq[MemberDefinition], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
-      val memberStrings = members.map(_.toString(objectNotation = true))
-      memberStrings.mkString("${", ", ", "}")
+      members.mkString("${", ", ", "}")
+    }
+  }
+
+  sealed abstract class MemberDefinition {
+    def id: Identifier
+  }
+
+  object MemberDefinition {
+    case class Full(definition: Definition) extends MemberDefinition {
+      override def toString = definition.toString(objectNotation = true)
+
+      override def id = definition.id
+    }
+
+    case class Simple(id: Identifier) extends MemberDefinition {
+      override def toString = id.name
     }
   }
 

@@ -1,14 +1,13 @@
 package de.uni_luebeck.isp.tessla
 
 object Errors {
+  abstract class TesslaError extends Exception with Diagnostic
 
   case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends TesslaError {
     override def loc: Location = error.loc
 
     override def message: String = s"${error.message} (t = $timestamp)"
   }
-
-  abstract class TesslaError extends Exception with Diagnostic
 
   case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location]) extends TesslaError {
     override def loc = inner.loc
@@ -18,6 +17,14 @@ object Errors {
     def stackTraceString = stackTrace.map(loc => s"\n    called from $loc").mkString("")
 
     override def toString = super.toString() + stackTraceString
+  }
+
+  case class MissingBody(id: Tessla.Identifier) extends TesslaError {
+    override def loc = id.loc
+
+    override def message =
+      s"Member definition $id needs a body. Eliding the body is only allowed if the definition" +
+      " consists of an identifier and nothing else."
   }
 
   case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location) extends TesslaError {

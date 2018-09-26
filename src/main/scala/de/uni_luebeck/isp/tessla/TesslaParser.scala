@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.compacom
-import de.uni_luebeck.isp.tessla.Errors.ParserError
+import de.uni_luebeck.isp.tessla.Errors.{MissingBody, ParserError}
 
 class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] with Parsers {
   override def translateSpec(source: TesslaSource) = {
@@ -355,11 +355,16 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
       (loc, ast)
     }
 
-    def memberDefinition = memberHeader ~ (EQ ~> expression) ^^! {
-      case (loc, ((headerLoc, ((((annotations, id), typeParams), params), typeOpt)), body)) =>
-        Tessla.Definition(
+    def memberDefinition = memberHeader ~ (EQ ~> expression).? ^^! {
+      case (loc, ((headerLoc, ((((annotations, id), typeParams), params), typeOpt)), Some(body))) =>
+        Tessla.MemberDefinition.Full(Tessla.Definition(
           annotations, id, typeParams.getOrElse(Seq()), params.getOrElse(Seq()), typeOpt, Location(headerLoc, path),
-          body, Location(loc, path))
+          body, Location(loc, path)))
+      case (_, ((_, ((((Seq(), id), None), None), None)), None)) =>
+        Tessla.MemberDefinition.Simple(id)
+      case (_, ((_, ((((_, id), _), _), _)), _)) =>
+        error(MissingBody(id))
+        null
     }
 
     def variable: Parser[Tessla.Expression] = identifier ^^ Tessla.Variable
