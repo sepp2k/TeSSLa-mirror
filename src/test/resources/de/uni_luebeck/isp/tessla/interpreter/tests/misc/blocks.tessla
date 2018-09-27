@@ -1,0 +1,23 @@
+in x: Events[Int]
+in y: Events[Int]
+
+def s1 := merge(a,b) where {
+  def a := if x > 5 then "a"
+  def b := if y > 3 then "b"
+}
+
+def s2 := {
+  def a := if x > 5 then "a"
+  def b := if y > 3 then "b"
+  return merge(a,b)
+}
+
+def s3 := {
+  def a := if x > 5 then "a"
+  def b := if y > 3 then "b"
+  merge(a,b)
+}
+
+out s1
+out s2
+out s3
