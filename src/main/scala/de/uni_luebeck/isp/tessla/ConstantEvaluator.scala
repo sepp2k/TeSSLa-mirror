@@ -33,6 +33,11 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   case class BuiltInEntry(builtIn: BuiltIn) extends TranslationResult
   case class TypeEntry(typ: TesslaCore.ValueType) extends TranslationResult
 
+  val stdlib = BuiltIn.builtIns.collect {
+    case (name, op: BuiltIn.PrimitiveOperator) =>
+      name -> (makeIdentifier(name), op)
+  }
+
   override def translateSpec(spec: TypedTessla.Specification): TesslaCore.Specification = {
     try {
       val env = createEnvForScopeWithParents(spec.globalScope)
@@ -40,11 +45,15 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       val inputStreams = spec.globalScope.variables.collect {
         case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
           (is.name, translateStreamType(typ, env), is.loc)
-      }.toSeq
+      }
       val outputStreams = spec.outStreams.map { os =>
         (os.name, getStream(env(os.id).entry, os.loc))
       }
-      TesslaCore.Specification(translatedStreams.toSeq, inputStreams, outputStreams)
+      val values = stdlib.map {
+        case (_, (id, op)) =>
+          id -> TesslaCore.BuiltInOperator(op)
+      }.toSeq
+      TesslaCore.Specification(translatedStreams.toSeq, values, inputStreams.toSeq, outputStreams)
     } catch {
       case err: TesslaError =>
         throw WithStackTrace(err, stack)
@@ -107,20 +116,20 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
 
   def translateLiteral(literal: Tessla.LiteralValue, loc: Location): TesslaCore.Value = literal match {
     case Tessla.IntLiteral(x) =>
-      TesslaCore.IntLiteral(x, loc)
+      TesslaCore.IntValue(x, loc)
     case Tessla.TimeLiteral(x, tu) =>
       baseTimeUnit match {
         case Some(base) =>
           val conversionFactor = tu.convertTo(base).getOrElse(throw Errors.TimeUnitConversionError(tu, base))
-          TesslaCore.IntLiteral(conversionFactor * x, loc)
+          TesslaCore.IntValue(conversionFactor * x, loc)
         case None =>
           error(UndefinedTimeUnit(tu.loc))
-          TesslaCore.IntLiteral(x, loc)
+          TesslaCore.IntValue(x, loc)
       }
     case Tessla.StringLiteral(str) =>
-      TesslaCore.StringLiteral(str, loc)
+      TesslaCore.StringValue(str, loc)
     case Tessla.BoolLiteral(bool) =>
-      TesslaCore.BoolLiteral(bool, loc)
+      TesslaCore.BoolValue(bool, loc)
     case Tessla.Unit =>
       TesslaCore.Unit(loc)
   }
@@ -140,7 +149,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     expression match {
       case TypedTessla.BuiltInOperator(BuiltIn.TesslaInfo) =>
         val members = Map(
-          "version" -> Lazy(ValueEntry(TesslaCore.StringLiteral(BuildInfo.version, expression.loc)))
+          "version" -> Lazy(ValueEntry(TesslaCore.StringValue(BuildInfo.version, expression.loc)))
         )
         wrapper.entry = Translated(Lazy(ObjectEntry(members)))
       case TypedTessla.BuiltInOperator(builtIn) =>
@@ -248,7 +257,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                     //       this code needs to be adjusted
                     val typeArgs = call.typeArgs.map(translateValueType(_, env))
                     stream {
-                      TesslaCore.Lift(op, typeArgs, args.indices.map(streamArg), call.loc)
+                      TesslaCore.Lift(stdlib(op.name)._1, typeArgs, args.indices.map(streamArg), call.loc)
                     }
                   case _ =>
                     val value = evalPrimitiveOperator(op, call.typeArgs.map(translateValueType(_, env)), args.map { arg =>
@@ -329,17 +338,17 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
 
 object ConstantEvaluator {
   private def getInt(v: TesslaCore.Value): BigInt = v match {
-    case intLit: TesslaCore.IntLiteral => intLit.value
+    case intLit: TesslaCore.IntValue => intLit.value
     case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Int, got: $v", v.loc)
   }
 
   private def getBool(v: TesslaCore.Value): Boolean = v match {
-    case boolLit: TesslaCore.BoolLiteral => boolLit.value
+    case boolLit: TesslaCore.BoolValue => boolLit.value
     case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
   }
 
   private def getString(v: TesslaCore.Value): String = v match {
-    case stringLit: TesslaCore.StringLiteral => stringLit.value
+    case stringLit: TesslaCore.StringValue => stringLit.value
     case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: String, got: $v", v.loc)
   }
 
@@ -362,11 +371,11 @@ object ConstantEvaluator {
                             arguments: Seq[Lazy[TesslaCore.Value]],
                             loc: Location): Lazy[Option[TesslaCore.Value]] = Lazy {
     def binIntOp(op: (BigInt, BigInt) => BigInt) = {
-      Some(TesslaCore.IntLiteral(op(getInt(arguments(0).get), getInt(arguments(1).get)), loc))
+      Some(TesslaCore.IntValue(op(getInt(arguments(0).get), getInt(arguments(1).get)), loc))
     }
 
     def binIntComp(op: (BigInt, BigInt) => Boolean) = {
-      Some(TesslaCore.BoolLiteral(op(getInt(arguments(0).get), getInt(arguments(1).get)), loc))
+      Some(TesslaCore.BoolValue(op(getInt(arguments(0).get), getInt(arguments(1).get)), loc))
     }
 
     def div(x: BigInt, y: BigInt): BigInt = {
@@ -386,17 +395,17 @@ object ConstantEvaluator {
       case BuiltIn.BitAnd => binIntOp(_ & _)
       case BuiltIn.BitOr => binIntOp(_ | _)
       case BuiltIn.BitXor => binIntOp(_ ^ _)
-      case BuiltIn.BitFlip => Some(TesslaCore.IntLiteral(~getInt(arguments(0).get), loc))
-      case BuiltIn.Negate => Some(TesslaCore.IntLiteral(-getInt(arguments(0).get), loc))
-      case BuiltIn.Eq => Some(TesslaCore.BoolLiteral(arguments(0).get.value == arguments(1).get.value, loc))
-      case BuiltIn.Neq => Some(TesslaCore.BoolLiteral(arguments(0).get.value != arguments(1).get.value, loc))
+      case BuiltIn.BitFlip => Some(TesslaCore.IntValue(~getInt(arguments(0).get), loc))
+      case BuiltIn.Negate => Some(TesslaCore.IntValue(-getInt(arguments(0).get), loc))
+      case BuiltIn.Eq => Some(TesslaCore.BoolValue(arguments(0).get == arguments(1).get, loc))
+      case BuiltIn.Neq => Some(TesslaCore.BoolValue(arguments(0).get != arguments(1).get, loc))
       case BuiltIn.Lt => binIntComp(_ < _)
       case BuiltIn.Lte => binIntComp(_ <= _)
       case BuiltIn.Gt => binIntComp(_ > _)
       case BuiltIn.Gte => binIntComp(_ >= _)
-      case BuiltIn.And => Some(TesslaCore.BoolLiteral(getBool(arguments(0).get) && getBool(arguments(1).get), loc))
-      case BuiltIn.Or => Some(TesslaCore.BoolLiteral(getBool(arguments(0).get) || getBool(arguments(1).get), loc))
-      case BuiltIn.Not => Some(TesslaCore.BoolLiteral(!getBool(arguments(0).get), loc))
+      case BuiltIn.And => Some(TesslaCore.BoolValue(getBool(arguments(0).get) && getBool(arguments(1).get), loc))
+      case BuiltIn.Or => Some(TesslaCore.BoolValue(getBool(arguments(0).get) || getBool(arguments(1).get), loc))
+      case BuiltIn.Not => Some(TesslaCore.BoolValue(!getBool(arguments(0).get), loc))
       case BuiltIn.IfThen =>
         if (getBool(arguments(0).get)) Some(arguments(1).get)
         else None
@@ -420,26 +429,26 @@ object ConstantEvaluator {
             throw KeyNotFound(key, map.value, loc)
         }
       case BuiltIn.MapContains =>
-        Some(TesslaCore.BoolLiteral(getMap(arguments(0).get).value.contains(arguments(1).get), loc))
+        Some(TesslaCore.BoolValue(getMap(arguments(0).get).value.contains(arguments(1).get), loc))
       case BuiltIn.MapRemove =>
         val map = getMap(arguments(0).get)
         Some(TesslaCore.TesslaMap(map.value - arguments(1).get, map.typ, loc))
       case BuiltIn.MapSize =>
         val map = getMap(arguments(0).get)
-        Some(TesslaCore.IntLiteral(map.value.size, loc))
+        Some(TesslaCore.IntValue(map.value.size, loc))
       case BuiltIn.SetEmpty =>
         Some(TesslaCore.TesslaSet(Set(), TesslaCore.SetType(typeArguments(0)), loc))
       case BuiltIn.SetAdd =>
         val set = getSet(arguments(0).get)
         Some(TesslaCore.TesslaSet(set.value + arguments(1).get, set.typ, loc))
       case BuiltIn.SetContains =>
-        Some(TesslaCore.BoolLiteral(getSet(arguments(0).get).value.contains(arguments(1).get), loc))
+        Some(TesslaCore.BoolValue(getSet(arguments(0).get).value.contains(arguments(1).get), loc))
       case BuiltIn.SetRemove =>
         val set = getSet(arguments(0).get)
         Some(TesslaCore.TesslaSet(set.value - arguments(1).get, set.typ, loc))
       case BuiltIn.SetSize =>
         val set = getSet(arguments(0).get)
-        Some(TesslaCore.IntLiteral(set.value.size, loc))
+        Some(TesslaCore.IntValue(set.value.size, loc))
       case BuiltIn.SetUnion =>
         val set1 = getSet(arguments(0).get)
         val set2 = getSet(arguments(1).get)
@@ -451,11 +460,11 @@ object ConstantEvaluator {
       case BuiltIn.CtfGetInt =>
         val composite = getCtf(arguments(0).get)
         val key = getString(arguments(1).get)
-        Some(TesslaCore.IntLiteral(Ctf.getInt(composite, key), loc))
+        Some(TesslaCore.IntValue(Ctf.getInt(composite, key), loc))
       case BuiltIn.CtfGetString =>
         val composite = getCtf(arguments(0).get)
         val key = getString(arguments(1).get)
-        Some(TesslaCore.StringLiteral(Ctf.getString(composite, key), loc))
+        Some(TesslaCore.StringValue(Ctf.getString(composite, key), loc))
     }
   }
 }

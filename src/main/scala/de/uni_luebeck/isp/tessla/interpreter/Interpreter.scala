@@ -13,7 +13,6 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       name -> (new Input, typ.elementType)
   }.toMap
 
-
   lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map {
     case (name, exp) => (name, Lazy(eval(exp.expression)))
   }.toMap
@@ -23,6 +22,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case (name, streamRef: TesslaCore.InputStream) => name -> inStreams(streamRef.name)._1
     case (name, _: TesslaCore.Nil) => name -> nil
   }
+
+  lazy val globalValues = spec.values.toMap
 
   private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
     case TesslaCore.Stream(id, loc) =>
@@ -41,11 +42,16 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => Lazy(arg.forceValue.withLoc(stream.loc))
         }
-        // We can pass the empty sequence for the type parameters because the only operators that require type
-        // parameters to be evaluated are the constructors for empty data structures and those will already have
-        // been turned into values by the constant folder, so no such operator can occur here.
-        val result = ConstantEvaluator.evalPrimitiveOperator(op, Seq(), args, exp.loc)
-        TesslaCore.ValueOrError.fromLazyOption(result)
+        globalValues(op) match {
+          case TesslaCore.BuiltInOperator(builtIn, _) =>
+            // We can pass the empty sequence for the type parameters because the only operators that require type
+            // parameters to be evaluated are the constructors for empty data structures and those will already have
+            // been turned into values by the constant folder, so no such operator can occur here.
+            val result = ConstantEvaluator.evalPrimitiveOperator (builtIn, Seq (), args, exp.loc)
+            TesslaCore.ValueOrError.fromLazyOption (result)
+          case other =>
+            throw InternalError(s"TODO: $other")
+        }
       }
     case TesslaCore.Default(values, defaultValue, _) =>
       evalStream(values).default(defaultValue)
@@ -64,7 +70,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.Merge(arg1, arg2, loc) =>
       val stream1 = evalStream(arg1)
       val stream2 = evalStream(arg2)
-      val zero = TesslaCore.IntLiteral(0, loc)
+      val zero = TesslaCore.IntValue(0, loc)
       lift(Seq(
         stream1.time(loc).default(zero),
         stream2.time(loc).default(zero),
@@ -78,7 +84,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }
 
   def getInt(value: TesslaCore.Value): BigInt = value match {
-    case TesslaCore.IntLiteral(i, _) => i
+    case TesslaCore.IntValue(i, _) => i
     case _ => throw InternalError(s"Int expected, but $value found", value.loc)
   }
 }
@@ -92,9 +98,9 @@ object Interpreter {
 
     override def translateSpec(spec: Interpreter): Trace = {
       val eventIterator = new Iterator[Trace.Event] {
-        var nextEvents = new mutable.Queue[Trace.Event]
-        var stopped = false
-        val seen = mutable.Set.empty[String]
+        private var nextEvents = new mutable.Queue[Trace.Event]
+        private var stopped = false
+        private val seen = mutable.Set.empty[String]
 
         spec.outStreams.foreach {
           case (name, stream) =>
@@ -110,7 +116,7 @@ object Interpreter {
             }
         }
 
-        def gatherValues(): Unit = {
+        private def gatherValues(): Unit = {
           while (nextEvents.isEmpty && inputTrace.events.hasNext) {
             val specTime = spec.getTime
             val event = inputTrace.events.next
@@ -148,7 +154,7 @@ object Interpreter {
             }
             stopped = true
           }
-      }
+        }
 
         override def hasNext = {
           if (!stopped) gatherValues()

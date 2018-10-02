@@ -176,7 +176,7 @@ class Specification() {
       override def init(): Unit = {
         delays.addListener(delay => {
           newDelay = delay.map(_.forceValue).map {
-            case TesslaCore.IntLiteral(value, loc) =>
+            case TesslaCore.IntValue(value, loc) =>
               if (value > 0) {
                 value
               } else {
@@ -241,7 +241,7 @@ class Specification() {
       new Stream {
         override protected def init(): Unit = {
           self.addListener {
-            value => propagate(value.map{_ => TesslaCore.IntLiteral(getTime, loc)})
+            value => propagate(value.map{_ => TesslaCore.IntValue(getTime, loc)})
           }
         }
       }
