@@ -85,7 +85,7 @@ class Specification() {
   }
 
   def lift(streams: Seq[Stream])
-          (op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream =
+    (op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream =
     new Stream {
       private var state: Seq[Option[TesslaCore.ValueOrError]] = streams.map(_ => None)
       private var inputs: Array[Option[TesslaCore.ValueOrError]] = streams.map(_ => None).toArray
@@ -111,6 +111,33 @@ class Specification() {
               counter = 0
               inputs = streams.map(_ => None).toArray
               state = newState
+              propagate(newOutput)
+            }
+          }
+        }
+      }
+    }
+
+  // TODO: rename appropriately
+  def simpleLift(streams: Seq[Stream])
+    (op: Seq[Option[TesslaCore.ValueOrError]] => Option[TesslaCore.ValueOrError]): Stream =
+    new Stream {
+      private var inputs: Array[Option[TesslaCore.ValueOrError]] = streams.map(_ => None).toArray
+      private var counter = 0
+
+      override protected def init(): Unit = {
+        for ((stream, i) <- streams.zipWithIndex) {
+          stream.addListener { value =>
+            counter += 1
+            inputs(i) = value
+            if (counter == streams.length) {
+              val newOutput =
+                if (inputs.exists(_.isDefined))
+                  op(inputs)
+                else
+                  None
+              counter = 0
+              inputs = streams.map(_ => None).toArray
               propagate(newOutput)
             }
           }
@@ -241,7 +268,7 @@ class Specification() {
       new Stream {
         override protected def init(): Unit = {
           self.addListener {
-            value => propagate(value.map{_ => TesslaCore.IntLiteral(getTime, loc)})
+            value => propagate(value.map { _ => TesslaCore.IntLiteral(getTime, loc) })
           }
         }
       }
@@ -276,7 +303,7 @@ class Specification() {
                 other = None
               case None =>
                 other = Some(value)
-              }
+            }
           }
 
           self.addListener(listener(false))
