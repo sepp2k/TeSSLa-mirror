@@ -101,6 +101,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     case TypedTessla.BoolType => TesslaCore.BoolType
     case TypedTessla.UnitType => TesslaCore.UnitType
     case TypedTessla.CtfType => TesslaCore.CtfType
+    case TypedTessla.OptionType(t) => TesslaCore.OptionType(translateValueType(t, env))
     case TypedTessla.MapType(k, v) => TesslaCore.MapType(translateValueType(k, env), translateValueType(v, env))
     case TypedTessla.SetType(t) => TesslaCore.SetType(translateValueType(t, env))
     case _ : TypedTessla.ObjectType =>
@@ -352,6 +353,11 @@ object ConstantEvaluator {
     case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: String, got: $v", v.loc)
   }
 
+  private def getOption(v: TesslaCore.Value): TesslaCore.TesslaOption = v match {
+    case optionValue: TesslaCore.TesslaOption => optionValue
+    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Option ${v.loc}, got: $v", v.loc)
+  }
+
   private def getCtf(v: TesslaCore.Value): ICompositeDefinition = v match {
     case ctfLit: TesslaCore.Ctf => ctfLit.value
     case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: CTF, got: $v", v.loc)
@@ -414,6 +420,17 @@ object ConstantEvaluator {
         else Some(arguments(2).get)
       case BuiltIn.First =>
         Some(arguments(0).get)
+      case BuiltIn.None =>
+        Some(TesslaCore.TesslaOption(None, TesslaCore.OptionType(typeArguments(0)), loc))
+      case BuiltIn.Some =>
+        Some(TesslaCore.TesslaOption(Some(arguments(0).get), TesslaCore.OptionType(arguments(0).get.typ), loc))
+      case BuiltIn.IsNone =>
+        Some(TesslaCore.BoolValue(getOption(arguments(0).get).value.isEmpty, loc))
+      case BuiltIn.GetSome =>
+        getOption(arguments(0).get).value match {
+          case None => throw CannotGetValueOfNone(loc)
+          case some => some
+        }
       case BuiltIn.MapEmpty =>
         Some(TesslaCore.TesslaMap(Map(), TesslaCore.MapType(typeArguments(0), typeArguments(1)), loc))
       case BuiltIn.MapAdd =>

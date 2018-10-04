@@ -1,0 +1,4 @@
+1: safeGet(map, keys) = Some("zweiundvierzig")
+1: pretty = "zweiundvierzig"
+2: safeGet(map, keys) = None
+2: pretty = "IsNix"

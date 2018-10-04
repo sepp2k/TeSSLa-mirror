@@ -164,6 +164,10 @@ object Errors {
     override def message: String = s"Key $key was not found in $map"
   }
 
+  case class CannotGetValueOfNone(loc: Location) extends TesslaError {
+    override def message: String = s"Cannot get value of None"
+  }
+
   case class StackOverflow(loc: Location) extends TesslaError {
     override def message = "Stack overflow"
   }

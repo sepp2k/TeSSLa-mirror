@@ -52,6 +52,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     case FlatTessla.BoolType => TypedTessla.BoolType
     case FlatTessla.StringType => TypedTessla.StringType
     case FlatTessla.UnitType => TypedTessla.UnitType
+    case FlatTessla.OptionType(t) => TypedTessla.OptionType(translateType(t, env))
     case FlatTessla.CtfType => TypedTessla.CtfType
     case s: FlatTessla.StreamType =>
       TypedTessla.StreamType(translateType(s.elementType, env))
@@ -222,6 +223,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         TypedTessla.StreamType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.SetType(expectedElementType), TypedTessla.SetType(actualElementType)) =>
         TypedTessla.SetType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
+      case (TypedTessla.OptionType(expectedElementType), TypedTessla.OptionType(actualElementType)) =>
+        TypedTessla.OptionType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.MapType(k, v), TypedTessla.MapType(k2, v2)) =>
         TypedTessla.MapType(typeSubst(k, k2, typeParams, substitutions, loc), typeSubst(v, v2, typeParams, substitutions, loc))
       case (TypedTessla.ObjectType(expectedMembers), TypedTessla.ObjectType(actualMembers)) =>
@@ -232,7 +235,13 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
             }.getOrElse(expectedMemberType)
         }
         TypedTessla.ObjectType(members)
-      case _ =>
+      case (TypedTessla.IntType, TypedTessla.IntType)
+         | (TypedTessla.BoolType, TypedTessla.BoolType)
+         | (TypedTessla.UnitType, TypedTessla.UnitType)
+         | (TypedTessla.StringType, TypedTessla.StringType) =>
+        expected
+      case (left, right) =>
+        assert(left.getClass != right.getClass)
         expected
     }
   }
@@ -305,6 +314,22 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         case BuiltIn.Time =>
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(StreamType(t)), StreamType(IntType), isLiftable = false)
+
+        case BuiltIn.None =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(), OptionType(t), isLiftable = false)
+
+        case BuiltIn.Some =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(t), OptionType(t), isLiftable = true)
+
+        case BuiltIn.IsNone =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(OptionType(t)), BoolType, isLiftable = true)
+
+        case BuiltIn.GetSome =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(OptionType(t)), t, isLiftable = true)
 
         case BuiltIn.MapEmpty =>
           val k = mkTVar("Key")

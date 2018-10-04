@@ -138,7 +138,7 @@ object TesslaCore extends HasUniqueIdentifiers {
   sealed abstract class Value extends ValueOrError {
     def loc: Location
     def withLoc(loc: Location): Value
-    def typ: Type
+    def typ: ValueType
     override def forceValue = this
   }
 
@@ -177,6 +177,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def typ = UnitType
   }
 
+  final case class TesslaOption(value: Option[Value], typ: OptionType, loc: Location) extends PrimitiveValue {
+    override def withLoc(loc: Location): TesslaOption = copy(loc = loc)
+  }
+
   final case class TesslaMap(value: Map[Value, Value], typ: MapType, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaMap = copy(loc = loc)
   }
@@ -212,6 +216,10 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   case object FunctionType extends ValueType {
     override def toString = "? => ?"
+  }
+
+  case class OptionType(elementType: ValueType) extends ValueType {
+    override def toString = s"Option[$elementType]"
   }
 
   case class MapType(keyType: ValueType, valueType: ValueType) extends ValueType {
