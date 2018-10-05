@@ -6,11 +6,12 @@ import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
   final case class Specification(streams: Seq[(Identifier, StreamDefinition)],
-                                 values: Seq[(Identifier, ValueExpression)],
+                                 functions: Seq[(Identifier, Value)],
                                  inStreams: Seq[(String, StreamType, Location)],
                                  outStreams: Seq[(String, StreamRef)]) {
     override def toString = {
       inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
+        functions.map { case (name, value) => s"const $name := $value\n" }.mkString +
         streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +
         outStreams.map { case (name, stream) => s"out $stream as $name\n" }.mkString
     }
@@ -79,6 +80,33 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
+    }
+  }
+
+  sealed abstract class ValueExpression
+
+  final case class Function(parameters: Seq[Identifier],
+                            scope: Map[Identifier, ValueExpression],
+                            body: Identifier,
+                            loc: Location) extends ValueExpression {
+    override def toString = {
+      val defs = scope.map {
+        case (id, exp) => s"const $id := $exp\n"
+      }.mkString
+      s"(${parameters.mkString(", ")}) => {\n${defs}return $body\n}"
+    }
+  }
+
+  case class Application(f: Identifier, args: Seq[Identifier]) extends ValueExpression {
+    override def toString = args.mkString("f(", ", ", ")")
+  }
+
+  case class Literal(value: ValueOrError) extends ValueExpression
+
+  sealed trait ValueOrError {
+    def forceValue: Value
+  }
+
   object ValueOrError {
     def fromLazyOption(lazyValueOption: Lazy[Option[Value]]): Option[ValueOrError] = {
       try {
@@ -94,51 +122,17 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  sealed abstract class ValueArg
-
-  case class ValueValue(value: Value) extends ValueArg {
-    override def toString = value.toString
-  }
-
-  case class ValueVariable(id: Identifier) extends ValueArg {
-    override def toString = id.toString
-  }
-
-  sealed abstract class ValueExpression
-
-  final case class Function(parameters: Seq[Identifier],
-                            scope: Map[Identifier, ValueExpression],
-                            body: ValueArg,
-                            loc: Location) extends ValueExpression {
-    override def toString = {
-      val defs = scope.map {
-        case (id, exp) => s"def $id := $exp\n"
-      }.mkString
-      s"(${parameters.mkString(", ")}) => {$defs$body}"
-    }
-  }
-
-  case class BuiltInOperator(builtIn: BuiltIn.PrimitiveOperator, loc: Location = Location.builtIn) extends ValueExpression {
-    override def toString = builtIn.name
-  }
-
-
-  case class Application(f: Identifier, args: Seq[ValueArg]) extends ValueExpression {
-    override def toString = args.mkString("f(", ", ", ")")
-  }
-
-  sealed abstract class ValueOrError {
-    def forceValue: Value
-  }
-
-  final case class Error(error: TesslaError) extends ValueOrError {
+  final case class Error(error: TesslaError) extends ValueExpression with ValueOrError {
     override def forceValue = throw error
   }
 
   sealed abstract class Value extends ValueOrError {
     def loc: Location
+
     def withLoc(loc: Location): Value
+
     def typ: ValueType
+
     override def forceValue = this
   }
 
@@ -192,6 +186,20 @@ object TesslaCore extends HasUniqueIdentifiers {
   final case class Ctf(value: ICompositeDefinition, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): Ctf = copy(loc = loc)
     override def typ = CtfType
+  }
+
+  case class BuiltInOperator(value: BuiltIn.PrimitiveOperator, loc: Location) extends PrimitiveValue {
+    override def withLoc(loc: Location): BuiltInOperator = copy(loc = loc)
+    override def typ = FunctionType
+  }
+
+  case class Closure(function: Function, capturedEnvironment: Map[Identifier, ValueOrError], loc: Location) extends Value {
+    override def withLoc(loc: Location): Closure = copy(loc = loc)
+    override def typ = FunctionType
+
+    override def toString = {
+      capturedEnvironment.map { case (id, v) => s"$id = $v"}.mkString(s"$function with {", ", ", "}")
+    }
   }
 
   sealed abstract class Type

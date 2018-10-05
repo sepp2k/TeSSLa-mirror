@@ -51,7 +51,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       }
       val values = stdlib.map {
         case (_, (id, op)) =>
-          id -> TesslaCore.BuiltInOperator(op)
+          id -> TesslaCore.BuiltInOperator(op, Location.builtIn)
       }.toSeq
       TesslaCore.Specification(translatedStreams.toSeq, values, inputStreams.toSeq, outputStreams)
     } catch {

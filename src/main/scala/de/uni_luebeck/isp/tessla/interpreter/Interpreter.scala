@@ -23,7 +23,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case (name, _: TesslaCore.Nil) => name -> nil
   }
 
-  lazy val globalValues = spec.values.toMap
+  lazy val globalFunctions = spec.functions.toMap
 
   private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
     case TesslaCore.Stream(id, loc) =>
@@ -42,7 +42,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => Lazy(arg.forceValue.withLoc(stream.loc))
         }
-        globalValues(op) match {
+        globalFunctions(op) match {
           case TesslaCore.BuiltInOperator(builtIn, _) =>
             // We can pass the empty sequence for the type parameters because the only operators that require type
             // parameters to be evaluated are the constructors for empty data structures and those will already have
