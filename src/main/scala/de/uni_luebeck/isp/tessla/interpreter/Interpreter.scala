@@ -34,7 +34,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }
 
   private def eval(exp: TesslaCore.Expression): Stream = exp match {
-    case TesslaCore.Lift(op, _, argStreams, loc) =>
+    case TesslaCore.SignalLift(op, _, argStreams, loc) =>
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)
       }
@@ -53,6 +53,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
             throw InternalError(s"TODO: $other")
         }
       }
+    case TesslaCore.Lift(f, _, _, _) =>
+      throw InternalError(s"TODO: ${globalFunctions(f)}")
     case TesslaCore.Default(values, defaultValue, _) =>
       evalStream(values).default(defaultValue)
     case TesslaCore.DefaultFrom(values, defaults, _) =>

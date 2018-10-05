@@ -75,11 +75,15 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   final case class Lift(f: Identifier, typeArgs: Seq[Type], args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
-        val targs = typeArgs.mkString("[", ", ", "]")
-        args.mkString(s"lift($f$targs", ", ", ")")
+      val targs = typeArgs.mkString("[", ", ", "]")
+      args.mkString(s"lift$targs($f", ", ", ")")
     }
   }
 
+  final case class SignalLift(f: Identifier, typeArgs: Seq[Type], args: Seq[StreamRef], loc: Location) extends Expression {
+    override def toString = {
+      val targs = typeArgs.mkString("[", ", ", "]")
+      args.mkString(s"slift$targs($f", ", ", ")")
     }
   }
 

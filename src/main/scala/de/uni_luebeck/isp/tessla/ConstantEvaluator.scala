@@ -251,6 +251,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 stream {
                   TesslaCore.Merge(streamArg(0), streamArg(1), call.loc)
                 }
+              case BuiltIn.Lift =>
+                stream {
+                  ???
+                }
               case op: BuiltIn.PrimitiveOperator =>
                 typ match {
                   case _ : TypedTessla.StreamType =>
@@ -258,7 +262,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                     //       this code needs to be adjusted
                     val typeArgs = call.typeArgs.map(translateValueType(_, env))
                     stream {
-                      TesslaCore.Lift(stdlib(op.name)._1, typeArgs, args.indices.map(streamArg), call.loc)
+                      TesslaCore.SignalLift(stdlib(op.name)._1, typeArgs, args.indices.map(streamArg), call.loc)
                     }
                   case _ =>
                     val value = evalPrimitiveOperator(op, call.typeArgs.map(translateValueType(_, env)), args.map { arg =>

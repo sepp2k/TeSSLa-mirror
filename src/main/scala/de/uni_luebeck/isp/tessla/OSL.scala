@@ -133,6 +133,7 @@ object OSL {
     }
 
     def translateExpression(expression: TesslaCore.Expression): Seq[ProtoStatement] = expression match {
+      case l: TesslaCore.SignalLift => l.args.flatMap(translateStreamRef)
       case l: TesslaCore.Lift => l.args.flatMap(translateStreamRef)
       case d: TesslaCore.Default => translateStreamRef(d.stream)
       case d: TesslaCore.DefaultFrom => translateStreamRef(d.valueStream) ++ translateStreamRef(d.defaultStream)
