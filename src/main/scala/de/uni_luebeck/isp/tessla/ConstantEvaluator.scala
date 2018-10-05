@@ -271,8 +271,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                     }, call.loc)
                     wrapper.entry = Translated(value.map(v => ValueEntry(v.get)))
                 }
-              case other =>
-                throw InternalError(s"Applying non-macro/builtin (${other.getClass.getSimpleName}) - should have been caught by the type checker.")
+              case BuiltIn.TesslaInfo =>
+                throw InternalError(s"Applying non-macro/builtin (${builtIn.getClass.getSimpleName}) - should have been caught by the type checker.")
             }
 
           case Translated(Lazy(MacroEntry(mac, closure))) =>
