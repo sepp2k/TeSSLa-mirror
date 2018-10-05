@@ -233,9 +233,62 @@ class Specification() {
       }
     }
 
+  def delay(delays: => Stream, resets: => Stream): Stream =
+    new Triggered {
+      private var newDelay: Option[Time] = None
+      private var newReset: Boolean = false
+      private var newTriggered: Boolean = false
+      private var targetTime: Option[Time] = None
+      private var counter = 0
+
+      def update(): Unit = {
+        if (counter == 2) {
+          counter = 0
+          if (newReset || newTriggered) {
+            targetTime = newDelay.map(_ + getTime)
+          }
+        } else {
+          counter += 1
+        }
+      }
+
+      override def init(): Unit = {
+        delays.addListener(delay => {
+          newDelay = delay.map(_.forceValue).map {
+            case TesslaCore.IntLiteral(value, loc) =>
+              if (value > 0) {
+                value
+              } else {
+                throw NegativeDelayError(value, loc)
+              }
+            case _ =>
+              throw InternalError("Uncaught type error: delay called with non-int delay")
+          }: Option[Time]
+          update()
+        })
+        resets.addListener(reset => {
+          newReset = reset.isDefined
+          update()
+        })
+      }
+
+      override def step(): Unit = {
+        targetTime match {
+          case Some(target) if target == getTime =>
+            newTriggered = true
+            targetTime = None
+            propagate(Some(TesslaCore.Unit(Location.BuiltIn)))
+          case _ =>
+            newTriggered = false
+            propagate(None)
+        }
+        update()
+      }
+    }
+
   def nil: Stream =
     new Triggered {
-      override def step() = {
+      override def step(): Unit = {
         propagate(None)
       }
     }
