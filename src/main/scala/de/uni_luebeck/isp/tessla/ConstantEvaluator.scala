@@ -273,7 +273,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 posArgIdx += 1
                 param.id -> env(arg.id)
               case arg: TypedTessla.NamedArgument =>
-                mac.parameters.find(_.name == arg.name).get.id -> env(arg.id)
+                mac.parameters.find(_.name == arg.name) match {
+                  case Some(param) => param.id -> env(arg.id)
+                  case None => throw UndefinedNamedArg(arg)
+                }
             }.toMap
             val scopeWithoutParameters = new TypedTessla.Scope(mac.scope.parent)
             mac.scope.variables.foreach {

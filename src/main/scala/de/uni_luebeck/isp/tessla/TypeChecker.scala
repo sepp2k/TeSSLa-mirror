@@ -518,7 +518,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
                   case _: FlatTessla.PositionalArgument =>
                     TypedTessla.PositionalArgument(possiblyLifted, arg.loc)
                   case named: FlatTessla.NamedArgument =>
-                    TypedTessla.NamedArgument(named.name, possiblyLifted, named.loc)
+                    TypedTessla.NamedArgument(named.name, TypedTessla.IdLoc(possiblyLifted, named.idLoc.loc), named.loc)
                 }
             }
             val leftOverTypeParameters = typeParams.diff(typeSubstitutions.keySet)

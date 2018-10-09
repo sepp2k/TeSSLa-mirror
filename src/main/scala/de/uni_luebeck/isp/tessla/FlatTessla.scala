@@ -211,7 +211,9 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = id.toString
   }
 
-  case class NamedArgument(name: String, id: Identifier, loc: Location) extends Argument {
+  case class NamedArgument(name: String, idLoc: IdLoc, loc: Location) extends Argument {
+    def id = idLoc.id
+
     override def toString = s"$name = $id"
   }
 }
