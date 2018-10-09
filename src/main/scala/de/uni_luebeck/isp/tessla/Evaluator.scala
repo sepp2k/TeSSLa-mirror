@@ -153,4 +153,33 @@ object Evaluator {
         Some(TesslaCore.Error(e))
     }
   }
+
+  type Env = Map[TesslaCore.Identifier, TesslaCore.ValueOrError]
+  type LazyEnv = Map[TesslaCore.Identifier, Lazy[TesslaCore.ValueOrError]]
+
+  def evalApplication(f: TesslaCore.Identifier,
+                      args: Seq[TesslaCore.Identifier],
+                      loc: Location,
+                      env: Env): TesslaCore.ValueOrError = {
+    env(f) match {
+      case b: TesslaCore.BuiltInOperator =>
+        evalPrimitiveOperator(b.value, args.map(env), loc).get
+      case c: TesslaCore.Closure =>
+        val lazyEnv = env.mapValues(Lazy(_))
+        val argEnv = c.function.parameters.zip(args.map(arg => Lazy(env(arg)))).toMap
+        lazy val innerEnv: LazyEnv =  lazyEnv ++ argEnv ++ c.function.scope.map {
+          case (id, e) => id -> Lazy(evalExpression(e, innerEnv.mapValues(_.get)))
+        }
+        innerEnv(c.function.body).get
+      case _ =>
+        throw InternalError("Application of non-function should have been caught by the type checker")
+    }
+  }
+
+  def evalExpression(exp: TesslaCore.ValueExpression, env: Env): TesslaCore.ValueOrError = exp match {
+    case l: TesslaCore.Literal => l.value
+    case f: TesslaCore.Function => TesslaCore.Closure(f, env, exp.loc)
+    case a: TesslaCore.Application =>
+      evalApplication(a.f, a.args, a.loc, env)
+  }
 }
