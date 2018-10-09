@@ -7,19 +7,19 @@ object DepthChecker {
     val memTable: mutable.Map[TesslaCore.Identifier, Int] = mutable.Map()
     val streams = spec.streams.toMap
     (spec.outStreams.map {
-      case (_, stream) =>
+      case (_, stream, _) =>
         nestingDepth(streams, stream, memTable)
     } ++ spec.streams.collect {
-      case (_, TesslaCore.StreamDefinition(l: TesslaCore.Last, _)) =>
+      case (_, l: TesslaCore.Last) =>
         nestingDepth(streams, l.values, memTable)
-      case (_, TesslaCore.StreamDefinition(dl: TesslaCore.DelayedLast, _)) =>
+      case (_, dl: TesslaCore.DelayedLast) =>
         Math.max(
           nestingDepth(streams, dl.values, memTable),
           nestingDepth(streams, dl.delays, memTable))
     }).fold(0)(math.max)
   }
 
-  def nestingDepth(streams: Map[TesslaCore.Identifier, TesslaCore.StreamDefinition], stream: TesslaCore.StreamRef, memoized: mutable.Map[TesslaCore.Identifier, Int]): Int = {
+  def nestingDepth(streams: Map[TesslaCore.Identifier, TesslaCore.Expression], stream: TesslaCore.StreamRef, memoized: mutable.Map[TesslaCore.Identifier, Int]): Int = {
     def visitChild(child: TesslaCore.StreamRef): Int = {
       nestingDepth(streams, child, memoized)
     }
@@ -29,7 +29,7 @@ object DepthChecker {
       case s: TesslaCore.Stream =>
         if (memoized.contains(s.id)) return memoized(s.id)
 
-        val childDepth = streams(s.id).expression match {
+        val childDepth = streams(s.id) match {
           case l: TesslaCore.SignalLift =>
             l.args.map(visitChild).max
           case l: TesslaCore.Lift =>
@@ -46,7 +46,7 @@ object DepthChecker {
             Math.max(visitChild(m.stream1), visitChild(m.stream2))
           case c: TesslaCore.Const =>
             visitChild(c.stream)
-          case dl: TesslaCore.DelayedLast =>
+          case _: TesslaCore.DelayedLast =>
             0
         }
         memoized(s.id) = 1 + childDepth

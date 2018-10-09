@@ -3,13 +3,11 @@ package de.uni_luebeck.isp.tessla
 import scala.collection.mutable
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.util.Lazy
-import ConstantEvaluator._
-import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 import de.uni_luebeck.isp.tessla.interpreter.BuildInfo
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.IdentifierFactory with TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
   type Env = Map[TypedTessla.Identifier, EnvEntryWrapper]
-  private val translatedStreams = mutable.Map[TesslaCore.Identifier, TesslaCore.StreamDefinition]()
+  private val translatedStreams = mutable.Map[TesslaCore.Identifier, TesslaCore.Expression]()
   private val stack = mutable.ArrayStack[Location]()
 
   case class EnvEntryWrapper(var entry: EnvEntry)
@@ -23,8 +21,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
 
   sealed abstract class TranslationResult
   case class StreamEntry(streamId: TesslaCore.Identifier, typ: TesslaCore.StreamType) extends TranslationResult
-  case class InputStreamEntry(name: String) extends TranslationResult
-  case class NilEntry(nil: TesslaCore.Nil) extends TranslationResult
+  case class InputStreamEntry(name: String, typ: TesslaCore.StreamType) extends TranslationResult
+  case class NilEntry(nil: TesslaCore.Nil, typ: TesslaCore.StreamType) extends TranslationResult
   case class ValueEntry(value: TesslaCore.Value) extends TranslationResult
   case class ObjectEntry(members: Map[String, Lazy[TranslationResult]]) extends TranslationResult
   case class MacroEntry(mac: TypedTessla.Macro, closure: Env) extends TranslationResult {
@@ -47,7 +45,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
           (is.name, translateStreamType(typ, env), is.loc)
       }
       val outputStreams = spec.outStreams.map { os =>
-        (os.name, getStream(env(os.id).entry, os.loc))
+        (os.name, getStream(env(os.id).entry, os.loc), getStreamType(env(os.id).entry))
       }
       val values = stdlib.map {
         case (_, (id, op)) =>
@@ -170,11 +168,12 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case v: TypedTessla.Variable =>
         wrapper.entry = translateVar(env, v.id, v.loc)
       case i: TypedTessla.InputStream =>
-        wrapper.entry = Translated(Lazy(InputStreamEntry(i.name)))
+        val typ = translateStreamType(i.streamType, env)
+        wrapper.entry = Translated(Lazy(InputStreamEntry(i.name, typ)))
       case ite: TypedTessla.StaticIfThenElse =>
         val cond = translateVar(env, ite.condition.id, ite.condition.loc)
         wrapper.entry = Translated(Lazy {
-          if (getBool(getValue(cond).forceValue)) {
+          if (Evaluator.getBool(getValue(cond).forceValue)) {
             val thenCase = translateVar(env, ite.thenCase.id, ite.thenCase.loc)
             getResult(thenCase).get
           } else {
@@ -203,7 +202,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
           val id = makeIdentifier(nameOpt)
           val translatedType = translateStreamType(typ, env)
           wrapper.entry = Translated(Lazy(StreamEntry(id, translatedType)))
-          translatedStreams(id) = TesslaCore.StreamDefinition(coreExp, translatedType)
+          translatedStreams(id) = coreExp
           wrapper.entry
         }
         // No checks regarding arity or non-existing or duplicate named arguments because those mistakes
@@ -222,7 +221,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
             def streamArg(i: Int) = getStream(args(i), call.args(i).loc)
             builtIn match {
               case BuiltIn.Nil =>
-                wrapper.entry = Translated(Lazy(NilEntry(TesslaCore.Nil(call.loc))))
+                val typ = TesslaCore.StreamType(translateValueType(call.typeArgs.head, env))
+                wrapper.entry = Translated(Lazy(NilEntry(TesslaCore.Nil(call.loc), typ)))
               case BuiltIn.Default =>
                 stream {
                   TesslaCore.Default(streamArg(0), getValue(args(1)), call.loc)
@@ -255,17 +255,18 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 stream {
                   ???
                 }
+              case BuiltIn.Lift3 =>
+                stream {
+                  ???
+                }
               case op: BuiltIn.PrimitiveOperator =>
                 typ match {
                   case _ : TypedTessla.StreamType =>
-                    // TODO: Currently type parameters can only be instantiated to value types. Once that changes,
-                    //       this code needs to be adjusted
-                    val typeArgs = call.typeArgs.map(translateValueType(_, env))
                     stream {
-                      TesslaCore.SignalLift(stdlib(op.name)._1, typeArgs, args.indices.map(streamArg), call.loc)
+                      TesslaCore.SignalLift(stdlib(op.name)._1, args.indices.map(streamArg), call.loc)
                     }
                   case _ =>
-                    val value = evalPrimitiveOperator(op, call.typeArgs.map(translateValueType(_, env)), args.map { arg =>
+                    val value = Evaluator.evalPrimitiveOperator(op, args.map { arg =>
                       Lazy {
                         getResult(arg).get match {
                           case ValueEntry(v) => v
@@ -314,8 +315,15 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
 
   def getStream(envEntry: EnvEntry, loc: Location): TesslaCore.StreamRef = getResult(envEntry).get match {
     case s : StreamEntry => TesslaCore.Stream(s.streamId, loc)
-    case NilEntry(nil) => nil
+    case n: NilEntry => n.nil
     case i : InputStreamEntry => TesslaCore.InputStream(i.name, loc)
+    case other => throw InternalError(s"Wrong type of environment entry: Expected StreamEntry, found: $other")
+  }
+
+  def getStreamType(envEntry: EnvEntry): TesslaCore.StreamType = getResult(envEntry).get match {
+    case s : StreamEntry => s.typ
+    case n: NilEntry => n.typ
+    case i : InputStreamEntry => i.typ
     case other => throw InternalError(s"Wrong type of environment entry: Expected StreamEntry, found: $other")
   }
 
@@ -338,154 +346,5 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       stack.pop()
     }
     wrapper.entry
-  }
-}
-
-object ConstantEvaluator {
-  private def getInt(v: TesslaCore.Value): BigInt = v match {
-    case intLit: TesslaCore.IntValue => intLit.value
-    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Int, got: $v", v.loc)
-  }
-
-  private def getBool(v: TesslaCore.Value): Boolean = v match {
-    case boolLit: TesslaCore.BoolValue => boolLit.value
-    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
-  }
-
-  private def getString(v: TesslaCore.Value): String = v match {
-    case stringLit: TesslaCore.StringValue => stringLit.value
-    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: String, got: $v", v.loc)
-  }
-
-  private def getOption(v: TesslaCore.Value): TesslaCore.TesslaOption = v match {
-    case optionValue: TesslaCore.TesslaOption => optionValue
-    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Option ${v.loc}, got: $v", v.loc)
-  }
-
-  private def getCtf(v: TesslaCore.Value): ICompositeDefinition = v match {
-    case ctfLit: TesslaCore.Ctf => ctfLit.value
-    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: CTF, got: $v", v.loc)
-  }
-
-  private def getMap(v: TesslaCore.Value): TesslaCore.TesslaMap = v match {
-    case mapLit: TesslaCore.TesslaMap => mapLit
-    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Map, got: $v", v.loc)
-  }
-
-  private def getSet(v: TesslaCore.Value): TesslaCore.TesslaSet = v match {
-    case setLit: TesslaCore.TesslaSet => setLit
-    case _ => throw InternalError(s"Type error should've been caught by type checker: Expected: Set, got: $v", v.loc)
-  }
-
-  def evalPrimitiveOperator(op: BuiltIn.PrimitiveOperator, typeArguments: Seq[TesslaCore.ValueType],
-                            arguments: Seq[Lazy[TesslaCore.Value]],
-                            loc: Location): Lazy[Option[TesslaCore.Value]] = Lazy {
-    def binIntOp(op: (BigInt, BigInt) => BigInt) = {
-      Some(TesslaCore.IntValue(op(getInt(arguments(0).get), getInt(arguments(1).get)), loc))
-    }
-
-    def binIntComp(op: (BigInt, BigInt) => Boolean) = {
-      Some(TesslaCore.BoolValue(op(getInt(arguments(0).get), getInt(arguments(1).get)), loc))
-    }
-
-    def div(x: BigInt, y: BigInt): BigInt = {
-      // This is a bit dirty because we hard-code the fact that y corresponds to arguments(1),
-      // but since this is only a local function, it should be fine.
-      if (y == 0) throw DivideByZero(arguments(1).get.loc)
-      else x/y
-    }
-
-    op match {
-      case BuiltIn.Add => binIntOp(_ + _)
-      case BuiltIn.Sub => binIntOp(_ - _)
-      case BuiltIn.Mul => binIntOp(_ * _)
-      case BuiltIn.Div => binIntOp(div)
-      case BuiltIn.LeftShift => binIntOp(_ << _.toInt)
-      case BuiltIn.RightShift => binIntOp(_ >> _.toInt)
-      case BuiltIn.BitAnd => binIntOp(_ & _)
-      case BuiltIn.BitOr => binIntOp(_ | _)
-      case BuiltIn.BitXor => binIntOp(_ ^ _)
-      case BuiltIn.BitFlip => Some(TesslaCore.IntValue(~getInt(arguments(0).get), loc))
-      case BuiltIn.Negate => Some(TesslaCore.IntValue(-getInt(arguments(0).get), loc))
-      case BuiltIn.Eq => Some(TesslaCore.BoolValue(arguments(0).get == arguments(1).get, loc))
-      case BuiltIn.Neq => Some(TesslaCore.BoolValue(arguments(0).get != arguments(1).get, loc))
-      case BuiltIn.Lt => binIntComp(_ < _)
-      case BuiltIn.Lte => binIntComp(_ <= _)
-      case BuiltIn.Gt => binIntComp(_ > _)
-      case BuiltIn.Gte => binIntComp(_ >= _)
-      case BuiltIn.And => Some(TesslaCore.BoolValue(getBool(arguments(0).get) && getBool(arguments(1).get), loc))
-      case BuiltIn.Or => Some(TesslaCore.BoolValue(getBool(arguments(0).get) || getBool(arguments(1).get), loc))
-      case BuiltIn.Not => Some(TesslaCore.BoolValue(!getBool(arguments(0).get), loc))
-      case BuiltIn.IfThen =>
-        if (getBool(arguments(0).get)) Some(arguments(1).get)
-        else None
-      case BuiltIn.IfThenElse =>
-        if (getBool(arguments(0).get)) Some(arguments(1).get)
-        else Some(arguments(2).get)
-      case BuiltIn.First =>
-        Some(arguments(0).get)
-      case BuiltIn.None =>
-        Some(TesslaCore.TesslaOption(None, TesslaCore.OptionType(typeArguments(0)), loc))
-      case BuiltIn.Some =>
-        Some(TesslaCore.TesslaOption(Some(arguments(0).get), TesslaCore.OptionType(arguments(0).get.typ), loc))
-      case BuiltIn.IsNone =>
-        Some(TesslaCore.BoolValue(getOption(arguments(0).get).value.isEmpty, loc))
-      case BuiltIn.GetSome =>
-        getOption(arguments(0).get).value match {
-          case None => throw CannotGetValueOfNone(loc)
-          case some => some
-        }
-      case BuiltIn.MapEmpty =>
-        Some(TesslaCore.TesslaMap(Map(), TesslaCore.MapType(typeArguments(0), typeArguments(1)), loc))
-      case BuiltIn.MapAdd =>
-        val map = getMap(arguments(0).get)
-        Some(TesslaCore.TesslaMap(map.value + (arguments(1).get -> arguments(2).get), map.typ, loc))
-      case BuiltIn.MapGet =>
-        val map = getMap(arguments(0).get)
-        val key = arguments(1).get
-        try {
-          Some(map.value(key).withLoc(loc))
-        } catch {
-          case _: NoSuchElementException =>
-            throw KeyNotFound(key, map.value, loc)
-        }
-      case BuiltIn.MapContains =>
-        Some(TesslaCore.BoolValue(getMap(arguments(0).get).value.contains(arguments(1).get), loc))
-      case BuiltIn.MapRemove =>
-        val map = getMap(arguments(0).get)
-        Some(TesslaCore.TesslaMap(map.value - arguments(1).get, map.typ, loc))
-      case BuiltIn.MapSize =>
-        val map = getMap(arguments(0).get)
-        Some(TesslaCore.IntValue(map.value.size, loc))
-      case BuiltIn.SetEmpty =>
-        Some(TesslaCore.TesslaSet(Set(), TesslaCore.SetType(typeArguments(0)), loc))
-      case BuiltIn.SetAdd =>
-        val set = getSet(arguments(0).get)
-        Some(TesslaCore.TesslaSet(set.value + arguments(1).get, set.typ, loc))
-      case BuiltIn.SetContains =>
-        Some(TesslaCore.BoolValue(getSet(arguments(0).get).value.contains(arguments(1).get), loc))
-      case BuiltIn.SetRemove =>
-        val set = getSet(arguments(0).get)
-        Some(TesslaCore.TesslaSet(set.value - arguments(1).get, set.typ, loc))
-      case BuiltIn.SetSize =>
-        val set = getSet(arguments(0).get)
-        Some(TesslaCore.IntValue(set.value.size, loc))
-      case BuiltIn.SetUnion =>
-        val set1 = getSet(arguments(0).get)
-        val set2 = getSet(arguments(1).get)
-        Some(TesslaCore.TesslaSet(set1.value | set2.value, set1.typ, loc))
-      case BuiltIn.SetIntersection =>
-        val set1 = getSet(arguments(0).get)
-        val set2 = getSet(arguments(1).get)
-        Some(TesslaCore.TesslaSet(set1.value & set2.value, set1.typ, loc))
-      case BuiltIn.CtfGetInt =>
-        val composite = getCtf(arguments(0).get)
-        val key = getString(arguments(1).get)
-        Some(TesslaCore.IntValue(Ctf.getInt(composite, key), loc))
-      case BuiltIn.CtfGetString =>
-        val composite = getCtf(arguments(0).get)
-        val key = getString(arguments(1).get)
-        Some(TesslaCore.StringValue(Ctf.getString(composite, key), loc))
-    }
   }
 }

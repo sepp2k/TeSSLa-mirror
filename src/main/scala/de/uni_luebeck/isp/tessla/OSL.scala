@@ -42,7 +42,7 @@ object OSL {
   }
 
   class Generator extends TranslationPhase[TesslaCore.Specification, OSL] {
-    var streams: Map[TesslaCore.Identifier, TesslaCore.StreamDefinition] = _
+    var streams: Map[TesslaCore.Identifier, TesslaCore.Expression] = _
     var functions: Map[TesslaCore.Identifier, TesslaCore.Value] = _
     val visited = mutable.Set[TesslaCore.Identifier]()
 
@@ -84,7 +84,7 @@ object OSL {
         if (visited(s.id)) Seq()
         else {
           visited += s.id
-          val exp = streams(s.id).expression
+          val exp = streams(s.id)
           findBasicCondition(exp).map(c => Seq(Cond(c))).getOrElse(translateExpression(exp))
         }
     }
@@ -93,7 +93,7 @@ object OSL {
       case _: TesslaCore.Nil => None
       case _: TesslaCore.InputStream => None
       case s: TesslaCore.Stream =>
-        Some(streams(s.id).expression)
+        Some(streams(s.id))
     }
 
     def findBasicCondition(streamRef: TesslaCore.StreamRef): Option[Condition] = {

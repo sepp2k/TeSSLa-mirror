@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.util.Lazy
-import de.uni_luebeck.isp.tessla.{Compiler, ConstantEvaluator, Errors, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{Compiler, Evaluator, Errors, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase}
 
 import scala.collection.mutable
 
@@ -14,13 +14,13 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }.toMap
 
   lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map {
-    case (name, exp) => (name, Lazy(eval(exp.expression)))
+    case (name, exp) => (name, Lazy(eval(exp)))
   }.toMap
 
-  lazy val outStreams: Seq[(String, Stream)] = spec.outStreams.map {
-    case (name, streamRef: TesslaCore.Stream) => name -> defs(streamRef.id).get
-    case (name, streamRef: TesslaCore.InputStream) => name -> inStreams(streamRef.name)._1
-    case (name, _: TesslaCore.Nil) => name -> nil
+  lazy val outStreams: Seq[(String, Stream, TesslaCore.Type)] = spec.outStreams.map {
+    case (name, streamRef: TesslaCore.Stream, typ) => (name, defs(streamRef.id).get, typ)
+    case (name, streamRef: TesslaCore.InputStream, typ) => (name, inStreams(streamRef.name)._1, typ)
+    case (name, _: TesslaCore.Nil, typ) => (name, nil, typ)
   }
 
   lazy val globalFunctions = spec.functions.toMap
@@ -34,7 +34,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }
 
   private def eval(exp: TesslaCore.Expression): Stream = exp match {
-    case TesslaCore.SignalLift(op, _, argStreams, loc) =>
+    case TesslaCore.SignalLift(op, argStreams, loc) =>
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)
       }
@@ -44,16 +44,13 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         }
         globalFunctions(op) match {
           case TesslaCore.BuiltInOperator(builtIn, _) =>
-            // We can pass the empty sequence for the type parameters because the only operators that require type
-            // parameters to be evaluated are the constructors for empty data structures and those will already have
-            // been turned into values by the constant folder, so no such operator can occur here.
-            val result = ConstantEvaluator.evalPrimitiveOperator (builtIn, Seq (), args, exp.loc)
+            val result = Evaluator.evalPrimitiveOperator (builtIn, args, exp.loc)
             TesslaCore.ValueOrError.fromLazyOption (result)
           case other =>
             throw InternalError(s"TODO: $other")
         }
       }
-    case TesslaCore.Lift(f, _, _, _) =>
+    case TesslaCore.Lift(f, _, _) =>
       throw InternalError(s"TODO: ${globalFunctions(f)}")
     case TesslaCore.Default(values, defaultValue, _) =>
       evalStream(values).default(defaultValue)
@@ -105,7 +102,7 @@ object Interpreter {
         private val seen = mutable.Set.empty[String]
 
         spec.outStreams.foreach {
-          case (name, stream) =>
+          case (name, stream, _) =>
             stream.addListener {
               case Some(value) =>
                 if (!stopped) {
@@ -115,6 +112,58 @@ object Interpreter {
                   nextEvents += Trace.Event(Location.unknown, timeStamp, id, value.forceValue)
                 }
               case None =>
+            }
+        }
+
+        private def typeCheck(value: TesslaCore.Value,
+                              elementType: TesslaCore.ValueType,
+                              name: String): Unit = value match {
+          case _: TesslaCore.IntValue =>
+            if (elementType != TesslaCore.IntType) {
+              throw InputTypeMismatch(value, "Int", name, elementType, value.loc)
+            }
+          case _: TesslaCore.StringValue =>
+            if (elementType != TesslaCore.StringType) {
+              throw InputTypeMismatch(value, "String", name, elementType, value.loc)
+            }
+          case _: TesslaCore.BoolValue =>
+            if (elementType != TesslaCore.BoolType) {
+              throw InputTypeMismatch(value, "Bool", name, elementType, value.loc)
+            }
+          case _: TesslaCore.Unit =>
+            if (elementType != TesslaCore.UnitType) {
+              throw InputTypeMismatch(value, "Unit", name, elementType, value.loc)
+            }
+          case o: TesslaCore.TesslaOption =>
+            elementType match {
+              case ot: TesslaCore.OptionType =>
+                o.value.foreach(typeCheck(_, ot.elementType, name))
+              case _ =>
+                throw InputTypeMismatch(value, "Option[?]", name, elementType, value.loc)
+            }
+          case s: TesslaCore.TesslaSet =>
+            elementType match {
+              case st: TesslaCore.SetType =>
+                s.value.foreach(typeCheck(_, st.elementType, name))
+              case _ =>
+                throw InputTypeMismatch(value, "Set[?]", name, elementType, value.loc)
+            }
+          case m: TesslaCore.TesslaMap =>
+            elementType match {
+              case mt: TesslaCore.MapType =>
+                m.value.foreach {
+                  case (k, v) =>
+                    typeCheck(k, mt.keyType, name)
+                    typeCheck(v, mt.valueType, name)
+                }
+              case _ =>
+                throw InputTypeMismatch(value, "Map[?, ?]", name, elementType, value.loc)
+            }
+          case _: TesslaCore.Closure | _: TesslaCore.BuiltInOperator =>
+            throw InternalError("Functions should not currently be able to appear in input streams")
+          case _: TesslaCore.Ctf =>
+            if (elementType != TesslaCore.CtfType) {
+              throw InputTypeMismatch(value, "CTF", name, elementType, value.loc)
             }
         }
 
@@ -135,9 +184,7 @@ object Interpreter {
             }
             spec.inStreams.get(event.stream.name) match {
               case Some((inStream, elementType)) =>
-                if (event.value.typ != elementType) {
-                  throw InputTypeMismatch(event.value, event.stream.name, elementType, event.loc)
-                }
+                typeCheck(event.value, elementType, event.stream.name)
                 if (seen.contains(event.stream.name)) {
                   throw SameTimeStampError(eventTime, event.stream.name, event.timeStamp.loc)
                 }

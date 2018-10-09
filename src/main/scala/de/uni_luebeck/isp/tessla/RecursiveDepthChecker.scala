@@ -6,21 +6,21 @@ object RecursiveDepthChecker {
   def nestingDepth(spec: TesslaCore.Specification): Int = {
     val streams = spec.streams.toMap
     spec.streams.collect {
-      case (id, TesslaCore.StreamDefinition(l: TesslaCore.Last, _)) =>
+      case (id, l: TesslaCore.Last) =>
         nestingDepth(streams, l.values, id)
-      case (id, TesslaCore.StreamDefinition(dl: TesslaCore.DelayedLast, _)) =>
+      case (id, dl: TesslaCore.DelayedLast) =>
         Math.max(
           nestingDepth(streams, dl.values, id),
           nestingDepth(streams, dl.delays, id))
     }.fold(0)(math.max)
   }
 
-  def nestingDepth(streams: Map[TesslaCore.Identifier, TesslaCore.StreamDefinition], stream: TesslaCore.StreamRef, origin: TesslaCore.Identifier): Int =
+  def nestingDepth(streams: Map[TesslaCore.Identifier, TesslaCore.Expression], stream: TesslaCore.StreamRef, origin: TesslaCore.Identifier): Int =
     nestingDepth(streams, stream, origin, mutable.Map()).getOrElse(0)
 
   def inc(a: Option[Int]): Option[Int] = a.map(_ + 1)
 
-  def nestingDepth(streams: Map[TesslaCore.Identifier, TesslaCore.StreamDefinition], stream: TesslaCore.StreamRef, origin: TesslaCore.Identifier, memoized: mutable.Map[TesslaCore.Identifier, Option[Int]]): Option[Int] = {
+  def nestingDepth(streams: Map[TesslaCore.Identifier, TesslaCore.Expression], stream: TesslaCore.StreamRef, origin: TesslaCore.Identifier, memoized: mutable.Map[TesslaCore.Identifier, Option[Int]]): Option[Int] = {
     stream match {
       case _: TesslaCore.Nil | _: TesslaCore.InputStream => None
       case s: TesslaCore.Stream =>
@@ -32,7 +32,7 @@ object RecursiveDepthChecker {
         val result = if (s.id == origin) {
           Some(0)
         } else {
-          streams(s.id).expression match {
+          streams(s.id) match {
             case l: TesslaCore.SignalLift =>
               l.args.map(visitChild).max
             case l: TesslaCore.Lift =>
@@ -45,7 +45,7 @@ object RecursiveDepthChecker {
               Seq(visitChild(d.valueStream), visitChild(d.defaultStream)).max
             case l: TesslaCore.Last =>
               visitChild(l.clock)
-            case dl: TesslaCore.DelayedLast =>
+            case _: TesslaCore.DelayedLast =>
               None
             case m: TesslaCore.Merge =>
               Seq(visitChild(m.stream1), visitChild(m.stream2)).max

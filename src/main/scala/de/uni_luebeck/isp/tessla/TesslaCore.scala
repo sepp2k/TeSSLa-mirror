@@ -5,20 +5,16 @@ import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
-  final case class Specification(streams: Seq[(Identifier, StreamDefinition)],
+  final case class Specification(streams: Seq[(Identifier, Expression)],
                                  functions: Seq[(Identifier, Value)],
                                  inStreams: Seq[(String, StreamType, Location)],
-                                 outStreams: Seq[(String, StreamRef)]) {
+                                 outStreams: Seq[(String, StreamRef, StreamType)]) {
     override def toString = {
       inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
         functions.map { case (name, value) => s"const $name := $value\n" }.mkString +
         streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +
-        outStreams.map { case (name, stream) => s"out $stream as $name\n" }.mkString
+        outStreams.map { case (name, stream, typ) => s"out $stream : $typ as $name\n" }.mkString
     }
-  }
-
-  final case class StreamDefinition(expression: Expression, typ: StreamType) {
-    override def toString = s"$expression : $typ"
   }
 
   sealed abstract class Expression {
@@ -73,21 +69,21 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"merge($stream1, $stream2)"
   }
 
-  final case class Lift(f: Identifier, typeArgs: Seq[Type], args: Seq[StreamRef], loc: Location) extends Expression {
+  final case class Lift(f: Identifier, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
-      val targs = typeArgs.mkString("[", ", ", "]")
-      args.mkString(s"lift$targs($f", ", ", ")")
+      args.mkString(s"lift($f", ", ", ")")
     }
   }
 
-  final case class SignalLift(f: Identifier, typeArgs: Seq[Type], args: Seq[StreamRef], loc: Location) extends Expression {
+  final case class SignalLift(f: Identifier, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
-      val targs = typeArgs.mkString("[", ", ", "]")
-      args.mkString(s"slift$targs($f", ", ", ")")
+      args.mkString(s"slift($f", ", ", ")")
     }
   }
 
-  sealed abstract class ValueExpression
+  sealed abstract class ValueExpression {
+    def loc: Location
+  }
 
   final case class Function(parameters: Seq[Identifier],
                             scope: Map[Identifier, ValueExpression],
@@ -101,11 +97,11 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  case class Application(f: Identifier, args: Seq[Identifier]) extends ValueExpression {
+  case class Application(f: Identifier, args: Seq[Identifier], loc: Location) extends ValueExpression {
     override def toString = args.mkString("f(", ", ", ")")
   }
 
-  case class Literal(value: ValueOrError) extends ValueExpression
+  case class Literal(value: ValueOrError, loc: Location) extends ValueExpression
 
   sealed trait ValueOrError {
     def forceValue: Value
@@ -126,7 +122,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  final case class Error(error: TesslaError) extends ValueExpression with ValueOrError {
+  final case class Error(error: TesslaError) extends ValueOrError {
     override def forceValue = throw error
   }
 
@@ -134,8 +130,6 @@ object TesslaCore extends HasUniqueIdentifiers {
     def loc: Location
 
     def withLoc(loc: Location): Value
-
-    def typ: ValueType
 
     override def forceValue = this
   }
@@ -155,51 +149,44 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   final case class IntValue(value: BigInt, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): IntValue = copy(loc = loc)
-    override def typ = IntType
   }
 
   final case class BoolValue(value: Boolean, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): BoolValue = copy(loc = loc)
-    override def typ = BoolType
   }
 
   final case class StringValue(value: String, loc: Location) extends PrimitiveValue {
     override def toString = s""""$value""""
     override def withLoc(loc: Location): StringValue = copy(loc = loc)
-    override def typ = StringType
   }
 
   final case class Unit(loc: Location) extends PrimitiveValue {
     override def value = ()
     override def withLoc(loc: Location): Unit = copy(loc = loc)
-    override def typ = UnitType
   }
 
-  final case class TesslaOption(value: Option[Value], typ: OptionType, loc: Location) extends PrimitiveValue {
+  final case class TesslaOption(value: Option[Value], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaOption = copy(loc = loc)
   }
 
-  final case class TesslaMap(value: Map[Value, Value], typ: MapType, loc: Location) extends PrimitiveValue {
+  final case class TesslaMap(value: Map[Value, Value], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaMap = copy(loc = loc)
   }
 
-  final case class TesslaSet(value: Set[Value], typ: SetType, loc: Location) extends PrimitiveValue {
+  final case class TesslaSet(value: Set[Value], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaSet = copy(loc = loc)
   }
 
   final case class Ctf(value: ICompositeDefinition, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): Ctf = copy(loc = loc)
-    override def typ = CtfType
   }
 
   case class BuiltInOperator(value: BuiltIn.PrimitiveOperator, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): BuiltInOperator = copy(loc = loc)
-    override def typ = FunctionType
   }
 
-  case class Closure(function: Function, capturedEnvironment: Map[Identifier, ValueOrError], loc: Location) extends Value {
+  case class Closure(function: Function, capturedEnvironment: Map[Identifier, Lazy[ValueOrError]], loc: Location) extends Value {
     override def withLoc(loc: Location): Closure = copy(loc = loc)
-    override def typ = FunctionType
 
     override def toString = {
       capturedEnvironment.map { case (id, v) => s"$id = $v"}.mkString(s"$function with {", ", ", "}")
