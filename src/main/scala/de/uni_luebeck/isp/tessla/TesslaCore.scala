@@ -1,7 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
@@ -105,25 +104,14 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   sealed trait ValueOrError {
     def forceValue: Value
-  }
 
-  object ValueOrError {
-    def fromLazyOption(lazyValueOption: Lazy[Option[Value]]): Option[ValueOrError] = {
-      try {
-        lazyValueOption.get
-      } catch {
-        case error: TesslaError =>
-          Some(Error(error))
-      }
-    }
-
-    def fromLazy(lazyValue: Lazy[Value]): ValueOrError = {
-      fromLazyOption(lazyValue.map(Some(_))).get
-    }
+    def mapValue(f: Value => Value): ValueOrError
   }
 
   final case class Error(error: TesslaError) extends ValueOrError {
     override def forceValue = throw error
+
+    override def mapValue(f: Value => Value) = this
   }
 
   sealed abstract class Value extends ValueOrError {
@@ -132,6 +120,8 @@ object TesslaCore extends HasUniqueIdentifiers {
     def withLoc(loc: Location): Value
 
     override def forceValue = this
+
+    override def mapValue(f: Value => Value) = f(this)
   }
 
   sealed abstract class PrimitiveValue extends Value {
@@ -185,7 +175,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def withLoc(loc: Location): BuiltInOperator = copy(loc = loc)
   }
 
-  case class Closure(function: Function, capturedEnvironment: Map[Identifier, Lazy[ValueOrError]], loc: Location) extends Value {
+  case class Closure(function: Function, capturedEnvironment: Map[Identifier, ValueOrError], loc: Location) extends Value {
     override def withLoc(loc: Location): Closure = copy(loc = loc)
 
     override def toString = {

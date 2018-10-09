@@ -40,12 +40,11 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       }
       lift(argStreams.map(evalStream)) { arguments =>
         val args = arguments.zip(argStreams).map {
-          case (arg, stream) => Lazy(arg.forceValue.withLoc(stream.loc))
+          case (arg, stream) => arg.mapValue(_.withLoc(stream.loc))
         }
         globalFunctions(op) match {
           case TesslaCore.BuiltInOperator(builtIn, _) =>
-            val result = Evaluator.evalPrimitiveOperator (builtIn, args, exp.loc)
-            TesslaCore.ValueOrError.fromLazyOption (result)
+            Evaluator.evalPrimitiveOperator (builtIn, args, exp.loc)
           case other =>
             throw InternalError(s"TODO: $other")
         }

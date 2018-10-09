@@ -267,14 +267,12 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                     }
                   case _ =>
                     val value = Evaluator.evalPrimitiveOperator(op, args.map { arg =>
-                      Lazy {
-                        getResult(arg).get match {
-                          case ValueEntry(v) => v
-                          case other => throw InternalError(s"Expected value entry, found $other")
-                        }
+                      getResult(arg).get match {
+                        case ValueEntry(v) => v
+                        case other => throw InternalError(s"Expected value entry, found $other")
                       }
                     }, call.loc)
-                    wrapper.entry = Translated(value.map(v => ValueEntry(v.get)))
+                    wrapper.entry = Translated(Lazy(ValueEntry(value.get.forceValue)))
                 }
               case BuiltIn.TesslaInfo =>
                 throw InternalError(s"Applying non-macro/builtin (${builtIn.getClass.getSimpleName}) - should have been caught by the type checker.")
@@ -328,12 +326,15 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   }
 
   def getValue(envEntry: EnvEntry): TesslaCore.ValueOrError = {
-    TesslaCore.ValueOrError.fromLazy(Lazy{
+    try {
       getResult(envEntry).get match {
         case ValueEntry(v) => v
         case other => throw InternalError(s"Wrong type of environment entry: Expected ValueEntry, found: $other")
       }
-    })
+    } catch {
+      case e: TesslaError =>
+        TesslaCore.Error(e)
+    }
   }
 
   def translateVar(env: Env, id: TypedTessla.Identifier, loc: Location): EnvEntry = {
