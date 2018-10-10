@@ -147,7 +147,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
       // annoying and stupid. So we wrap the call in an option and fall back to "." as the default.
       val dir = Option(Paths.get(path).getParent).getOrElse(Paths.get("."))
       val includePath = dir.resolve(file.value)
-      new TesslaParser().translateSpec(TesslaSource.fromFile(includePath.toString))
+      translateSpec(TesslaSource.fromFile(includePath.toString))
     }
 
     // TODO identifier completion, requires some small compacom enhancements

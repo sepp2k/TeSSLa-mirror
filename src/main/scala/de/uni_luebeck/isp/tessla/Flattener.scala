@@ -276,7 +276,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       val args = call.args.map {
         case arg: Tessla.NamedArgument =>
           val id = expToId(translateExpression(arg.expr, scope, env), scope)
-          FlatTessla.NamedArgument(arg.id.name, id, arg.loc)
+          FlatTessla.NamedArgument(arg.id.name, FlatTessla.IdLoc(id, arg.id.loc), arg.loc)
         case arg: Tessla.PositionalArgument =>
           val id = expToId(translateExpression(arg.expr, scope, env), scope)
           FlatTessla.PositionalArgument(id, arg.loc)
