@@ -13,8 +13,11 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       name -> (new Input, typ.elementType)
   }.toMap
 
+  type Env = Map[TesslaCore.Identifier, TesslaCore.ValueOrError]
+  lazy val globalEnv = spec.values
+
   lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map {
-    case (name, exp) => (name, Lazy(eval(exp)))
+    case (name, exp) => (name, Lazy(eval(exp, globalEnv)))
   }.toMap
 
   lazy val outStreams: Seq[(String, Stream, TesslaCore.Type)] = spec.outStreams.map {
@@ -22,8 +25,6 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case (name, streamRef: TesslaCore.InputStream, typ) => (name, inStreams(streamRef.name)._1, typ)
     case (name, _: TesslaCore.Nil, typ) => (name, nil, typ)
   }
-
-  lazy val globalFunctions = spec.functions.toMap
 
   private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
     case TesslaCore.Stream(id, loc) =>
@@ -33,7 +34,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.Nil(_) => nil
   }
 
-  private def eval(exp: TesslaCore.Expression): Stream = exp match {
+  private def eval(exp: TesslaCore.Expression, env: Env): Stream = exp match {
     case TesslaCore.SignalLift(op, argStreams, loc) =>
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)
@@ -42,15 +43,10 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => arg.mapValue(_.withLoc(stream.loc))
         }
-        globalFunctions(op) match {
-          case TesslaCore.BuiltInOperator(builtIn, _) =>
-            Evaluator.evalPrimitiveOperator (builtIn, args, exp.loc)
-          case other =>
-            throw InternalError(s"TODO: $other")
-        }
+        Evaluator.evalPrimitiveOperator(op, args, exp.loc)
       }
     case TesslaCore.Lift(f, _, _) =>
-      throw InternalError(s"TODO: ${globalFunctions(f)}")
+      throw InternalError(s"TODO: ${env(f)}")
     case TesslaCore.Default(values, defaultValue, _) =>
       evalStream(values).default(defaultValue)
     case TesslaCore.DefaultFrom(values, defaults, _) =>

@@ -5,12 +5,12 @@ import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
   final case class Specification(streams: Seq[(Identifier, Expression)],
-                                 functions: Seq[(Identifier, Value)],
+                                 values: Map[Identifier, ValueOrError],
                                  inStreams: Seq[(String, StreamType, Location)],
                                  outStreams: Seq[(String, StreamRef, StreamType)]) {
     override def toString = {
       inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
-        functions.map { case (name, value) => s"const $name := $value\n" }.mkString +
+        values.map { case (name, value) => s"const $name := $value\n" }.mkString +
         streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +
         outStreams.map { case (name, stream, typ) => s"out $stream : $typ as $name\n" }.mkString
     }
@@ -74,7 +74,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  final case class SignalLift(f: Identifier, args: Seq[StreamRef], loc: Location) extends Expression {
+  final case class SignalLift(f: BuiltIn.PrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
       args.mkString(s"slift($f", ", ", ")")
     }
@@ -97,7 +97,7 @@ object TesslaCore extends HasUniqueIdentifiers {
   }
 
   case class Application(f: Identifier, args: Seq[Identifier], loc: Location) extends ValueExpression {
-    override def toString = args.mkString("f(", ", ", ")")
+    override def toString = args.mkString(s"$f(", ", ", ")")
   }
 
   case class Literal(value: ValueOrError, loc: Location) extends ValueExpression
@@ -175,11 +175,12 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def withLoc(loc: Location): BuiltInOperator = copy(loc = loc)
   }
 
-  case class Closure(function: Function, capturedEnvironment: Map[Identifier, ValueOrError], loc: Location) extends Value {
+  case class Closure(function: Function, var capturedEnvironment: Map[Identifier, ValueOrError], loc: Location) extends Value {
     override def withLoc(loc: Location): Closure = copy(loc = loc)
 
     override def toString = {
-      capturedEnvironment.map { case (id, v) => s"$id = $v"}.mkString(s"$function with {", ", ", "}")
+      //capturedEnvironment.map { case (id, v) => s"$id = $v"}.mkString(s"$function with {", ", ", "}")
+      s"$function (closure)"
     }
   }
 

@@ -43,7 +43,7 @@ object OSL {
 
   class Generator extends TranslationPhase[TesslaCore.Specification, OSL] {
     var streams: Map[TesslaCore.Identifier, TesslaCore.Expression] = _
-    var functions: Map[TesslaCore.Identifier, TesslaCore.Value] = _
+    var values: Map[TesslaCore.Identifier, TesslaCore.ValueOrError] = _
     val visited = mutable.Set[TesslaCore.Identifier]()
 
     sealed abstract class ProtoStatement
@@ -52,7 +52,7 @@ object OSL {
 
     override def translateSpec(spec: TesslaCore.Specification) = {
       streams = spec.streams.toMap
-      functions = spec.functions.toMap
+      values = spec.values
       val protoStatements = spec.outStreams.map(_._2).flatMap(translateStreamRef)
       val mergedConditions = protoStatements.foldLeft(Map[Option[String], Set[String]]()) {
         case (m, Cond(cond)) =>
@@ -102,20 +102,20 @@ object OSL {
 
     def findBasicCondition(exp: TesslaCore.Expression): Option[Condition] = exp match {
       case l: TesslaCore.SignalLift =>
-        functions(l.f) match {
-          case TesslaCore.BuiltInOperator(BuiltIn.And, _) =>
+        l.f match {
+          case BuiltIn.And =>
             findBasicCondition(l.args(0)).flatMap { lhs =>
               findBasicCondition(l.args(1)).map { rhs =>
                 And(lhs,rhs)
               }
             }
-          case TesslaCore.BuiltInOperator(BuiltIn.Or, _) =>
+          case BuiltIn.Or =>
             findBasicCondition(l.args(0)).flatMap { lhs =>
               findBasicCondition(l.args(1)).map { rhs =>
                 Or(lhs, rhs)
               }
             }
-          case TesslaCore.BuiltInOperator(BuiltIn.Eq, _) =>
+          case BuiltIn.Eq =>
             l.args match {
               case Seq(i: TesslaCore.InputStream, s: TesslaCore.Stream) =>
                 translateInputStreamName(i.name).flatMap { name =>
