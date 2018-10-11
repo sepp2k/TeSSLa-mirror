@@ -85,7 +85,7 @@ class Specification() {
   }
 
   def lift(streams: Seq[Stream])
-          (op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream =
+    (op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream =
     new Stream {
       private var state: Seq[Option[TesslaCore.ValueOrError]] = streams.map(_ => None)
       private var inputs: Array[Option[TesslaCore.ValueOrError]] = streams.map(_ => None).toArray
@@ -111,6 +111,33 @@ class Specification() {
               counter = 0
               inputs = streams.map(_ => None).toArray
               state = newState
+              propagate(newOutput)
+            }
+          }
+        }
+      }
+    }
+
+  // TODO: rename appropriately
+  def simpleLift(streams: Seq[Stream])
+    (op: Seq[Option[TesslaCore.ValueOrError]] => Option[TesslaCore.ValueOrError]): Stream =
+    new Stream {
+      private var inputs: Array[Option[TesslaCore.ValueOrError]] = streams.map(_ => None).toArray
+      private var counter = 0
+
+      override protected def init(): Unit = {
+        for ((stream, i) <- streams.zipWithIndex) {
+          stream.addListener { value =>
+            counter += 1
+            inputs(i) = value
+            if (counter == streams.length) {
+              val newOutput =
+                if (inputs.exists(_.isDefined))
+                  op(inputs)
+                else
+                  None
+              counter = 0
+              inputs = streams.map(_ => None).toArray
               propagate(newOutput)
             }
           }
@@ -206,9 +233,62 @@ class Specification() {
       }
     }
 
+  def delay(delays: => Stream, resets: => Stream): Stream =
+    new Triggered {
+      private var newDelay: Option[Time] = None
+      private var newReset: Boolean = false
+      private var newTriggered: Boolean = false
+      private var targetTime: Option[Time] = None
+      private var counter = 0
+
+      def update(): Unit = {
+        if (counter == 2) {
+          counter = 0
+          if (newReset || newTriggered) {
+            targetTime = newDelay.map(_ + getTime)
+          }
+        } else {
+          counter += 1
+        }
+      }
+
+      override def init(): Unit = {
+        delays.addListener(delay => {
+          newDelay = delay.map(_.forceValue).map {
+            case TesslaCore.IntValue(value, loc) =>
+              if (value > 0) {
+                value
+              } else {
+                throw NegativeDelayError(value, loc)
+              }
+            case _ =>
+              throw InternalError("Uncaught type error: delay called with non-int delay")
+          }: Option[Time]
+          update()
+        })
+        resets.addListener(reset => {
+          newReset = reset.isDefined
+          update()
+        })
+      }
+
+      override def step(): Unit = {
+        targetTime match {
+          case Some(target) if target == getTime =>
+            newTriggered = true
+            targetTime = None
+            propagate(Some(TesslaCore.Unit(Location.builtIn)))
+          case _ =>
+            newTriggered = false
+            propagate(None)
+        }
+        update()
+      }
+    }
+
   def nil: Stream =
     new Triggered {
-      override def step() = {
+      override def step(): Unit = {
         propagate(None)
       }
     }
@@ -241,7 +321,7 @@ class Specification() {
       new Stream {
         override protected def init(): Unit = {
           self.addListener {
-            value => propagate(value.map{_ => TesslaCore.IntValue(getTime, loc)})
+            value => propagate(value.map { _ => TesslaCore.IntValue(getTime, loc) })
           }
         }
       }
@@ -276,7 +356,7 @@ class Specification() {
                 other = None
               case None =>
                 other = Some(value)
-              }
+            }
           }
 
           self.addListener(listener(false))
