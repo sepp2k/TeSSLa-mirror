@@ -45,8 +45,21 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         }
         Evaluator.evalPrimitiveOperator(op, args, exp.loc)
       }
-    case TesslaCore.Lift(f, _, _) =>
-      throw InternalError(s"TODO: ${env(f)}")
+    case TesslaCore.Lift(f, argStreams, loc) =>
+      if (argStreams.isEmpty) {
+        throw Errors.InternalError("Lift without arguments should be impossible", loc)
+      }
+      simpleLift(argStreams.map(evalStream)) { arguments =>
+        val args = arguments.zip(argStreams).map {
+          case (Some(arg), stream) => arg.mapValue(a => TesslaCore.TesslaOption(Some(a), stream.loc))
+          case (None, stream) => TesslaCore.TesslaOption(None, stream.loc)
+        }
+        Evaluator.evalApplication(f, args, loc, env) match {
+          case to: TesslaCore.TesslaOption => to.value
+          case other =>
+            throw InternalError(s"Used lift on non-option function (return value: $other) - should have been caught by type checker")
+        }
+      }
     case TesslaCore.Default(values, defaultValue, _) =>
       evalStream(values).default(defaultValue)
     case TesslaCore.DefaultFrom(values, defaults, _) =>

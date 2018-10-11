@@ -375,7 +375,6 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case (id, wrapper) =>
         translateEntryInFunction(env, wrapper, id.nameOpt)
     }
-    val resultId = makeIdentifier()
     // This null should be safe because we only use this entry to put into a NYT and no one ever uses the ID of a
     // VariableEntry in an NYT
     val resultEntry = TypedTessla.VariableEntry(null, m.mac.body, m.mac.returnType, m.mac.body.loc)
@@ -393,7 +392,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case _ =>
         None
     }
-    TesslaCore.Function(params.map(_._2), scope.toMap, resultId, m.mac.loc)
+    TesslaCore.Function(params.map(_._2), scope.toMap, getValueId(resultWrapper.entry), m.mac.loc)
   }
 
   // Get the ID of an environment entry that corresponds to a TesslaCore value-level expression
