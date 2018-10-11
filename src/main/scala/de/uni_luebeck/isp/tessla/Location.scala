@@ -54,7 +54,7 @@ object Location {
 
   def unknown: Location = Unknown
 
-  private case object BuiltIn extends Location {
+  private[tessla] case object BuiltIn extends Location {
     override def merge(other: Location) = other
 
     override def toString = "<built-in>"
