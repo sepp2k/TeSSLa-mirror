@@ -231,14 +231,22 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def typeParameters: Parser[Seq[Tessla.Identifier]] = LBRACKET ~> rep1sep(identifier, COMMA) <~ RBRACKET
 
-    def expression: Parser[Tessla.Expression] = ifThenElse | staticIfThenElse | whereExpression
+    def expression: Parser[Tessla.Expression] = whereExpression
+
+    def whereExpression =
+      mixfixExpression ~ (WHERE ~> LBRACE ~> definition.* <~ RBRACE).? ^^! {
+        case (_, (exp, None)) => exp
+        case (loc, (exp, Some(definitions))) => Tessla.Block(definitions, exp, Location(loc, path))
+      }
+
+    def mixfixExpression: Parser[Tessla.Expression] = ifThenElse | staticIfThenElse | infixExpression
 
     def staticIfThenElse = (STATIC ~> IF ~> expression) ~ (THEN ~> expression) ~ (ELSE ~> expression) ^^! {
       case (loc, ((cond, thenCase), elseCase)) =>
         Tessla.StaticIfThenElse(cond, thenCase, elseCase, Location(loc, path))
     }
 
-    def ifThenElse = (IF ~ expression) ~ (THEN ~> expression) ~ (ELSE ~> expression).? ^^! {
+    def ifThenElse = (IF ~ expression) ~ (THEN ~> mixfixExpression) ~ (ELSE ~> mixfixExpression).? ^^! {
       case (loc, (((ifToken, cond), thenCase), Some(elseCase))) =>
         Tessla.MacroCall(
           Tessla.Variable(Tessla.Identifier("if then else", Location(ifToken.loc, path))),
@@ -251,12 +259,6 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
           Seq(),
           Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase)), Location(loc, path))
     }
-
-    def whereExpression =
-      infixExpression ~ (WHERE ~> LBRACE ~> definition.* <~ RBRACE).? ^^! {
-        case (_, (exp, None)) => exp
-        case (loc, (exp, Some(definitions))) => Tessla.Block(definitions, exp, Location(loc, path))
-      }
 
     def infixOp(lhs: Tessla.Expression, rhss: Seq[(WithLocation[Token], Tessla.Expression)]) = {
       rhss.foldLeft(lhs) {

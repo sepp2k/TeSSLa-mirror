@@ -1,7 +1,7 @@
 in x: Events[Int]
 in y: Events[Int]
 
-def s1 := merge(a,b) where {
+def s1 := if true then merge(a,b) else merge(a,b) where {
   def a := if x > 5 then "a"
   def b := if y > 3 then "b"
 }
