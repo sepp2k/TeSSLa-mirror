@@ -154,6 +154,11 @@ object Evaluator {
     }
   }
 
+  // The laziness here (and by extension in TesslaCore.Closure) is necessary, so that the
+  // recursive definition of the inner environment when evaluating a closure application
+  // does not chase its own tail into an infinite recursion. This laziness can't be contained
+  // locally as this will resolve the laziness too soon and still run into the same problem -
+  // at least in the case of nested functions.
   type Env = Map[TesslaCore.Identifier, Lazy[TesslaCore.ValueOrError]]
 
   def evalApplication(f: TesslaCore.Identifier,
