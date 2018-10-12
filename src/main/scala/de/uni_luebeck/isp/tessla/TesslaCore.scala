@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
@@ -175,7 +176,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def withLoc(loc: Location): BuiltInOperator = copy(loc = loc)
   }
 
-  case class Closure(function: Function, var capturedEnvironment: Map[Identifier, ValueOrError], loc: Location) extends Value {
+  case class Closure(function: Function, var capturedEnvironment: Map[Identifier, Lazy[ValueOrError]], loc: Location) extends Value {
     override def withLoc(loc: Location): Closure = copy(loc = loc)
 
     override def toString = {

@@ -154,21 +154,20 @@ object Evaluator {
     }
   }
 
-  type Env = Map[TesslaCore.Identifier, TesslaCore.ValueOrError]
-  type LazyEnv = Map[TesslaCore.Identifier, Lazy[TesslaCore.ValueOrError]]
+  type Env = Map[TesslaCore.Identifier, Lazy[TesslaCore.ValueOrError]]
 
   def evalApplication(f: TesslaCore.Identifier,
                       args: Seq[TesslaCore.ValueOrError],
                       loc: Location,
                       env: Env): TesslaCore.ValueOrError = {
-    env(f) match {
+    env(f).get match {
       case b: TesslaCore.BuiltInOperator =>
         evalPrimitiveOperator(b.value, args, loc).get
       case c: TesslaCore.Closure =>
-        val lazyEnv = c.capturedEnvironment.mapValues(Lazy(_))
+        val env = c.capturedEnvironment
         val argEnv = c.function.parameters.zip(args.map(arg => Lazy(arg))).toMap
-        lazy val innerEnv: LazyEnv =  lazyEnv ++ argEnv ++ c.function.scope.map {
-          case (id, e) => id -> Lazy(evalExpression(e, innerEnv.mapValues(_.get)))
+        lazy val innerEnv: Env =  env ++ argEnv ++ c.function.scope.map {
+          case (id, e) => id -> Lazy(evalExpression(e, innerEnv))
         }
         innerEnv(c.function.body).get
       case _ =>
@@ -180,6 +179,6 @@ object Evaluator {
     case l: TesslaCore.Literal => l.value
     case f: TesslaCore.Function => TesslaCore.Closure(f, env, exp.loc)
     case a: TesslaCore.Application =>
-      evalApplication(a.f, a.args.map(env), a.loc, env)
+      evalApplication(a.f, a.args.map(env(_).get), a.loc, env)
   }
 }

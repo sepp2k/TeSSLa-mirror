@@ -55,7 +55,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       val values = globalValues.toMap
       values.foreach {
         case (_, c: TesslaCore.Closure) =>
-          c.capturedEnvironment = values
+          c.capturedEnvironment = values.mapValues(Lazy(_))
         case _ =>
       }
       TesslaCore.Specification(translatedStreams.toSeq, values, inputStreams.toSeq, outputStreams)
