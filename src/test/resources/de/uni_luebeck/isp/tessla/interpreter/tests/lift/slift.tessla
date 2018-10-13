@@ -1,0 +1,15 @@
+in x: Events[Int]
+in y: Events[Int]
+
+def slift[A,B,C](a: Events[A], b: Events[B], f: (A,B) => C): Events[C] := {
+  def aa := merge(a, last(a, b))
+  def bb := merge(b, last(b, a))
+  def ff(a: Option[A], b: Option[B]): Option[C] :=
+    if !isNone(a) && !isNone(b)
+    then Some(f(getSome(a), getSome(b)))
+    else None[C]
+  return lift(aa, bb, ff)
+}
+
+def add(a: Int, b: Int) := a + b
+out slift(x, y, add) as z

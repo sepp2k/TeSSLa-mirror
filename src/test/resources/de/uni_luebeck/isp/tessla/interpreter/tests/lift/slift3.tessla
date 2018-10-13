@@ -1,0 +1,22 @@
+in c: Events[Bool]
+in t: Events[String]
+in e: Events[String]
+
+def unify[T](t: Events[T]) := const((), t)
+def mergeUnit[A,B](a: Events[A], b: Events[B]) :=
+  merge(unify(a), unify(b))
+
+def slift3[A,B,C,D](a: Events[A], b: Events[B], c: Events[C], f: (A,B,C) => D): Events[D] := {
+  def aa := merge(a, last(a, mergeUnit(b,c)))
+  def bb := merge(b, last(b, mergeUnit(a,c)))
+  def cc := merge(c, last(c, mergeUnit(a,b)))
+  def ff(a: Option[A], b: Option[B], c: Option[C]): Option[D] :=
+    if !isNone(a) && !isNone(b) && !isNone(c)
+    then Some(f(getSome(a), getSome(b), getSome(c)))
+    else None[D]
+  return lift3(aa, bb, cc, ff)
+}
+
+def ifThenElse(condition: Bool, thenCase: String, elseCase: String): String :=
+    if condition then thenCase else elseCase
+out slift3(c, t, e, ifThenElse) as z
