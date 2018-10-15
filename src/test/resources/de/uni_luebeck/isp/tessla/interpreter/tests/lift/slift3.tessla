@@ -17,6 +17,6 @@ def slift3[A,B,C,D](a: Events[A], b: Events[B], c: Events[C], f: (A,B,C) => D): 
   return lift3(aa, bb, cc, ff)
 }
 
-def ifThenElse(condition: Bool, thenCase: String, elseCase: String): String :=
-    if condition then thenCase else elseCase
-out slift3(c, t, e, ifThenElse) as z
+out slift3(c, t, e,
+  fun(c: Bool, t: String, e: String) =>
+  if c then t else e) as z

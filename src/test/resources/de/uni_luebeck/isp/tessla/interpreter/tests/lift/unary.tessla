@@ -1,8 +1,7 @@
 in x: Events[Int]
 
 def passThrough[A](a: Events[A]): Events[A] := {
-  def f(a: Option[A], b: Option[A]) := a
-  return lift(a, nil[A], f)
+  return lift(a, nil[A], fun(a: Option[A], b: Option[A]) => a)
 }
 
 out passThrough(x) as z
