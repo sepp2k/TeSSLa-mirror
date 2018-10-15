@@ -5,18 +5,16 @@ import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
-  final case class Specification(streams: Seq[(Identifier, StreamDefinition)],
+  final case class Specification(streams: Seq[(Identifier, Expression)],
+                                 values: Map[Identifier, ValueOrError],
                                  inStreams: Seq[(String, StreamType, Location)],
-                                 outStreams: Seq[(String, StreamRef)]) {
+                                 outStreams: Seq[(String, StreamRef, StreamType)]) {
     override def toString = {
       inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
+        values.map { case (name, value) => s"const $name := $value\n" }.mkString +
         streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +
-        outStreams.map { case (name, stream) => s"out $stream as $name\n" }.mkString
+        outStreams.map { case (name, stream, typ) => s"out $stream : $typ as $name\n" }.mkString
     }
-  }
-
-  final case class StreamDefinition(expression: Expression, typ: StreamType) {
-    override def toString = s"$expression : $typ"
   }
 
   sealed abstract class Expression {
@@ -71,91 +69,120 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"merge($stream1, $stream2)"
   }
 
-  final case class Lift(operator: BuiltIn.PrimitiveOperator, typeArgs: Seq[Type], args: Seq[StreamRef], loc: Location) extends Expression {
-    override def toString = operator match {
-      case _: BuiltIn.PrefixOperator => s"$operator${args(0)}"
-      case _: BuiltIn.InfixOperator => s"${args(0)} $operator ${args(1)}"
-      case BuiltIn.IfThen => s"if ${args(0)} then ${args(1)}"
-      case BuiltIn.IfThenElse => s"if ${args(0)} then ${args(1)} else ${args(2)}"
-      case _ =>
-        val targs = typeArgs.mkString("[", ", ", "]")
-        args.mkString(s"$operator$targs(", ", ", ")")
+  final case class Lift(f: Identifier, args: Seq[StreamRef], loc: Location) extends Expression {
+    override def toString = {
+      args.mkString(s"lift($f", ", ", ")")
     }
   }
 
-  object ValueOrError {
-    def fromLazyOption(lazyValueOption: Lazy[Option[Value]]): Option[ValueOrError] = {
-      try {
-        lazyValueOption.get
-      } catch {
-        case error: TesslaError =>
-          Some(Error(error))
-      }
-    }
-
-    def fromLazy(lazyValue: Lazy[Value]): ValueOrError = {
-      fromLazyOption(lazyValue.map(Some(_))).get
+  final case class SignalLift(f: BuiltIn.PrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
+    override def toString = {
+      args.mkString(s"slift($f", ", ", ")")
     }
   }
 
-  sealed abstract class ValueOrError {
+  sealed abstract class ValueExpression {
+    def loc: Location
+  }
+
+  final case class Function(parameters: Seq[Identifier],
+                            scope: Map[Identifier, ValueExpression],
+                            body: Identifier,
+                            loc: Location) extends ValueExpression {
+    override def toString = {
+      val defs = scope.map {
+        case (id, exp) => s"const $id := $exp\n"
+      }.mkString
+      s"(${parameters.mkString(", ")}) => {\n${defs}return $body\n}"
+    }
+  }
+
+  case class Application(f: Identifier, args: Seq[Identifier], loc: Location) extends ValueExpression {
+    override def toString = args.mkString(s"$f(", ", ", ")")
+  }
+
+  case class Literal(value: ValueOrError, loc: Location) extends ValueExpression
+
+  sealed trait ValueOrError {
     def forceValue: Value
+
+    def mapValue(f: Value => Value): ValueOrError
   }
 
   final case class Error(error: TesslaError) extends ValueOrError {
     override def forceValue = throw error
+
+    override def mapValue(f: Value => Value) = this
   }
 
   sealed abstract class Value extends ValueOrError {
     def loc: Location
+
     def withLoc(loc: Location): Value
-    def typ: Type
-    def value: Any
+
     override def forceValue = this
+
+    override def mapValue(f: Value => Value) = f(this)
+  }
+
+  sealed abstract class PrimitiveValue extends Value {
+    def value: Any
 
     override def toString = value.toString
 
     override def equals(obj: Any) = obj match {
-      case other: Value => value == other.value
+      case other: PrimitiveValue => value == other.value
       case _ => false
     }
 
     override def hashCode() = value.hashCode()
   }
 
-  final case class IntLiteral(value: BigInt, loc: Location) extends Value {
-    override def withLoc(loc: Location): IntLiteral = copy(loc = loc)
-    override def typ = IntType
+  final case class IntValue(value: BigInt, loc: Location) extends PrimitiveValue {
+    override def withLoc(loc: Location): IntValue = copy(loc = loc)
   }
 
-  final case class BoolLiteral(value: Boolean, loc: Location) extends Value {
-    override def withLoc(loc: Location): BoolLiteral = copy(loc = loc)
-    override def typ = BoolType
+  final case class BoolValue(value: Boolean, loc: Location) extends PrimitiveValue {
+    override def withLoc(loc: Location): BoolValue = copy(loc = loc)
   }
 
-  final case class StringLiteral(value: String, loc: Location) extends Value {
+  final case class StringValue(value: String, loc: Location) extends PrimitiveValue {
     override def toString = s""""$value""""
-    override def withLoc(loc: Location): StringLiteral = copy(loc = loc)
-    override def typ = StringType
+    override def withLoc(loc: Location): StringValue = copy(loc = loc)
   }
 
-  final case class Unit(loc: Location) extends Value {
+  final case class Unit(loc: Location) extends PrimitiveValue {
     override def value = ()
     override def withLoc(loc: Location): Unit = copy(loc = loc)
-    override def typ = UnitType
   }
 
-  final case class TesslaMap(value: Map[Value, Value], typ: MapType, loc: Location) extends Value {
+  final case class TesslaOption(value: Option[Value], loc: Location) extends PrimitiveValue {
+    override def withLoc(loc: Location): TesslaOption = copy(loc = loc)
+  }
+
+  final case class TesslaMap(value: Map[Value, Value], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaMap = copy(loc = loc)
   }
 
-  final case class TesslaSet(value: Set[Value], typ: SetType, loc: Location) extends Value {
+  final case class TesslaSet(value: Set[Value], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaSet = copy(loc = loc)
   }
 
-  final case class Ctf(value: ICompositeDefinition, loc: Location) extends Value {
+  final case class Ctf(value: ICompositeDefinition, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): Ctf = copy(loc = loc)
-    override def typ = CtfType
+  }
+
+  case class BuiltInOperator(value: BuiltIn.PrimitiveOperator, loc: Location) extends PrimitiveValue {
+    override def withLoc(loc: Location): BuiltInOperator = copy(loc = loc)
+  }
+
+  case class Closure(function: Function, var capturedEnvironment: Map[Identifier, Lazy[ValueOrError]], loc: Location) extends Value {
+    override def withLoc(loc: Location): Closure = copy(loc = loc)
+
+    override def toString = {
+      //capturedEnvironment.map { case (id, v) => s"$id = $v"}.mkString(s"$function with {", ", ", "}")
+      s"$function (closure)"
+    }
   }
 
   sealed abstract class Type
@@ -176,6 +203,14 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   case object UnitType extends ValueType {
     override def toString = "Unit"
+  }
+
+  case object FunctionType extends ValueType {
+    override def toString = "? => ?"
+  }
+
+  case class OptionType(elementType: ValueType) extends ValueType {
+    override def toString = s"Option[$elementType]"
   }
 
   case class MapType(keyType: ValueType, valueType: ValueType) extends ValueType {

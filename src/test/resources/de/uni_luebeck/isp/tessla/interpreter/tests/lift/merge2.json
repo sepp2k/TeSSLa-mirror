@@ -1,0 +1,5 @@
+{
+  "input": "merge.input",
+  "expectedOutput": "merge.output",
+  "spec": "merge2.tessla"
+}

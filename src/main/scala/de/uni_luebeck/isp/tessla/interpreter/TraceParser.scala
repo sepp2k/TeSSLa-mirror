@@ -207,16 +207,16 @@ object TraceParser extends Parsers {
 
     def literal: Parser[TesslaCore.Value] =
       TRUE ^^^! {
-        loc => TesslaCore.BoolLiteral(true, Location(loc, path))
+        loc => TesslaCore.BoolValue(true, Location(loc, path))
       } |
         FALSE ^^^! {
-          loc => TesslaCore.BoolLiteral(false, Location(loc, path))
+          loc => TesslaCore.BoolValue(false, Location(loc, path))
         } |
         string ^^! {
-          case (loc, value) => TesslaCore.StringLiteral(value, Location(loc, path))
+          case (loc, value) => TesslaCore.StringValue(value, Location(loc, path))
         } |
         bigInt ^^! {
-          case (loc, value) => TesslaCore.IntLiteral(value, Location(loc, path))
+          case (loc, value) => TesslaCore.IntValue(value, Location(loc, path))
         }
 
     def unit: Parser[TesslaCore.Value] =

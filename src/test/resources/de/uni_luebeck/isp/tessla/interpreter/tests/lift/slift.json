@@ -1,0 +1,5 @@
+{
+  "input": "slift.input",
+  "expectedOutput": "slift.output",
+  "spec": "slift.tessla"
+}

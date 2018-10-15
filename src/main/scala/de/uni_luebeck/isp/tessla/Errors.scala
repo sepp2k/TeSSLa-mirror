@@ -24,7 +24,7 @@ object Errors {
 
     override def message =
       s"Member definition $id needs a body. Eliding the body is only allowed if the definition" +
-      " consists of an identifier and nothing else."
+      " consists of an identifier and nothing else"
   }
 
   case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location) extends TesslaError {
@@ -145,24 +145,28 @@ object Errors {
     override def message: String = s"Negative delay $value"
   }
 
-  case class InputTypeMismatch(value: TesslaCore.Value, streamName: String, streamType: TesslaCore.Type, loc: Location) extends TesslaError {
-    override def message: String = s"Tried to provide value of type ${value.typ} ($value) to input stream '$streamName' of type $streamType"
+  case class InputTypeMismatch(value: TesslaCore.Value, valueType: String, streamName: String, streamType: TesslaCore.Type, loc: Location) extends TesslaError {
+    override def message: String = s"Unexpected value of type $valueType ($value), expected type $streamType, in input stream '$streamName'"
   }
 
   case class TracesOperationError(loc: Location, op: String, args: TesslaCore.Value*) extends TesslaError {
-    override def message: String = s"Operation $op not defined for ${args.mkString(", ")}."
+    override def message: String = s"Operation $op not defined for ${args.mkString(", ")}"
   }
 
   case class TracesUnknownIdentifierError(loc: Location, name: String) extends TesslaError {
-    override def message: String = s"Unknown identifier in traces: $name."
+    override def message: String = s"Unknown identifier in traces: $name"
   }
 
   case class NegativeStepError(loc: Location, value: BigInt) extends TesslaError {
-    override def message: String = s"Negative step in time stamp range: $value."
+    override def message: String = s"Negative step in time stamp range: $value"
   }
 
   case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
     override def message: String = s"Key $key was not found in $map"
+  }
+
+  case class CannotGetValueOfNone(loc: Location) extends TesslaError {
+    override def message: String = s"Cannot get value of None"
   }
 
   case class StackOverflow(loc: Location) extends TesslaError {

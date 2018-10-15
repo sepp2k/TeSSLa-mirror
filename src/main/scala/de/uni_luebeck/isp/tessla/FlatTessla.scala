@@ -139,6 +139,12 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = "Unit"
   }
 
+  case class OptionType(elementType: Type) extends Type {
+    override def isValueType = true
+
+    override def toString = s"Option[$elementType]"
+  }
+
   case object CtfType extends Type {
     override def isValueType = true
 

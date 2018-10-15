@@ -26,8 +26,8 @@ class FlatEventIterator(eventRanges: Iterator[EventRange], abortAt: Option[BigIn
             generator.stream, generator.value))
         }
         eventCounter += 1
-        Some(Trace.Event(generator.loc, Trace.TimeStamp(range.loc, range.from),
-          generator.stream, generator.evalValue))
+        val ts = Trace.TimeStamp(range.loc, range.from)
+        Some(Trace.Event(generator.loc, ts, generator.stream, generator.evalValue))
       } else {
         None
       }

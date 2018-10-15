@@ -27,6 +27,14 @@ object BuiltIn {
     override def name = "time"
   }
 
+  case object Lift extends BuiltIn {
+    override def name = "lift"
+  }
+
+  case object Lift3 extends BuiltIn {
+    override def name = "lift3"
+  }
+
   case object DelayedLast extends BuiltIn {
     override def name = "delayedLast"
   }
@@ -148,6 +156,23 @@ object BuiltIn {
     override def name = "if then"
   }
 
+  // Option operators
+  case object None extends PrimitiveOperator {
+    override def name = "None"
+  }
+
+  case object Some extends PrimitiveOperator {
+    override def name = "Some"
+  }
+
+  case object IsNone extends PrimitiveOperator {
+    override def name = "isNone"
+  }
+
+  case object GetSome extends PrimitiveOperator {
+    override def name = "getSome"
+  }
+
   // Map operators
   case object MapEmpty extends PrimitiveOperator {
     override def name = "Map_empty"
@@ -222,6 +247,8 @@ object BuiltIn {
     Last,
     DelayedLast,
     Time,
+    Lift,
+    Lift3,
     Const,
     Merge,
     Add,
@@ -247,6 +274,10 @@ object BuiltIn {
     First,
     IfThenElse,
     IfThen,
+    IsNone,
+    None,
+    Some,
+    GetSome,
     MapEmpty,
     MapAdd,
     MapGet,

@@ -58,84 +58,84 @@ object RawTrace{
 
   case class Add(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
-      case (TesslaCore.IntLiteral(val1, _), TesslaCore.IntLiteral(val2, _)) => TesslaCore.IntLiteral(val1 + val2, loc)
+      case (TesslaCore.IntValue(val1, _), TesslaCore.IntValue(val2, _)) => TesslaCore.IntValue(val1 + val2, loc)
       case (l, r) => throw TracesOperationError(loc, "+", l, r)
     }
   }
 
   case class Sub(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
-      case (TesslaCore.IntLiteral(val1, _), TesslaCore.IntLiteral(val2, _)) => TesslaCore.IntLiteral(val1 - val2, loc)
+      case (TesslaCore.IntValue(val1, _), TesslaCore.IntValue(val2, _)) => TesslaCore.IntValue(val1 - val2, loc)
       case (l, r) => throw TracesOperationError(loc, "-", l, r)
     }
   }
 
   case class Mult(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
-      case (TesslaCore.IntLiteral(val1, _), TesslaCore.IntLiteral(val2, _)) => TesslaCore.IntLiteral(val1 * val2, loc)
+      case (TesslaCore.IntValue(val1, _), TesslaCore.IntValue(val2, _)) => TesslaCore.IntValue(val1 * val2, loc)
       case (l, r) => throw TracesOperationError(loc, "*", l, r)
     }
   }
 
   case class Div(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
-      case (TesslaCore.IntLiteral(val1, _), TesslaCore.IntLiteral(val2, _)) => TesslaCore.IntLiteral(val1 / val2, loc)
+      case (TesslaCore.IntValue(val1, _), TesslaCore.IntValue(val2, _)) => TesslaCore.IntValue(val1 / val2, loc)
       case (l, r) => throw TracesOperationError(loc, "/", l, r)
     }
   }
 
   case class Mod(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
-      case (TesslaCore.IntLiteral(val1, _), TesslaCore.IntLiteral(val2, _)) => TesslaCore.IntLiteral(val1 % val2, loc)
+      case (TesslaCore.IntValue(val1, _), TesslaCore.IntValue(val2, _)) => TesslaCore.IntValue(val1 % val2, loc)
       case (l, r) => throw TracesOperationError(loc, "%", l, r)
     }
   }
 
   case class Neg(exp: TraceOp, loc: Location) extends TracesUnaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = exp.eval(env) match {
-      case TesslaCore.IntLiteral(v, _) => TesslaCore.IntLiteral(-v, loc)
+      case TesslaCore.IntValue(v, _) => TesslaCore.IntValue(-v, loc)
       case transExp => throw TracesOperationError(loc, "-", transExp)
     }
   }
 
   case class And(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
-      case (TesslaCore.BoolLiteral(val1, _), TesslaCore.BoolLiteral(val2, _)) => TesslaCore.BoolLiteral(val1 && val2, loc)
+      case (TesslaCore.BoolValue(val1, _), TesslaCore.BoolValue(val2, _)) => TesslaCore.BoolValue(val1 && val2, loc)
       case (l, r) => throw TracesOperationError(loc, "&&", l, r)
     }
   }
 
   case class Implies(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
-      case (TesslaCore.BoolLiteral(val1, _), TesslaCore.BoolLiteral(val2, _)) => TesslaCore.BoolLiteral(!val1 || val2, loc)
+      case (TesslaCore.BoolValue(val1, _), TesslaCore.BoolValue(val2, _)) => TesslaCore.BoolValue(!val1 || val2, loc)
       case (l, r) => throw TracesOperationError(loc, "->", l, r)
     }
   }
 
   case class Equiv(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
-      case (TesslaCore.BoolLiteral(val1, _), TesslaCore.BoolLiteral(val2, _)) => TesslaCore.BoolLiteral(val1 == val2, loc)
+      case (TesslaCore.BoolValue(val1, _), TesslaCore.BoolValue(val2, _)) => TesslaCore.BoolValue(val1 == val2, loc)
       case (l, r) => throw TracesOperationError(loc, "<->", l, r)
     }
   }
 
   case class Or(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
-      case (TesslaCore.BoolLiteral(val1, _), TesslaCore.BoolLiteral(val2, _)) => TesslaCore.BoolLiteral(val1 || val2, loc)
+      case (TesslaCore.BoolValue(val1, _), TesslaCore.BoolValue(val2, _)) => TesslaCore.BoolValue(val1 || val2, loc)
       case (l, r) => throw TracesOperationError(loc, "||", l, r)
     }
   }
 
   case class Xor(lhs: TraceOp, rhs: TraceOp, loc: Location) extends TracesBinaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = (lhs.eval(env), rhs.eval(env)) match {
-      case (TesslaCore.BoolLiteral(val1, _), TesslaCore.BoolLiteral(val2, _)) => TesslaCore.BoolLiteral((val1 && !val2) || (!val1 && val2), loc)
+      case (TesslaCore.BoolValue(val1, _), TesslaCore.BoolValue(val2, _)) => TesslaCore.BoolValue((val1 && !val2) || (!val1 && val2), loc)
       case (l, r) => throw TracesOperationError(loc, "^", l, r)
     }
   }
 
   case class Not(exp: TraceOp, loc: Location) extends TracesUnaryOp {
     override def eval(env: Map[String, BigInt]): TesslaCore.Value = exp.eval(env) match {
-      case TesslaCore.BoolLiteral(v, _) => TesslaCore.BoolLiteral(!v, loc)
+      case TesslaCore.BoolValue(v, _) => TesslaCore.BoolValue(!v, loc)
       case transExp => throw TracesOperationError(loc, "!", transExp)
     }
   }
@@ -151,7 +151,7 @@ object RawTrace{
 
     override def eval(env: Map[String, BigInt]): TesslaCore.Value =
       if (env.isDefinedAt(name)) {
-        TesslaCore.IntLiteral(env(name), loc)
+        TesslaCore.IntValue(env(name), loc)
       } else {
         throw TracesUnknownIdentifierError(loc, name)
       }
