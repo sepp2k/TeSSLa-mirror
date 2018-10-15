@@ -18,7 +18,7 @@ class TesslaSource private(val src: Source, val path: String) {
   */
 object TesslaSource {
   def fromFile(path: String): TesslaSource = {
-    new TesslaSource(Source.fromFile(path), path)
+    new TesslaSource(Source.fromFile(path, "UTF-8"), path)
   }
 
   def fromString(str: String, path: String): TesslaSource = {
@@ -26,7 +26,7 @@ object TesslaSource {
   }
 
   def fromJavaStream(stream: InputStream, path: String): TesslaSource = {
-    new TesslaSource(Source.fromInputStream(stream), path)
+    new TesslaSource(Source.fromInputStream(stream, "UTF-8"), path)
   }
 
   def fromScalaSource(source: Source, path: String) = {
