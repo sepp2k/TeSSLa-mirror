@@ -94,7 +94,7 @@ object TraceParser extends Parsers {
     override val keywords = List(TRUE, FALSE, IN)
     override val symbols = List(COLON, SEMICOLON, COMMA, EQ, DOLLAR, LPAREN, RPAREN, MINUS, DDOT, LEQ, GEQ, LT, GT,
       UNDERSCORE, PLUSEQ, PLUS, STAR, SLASH, PERCENT, DAMPERSAND, DPIPE, RARROW, LRARROW, EXCLMARK)
-    override val comments = List("--" -> "\n")
+    override val comments = List("--" -> "\n", "#" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = {
       super.isIdentifierCont(c)
