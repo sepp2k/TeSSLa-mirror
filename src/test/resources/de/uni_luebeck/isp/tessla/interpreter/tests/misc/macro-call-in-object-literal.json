@@ -1,0 +1,5 @@
+{
+  "input": "macro-call-in-object-literal.input",
+  "expectedOutput": "macro-call-in-object-literal.output",
+  "spec": "macro-call-in-object-literal.tessla"
+}
