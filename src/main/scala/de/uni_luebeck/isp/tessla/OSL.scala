@@ -43,7 +43,6 @@ object OSL {
 
   class Generator extends TranslationPhase[TesslaCore.Specification, OSL] {
     var streams: Map[TesslaCore.Identifier, TesslaCore.Expression] = _
-    var values: Map[TesslaCore.Identifier, TesslaCore.ValueOrError] = _
     val visited = mutable.Set[TesslaCore.Identifier]()
 
     sealed abstract class ProtoStatement
@@ -52,7 +51,6 @@ object OSL {
 
     override def translateSpec(spec: TesslaCore.Specification) = {
       streams = spec.streams.toMap
-      values = spec.values
       val protoStatements = spec.outStreams.map(_._2).flatMap(translateStreamRef)
       val mergedConditions = protoStatements.foldLeft(Map[Option[String], Set[String]]()) {
         case (m, Cond(cond)) =>

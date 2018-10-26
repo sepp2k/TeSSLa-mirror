@@ -6,12 +6,10 @@ import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
   final case class Specification(streams: Seq[(Identifier, Expression)],
-                                 values: Map[Identifier, ValueOrError],
                                  inStreams: Seq[(String, StreamType, Location)],
                                  outStreams: Seq[(String, StreamRef, StreamType)]) {
     override def toString = {
       inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
-        values.map { case (name, value) => s"const $name := $value\n" }.mkString +
         streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +
         outStreams.map { case (name, stream, typ) => s"out $stream : $typ as $name\n" }.mkString
     }
@@ -69,7 +67,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"merge($stream1, $stream2)"
   }
 
-  final case class Lift(f: Identifier, args: Seq[StreamRef], loc: Location) extends Expression {
+  final case class Lift(f: ValueArg, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
       args.mkString(s"lift($f", ", ", ")")
     }
@@ -81,13 +79,17 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
+  sealed abstract class ValueArg
+
+  case class ValueExpressionRef(id: Identifier) extends ValueArg
+
   sealed abstract class ValueExpression {
     def loc: Location
   }
 
   final case class Function(parameters: Seq[Identifier],
                             scope: Map[Identifier, ValueExpression],
-                            body: Identifier,
+                            body: ValueArg,
                             loc: Location) extends ValueExpression {
     override def toString = {
       val defs = scope.map {
@@ -97,13 +99,11 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  case class Application(f: Identifier, args: Seq[Identifier], loc: Location) extends ValueExpression {
+  case class Application(f: ValueArg, args: Seq[ValueArg], loc: Location) extends ValueExpression {
     override def toString = args.mkString(s"$f(", ", ", ")")
   }
 
-  case class Literal(value: ValueOrError, loc: Location) extends ValueExpression
-
-  sealed trait ValueOrError {
+  sealed trait ValueOrError extends ValueArg {
     def forceValue: Value
 
     def mapValue(f: Value => Value): ValueOrError

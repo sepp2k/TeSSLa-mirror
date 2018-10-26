@@ -161,11 +161,11 @@ object Evaluator {
   // at least in the case of nested functions.
   type Env = Map[TesslaCore.Identifier, Lazy[TesslaCore.ValueOrError]]
 
-  def evalApplication(f: TesslaCore.Identifier,
+  def evalApplication(f: TesslaCore.ValueArg,
                       args: Seq[TesslaCore.ValueOrError],
                       loc: Location,
                       env: Env): TesslaCore.ValueOrError = {
-    env(f).get match {
+    evalArg(f, env) match {
       case b: TesslaCore.BuiltInOperator =>
         evalPrimitiveOperator(b.value, args, loc).get
       case c: TesslaCore.Closure =>
@@ -174,16 +174,20 @@ object Evaluator {
         lazy val innerEnv: Env =  env ++ argEnv ++ c.function.scope.map {
           case (id, e) => id -> Lazy(evalExpression(e, innerEnv))
         }
-        innerEnv(c.function.body).get
+        evalArg(c.function.body, innerEnv)
       case _ =>
         throw InternalError("Application of non-function should have been caught by the type checker")
     }
   }
 
+  def evalArg(arg: TesslaCore.ValueArg, env: Env): TesslaCore.ValueOrError = arg match {
+    case value: TesslaCore.ValueOrError => value
+    case ref: TesslaCore.ValueExpressionRef => env(ref.id).get
+  }
+
   def evalExpression(exp: TesslaCore.ValueExpression, env: Env): TesslaCore.ValueOrError = exp match {
-    case l: TesslaCore.Literal => l.value
     case f: TesslaCore.Function => TesslaCore.Closure(f, env, exp.loc)
     case a: TesslaCore.Application =>
-      evalApplication(a.f, a.args.map(env(_).get), a.loc, env)
+      evalApplication(a.f, a.args.map(evalArg(_, env)), a.loc, env)
   }
 }
