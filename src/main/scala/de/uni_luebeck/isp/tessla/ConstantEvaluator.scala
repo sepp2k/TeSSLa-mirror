@@ -345,12 +345,24 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     }
   }
 
+  /***
+    * Checks whether the given type can be used inside a value function definition
+    */
+  def isValueCompatibleType(typ: TypedTessla.Type): Boolean = typ match {
+    case _: TypedTessla.StreamType =>
+      false
+    case ft: TypedTessla.FunctionType =>
+      isValueCompatibleType(ft.returnType) && ft.parameterTypes.forall(isValueCompatibleType)
+    case _ =>
+      true
+  }
+
   def translateFunction(closure: Env, mac: TypedTessla.Macro): TesslaCore.Function = {
     val params = mac.parameters.map { param =>
       param.id -> makeIdentifier(param.name)
     }
     val scopeNotYetTranslateds = mac.scope.variables.values.filter { entry =>
-      !entry.expression.isInstanceOf[TypedTessla.Parameter]
+      !entry.expression.isInstanceOf[TypedTessla.Parameter] && isValueCompatibleType(entry.typeInfo)
     }.map { entry =>
       NotYetTranslated(entry, null)
     }
