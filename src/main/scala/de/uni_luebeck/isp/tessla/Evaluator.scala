@@ -195,11 +195,11 @@ object Evaluator {
     case a: TesslaCore.Application =>
       evalApplication(a.f, a.args.map(evalArg(_, env)), a.loc, env)
     case ma: TesslaCore.MemberAccess =>
-      evalArg(ma.obj, env) match {
+      evalArg(ma.obj, env).mapValue {
         case obj: TesslaCore.TesslaObject =>
           obj.value(ma.member)
-        case _ =>
-          throw InternalError("Member access on non-object should have been caught by type checker", ma.loc)
+        case other =>
+          throw InternalError(s"Member access on non-object ($other) should have been caught by type checker", ma.loc)
       }
   }
 }
