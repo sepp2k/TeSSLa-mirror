@@ -25,7 +25,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   case class InputStreamEntry(name: String, typ: TesslaCore.StreamType) extends TranslationResult
   case class NilEntry(nil: TesslaCore.Nil, typ: TesslaCore.StreamType) extends TranslationResult
   case class ValueEntry(value: TesslaCore.Value) extends TranslationResult
-  case class ObjectEntry(members: Map[String, Lazy[TranslationResult]]) extends TranslationResult
+  case class ObjectEntry(members: Map[String, Lazy[TranslationResult]], loc: Location) extends TranslationResult
   case class FunctionEntry(f: TesslaCore.Function, id: TesslaCore.Identifier) extends TranslationResult
   case class MacroEntry(mac: TypedTessla.Macro, closure: Env, functionValue: Option[TesslaCore.Closure]) extends TranslationResult {
     override def toString = s"MacroEntry($mac, ...)"
@@ -150,7 +150,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         val members = Map(
           "version" -> Lazy(ValueEntry(TesslaCore.StringValue(BuildInfo.version, expression.loc)))
         )
-        wrapper.entry = Translated(Lazy(ObjectEntry(members)))
+        wrapper.entry = Translated(Lazy(ObjectEntry(members, Location.builtIn)))
       case TypedTessla.BuiltInOperator(builtIn) =>
         wrapper.entry = Translated(Lazy(BuiltInEntry(builtIn)))
       case mac: TypedTessla.Macro if inFunction =>
@@ -193,7 +193,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
           ObjectEntry(obj.members.map {
             case (name, member) =>
               name -> getResult(translateVar(env, member.id, member.loc, inFunction))
-          })
+          }, obj.loc)
         })
       case acc: TypedTessla.MemberAccess =>
         wrapper.entry = Translated(Lazy {
@@ -420,7 +420,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         case (name, Lazy(value)) =>
           name -> getValueArg(Translated(Lazy(value)))
       }
-      TesslaCore.ObjectCreation(members, Location.unknown)
+      TesslaCore.ObjectCreation(members, oe.loc)
     case _ =>
       throw InternalError(s"Expected value-level entry, but found $entry")
   }
@@ -447,7 +447,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   def getValue(envEntry: EnvEntry): TesslaCore.ValueOrError = {
     try {
       getResult(envEntry).get match {
-        case ValueEntry(v) => v
+        case ve: ValueEntry => ve.value
+        case oe: ObjectEntry =>
+          val members = oe.members.mapValues(v => getValue(Translated(v)).forceValue)
+          TesslaCore.TesslaObject(members, oe.loc)
         case other => throw InternalError(s"Wrong type of environment entry: Expected ValueEntry, found: $other")
       }
     } catch {

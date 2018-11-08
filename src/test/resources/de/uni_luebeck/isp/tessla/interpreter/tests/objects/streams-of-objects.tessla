@@ -3,7 +3,9 @@ in b: Events[Int]
 
 def t: Events[(Int, Int)] := slift(a, b, fun (x: Int, y: Int) => (x, y))
 
-def o: Events[${x: Int, y: Int, z: Int}] := slift(a, b, fun (x: Int, y: Int) => ${x, y, z = x+y})
+def o: Events[${x: Int, y: Int, z: Int}] := default(
+    slift(a, b, fun (x: Int, y: Int) => ${x, y, z = x+y}),
+    ${x = 0, y = 0, z = 0})
 
 def sumPair(t: (Int, Int)) := t._1 + t._2
 
