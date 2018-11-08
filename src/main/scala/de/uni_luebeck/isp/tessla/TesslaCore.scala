@@ -103,6 +103,15 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = args.mkString(s"$f(", ", ", ")")
   }
 
+  // TODO: Hack! This should be a ValueExpression, not a ValueArg
+  case class ObjectCreation(members: Map[String, ValueArg], loc: Location) extends ValueArg {
+    override def toString = members.map {case (name, value) => s"$name = $value"}.mkString("${", ", ", "}")
+  }
+
+  case class MemberAccess(obj: ValueArg, member: String, loc: Location) extends ValueExpression {
+    override def toString = s"$obj.$member"
+  }
+
   sealed trait ValueOrError extends ValueArg {
     def forceValue: Value
 
@@ -154,6 +163,12 @@ object TesslaCore extends HasUniqueIdentifiers {
   final case class Unit(loc: Location) extends PrimitiveValue {
     override def value = ()
     override def withLoc(loc: Location): Unit = copy(loc = loc)
+  }
+
+  final case class TesslaObject(value: Map[String, Value], loc: Location) extends PrimitiveValue {
+    override def withLoc(loc: Location): TesslaObject = copy(loc = loc)
+
+    override def toString = value.map { case (name, v) => s"$name = $v"}.mkString("${", ", ", "}")
   }
 
   final case class TesslaOption(value: Option[Value], loc: Location) extends PrimitiveValue {
@@ -211,6 +226,10 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   case class OptionType(elementType: ValueType) extends ValueType {
     override def toString = s"Option[$elementType]"
+  }
+
+  case class ObjectType(memberTypes: Map[String, ValueType]) extends ValueType {
+    override def toString = memberTypes.map {case (name, typ) => s"$name: $typ"}.mkString("${", ", ", "}")
   }
 
   case class MapType(keyType: ValueType, valueType: ValueType) extends ValueType {

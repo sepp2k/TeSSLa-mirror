@@ -582,6 +582,9 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         val t = typeMap(receiver) match {
           case ot: TypedTessla.ObjectType =>
             ot.memberTypes.getOrElse(acc.member, throw MemberNotDefined(ot, acc.member, acc.memberLoc))
+          case TypedTessla.StreamType(ot: TypedTessla.ObjectType) =>
+            val memberType = ot.memberTypes.getOrElse(acc.member, throw MemberNotDefined(ot, acc.member, acc.memberLoc))
+            TypedTessla.StreamType(memberType)
           case other =>
             throw TypeMismatch("object", other, acc.receiver.loc)
         }

@@ -181,13 +181,25 @@ object Evaluator {
   }
 
   def evalArg(arg: TesslaCore.ValueArg, env: Env): TesslaCore.ValueOrError = arg match {
-    case value: TesslaCore.ValueOrError => value
-    case ref: TesslaCore.ValueExpressionRef => env(ref.id).get
+    case value: TesslaCore.ValueOrError =>
+      value
+    case obj: TesslaCore.ObjectCreation =>
+      TesslaCore.TesslaObject(obj.members.mapValues(evalArg(_, env).forceValue), obj.loc)
+    case ref: TesslaCore.ValueExpressionRef =>
+      env(ref.id).get
   }
 
   def evalExpression(exp: TesslaCore.ValueExpression, env: Env): TesslaCore.ValueOrError = exp match {
-    case f: TesslaCore.Function => TesslaCore.Closure(f, env, exp.loc)
+    case f: TesslaCore.Function =>
+      TesslaCore.Closure(f, env, exp.loc)
     case a: TesslaCore.Application =>
       evalApplication(a.f, a.args.map(evalArg(_, env)), a.loc, env)
+    case ma: TesslaCore.MemberAccess =>
+      evalArg(ma.obj, env) match {
+        case obj: TesslaCore.TesslaObject =>
+          obj.value(ma.member)
+        case _ =>
+          throw InternalError("Member access on non-object should have been caught by type checker", ma.loc)
+      }
   }
 }

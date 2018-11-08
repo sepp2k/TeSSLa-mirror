@@ -170,8 +170,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   }
 
   case class ObjectType(memberTypes: Map[String, Type]) extends Type {
-    // TODO change to `memberTypes.values.forall(_.isValueType)` once objects as values are supported
-    override def isValueType = false
+    override def isValueType = memberTypes.values.forall(_.isValueType)
 
     override def toString = memberTypes.map {case (name, t) => s"$name : $t"}.mkString("${", ", ", "}")
   }

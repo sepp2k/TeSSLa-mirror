@@ -1,0 +1,25 @@
+in a: Events[Int]
+in b: Events[Int]
+
+def t: Events[(Int, Int)] := slift(a, b, fun (x: Int, y: Int) => (x, y))
+
+def o: Events[${x: Int, y: Int, z: Int}] := slift(a, b, fun (x: Int, y: Int) => ${x, y, z = x+y})
+
+def sumPair(t: (Int, Int)) := t._1 + t._2
+
+out slift1(t, sumPair)
+out t
+out o
+
+def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] :=
+  lift(stream, nil[Unit], fun (x: Option[T], nothing: Option[Unit]) => Some(f(getSome(x))))
+
+def slift[A,B,C](a: Events[A], b: Events[B], f: (A,B) => C): Events[C] := {
+  def aa := merge(a, last(a, b))
+  def bb := merge(b, last(b, a))
+  return lift(aa, bb, fun (a: Option[A], b: Option[B]) =>
+    if !isNone(a) && !isNone(b)
+    then Some(f(getSome(a), getSome(b)))
+    else None[C]
+  )
+}
