@@ -24,7 +24,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   case class StreamEntry(streamId: TesslaCore.Identifier, typ: TesslaCore.StreamType) extends TranslationResult
   case class InputStreamEntry(name: String, typ: TesslaCore.StreamType) extends TranslationResult
   case class NilEntry(nil: TesslaCore.Nil, typ: TesslaCore.StreamType) extends TranslationResult
-  case class ValueEntry(value: TesslaCore.Value) extends TranslationResult
+  case class ValueEntry(value: TesslaCore.ValueOrError) extends TranslationResult
   case class ObjectEntry(members: Map[String, Lazy[TranslationResult]], loc: Location) extends TranslationResult
   case class FunctionEntry(f: TesslaCore.Function, id: TesslaCore.Identifier) extends TranslationResult
   case class MacroEntry(mac: TypedTessla.Macro, closure: Env, functionValue: Option[TesslaCore.Closure]) extends TranslationResult {
@@ -300,7 +300,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                         case other => throw InternalError(s"Expected value entry, found $other")
                       }
                     }, call.loc)
-                    wrapper.entry = Translated(Lazy(ValueEntry(value.get.forceValue)))
+                    wrapper.entry = Translated(Lazy(ValueEntry(value.get)))
                 }
               case BuiltIn.TesslaInfo =>
                 throw InternalError(s"Applying non-macro/builtin (${builtIn.getClass.getSimpleName}) - should have been caught by the type checker.")
