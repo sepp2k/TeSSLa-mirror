@@ -3,6 +3,8 @@ package de.uni_luebeck.isp.tessla.util
 import scala.language.implicitConversions
 
 class Lazy[+A](a: => A) {
+  override def toString = s"Lazy($a)"
+
   lazy val get: A = a
 
   def map[B](f: A => B): Lazy[B] = Lazy(f(a))

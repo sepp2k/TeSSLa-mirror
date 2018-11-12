@@ -72,7 +72,7 @@ object Main extends SexyOpt {
           return
         }
         if (listOutStreams) {
-          spec.outStreams.foreach { case (name, _) => println(name) }
+          spec.outStreams.foreach { case (name, _, _) => println(name) }
           return
         }
         if (computationDepth) {

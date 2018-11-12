@@ -1,0 +1,14 @@
+in x: Events[Int]
+in y: Events[Int]
+
+def isSome[T](opt: Option[T]) := !isNone(opt)
+
+# Unlike the built-in merge this one prefers the second stream in case of
+# ties. This is so this is distinguishable from the built-in merge making
+# this test more robust in the presence of scoping bugs.
+def mergeAux(a: Option[Int], b: Option[Int]): Option[Int] :=
+  if isSome(b) then b else a
+
+def merge(a: Events[Int], b: Events[Int]): Events[Int] :=
+  lift(a, b, mergeAux)
+out merge(x, y) as m

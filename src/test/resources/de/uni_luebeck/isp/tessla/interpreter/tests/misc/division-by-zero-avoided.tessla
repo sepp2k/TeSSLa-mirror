@@ -6,4 +6,11 @@ def result :=
     then -1234567890
     else x / y
 
+def f(a: Int, b: Int) :=
+    if b == 0
+    then -1234567890
+    else a / b
+
 out result
+out f(42, 0)
+out f(42, 1)

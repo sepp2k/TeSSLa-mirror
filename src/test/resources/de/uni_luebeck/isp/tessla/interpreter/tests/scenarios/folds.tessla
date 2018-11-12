@@ -8,8 +8,5 @@ def fold[T,U](f: (Events[T], Events[U]) => Events[T], start: T, stream: Events[U
 @liftable
 def add(x: Int, y: Int) := x+y
 
-@liftable
-def add1(x: Int, y: Int) := x+1
-
 out fold(add, 0, x) as sum
-out fold(add1, 0, x) as eventCount
+out fold(fun (a: Events[Int], b: Events[Int]) => a+1, 0, x) as eventCount

@@ -132,6 +132,13 @@ object Tessla {
     }
   }
 
+  case class Lambda(parameters: Seq[Parameter], headerLoc: Location, body: Expression, loc: Location) extends Expression {
+    override def toString(inner: Boolean) = {
+      val str = s"fun (${parameters.mkString(", ")}) => $body"
+      if (inner) s"($str)" else str
+    }
+  }
+
   sealed abstract class MemberDefinition {
     def id: Identifier
   }

@@ -1,8 +1,11 @@
 package de.uni_luebeck.isp.tessla
 
 package object util {
-  def unreachable: Nothing = {
-    // We're not using assert here as we can't return a value if asserts are off
-    throw new AssertionError("code marked as unreachable was reached")
+  /**
+    * `optionIf(cond) {foo}` evaluates `foo` and returns its value wrapped in a `Some` if `cond`
+    * is true; otherwise `None` is returned.
+    */
+  def optionIf[T](condition: Boolean)(thenCase: =>T): Option[T] = {
+    if (condition) Some(thenCase) else None
   }
 }

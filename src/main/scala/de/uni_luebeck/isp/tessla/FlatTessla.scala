@@ -139,6 +139,12 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = "Unit"
   }
 
+  case class OptionType(elementType: Type) extends Type {
+    override def isValueType = true
+
+    override def toString = s"Option[$elementType]"
+  }
+
   case object CtfType extends Type {
     override def isValueType = true
 
@@ -164,8 +170,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   }
 
   case class ObjectType(memberTypes: Map[String, Type]) extends Type {
-    // TODO change to `memberTypes.values.forall(_.isValueType)` once objects as values are supported
-    override def isValueType = false
+    override def isValueType = memberTypes.values.forall(_.isValueType)
 
     override def toString = memberTypes.map {case (name, t) => s"$name : $t"}.mkString("${", ", ", "}")
   }
@@ -211,7 +216,9 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = id.toString
   }
 
-  case class NamedArgument(name: String, id: Identifier, loc: Location) extends Argument {
+  case class NamedArgument(name: String, idLoc: IdLoc, loc: Location) extends Argument {
+    def id = idLoc.id
+
     override def toString = s"$name = $id"
   }
 }

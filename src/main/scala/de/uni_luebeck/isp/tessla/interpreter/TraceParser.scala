@@ -94,7 +94,7 @@ object TraceParser extends Parsers {
     override val keywords = List(TRUE, FALSE, IN)
     override val symbols = List(COLON, SEMICOLON, COMMA, EQ, DOLLAR, LPAREN, RPAREN, MINUS, DDOT, LEQ, GEQ, LT, GT,
       UNDERSCORE, PLUSEQ, PLUS, STAR, SLASH, PERCENT, DAMPERSAND, DPIPE, RARROW, LRARROW, EXCLMARK)
-    override val comments = List("--" -> "\n")
+    override val comments = List("--" -> "\n", "#" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = {
       super.isIdentifierCont(c)
@@ -207,16 +207,16 @@ object TraceParser extends Parsers {
 
     def literal: Parser[TesslaCore.Value] =
       TRUE ^^^! {
-        loc => TesslaCore.BoolLiteral(true, Location(loc, path))
+        loc => TesslaCore.BoolValue(true, Location(loc, path))
       } |
         FALSE ^^^! {
-          loc => TesslaCore.BoolLiteral(false, Location(loc, path))
+          loc => TesslaCore.BoolValue(false, Location(loc, path))
         } |
         string ^^! {
-          case (loc, value) => TesslaCore.StringLiteral(value, Location(loc, path))
+          case (loc, value) => TesslaCore.StringValue(value, Location(loc, path))
         } |
         bigInt ^^! {
-          case (loc, value) => TesslaCore.IntLiteral(value, Location(loc, path))
+          case (loc, value) => TesslaCore.IntValue(value, Location(loc, path))
         }
 
     def unit: Parser[TesslaCore.Value] =

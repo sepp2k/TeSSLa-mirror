@@ -1,0 +1,5 @@
+{
+  "input": "options.input",
+  "expectedOutput": "options.output",
+  "spec": "options.tessla"
+}

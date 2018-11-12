@@ -42,7 +42,7 @@ object OSL {
   }
 
   class Generator extends TranslationPhase[TesslaCore.Specification, OSL] {
-    var streams: Map[TesslaCore.Identifier, TesslaCore.StreamDefinition] = _
+    var streams: Map[TesslaCore.Identifier, TesslaCore.Expression] = _
     val visited = mutable.Set[TesslaCore.Identifier]()
 
     sealed abstract class ProtoStatement
@@ -82,7 +82,7 @@ object OSL {
         if (visited(s.id)) Seq()
         else {
           visited += s.id
-          val exp = streams(s.id).expression
+          val exp = streams(s.id)
           findBasicCondition(exp).map(c => Seq(Cond(c))).getOrElse(translateExpression(exp))
         }
     }
@@ -91,7 +91,7 @@ object OSL {
       case _: TesslaCore.Nil => None
       case _: TesslaCore.InputStream => None
       case s: TesslaCore.Stream =>
-        Some(streams(s.id).expression)
+        Some(streams(s.id))
     }
 
     def findBasicCondition(streamRef: TesslaCore.StreamRef): Option[Condition] = {
@@ -99,8 +99,8 @@ object OSL {
     }
 
     def findBasicCondition(exp: TesslaCore.Expression): Option[Condition] = exp match {
-      case l: TesslaCore.Lift =>
-        l.operator match {
+      case l: TesslaCore.SignalLift =>
+        l.f match {
           case BuiltIn.And =>
             findBasicCondition(l.args(0)).flatMap { lhs =>
               findBasicCondition(l.args(1)).map { rhs =>
@@ -131,6 +131,7 @@ object OSL {
     }
 
     def translateExpression(expression: TesslaCore.Expression): Seq[ProtoStatement] = expression match {
+      case l: TesslaCore.SignalLift => l.args.flatMap(translateStreamRef)
       case l: TesslaCore.Lift => l.args.flatMap(translateStreamRef)
       case d: TesslaCore.Default => translateStreamRef(d.stream)
       case d: TesslaCore.DefaultFrom => translateStreamRef(d.valueStream) ++ translateStreamRef(d.defaultStream)

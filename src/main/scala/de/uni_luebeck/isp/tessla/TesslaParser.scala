@@ -45,6 +45,8 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     case object RETURN extends Token("return")
 
+    case object FUN extends Token("fun")
+
     case object COLON extends Token(":")
 
     case object PERCENT extends Token("%")
@@ -121,7 +123,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
     import tokens._
 
     override val keywords = List(DEFINE, DEF, TYPE, OUT, IN, STATIC, IF, THEN, ELSE, TRUE, FALSE, AS, INCLUDE, WHERE,
-      RETURN)
+      RETURN, FUN)
     override val symbols = List(COLONEQ, COLON, COMMA, LPAREN, RPAREN, LBRACKET, RBRACKET, DOLLARBRACE, LBRACE, RBRACE,
       PERCENT, LSHIFT, RSHIFT, GEQ, LEQ, NEQ, EQEQ, ROCKET, EQ, LT, GT, ANDAND, PIPEPIPE, TILDE, AND, PIPE, HAT, PLUS,
       MINUS, STAR, SLASH, BANG, AT, DOT)
@@ -147,7 +149,7 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
       // annoying and stupid. So we wrap the call in an option and fall back to "." as the default.
       val dir = Option(Paths.get(path).getParent).getOrElse(Paths.get("."))
       val includePath = dir.resolve(file.value)
-      new TesslaParser().translateSpec(TesslaSource.fromFile(includePath.toString))
+      translateSpec(TesslaSource.fromFile(includePath.toString))
     }
 
     // TODO identifier completion, requires some small compacom enhancements
@@ -231,14 +233,30 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
 
     def typeParameters: Parser[Seq[Tessla.Identifier]] = LBRACKET ~> rep1sep(identifier, COMMA) <~ RBRACKET
 
-    def expression: Parser[Tessla.Expression] = ifThenElse | staticIfThenElse | whereExpression
+    def expression: Parser[Tessla.Expression] = lambda | whereExpression
 
-    def staticIfThenElse = (STATIC ~> IF ~> expression) ~ (THEN ~> expression) ~ (ELSE ~> expression) ^^! {
+    def whereExpression =
+      mixfixExpression ~ (WHERE ~> LBRACE ~> definition.* <~ RBRACE).? ^^! {
+        case (_, (exp, None)) => exp
+        case (loc, (exp, Some(definitions))) => Tessla.Block(definitions, exp, Location(loc, path))
+      }
+
+    def lambdaHeader = FUN ~> parameters ^^! {
+      case (loc, params) => (Location(loc, path), params)
+    }
+
+    def lambda: Parser[Tessla.Expression] = lambdaHeader ~ (ROCKET ~> expression) ^^! {
+      case (loc, ((headerLoc, params), body)) => Tessla.Lambda(params, headerLoc, body, Location(loc, path))
+    }
+
+    def mixfixExpression: Parser[Tessla.Expression] = ifThenElse | staticIfThenElse | infixExpression
+
+    def staticIfThenElse = (STATIC ~> IF ~> mixfixExpression) ~ (THEN ~> mixfixExpression) ~ (ELSE ~> mixfixExpression) ^^! {
       case (loc, ((cond, thenCase), elseCase)) =>
         Tessla.StaticIfThenElse(cond, thenCase, elseCase, Location(loc, path))
     }
 
-    def ifThenElse = (IF ~ expression) ~ (THEN ~> expression) ~ (ELSE ~> expression).? ^^! {
+    def ifThenElse = (IF ~ mixfixExpression) ~ (THEN ~> mixfixExpression) ~ (ELSE ~> mixfixExpression).? ^^! {
       case (loc, (((ifToken, cond), thenCase), Some(elseCase))) =>
         Tessla.MacroCall(
           Tessla.Variable(Tessla.Identifier("if then else", Location(ifToken.loc, path))),
@@ -251,12 +269,6 @@ class TesslaParser extends TranslationPhase[TesslaSource, Tessla.Specification] 
           Seq(),
           Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase)), Location(loc, path))
     }
-
-    def whereExpression =
-      infixExpression ~ (WHERE ~> LBRACE ~> definition.* <~ RBRACE).? ^^! {
-        case (_, (exp, None)) => exp
-        case (loc, (exp, Some(definitions))) => Tessla.Block(definitions, exp, Location(loc, path))
-      }
 
     def infixOp(lhs: Tessla.Expression, rhss: Seq[(WithLocation[Token], Tessla.Expression)]) = {
       rhss.foldLeft(lhs) {

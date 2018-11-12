@@ -19,6 +19,10 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     makeIdentifier("Events"), 1, { case Seq(t) => FlatTessla.StreamType(t)}, Location.builtIn
   )
 
+  val optionType = FlatTessla.TypeEntry(
+    makeIdentifier("Option"), 1, { case Seq(t) => FlatTessla.OptionType(t)}, Location.builtIn
+  )
+
   val mapType = FlatTessla.TypeEntry(
     makeIdentifier("Map"), 2, { case Seq(k, v) => FlatTessla.MapType(k, v)}, Location.builtIn
   )
@@ -36,7 +40,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
   ).map {
     case (name, t) =>
       name -> FlatTessla.TypeEntry(makeIdentifier(name), 0, _ => t, Location.builtIn)
-  } ++ Map("Events" -> eventsType, "Map" -> mapType, "Set" -> setType)
+  } ++ Map("Events" -> eventsType, "Option" -> optionType, "Map" -> mapType, "Set" -> setType)
 
   def createIdMap(names: Iterable[String]): IdMap = {
     names.map(name => name -> makeIdentifier(name)).toMap
@@ -110,6 +114,20 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     }
   }
 
+  def translateParameter(param: Tessla.Parameter, idMap: IdMap, scope: FlatTessla.Scope, env: Env): FlatTessla.Parameter = {
+    val typ = param.parameterType match {
+      case Some(t) =>
+        translateType(t, scope, env)
+      case None =>
+        error(MissingTypeAnnotationParam(param.id.name, param.id.loc))
+        // Since we call error here, the compilation will abort after this phase and the result will never be used.
+        // Therefore it's okay to insert a null here (once we extend the system to keep compiling after errors, the
+        // null should be replaced by a proper error node)
+        null
+    }
+    FlatTessla.Parameter(param, typ, idMap(param.id.name))
+  }
+
   def addDefinition(definition: Tessla.Definition, scope: FlatTessla.Scope, env: Env): Unit = {
     val (innerDefs, exp) = definition.body match {
       case block: Tessla.Block => (block.definitions, block.expression)
@@ -150,19 +168,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
         val tp = FlatTessla.TypeParameter(typeParamIdMap(typeParameter.name), typeParameter.loc)
         innerScope.addType(FlatTessla.TypeEntry(tp.id, 0, _ => tp, tp.loc))
       }
-      val parameters = definition.parameters.map { param =>
-        val typ = param.parameterType match {
-          case Some(t) =>
-            translateType(t, innerScope, paramEnv)
-          case None =>
-            error(MissingTypeAnnotationParam(param.id.name, param.id.loc))
-            // Since we call error here, the compilation will abort after this phase and the result will never be used.
-            // Therefore it's okay to insert a null here (once we extend the system to keep compiling after errors, the
-            // null should be replaced by a proper error node)
-            null
-        }
-        FlatTessla.Parameter(param, typ, paramIdMap(param.id.name))
-      }
+      val parameters = definition.parameters.map(translateParameter(_, paramIdMap, innerScope, paramEnv))
       parameters.foreach { param =>
         val typ = param.parameterType
         innerScope.addVariable(FlatTessla.VariableEntry(paramIdMap(param.name), param, Some(typ), param.loc))
@@ -272,7 +278,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       val args = call.args.map {
         case arg: Tessla.NamedArgument =>
           val id = expToId(translateExpression(arg.expr, scope, env), scope)
-          FlatTessla.NamedArgument(arg.id.name, id, arg.loc)
+          FlatTessla.NamedArgument(arg.id.name, FlatTessla.IdLoc(id, arg.id.loc), arg.loc)
         case arg: Tessla.PositionalArgument =>
           val id = expToId(translateExpression(arg.expr, scope, env), scope)
           FlatTessla.PositionalArgument(id, arg.loc)
@@ -322,5 +328,25 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       val receiverId = expToId(translateExpression(memberAccess.receiver, scope, env), scope)
       val receiver = FlatTessla.IdLoc(receiverId, memberAccess.receiver.loc)
       FlatTessla.MemberAccess(receiver, memberAccess.member.name, memberAccess.member.loc, memberAccess.loc)
+
+    case lambda: Tessla.Lambda =>
+      val (innerDefs, exp) = lambda.body match {
+        case block: Tessla.Block => (block.definitions, block.expression)
+        case e => (Seq(), e)
+      }
+      checkForDuplicates(lambda.parameters.map(_.id) ++ innerDefs.map(_.id))
+      val innerScope = new FlatTessla.Scope(Some(scope))
+      val paramIdMap = createIdMap(lambda.parameters.map(_.id.name))
+      val innerEnv = env ++ Env(variables = paramIdMap ++ createIdMap(innerDefs.map(_.id.name)), types = Map())
+      val parameters = lambda.parameters.map(translateParameter(_, paramIdMap, innerScope, innerEnv))
+      parameters.foreach { param =>
+        val typ = param.parameterType
+        innerScope.addVariable(FlatTessla.VariableEntry(paramIdMap(param.name), param, Some(typ), param.loc))
+      }
+      innerDefs.foreach { innerDef =>
+        addDefinition(innerDef, innerScope, innerEnv)
+      }
+      val body = translateExpression(exp, innerScope, innerEnv)
+      FlatTessla.Macro(Seq(), parameters, innerScope, None, lambda.headerLoc, body, lambda.loc, isLiftable = false)
   }
 }
