@@ -4,7 +4,6 @@ import de.uni_luebeck.isp.compacom
 import de.uni_luebeck.isp.tessla.{TesslaCore, TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.tessla.Errors.{NotAnEventError, ParserError}
-import de.uni_luebeck.isp.tessla.TimeUnit._
 import de.uni_luebeck.isp.tessla.Location
 import de.uni_luebeck.isp.tessla.interpreter.RawTrace._
 
@@ -308,7 +307,7 @@ object TraceParser extends Parsers {
         from .. (infinite)
         from .. id (infinite)
         */
-        case (idOpt) =>
+        idOpt =>
           (loc: compacom.Location, from: BigInt) => RawTrace.TimeRange(Location(loc, path), idOpt, from, None, 1)
       }) | (((leftSideOp ~ identifierOrWildcard) ~ rightSideOp.?) ~ step1.?) ^^ {
         /*
