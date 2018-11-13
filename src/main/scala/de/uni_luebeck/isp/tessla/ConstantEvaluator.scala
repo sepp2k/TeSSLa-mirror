@@ -139,7 +139,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   }
 
   def isValueFunction(mac: TypedTessla.Macro): Boolean = {
-    mac.returnType.isValueType && mac.parameters.forall(_.parameterType.isValueType)
+    isValueCompatibleType(mac.returnType) && mac.parameters.forall(p => isValueCompatibleType(p.parameterType))
   }
 
   def translateExpression(env: Env, wrapper: EnvEntryWrapper, expression: TypedTessla.Expression, nameOpt: Option[String],
@@ -348,6 +348,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         TesslaCore.ValueExpressionRef(fe.id)
       case Translated(Lazy(BuiltInEntry(primOp: BuiltIn.PrimitiveOperator))) =>
         TesslaCore.BuiltInOperator(primOp, loc)
+      case Translated(Lazy(param: FunctionParameterEntry)) =>
+        TesslaCore.ValueExpressionRef(param.id)
       case other => throw InternalError(s"Wrong type of environment entry: Expected macro or primitive function, found: $other")
     }
   }
