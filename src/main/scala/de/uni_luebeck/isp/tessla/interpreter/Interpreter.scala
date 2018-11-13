@@ -167,15 +167,17 @@ object Interpreter {
                 throw InputTypeMismatch(value, "Map[?, ?]", name, elementType, value.loc)
             }
           case o: TesslaCore.TesslaObject =>
+            val actual = o.value.keys.map {n => s"$n: ?"}.mkString("${", ", ", "}")
             elementType match {
               case ot: TesslaCore.ObjectType =>
                 if (ot.memberTypes.keySet != o.value.keySet) {
-                  val actual = o.value.keys.map {n => s"$n: ?"}.mkString("${", ", ", "}")
                   throw InputTypeMismatch(value, actual, name, elementType, value.loc)
                 }
                 o.value.foreach {
                   case (n, v) => typeCheck(v, ot.memberTypes(n), s"$name.$n")
                 }
+              case _ =>
+                throw InputTypeMismatch(value, actual, name, elementType, value.loc)
             }
           case _: TesslaCore.Closure | _: TesslaCore.BuiltInOperator =>
             throw InternalError("Functions should not currently be able to appear in input streams")
