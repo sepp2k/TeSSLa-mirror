@@ -1,0 +1,8 @@
+type Coord := ${x: Int, y: Int}
+
+in o: Events[Coord]
+
+out slift1(o, fun (o: Coord) => o.x + o.y) as sum
+
+def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] :=
+  lift(stream, nil[Unit], fun (x: Option[T], nothing: Option[Unit]) => Some(f(getSome(x))))

@@ -1,0 +1,1 @@
+/errors/invalid-input-object2.input(1,8 - 1,17): Unexpected value of type ${x: ?} (${x = 42}), expected type ${x: Int, y: Int}, in input stream 'o'

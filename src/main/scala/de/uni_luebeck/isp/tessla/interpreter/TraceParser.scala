@@ -50,6 +50,10 @@ object TraceParser extends Parsers {
 
     case object RPAREN extends Token(")")
 
+    case object DOLLARBRACE extends Token("${")
+
+    case object RBRACE extends Token("}")
+
     case object MINUS extends Token("-")
 
     case object DDOT extends Token("..")
@@ -92,8 +96,9 @@ object TraceParser extends Parsers {
     import tokens._
 
     override val keywords = List(TRUE, FALSE, IN)
-    override val symbols = List(COLON, SEMICOLON, COMMA, EQ, DOLLAR, LPAREN, RPAREN, MINUS, DDOT, LEQ, GEQ, LT, GT,
-      UNDERSCORE, PLUSEQ, PLUS, STAR, SLASH, PERCENT, DAMPERSAND, DPIPE, RARROW, LRARROW, EXCLMARK)
+    override val symbols = List(COLON, SEMICOLON, COMMA, EQ, LPAREN, RPAREN, DOLLARBRACE, RBRACE, DOLLAR,
+      MINUS, DDOT, LEQ, GEQ, LT, GT, UNDERSCORE, PLUSEQ, PLUS, STAR, SLASH, PERCENT, DAMPERSAND, DPIPE,
+      RARROW, LRARROW, EXCLMARK)
     override val comments = List("--" -> "\n", "#" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = {
@@ -217,6 +222,10 @@ object TraceParser extends Parsers {
         } |
         bigInt ^^! {
           case (loc, value) => TesslaCore.IntValue(value, Location(loc, path))
+        } |
+        DOLLARBRACE ~> repsep(identifier ~ (EQ ~> literal), COMMA) <~ COMMA.? <~ RBRACE ^^! {
+          (loc, members) =>
+            TesslaCore.TesslaObject(members.map { case (id, v) => id.name -> v}.toMap, Location(loc, path))
         }
 
     def unit: Parser[TesslaCore.Value] =
