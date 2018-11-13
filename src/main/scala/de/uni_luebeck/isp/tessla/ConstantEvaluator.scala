@@ -362,6 +362,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       false
     case ft: TypedTessla.FunctionType =>
       isValueCompatibleType(ft.returnType) && ft.parameterTypes.forall(isValueCompatibleType)
+    case ot: TypedTessla.ObjectType =>
+      ot.memberTypes.values.forall(isValueCompatibleType)
     case _ =>
       true
   }
