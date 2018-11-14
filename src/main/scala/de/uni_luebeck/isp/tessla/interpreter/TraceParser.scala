@@ -43,6 +43,14 @@ object TraceParser extends Parsers {
 
     case object FALSE extends Token("false")
 
+    case object SOME extends Token("Some")
+
+    case object NONE extends Token("None")
+
+    case object SET extends Token("Set")
+
+    case object MAP extends Token("Map")
+
     case object IN extends Token("in")
 
     case object LPAREN extends Token("(")
@@ -94,10 +102,10 @@ object TraceParser extends Parsers {
 
     import tokens._
 
-    override val keywords = List(TRUE, FALSE, IN)
-    override val symbols = List(COLON, SEMICOLON, COMMA, EQ, LPAREN, RPAREN, DOLLARBRACE, RBRACE, DOLLAR,
-      MINUS, DDOT, LEQ, GEQ, LT, GT, UNDERSCORE, PLUSEQ, PLUS, STAR, SLASH, PERCENT, DAMPERSAND, DPIPE,
-      RARROW, LRARROW, EXCLMARK)
+    override val keywords = List(TRUE, FALSE, IN, MAP, SET, SOME, NONE)
+    override val symbols = List(RARROW, LRARROW, COLON, SEMICOLON, COMMA, EQ, LPAREN, RPAREN, DOLLARBRACE, RBRACE,
+      DOLLAR,  MINUS, DDOT, LEQ, GEQ, LT, GT, UNDERSCORE, PLUSEQ, PLUS, STAR, SLASH, PERCENT, DAMPERSAND, DPIPE,
+      EXCLMARK)
     override val comments = List("--" -> "\n", "#" -> "\n")
 
     override def isIdentifierCont(c: Char): Boolean = {
@@ -217,15 +225,28 @@ object TraceParser extends Parsers {
           loc => TesslaCore.BoolValue(false, Location(loc, path))
         } |
         string ^^! {
-          case (loc, value) => TesslaCore.StringValue(value, Location(loc, path))
+          (loc, value) => TesslaCore.StringValue(value, Location(loc, path))
         } |
         bigInt ^^! {
-          case (loc, value) => TesslaCore.IntValue(value, Location(loc, path))
+          (loc, value) => TesslaCore.IntValue(value, Location(loc, path))
         } |
         DOLLARBRACE ~> repsep(identifier ~ (EQ ~> literal), COMMA) <~ COMMA.? <~ RBRACE ^^! {
           (loc, members) =>
             TesslaCore.TesslaObject(members.map { case (id, v) => id.name -> v}.toMap, Location(loc, path))
+        } |
+        NONE ^^^! {
+          loc => TesslaCore.TesslaOption(None, Location(loc, path))
+        } |
+        SOME ~> LPAREN ~> literal <~ RPAREN ^^! {
+          (loc, value) => TesslaCore.TesslaOption(Some(value), Location(loc, path))
+        } |
+        SET ~> LPAREN ~> repsep(literal, COMMA) <~ RPAREN ^^! {
+          (loc, values) => TesslaCore.TesslaSet(values.toSet, Location(loc, path))
+        } |
+        MAP ~> LPAREN ~> repsep(literal ~ (RARROW ~> literal), COMMA) <~ RPAREN ^^! {
+          (loc, entries) => TesslaCore.TesslaMap(entries.toMap, Location(loc, path))
         }
+
 
     def unit: Parser[TesslaCore.Value] =
       LPAREN ~ RPAREN ^^^! {

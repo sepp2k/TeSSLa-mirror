@@ -1,0 +1,5 @@
+in map: Events[Map[String, Int]]
+in set: Events[Set[String]]
+in opt: Events[Option[Int]]
+
+out *
