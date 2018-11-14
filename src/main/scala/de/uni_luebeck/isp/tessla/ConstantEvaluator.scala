@@ -294,12 +294,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                       TesslaCore.SignalLift(op, args.indices.map(streamArg), call.loc)
                     }
                   case _ =>
-                    val value = Evaluator.evalPrimitiveOperator(op, args.map { arg =>
-                      getResult(arg).get match {
-                        case ValueEntry(v) => v
-                        case other => throw InternalError(s"Expected value entry, found $other")
-                      }
-                    }, call.loc)
+                    val value = Evaluator.evalPrimitiveOperator(op, args.map(getValue), call.loc)
                     wrapper.entry = Translated(Lazy(ValueEntry(value.get)))
                 }
               case BuiltIn.TesslaInfo =>
