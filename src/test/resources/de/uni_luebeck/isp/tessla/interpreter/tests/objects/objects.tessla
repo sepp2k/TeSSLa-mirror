@@ -10,6 +10,7 @@ def o1 := ${x = a, y = b}
 
 def o2 := ${x = a-1, y = a+2}
 
+def incVec(o: Vec2D) := ${x = o.x + 1, y = o.y + 1}
 def sumXY(o: Vec2D) := o.x + o.y
 
 out sumXY(o1)
