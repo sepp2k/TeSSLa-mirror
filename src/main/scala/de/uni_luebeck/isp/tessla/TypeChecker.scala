@@ -306,6 +306,10 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           val t = mkTVar("Value")
           FunctionType(Seq(t.id), Seq(StreamType(t), StreamType(IntType)), StreamType(t), isLiftable = false)
 
+        case BuiltIn.Delay =>
+          val t = mkTVar("Resets")
+          FunctionType(Seq(t.id), Seq(StreamType(IntType), StreamType(t)), StreamType(UnitType), isLiftable = false)
+
         case BuiltIn.Const =>
           val t1 = mkTVar("Old")
           val t2 = mkTVar("New")

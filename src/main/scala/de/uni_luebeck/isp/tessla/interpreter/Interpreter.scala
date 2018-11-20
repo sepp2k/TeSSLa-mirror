@@ -71,6 +71,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       last(evalStream(clock), evalStream(values))
     case TesslaCore.DelayedLast(values, delays, _) =>
       delayedLast(evalStream(delays), evalStream(values))
+    case TesslaCore.Delay(delays, resets, _) =>
+      delay(evalStream(delays), evalStream(resets))
     case TesslaCore.Time(values, loc) =>
       evalStream(values).time(loc)
     case TesslaCore.Merge(arg1, arg2, loc) =>

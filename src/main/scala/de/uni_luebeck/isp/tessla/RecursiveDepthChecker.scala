@@ -12,6 +12,8 @@ object RecursiveDepthChecker {
         Math.max(
           nestingDepth(streams, dl.values, id),
           nestingDepth(streams, dl.delays, id))
+      case (id, d: TesslaCore.Delay) =>
+        nestingDepth(streams, d.delays, id)
     }.fold(0)(math.max)
   }
 
@@ -47,6 +49,8 @@ object RecursiveDepthChecker {
               visitChild(l.clock)
             case _: TesslaCore.DelayedLast =>
               None
+            case d: TesslaCore.Delay =>
+                visitChild(d.resets)
             case m: TesslaCore.Merge =>
               Seq(visitChild(m.stream1), visitChild(m.stream2)).max
             case c: TesslaCore.Const =>

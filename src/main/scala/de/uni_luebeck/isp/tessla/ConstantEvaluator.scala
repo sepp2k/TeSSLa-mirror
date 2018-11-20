@@ -259,6 +259,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 stream {
                   TesslaCore.DelayedLast(streamArg(0), streamArg(1), call.loc)
                 }
+              case BuiltIn.Delay =>
+                stream {
+                  TesslaCore.Delay(streamArg(0), streamArg(1), call.loc)
+                }
               case BuiltIn.Const =>
                 stream {
                   TesslaCore.Const(getValue(args(0)), streamArg(1), call.loc)

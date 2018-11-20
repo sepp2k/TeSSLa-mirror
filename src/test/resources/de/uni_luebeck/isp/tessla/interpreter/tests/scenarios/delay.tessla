@@ -1,0 +1,4 @@
+in delays: Events[Int]
+in resets: Events[Unit]
+
+out delay(delays, resets) as d

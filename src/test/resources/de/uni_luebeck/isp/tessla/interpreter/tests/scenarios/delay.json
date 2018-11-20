@@ -1,0 +1,5 @@
+{
+  "input": "delay.input",
+  "expectedOutput": "delay.output",
+  "spec": "delay.tessla"
+}

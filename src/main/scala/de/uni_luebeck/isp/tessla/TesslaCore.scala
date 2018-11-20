@@ -63,6 +63,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"delayedLast($values, $delays)"
   }
 
+  final case class Delay(delays: StreamRef, resets: StreamRef, loc: Location) extends Expression {
+    override def toString = s"delay($delays, $resets)"
+  }
+
   final case class Merge(stream1: StreamRef, stream2: StreamRef, loc: Location) extends Expression {
     override def toString = s"merge($stream1, $stream2)"
   }

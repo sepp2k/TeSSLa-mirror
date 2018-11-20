@@ -39,6 +39,10 @@ object BuiltIn {
     override def name = "delayedLast"
   }
 
+  case object Delay extends BuiltIn {
+    override def name = "delay"
+  }
+
   case object Const extends BuiltIn {
     override def name = "const"
   }
@@ -246,6 +250,7 @@ object BuiltIn {
     DefaultFrom,
     Last,
     DelayedLast,
+    Delay,
     Time,
     Lift,
     Lift3,
