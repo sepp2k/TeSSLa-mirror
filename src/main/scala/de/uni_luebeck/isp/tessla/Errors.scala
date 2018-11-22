@@ -165,6 +165,14 @@ object Errors {
     override def message: String = s"Key $key was not found in $map"
   }
 
+  case class HeadOfEmptyList(loc: Location) extends TesslaError {
+    override def message: String = "Head of empty list"
+  }
+
+  case class LastOfEmptyList(loc: Location) extends TesslaError {
+    override def message: String = "Last of empty list"
+  }
+
   case class CannotGetValueOfNone(loc: Location) extends TesslaError {
     override def message: String = s"Cannot get value of None"
   }

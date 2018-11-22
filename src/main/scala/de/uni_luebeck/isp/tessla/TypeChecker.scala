@@ -65,6 +65,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       TypedTessla.SetType(translateType(s.elementType, env))
     case m: FlatTessla.MapType =>
       TypedTessla.MapType(keyType = translateType(m.keyType, env), valueType = translateType(m.valueType, env))
+    case s: FlatTessla.ListType =>
+      TypedTessla.ListType(translateType(s.elementType, env))
     case o: FlatTessla.ObjectType =>
       TypedTessla.ObjectType(o.memberTypes.mapValues(translateType(_, env)))
     case tvar: FlatTessla.TypeParameter =>
@@ -223,6 +225,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         TypedTessla.StreamType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.SetType(expectedElementType), TypedTessla.SetType(actualElementType)) =>
         TypedTessla.SetType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
+      case (TypedTessla.ListType(expectedElementType), TypedTessla.ListType(actualElementType)) =>
+        TypedTessla.ListType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.OptionType(expectedElementType), TypedTessla.OptionType(actualElementType)) =>
         TypedTessla.OptionType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.MapType(k, v), TypedTessla.MapType(k2, v2)) =>
@@ -409,6 +413,32 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           val b = mkTVar("B")
           val fType = FunctionType(Seq(), Seq(b, a), b, isLiftable = false)
           FunctionType(Seq(a.id, b.id), Seq(SetType(a), b, fType), b, isLiftable = false)
+
+        case BuiltIn.ListEmpty =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(), ListType(t), isLiftable = true)
+
+        case BuiltIn.ListSize =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(ListType(t)), IntType, isLiftable = true)
+
+        case BuiltIn.ListHead | BuiltIn.ListLast =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(ListType(t)), t, isLiftable = true)
+
+        case BuiltIn.ListPrepend | BuiltIn.ListAppend =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(ListType(t), t), ListType(t), isLiftable = true)
+
+        case BuiltIn.ListTail | BuiltIn.ListInit =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(ListType(t)), ListType(t), isLiftable = true)
+
+        case BuiltIn.ListFold =>
+          val a = mkTVar("A")
+          val b = mkTVar("B")
+          val fType = FunctionType(Seq(), Seq(b, a), b, isLiftable = false)
+          FunctionType(Seq(a.id, b.id), Seq(ListType(a), b, fType), b, isLiftable = false)
 
         case BuiltIn.CtfGetInt =>
           FunctionType(Seq(), Seq(CtfType, StringType), IntType, isLiftable = true)

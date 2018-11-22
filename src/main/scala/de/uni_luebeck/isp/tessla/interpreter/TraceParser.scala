@@ -51,6 +51,8 @@ object TraceParser extends Parsers {
 
     case object MAP extends Token("Map")
 
+    case object LIST extends Token("List")
+
     case object IN extends Token("in")
 
     case object LPAREN extends Token("(")
@@ -102,7 +104,7 @@ object TraceParser extends Parsers {
 
     import tokens._
 
-    override val keywords = List(TRUE, FALSE, IN, MAP, SET, SOME, NONE)
+    override val keywords = List(TRUE, FALSE, IN, MAP, SET, LIST, SOME, NONE)
     override val symbols = List(RARROW, LRARROW, COLON, SEMICOLON, COMMA, EQ, LPAREN, RPAREN, DOLLARBRACE, RBRACE,
       DOLLAR,  MINUS, DDOT, LEQ, GEQ, LT, GT, UNDERSCORE, PLUSEQ, PLUS, STAR, SLASH, PERCENT, DAMPERSAND, DPIPE,
       EXCLMARK)
@@ -242,6 +244,9 @@ object TraceParser extends Parsers {
         } |
         SET ~> LPAREN ~> repsep(literal, COMMA) <~ RPAREN ^^! {
           (loc, values) => TesslaCore.TesslaSet(values.toSet, Location(loc, path))
+        } |
+        LIST ~> LPAREN ~> repsep(literal, COMMA) <~ RPAREN ^^! {
+          (loc, values) => TesslaCore.TesslaList(values.toList, Location(loc, path))
         } |
         MAP ~> LPAREN ~> repsep(literal ~ (RARROW ~> literal), COMMA) <~ RPAREN ^^! {
           (loc, entries) => TesslaCore.TesslaMap(entries.toMap, Location(loc, path))

@@ -31,6 +31,10 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     makeIdentifier("Set"), 1, { case Seq(t) => FlatTessla.SetType(t)}, Location.builtIn
   )
 
+  val listType = FlatTessla.TypeEntry(
+    makeIdentifier("List"), 1, { case Seq(t) => FlatTessla.ListType(t)}, Location.builtIn
+  )
+
   val builtInTypes: Map[String, FlatTessla.TypeEntry] = Map(
     "Int" -> FlatTessla.IntType,
     "String" -> FlatTessla.StringType,
@@ -40,7 +44,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
   ).map {
     case (name, t) =>
       name -> FlatTessla.TypeEntry(makeIdentifier(name), 0, _ => t, Location.builtIn)
-  } ++ Map("Events" -> eventsType, "Option" -> optionType, "Map" -> mapType, "Set" -> setType)
+  } ++ Map("Events" -> eventsType, "Option" -> optionType, "Map" -> mapType, "Set" -> setType, "List" -> listType)
 
   def createIdMap(names: Iterable[String]): IdMap = {
     names.map(name => name -> makeIdentifier(name)).toMap

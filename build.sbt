@@ -44,6 +44,7 @@ libraryDependencies ++= Seq(
 scalacOptions += "-feature"
 scalacOptions += "-unchecked"
 scalacOptions += "-deprecation"
+scalacOptions ++= Seq("-Ypatmat-exhaust-depth", "off")
 
 cancelable in Global := true
 

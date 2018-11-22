@@ -168,6 +168,13 @@ object Interpreter {
               case _ =>
                 throw InputTypeMismatch(value, "Map[?, ?]", name, elementType, value.loc)
             }
+          case s: TesslaCore.TesslaList =>
+            elementType match {
+              case st: TesslaCore.ListType =>
+                s.value.foreach(typeCheck(_, st.elementType, name))
+              case _ =>
+                throw InputTypeMismatch(value, "List[?]", name, elementType, value.loc)
+            }
           case o: TesslaCore.TesslaObject =>
             val actual = o.value.keys.map {n => s"$n: ?"}.mkString("${", ", ", "}")
             elementType match {

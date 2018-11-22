@@ -97,6 +97,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     case TypedTessla.OptionType(t) => TesslaCore.OptionType(translateValueType(t, env))
     case TypedTessla.MapType(k, v) => TesslaCore.MapType(translateValueType(k, env), translateValueType(v, env))
     case TypedTessla.SetType(t) => TesslaCore.SetType(translateValueType(t, env))
+    case TypedTessla.ListType(t) => TesslaCore.ListType(translateValueType(t, env))
     case ot : TypedTessla.ObjectType =>
       TesslaCore.ObjectType(ot.memberTypes.mapValues(translateValueType(_, env)))
     case _ : TypedTessla.FunctionType =>
