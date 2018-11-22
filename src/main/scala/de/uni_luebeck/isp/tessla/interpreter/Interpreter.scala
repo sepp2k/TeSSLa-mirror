@@ -53,7 +53,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
           case (Some(arg), stream) => arg.mapValue(a => TesslaCore.TesslaOption(Some(a), stream.loc))
           case (None, stream) => TesslaCore.TesslaOption(None, stream.loc)
         }
-        Evaluator.evalApplication(f, args, loc, Map()) match {
+        Evaluator.evalApplication(f, args, loc) match {
           case to: TesslaCore.TesslaOption => to.value
           case other =>
             throw InternalError(s"Used lift on non-option function (return value: $other) - should have been caught by type checker")

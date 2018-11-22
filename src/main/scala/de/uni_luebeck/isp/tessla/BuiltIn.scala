@@ -231,6 +231,10 @@ object BuiltIn {
     override def name = "Set_intersection"
   }
 
+  case object SetFold extends PrimitiveOperator {
+    override def name = "Set_fold"
+  }
+
   case object CtfGetString extends PrimitiveOperator {
     override def name = "CTF_getString"
   }
@@ -296,6 +300,7 @@ object BuiltIn {
     SetSize,
     SetUnion,
     SetIntersection,
+    SetFold,
     CtfGetString,
     CtfGetInt,
     TesslaInfo

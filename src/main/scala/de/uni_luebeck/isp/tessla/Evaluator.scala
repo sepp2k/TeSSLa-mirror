@@ -139,6 +139,11 @@ object Evaluator {
           val set1 = getSet(arguments(0))
           val set2 = getSet(arguments(1))
           Some(TesslaCore.TesslaSet(set1.value & set2.value, loc))
+        case BuiltIn.SetFold =>
+          val set = getSet(arguments(0)).value
+          val z = arguments(1)
+          val f = arguments(2)
+          Some(set.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc)))
         case BuiltIn.CtfGetInt =>
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))
@@ -164,7 +169,7 @@ object Evaluator {
   def evalApplication(f: TesslaCore.ValueArg,
                       args: Seq[TesslaCore.ValueOrError],
                       loc: Location,
-                      env: Env): TesslaCore.ValueOrError = {
+                      env: Env = Map()): TesslaCore.ValueOrError = {
     evalArg(f, env) match {
       case b: TesslaCore.BuiltInOperator =>
         evalPrimitiveOperator(b.value, args, loc).get

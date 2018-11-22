@@ -454,6 +454,11 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         case oe: ObjectEntry =>
           val members = oe.members.mapValues(v => getValue(Translated(v)).forceValue)
           TesslaCore.TesslaObject(members, oe.loc)
+        case me: MacroEntry =>
+          me.functionValue match {
+            case Some(f) => f
+            case None => throw InternalError("Using non-value macro as value - should have been caught by type checker")
+          }
         case other => throw InternalError(s"Wrong type of environment entry: Expected ValueEntry, found: $other")
       }
     } catch {
