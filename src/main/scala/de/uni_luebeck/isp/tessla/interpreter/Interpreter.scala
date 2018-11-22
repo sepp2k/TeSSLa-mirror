@@ -16,7 +16,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   type Env = Map[TesslaCore.Identifier, TesslaCore.ValueOrError]
 
   lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map {
-    case (name, exp) => (name, Lazy(eval(exp, Map())))
+    case (name, exp) => (name, Lazy(eval(exp)))
   }.toMap
 
   lazy val outStreams: Seq[(String, Stream, TesslaCore.Type)] = spec.outStreams.map {
@@ -33,7 +33,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.Nil(_) => nil
   }
 
-  private def eval(exp: TesslaCore.Expression, env: Env): Stream = exp match {
+  private def eval(exp: TesslaCore.Expression): Stream = exp match {
     case TesslaCore.SignalLift(op, argStreams, loc) =>
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)
@@ -53,7 +53,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
           case (Some(arg), stream) => arg.mapValue(a => TesslaCore.TesslaOption(Some(a), stream.loc))
           case (None, stream) => TesslaCore.TesslaOption(None, stream.loc)
         }
-        Evaluator.evalApplication(f, args, loc, env.mapValues(Lazy(_))) match {
+        Evaluator.evalApplication(f, args, loc, Map()) match {
           case to: TesslaCore.TesslaOption => to.value
           case other =>
             throw InternalError(s"Used lift on non-option function (return value: $other) - should have been caught by type checker")
