@@ -248,6 +248,9 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
 
   def mkTVar(name: String) = TypedTessla.TypeParameter(makeIdentifier(name), Location.builtIn)
 
+  // TODO: Super ugly workaround for issue #84
+  mkTVar("T")
+
   val typesOfBuiltIns: Map[BuiltIn, TypedTessla.Type] = BuiltIn.builtIns.map {
     case (_, builtIn) =>
       import TypedTessla._
