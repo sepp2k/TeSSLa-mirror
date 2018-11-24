@@ -196,17 +196,19 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
               name -> getResult(translateVar(env, member.id, member.loc, inFunction))
           }, obj.loc)
         })
+      case acc: TypedTessla.MemberAccess if inFunction =>
+        wrapper.entry = Translated(Lazy {
+          val arg = getValueArg(translateVar(env, acc.receiver.id, acc.loc, inFunction))
+          val ma = TesslaCore.MemberAccess(arg, acc.member, acc.loc)
+          ValueExpressionEntry(ma, makeIdentifier(nameOpt))
+        })
       case acc: TypedTessla.MemberAccess =>
         wrapper.entry = Translated(Lazy {
           getResult(translateVar(env, acc.receiver.id, acc.loc, inFunction)).get match {
             case obj: ObjectEntry =>
               obj.members(acc.member).get
-            case se: StreamEntry =>
-              val ma = TesslaCore.MemberAccess(TesslaCore.ValueExpressionRef(se.streamId), acc.member, acc.loc)
-              ValueExpressionEntry(ma, makeIdentifier(nameOpt))
-            case param: FunctionParameterEntry =>
-              val ma = TesslaCore.MemberAccess(TesslaCore.ValueExpressionRef(param.id), acc.member, acc.loc)
-              ValueExpressionEntry(ma, makeIdentifier(nameOpt))
+            case ValueEntry(obj: TesslaCore.TesslaObject) =>
+              ValueEntry(obj.value(acc.member))
             case other =>
               throw InternalError(s"Member access on non-object ($other) should've been caught by type checker", acc.receiver.loc)
           }
