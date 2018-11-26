@@ -518,6 +518,9 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         TypedTessla.Literal(lit.value, lit.loc) -> t
       case inStream: FlatTessla.InputStream =>
         val typ = translateType(inStream.streamType, env)
+        if (!isStreamType(typ)) {
+          error(InputStreamMustHaveStreamType(inStream.loc))
+        }
         TypedTessla.InputStream(inStream.name, typ, inStream.loc) -> typ
       case param: FlatTessla.Parameter =>
         val id = env(param.id)

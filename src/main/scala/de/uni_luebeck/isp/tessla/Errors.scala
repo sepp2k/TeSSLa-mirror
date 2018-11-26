@@ -65,6 +65,10 @@ object Errors {
     override def message = "Streams may only contain value types; not other streams or functions"
   }
 
+  case class InputStreamMustHaveStreamType(loc: Location) extends TesslaError {
+    override def message = "Input streams must be defined to have stream types"
+  }
+
   case class InfiniteRecursion(loc: Location) extends TesslaError {
     override def message = "Infinite recursion detected"
   }
