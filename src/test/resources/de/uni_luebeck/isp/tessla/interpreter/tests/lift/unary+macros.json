@@ -1,0 +1,5 @@
+{
+  "input": "unary+macros.input",
+  "expectedOutput": "unary+macros.output",
+  "spec": "unary+macros.tessla"
+}
