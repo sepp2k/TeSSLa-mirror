@@ -246,6 +246,7 @@ class Specification() {
           counter = 0
           if (newReset || newTriggered) {
             targetTime = newDelay.map(_ + getTime)
+            targetTime.foreach(updateTrigger(this, _))
           }
         } else {
           counter += 1

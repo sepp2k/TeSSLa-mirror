@@ -65,6 +65,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       TypedTessla.SetType(translateType(s.elementType, env))
     case m: FlatTessla.MapType =>
       TypedTessla.MapType(keyType = translateType(m.keyType, env), valueType = translateType(m.valueType, env))
+    case s: FlatTessla.ListType =>
+      TypedTessla.ListType(translateType(s.elementType, env))
     case o: FlatTessla.ObjectType =>
       TypedTessla.ObjectType(o.memberTypes.mapValues(translateType(_, env)))
     case tvar: FlatTessla.TypeParameter =>
@@ -223,6 +225,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         TypedTessla.StreamType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.SetType(expectedElementType), TypedTessla.SetType(actualElementType)) =>
         TypedTessla.SetType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
+      case (TypedTessla.ListType(expectedElementType), TypedTessla.ListType(actualElementType)) =>
+        TypedTessla.ListType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.OptionType(expectedElementType), TypedTessla.OptionType(actualElementType)) =>
         TypedTessla.OptionType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.MapType(k, v), TypedTessla.MapType(k2, v2)) =>
@@ -305,6 +309,10 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         case BuiltIn.DelayedLast =>
           val t = mkTVar("Value")
           FunctionType(Seq(t.id), Seq(StreamType(t), StreamType(IntType)), StreamType(t), isLiftable = false)
+
+        case BuiltIn.Delay =>
+          val t = mkTVar("Resets")
+          FunctionType(Seq(t.id), Seq(StreamType(IntType), StreamType(t)), StreamType(UnitType), isLiftable = false)
 
         case BuiltIn.Const =>
           val t1 = mkTVar("Old")
@@ -400,6 +408,38 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(SetType(t), SetType(t)), SetType(t), isLiftable = true)
 
+        case BuiltIn.SetFold =>
+          val a = mkTVar("A")
+          val b = mkTVar("B")
+          val fType = FunctionType(Seq(), Seq(b, a), b, isLiftable = false)
+          FunctionType(Seq(a.id, b.id), Seq(SetType(a), b, fType), b, isLiftable = false)
+
+        case BuiltIn.ListEmpty =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(), ListType(t), isLiftable = true)
+
+        case BuiltIn.ListSize =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(ListType(t)), IntType, isLiftable = true)
+
+        case BuiltIn.ListHead | BuiltIn.ListLast =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(ListType(t)), t, isLiftable = true)
+
+        case BuiltIn.ListPrepend | BuiltIn.ListAppend =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(ListType(t), t), ListType(t), isLiftable = true)
+
+        case BuiltIn.ListTail | BuiltIn.ListInit =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(ListType(t)), ListType(t), isLiftable = true)
+
+        case BuiltIn.ListFold =>
+          val a = mkTVar("A")
+          val b = mkTVar("B")
+          val fType = FunctionType(Seq(), Seq(b, a), b, isLiftable = false)
+          FunctionType(Seq(a.id, b.id), Seq(ListType(a), b, fType), b, isLiftable = false)
+
         case BuiltIn.CtfGetInt =>
           FunctionType(Seq(), Seq(CtfType, StringType), IntType, isLiftable = true)
 
@@ -478,6 +518,9 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         TypedTessla.Literal(lit.value, lit.loc) -> t
       case inStream: FlatTessla.InputStream =>
         val typ = translateType(inStream.streamType, env)
+        if (!isStreamType(typ)) {
+          error(InputStreamMustHaveStreamType(inStream.loc))
+        }
         TypedTessla.InputStream(inStream.name, typ, inStream.loc) -> typ
       case param: FlatTessla.Parameter =>
         val id = env(param.id)

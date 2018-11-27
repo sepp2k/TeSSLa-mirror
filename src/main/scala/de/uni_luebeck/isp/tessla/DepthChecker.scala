@@ -16,6 +16,8 @@ object DepthChecker {
         Math.max(
           nestingDepth(streams, dl.values, memTable),
           nestingDepth(streams, dl.delays, memTable))
+      case (_, d: TesslaCore.Delay) =>
+        nestingDepth(streams, d.delays, memTable)
     }).fold(0)(math.max)
   }
 
@@ -48,6 +50,8 @@ object DepthChecker {
             visitChild(c.stream)
           case _: TesslaCore.DelayedLast =>
             0
+          case d: TesslaCore.Delay =>
+            visitChild(d.resets)
         }
         memoized(s.id) = 1 + childDepth
         1 + childDepth

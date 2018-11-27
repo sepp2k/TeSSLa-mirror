@@ -1,13 +1,13 @@
 0: o = ${x = 0, y = 0, z = 0}
 2: o = ${x = 2, y = 3, z = 5}
 2: slift1(t, sumPair) = 5
-2: t = ${_1 = 2, _2 = 3}
+2: t = (2, 3)
 2: slift(aa, bb, fun (aa: (Int, Int), bb: (Int, Int)) => aa._1 + bb._2) = 5
 4: o = ${x = 2, y = 4, z = 6}
 4: slift1(t, sumPair) = 6
-4: t = ${_1 = 2, _2 = 4}
+4: t = (2, 4)
 4: slift(aa, bb, fun (aa: (Int, Int), bb: (Int, Int)) => aa._1 + bb._2) = 6
 6: o = ${x = 1, y = 4, z = 5}
 6: slift1(t, sumPair) = 5
-6: t = ${_1 = 1, _2 = 4}
+6: t = (1, 4)
 6: slift(aa, bb, fun (aa: (Int, Int), bb: (Int, Int)) => aa._1 + bb._2) = 5

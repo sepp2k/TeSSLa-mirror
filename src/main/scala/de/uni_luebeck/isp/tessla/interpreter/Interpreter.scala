@@ -16,7 +16,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   type Env = Map[TesslaCore.Identifier, TesslaCore.ValueOrError]
 
   lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map {
-    case (name, exp) => (name, Lazy(eval(exp, Map())))
+    case (name, exp) => (name, Lazy(eval(exp)))
   }.toMap
 
   lazy val outStreams: Seq[(String, Stream, TesslaCore.Type)] = spec.outStreams.map {
@@ -33,7 +33,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.Nil(_) => nil
   }
 
-  private def eval(exp: TesslaCore.Expression, env: Env): Stream = exp match {
+  private def eval(exp: TesslaCore.Expression): Stream = exp match {
     case TesslaCore.SignalLift(op, argStreams, loc) =>
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)
@@ -53,7 +53,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
           case (Some(arg), stream) => arg.mapValue(a => TesslaCore.TesslaOption(Some(a), stream.loc))
           case (None, stream) => TesslaCore.TesslaOption(None, stream.loc)
         }
-        Evaluator.evalApplication(f, args, loc, env.mapValues(Lazy(_))) match {
+        Evaluator.evalApplication(f, args, loc) match {
           case to: TesslaCore.TesslaOption => to.value
           case other =>
             throw InternalError(s"Used lift on non-option function (return value: $other) - should have been caught by type checker")
@@ -71,6 +71,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       last(evalStream(clock), evalStream(values))
     case TesslaCore.DelayedLast(values, delays, _) =>
       delayedLast(evalStream(delays), evalStream(values))
+    case TesslaCore.Delay(delays, resets, _) =>
+      delay(evalStream(delays), evalStream(resets))
     case TesslaCore.Time(values, loc) =>
       evalStream(values).time(loc)
     case TesslaCore.Merge(arg1, arg2, loc) =>
@@ -165,6 +167,26 @@ object Interpreter {
                 }
               case _ =>
                 throw InputTypeMismatch(value, "Map[?, ?]", name, elementType, value.loc)
+            }
+          case s: TesslaCore.TesslaList =>
+            elementType match {
+              case st: TesslaCore.ListType =>
+                s.value.foreach(typeCheck(_, st.elementType, name))
+              case _ =>
+                throw InputTypeMismatch(value, "List[?]", name, elementType, value.loc)
+            }
+          case o: TesslaCore.TesslaObject =>
+            val actual = o.value.keys.map {n => s"$n: ?"}.mkString("${", ", ", "}")
+            elementType match {
+              case ot: TesslaCore.ObjectType =>
+                if (ot.memberTypes.keySet != o.value.keySet) {
+                  throw InputTypeMismatch(value, actual, name, elementType, value.loc)
+                }
+                o.value.foreach {
+                  case (n, v) => typeCheck(v, ot.memberTypes(n), s"$name.$n")
+                }
+              case _ =>
+                throw InputTypeMismatch(value, actual, name, elementType, value.loc)
             }
           case _: TesslaCore.Closure | _: TesslaCore.BuiltInOperator =>
             throw InternalError("Functions should not currently be able to appear in input streams")

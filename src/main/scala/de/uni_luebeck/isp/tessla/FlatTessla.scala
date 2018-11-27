@@ -163,6 +163,12 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = s"Set[$elementType]"
   }
 
+  case class ListType(elementType: Type) extends Type {
+    override def isValueType = true
+
+    override def toString = s"List[$elementType]"
+  }
+
   case class StreamType(elementType: Type) extends Type {
     override def isValueType = false
 

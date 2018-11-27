@@ -39,6 +39,10 @@ object BuiltIn {
     override def name = "delayedLast"
   }
 
+  case object Delay extends BuiltIn {
+    override def name = "delay"
+  }
+
   case object Const extends BuiltIn {
     override def name = "const"
   }
@@ -227,6 +231,48 @@ object BuiltIn {
     override def name = "Set_intersection"
   }
 
+  case object SetFold extends PrimitiveOperator {
+    override def name = "Set_fold"
+  }
+
+  // List operators
+  case object ListEmpty extends PrimitiveOperator {
+    override def name = "List_empty"
+  }
+
+  case object ListSize extends PrimitiveOperator {
+    override def name = "List_size"
+  }
+
+  case object ListAppend extends PrimitiveOperator {
+    override def name = "List_append"
+  }
+
+  case object ListPrepend extends PrimitiveOperator {
+    override def name = "List_prepend"
+  }
+
+  case object ListHead extends PrimitiveOperator {
+    override def name = "List_head"
+  }
+
+  case object ListTail extends PrimitiveOperator {
+    override def name = "List_tail"
+  }
+
+  case object ListInit extends PrimitiveOperator {
+    override def name = "List_init"
+  }
+
+  case object ListLast extends PrimitiveOperator {
+    override def name = "List_last"
+  }
+
+  case object ListFold extends PrimitiveOperator {
+    override def name = "List_fold"
+  }
+
+  // CTF operators
   case object CtfGetString extends PrimitiveOperator {
     override def name = "CTF_getString"
   }
@@ -246,6 +292,7 @@ object BuiltIn {
     DefaultFrom,
     Last,
     DelayedLast,
+    Delay,
     Time,
     Lift,
     Lift3,
@@ -291,6 +338,16 @@ object BuiltIn {
     SetSize,
     SetUnion,
     SetIntersection,
+    SetFold,
+    ListAppend,
+    ListEmpty,
+    ListSize,
+    ListFold,
+    ListHead,
+    ListInit,
+    ListLast,
+    ListPrepend,
+    ListTail,
     CtfGetString,
     CtfGetInt,
     TesslaInfo

@@ -4,7 +4,6 @@ import de.uni_luebeck.isp.compacom
 import de.uni_luebeck.isp.tessla.{TesslaCore, TesslaSource, TimeUnit}
 import de.uni_luebeck.isp.compacom.{Parsers, SimpleTokenizer, SimpleTokens, WithLocation}
 import de.uni_luebeck.isp.tessla.Errors.{NotAnEventError, ParserError}
-import de.uni_luebeck.isp.tessla.TimeUnit._
 import de.uni_luebeck.isp.tessla.Location
 import de.uni_luebeck.isp.tessla.interpreter.RawTrace._
 
@@ -44,11 +43,25 @@ object TraceParser extends Parsers {
 
     case object FALSE extends Token("false")
 
+    case object SOME extends Token("Some")
+
+    case object NONE extends Token("None")
+
+    case object SET extends Token("Set")
+
+    case object MAP extends Token("Map")
+
+    case object LIST extends Token("List")
+
     case object IN extends Token("in")
 
     case object LPAREN extends Token("(")
 
     case object RPAREN extends Token(")")
+
+    case object DOLLARBRACE extends Token("${")
+
+    case object RBRACE extends Token("}")
 
     case object MINUS extends Token("-")
 
@@ -61,8 +74,6 @@ object TraceParser extends Parsers {
     case object LEQ extends Token("<=")
 
     case object GEQ extends Token(">=")
-
-    case object UNDERSCORE extends Token("_")
 
     case object PLUSEQ extends Token("+=")
 
@@ -91,14 +102,10 @@ object TraceParser extends Parsers {
 
     import tokens._
 
-    override val keywords = List(TRUE, FALSE, IN)
-    override val symbols = List(COLON, SEMICOLON, COMMA, EQ, DOLLAR, LPAREN, RPAREN, MINUS, DDOT, LEQ, GEQ, LT, GT,
-      UNDERSCORE, PLUSEQ, PLUS, STAR, SLASH, PERCENT, DAMPERSAND, DPIPE, RARROW, LRARROW, EXCLMARK)
+    override val keywords = List(TRUE, FALSE, IN, MAP, SET, LIST, SOME, NONE)
+    override val symbols = List(RARROW, LRARROW, COLON, SEMICOLON, COMMA, EQ, LPAREN, RPAREN, DOLLARBRACE, RBRACE,
+      DOLLAR,  MINUS, DDOT, LEQ, GEQ, LT, GT, PLUSEQ, PLUS, STAR, SLASH, PERCENT, DAMPERSAND, DPIPE, EXCLMARK)
     override val comments = List("--" -> "\n", "#" -> "\n")
-
-    override def isIdentifierCont(c: Char): Boolean = {
-      super.isIdentifierCont(c)
-    }
   }
 
   import Tokens._
@@ -213,11 +220,31 @@ object TraceParser extends Parsers {
           loc => TesslaCore.BoolValue(false, Location(loc, path))
         } |
         string ^^! {
-          case (loc, value) => TesslaCore.StringValue(value, Location(loc, path))
+          (loc, value) => TesslaCore.StringValue(value, Location(loc, path))
         } |
         bigInt ^^! {
-          case (loc, value) => TesslaCore.IntValue(value, Location(loc, path))
+          (loc, value) => TesslaCore.IntValue(value, Location(loc, path))
+        } |
+        DOLLARBRACE ~> repsep(identifier ~ (EQ ~> literal), COMMA) <~ COMMA.? <~ RBRACE ^^! {
+          (loc, members) =>
+            TesslaCore.TesslaObject(members.map { case (id, v) => id.name -> v}.toMap, Location(loc, path))
+        } |
+        NONE ^^^! {
+          loc => TesslaCore.TesslaOption(None, Location(loc, path))
+        } |
+        SOME ~> LPAREN ~> literal <~ RPAREN ^^! {
+          (loc, value) => TesslaCore.TesslaOption(Some(value), Location(loc, path))
+        } |
+        SET ~> LPAREN ~> repsep(literal, COMMA) <~ RPAREN ^^! {
+          (loc, values) => TesslaCore.TesslaSet(values.toSet, Location(loc, path))
+        } |
+        LIST ~> LPAREN ~> repsep(literal, COMMA) <~ RPAREN ^^! {
+          (loc, values) => TesslaCore.TesslaList(values.toList, Location(loc, path))
+        } |
+        MAP ~> LPAREN ~> repsep(literal ~ (RARROW ~> literal), COMMA) <~ RPAREN ^^! {
+          (loc, entries) => TesslaCore.TesslaMap(entries.toMap, Location(loc, path))
         }
+
 
     def unit: Parser[TesslaCore.Value] =
       LPAREN ~ RPAREN ^^^! {
@@ -250,14 +277,8 @@ object TraceParser extends Parsers {
       case WithLocation(loc, ID(name)) => Trace.Identifier(Location(loc, path), name)
     }
 
-    def identifierOrWildcard: Parser[Trace.Identifier] =
-      UNDERSCORE ^^^! {
-        loc => Trace.Identifier(Location(loc, path), "_")
-      } |
-        identifier
-
-    def identifierWildcardOrNumber: Parser[(Option[Trace.Identifier], Option[BigInt])] =
-      identifierOrWildcard ^^ {
+    def identifierOrNumber: Parser[(Option[Trace.Identifier], Option[BigInt])] =
+      identifier ^^ {
         value => (Some(value), None)
       } | bigNat ^^ {
         value => (None, Some(value))
@@ -276,7 +297,7 @@ object TraceParser extends Parsers {
         case value => value - 1
       }
 
-      ((COMMA ~> bigNat) ~ (DDOT ~> identifierWildcardOrNumber.?)) ^^ {
+      ((COMMA ~> bigNat) ~ (DDOT ~> identifierOrNumber.?)) ^^ {
         /*
         from, from+step .. id (infinite)
         from, from+step .. (infinite)
@@ -294,14 +315,14 @@ object TraceParser extends Parsers {
         */
         to =>
           (loc: compacom.Location, from: BigInt) => RawTrace.TimeRange(Location(loc, path), None, from, Some(to), 1)
-      } | identifierOrWildcard.? ^^ {
+      } | identifier.? ^^ {
         /*
         from .. (infinite)
         from .. id (infinite)
         */
-        case (idOpt) =>
+        idOpt =>
           (loc: compacom.Location, from: BigInt) => RawTrace.TimeRange(Location(loc, path), idOpt, from, None, 1)
-      }) | (((leftSideOp ~ identifierOrWildcard) ~ rightSideOp.?) ~ step1.?) ^^ {
+      }) | (((leftSideOp ~ identifier) ~ rightSideOp.?) ~ step1.?) ^^ {
         /*
         from < id < to
         from < id <= to
@@ -409,7 +430,7 @@ object TraceParser extends Parsers {
         case (loc, (from, f)) =>
           /*value*/
           f.map(_.apply(loc, from)).getOrElse(RawTrace.TimeRange(Location(loc, path), None, from, Some(from), 1))
-      } | identifierOrWildcard ~ identifierRangeTail ^^! {
+      } | identifier ~ identifierRangeTail ^^! {
         case (loc, (id, f)) => f(loc, id)
       } | ((LEQ | LT | GEQ | GT) ~ bigNat) ~ step1.? ^^! {
         case (loc, (rhs: (WithLocation[_], BigInt), stepOpt: Option[(Option[Trace.Identifier], BigInt)])) =>
@@ -455,7 +476,7 @@ object TraceParser extends Parsers {
     /*first variant of a step: (used in notations with <, <=, >, >=)
     * ; t += 2
     * ; += 2 (only valid if no timestamp variable is used)*/
-    def step1: Parser[(Option[Trace.Identifier], BigInt)] = (SEMICOLON ~> identifierOrWildcard.?) ~ (PLUSEQ ~> bigNat)
+    def step1: Parser[(Option[Trace.Identifier], BigInt)] = (SEMICOLON ~> identifier.?) ~ (PLUSEQ ~> bigNat)
 
     /*Second variant of a step: (used in notations with ..)
     * , 20*/

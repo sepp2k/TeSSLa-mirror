@@ -12,7 +12,7 @@ name := "tessla"
 
 organization := "de.uni_luebeck.isp"
 
-version := s"0.6.0-SNAPSHOT"
+version := s"0.6.1-SNAPSHOT"
 
 scalaVersion := "2.12.7"
 
@@ -44,6 +44,7 @@ libraryDependencies ++= Seq(
 scalacOptions += "-feature"
 scalacOptions += "-unchecked"
 scalacOptions += "-deprecation"
+scalacOptions ++= Seq("-Ypatmat-exhaust-depth", "off")
 
 cancelable in Global := true
 

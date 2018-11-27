@@ -1,0 +1,1 @@
+/errors/invalid-input-object3.input(1,22 - 1,43): Unexpected value of type String ("Look, I'm a string!"), expected type Int, in input stream 'o.y'

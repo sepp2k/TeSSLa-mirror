@@ -99,7 +99,8 @@ The following builtins exist in Tessla:
  * `last[T1, T2](values: Events[T1], clock: Events[T2]): Events[T1]`
  * `const[T](stream: Events[T], value: T): Events[T]`
  * `time[T](stream: Events[T]): Events[Int]`
- * `delayedLast[T](values: Events[T], delay: Events[Int]): Events[T]`
+ * `delayedLast[T](values: Events[T], delays: Events[Int]): Events[T]`
+ * `delay[T](delays: Events[Int], resets: Events[T]): Events[Unit]`
  * `first[T1, T2](x: T1, x: T2): T1`
  * `merge[T](stream1: Events[T], stream2: Events[T]): Events[T]`
 

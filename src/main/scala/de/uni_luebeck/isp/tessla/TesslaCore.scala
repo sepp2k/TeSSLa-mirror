@@ -63,6 +63,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"delayedLast($values, $delays)"
   }
 
+  final case class Delay(delays: StreamRef, resets: StreamRef, loc: Location) extends Expression {
+    override def toString = s"delay($delays, $resets)"
+  }
+
   final case class Merge(stream1: StreamRef, stream2: StreamRef, loc: Location) extends Expression {
     override def toString = s"merge($stream1, $stream2)"
   }
@@ -168,7 +172,14 @@ object TesslaCore extends HasUniqueIdentifiers {
   final case class TesslaObject(value: Map[String, Value], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaObject = copy(loc = loc)
 
-    override def toString = value.map { case (name, v) => s"$name = $v"}.mkString("${", ", ", "}")
+    override def toString = {
+      val tupleKeys = (1 to value.keys.size).map(i => s"_$i")
+      if (value.keys.toSet == tupleKeys.toSet) {
+        tupleKeys.map(k => value(k)).mkString("(", ", ", ")")
+      } else {
+        value.map { case (name, v) => s"$name = $v" }.mkString("${", ", ", "}")
+      }
+    }
   }
 
   final case class TesslaOption(value: Option[Value], loc: Location) extends PrimitiveValue {
@@ -181,6 +192,10 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   final case class TesslaSet(value: Set[Value], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaSet = copy(loc = loc)
+  }
+
+  final case class TesslaList(value: List[Value], loc: Location) extends PrimitiveValue {
+    override def withLoc(loc: Location): TesslaList = copy(loc = loc)
   }
 
   final case class Ctf(value: ICompositeDefinition, loc: Location) extends PrimitiveValue {
@@ -238,6 +253,10 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   case class SetType(elementType: ValueType) extends ValueType {
     override def toString = s"Set[$elementType]"
+  }
+
+  case class ListType(elementType: ValueType) extends ValueType {
+    override def toString = s"List[$elementType]"
   }
 
   case object CtfType extends ValueType {

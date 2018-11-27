@@ -7,7 +7,7 @@ FlatTessla
 TypedTessla  
 ———ConstantEvaluator—> (evaluates constant expressions, expands macros and turns objects into separate streams)  
 TesslaCore  
-———Cycle detection—> (produces error for recursive streams without last or delayedLast)  
+———Cycle detection—> (produces error for recursive streams without last, delay or delayedLast)  
 TesslaCore
 
 Additional optimizations (such as common subexpression elimination and dead code elimination) will be added as a TesslaCore->TesslaCore phase after cycle detection.

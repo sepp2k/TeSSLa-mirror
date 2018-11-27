@@ -65,6 +65,10 @@ object Errors {
     override def message = "Streams may only contain value types; not other streams or functions"
   }
 
+  case class InputStreamMustHaveStreamType(loc: Location) extends TesslaError {
+    override def message = "Input streams must be defined to have stream types"
+  }
+
   case class InfiniteRecursion(loc: Location) extends TesslaError {
     override def message = "Infinite recursion detected"
   }
@@ -163,6 +167,14 @@ object Errors {
 
   case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
     override def message: String = s"Key $key was not found in $map"
+  }
+
+  case class HeadOfEmptyList(loc: Location) extends TesslaError {
+    override def message: String = "Head of empty list"
+  }
+
+  case class LastOfEmptyList(loc: Location) extends TesslaError {
+    override def message: String = "Last of empty list"
   }
 
   case class CannotGetValueOfNone(loc: Location) extends TesslaError {
