@@ -9,7 +9,11 @@ sealed abstract class Location {
   def merge(other: Location): Location
   def stackTrace: Seq[Location] = Seq()
   def withStackTrace(stackStrace: Seq[Location]) = LocationWithStackTrace(this, stackStrace)
+  def range: Option[SourceRange] = None
+  def path: String
 }
+
+case class SourceRange(fromLine: Int, fromColumn: Int, toLine: Int, toColumn: Int)
 
 object Location {
   case class LocationWithStackTrace(loc: Location, override val stackTrace: Seq[Location]) extends Location {
@@ -17,6 +21,7 @@ object Location {
       require(stackTrace == other.stackTrace)
       LocationWithStackTrace(loc.merge(other.asInstanceOf[LocationWithStackTrace].loc), stackTrace)
     }
+    def path = loc.path
   }
 
   private case class SourceLoc(loc: compacom.Location, path: String) extends Location {
@@ -31,6 +36,12 @@ object Location {
     override def toString = {
       s"$path$loc"
     }
+
+    override def range = Some(SourceRange(
+      fromLine = loc.from.line,
+      fromColumn = loc.from.column,
+      toLine = loc.to.line,
+      toColumn = loc.to.column))
   }
 
   def apply(loc: compacom.Location, path: String): Location = {
@@ -49,7 +60,9 @@ object Location {
   private case object Unknown extends Location {
     override def merge(other: Location) = other
 
-    override def toString = "<unknown location>"
+    override def toString = path
+
+    def path = "<unknown location>"
   }
 
   def unknown: Location = Unknown
@@ -57,7 +70,9 @@ object Location {
   private case object BuiltIn extends Location {
     override def merge(other: Location) = other
 
-    override def toString = "<built-in>"
+    override def toString = path
+
+    def path = "<built-in>"
   }
 
   def builtIn: Location = BuiltIn
