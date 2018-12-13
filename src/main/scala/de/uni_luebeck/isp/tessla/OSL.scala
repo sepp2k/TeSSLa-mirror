@@ -141,6 +141,7 @@ object OSL {
       case m: TesslaCore.Merge => translateStreamRef(m.stream1) ++ translateStreamRef(m.stream2)
       case t: TesslaCore.Time => translateStreamRef(t.stream)
       case c: TesslaCore.Const => translateStreamRef(c.stream)
+      case c: TesslaCore.StdLibCount => translateStreamRef(c.stream)
     }
 
     val operandPattern = raw"operand\d+(?:type|int|bool|string)|operandcount".r

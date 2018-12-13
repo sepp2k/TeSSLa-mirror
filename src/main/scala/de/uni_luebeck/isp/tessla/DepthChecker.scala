@@ -52,6 +52,8 @@ object DepthChecker {
             0
           case d: TesslaCore.Delay =>
             visitChild(d.resets)
+          case c: TesslaCore.StdLibCount =>
+            visitChild(c.stream)
         }
         memoized(s.id) = 1 + childDepth
         1 + childDepth

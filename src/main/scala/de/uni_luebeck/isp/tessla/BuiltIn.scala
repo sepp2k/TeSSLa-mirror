@@ -286,6 +286,11 @@ object BuiltIn {
     override def name = "tessla"
   }
 
+  // Standard Library Macros
+  case object StdLibCount extends BuiltIn {
+    override def name = "count"
+  }
+
   def builtIns: Map[String, BuiltIn] = Set(
     Nil,
     Default,
@@ -350,6 +355,7 @@ object BuiltIn {
     ListTail,
     CtfGetString,
     CtfGetInt,
-    TesslaInfo
+    TesslaInfo,
+    StdLibCount
   ).map(op => op.name -> op).toMap
 }

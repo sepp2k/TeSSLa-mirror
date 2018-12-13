@@ -294,6 +294,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                   )
                   TesslaCore.Lift(f, liftArgs, call.loc)
                 }
+              case BuiltIn.StdLibCount =>
+                stream {
+                  TesslaCore.StdLibCount(streamArg(0), call.loc)
+                }
               case op: BuiltIn.PrimitiveOperator =>
                 typ match {
                   case _ : TypedTessla.StreamType =>
