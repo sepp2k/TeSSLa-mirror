@@ -83,6 +83,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
+  final case class StdLibCount(stream: StreamRef, loc: Location) extends Expression {
+    override def toString = s"count($stream)"
+  }
+
   sealed abstract class ValueArg
 
   case class ValueExpressionRef(id: Identifier) extends ValueArg

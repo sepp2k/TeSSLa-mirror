@@ -55,6 +55,8 @@ object RecursiveDepthChecker {
               Seq(visitChild(m.stream1), visitChild(m.stream2)).max
             case c: TesslaCore.Const =>
               visitChild(c.stream)
+            case c: TesslaCore.StdLibCount =>
+              visitChild(c.stream)
           }
         }
 

@@ -30,6 +30,7 @@ class CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCo
         case t: TesslaCore.Time => resolveStream(t.stream)
         case l: TesslaCore.SignalLift => l.args.flatMap(resolveStream)
         case l: TesslaCore.Lift => l.args.flatMap(resolveStream)
+        case c: TesslaCore.StdLibCount => resolveStream(c.stream)
       }
     }
     ReverseTopologicalSort.sort(streams)(requiredStreams) match {

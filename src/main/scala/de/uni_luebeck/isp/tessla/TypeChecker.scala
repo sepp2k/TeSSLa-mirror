@@ -448,6 +448,10 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
 
         case BuiltIn.TesslaInfo =>
           ObjectType(Map("version" -> StringType))
+
+        case BuiltIn.StdLibCount =>
+          val x = mkTVar("X")
+          FunctionType(Seq(x.id), Seq(StreamType(x)), StreamType(IntType), isLiftable = false)
       }
       builtIn -> typ
   }

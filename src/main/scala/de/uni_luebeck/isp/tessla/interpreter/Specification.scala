@@ -5,6 +5,7 @@ import de.uni_luebeck.isp.tessla.Errors._
 import scala.collection.immutable.SortedMap
 import de.uni_luebeck.isp.tessla.{Location, TesslaCore}
 
+
 object Specification {
   type Time = BigInt
 }

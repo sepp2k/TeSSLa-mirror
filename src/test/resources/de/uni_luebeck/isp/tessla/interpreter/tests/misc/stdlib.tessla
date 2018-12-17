@@ -1,0 +1,5 @@
+in x: Events[Int]
+
+def c := count(x)
+
+out c

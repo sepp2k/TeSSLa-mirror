@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.util.Lazy
-import de.uni_luebeck.isp.tessla.{Compiler, Evaluator, Errors, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{BuiltIn, Compiler, Errors, Evaluator, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase}
 
 import scala.collection.mutable
 
@@ -75,6 +75,15 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       delay(evalStream(delays), evalStream(resets))
     case TesslaCore.Time(values, loc) =>
       evalStream(values).time(loc)
+    case TesslaCore.StdLibCount(values, loc) =>
+      val x = evalStream(values)
+      lazy val y: Stream = lift(Seq(last(x, y), nil.default(TesslaCore.IntValue(1, loc)))) { arguments =>
+        val args = arguments.map {
+          case arg => arg.mapValue(_.withLoc(loc))
+        }
+        Evaluator.evalPrimitiveOperator(BuiltIn.Add, args, exp.loc)
+      }.default(TesslaCore.IntValue(0, loc))
+      y
     case TesslaCore.Merge(arg1, arg2, loc) =>
       val stream1 = evalStream(arg1)
       val stream2 = evalStream(arg2)
