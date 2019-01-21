@@ -356,6 +356,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         TesslaCore.BuiltInOperator(primOp, loc)
       case Translated(Lazy(param: FunctionParameterEntry)) =>
         TesslaCore.ValueExpressionRef(param.id)
+      case Translated(Lazy(vee: ValueExpressionEntry)) =>
+        TesslaCore.ValueExpressionRef(vee.id)
       case other => throw InternalError(s"Wrong type of environment entry: Expected macro or primitive function, found: $other")
     }
   }
