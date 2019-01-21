@@ -238,7 +238,13 @@ object Evaluator {
     case value: TesslaCore.ValueOrError =>
       value
     case obj: TesslaCore.ObjectCreation =>
-      TesslaCore.TesslaObject(obj.members.mapValues(evalArg(_, env).forceValue), obj.loc)
+      try {
+        TesslaCore.TesslaObject(obj.members.map {
+          case (k, v) => k -> evalArg(v, env).forceValue
+        }, obj.loc)
+      } catch {
+        case e: TesslaError => TesslaCore.Error(e)
+      }
     case ref: TesslaCore.ValueExpressionRef =>
       env(ref.id).get
   }
