@@ -2,6 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
+import util.mapValues
 
 class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
   type IdMap = Map[String, FlatTessla.Identifier]
@@ -79,12 +80,12 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       stdlibScope.addType(entry)
     }
     val globalScope = new FlatTessla.Scope(Some(stdlibScope))
-    val globalVariableIdMap = stdlib.mapValues(_.id) ++ createIdMap(spec.statements.flatMap(getName))
-    val globalTypeIdMap = builtInTypes.mapValues(_.id) ++ createIdMap(spec.statements.collect {
+    val globalVariableIdMap = mapValues(stdlib)(_.id) ++ createIdMap(spec.statements.flatMap(getName))
+    val globalTypeIdMap = mapValues(builtInTypes)(_.id) ++ createIdMap(spec.statements.collect {
       case typeDef: Tessla.TypeDefinition => typeDef.id.name
     })
     val globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
-    val stdlibNames = stdlib.mapValues(_.id)
+    val stdlibNames = mapValues(stdlib)(_.id)
     val emptySpec = FlatTessla.Specification(globalScope, Seq(), outAllLocation = None, stdlibNames)
     checkForDuplicates(spec.statements.flatMap(getId))
     spec.statements.foldLeft(emptySpec) {

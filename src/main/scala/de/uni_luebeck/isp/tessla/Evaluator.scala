@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
+import util.mapValues
 
 object Evaluator {
   def getInt(voe: TesslaCore.ValueOrError): BigInt = voe.forceValue match {
@@ -239,9 +240,7 @@ object Evaluator {
       value
     case obj: TesslaCore.ObjectCreation =>
       try {
-        TesslaCore.TesslaObject(obj.members.map {
-          case (k, v) => k -> evalArg(v, env).forceValue
-        }, obj.loc)
+        TesslaCore.TesslaObject(mapValues(obj.members)(evalArg(_, env).forceValue), obj.loc)
       } catch {
         case e: TesslaError => TesslaCore.Error(e)
       }

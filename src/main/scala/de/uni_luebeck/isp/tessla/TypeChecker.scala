@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.FlatTessla.VariableEntry
-
+import util.mapValues
 import scala.collection.mutable
 
 class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[FlatTessla.Specification, TypedTessla.Specification] {
@@ -25,7 +25,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         entry.id.nameOpt.map(name => TypedTessla.OutStream(entry.id, name, entry.loc))
       }
     }
-    TypedTessla.Specification(scope, outputStreams, spec.outAllLocation, stdlibNames.mapValues(env))
+    TypedTessla.Specification(scope, outputStreams, spec.outAllLocation, mapValues(stdlibNames)(env))
   }
 
   def translateOutStream(stream: FlatTessla.OutStream, scope: TypedTessla.Scope, env: Env): TypedTessla.OutStream = {
@@ -68,7 +68,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     case s: FlatTessla.ListType =>
       TypedTessla.ListType(translateType(s.elementType, env))
     case o: FlatTessla.ObjectType =>
-      TypedTessla.ObjectType(o.memberTypes.mapValues(translateType(_, env)))
+      TypedTessla.ObjectType(mapValues(o.memberTypes)(translateType(_, env)))
     case tvar: FlatTessla.TypeParameter =>
       TypedTessla.TypeParameter(env(tvar.id), tvar.loc)
   }
@@ -163,7 +163,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
   }
 
   def translateScope(scope: FlatTessla.Scope, parent: Option[TypedTessla.Scope], parentEnv: Env): (TypedTessla.Scope, Env) = {
-    val env = parentEnv ++ scope.variables.mapValues(entry => makeIdentifier(entry.id.nameOpt))
+    val env = parentEnv ++ mapValues(scope.variables)(entry => makeIdentifier(entry.id.nameOpt))
     val resultingScope = new TypedTessla.Scope(parent)
     scope.variables.values.foreach(processTypeAnnotation(_, env))
 
@@ -620,8 +620,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         }
 
       case o: FlatTessla.ObjectLiteral =>
-        val members = o.members.mapValues(member => TypedTessla.IdLoc(env(member.id), member.loc))
-        val memberTypes = members.mapValues(member => typeMap(member.id))
+        val members = mapValues(o.members)(member => TypedTessla.IdLoc(env(member.id), member.loc))
+        val memberTypes = mapValues(members)(member => typeMap(member.id))
         TypedTessla.ObjectLiteral(members, o.loc) -> TypedTessla.ObjectType(memberTypes)
 
       case acc: FlatTessla.MemberAccess =>
