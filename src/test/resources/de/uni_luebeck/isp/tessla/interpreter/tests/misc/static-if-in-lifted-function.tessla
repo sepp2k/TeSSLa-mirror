@@ -1,0 +1,13 @@
+in x: Events[Int]
+
+def fac(n: Int): Int :=
+    static if n == 0
+    then 1
+    else fac(n-1) * n
+
+out fac(5)
+
+out slift1(x, fac)
+
+def slift1[T, U](s: Events[T], f: (T) => U): Events[U] :=
+    lift(s, nil[Unit], fun (x: Option[T], y: Option[Unit]) => Some(f(getSome(x))))

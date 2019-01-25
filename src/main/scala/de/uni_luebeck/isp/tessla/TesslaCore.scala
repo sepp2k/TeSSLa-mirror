@@ -107,7 +107,11 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  case class Application(f: ValueArg, args: Seq[ValueArg], loc: Location) extends ValueExpression {
+  case class IfThenElse(cond: ValueArg, thenCase: Lazy[ValueArg], elseCase: Lazy[ValueArg], loc: Location) extends ValueExpression {
+    override def toString = s"if $cond then $thenCase else $elseCase"
+  }
+
+  case class Application(f: Lazy[ValueArg], args: Seq[Lazy[ValueArg]], loc: Location) extends ValueExpression {
     override def toString = args.mkString(s"$f(", ", ", ")")
   }
 
@@ -123,13 +127,13 @@ object TesslaCore extends HasUniqueIdentifiers {
   sealed trait ValueOrError extends ValueArg {
     def forceValue: Value
 
-    def mapValue(f: Value => Value): ValueOrError
+    def mapValue(f: Value => ValueOrError): ValueOrError
   }
 
   final case class Error(error: TesslaError) extends ValueOrError {
     override def forceValue = throw error
 
-    override def mapValue(f: Value => Value) = this
+    override def mapValue(f: Value => ValueOrError) = this
   }
 
   sealed abstract class Value extends ValueOrError {
@@ -139,7 +143,7 @@ object TesslaCore extends HasUniqueIdentifiers {
 
     override def forceValue = this
 
-    override def mapValue(f: Value => Value) = f(this)
+    override def mapValue(f: Value => ValueOrError) = f(this)
   }
 
   sealed abstract class PrimitiveValue extends Value {

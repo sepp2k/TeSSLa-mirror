@@ -178,15 +178,28 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case i: TypedTessla.InputStream =>
         val typ = translateStreamType(i.streamType, env)
         wrapper.entry = Translated(Lazy(InputStreamEntry(i.name, typ)))
+      case ite: TypedTessla.StaticIfThenElse if inFunction =>
+        wrapper.entry = Translated(Lazy {
+          val cond = getValueArg(translateVar(env, ite.condition.id, ite.condition.loc))
+          val thenCase = Lazy(getValueArg(translateVar(env, ite.thenCase.id, ite.thenCase.loc)))
+          val elseCase = Lazy(getValueArg(translateVar(env, ite.elseCase.id, ite.elseCase.loc)))
+          val id = makeIdentifier(nameOpt)
+          ValueExpressionEntry(TesslaCore.IfThenElse(cond, thenCase, elseCase, ite.loc), id)
+        })
       case ite: TypedTessla.StaticIfThenElse =>
         val cond = translateVar(env, ite.condition.id, ite.condition.loc)
         wrapper.entry = Translated(Lazy {
-          if (Evaluator.getBool(getValue(cond).forceValue)) {
-            val thenCase = translateVar(env, ite.thenCase.id, ite.thenCase.loc)
-            getResult(thenCase).get
-          } else {
-            val elseCase = translateVar(env, ite.elseCase.id, ite.elseCase.loc)
-            getResult(elseCase).get
+          try {
+            if (Evaluator.getBool(getValue(cond).forceValue)) {
+              val thenCase = translateVar(env, ite.thenCase.id, ite.thenCase.loc)
+              getResult(thenCase).get
+            } else {
+              val elseCase = translateVar(env, ite.elseCase.id, ite.elseCase.loc)
+              getResult(elseCase).get
+            }
+          } catch {
+            case e: TesslaError =>
+              ValueEntry(TesslaCore.Error(e))
           }
         })
       case obj: TypedTessla.ObjectLiteral =>
@@ -214,8 +227,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         })
       case call: TypedTessla.MacroCall if inFunction =>
         wrapper.entry = Translated(Lazy {
-          val f = getFunction(env, call.macroID, call.loc)
-          val args = call.args.map(arg => getValueArg(translateVar(env, arg.id, arg.loc)))
+          val f = Lazy(getFunction(env, call.macroID, call.loc))
+          val args = call.args.map(arg => Lazy(getValueArg(translateVar(env, arg.id, arg.loc))))
           val id = makeIdentifier(nameOpt)
           ValueExpressionEntry(TesslaCore.Application(f, args, call.loc), id)
         })

@@ -248,11 +248,26 @@ object Evaluator {
       env(ref.id).get
   }
 
+  def evalIfThenElse(cond: TesslaCore.ValueArg,
+                     thenCase: Lazy[TesslaCore.ValueArg],
+                     elseCase: Lazy[TesslaCore.ValueArg],
+                     env: Env, loc: Location): TesslaCore.ValueOrError = {
+    evalArg(cond, env).mapValue {cond =>
+      if (getBool(cond)) {
+        evalArg(thenCase.get, env)
+      } else {
+        evalArg(elseCase.get, env)
+      }
+    }
+  }
+
   def evalExpression(exp: TesslaCore.ValueExpression, env: Env): TesslaCore.ValueOrError = exp match {
     case f: TesslaCore.Function =>
       TesslaCore.Closure(f, env, exp.loc)
+    case ite: TesslaCore.IfThenElse =>
+      evalIfThenElse(ite.cond, ite.thenCase, ite.elseCase, env, ite.loc)
     case a: TesslaCore.Application =>
-      evalApplication(a.f, a.args.map(evalArg(_, env)), a.loc, env)
+      evalApplication(a.f.get, a.args.map(arg => evalArg(arg.get, env)), a.loc, env)
     case ma: TesslaCore.MemberAccess =>
       evalArg(ma.obj, env).mapValue {
         case obj: TesslaCore.TesslaObject =>
