@@ -194,6 +194,15 @@ object Evaluator {
           val z = arguments(1)
           val f = arguments(2)
           Some(list.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc)))
+        case BuiltIn.String_concat =>
+          val s1 = getString(arguments(0))
+          val s2 = getString(arguments(1))
+          Some(TesslaCore.StringValue(s1 + s2, loc))
+        case BuiltIn.ToString =>
+          arguments(0).forceValue match {
+            case s: TesslaCore.StringValue => Some(s.withLoc(loc))
+            case arg => Some(TesslaCore.StringValue(arg.toString, loc))
+          }
         case BuiltIn.CtfGetInt =>
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))

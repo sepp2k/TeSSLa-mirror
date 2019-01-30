@@ -218,7 +218,6 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def withLoc(loc: Location): Closure = copy(loc = loc)
 
     override def toString = {
-      //capturedEnvironment.map { case (id, v) => s"$id = $v"}.mkString(s"$function with {", ", ", "}")
       s"$function (closure)"
     }
   }
