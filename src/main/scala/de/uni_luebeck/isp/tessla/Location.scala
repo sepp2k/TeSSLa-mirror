@@ -9,7 +9,7 @@ sealed abstract class Location {
   def merge(other: Location): Location
   def stackTrace: Seq[Location] = Seq()
   def withStackTrace(stackStrace: Seq[Location]) = LocationWithStackTrace(this, stackStrace)
-  def range: Option[SourceRange] = None
+  def range: Option[SourceRange]
   def path: String
 }
 
@@ -22,6 +22,7 @@ object Location {
       LocationWithStackTrace(loc.merge(other.asInstanceOf[LocationWithStackTrace].loc), stackTrace)
     }
     def path = loc.path
+    def range = loc.range
   }
 
   private case class SourceLoc(loc: compacom.Location, path: String) extends Location {
@@ -63,6 +64,8 @@ object Location {
     override def toString = path
 
     def path = "<unknown location>"
+
+    def range = None
   }
 
   def unknown: Location = Unknown
@@ -73,6 +76,8 @@ object Location {
     override def toString = path
 
     def path = "<built-in>"
+
+    def range = None
   }
 
   def builtIn: Location = BuiltIn
