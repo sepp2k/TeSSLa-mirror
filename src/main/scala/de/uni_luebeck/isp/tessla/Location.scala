@@ -1,9 +1,8 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.compacom
-import de.uni_luebeck.isp.compacom.Position
-
 import Location._
+import org.antlr.v4.runtime.{ParserRuleContext, Token}
 
 sealed abstract class Location {
   def merge(other: Location): Location
@@ -49,25 +48,47 @@ object Location {
     override def range = Some(sourceRange)
   }
 
+  def apply(fromLine: Int, fromColumn: Int, toLine: Int, toColumn: Int, path: String): Location = {
+    SourceLoc(SourceRange(fromLine, fromColumn, toLine, toColumn), path)
+  }
+
   def apply(loc: compacom.Location, path: String): Location = {
-    val range = SourceRange(
+    Location(
       fromLine = loc.from.line,
       fromColumn = loc.from.column,
       toLine = loc.to.line,
-      toColumn = loc.to.column
+      toColumn = loc.to.column,
+      path = path
     )
-    SourceLoc(range, path)
+  }
+
+  def fromToken(token: Token): Location = {
+    val lineBreaks = token.getText.count(_ == '\n')
+    val lastLineLength = token.getText.split("\n", -1).last.length
+    val fromColumn = token.getCharPositionInLine + 1
+    val toColumn = if (lineBreaks > 0) lastLineLength else fromColumn + lastLineLength
+    val range = SourceRange(
+      fromLine = token.getLine,
+      fromColumn = fromColumn,
+      toLine = token.getLine + lineBreaks,
+      toColumn = toColumn
+    )
+    SourceLoc(range, token.getInputStream.getSourceName)
+  }
+
+  def fromNode(node: ParserRuleContext): Location = {
+    fromToken(node.start).merge(fromToken(node.stop))
   }
 
   def forWholeFile(fileContents: String, path: String): Location = {
     val lines = fileContents.split("\\n")
-    val range = SourceRange(
+    Location(
       fromLine = 0,
       fromColumn = 0,
       toLine = lines.length - 1,
-      toColumn = lines.last.length
+      toColumn = lines.last.length,
+      path = path
     )
-    SourceLoc(range, path)
   }
 
   private case object Unknown extends Location {

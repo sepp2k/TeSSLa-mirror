@@ -8,6 +8,7 @@ import de.uni_luebeck.isp.tessla.Errors.{DecreasingTimeStampsError, SameTimeStam
 import de.uni_luebeck.isp.tessla.interpreter.{Interpreter, ValueTypeChecker}
 import de.uni_luebeck.isp.tessla.interpreter.Interpreter.CoreToInterpreterSpec
 import de.uni_luebeck.isp.tessla.interpreter.Specification.Time
+import org.antlr.v4.runtime.CharStreams
 
 import scala.collection.mutable
 
@@ -120,15 +121,15 @@ object JavaApi {
     compile(tessla, fileName, null)
 
   def compile(tessla: String, fileName: String, timeUnit: String): CompilationResult = {
-    val specSource = TesslaSource.fromString(tessla, path = fileName)
+    val specSource = CharStreams.fromString(tessla, fileName)
     val timeUnitSource = Option(timeUnit).map(TesslaSource.fromString(_, "timeunit"))
     val spec = new Compiler().compile(specSource, timeUnitSource)
     val interpreterResult = spec.andThen(new CoreToInterpreterSpec)
     interpreterResult match {
       case Success(interpreter, warnings) =>
-        new CompilationResult(Result(warnings.map(Diagnostic(_)).asJava, List().asJava), new Engine(interpreter))
+        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(interpreter))
       case Failure(errors, warnings) =>
-        new CompilationResult(Result(warnings.map(Diagnostic(_)).asJava, errors.map(Diagnostic(_)).asJava), null)
+        CompilationResult(Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava), null)
     }
   }
 }

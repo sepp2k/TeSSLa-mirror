@@ -4,6 +4,7 @@ import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.util.Lazy
 import de.uni_luebeck.isp.tessla.{BuiltIn, Compiler, Errors, Evaluator, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase}
+import org.antlr.v4.runtime.CharStream
 
 import scala.collection.mutable
 
@@ -78,9 +79,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.StdLibCount(values, loc) =>
       val x = evalStream(values)
       lazy val y: Stream = lift(Seq(last(x, y), nil.default(TesslaCore.IntValue(1, loc)))) { arguments =>
-        val args = arguments.map {
-          case arg => arg.mapValue(_.withLoc(loc))
-        }
+        val args = arguments.map(_.mapValue(_.withLoc(loc)))
         Evaluator.evalPrimitiveOperator(BuiltIn.Add, args, exp.loc)
       }.default(TesslaCore.IntValue(0, loc))
       y
@@ -259,7 +258,7 @@ object Interpreter {
     }
   }
 
-  def runSpec(specSource: TesslaSource,
+  def runSpec(specSource: CharStream,
               traceSource: TesslaSource,
               stopOn: Option[String] = None,
               timeUnit: Option[TesslaSource] = None,
@@ -282,7 +281,7 @@ object Interpreter {
     new Trace(tu, new FlatEventIterator(rawTrace.eventRanges, abortAt))
   }
 
-  def runCtf(specSource: TesslaSource,
+  def runCtf(specSource: CharStream,
              ctfFileName: String,
              stopOn: Option[String] = None,
              timeUnit: Option[TesslaSource] = None,

@@ -4,6 +4,7 @@ import java.io.IOException
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.interpreter._
+import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
 
 object Main extends SexyOpt {
@@ -58,7 +59,7 @@ object Main extends SexyOpt {
 
     parse(args)
     try {
-      val specSource = TesslaSource.fromFile(tesslaFile)
+      val specSource = CharStreams.fromFileName(tesslaFile)
       val timeUnitSource = timeUnit.map(TesslaSource.fromString(_, "--timeunit"))
       if (verifyOnly || generateOsl || listInStreams || listOutStreams || computationDepth || recursionDepth || nodeCount) {
         val result = new Compiler().compile(specSource, timeUnitSource)

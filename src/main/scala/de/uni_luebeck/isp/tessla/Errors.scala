@@ -204,4 +204,12 @@ object Errors {
   case class MemberNotDefined(ot: TypedTessla.ObjectType, member: String, loc: Location) extends TesslaError {
     override def message = s"Object of type $ot does not have a member named $member"
   }
+
+  case class InvalidEscapeSequence(sequence: String, loc: Location) extends TesslaError {
+    override def message = s"Invalid escape sequence '$sequence' in string"
+  }
+
+  case class StringInterpolationInInclude(loc: Location) extends TesslaError {
+    override def message = "String interpolation is not allowed in include statement"
+  }
 }
