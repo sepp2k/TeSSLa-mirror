@@ -1,0 +1,5 @@
+{
+  "input": "strings.input",
+  "expectedOutput": "strings.output",
+  "spec": "strings.tessla"
+}

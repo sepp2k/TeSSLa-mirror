@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
+import util.mapValues
 
 object Evaluator {
   def getInt(voe: TesslaCore.ValueOrError): BigInt = voe.forceValue match {
@@ -193,6 +194,15 @@ object Evaluator {
           val z = arguments(1)
           val f = arguments(2)
           Some(list.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc)))
+        case BuiltIn.String_concat =>
+          val s1 = getString(arguments(0))
+          val s2 = getString(arguments(1))
+          Some(TesslaCore.StringValue(s1 + s2, loc))
+        case BuiltIn.ToString =>
+          arguments(0).forceValue match {
+            case s: TesslaCore.StringValue => Some(s.withLoc(loc))
+            case arg => Some(TesslaCore.StringValue(arg.toString, loc))
+          }
         case BuiltIn.CtfGetInt =>
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))
@@ -238,16 +248,35 @@ object Evaluator {
     case value: TesslaCore.ValueOrError =>
       value
     case obj: TesslaCore.ObjectCreation =>
-      TesslaCore.TesslaObject(obj.members.mapValues(evalArg(_, env).forceValue), obj.loc)
+      try {
+        TesslaCore.TesslaObject(mapValues(obj.members)(evalArg(_, env).forceValue), obj.loc)
+      } catch {
+        case e: TesslaError => TesslaCore.Error(e)
+      }
     case ref: TesslaCore.ValueExpressionRef =>
       env(ref.id).get
+  }
+
+  def evalIfThenElse(cond: TesslaCore.ValueArg,
+                     thenCase: Lazy[TesslaCore.ValueArg],
+                     elseCase: Lazy[TesslaCore.ValueArg],
+                     env: Env, loc: Location): TesslaCore.ValueOrError = {
+    evalArg(cond, env).mapValue {cond =>
+      if (getBool(cond)) {
+        evalArg(thenCase.get, env)
+      } else {
+        evalArg(elseCase.get, env)
+      }
+    }
   }
 
   def evalExpression(exp: TesslaCore.ValueExpression, env: Env): TesslaCore.ValueOrError = exp match {
     case f: TesslaCore.Function =>
       TesslaCore.Closure(f, env, exp.loc)
+    case ite: TesslaCore.IfThenElse =>
+      evalIfThenElse(ite.cond, ite.thenCase, ite.elseCase, env, ite.loc)
     case a: TesslaCore.Application =>
-      evalApplication(a.f, a.args.map(evalArg(_, env)), a.loc, env)
+      evalApplication(a.f.get, a.args.map(arg => evalArg(arg.get, env)), a.loc, env)
     case ma: TesslaCore.MemberAccess =>
       evalArg(ma.obj, env).mapValue {
         case obj: TesslaCore.TesslaObject =>

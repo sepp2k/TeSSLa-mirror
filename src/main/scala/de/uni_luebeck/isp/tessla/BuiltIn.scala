@@ -272,6 +272,14 @@ object BuiltIn {
     override def name = "List_fold"
   }
 
+  case object String_concat extends PrimitiveOperator {
+    override def name = "String_concat"
+  }
+
+  case object ToString extends PrimitiveOperator {
+    override def name = "toString"
+  }
+
   // CTF operators
   case object CtfGetString extends PrimitiveOperator {
     override def name = "CTF_getString"
@@ -353,6 +361,8 @@ object BuiltIn {
     ListLast,
     ListPrepend,
     ListTail,
+    String_concat,
+    ToString,
     CtfGetString,
     CtfGetInt,
     TesslaInfo,

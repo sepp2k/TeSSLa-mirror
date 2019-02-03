@@ -1,0 +1,3 @@
+0: fac(5) = 120
+1: slift1(x, fac) = 1
+2: slift1(x, fac) = 5040

@@ -1,0 +1,1 @@
+0: notA(Some(true)) = Some(false)

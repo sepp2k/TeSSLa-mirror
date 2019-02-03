@@ -56,8 +56,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   }
 
   def createEnvForScope(scope: TypedTessla.Scope, parent: Env): Env = {
-    val entries = scope.variables.mapValues(entry => NotYetTranslated(entry, null, inFunction = false)).toMap
-    val env = parent ++ entries.mapValues(EnvEntryWrapper)
+    val entries = mapValues(scope.variables)(entry => NotYetTranslated(entry, null, inFunction = false)).toMap
+    val env = parent ++ mapValues(entries)(EnvEntryWrapper)
     entries.values.foreach(_.closure = env)
     env
   }
@@ -99,7 +99,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     case TypedTessla.SetType(t) => TesslaCore.SetType(translateValueType(t, env))
     case TypedTessla.ListType(t) => TesslaCore.ListType(translateValueType(t, env))
     case ot : TypedTessla.ObjectType =>
-      TesslaCore.ObjectType(ot.memberTypes.mapValues(translateValueType(_, env)))
+      TesslaCore.ObjectType(mapValues(ot.memberTypes)(translateValueType(_, env)))
     case _ : TypedTessla.FunctionType =>
       throw InternalError(s"Function type where value type expected - should have been caught by type checker")
     case TypedTessla.StreamType(_) =>
@@ -178,22 +178,34 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case i: TypedTessla.InputStream =>
         val typ = translateStreamType(i.streamType, env)
         wrapper.entry = Translated(Lazy(InputStreamEntry(i.name, typ)))
+      case ite: TypedTessla.StaticIfThenElse if inFunction =>
+        wrapper.entry = Translated(Lazy {
+          val cond = getValueArg(translateVar(env, ite.condition.id, ite.condition.loc))
+          val thenCase = Lazy(getValueArg(translateVar(env, ite.thenCase.id, ite.thenCase.loc)))
+          val elseCase = Lazy(getValueArg(translateVar(env, ite.elseCase.id, ite.elseCase.loc)))
+          val id = makeIdentifier(nameOpt)
+          ValueExpressionEntry(TesslaCore.IfThenElse(cond, thenCase, elseCase, ite.loc), id)
+        })
       case ite: TypedTessla.StaticIfThenElse =>
         val cond = translateVar(env, ite.condition.id, ite.condition.loc)
         wrapper.entry = Translated(Lazy {
-          if (Evaluator.getBool(getValue(cond).forceValue)) {
-            val thenCase = translateVar(env, ite.thenCase.id, ite.thenCase.loc)
-            getResult(thenCase).get
-          } else {
-            val elseCase = translateVar(env, ite.elseCase.id, ite.elseCase.loc)
-            getResult(elseCase).get
+          try {
+            if (Evaluator.getBool(getValue(cond).forceValue)) {
+              val thenCase = translateVar(env, ite.thenCase.id, ite.thenCase.loc)
+              getResult(thenCase).get
+            } else {
+              val elseCase = translateVar(env, ite.elseCase.id, ite.elseCase.loc)
+              getResult(elseCase).get
+            }
+          } catch {
+            case e: TesslaError =>
+              ValueEntry(TesslaCore.Error(e))
           }
         })
       case obj: TypedTessla.ObjectLiteral =>
         wrapper.entry = Translated(Lazy {
-          ObjectEntry(obj.members.map {
-            case (name, member) =>
-              name -> getResult(translateVar(env, member.id, member.loc))
+          ObjectEntry(mapValues(obj.members) { member =>
+              getResult(translateVar(env, member.id, member.loc))
           }, obj.loc)
         })
       case acc: TypedTessla.MemberAccess if inFunction =>
@@ -215,8 +227,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         })
       case call: TypedTessla.MacroCall if inFunction =>
         wrapper.entry = Translated(Lazy {
-          val f = getFunction(env, call.macroID, call.loc)
-          val args = call.args.map(arg => getValueArg(translateVar(env, arg.id, arg.loc)))
+          val f = Lazy(getFunction(env, call.macroID, call.loc))
+          val args = call.args.map(arg => Lazy(getValueArg(translateVar(env, arg.id, arg.loc))))
           val id = makeIdentifier(nameOpt)
           ValueExpressionEntry(TesslaCore.Application(f, args, call.loc), id)
         })
@@ -356,6 +368,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         TesslaCore.BuiltInOperator(primOp, loc)
       case Translated(Lazy(param: FunctionParameterEntry)) =>
         TesslaCore.ValueExpressionRef(param.id)
+      case Translated(Lazy(vee: ValueExpressionEntry)) =>
+        TesslaCore.ValueExpressionRef(vee.id)
       case other => throw InternalError(s"Wrong type of environment entry: Expected macro or primitive function, found: $other")
     }
   }
@@ -384,9 +398,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       NotYetTranslated(entry, null, inFunction = true)
     }
     val scopeWrappers = scopeNotYetTranslateds.map(nyt => nyt.entry.id -> EnvEntryWrapper(nyt))
-    val env: Env = closure ++ params.map {
-      case (oldId, newId) =>
-        oldId -> EnvEntryWrapper(Translated(Lazy(FunctionParameterEntry(newId))))
+    val env: Env = closure ++ mapValues(params.toMap) { newId =>
+        EnvEntryWrapper(Translated(Lazy(FunctionParameterEntry(newId))))
     } ++ scopeWrappers
     scopeNotYetTranslateds.foreach(_.closure = env)
     scopeWrappers.foreach {
@@ -426,10 +439,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     case Translated(Lazy(param: FunctionParameterEntry)) =>
       TesslaCore.ValueExpressionRef(param.id)
     case Translated(Lazy(oe: ObjectEntry)) =>
-      val members = oe.members.map {
-        case (name, Lazy(value)) =>
-          name -> getValueArg(Translated(Lazy(value)))
-      }
+      val members = mapValues(oe.members)(value => getValueArg(Translated(value)))
       TesslaCore.ObjectCreation(members, oe.loc)
     case _ =>
       throw InternalError(s"Expected value-level entry, but found $entry")
@@ -459,7 +469,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       getResult(envEntry).get match {
         case ve: ValueEntry => ve.value
         case oe: ObjectEntry =>
-          val members = oe.members.mapValues(v => getValue(Translated(v)).forceValue)
+          val members = mapValues(oe.members)(v => getValue(Translated(v)).forceValue)
           TesslaCore.TesslaObject(members, oe.loc)
         case me: MacroEntry =>
           me.functionValue match {

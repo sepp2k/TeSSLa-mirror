@@ -1,0 +1,10 @@
+def f[T](x: T) := String_concat("<", String_concat(toString(x), ">"))
+
+out f(42)
+out f(Some(23))
+out f(None[Unit])
+out f(())
+out f(List_empty[Int])
+out f(List_prepend(List_empty[Int], 13))
+out f("hallo")
+out f(Set_add(Set_empty[String], "hallo"))
