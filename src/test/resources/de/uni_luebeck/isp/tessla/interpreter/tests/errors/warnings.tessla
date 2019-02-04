@@ -1,4 +1,4 @@
-define f(x: Int) := default(nil[Int], x + 19)
+def f(x: Int) := default(nil[Int], x + 19)
 
 out f(x = 23)
 out 42
@@ -8,5 +8,5 @@ out 2 as a
 
 def eventCount[T](e: Events[T]) := {
     def ec: Events[Int] := default(last(ec, e) + 1, 0)
-    ec
+    return ec
 }

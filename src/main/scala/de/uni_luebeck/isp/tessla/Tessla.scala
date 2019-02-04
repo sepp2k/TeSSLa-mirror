@@ -144,10 +144,8 @@ object Tessla {
   }
 
   object MemberDefinition {
-    case class Full(definition: Definition) extends MemberDefinition {
-      override def toString = definition.toString(objectNotation = true)
-
-      override def id = definition.id
+    case class Full(id: Identifier, value: Expression) extends MemberDefinition {
+      override def toString = s"$id: $value"
     }
 
     case class Simple(id: Identifier) extends MemberDefinition {

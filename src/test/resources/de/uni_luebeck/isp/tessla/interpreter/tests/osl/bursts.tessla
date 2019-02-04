@@ -27,8 +27,8 @@ def resetCount[A,B](values: Events[A], reset: Events[B]) := {
         then 0
         else if default(time(reset) == time(values), false)
         then 1
-        else last(count, values) + 1
-    , 0)
+        else last(count, values) + 1,
+        0)
     count
 }
 

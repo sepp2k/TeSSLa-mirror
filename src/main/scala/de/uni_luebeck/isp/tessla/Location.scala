@@ -2,6 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.compacom
 import Location._
+import org.antlr.v4.runtime.tree.TerminalNode
 import org.antlr.v4.runtime.{ParserRuleContext, Token}
 
 sealed abstract class Location {
@@ -75,6 +76,8 @@ object Location {
     )
     SourceLoc(range, token.getInputStream.getSourceName)
   }
+
+  def fromToken(node: TerminalNode): Location = fromToken(node.getSymbol)
 
   def fromNode(node: ParserRuleContext): Location = {
     fromToken(node.start).merge(fromToken(node.stop))

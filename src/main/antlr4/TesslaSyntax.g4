@@ -14,16 +14,18 @@ include: 'include' file=stringLit eos;
 
 statement
     : def #Definition
-    | 'type' header=typeHeader ':=' nl* type eos #TypeDefinition
+    | 'type' name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') nl* type eos #TypeDefinition
     | 'in' ID (':' type)? eos # In
     | 'out' expression ('as' ID)? eos # Out
     | 'out' '*' eos # OutAll
     ;
 
-def: header=definitionHeader ':=' nl* body=expression eos;
+def: header=definitionHeader (':='|'=') nl* body eos;
+
+body: expression ('where' '{' nl* defs+=def+ '}')?;
 
 definitionHeader:
-    tessladoc+=DOCLINE*
+    tessladoc+=DOCLINE* nl*
     annotations+=annotation*
     DEF name=ID
     ('[' nl* typeParameters+=ID (',' nl* typeParameters+=ID)* nl* ']')?
@@ -38,39 +40,43 @@ type
     : name=ID #SimpleType
     | name=ID '[' typeArguments+=type (',' typeArguments+=type)* ']' #TypeApplication
     | '(' parameterTypes+=type (',' parameterTypes+=type)* ')' '=>' resultType=type #FunctionType
-    | DOLLAR_BRACE (memberSigs+=memberSig (',' memberSigs+=memberSig)*)? '}' #ObjectType
+    | (DOLLAR_BRACE | '{') nl* (memberSigs+=memberSig (',' nl* memberSigs+=memberSig)*)? ','? nl* '}' #ObjectType
+    | '(' (elementTypes+=type (',' elementTypes+=type)*)? ')' #TupleType
     ;
 
 memberSig: name=ID ':' type;
 
-typeHeader: ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')?;
-
 expression
     : ID #Variable
     | stringLit #StringLiteral
-    | (DECINT | HEXINT) #IntLiteral
-    | '(' inner=expression ')' #ParenthesizedExpression
-    | '{' nl* definitions+=def* RETURN? expression nl* '}' #Block
+    | (DECINT | HEXINT) timeUnit=ID? #IntLiteral
+    | 'true' #True
+    | 'false' #False
+    | '(' (elems+=expression (',' elems+=expression)*)? lastComma=','? ')' #TupleExpression
+    | '{' nl* definitions+=def+ RETURN? expression nl* '}' #Block
+    | (DOLLAR_BRACE | '{') nl* members+=memberDefinition (',' nl* members+=memberDefinition)* ','? nl* '}' #ObjectLiteral
     | function=expression (
         ('[' nl* typeArguments+=type (',' nl* typeArguments+=type)* nl* ']')? '(' nl* arguments+=arg (',' nl* arguments+=arg)* nl* ')'
       | ('[' nl* typeArguments+=type (',' nl* typeArguments+=type)* nl* ']')
       )  #FunctionCall
-    | obj=expression '.' fieldName=ID #MemberAccess
+    | obj=expression '.' nl* fieldName=ID #MemberAccess
     | op=('!' | '~' | '-') expression #UnaryExpression
-    | lhs=expression op=('*' | '/') rhs=expression #InfixExpression
-    | lhs=expression op=('+' | '-') rhs=expression #InfixExpression
-    | lhs=expression op=('<<' | '>>') rhs=expression #InfixExpression
-    | lhs=expression op='&' rhs=expression #InfixExpression
-    | lhs=expression op=('|' | '^') rhs=expression #InfixExpression
-    | lhs=expression op=('==' | '!=' | '<' | '>' | '<=' | '>=') rhs=expression #InfixExpression
-    | lhs=expression op='&&' rhs=expression #InfixExpression
-    | lhs=expression op='||' rhs=expression #InfixExpression
-    | staticModifier='static'? ifToken='if' condition=expression nl*
-        'then' nl* thenCase=expression nl* 'else' nl* elseCase=expression # ITE
+    | lhs=expression op=('*' | '/') nl* rhs=expression #InfixExpression
+    | lhs=expression op=('+' | '-') nl* rhs=expression #InfixExpression
+    | lhs=expression op=('<<' | '>>') nl* rhs=expression #InfixExpression
+    | lhs=expression op='&' nl* rhs=expression #InfixExpression
+    | lhs=expression op=('|' | '^') nl* rhs=expression #InfixExpression
+    | lhs=expression op=('==' | '!=' | '<' | '>' | '<=' | '>=') nl* rhs=expression #InfixExpression
+    | lhs=expression op='&&' nl* rhs=expression #InfixExpression
+    | lhs=expression op='||' nl* rhs=expression #InfixExpression
+    | ifToken='if' condition=expression nl* 'then' nl* thenCase=expression nl* ('else' nl* elseCase=expression)? #ITE
+    | 'static' 'if' condition=expression nl* 'then' nl* thenCase=expression nl* 'else' nl* elseCase=expression #ITE
+    | funKW='fun'? openingParen='(' nl* params+=param (',' nl* params+=param)* nl* closingParen=')' '=>' nl* expression #Lambda
     ;
 
-arg: (name=ID '=')? expression;
+memberDefinition: name=ID ((':'|'=') value=expression)?;
 
+arg: (name=ID '=')? expression;
 
 stringLit: openingQuote=DQUOTE stringContents* closingQuote=DQUOTE;
 

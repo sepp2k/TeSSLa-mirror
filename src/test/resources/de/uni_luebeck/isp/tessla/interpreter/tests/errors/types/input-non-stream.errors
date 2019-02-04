@@ -1,1 +1,1 @@
-/errors/types/input-non-stream.tessla(1,1 - 1,10): Input streams must be defined to have stream types
+/errors/types/input-non-stream.tessla(1,7 - 1,10): Input streams must be defined to have stream types

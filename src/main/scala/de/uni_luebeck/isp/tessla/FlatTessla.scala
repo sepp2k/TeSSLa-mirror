@@ -73,7 +73,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def loc = Location.builtIn
   }
 
-  case class InputStream(name: String, streamType: Type, loc: Location) extends Expression {
+  case class InputStream(name: String, streamType: Type, typeLoc: Location, loc: Location) extends Expression {
     override def toString = s"in $name: $streamType"
   }
 

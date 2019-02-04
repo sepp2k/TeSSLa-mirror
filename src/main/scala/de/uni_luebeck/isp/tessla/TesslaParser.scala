@@ -76,12 +76,22 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
     val annotations = definition.header.annotations.asScala.map(_.ID).map(mkID)
     val typeParameters = definition.header.typeParameters.asScala.map(mkID)
     val parameters = definition.header.parameters.asScala.map(translateParameter)
-    val body = translateExpression(definition.body)
+    val body = translateBody(definition.body)
+    val loc = Location.fromToken(definition.header.DEF).merge(Location.fromNode(definition.body))
     Tessla.Definition(
       annotations, mkID(definition.header.name), typeParameters, parameters,
       Option(definition.header.resultType).map(translateType),
-      Location.fromNode(definition.header), body, Location.fromNode(definition)
+      Location.fromNode(definition.header), body, loc
     )
+  }
+
+  def translateBody(body: TesslaSyntax.BodyContext): Tessla.Expression = {
+    val exp = translateExpression(body.expression)
+    if (body.defs.isEmpty) {
+      exp
+    } else {
+      Tessla.Block(body.defs.asScala.map(translateDefinition), exp, Location.fromNode(body))
+    }
   }
 
   object StatementVisitor extends TesslaVisitor[Tessla.Statement] {
@@ -90,7 +100,8 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
     }
 
     override def visitOut(out: TesslaSyntax.OutContext) = {
-      Tessla.Out(translateExpression(out.expression), Option(out.ID).map(mkID), Location.fromNode(out))
+      val loc = Option(out.ID).map(Location.fromToken).getOrElse(Location.fromNode(out.expression))
+      Tessla.Out(translateExpression(out.expression), Option(out.ID).map(mkID), loc)
     }
 
     override def visitOutAll(outAll: TesslaSyntax.OutAllContext) = {
@@ -99,6 +110,12 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
 
     override def visitIn(in: TesslaSyntax.InContext) = {
       Tessla.In(mkID(in.ID), translateType(in.`type`), Location.fromNode(in))
+    }
+
+    override def visitTypeDefinition(typeDef: TesslaSyntax.TypeDefinitionContext) = {
+      val typeParams = typeDef.typeParameters.asScala.map(mkID)
+      val loc = Location.fromToken(typeDef.TYPE).merge(Location.fromNode(typeDef.`type`))
+      Tessla.TypeDefinition(mkID(typeDef.name), typeParams, translateType(typeDef.`type`), loc)
     }
   }
 
@@ -118,9 +135,21 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
       Tessla.TypeApplication(mkID(typ.ID), typ.typeArguments.asScala.map(translateType), loc)
     }
 
-    override def visitFunctionType(ctx: TesslaSyntax.FunctionTypeContext) = ???
+    override def visitFunctionType(typ: TesslaSyntax.FunctionTypeContext) = {
+      val loc = Location.fromNode(typ)
+      Tessla.FunctionType(typ.parameterTypes.asScala.map(translateType), translateType(typ.resultType), loc)
+    }
 
-    override def visitObjectType(ctx: TesslaSyntax.ObjectTypeContext) = ???
+    override def visitObjectType(typ: TesslaSyntax.ObjectTypeContext) = {
+      val memberTypes = typ.memberSigs.asScala.map { sig =>
+        (mkID(sig.name), translateType(sig.`type`))
+      }
+      Tessla.ObjectType(memberTypes, Location.fromNode(typ))
+    }
+
+    override def visitTupleType(typ: TesslaSyntax.TupleTypeContext) = {
+      Tessla.TupleType(typ.elementTypes.asScala.map(translateType), Location.fromNode(typ))
+    }
   }
 
   def mkID(id: Token): Tessla.Identifier = {
@@ -153,13 +182,39 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
       }
     }
 
-    override def visitParenthesizedExpression(exp: TesslaSyntax.ParenthesizedExpressionContext) = {
-      visit(exp.inner)
+    override def visitTupleExpression(exp: TesslaSyntax.TupleExpressionContext) = {
+      if (exp.elems.isEmpty) {
+        Tessla.Literal(Tessla.Unit, Location.fromNode(exp))
+      } else if (exp.elems.size == 1 && exp.lastComma == null) {
+        visit(exp.elems.get(0))
+      } else {
+        Tessla.Tuple(exp.elems.asScala.map(visit), Location.fromNode(exp))
+      }
+    }
+
+    override def visitObjectLiteral(obj: TesslaSyntax.ObjectLiteralContext) = {
+      Tessla.ObjectLiteral(obj.members.asScala.map(translateMemberDefinition), Location.fromNode(obj))
+    }
+
+    def translateMemberDefinition(memDef: TesslaSyntax.MemberDefinitionContext) = {
+      if (memDef.value == null) Tessla.MemberDefinition.Simple(mkID(memDef.name))
+      else Tessla.MemberDefinition.Full(mkID(memDef.name), translateExpression(memDef.value))
     }
 
     override def visitBlock(block: TesslaSyntax.BlockContext) = {
       val defs = block.definitions.asScala.map(translateDefinition)
+      if (block.RETURN != null) {
+        warn(Location.fromToken(block.RETURN), "The keyword 'return' is deprecated")
+      }
       Tessla.Block(defs, translateExpression(block.expression), Location.fromNode(block))
+    }
+
+    override def visitLambda(lambda: TesslaSyntax.LambdaContext) = {
+      val startHeaderLoc = Location.fromToken(Option(lambda.funKW).getOrElse(lambda.openingParen))
+      val endHeaderLoc = Location.fromToken(lambda.closingParen)
+      val headerLoc = startHeaderLoc.merge(endHeaderLoc)
+      val body = translateExpression(lambda.expression)
+      Tessla.Lambda(lambda.params.asScala.map(translateParameter), headerLoc, body, Location.fromNode(lambda))
     }
 
     override def visitUnaryExpression(exp: TesslaSyntax.UnaryExpressionContext) = {
@@ -184,17 +239,25 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
     override def visitITE(ite: TesslaSyntax.ITEContext) = {
       val cond = translateExpression(ite.condition)
       val thenCase = translateExpression(ite.thenCase)
-      val elseCase = translateExpression(ite.elseCase)
       val loc = Location.fromNode(ite)
-      if (ite.staticModifier != null) {
-        Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
-      } else {
+      if (ite.elseCase == null) {
         Tessla.MacroCall(
-          Tessla.Variable(Tessla.Identifier("if then else", Location.fromToken(ite.ifToken))),
+          Tessla.Variable(Tessla.Identifier("if then", Location.fromToken(ite.ifToken))),
           Seq(),
-          Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
-          loc
+          Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase)), loc
         )
+      } else {
+        val elseCase = translateExpression(ite.elseCase)
+        if (ite.STATIC != null) {
+          Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
+        } else {
+          Tessla.MacroCall(
+            Tessla.Variable(Tessla.Identifier("if then else", Location.fromToken(ite.ifToken))),
+            Seq(),
+            Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
+            loc
+          )
+        }
       }
     }
 
@@ -202,14 +265,29 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
       Tessla.MemberAccess(translateExpression(ma.obj), mkID(ma.fieldName), Location.fromNode(ma))
     }
 
+    override def visitTrue(trueExp: TesslaSyntax.TrueContext) = {
+      Tessla.Literal(Tessla.BoolLiteral(true), Location.fromNode(trueExp))
+    }
+
+    override def visitFalse(falseExp: TesslaSyntax.FalseContext) = {
+      Tessla.Literal(Tessla.BoolLiteral(false), Location.fromNode(falseExp))
+    }
+
     override def visitIntLiteral(intLit: TesslaSyntax.IntLiteralContext) = {
+      def mkLit(x: BigInt) = {
+        if (intLit.timeUnit == null) {
+          Tessla.IntLiteral(x)
+        } else {
+          Tessla.TimeLiteral(x, TimeUnit.fromString(intLit.timeUnit.getText, Location.fromToken(intLit.timeUnit)))
+        }
+      }
       if (intLit.DECINT != null) {
-        Tessla.Literal(Tessla.IntLiteral(intLit.DECINT.getText.toInt), Location.fromNode(intLit))
+        Tessla.Literal(mkLit(intLit.DECINT.getText.toInt), Location.fromNode(intLit))
       } else {
         require(intLit.HEXINT != null)
         require(intLit.HEXINT.getText.startsWith("0x"))
-        val i = Integer.parseInt(intLit.HEXINT.getText.substring(2), 16)
-        Tessla.Literal(Tessla.IntLiteral(i), Location.fromNode(intLit))
+        val x = Integer.parseInt(intLit.HEXINT.getText.substring(2), 16)
+        Tessla.Literal(mkLit(x), Location.fromNode(intLit))
       }
     }
 
@@ -260,5 +338,4 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
       }
     }
   }
-
 }

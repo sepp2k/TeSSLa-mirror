@@ -72,13 +72,13 @@ fragment NameChar
     ;
 
 fragment NameStartChar
-    : [_\p{Alpha}\p{General_Category=Other_Letter}\p{Emoji}]
+    : [_\p{Alpha}\p{General_Category=Other_Letter}\p{Emoji_Presentation}]
     ;
 
+ID: NameStartChar NameChar*;
 DECINT: [\p{Nd}]+;
 HEXINT: '0x'[\p{Nd}a-fA-F\uFF21-\uFF26\uFF41-\uFF46]+;
-FLOAT: [\p{Nd}]+.[\p{Nd}]+;
-ID: NameStartChar NameChar*;
+FLOAT: [\p{Nd}]+'.'[\p{Nd}]+;
 
 DOCLINE: ('---' | '##') .*? ('\r'? '\n')+;
 LINE_COMMENT: ('--' | '#') .*? ('\r'? '\n')+;
