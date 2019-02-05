@@ -88,6 +88,10 @@ object BuiltIn {
     override def name = "/"
   }
 
+  case object Mod extends InfixOperator {
+    override def name = "%"
+  }
+
   case object BitAnd extends InfixOperator {
     override def name = "&"
   }
@@ -316,6 +320,7 @@ object BuiltIn {
     Negate,
     Mul,
     Div,
+    Mod,
     BitAnd,
     BitOr,
     BitXor,

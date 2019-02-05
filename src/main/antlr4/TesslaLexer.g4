@@ -37,6 +37,7 @@ PLUS: '+';
 MINUS: '-';
 TIMES: '*';
 DIV: '/';
+MOD: '%';
 AND: '&';
 OR: '|';
 XOR: '^';

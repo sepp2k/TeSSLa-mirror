@@ -62,7 +62,7 @@ expression
       )  #FunctionCall
     | obj=expression '.' nl* fieldName=ID #MemberAccess
     | op=('!' | '~' | '-') expression #UnaryExpression
-    | lhs=expression op=('*' | '/') nl* rhs=expression #InfixExpression
+    | lhs=expression op=('*' | '/' | '%') nl* rhs=expression #InfixExpression
     | lhs=expression op=('+' | '-') nl* rhs=expression #InfixExpression
     | lhs=expression op=('<<' | '>>') nl* rhs=expression #InfixExpression
     | lhs=expression op='&' nl* rhs=expression #InfixExpression

@@ -67,6 +67,11 @@ object Evaluator {
           val y = getInt(arguments(1))
           if (y == 0) Some(TesslaCore.Error(DivideByZero(arguments(1).forceValue.loc)))
           else Some(TesslaCore.IntValue(x / y, loc))
+        case BuiltIn.Mod =>
+          val x = getInt(arguments(0))
+          val y = getInt(arguments(1))
+          if (y == 0) Some(TesslaCore.Error(DivideByZero(arguments(1).forceValue.loc)))
+          else Some(TesslaCore.IntValue(x % y, loc))
         case BuiltIn.LeftShift => binIntOp(_ << _.toInt)
         case BuiltIn.RightShift => binIntOp(_ >> _.toInt)
         case BuiltIn.BitAnd => binIntOp(_ & _)
