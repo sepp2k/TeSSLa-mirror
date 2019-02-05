@@ -26,6 +26,8 @@ object JavaApi {
 
   abstract class EngineListener {
     def event(stream: String, time: Time, value: TesslaCore.Value)
+
+    def printEvent(time: Time, value: TesslaCore.Value)
   }
 
   case class CompilationResult(result: Result, engine: Engine)
@@ -35,10 +37,16 @@ object JavaApi {
 
     def addListener(listener: EngineListener) {
       spec.outStreams.foreach {
-        case (name, stream, _) =>
+        case (Some(name), stream, _) =>
           stream.addListener {
             case Some(value) =>
               listener.event(name, spec.getTime, value.forceValue)
+            case None =>
+          }
+        case (None, stream, _) =>
+          stream.addListener {
+            case Some(value) =>
+              listener.printEvent(spec.getTime, value.forceValue)
             case None =>
           }
       }

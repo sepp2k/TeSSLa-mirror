@@ -17,6 +17,7 @@ statement
     | 'type' name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') nl* type eos #TypeDefinition
     | 'in' ID (':' type)? eos # In
     | 'out' expression ('as' ID)? eos # Out
+    | 'print' expression eos # Print
     | 'out' '*' eos # OutAll
     ;
 

@@ -20,7 +20,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case (name, exp) => (name, Lazy(eval(exp)))
   }.toMap
 
-  lazy val outStreams: Seq[(String, Stream, TesslaCore.Type)] = spec.outStreams.map {
+  lazy val outStreams: Seq[(Option[String], Stream, TesslaCore.Type)] = spec.outStreams.map {
     case (name, streamRef: TesslaCore.Stream, typ) => (name, defs(streamRef.id).get, typ)
     case (name, streamRef: TesslaCore.InputStream, typ) => (name, inStreams(streamRef.name)._1, typ)
     case (name, _: TesslaCore.Nil, typ) => (name, nil, typ)
@@ -193,14 +193,14 @@ object Interpreter {
         private val seen = mutable.Set.empty[String]
 
         spec.outStreams.foreach {
-          case (name, stream, _) =>
+          case (nameOpt, stream, _) =>
             stream.addListener {
               case Some(value) =>
                 if (!stopped) {
-                  if (stopOn.contains(name)) stopped = true
+                  if (stopOn.isDefined && stopOn == nameOpt) stopped = true
                   val timeStamp = Trace.TimeStamp(Location.unknown, spec.getTime)
-                  val id = Trace.Identifier(Location.unknown, name)
-                  nextEvents += Trace.Event(Location.unknown, timeStamp, id, value.forceValue)
+                  val idOpt = nameOpt.map(Trace.Identifier(Location.unknown, _))
+                  nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value.forceValue)
                 }
               case None =>
             }

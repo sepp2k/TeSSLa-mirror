@@ -209,8 +209,11 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def hashCode() = id.hashCode()
   }
 
-  case class OutStream(id: Identifier, name: String, loc: Location) {
-    override def toString = s"out $id as $name"
+  case class OutStream(id: Identifier, nameOpt: Option[String], loc: Location) {
+    override def toString = nameOpt match {
+      case Some(name) => s"out $id as $name"
+      case None => s"print $id"
+    }
   }
 
   sealed abstract class Argument {

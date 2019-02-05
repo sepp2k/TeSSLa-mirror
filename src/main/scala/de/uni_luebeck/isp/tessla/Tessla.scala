@@ -56,8 +56,11 @@ object Tessla {
   }
 
   case class OutAll(loc: Location) extends Statement {
-    def name = "out *"
-    override def toString = name
+    override def toString = "out *"
+  }
+
+  case class Print(expr: Expression, loc: Location) extends Statement {
+    override def toString = s"print $expr"
   }
 
   case class Parameter(id: Identifier, parameterType: Option[Type]) {

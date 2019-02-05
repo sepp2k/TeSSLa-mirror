@@ -108,6 +108,11 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
       Tessla.OutAll(Location.fromNode(outAll))
     }
 
+    override def visitPrint(print: TesslaSyntax.PrintContext) = {
+      val loc = Location.fromNode(print.expression)
+      Tessla.Print(translateExpression(print.expression), loc)
+    }
+
     override def visitIn(in: TesslaSyntax.InContext) = {
       Tessla.In(mkID(in.ID), translateType(in.`type`), Location.fromNode(in))
     }

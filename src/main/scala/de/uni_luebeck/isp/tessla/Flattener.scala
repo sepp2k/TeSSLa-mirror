@@ -94,13 +94,18 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
         result.copy(outAllLocation = Some(outAll.loc))
 
       case (result, out: Tessla.Out) =>
-        result.outStreams.find(_.name == out.name).foreach {
+        result.outStreams.find(_.nameOpt.contains(out.name)).foreach {
           previous =>
             warn(ConflictingOut(out.loc, previous = previous.loc))
         }
         val id = expToId(translateExpression(out.expr, globalScope, globalEnv), globalScope)
-        val newOut = FlatTessla.OutStream(id, out.name, out.loc)
+        val newOut = FlatTessla.OutStream(id, Some(out.name), out.loc)
         result.copy(outStreams = result.outStreams :+ newOut)
+
+      case (result, print: Tessla.Print) =>
+        val id = expToId(translateExpression(print.expr, globalScope, globalEnv), globalScope)
+        val newPrint = FlatTessla.OutStream(id, None, print.loc)
+        result.copy(outStreams = result.outStreams :+ newPrint)
 
       case (result, definition: Tessla.Definition) =>
         addDefinition(definition, globalScope, globalEnv)

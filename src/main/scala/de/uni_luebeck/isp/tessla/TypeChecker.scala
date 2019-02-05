@@ -22,7 +22,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     if (spec.outAll) {
       val streams = scope.variables.values.filter(entry => isStreamType(entry.typeInfo))
       outputStreams ++= streams.flatMap { entry =>
-        entry.id.nameOpt.map(name => TypedTessla.OutStream(entry.id, name, entry.loc))
+        entry.id.nameOpt.map(name => TypedTessla.OutStream(entry.id, Some(name), entry.loc))
       }
     }
     TypedTessla.Specification(scope, outputStreams, spec.outAllLocation, mapValues(stdlibNames)(env))
@@ -32,12 +32,12 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     val id = env(stream.id)
     typeMap(id) match {
       case _: TypedTessla.StreamType =>
-        TypedTessla.OutStream(id, stream.name, stream.loc)
+        TypedTessla.OutStream(id, stream.nameOpt, stream.loc)
       case t if t.isValueType =>
-        TypedTessla.OutStream(liftConstant(id, scope, env, stream.loc), stream.name, stream.loc)
+        TypedTessla.OutStream(liftConstant(id, scope, env, stream.loc), stream.nameOpt, stream.loc)
       case other =>
         error(TypeMismatch("stream or value type", other, stream.loc))
-        TypedTessla.OutStream(id, "<error>", stream.loc)
+        TypedTessla.OutStream(id, Some("<error>"), stream.loc)
     }
   }
 

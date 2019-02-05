@@ -10,6 +10,7 @@ INCLUDE: 'include';
 TYPE: 'type';
 IN: 'in';
 OUT: 'out';
+PRINT: 'print';
 AS: 'as';
 STATIC: 'static';
 IF: 'if';

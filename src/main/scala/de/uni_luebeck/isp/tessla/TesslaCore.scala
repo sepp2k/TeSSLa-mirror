@@ -7,7 +7,7 @@ import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 object TesslaCore extends HasUniqueIdentifiers {
   final case class Specification(streams: Seq[(Identifier, Expression)],
                                  inStreams: Seq[(String, StreamType, Location)],
-                                 outStreams: Seq[(String, StreamRef, StreamType)]) {
+                                 outStreams: Seq[(Option[String], StreamRef, StreamType)]) {
     override def toString = {
       inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
         streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +

@@ -44,7 +44,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
           (is.name, translateStreamType(typ, env), is.loc)
       }
       val outputStreams = spec.outStreams.map { os =>
-        (os.name, getStream(env(os.id).entry, os.loc), getStreamType(env(os.id).entry))
+        (os.nameOpt, getStream(env(os.id).entry, os.loc), getStreamType(env(os.id).entry))
       }
       TesslaCore.Specification(translatedStreams.toSeq, inputStreams.toSeq, outputStreams)
     } catch {

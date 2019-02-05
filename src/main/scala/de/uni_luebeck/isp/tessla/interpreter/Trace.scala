@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{Location, TesslaCore}
-import de.uni_luebeck.isp.tessla.TimeUnit
+import de.uni_luebeck.isp.tessla.{Location, TesslaCore, TimeUnit}
+import de.uni_luebeck.isp.tessla.Errors.InternalError
 import org.eclipse.tracecompass.ctf.core.CTFException
 import org.eclipse.tracecompass.ctf.core.trace.{CTFTrace, CTFTraceReader}
 
@@ -11,8 +11,19 @@ object Trace {
   type Identifier = RawTrace.Identifier
   val Identifier = RawTrace.Identifier
 
-  case class Event(loc: Location, timeStamp: TimeStamp, stream: Identifier, value: TesslaCore.Value) extends Item {
-    override def toString: String = s"$timeStamp: ${stream.name} = $value"
+  case class Event(loc: Location, timeStamp: TimeStamp, streamOpt: Option[Identifier], value: TesslaCore.Value) extends Item {
+    override def toString: String = streamOpt match {
+      case Some(stream) => s"$timeStamp: ${stream.name} = $value"
+      case None => value match {
+        case str: TesslaCore.StringValue => str.value
+        case _ => value.toString
+      }
+    }
+
+    def stream = streamOpt match {
+      case Some(stream) => stream
+      case None => throw InternalError("Requested name of print stream")
+    }
   }
 
   case class TimeUnitDeclaration(timeUnit: TimeUnit) extends Item {
@@ -45,7 +56,7 @@ object Trace {
         val stream = Trace.Identifier(Location.unknown, event.getDeclaration.getName)
         val value = TesslaCore.Ctf(event.getFields, Location.unknown)
         eventCounter += 1
-        Trace.Event(Location.unknown, ts, stream, value)
+        Trace.Event(Location.unknown, ts, Some(stream), value)
       }
     }
 
