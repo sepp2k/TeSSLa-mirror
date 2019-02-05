@@ -34,6 +34,7 @@ object Main extends SexyOpt {
   val flattenInput = flag("flatten-input", "Print the input trace in a flattened form.")
   val computationDepth = flag("print-computation-depth", "Print the length of the longest path a propagation message travels")
   val recursionDepth = flag("print-recursion-depth", "Print the length of the longest recursion")
+  val nodeCount = flag("print-node-count", "Print the number of nodes in the TeSSLaCore graph")
 
   val ctfTrace = flag("ctf", "The trace-file with the input data is in CTF format. With this option you must specify " +
     "a trace-file. stdin is not supported.")
@@ -59,7 +60,7 @@ object Main extends SexyOpt {
     try {
       val specSource = TesslaSource.fromFile(tesslaFile)
       val timeUnitSource = timeUnit.map(TesslaSource.fromString(_, "--timeunit"))
-      if (verifyOnly || generateOsl || listInStreams || listOutStreams || computationDepth || recursionDepth) {
+      if (verifyOnly || generateOsl || listInStreams || listOutStreams || computationDepth || recursionDepth || nodeCount) {
         val result = new Compiler().compile(specSource, timeUnitSource)
         if (generateOsl) {
           println(unwrapResult(result.andThen(new OSL.Generator)))
@@ -81,6 +82,10 @@ object Main extends SexyOpt {
         }
         if (recursionDepth) {
           println(RecursiveDepthChecker.nestingDepth(spec))
+          return
+        }
+        if (nodeCount) {
+          println(NodeCounter.nodeCount(spec))
           return
         }
       } else if (ctfTrace) {
