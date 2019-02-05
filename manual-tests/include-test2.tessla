@@ -1,0 +1,3 @@
+include "include-test2-incl.tessla"
+
+out f(41)
