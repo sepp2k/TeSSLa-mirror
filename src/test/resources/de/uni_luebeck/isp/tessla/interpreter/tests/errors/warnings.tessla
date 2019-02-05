@@ -10,3 +10,9 @@ def eventCount[T](e: Events[T]) := {
     def ec: Events[Int] := default(last(ec, e) + 1, 0)
     return ec
 }
+
+def o1: ${} = ${}
+def o2: {} = {}
+
+def f1 = fun (x: Int) => x
+def f2 = (x: Int) => x

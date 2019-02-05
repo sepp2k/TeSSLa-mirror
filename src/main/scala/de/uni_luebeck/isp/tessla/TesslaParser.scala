@@ -146,6 +146,9 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
     }
 
     override def visitObjectType(typ: TesslaSyntax.ObjectTypeContext) = {
+      if (typ.DOLLAR_BRACE != null) {
+        warn(Location.fromToken(typ.DOLLAR_BRACE), "Use of '${' for objects is deprecated, use '{' instead")
+      }
       val memberTypes = typ.memberSigs.asScala.map { sig =>
         (mkID(sig.name), translateType(sig.`type`))
       }
@@ -198,6 +201,9 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
     }
 
     override def visitObjectLiteral(obj: TesslaSyntax.ObjectLiteralContext) = {
+      if (obj.DOLLAR_BRACE != null) {
+        warn(Location.fromToken(obj.DOLLAR_BRACE), "Use of '${' for objects is deprecated, use '{' instead")
+      }
       Tessla.ObjectLiteral(obj.members.asScala.map(translateMemberDefinition), Location.fromNode(obj))
     }
 
@@ -219,6 +225,9 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
       val endHeaderLoc = Location.fromToken(lambda.closingParen)
       val headerLoc = startHeaderLoc.merge(endHeaderLoc)
       val body = translateExpression(lambda.expression)
+      if (lambda.funKW != null) {
+        warn(Location.fromToken(lambda.funKW), "The keyword 'fun' is deprecated")
+      }
       Tessla.Lambda(lambda.params.asScala.map(translateParameter), headerLoc, body, Location.fromNode(lambda))
     }
 

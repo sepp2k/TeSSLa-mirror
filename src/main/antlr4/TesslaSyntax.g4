@@ -41,7 +41,7 @@ type
     : name=ID #SimpleType
     | name=ID '[' typeArguments+=type (',' typeArguments+=type)* ']' #TypeApplication
     | '(' parameterTypes+=type (',' parameterTypes+=type)* ')' '=>' resultType=type #FunctionType
-    | (DOLLAR_BRACE | '{') nl* (memberSigs+=memberSig (',' nl* memberSigs+=memberSig)*)? ','? nl* '}' #ObjectType
+    | (DOLLAR_BRACE | '{') nl* (memberSigs+=memberSig (',' nl* memberSigs+=memberSig)* ','?)? nl* '}' #ObjectType
     | '(' (elementTypes+=type (',' elementTypes+=type)*)? ')' #TupleType
     ;
 
@@ -55,7 +55,7 @@ expression
     | 'false' #False
     | '(' (elems+=expression (',' elems+=expression)*)? lastComma=','? ')' #TupleExpression
     | '{' nl* definitions+=def+ RETURN? expression nl* '}' #Block
-    | (DOLLAR_BRACE | '{') nl* members+=memberDefinition (',' nl* members+=memberDefinition)* ','? nl* '}' #ObjectLiteral
+    | (DOLLAR_BRACE | '{') nl* (members+=memberDefinition (',' nl* members+=memberDefinition)* ','?)? nl* '}' #ObjectLiteral
     | function=expression (
         ('[' nl* typeArguments+=type (',' nl* typeArguments+=type)* nl* ']')? '(' nl* arguments+=arg (',' nl* arguments+=arg)* nl* ')'
       | ('[' nl* typeArguments+=type (',' nl* typeArguments+=type)* nl* ']')
