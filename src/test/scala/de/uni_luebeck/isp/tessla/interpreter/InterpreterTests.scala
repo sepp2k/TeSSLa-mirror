@@ -143,7 +143,9 @@ class InterpreterTests extends FunSuite {
         val channel = Channels.newChannel(getClass.getResourceAsStream(s"$root/$path/$file"))
         CharStreams.fromChannel(channel, StandardCharsets.UTF_8, 4096, CodingErrorAction.REPLACE, s"$path/$file", -1)
       }
-      def testSource(file: String): TesslaSource = TesslaSource.fromJavaStream(getClass.getResourceAsStream(s"$root/$path/$file"), s"$path/$file")
+      def testSource(file: String): Source = {
+        Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$file"))(StandardCharsets.UTF_8)
+      }
 
       val testCase = parseJson(s"$path/$name")
       test(s"$path/$name (Interpreter)") {
@@ -172,7 +174,7 @@ class InterpreterTests extends FunSuite {
           }
         }
 
-        def timeUnit = testCase.timeUnit.map(TesslaSource.fromString(_, s"$path/$name.json#timeunit"))
+        val timeUnit = testCase.timeUnit
         val src = testStream(testCase.spec)
         testCase.expectedOsl.foreach { oslFile =>
           val expectedOSL = semiParseOsl(testSource(oslFile).getLines)
@@ -184,7 +186,7 @@ class InterpreterTests extends FunSuite {
         testCase.input match {
           case Some(input) =>
             try {
-              val result = Interpreter.runSpec(src, testSource(input),
+              val result = Interpreter.runSpec(src, testStream(input),
                 abortAt = testCase.abortAt.map(BigInt(_)),
                 timeUnit = timeUnit
               )

@@ -27,7 +27,10 @@
     "timeUnit": {
       "type": "string",
       "enum": [
+        "fs",
+        "ps",
         "ns",
+        "µs",
         "us",
         "ms",
         "s",

@@ -1,14 +1,11 @@
 package de.uni_luebeck.isp.tessla
 
-import java.nio.file.Paths
-
 import de.uni_luebeck.isp.tessla.Errors._
 import org.antlr.v4.runtime._
 import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
-
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
-
+import java.nio.file.Paths
 
 class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
   var path: String = _
@@ -20,7 +17,7 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
     parser.removeErrorListeners()
     parser.addErrorListener(new BaseErrorListener {
       override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException) = {
-        error(Errors.ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token])))
+        error(ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token])))
       }
     })
     val spec = parser.spec()
@@ -66,7 +63,7 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
 
   trait TesslaVisitor[T] extends TesslaSyntaxBaseVisitor[T] {
     override final def visitChildren(node: RuleNode) = {
-      throw InternalError("Undefined visitor method")
+      throw InternalError("Undefined visitor method", Location.fromNode(node.asInstanceOf[ParserRuleContext]))
     }
   }
 
@@ -152,7 +149,7 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
       val memberTypes = typ.memberSigs.asScala.map { sig =>
         (mkID(sig.name), translateType(sig.`type`))
       }
-      Tessla.ObjectType(memberTypes, isOpen = typ.ELLIPSIS != null, Location.fromNode(typ))
+      Tessla.ObjectType(memberTypes, isOpen = typ.DOTDOT != null, Location.fromNode(typ))
     }
 
     override def visitTupleType(typ: TesslaSyntax.TupleTypeContext) = {
@@ -294,11 +291,11 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
         }
       }
       if (intLit.DECINT != null) {
-        Tessla.Literal(mkLit(intLit.DECINT.getText.toInt), Location.fromNode(intLit))
+        Tessla.Literal(mkLit(BigInt(intLit.DECINT.getText)), Location.fromNode(intLit))
       } else {
         require(intLit.HEXINT != null)
         require(intLit.HEXINT.getText.startsWith("0x"))
-        val x = Integer.parseInt(intLit.HEXINT.getText.substring(2), 16)
+        val x = BigInt(intLit.HEXINT.getText.substring(2), 16)
         Tessla.Literal(mkLit(x), Location.fromNode(intLit))
       }
     }

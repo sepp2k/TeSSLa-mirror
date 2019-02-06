@@ -130,8 +130,7 @@ object JavaApi {
 
   def compile(tessla: String, fileName: String, timeUnit: String): CompilationResult = {
     val specSource = CharStreams.fromString(tessla, fileName)
-    val timeUnitSource = Option(timeUnit).map(TesslaSource.fromString(_, "timeunit"))
-    val spec = new Compiler().compile(specSource, timeUnitSource)
+    val spec = new Compiler().compile(specSource, Option(timeUnit))
     val interpreterResult = spec.andThen(new CoreToInterpreterSpec)
     interpreterResult match {
       case Success(interpreter, warnings) =>

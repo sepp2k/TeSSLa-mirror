@@ -1,8 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.compacom
 import Location._
-import org.antlr.v4.runtime.tree.TerminalNode
+import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
 import org.antlr.v4.runtime.{ParserRuleContext, Token}
 
 sealed abstract class Location {
@@ -53,16 +52,6 @@ object Location {
     SourceLoc(SourceRange(fromLine, fromColumn, toLine, toColumn), path)
   }
 
-  def apply(loc: compacom.Location, path: String): Location = {
-    Location(
-      fromLine = loc.from.line,
-      fromColumn = loc.from.column,
-      toLine = loc.to.line,
-      toColumn = loc.to.column,
-      path = path
-    )
-  }
-
   def fromToken(token: Token): Location = {
     val lineBreaks = token.getText.count(_ == '\n')
     val lastLineLength = token.getText.split("\n", -1).last.length
@@ -99,9 +88,9 @@ object Location {
 
     override def toString = path
 
-    def path = "<unknown location>"
+    override def path = "<unknown location>"
 
-    def range = None
+    override def range = None
   }
 
   def unknown: Location = Unknown
@@ -111,10 +100,22 @@ object Location {
 
     override def toString = path
 
-    def path = "<built-in>"
+    override def path = "<built-in>"
 
-    def range = None
+    override def range = None
   }
 
   def builtIn: Location = BuiltIn
+
+  private case class Opt(name: String) extends Location {
+    override def merge(other: Location) = other
+
+    override def toString = path
+
+    override def path = s"option '$name'"
+
+    override def range = None
+  }
+
+  def option(name: String): Location = Opt(name)
 }

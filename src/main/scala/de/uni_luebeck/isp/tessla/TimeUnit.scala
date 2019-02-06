@@ -30,11 +30,6 @@ object TimeUnit {
     case _ => throw UnknownTimeUnit(str, loc)
   }
 
-  def parse(source: TesslaSource) = {
-    val unitString = source.src.mkString("")
-    fromString(unitString, Location.forWholeFile(unitString, source.path))
-  }
-
   case class Femtos(loc: Location) extends TimeUnit {
     val factor = 1000
 

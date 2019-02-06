@@ -60,9 +60,8 @@ object Main extends SexyOpt {
     parse(args)
     try {
       val specSource = CharStreams.fromFileName(tesslaFile)
-      val timeUnitSource = timeUnit.map(TesslaSource.fromString(_, "--timeunit"))
       if (verifyOnly || generateOsl || listInStreams || listOutStreams || computationDepth || recursionDepth || nodeCount) {
-        val result = new Compiler().compile(specSource, timeUnitSource)
+        val result = new Compiler().compile(specSource, timeUnit)
         if (generateOsl) {
           println(unwrapResult(result.andThen(new OSL.Generator)))
           return
@@ -96,17 +95,17 @@ object Main extends SexyOpt {
         }
         val abortAtValue = abortAt.map(BigInt(_))
         val output = unwrapResult {
-          Interpreter.runCtf(specSource, traceFile.get, timeUnit = timeUnitSource, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
+          Interpreter.runCtf(specSource, traceFile.get, timeUnit = timeUnit.value, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
         }
         output.foreach(println)
       } else {
         val abortAtValue = abortAt.map(BigInt(_))
-        val traceSource = traceFile.map(TesslaSource.fromFile).getOrElse(TesslaSource.stdin)
+        val traceSource = traceFile.map(CharStreams.fromFileName).getOrElse(CharStreams.fromStream(System.in))
         if (flattenInput) {
-          Interpreter.flattenInput(traceSource, timeUnitSource, abortAtValue).foreach(println)
+          Interpreter.flattenInput(traceSource, abortAtValue).foreach(println)
         } else {
           val output = unwrapResult {
-            Interpreter.runSpec(specSource, traceSource, timeUnit = timeUnitSource, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
+            Interpreter.runSpec(specSource, traceSource, timeUnit = timeUnit, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
           }
           output.foreach(println)
         }

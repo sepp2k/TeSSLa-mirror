@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.util.Lazy
-import de.uni_luebeck.isp.tessla.{BuiltIn, Compiler, Errors, Evaluator, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase}
+import de.uni_luebeck.isp.tessla._
 import org.antlr.v4.runtime.CharStream
 
 import scala.collection.mutable
@@ -154,7 +154,7 @@ object ValueTypeChecker {
           throw InputTypeMismatch(value, "List[?]", name, elementType, value.loc)
       }
     case o: TesslaCore.TesslaObject =>
-      val actual = o.value.keys.map {n => s"$n: ?"}.mkString("${", ", ", "}")
+      val actual = o.value.keys.map {n => s"$n: ?"}.mkString("{", ", ", "}")
       elementType match {
         case ot: TesslaCore.ObjectType =>
           if (ot.memberTypes.keySet != o.value.keySet) {
@@ -176,6 +176,8 @@ object ValueTypeChecker {
 }
 
 object Interpreter {
+  type Trace = Iterator[Trace.Event]
+
   class CoreToInterpreterSpec extends TranslationPhase[TesslaCore.Specification, Interpreter] {
     def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
   }
@@ -183,7 +185,7 @@ object Interpreter {
   class RunInterpreter(inputTrace: Trace, stopOn: Option[String]) extends TranslationPhase[Interpreter, Trace] {
 
     override def translateSpec(spec: Interpreter): Trace = {
-      val eventIterator = new Iterator[Trace.Event] {
+      new Iterator[Trace.Event] {
         private var nextEvents = new mutable.Queue[Trace.Event]
         private var stopped = false
         private val seen = mutable.Set.empty[String]
@@ -195,7 +197,7 @@ object Interpreter {
                 if (!stopped) {
                   if (stopOn.isDefined && stopOn == nameOpt) stopped = true
                   val timeStamp = Trace.TimeStamp(Location.unknown, spec.getTime)
-                  val idOpt = nameOpt.map(Trace.Identifier(Location.unknown, _))
+                  val idOpt = nameOpt.map(Trace.Identifier(_, Location.unknown))
                   nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value.forceValue)
                 }
               case None =>
@@ -203,9 +205,9 @@ object Interpreter {
         }
 
         private def gatherValues(): Unit = {
-          while (nextEvents.isEmpty && inputTrace.events.hasNext) {
+          while (nextEvents.isEmpty && inputTrace.hasNext) {
             val specTime = spec.getTime
-            val event = inputTrace.events.next
+            val event = inputTrace.next
             val eventTime = event.timeStamp.time
             if (eventTime > specTime) {
               try {
@@ -250,41 +252,38 @@ object Interpreter {
           nextEvents.dequeue
         }
       }
-      new Trace(inputTrace.timeStampUnit, eventIterator)
     }
   }
 
   def runSpec(specSource: CharStream,
-              traceSource: TesslaSource,
+              traceSource: CharStream,
               stopOn: Option[String] = None,
-              timeUnit: Option[TesslaSource] = None,
+              timeUnit: Option[String] = None,
               printCore: Boolean = false,
               abortAt: Option[BigInt] = None,
              ): Result[Trace] = {
-    val flatTrace = flattenInput(traceSource, timeUnit, abortAt)
-    val core = new Compiler().applyPasses(specSource, flatTrace.timeStampUnit)
+    val flatTrace = flattenInput(traceSource, abortAt)
+    val tu = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
+    val core = new Compiler().applyPasses(specSource, tu)
     if (printCore) core.foreach(println)
     core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(flatTrace, stopOn))
   }
 
-  def flattenInput(traceSource: TesslaSource,
-              timeUnit: Option[TesslaSource] = None,
-              abortAt: Option[BigInt] = None,
-             ): Trace = {
-    val rawTrace: RawTrace = TraceParser.parseTrace(traceSource)
-    val tu = timeUnit.map(TimeUnit.parse).orElse(rawTrace.timeStampUnit)
-
-    new Trace(tu, new FlatEventIterator(rawTrace.eventRanges, abortAt))
+  def flattenInput(traceSource: CharStream,
+                   abortAt: Option[BigInt] = None,
+                  ): Trace = {
+    val rawTrace = new TraceParser().parseTrace(traceSource)
+    new FlatEventIterator(rawTrace, abortAt)
   }
 
   def runCtf(specSource: CharStream,
              ctfFileName: String,
              stopOn: Option[String] = None,
-             timeUnit: Option[TesslaSource] = None,
+             timeUnit: Option[String] = None,
              printCore: Boolean = false,
              abortAt: Option[BigInt] = None,
             ): Result[Trace] = {
-    val tu = timeUnit.map(TimeUnit.parse)
+    val tu = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
     val core = new Compiler().applyPasses(specSource, tu)
     if (printCore) core.foreach(println)
     val trace = Trace.fromCtfFile(ctfFileName, abortAt)

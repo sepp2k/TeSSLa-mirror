@@ -1,6 +1,7 @@
 {
   "spec": "timeunits.tessla",
   "input": "timeunits.input",
-  "expectedOutput": "timeunits.output"
+  "expectedOutput": "timeunits.output",
+  "timeUnit": "ms"
 }
             

@@ -12,7 +12,7 @@ name := "tessla"
 
 organization := "de.uni_luebeck.isp"
 
-version := s"0.6.5-development-SNAPSHOT"
+version := s"0.7.0-antlr-SNAPSHOT"
 
 scalaVersion := "2.12.7"
 
@@ -34,7 +34,6 @@ credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-rep
 
 libraryDependencies ++= Seq(
   "com.github.sepp2k" %% "sexyopt" % "0.1.1",
-  "de.uni_luebeck.isp" %% "compacom" % "0.2.8",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "com.typesafe.play" %% "play-json" % "2.6.6" % "test",
   "com.eclipsesource" %% "play-json-schema-validator" % "0.9.4" % "test",

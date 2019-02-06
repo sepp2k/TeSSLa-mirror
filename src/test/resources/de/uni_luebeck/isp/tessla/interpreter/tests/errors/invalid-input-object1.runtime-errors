@@ -1,1 +1,1 @@
-/errors/invalid-input-object1.input(1,7 - 1,10): Unexpected value of type Int (42), expected type ${x: Int, y: Int}, in input stream 'o'
+/errors/invalid-input-object1.input(1,8 - 1,10): Unexpected value of type Int (42), expected type {x: Int, y: Int}, in input stream 'o'

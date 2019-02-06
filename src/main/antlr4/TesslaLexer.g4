@@ -28,7 +28,7 @@ AT: '@';
 COMMA: ',';
 SEMI: ';';
 DOT: '.';
-ELLIPSIS: '...';
+DOTDOT: '..';
 COLONEQ: ':=';
 ROCKET: '=>';
 DOLLAR_BRACE: '${';
@@ -83,8 +83,10 @@ DECINT: [\p{Nd}]+;
 HEXINT: '0x'[\p{Nd}a-fA-F\uFF21-\uFF26\uFF41-\uFF46]+;
 FLOAT: [\p{Nd}]+'.'[\p{Nd}]+;
 
-DOCLINE: ('---' | '##') .*? ('\r'? '\n')+;
-LINE_COMMENT: ('--' | '#') .*? ('\r'? '\n')+;
+DOCLINE: ('---' | '##') [^\n]* ('\r'? '\n')+;
+// Skip the comment, but not the linebreak at the end of the comment. This way the parser will still see a
+// linebreak that terminates a statement when a comment is written on the same line as a statement.
+LINE_COMMENT: ('--' | '#') ~'\n'* -> skip;
 ESCAPED_NEWLINE: '\\\n' -> skip;
 NL: '\r'? '\n';
 WS: [ \t]+ -> skip;

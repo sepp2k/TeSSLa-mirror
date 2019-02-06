@@ -180,7 +180,7 @@ object TesslaCore extends HasUniqueIdentifiers {
       if (value.keys.toSet == tupleKeys.toSet) {
         tupleKeys.map(k => value(k)).mkString("(", ", ", ")")
       } else {
-        value.map { case (name, v) => s"$name = $v" }.mkString("${", ", ", "}")
+        value.map { case (name, v) => s"$name = $v" }.mkString("{", ", ", "}")
       }
     }
   }
@@ -246,7 +246,14 @@ object TesslaCore extends HasUniqueIdentifiers {
   }
 
   case class ObjectType(memberTypes: Map[String, ValueType]) extends ValueType {
-    override def toString = memberTypes.map {case (name, typ) => s"$name: $typ"}.mkString("${", ", ", "}")
+    override def toString = {
+      val tupleKeys = (1 to memberTypes.keys.size).map(i => s"_$i")
+      if (memberTypes.keys.toSet == tupleKeys.toSet) {
+        memberTypes.mkString("(", ", ", ")")
+      } else {
+        memberTypes.map { case (name, t) => s"$name: $t" }.mkString("{", ", ", "}")
+      }
+    }
   }
 
   case class MapType(keyType: ValueType, valueType: ValueType) extends ValueType {

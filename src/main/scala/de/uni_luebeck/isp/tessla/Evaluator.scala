@@ -46,6 +46,13 @@ object Evaluator {
     case v => throw InternalError(s"Type error should've been caught by type checker: Expected: List, got: $v", v.loc)
   }
 
+  def evalToString(arg: TesslaCore.ValueOrError): String = {
+    arg.forceValue match {
+      case s: TesslaCore.StringValue => s.value
+      case _ => arg.toString
+    }
+  }
+
   def evalPrimitiveOperator(op: BuiltIn.PrimitiveOperator,
                             arguments: Seq[TesslaCore.ValueOrError],
                             loc: Location): Option[TesslaCore.ValueOrError] = {
@@ -204,10 +211,7 @@ object Evaluator {
           val s2 = getString(arguments(1))
           Some(TesslaCore.StringValue(s1 + s2, loc))
         case BuiltIn.ToString =>
-          arguments(0).forceValue match {
-            case s: TesslaCore.StringValue => Some(s.withLoc(loc))
-            case arg => Some(TesslaCore.StringValue(arg.toString, loc))
-          }
+          Some(TesslaCore.StringValue(evalToString(arguments(0)), loc))
         case BuiltIn.CtfGetInt =>
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))

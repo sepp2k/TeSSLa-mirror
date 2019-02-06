@@ -20,10 +20,10 @@ class Compiler {
   }
 
   def compile(src: CharStream,
-              timeUnitSource: Option[TesslaSource],
+              timeUnit: Option[String],
               printCore: Boolean = false) = {
-    val timeUnit = timeUnitSource.map(TimeUnit.parse)
-    val result = applyPasses(src, timeUnit)
+    val parsedTimeUnit = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
+    val result = applyPasses(src, parsedTimeUnit)
     if (printCore) result.andThen(new Printer[TesslaCore.Specification])
     else result
   }

@@ -1,7 +1,0 @@
-{
-  "spec": "timeunits-unknown-error.tessla",
-  "input": "timeunits-unknown-error.input",
-  "expectedOutput": "timeunits-unknown-error.output",
-  "expectedRuntimeErrors": "timeunits-unknown-error.runtime-errors"
-}
-            

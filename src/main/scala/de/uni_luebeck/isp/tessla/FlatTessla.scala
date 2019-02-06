@@ -177,7 +177,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
       if (memberTypes.keys.toSet == tupleKeys.toSet && !isOpen) {
         memberTypes.mkString("(", ", ", ")")
       } else {
-        var members = memberTypes.map { case (name, t) => s"$name : $t" }.toSeq
+        var members = memberTypes.map { case (name, t) => s"$name: $t" }.toSeq
         if (isOpen) {
           members :+= "..."
         }
