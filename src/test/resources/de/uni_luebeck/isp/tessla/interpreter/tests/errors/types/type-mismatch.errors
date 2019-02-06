@@ -3,7 +3,7 @@
 /errors/types/type-mismatch.tessla(4,1 - 4,27): Type mismatch: Expected [](Int) => String, found [](Int) => Int
 /errors/types/type-mismatch.tessla(7,7 - 7,15): Type mismatch: Expected Int, found String
 /errors/types/type-mismatch.tessla(9,5 - 9,6): Type mismatch: Expected stream or value type, found [](Int) => Int
-/errors/types/type-mismatch.tessla(12,9 - 12,10): Type mismatch: Expected [](Int) => Unit, found [](Int) => Int
+/errors/types/type-mismatch.tessla(12,9 - 12,10): Type mismatch: Expected [](Int) => (), found [](Int) => Int
 /errors/types/type-mismatch.tessla(15,17 - 15,25): Type mismatch: Expected Int, found String
 /errors/types/type-mismatch.tessla(18,13 - 18,21): Type mismatch: Expected value type, found Events[Int]
 /errors/types/type-mismatch.tessla(18,23 - 18,31): Type mismatch: Expected value type, found Events[Int]

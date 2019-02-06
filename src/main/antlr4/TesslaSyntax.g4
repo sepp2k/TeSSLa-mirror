@@ -41,7 +41,7 @@ type
     : name=ID #SimpleType
     | name=ID '[' typeArguments+=type (',' typeArguments+=type)* ']' #TypeApplication
     | '(' parameterTypes+=type (',' parameterTypes+=type)* ')' '=>' resultType=type #FunctionType
-    | (DOLLAR_BRACE | '{') nl* (memberSigs+=memberSig (',' nl* memberSigs+=memberSig)* ','?)? nl* '}' #ObjectType
+    | (DOLLAR_BRACE | '{') nl* (memberSigs+=memberSig (',' nl* memberSigs+=memberSig)* (',' '...'?)?)? nl* '}' #ObjectType
     | '(' (elementTypes+=type (',' elementTypes+=type)*)? ')' #TupleType
     ;
 

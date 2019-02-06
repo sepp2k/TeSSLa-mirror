@@ -133,12 +133,6 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = "Bool"
   }
 
-  case object UnitType extends Type {
-    override def isValueType = true
-
-    override def toString = "Unit"
-  }
-
   case class OptionType(elementType: Type) extends Type {
     override def isValueType = true
 
@@ -175,10 +169,21 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = s"Events[$elementType]"
   }
 
-  case class ObjectType(memberTypes: Map[String, Type]) extends Type {
+  case class ObjectType(memberTypes: Map[String, Type], isOpen: Boolean) extends Type {
     override def isValueType = memberTypes.values.forall(_.isValueType)
 
-    override def toString = memberTypes.map {case (name, t) => s"$name : $t"}.mkString("${", ", ", "}")
+    override def toString = {
+      val tupleKeys = (1 to memberTypes.keys.size).map(i => s"_$i")
+      if (memberTypes.keys.toSet == tupleKeys.toSet && !isOpen) {
+        memberTypes.mkString("(", ", ", ")")
+      } else {
+        var members = memberTypes.map { case (name, t) => s"$name : $t" }.toSeq
+        if (isOpen) {
+          members :+= "..."
+        }
+        members.mkString("{", ", ", "}")
+      }
+    }
   }
 
   case class FunctionType(typeParameters: Seq[Identifier], parameterTypes: Seq[Type], returnType: Type,

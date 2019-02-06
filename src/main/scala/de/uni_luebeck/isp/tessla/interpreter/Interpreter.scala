@@ -121,10 +121,6 @@ object ValueTypeChecker {
       if (elementType != TesslaCore.BoolType) {
         throw InputTypeMismatch(value, "Bool", name, elementType, value.loc)
       }
-    case _: TesslaCore.Unit =>
-      if (elementType != TesslaCore.UnitType) {
-        throw InputTypeMismatch(value, "Unit", name, elementType, value.loc)
-      }
     case o: TesslaCore.TesslaOption =>
       elementType match {
         case ot: TesslaCore.OptionType =>

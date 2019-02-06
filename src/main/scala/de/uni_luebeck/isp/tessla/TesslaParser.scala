@@ -152,7 +152,7 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
       val memberTypes = typ.memberSigs.asScala.map { sig =>
         (mkID(sig.name), translateType(sig.`type`))
       }
-      Tessla.ObjectType(memberTypes, Location.fromNode(typ))
+      Tessla.ObjectType(memberTypes, isOpen = typ.ELLIPSIS != null, Location.fromNode(typ))
     }
 
     override def visitTupleType(typ: TesslaSyntax.TupleTypeContext) = {
@@ -191,9 +191,7 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
     }
 
     override def visitTupleExpression(exp: TesslaSyntax.TupleExpressionContext) = {
-      if (exp.elems.isEmpty) {
-        Tessla.Literal(Tessla.Unit, Location.fromNode(exp))
-      } else if (exp.elems.size == 1 && exp.lastComma == null) {
+      if (exp.elems.size == 1 && exp.lastComma == null) {
         visit(exp.elems.get(0))
       } else {
         Tessla.Tuple(exp.elems.asScala.map(visit), Location.fromNode(exp))

@@ -279,7 +279,7 @@ class Specification() {
           case Some(target) if target == getTime =>
             newTriggered = true
             targetTime = None
-            propagate(Some(TesslaCore.Unit(Location.builtIn)))
+            propagate(Some(TesslaCore.TesslaObject(Map(), Location.builtIn)))
           case _ =>
             newTriggered = false
             propagate(None)

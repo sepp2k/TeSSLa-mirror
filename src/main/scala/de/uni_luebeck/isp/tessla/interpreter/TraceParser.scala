@@ -122,7 +122,8 @@ object TraceParser extends Parsers {
     def event: Parser[EventRange] =
       (((timeRange <~ COLON) ~ identifier) ~ (EQ ~> equivalence).?) ^^! {
         case (loc, ((time, id), v)) =>
-          EventRange(Location(loc, path), time, id, v.getOrElse(RawTrace.Literal(TesslaCore.Unit(Location(loc, path)), Location(loc, path))))
+          EventRange(Location(loc, path), time, id,
+            v.getOrElse(RawTrace.Literal(TesslaCore.TesslaObject(Map(), Location(loc, path)), Location(loc, path))))
       }
 
     def equivalence: Parser[RawTrace.TraceOp] =
@@ -202,7 +203,7 @@ object TraceParser extends Parsers {
           case (loc, v) => RawTrace.Neg(v, Location(loc, path))
         } |
         LPAREN ~> equivalence.? <~ RPAREN ^^! {
-          case (loc, None) => RawTrace.Literal(TesslaCore.Unit(Location(loc, path)), Location(loc, path))
+          case (loc, None) => RawTrace.Literal(TesslaCore.TesslaObject(Map(), Location(loc, path)), Location(loc, path))
           case (_, Some(exp)) => exp
         } |
         atomic
@@ -248,7 +249,7 @@ object TraceParser extends Parsers {
 
     def unit: Parser[TesslaCore.Value] =
       LPAREN ~ RPAREN ^^^! {
-        loc => TesslaCore.Unit(Location(loc, path))
+        loc => TesslaCore.TesslaObject(Map(), Location(loc, path))
       }
 
     def literalWithUnit: Parser[TesslaCore.Value] = literal | unit

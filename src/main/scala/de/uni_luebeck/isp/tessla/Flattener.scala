@@ -39,7 +39,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
   val builtInTypes: Map[String, FlatTessla.TypeEntry] = Map(
     "Int" -> FlatTessla.IntType,
     "String" -> FlatTessla.StringType,
-    "Unit" -> FlatTessla.UnitType,
+    "Unit" -> FlatTessla.ObjectType(Map(), isOpen = false),
     "Bool" -> FlatTessla.BoolType,
     "CTF" -> FlatTessla.CtfType
   ).map {
@@ -266,14 +266,14 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
         case (id, t) =>
           id.name -> translateType(t, scope, env)
       }
-      FlatTessla.ObjectType(memberTypes.toMap)
+      FlatTessla.ObjectType(memberTypes.toMap, ot.isOpen)
 
     case tt: Tessla.TupleType =>
       val memberTypes = tt.elementTypes.zipWithIndex.map {
         case (t, idx) =>
           s"_${idx+1}" -> translateType(t, scope, env)
       }
-      FlatTessla.ObjectType(memberTypes.toMap)
+      FlatTessla.ObjectType(memberTypes.toMap, isOpen = false)
   }
 
   def translateExpression(expr: Tessla.Expression, scope: FlatTessla.Scope, env: Env): FlatTessla.Expression = expr match {

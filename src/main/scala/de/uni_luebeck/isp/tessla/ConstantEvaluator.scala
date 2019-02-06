@@ -92,7 +92,6 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     case TypedTessla.IntType => TesslaCore.IntType
     case TypedTessla.StringType => TesslaCore.StringType
     case TypedTessla.BoolType => TesslaCore.BoolType
-    case TypedTessla.UnitType => TesslaCore.UnitType
     case TypedTessla.CtfType => TesslaCore.CtfType
     case TypedTessla.OptionType(t) => TesslaCore.OptionType(translateValueType(t, env))
     case TypedTessla.MapType(k, v) => TesslaCore.MapType(translateValueType(k, env), translateValueType(v, env))
@@ -124,8 +123,6 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       TesslaCore.StringValue(str, loc)
     case Tessla.BoolLiteral(bool) =>
       TesslaCore.BoolValue(bool, loc)
-    case Tessla.Unit =>
-      TesslaCore.Unit(loc)
   }
 
   def translateEntry(env: Env, wrapper: EnvEntryWrapper): Unit = wrapper.entry match {

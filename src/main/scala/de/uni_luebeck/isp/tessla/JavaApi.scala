@@ -65,7 +65,7 @@ object JavaApi {
       provide(stream, TesslaCore.StringValue(value, Location.unknown))
 
     def provide(stream: String): Boolean =
-      provide(stream, TesslaCore.Unit(Location.unknown))
+      provide(stream, TesslaCore.TesslaObject(Map(), Location.unknown))
 
     def provide(stream: String, value: TesslaCore.Value): Boolean =  {
       if (seen.contains(stream)) {

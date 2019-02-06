@@ -185,10 +185,6 @@ object Tessla {
 
   case class BoolLiteral(value: Boolean) extends LiteralValue
 
-  case object Unit extends LiteralValue {
-    override def value = ()
-  }
-
   abstract class Argument {
     def loc: Location
   }
@@ -224,8 +220,14 @@ object Tessla {
     def withLoc(loc: Location): FunctionType = copy(loc = loc)
   }
 
-  case class ObjectType(memberTypes: Seq[(Identifier, Type)], loc: Location) extends Type {
-    override def toString = memberTypes.map {case (name, t) => s"$name : $t"}.mkString("${", ", ", "}")
+  case class ObjectType(memberTypes: Seq[(Identifier, Type)], isOpen: Boolean, loc: Location) extends Type {
+    override def toString = {
+      var members = memberTypes.map {case (name, t) => s"$name : $t"}.toSeq
+      if (isOpen) {
+        members :+= "..."
+      }
+      members.mkString("{", ", ", "}")
+    }
     def withLoc(loc: Location): ObjectType = copy(loc = loc)
   }
 

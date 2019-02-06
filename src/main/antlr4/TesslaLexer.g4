@@ -28,6 +28,7 @@ AT: '@';
 COMMA: ',';
 SEMI: ';';
 DOT: '.';
+ELLIPSIS: '...';
 COLONEQ: ':=';
 ROCKET: '=>';
 DOLLAR_BRACE: '${';

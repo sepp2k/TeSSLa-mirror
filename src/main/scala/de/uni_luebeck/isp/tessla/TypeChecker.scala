@@ -51,7 +51,6 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     case FlatTessla.IntType => TypedTessla.IntType
     case FlatTessla.BoolType => TypedTessla.BoolType
     case FlatTessla.StringType => TypedTessla.StringType
-    case FlatTessla.UnitType => TypedTessla.UnitType
     case FlatTessla.OptionType(t) => TypedTessla.OptionType(translateType(t, env))
     case FlatTessla.CtfType => TypedTessla.CtfType
     case s: FlatTessla.StreamType =>
@@ -68,7 +67,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     case s: FlatTessla.ListType =>
       TypedTessla.ListType(translateType(s.elementType, env))
     case o: FlatTessla.ObjectType =>
-      TypedTessla.ObjectType(mapValues(o.memberTypes)(translateType(_, env)))
+      TypedTessla.ObjectType(mapValues(o.memberTypes)(translateType(_, env)), o.isOpen)
     case tvar: FlatTessla.TypeParameter =>
       TypedTessla.TypeParameter(env(tvar.id), tvar.loc)
   }
@@ -231,17 +230,16 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         TypedTessla.OptionType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.MapType(k, v), TypedTessla.MapType(k2, v2)) =>
         TypedTessla.MapType(typeSubst(k, k2, typeParams, substitutions, loc), typeSubst(v, v2, typeParams, substitutions, loc))
-      case (TypedTessla.ObjectType(expectedMembers), TypedTessla.ObjectType(actualMembers)) =>
-        val members = expectedMembers.map {
+      case (expected: TypedTessla.ObjectType, actual: TypedTessla.ObjectType) =>
+        val members = expected.memberTypes.map {
           case (name, expectedMemberType) =>
-            name -> actualMembers.get(name).map { actualMemberType =>
+            name -> actual.memberTypes.get(name).map { actualMemberType =>
               typeSubst(expectedMemberType, actualMemberType, typeParams, substitutions, loc)
             }.getOrElse(expectedMemberType)
         }
-        TypedTessla.ObjectType(members)
+        TypedTessla.ObjectType(members, expected.isOpen)
       case (TypedTessla.IntType, TypedTessla.IntType)
          | (TypedTessla.BoolType, TypedTessla.BoolType)
-         | (TypedTessla.UnitType, TypedTessla.UnitType)
          | (TypedTessla.StringType, TypedTessla.StringType) =>
         expected
       case (left, right) =>
@@ -312,7 +310,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
 
         case BuiltIn.Delay =>
           val t = mkTVar("Resets")
-          FunctionType(Seq(t.id), Seq(StreamType(IntType), StreamType(t)), StreamType(UnitType), isLiftable = false)
+          val unitType = TypedTessla.ObjectType(Map(), isOpen = false)
+          FunctionType(Seq(t.id), Seq(StreamType(IntType), StreamType(t)), StreamType(unitType), isLiftable = false)
 
         case BuiltIn.Const =>
           val t1 = mkTVar("Old")
@@ -454,7 +453,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           FunctionType(Seq(), Seq(CtfType, StringType), StringType, isLiftable = true)
 
         case BuiltIn.TesslaInfo =>
-          ObjectType(Map("version" -> StringType))
+          ObjectType(Map("version" -> StringType), isOpen = false)
 
         case BuiltIn.StdLibCount =>
           val x = mkTVar("X")
@@ -504,7 +503,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       parent.memberTypes.forall {
         case (name, typ) =>
           child.memberTypes.get(name).exists(childTyp => isSubtypeOrEqual(parent = typ, child = childTyp))
-      }
+      } && (parent.isOpen || parent.memberTypes.keySet == child.memberTypes.keySet)
     case _ =>
       parent == child
   }
@@ -522,7 +521,6 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           case _: Tessla.TimeLiteral =>
             // TODO: Implement units of measure, this should contain the appropriate unit
             TypedTessla.IntType
-          case Tessla.Unit => TypedTessla.UnitType
           case _: Tessla.BoolLiteral => TypedTessla.BoolType
           case _: Tessla.StringLiteral => TypedTessla.StringType
         }
@@ -629,7 +627,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       case o: FlatTessla.ObjectLiteral =>
         val members = mapValues(o.members)(member => TypedTessla.IdLoc(env(member.id), member.loc))
         val memberTypes = mapValues(members)(member => typeMap(member.id))
-        TypedTessla.ObjectLiteral(members, o.loc) -> TypedTessla.ObjectType(memberTypes)
+        TypedTessla.ObjectLiteral(members, o.loc) -> TypedTessla.ObjectType(memberTypes, isOpen = false)
 
       case acc: FlatTessla.MemberAccess =>
         val receiver = env(acc.receiver.id)
