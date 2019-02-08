@@ -121,6 +121,13 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = "Int"
   }
 
+  case object FloatType extends Type {
+    override def isValueType = true
+
+    override def toString = "Float"
+  }
+
+
   case object StringType extends Type {
     override def isValueType = true
 

@@ -49,6 +49,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
 
   def translateType(typ: FlatTessla.Type, env: Env): TypedTessla.Type = typ match {
     case FlatTessla.IntType => TypedTessla.IntType
+    case FlatTessla.FloatType => TypedTessla.FloatType
     case FlatTessla.BoolType => TypedTessla.BoolType
     case FlatTessla.StringType => TypedTessla.StringType
     case FlatTessla.OptionType(t) => TypedTessla.OptionType(translateType(t, env))
@@ -239,6 +240,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         }
         TypedTessla.ObjectType(members, expected.isOpen)
       case (TypedTessla.IntType, TypedTessla.IntType)
+         | (TypedTessla.FloatType, TypedTessla.FloatType)
          | (TypedTessla.BoolType, TypedTessla.BoolType)
          | (TypedTessla.StringType, TypedTessla.StringType) =>
         expected
@@ -258,11 +260,26 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
            | BuiltIn.BitXor | BuiltIn.LeftShift | BuiltIn.RightShift =>
           FunctionType(Seq(), Seq(IntType, IntType), IntType, isLiftable = true)
 
+        case BuiltIn.FAdd | BuiltIn.FSub | BuiltIn.FMul | BuiltIn.FDiv | BuiltIn.Pow | BuiltIn.Log =>
+          FunctionType(Seq(), Seq(FloatType, FloatType), FloatType, isLiftable = true)
+
         case BuiltIn.Negate | BuiltIn.BitFlip =>
           FunctionType(Seq(), Seq(IntType), IntType, isLiftable = true)
 
+        case BuiltIn.FNegate =>
+          FunctionType(Seq(), Seq(FloatType), FloatType, isLiftable = true)
+
+        case BuiltIn.FloatToInt =>
+          FunctionType(Seq(), Seq(FloatType), IntType, isLiftable = true)
+
+        case BuiltIn.IntToFloat =>
+          FunctionType(Seq(), Seq(IntType), FloatType, isLiftable = true)
+
         case BuiltIn.Lt | BuiltIn.Gt | BuiltIn.Gte | BuiltIn.Lte =>
           FunctionType(Seq(), Seq(IntType, IntType), BoolType, isLiftable = true)
+
+        case BuiltIn.FLt | BuiltIn.FGt | BuiltIn.FGte | BuiltIn.FLte =>
+          FunctionType(Seq(), Seq(FloatType, FloatType), BoolType, isLiftable = true)
 
         case BuiltIn.Eq | BuiltIn.Neq =>
           val t = mkTVar("T")
@@ -518,6 +535,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       case lit: FlatTessla.Literal =>
         val t = lit.value match {
           case _: Tessla.IntLiteral => TypedTessla.IntType
+          case _: Tessla.FloatLiteral => TypedTessla.FloatType
           case _: Tessla.TimeLiteral =>
             // TODO: Implement units of measure, this should contain the appropriate unit
             TypedTessla.IntType

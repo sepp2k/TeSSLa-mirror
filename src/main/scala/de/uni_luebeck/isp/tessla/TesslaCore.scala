@@ -163,6 +163,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def withLoc(loc: Location): IntValue = copy(loc = loc)
   }
 
+  final case class FloatValue(value: Double, loc: Location) extends PrimitiveValue {
+    override def withLoc(loc: Location): FloatValue = copy(loc = loc)
+  }
+
   final case class BoolValue(value: Boolean, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): BoolValue = copy(loc = loc)
   }
@@ -223,6 +227,10 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   case object IntType extends ValueType {
     override def toString = "Int"
+  }
+
+  case object FloatType extends ValueType {
+    override def toString = "Float"
   }
 
   case object BoolType extends ValueType {

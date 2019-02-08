@@ -27,6 +27,7 @@ expression
     : ID #Variable
     | DQUOTE stringContents* DQUOTE #StringLiteral
     | (DECINT | HEXINT) #IntLiteral
+    | FLOAT #FloatLiteral
     | 'true' #True
     | 'false' #False
     | '(' (elems+=expression (',' elems+=expression)*)? lastComma=','? ')' #TupleExpression
@@ -37,7 +38,7 @@ expression
     | 'Set' '(' (elems+=expression (',' elems+=expression)*)? ','? ')' #SetExpression
     | 'Map' '(' (elems+=keyVal (',' elems+=keyVal)*)? ','? ')' #MapExpression
     | op=('!' | '~' | '-') expression #UnaryExpression
-    | lhs=expression op=('*' | '/' | '%') rhs=expression #InfixExpression
+    | lhs=expression op=('*' | '/' | '%' | '*.' | '/.') rhs=expression #InfixExpression
     | lhs=expression op=('+' | '-') rhs=expression #InfixExpression
     | lhs=expression op=('<<' | '>>') rhs=expression #InfixExpression
     | lhs=expression op='&' rhs=expression #InfixExpression

@@ -90,6 +90,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
 
   def translateValueType(typ: TypedTessla.Type, env: Env): TesslaCore.ValueType = typ match {
     case TypedTessla.IntType => TesslaCore.IntType
+    case TypedTessla.FloatType => TesslaCore.FloatType
     case TypedTessla.StringType => TesslaCore.StringType
     case TypedTessla.BoolType => TesslaCore.BoolType
     case TypedTessla.CtfType => TesslaCore.CtfType
@@ -119,6 +120,8 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
           error(UndefinedTimeUnit(tu.loc))
           TesslaCore.IntValue(x, loc)
       }
+    case Tessla.FloatLiteral(f) =>
+      TesslaCore.FloatValue(f, loc)
     case Tessla.StringLiteral(str) =>
       TesslaCore.StringValue(str, loc)
     case Tessla.BoolLiteral(bool) =>

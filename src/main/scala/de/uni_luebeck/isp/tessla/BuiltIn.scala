@@ -92,6 +92,22 @@ object BuiltIn {
     override def name = "%"
   }
 
+  case object FAdd extends InfixOperator {
+    override def name = "+."
+  }
+
+  case object FSub extends InfixOperator {
+    override def name = "-."
+  }
+
+  case object FMul extends InfixOperator {
+    override def name = "*."
+  }
+
+  case object FDiv extends InfixOperator {
+    override def name = "/."
+  }
+
   case object BitAnd extends InfixOperator {
     override def name = "&"
   }
@@ -113,11 +129,15 @@ object BuiltIn {
   }
 
   case object BitFlip extends PrefixOperator {
-    override def name = "~"
+    override def name = "unary ~"
   }
 
   case object Negate extends PrefixOperator {
     override def name = "unary -"
+  }
+
+  case object FNegate extends PrefixOperator {
+    override def name = "unary -."
   }
 
   case object Lt extends InfixOperator {
@@ -136,6 +156,23 @@ object BuiltIn {
     override def name = ">="
   }
 
+  case object FLt extends InfixOperator {
+    override def name = "<."
+  }
+
+  case object FGt extends InfixOperator {
+    override def name = ">."
+  }
+
+  case object FLte extends InfixOperator {
+    override def name = "<=."
+  }
+
+  case object FGte extends InfixOperator {
+    override def name = ">=."
+  }
+
+
   case object Eq extends InfixOperator {
     override def name = "=="
   }
@@ -153,7 +190,7 @@ object BuiltIn {
   }
 
   case object Not extends PrefixOperator {
-    override def name = "!"
+    override def name = "unary !"
   }
 
   case object IfThenElse extends PrimitiveOperator {
@@ -162,6 +199,23 @@ object BuiltIn {
 
   case object IfThen extends PrimitiveOperator {
     override def name = "if then"
+  }
+
+  // Float functions
+  case object Pow extends PrimitiveOperator {
+    override def name = "pow"
+  }
+
+  case object Log extends PrimitiveOperator {
+    override def name = "log"
+  }
+
+  case object IntToFloat extends PrimitiveOperator {
+    override def name = "intToFloat"
+  }
+
+  case object FloatToInt extends PrimitiveOperator {
+    override def name = "floatToInt"
   }
 
   // Option operators
@@ -321,6 +375,10 @@ object BuiltIn {
     Mul,
     Div,
     Mod,
+    FAdd,
+    FSub,
+    FMul,
+    FDiv,
     BitAnd,
     BitOr,
     BitXor,
@@ -331,6 +389,10 @@ object BuiltIn {
     Gt,
     Lte,
     Gte,
+    FLt,
+    FGt,
+    FLte,
+    FGte,
     Eq,
     Neq,
     And,
@@ -339,6 +401,10 @@ object BuiltIn {
     First,
     IfThenElse,
     IfThen,
+    Pow,
+    Log,
+    IntToFloat,
+    FloatToInt,
     IsNone,
     None,
     Some,

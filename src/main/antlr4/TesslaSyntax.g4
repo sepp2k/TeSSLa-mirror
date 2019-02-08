@@ -49,6 +49,7 @@ expression
     : ID #Variable
     | stringLit #StringLiteral
     | (DECINT | HEXINT) timeUnit=ID? #IntLiteral
+    | FLOAT #FloatLiteral
     | 'true' #True
     | 'false' #False
     | '(' NL* (elems+=expression (',' NL* elems+=expression)*)? lastComma=','? NL* ')' #TupleExpression
@@ -59,13 +60,13 @@ expression
       | ('[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']')
       )  #FunctionCall
     | obj=expression '.' NL* fieldName=ID #MemberAccess
-    | op=('!' | '~' | '-') expression #UnaryExpression
-    | lhs=expression op=('*' | '/' | '%') NL* rhs=expression #InfixExpression
-    | lhs=expression op=('+' | '-') NL* rhs=expression #InfixExpression
+    | op=('!' | '~' | '-' | '-.') expression #UnaryExpression
+    | lhs=expression op=('*' | '/' | '%' | '*.' | '/.') NL* rhs=expression #InfixExpression
+    | lhs=expression op=('+' | '-' | '+.' | '-.') NL* rhs=expression #InfixExpression
     | lhs=expression op=('<<' | '>>') NL* rhs=expression #InfixExpression
     | lhs=expression op='&' NL* rhs=expression #InfixExpression
     | lhs=expression op=('|' | '^') NL* rhs=expression #InfixExpression
-    | lhs=expression op=('==' | '!=' | '<' | '>' | '<=' | '>=') NL* rhs=expression #InfixExpression
+    | lhs=expression op=('==' | '!=' | '<' | '>' | '<=' | '>=' | '<.' | '>.' | '<=.' | '>=.') NL* rhs=expression #InfixExpression
     | lhs=expression op='&&' NL* rhs=expression #InfixExpression
     | lhs=expression op='||' NL* rhs=expression #InfixExpression
     | ifToken='if' condition=expression NL* 'then' NL* thenCase=expression NL* ('else' NL* elseCase=expression)? #ITE

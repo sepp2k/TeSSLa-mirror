@@ -179,6 +179,8 @@ object Tessla {
     override def toString = s"$value $unit"
   }
 
+  case class FloatLiteral(value: Double) extends LiteralValue
+
   case class StringLiteral(value: String) extends LiteralValue {
     override def toString = s""""$value""""
   }

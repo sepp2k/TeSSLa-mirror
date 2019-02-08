@@ -113,6 +113,10 @@ object ValueTypeChecker {
       if (elementType != TesslaCore.IntType) {
         throw InputTypeMismatch(value, "Int", name, elementType, value.loc)
       }
+    case _: TesslaCore.FloatValue =>
+      if (elementType != TesslaCore.FloatType) {
+        throw InputTypeMismatch(value, "Float", name, elementType, value.loc)
+      }
     case _: TesslaCore.StringValue =>
       if (elementType != TesslaCore.StringType) {
         throw InputTypeMismatch(value, "String", name, elementType, value.loc)

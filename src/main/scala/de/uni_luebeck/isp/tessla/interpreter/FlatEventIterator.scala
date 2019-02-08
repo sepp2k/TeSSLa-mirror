@@ -51,6 +51,10 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
         }
       }
 
+      override def visitFloatLiteral(floatLit: FloatLiteralContext) = {
+        TesslaCore.FloatValue(floatLit.FLOAT.getText.toDouble, Location.fromNode(floatLit))
+      }
+
       def parseEscapeSequence(sequence: String, loc: Location): String = sequence match {
         case "\\r" => "\r"
         case "\\n" => "\n"
@@ -133,7 +137,7 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
       }
 
       override def visitUnaryExpression(exp: UnaryExpressionContext) = {
-        val operatorName = if (exp.op.getText == "-") "unary -" else exp.op.getText
+        val operatorName = s"unary ${exp.op.getText}"
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
         Evaluator.evalApplication(getOperator(operatorName, opLoc), Seq(visit(exp.expression)), loc).forceValue

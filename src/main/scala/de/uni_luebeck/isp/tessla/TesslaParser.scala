@@ -227,9 +227,8 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
     }
 
     override def visitUnaryExpression(exp: TesslaSyntax.UnaryExpressionContext) = {
-      val op = if (exp.op.getText == "-") "unary -" else exp.op.getText
       Tessla.MacroCall(
-        Tessla.Variable(Tessla.Identifier(op, Location.fromToken(exp.op))),
+        Tessla.Variable(Tessla.Identifier(s"unary ${exp.op.getText}", Location.fromToken(exp.op))),
         Seq(),
         Seq(Tessla.PositionalArgument(translateExpression(exp.expression))),
         Location.fromNode(exp)
@@ -298,6 +297,10 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
         val x = BigInt(intLit.HEXINT.getText.substring(2), 16)
         Tessla.Literal(mkLit(x), Location.fromNode(intLit))
       }
+    }
+
+    override def visitFloatLiteral(floatLit: TesslaSyntax.FloatLiteralContext) = {
+      Tessla.Literal(Tessla.FloatLiteral(floatLit.FLOAT.getText.toDouble), Location.fromNode(floatLit))
     }
 
     override def visitStringLiteral(str: TesslaSyntax.StringLiteralContext): Tessla.Expression = {

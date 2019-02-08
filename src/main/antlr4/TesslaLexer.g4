@@ -39,6 +39,10 @@ MINUS: '-';
 TIMES: '*';
 DIV: '/';
 MOD: '%';
+FPLUS: '+.';
+FMINUS: '-.';
+FTIMES: '*.';
+FDIV: '/.';
 AND: '&';
 OR: '|';
 XOR: '^';
@@ -51,6 +55,10 @@ GEQ: '>=';
 GT: '>';
 LT: '<';
 LEQ: '<=';
+FGEQ: '>=.';
+FGT: '>.';
+FLT: '<.';
+FLEQ: '<=.';
 ANDAND: '&&';
 OROR: '||';
 NOT: '!';
@@ -81,7 +89,7 @@ fragment NameStartChar
 ID: NameStartChar NameChar*;
 DECINT: [\p{Nd}]+;
 HEXINT: '0x'[\p{Nd}a-fA-F\uFF21-\uFF26\uFF41-\uFF46]+;
-FLOAT: [\p{Nd}]+'.'[\p{Nd}]+;
+FLOAT: [\p{Nd}]+ ('.' [\p{Nd}]+ ('e' [\p{Nd}]+)? | 'e' [\p{Nd}]+);
 
 DOCLINE: ('---' | '##') [^\n]* ('\r'? '\n')+;
 // Skip the comment, but not the linebreak at the end of the comment. This way the parser will still see a

@@ -38,6 +38,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
 
   val builtInTypes: Map[String, FlatTessla.TypeEntry] = Map(
     "Int" -> FlatTessla.IntType,
+    "Float" -> FlatTessla.FloatType,
     "String" -> FlatTessla.StringType,
     "Unit" -> FlatTessla.ObjectType(Map(), isOpen = false),
     "Bool" -> FlatTessla.BoolType,
