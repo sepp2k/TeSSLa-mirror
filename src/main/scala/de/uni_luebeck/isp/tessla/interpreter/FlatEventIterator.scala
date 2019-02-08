@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 
 class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
   val queue: mutable.PriorityQueue[EventRange] =
-    new mutable.PriorityQueue[EventRange]()(Ordering.by(ev => ev.from)).reverse
+    new mutable.PriorityQueue[EventRange]()(Ordering.by((ev: EventRange) => ev.from).reverse)
   var nextEvents = new mutable.Queue[Trace.Event]
   var eventCounter = 0
 
@@ -213,9 +213,10 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
   }
 
   def gatherValues(): Unit = {
-    nextEvents ++= generateEvent.toList
-    while (abortAt.forall(eventCounter < _) && nextEvents.isEmpty && eventRanges.hasNext) {
-      queue.enqueue(EventRange(eventRanges.next))
+    while (abortAt.forall(eventCounter <= _) && nextEvents.isEmpty && (queue.nonEmpty || eventRanges.hasNext)) {
+      if (eventRanges.hasNext) {
+        queue.enqueue(EventRange(eventRanges.next))
+      }
       nextEvents ++= generateEvent.toList
     }
   }

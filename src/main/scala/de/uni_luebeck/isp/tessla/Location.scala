@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import Location._
-import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
+import org.antlr.v4.runtime.tree.TerminalNode
 import org.antlr.v4.runtime.{ParserRuleContext, Token}
 
 sealed abstract class Location {
