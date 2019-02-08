@@ -4,7 +4,7 @@ import java.nio.channels.Channels
 import java.nio.charset.{CodingErrorAction, StandardCharsets}
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, OSL, TesslaSource, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{Compiler, OSL, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
