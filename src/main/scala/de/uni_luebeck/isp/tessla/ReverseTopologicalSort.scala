@@ -4,7 +4,7 @@ import scala.collection.mutable
 
 object ReverseTopologicalSort {
   sealed abstract class Result[Node]
-  final case class Sorted[Node](nodes: Iterable[Node]) extends Result[Node]
+  final case class Sorted[Node](nodes: Seq[Node]) extends Result[Node]
   final case class Cycles[Node](nodesInCycles: Seq[Node]) extends Result[Node]
 
   def sort[Node](startNodes: Iterable[Node])(getChildren: Node => Seq[Node]): Result[Node] = {

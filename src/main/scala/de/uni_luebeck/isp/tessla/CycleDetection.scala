@@ -11,15 +11,15 @@ package de.uni_luebeck.isp.tessla
   */
 class CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
   override def translateSpec(spec: TesslaCore.Specification): TesslaCore.Specification = {
-    val streams = spec.streams.toMap
+    val streams = spec.streams.map {s => s.id -> s}.toMap
 
-    def resolveStream(s: TesslaCore.StreamRef): Seq[(TesslaCore.Identifier, TesslaCore.Expression)] = s match {
+    def resolveStream(s: TesslaCore.StreamRef): Seq[TesslaCore.StreamDescription] = s match {
       case _: TesslaCore.Nil | _: TesslaCore.InputStream => Seq()
-      case stream: TesslaCore.Stream => Seq(stream.id -> streams(stream.id))
+      case stream: TesslaCore.Stream => Seq(streams(stream.id))
     }
 
-    def requiredStreams(streamDef: (TesslaCore.Identifier, TesslaCore.Expression)): Seq[(TesslaCore.Identifier, TesslaCore.Expression)] = {
-      streamDef._2 match {
+    def requiredStreams(streamDef: TesslaCore.StreamDescription): Seq[TesslaCore.StreamDescription] = {
+      streamDef.expression match {
         case c: TesslaCore.Const => resolveStream(c.stream)
         case d: TesslaCore.Default => resolveStream(d.stream)
         case d: TesslaCore.DefaultFrom => resolveStream(d.valueStream) ++ resolveStream(d.defaultStream)
@@ -33,11 +33,10 @@ class CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCo
         case c: TesslaCore.StdLibCount => resolveStream(c.stream)
       }
     }
-    ReverseTopologicalSort.sort(streams)(requiredStreams) match {
+    ReverseTopologicalSort.sort(streams.values)(requiredStreams) match {
       case ReverseTopologicalSort.Cycles(nodesInCycles) =>
-        val errors = nodesInCycles.flatMap {
-          case (id, streamDef) =>
-            id.nameOpt.map(_ => Errors.InfiniteRecursion(streamDef.loc))
+        val errors = nodesInCycles.flatMap { stream =>
+            stream.id.nameOpt.map(_ => Errors.InfiniteRecursion(stream.expression.loc))
         }.toIndexedSeq
         // Add all but the last error to the error list and then throw the last.
         // We need to throw one of them, so the execution does not continue, but we also want to record the others. We
@@ -49,7 +48,7 @@ class CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCo
         throw errors.last
 
       case ReverseTopologicalSort.Sorted(sortedNodes) =>
-        spec.copy(streams = sortedNodes.toSeq)
+        spec.copy(streams = sortedNodes)
     }
   }
 }

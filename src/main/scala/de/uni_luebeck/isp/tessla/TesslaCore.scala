@@ -5,13 +5,28 @@ import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
-  final case class Specification(streams: Seq[(Identifier, Expression)],
-                                 inStreams: Seq[(String, StreamType, Location)],
-                                 outStreams: Seq[(Option[String], StreamRef, StreamType)]) {
+  final case class Specification(streams: Seq[StreamDescription],
+                                 inStreams: Seq[InStreamDescription],
+                                 outStreams: Seq[OutStreamDescription]) {
     override def toString = {
-      inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
-        streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +
-        outStreams.map { case (name, stream, typ) => s"out $stream : $typ as $name\n" }.mkString
+      inStreams.map { is => s"$is\n" }.mkString +
+        streams.map { s => s"$s\n" }.mkString +
+        outStreams.map { os => s"$os\n" }.mkString
+    }
+  }
+
+  case class StreamDescription(id: Identifier, expression: Expression, typ: StreamType) {
+    override def toString = s"def $id: $typ = $expression"
+  }
+
+  case class InStreamDescription(name: String, typ: StreamType, loc: Location) {
+    override def toString = s"in $name: $typ"
+  }
+
+  case class OutStreamDescription(nameOpt: Option[String], stream: StreamRef, typ: StreamType) {
+    override def toString = nameOpt match {
+      case Some(name) => s"out $stream: $typ as $name\n"
+      case None => s"print $stream: $typ"
     }
   }
 

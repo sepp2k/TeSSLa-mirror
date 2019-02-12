@@ -4,16 +4,20 @@ import scala.collection.mutable
 
 object RecursiveDepthChecker {
   def nestingDepth(spec: TesslaCore.Specification): Int = {
-    val streams = spec.streams.toMap
-    spec.streams.collect {
-      case (id, l: TesslaCore.Last) =>
-        nestingDepth(streams, l.values, id)
-      case (id, dl: TesslaCore.DelayedLast) =>
-        Math.max(
-          nestingDepth(streams, dl.values, id),
-          nestingDepth(streams, dl.delays, id))
-      case (id, d: TesslaCore.Delay) =>
-        nestingDepth(streams, d.delays, id)
+    val streams = spec.streams.map {s => s.id -> s.expression}.toMap
+    spec.streams.flatMap { s =>
+      s.expression match {
+        case l: TesslaCore.Last =>
+          Some(nestingDepth(streams, l.values, s.id))
+        case dl: TesslaCore.DelayedLast =>
+          Some(Math.max(
+            nestingDepth(streams, dl.values, s.id),
+            nestingDepth(streams, dl.delays, s.id)))
+        case d: TesslaCore.Delay =>
+          Some(nestingDepth(streams, d.delays, s.id))
+        case _ =>
+          None
+      }
     }.fold(0)(math.max)
   }
 

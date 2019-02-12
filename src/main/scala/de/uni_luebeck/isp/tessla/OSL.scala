@@ -50,8 +50,8 @@ object OSL {
     case class Cond(conditions: Condition) extends ProtoStatement
 
     override def translateSpec(spec: TesslaCore.Specification) = {
-      streams = spec.streams.toMap
-      val protoStatements = spec.outStreams.map(_._2).flatMap(translateStreamRef)
+      streams = spec.streams.map(s => s.id -> s.expression).toMap
+      val protoStatements = spec.outStreams.map(_.stream).flatMap(translateStreamRef)
       val mergedConditions = protoStatements.foldLeft(Map[Option[String], Set[String]]()) {
         case (m, Cond(cond)) =>
           val props = cond.properties

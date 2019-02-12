@@ -8,7 +8,7 @@ import de.uni_luebeck.isp.tessla.util._
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.IdentifierFactory with TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
   type Env = Map[TypedTessla.Identifier, EnvEntryWrapper]
-  private val translatedStreams = mutable.Map[TesslaCore.Identifier, TesslaCore.Expression]()
+  private val translatedStreams = mutable.Map[TesslaCore.Identifier, (TesslaCore.Expression, TesslaCore.StreamType)]()
   private val stack = mutable.ArrayStack[Location]()
 
   case class EnvEntryWrapper(var entry: EnvEntry)
@@ -41,12 +41,16 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       translateEnv(env)
       val inputStreams = spec.globalScope.variables.collect {
         case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
-          (is.name, translateStreamType(typ, env), is.loc)
+          TesslaCore.InStreamDescription(is.name, translateStreamType(typ, env), is.loc)
       }
       val outputStreams = spec.outStreams.map { os =>
-        (os.nameOpt, getStream(env(os.id).entry, os.loc), getStreamType(env(os.id).entry))
+        val s = getStream(env(os.id).entry, os.loc)
+        TesslaCore.OutStreamDescription(os.nameOpt, s, getStreamType(env(os.id).entry))
       }
-      TesslaCore.Specification(translatedStreams.toSeq, inputStreams.toSeq, outputStreams)
+      val streams = translatedStreams.map {
+        case (n, (e, t)) => TesslaCore.StreamDescription(n,e,t)
+      }
+      TesslaCore.Specification(streams.toSeq, inputStreams.toSeq, outputStreams)
     } catch {
       case err: TesslaError =>
         throw WithStackTrace(err, stack)
@@ -237,7 +241,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
           val id = makeIdentifier(nameOpt)
           val translatedType = translateStreamType(typ, env)
           wrapper.entry = Translated(Lazy(StreamEntry(id, translatedType)))
-          translatedStreams(id) = coreExp
+          translatedStreams(id) = (coreExp, translatedType)
           wrapper.entry
         }
         // No checks regarding arity or non-existing or duplicate named arguments because those mistakes

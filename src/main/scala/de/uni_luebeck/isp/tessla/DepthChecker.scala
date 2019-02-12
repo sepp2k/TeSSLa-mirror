@@ -5,19 +5,20 @@ import scala.collection.mutable
 object DepthChecker {
   def nestingDepth(spec: TesslaCore.Specification): Int = {
     val memTable: mutable.Map[TesslaCore.Identifier, Int] = mutable.Map()
-    val streams = spec.streams.toMap
-    (spec.outStreams.map {
-      case (_, stream, _) =>
-        nestingDepth(streams, stream, memTable)
-    } ++ spec.streams.collect {
-      case (_, l: TesslaCore.Last) =>
-        nestingDepth(streams, l.values, memTable)
-      case (_, dl: TesslaCore.DelayedLast) =>
-        Math.max(
-          nestingDepth(streams, dl.values, memTable),
-          nestingDepth(streams, dl.delays, memTable))
-      case (_, d: TesslaCore.Delay) =>
-        nestingDepth(streams, d.delays, memTable)
+    val streams = spec.streams.map(s => s.id -> s.expression).toMap
+    (spec.outStreams.map { os => nestingDepth(streams, os.stream, memTable) } ++ spec.streams.flatMap { s =>
+      s.expression match {
+        case l: TesslaCore.Last =>
+          Some(nestingDepth(streams, l.values, memTable))
+        case dl: TesslaCore.DelayedLast =>
+          Some(Math.max(
+            nestingDepth(streams, dl.values, memTable),
+            nestingDepth(streams, dl.delays, memTable)))
+        case d: TesslaCore.Delay =>
+          Some(nestingDepth(streams, d.delays, memTable))
+        case _ =>
+          None
+      }
     }).fold(0)(math.max)
   }
 

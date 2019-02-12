@@ -5,10 +5,9 @@ import scala.collection.mutable
 object NodeCounter {
   def nodeCount(spec: TesslaCore.Specification): Int = {
     val visited: mutable.Set[TesslaCore.Identifier] = mutable.Set()
-    val streams = spec.streams.toMap
-    spec.outStreams.map {
-      case (_, stream, _) =>
-        nodeCount(streams, stream, visited)
+    val streams = spec.streams.map(s => s.id -> s.expression).toMap
+    spec.outStreams.map { os =>
+      nodeCount(streams, os.stream, visited)
     }.sum
   }
 

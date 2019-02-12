@@ -9,21 +9,22 @@ import org.antlr.v4.runtime.CharStream
 import scala.collection.mutable
 
 class Interpreter(val spec: TesslaCore.Specification) extends Specification {
-  val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.inStreams.map {
-    case (name, typ, _) =>
-      name -> (new Input, typ.elementType)
+  val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.inStreams.map {inStream =>
+    inStream.name -> (new Input, inStream.typ.elementType)
   }.toMap
 
   type Env = Map[TesslaCore.Identifier, TesslaCore.ValueOrError]
 
-  lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map {
-    case (name, exp) => (name, Lazy(eval(exp)))
+  lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map { stream =>
+    stream.id -> Lazy(eval(stream.expression))
   }.toMap
 
-  lazy val outStreams: Seq[(Option[String], Stream, TesslaCore.Type)] = spec.outStreams.map {
-    case (name, streamRef: TesslaCore.Stream, typ) => (name, defs(streamRef.id).get, typ)
-    case (name, streamRef: TesslaCore.InputStream, typ) => (name, inStreams(streamRef.name)._1, typ)
-    case (name, _: TesslaCore.Nil, typ) => (name, nil, typ)
+  lazy val outStreams: Seq[(Option[String], Stream, TesslaCore.Type)] = spec.outStreams.map { os =>
+    os.stream match {
+      case streamRef: TesslaCore.Stream => (os.nameOpt, defs(streamRef.id).get, os.typ)
+      case streamRef: TesslaCore.InputStream => (os.nameOpt, inStreams(streamRef.name)._1, os.typ)
+      case _: TesslaCore.Nil => (os.nameOpt, nil, os.typ)
+    }
   }
 
   private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {

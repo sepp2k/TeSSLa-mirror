@@ -69,11 +69,11 @@ object Main extends SexyOpt {
 
         val spec = unwrapResult(result)
         if (listInStreams) {
-          spec.inStreams.foreach { case (name, _, _) => println(name) }
+          spec.inStreams.foreach { is => println(is.name) }
           return
         }
         if (listOutStreams) {
-          spec.outStreams.foreach { case (name, _, _) => println(name) }
+          spec.outStreams.foreach { os => println(os.nameOpt.getOrElse(s"print ${os.stream}")) }
           return
         }
         if (computationDepth) {
