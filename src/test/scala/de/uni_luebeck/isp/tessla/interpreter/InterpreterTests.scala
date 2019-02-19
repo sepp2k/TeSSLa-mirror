@@ -4,12 +4,13 @@ import java.nio.channels.Channels
 import java.nio.charset.{CodingErrorAction, StandardCharsets}
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, OSL, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{Compiler, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
+import de.uni_luebeck.isp.tessla.analyses.OSL
 import org.antlr.v4.runtime.{CharStream, CharStreams}
 
 import scala.collection.mutable

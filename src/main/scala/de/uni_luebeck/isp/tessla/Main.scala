@@ -1,8 +1,10 @@
 package de.uni_luebeck.isp.tessla
 
 import java.io.IOException
+
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.analyses.{DepthChecker, NodeCounter, RecursiveDepthChecker, OSL}
 import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
