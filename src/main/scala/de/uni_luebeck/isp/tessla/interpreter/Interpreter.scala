@@ -35,12 +35,36 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.Nil(_) => nil
   }
 
+  def merge(stream1: Stream, stream2: Stream): Stream = {
+    lift(Seq(stream1, stream2)) {
+      case Seq(Some(value1), _) => Some(value1)
+      case Seq(None, value2Opt) => value2Opt
+    }
+  }
+
+  def slift(streams: Seq[Stream])(op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream = {
+    val ticks = lift(streams) { _ =>
+      Some(TesslaCore.TesslaObject(Map(), Location.builtIn))
+    }
+    val recentValueStreams = streams.map { stream =>
+      merge(stream, last(stream, ticks))
+    }
+    lift(recentValueStreams) { valueOptions =>
+      if (valueOptions.exists(_.isEmpty)) {
+        None
+      } else {
+        op(valueOptions.flatten)
+      }
+    }
+  }
+
+
   private def eval(exp: TesslaCore.Expression): Stream = exp match {
     case TesslaCore.SignalLift(op, argStreams, loc) =>
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)
       }
-      lift(argStreams.map(evalStream)) { arguments =>
+      slift(argStreams.map(evalStream)) { arguments =>
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => arg.mapValue(_.withLoc(stream.loc))
         }
@@ -50,7 +74,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)
       }
-      simpleLift(argStreams.map(evalStream)) { arguments =>
+      lift(argStreams.map(evalStream)) { arguments =>
         val args = arguments.zip(argStreams).map {
           case (Some(arg), stream) => arg.mapValue(a => TesslaCore.TesslaOption(Some(a), stream.loc))
           case (None, stream) => TesslaCore.TesslaOption(None, stream.loc)
@@ -66,11 +90,11 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.DefaultFrom(values, defaults, _) =>
       evalStream(values).default(evalStream(defaults))
     case TesslaCore.Const(value, stream, _) =>
-      lift(Seq(evalStream(stream))) { _ =>
+      slift(Seq(evalStream(stream))) { _ =>
         Some(value)
       }
     case TesslaCore.Last(values, clock, _) =>
-      last(evalStream(clock), evalStream(values))
+      last(evalStream(values), evalStream(clock))
     case TesslaCore.DelayedLast(values, delays, _) =>
       delayedLast(evalStream(delays), evalStream(values))
     case TesslaCore.Delay(delays, resets, _) =>
@@ -79,25 +103,16 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       evalStream(values).time(loc)
     case TesslaCore.StdLibCount(values, loc) =>
       val x = evalStream(values)
-      lazy val y: Stream = lift(Seq(last(x, y), nil.default(TesslaCore.IntValue(1, loc)))) { arguments =>
-        val args = arguments.map(_.mapValue(_.withLoc(loc)))
-        Evaluator.evalPrimitiveOperator(BuiltIn.Add, args, exp.loc)
+      lazy val y: Stream = lift(Seq(x, last(y, x))) {
+        case Seq(Some(_), Some(b)) =>
+          Some(b.mapValue(value => TesslaCore.IntValue(getInt(value) + 1, loc)))
+        case _ => Some(TesslaCore.IntValue(0, loc))
       }.default(TesslaCore.IntValue(0, loc))
       y
-    case TesslaCore.Merge(arg1, arg2, loc) =>
+    case TesslaCore.Merge(arg1, arg2, _) =>
       val stream1 = evalStream(arg1)
       val stream2 = evalStream(arg2)
-      val zero = TesslaCore.IntValue(0, loc)
-      lift(Seq(
-        stream1.time(loc).default(zero),
-        stream2.time(loc).default(zero),
-        stream1.default(stream2),
-        stream2.default(stream1)
-      )) {
-        case Seq(time1, time2, value1, value2) =>
-          if (getInt(time1.forceValue) >= getInt(time2.forceValue)) Some(value1)
-          else Some(value2)
-      }
+      merge(stream1, stream2)
   }
 
   def getInt(value: TesslaCore.Value): BigInt = value match {
