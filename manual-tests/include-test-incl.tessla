@@ -1,1 +1,1 @@
-def foo := "\a\b\c"
+def foo := "\c"

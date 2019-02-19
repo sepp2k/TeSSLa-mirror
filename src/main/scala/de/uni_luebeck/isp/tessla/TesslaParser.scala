@@ -8,10 +8,7 @@ import scala.collection.mutable.ArrayBuffer
 import java.nio.file.Paths
 
 class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
-  var path: String = _
-
   override def translateSpec(input: CharStream) = {
-    path = input.getSourceName
     val tokens = new CommonTokenStream(new TesslaLexer(input))
     val parser = new TesslaSyntax(tokens)
     parser.removeErrorListeners()
@@ -21,7 +18,7 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
       }
     })
     val spec = parser.spec()
-    if (errors.nonEmpty) {
+    if (parser.getNumberOfSyntaxErrors > 0) {
       val lastError = errors.remove(errors.length - 1)
       throw lastError
     }
@@ -30,9 +27,10 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
   }
 
   def translateInclude(include: TesslaSyntax.IncludeContext): Seq[Tessla.Statement] = {
+    val currentFile = include.getStart.getTokenSource.getSourceName
     // getParent returns null for relative paths without subdirectories (i.e. just a file name), which is
     // annoying and stupid. So we wrap the call in an option and fall back to "." as the default.
-    val dir = Option(Paths.get(path).getParent).getOrElse(Paths.get("."))
+    val dir = Option(Paths.get(currentFile).getParent).getOrElse(Paths.get("."))
     val includePath = dir.resolve(getIncludeString(include.file))
     translateSpec(CharStreams.fromFileName(includePath.toString)).statements
   }
