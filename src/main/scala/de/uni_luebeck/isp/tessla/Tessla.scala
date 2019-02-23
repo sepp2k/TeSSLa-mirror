@@ -224,7 +224,7 @@ object Tessla {
 
   case class ObjectType(memberTypes: Seq[(Identifier, Type)], isOpen: Boolean, loc: Location) extends Type {
     override def toString = {
-      var members = memberTypes.map {case (name, t) => s"$name : $t"}.toSeq
+      var members = memberTypes.map {case (name, t) => s"$name : $t"}
       if (isOpen) {
         members :+= "..."
       }

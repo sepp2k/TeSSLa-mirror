@@ -1,0 +1,21 @@
+--- f does stuff
+def f(x: Int) = g(y) where {
+    def g(a: Int) = a+1
+    --- Inner defs can have docs too
+    def y = x*x
+}
+
+## g also does some stuff and this is a "quote"
+## and we even have multiple lines
+
+## now
+def g[T](str: String, x: T): (String, T) = {
+    def double(s: String) = "$s$s"
+    (double(str), x)
+}
+
+--- Tata is a Map with the types switched
+type Tata[A,B] = Map[B, A]
+
+## Tni is an Int
+type Tni = Int

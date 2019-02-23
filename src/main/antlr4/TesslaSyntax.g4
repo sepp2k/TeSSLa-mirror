@@ -12,7 +12,7 @@ include: 'include' file=stringLit eos;
 
 statement
     : def #Definition
-    | 'type' name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* type eos #TypeDefinition
+    | tessladoc+=DOCLINE* NL* 'type' name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* type eos #TypeDefinition
     | 'in' ID (':' type)? eos # In
     | 'out' expression ('as' ID)? eos # Out
     | 'print' expression eos # Print

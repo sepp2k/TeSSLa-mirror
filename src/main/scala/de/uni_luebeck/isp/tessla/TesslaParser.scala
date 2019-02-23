@@ -5,58 +5,10 @@ import org.antlr.v4.runtime._
 import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
-import java.nio.file.Paths
 
-class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
-  override def translateSpec(input: CharStream) = {
-    val tokens = new CommonTokenStream(new TesslaLexer(input))
-    val parser = new TesslaSyntax(tokens)
-    parser.removeErrorListeners()
-    parser.addErrorListener(new BaseErrorListener {
-      override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException) = {
-        error(ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token])))
-      }
-    })
-    val spec = parser.spec()
-    if (parser.getNumberOfSyntaxErrors > 0) {
-      val lastError = errors.remove(errors.length - 1)
-      throw lastError
-    }
-    Tessla.Specification(spec.includes.asScala.flatMap(translateInclude) ++
-      spec.statements.asScala.map(translateStatement))
-  }
-
-  def translateInclude(include: TesslaSyntax.IncludeContext): Seq[Tessla.Statement] = {
-    val currentFile = include.getStart.getTokenSource.getSourceName
-    // getParent returns null for relative paths without subdirectories (i.e. just a file name), which is
-    // annoying and stupid. So we wrap the call in an option and fall back to "." as the default.
-    val dir = Option(Paths.get(currentFile).getParent).getOrElse(Paths.get("."))
-    val includePath = dir.resolve(getIncludeString(include.file))
-    translateSpec(CharStreams.fromFileName(includePath.toString)).statements
-  }
-
-  def parseEscapeSequence(sequence: String, loc: Location): String = sequence match {
-    case "\\r" => "\r"
-    case "\\n" => "\n"
-    case "\\t" => "\t"
-    case "\\a" => "\u0007"
-    case "\\\\" => "\\"
-    case "\\\"" => "\""
-    case other =>
-      error(InvalidEscapeSequence(other, loc))
-      other
-  }
-
-  def getIncludeString(stringLit: TesslaSyntax.StringLitContext): String = {
-    stringLit.stringContents.asScala.map { part =>
-      if (part.TEXT != null) part.TEXT.getText
-      else if (part.ESCAPE_SEQUENCE != null) {
-        parseEscapeSequence(part.ESCAPE_SEQUENCE.getText, Location.fromNode(part))
-      } else {
-        error(StringInterpolationInInclude(Location.fromNode(part)))
-        ""
-      }
-    }.mkString
+class TesslaParser extends AbstractTesslaParser[Tessla.Statement, Tessla.Specification] {
+  override def aggregateItems(statements: Seq[Tessla.Statement]) = {
+    Tessla.Specification(statements)
   }
 
   trait TesslaVisitor[T] extends TesslaSyntaxBaseVisitor[T] {
@@ -65,7 +17,7 @@ class TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
     }
   }
 
-  def translateStatement(stat: TesslaSyntax.StatementContext): Tessla.Statement = StatementVisitor.visit(stat)
+  override def translateStatement(stat: TesslaSyntax.StatementContext): Tessla.Statement = StatementVisitor.visit(stat)
 
   def translateDefinition(definition: TesslaSyntax.DefContext) = {
     val annotations = definition.header.annotations.asScala.map(_.ID).map(mkID)
