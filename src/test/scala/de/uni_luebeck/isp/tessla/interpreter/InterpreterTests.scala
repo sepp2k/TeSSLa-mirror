@@ -1,12 +1,17 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import java.nio.channels.Channels
+import java.nio.charset.{CodingErrorAction, StandardCharsets}
+
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, OSL, TesslaSource, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{Compiler, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
+import de.uni_luebeck.isp.tessla.analyses.OSL
+import org.antlr.v4.runtime.{CharStream, CharStreams}
 
 import scala.collection.mutable
 import scala.io.Source
@@ -135,7 +140,13 @@ class InterpreterTests extends FunSuite {
 
   testCases.foreach {
     case (path, name) =>
-      def testSource(file: String): TesslaSource = TesslaSource.fromJavaStream(getClass.getResourceAsStream(s"$root/$path/$file"), s"$path/$file")
+      def testStream(file: String): CharStream = {
+        val channel = Channels.newChannel(getClass.getResourceAsStream(s"$root/$path/$file"))
+        CharStreams.fromChannel(channel, StandardCharsets.UTF_8, 4096, CodingErrorAction.REPLACE, s"$path/$file", -1)
+      }
+      def testSource(file: String): Source = {
+        Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$file"))(StandardCharsets.UTF_8)
+      }
 
       val testCase = parseJson(s"$path/$name")
       test(s"$path/$name (Interpreter)") {
@@ -164,8 +175,8 @@ class InterpreterTests extends FunSuite {
           }
         }
 
-        def timeUnit = testCase.timeUnit.map(TesslaSource.fromString(_, s"$path/$name.json#timeunit"))
-        val src = testSource(testCase.spec)
+        val timeUnit = testCase.timeUnit
+        val src = testStream(testCase.spec)
         testCase.expectedOsl.foreach { oslFile =>
           val expectedOSL = semiParseOsl(testSource(oslFile).getLines)
           handleResult(new Compiler().compile(src, timeUnit).andThen(new OSL.Generator)) { osl =>
@@ -176,7 +187,7 @@ class InterpreterTests extends FunSuite {
         testCase.input match {
           case Some(input) =>
             try {
-              val result = Interpreter.runSpec(src, testSource(input),
+              val result = Interpreter.runSpec(src, testStream(input),
                 abortAt = testCase.abortAt.map(BigInt(_)),
                 timeUnit = timeUnit
               )

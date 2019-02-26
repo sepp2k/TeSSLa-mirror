@@ -22,7 +22,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     if (spec.outAll) {
       val streams = scope.variables.values.filter(entry => isStreamType(entry.typeInfo))
       outputStreams ++= streams.flatMap { entry =>
-        entry.id.nameOpt.map(name => TypedTessla.OutStream(entry.id, name, entry.loc))
+        entry.id.nameOpt.map(name => TypedTessla.OutStream(entry.id, Some(name), entry.loc))
       }
     }
     TypedTessla.Specification(scope, outputStreams, spec.outAllLocation, mapValues(stdlibNames)(env))
@@ -32,12 +32,12 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     val id = env(stream.id)
     typeMap(id) match {
       case _: TypedTessla.StreamType =>
-        TypedTessla.OutStream(id, stream.name, stream.loc)
+        TypedTessla.OutStream(id, stream.nameOpt, stream.loc)
       case t if t.isValueType =>
-        TypedTessla.OutStream(liftConstant(id, scope, env, stream.loc), stream.name, stream.loc)
+        TypedTessla.OutStream(liftConstant(id, scope, env, stream.loc), stream.nameOpt, stream.loc)
       case other =>
         error(TypeMismatch("stream or value type", other, stream.loc))
-        TypedTessla.OutStream(id, "<error>", stream.loc)
+        TypedTessla.OutStream(id, Some("<error>"), stream.loc)
     }
   }
 
@@ -49,9 +49,9 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
 
   def translateType(typ: FlatTessla.Type, env: Env): TypedTessla.Type = typ match {
     case FlatTessla.IntType => TypedTessla.IntType
+    case FlatTessla.FloatType => TypedTessla.FloatType
     case FlatTessla.BoolType => TypedTessla.BoolType
     case FlatTessla.StringType => TypedTessla.StringType
-    case FlatTessla.UnitType => TypedTessla.UnitType
     case FlatTessla.OptionType(t) => TypedTessla.OptionType(translateType(t, env))
     case FlatTessla.CtfType => TypedTessla.CtfType
     case s: FlatTessla.StreamType =>
@@ -68,7 +68,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     case s: FlatTessla.ListType =>
       TypedTessla.ListType(translateType(s.elementType, env))
     case o: FlatTessla.ObjectType =>
-      TypedTessla.ObjectType(mapValues(o.memberTypes)(translateType(_, env)))
+      TypedTessla.ObjectType(mapValues(o.memberTypes)(translateType(_, env)), o.isOpen)
     case tvar: FlatTessla.TypeParameter =>
       TypedTessla.TypeParameter(env(tvar.id), tvar.loc)
   }
@@ -169,17 +169,10 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
 
     ReverseTopologicalSort.sort(scope.variables.values)(requiredEntries(scope, _)) match {
       case ReverseTopologicalSort.Cycles(nodesInCycles) =>
-        val errors = nodesInCycles.flatMap { entry =>
-          entry.id.nameOpt.map(MissingTypeAnnotationRec(_, entry.loc))
-        }.toIndexedSeq
-        // Add all but the last error to the error list and then throw the last.
-        // We need to throw one of them, so the execution does not continue (possibly leading to missing key exceptions
-        // later), but we also want to record the others. We exclude the last from iteration, so it isn't reported twice
-        // (once in the loop and then again when throwing it afterwards)
-        errors.init.foreach { err =>
-          error(err)
+        nodesInCycles.foreach { entry =>
+          entry.id.nameOpt.foreach(name => error(MissingTypeAnnotationRec(name, entry.loc)))
         }
-        throw errors.last
+        abort()
       case ReverseTopologicalSort.Sorted(sorted) =>
         sorted.foreach { entry =>
           resultingScope.addVariable(translateEntry(entry, resultingScope, env))
@@ -231,17 +224,17 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         TypedTessla.OptionType(typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc))
       case (TypedTessla.MapType(k, v), TypedTessla.MapType(k2, v2)) =>
         TypedTessla.MapType(typeSubst(k, k2, typeParams, substitutions, loc), typeSubst(v, v2, typeParams, substitutions, loc))
-      case (TypedTessla.ObjectType(expectedMembers), TypedTessla.ObjectType(actualMembers)) =>
-        val members = expectedMembers.map {
+      case (expected: TypedTessla.ObjectType, actual: TypedTessla.ObjectType) =>
+        val members = expected.memberTypes.map {
           case (name, expectedMemberType) =>
-            name -> actualMembers.get(name).map { actualMemberType =>
+            name -> actual.memberTypes.get(name).map { actualMemberType =>
               typeSubst(expectedMemberType, actualMemberType, typeParams, substitutions, loc)
             }.getOrElse(expectedMemberType)
         }
-        TypedTessla.ObjectType(members)
+        TypedTessla.ObjectType(members, expected.isOpen)
       case (TypedTessla.IntType, TypedTessla.IntType)
+         | (TypedTessla.FloatType, TypedTessla.FloatType)
          | (TypedTessla.BoolType, TypedTessla.BoolType)
-         | (TypedTessla.UnitType, TypedTessla.UnitType)
          | (TypedTessla.StringType, TypedTessla.StringType) =>
         expected
       case (left, right) =>
@@ -256,15 +249,30 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
     case (_, builtIn) =>
       import TypedTessla._
       val typ = builtIn match {
-        case BuiltIn.Add | BuiltIn.Sub | BuiltIn.Mul | BuiltIn.Div | BuiltIn.BitAnd | BuiltIn.BitOr | BuiltIn.BitXor
-           | BuiltIn.LeftShift | BuiltIn.RightShift =>
+        case BuiltIn.Add | BuiltIn.Sub | BuiltIn.Mul | BuiltIn.Div | BuiltIn.Mod | BuiltIn.BitAnd | BuiltIn.BitOr
+           | BuiltIn.BitXor | BuiltIn.LeftShift | BuiltIn.RightShift =>
           FunctionType(Seq(), Seq(IntType, IntType), IntType, isLiftable = true)
+
+        case BuiltIn.FAdd | BuiltIn.FSub | BuiltIn.FMul | BuiltIn.FDiv | BuiltIn.Pow | BuiltIn.Log =>
+          FunctionType(Seq(), Seq(FloatType, FloatType), FloatType, isLiftable = true)
 
         case BuiltIn.Negate | BuiltIn.BitFlip =>
           FunctionType(Seq(), Seq(IntType), IntType, isLiftable = true)
 
+        case BuiltIn.FNegate =>
+          FunctionType(Seq(), Seq(FloatType), FloatType, isLiftable = true)
+
+        case BuiltIn.FloatToInt =>
+          FunctionType(Seq(), Seq(FloatType), IntType, isLiftable = true)
+
+        case BuiltIn.IntToFloat =>
+          FunctionType(Seq(), Seq(IntType), FloatType, isLiftable = true)
+
         case BuiltIn.Lt | BuiltIn.Gt | BuiltIn.Gte | BuiltIn.Lte =>
           FunctionType(Seq(), Seq(IntType, IntType), BoolType, isLiftable = true)
+
+        case BuiltIn.FLt | BuiltIn.FGt | BuiltIn.FGte | BuiltIn.FLte =>
+          FunctionType(Seq(), Seq(FloatType, FloatType), BoolType, isLiftable = true)
 
         case BuiltIn.Eq | BuiltIn.Neq =>
           val t = mkTVar("T")
@@ -312,7 +320,8 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
 
         case BuiltIn.Delay =>
           val t = mkTVar("Resets")
-          FunctionType(Seq(t.id), Seq(StreamType(IntType), StreamType(t)), StreamType(UnitType), isLiftable = false)
+          val unitType = TypedTessla.ObjectType(Map(), isOpen = false)
+          FunctionType(Seq(t.id), Seq(StreamType(IntType), StreamType(t)), StreamType(unitType), isLiftable = false)
 
         case BuiltIn.Const =>
           val t1 = mkTVar("Old")
@@ -454,7 +463,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
           FunctionType(Seq(), Seq(CtfType, StringType), StringType, isLiftable = true)
 
         case BuiltIn.TesslaInfo =>
-          ObjectType(Map("version" -> StringType))
+          ObjectType(Map("version" -> StringType), isOpen = false)
 
         case BuiltIn.StdLibCount =>
           val x = mkTVar("X")
@@ -504,7 +513,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       parent.memberTypes.forall {
         case (name, typ) =>
           child.memberTypes.get(name).exists(childTyp => isSubtypeOrEqual(parent = typ, child = childTyp))
-      }
+      } && (parent.isOpen || parent.memberTypes.keySet == child.memberTypes.keySet)
     case _ =>
       parent == child
   }
@@ -519,10 +528,10 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       case lit: FlatTessla.Literal =>
         val t = lit.value match {
           case _: Tessla.IntLiteral => TypedTessla.IntType
+          case _: Tessla.FloatLiteral => TypedTessla.FloatType
           case _: Tessla.TimeLiteral =>
             // TODO: Implement units of measure, this should contain the appropriate unit
             TypedTessla.IntType
-          case Tessla.Unit => TypedTessla.UnitType
           case _: Tessla.BoolLiteral => TypedTessla.BoolType
           case _: Tessla.StringLiteral => TypedTessla.StringType
         }
@@ -530,9 +539,9 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       case inStream: FlatTessla.InputStream =>
         val typ = translateType(inStream.streamType, env)
         if (!isStreamType(typ)) {
-          error(InputStreamMustHaveStreamType(inStream.loc))
+          error(InputStreamMustHaveStreamType(inStream.typeLoc))
         }
-        TypedTessla.InputStream(inStream.name, typ, inStream.loc) -> typ
+        TypedTessla.InputStream(inStream.name, typ, inStream.typeLoc, inStream.loc) -> typ
       case param: FlatTessla.Parameter =>
         val id = env(param.id)
         val t = typeMap(id)
@@ -629,7 +638,7 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
       case o: FlatTessla.ObjectLiteral =>
         val members = mapValues(o.members)(member => TypedTessla.IdLoc(env(member.id), member.loc))
         val memberTypes = mapValues(members)(member => typeMap(member.id))
-        TypedTessla.ObjectLiteral(members, o.loc) -> TypedTessla.ObjectType(memberTypes)
+        TypedTessla.ObjectLiteral(members, o.loc) -> TypedTessla.ObjectType(memberTypes, isOpen = false)
 
       case acc: FlatTessla.MemberAccess =>
         val receiver = env(acc.receiver.id)

@@ -1,0 +1,3 @@
+Error: manual-tests/include-test.d/incl.tessla(1,11 - 1,13): Invalid escape sequence '\b' in string
+Error: manual-tests/include-test-incl.tessla(1,13 - 1,15): Invalid escape sequence '\c' in string
+Error: manual-tests/include-test.tessla(4,17 - 4,19): Invalid escape sequence '\s' in string

@@ -9,3 +9,4 @@ target/
 main.aux
 *.synctex.gz
 *.log
+*.tokens

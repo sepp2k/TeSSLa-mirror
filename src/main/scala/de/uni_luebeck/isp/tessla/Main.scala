@@ -1,9 +1,12 @@
 package de.uni_luebeck.isp.tessla
 
 import java.io.IOException
+
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.analyses._
 import de.uni_luebeck.isp.tessla.interpreter._
+import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
 
 object Main extends SexyOpt {
@@ -35,6 +38,8 @@ object Main extends SexyOpt {
   val computationDepth = flag("print-computation-depth", "Print the length of the longest path a propagation message travels")
   val recursionDepth = flag("print-recursion-depth", "Print the length of the longest recursion")
   val nodeCount = flag("print-node-count", "Print the number of nodes in the TeSSLaCore graph")
+  val tesslaDoc = flag("doc", "Generate tessla-doc documentation")
+  val tesslaDocAll = flag("doc-all", "Generate tessla-doc documentation including those of included files")
 
   val ctfTrace = flag("ctf", "The trace-file with the input data is in CTF format. With this option you must specify " +
     "a trace-file. stdin is not supported.")
@@ -58,10 +63,17 @@ object Main extends SexyOpt {
 
     parse(args)
     try {
-      val specSource = TesslaSource.fromFile(tesslaFile)
-      val timeUnitSource = timeUnit.map(TesslaSource.fromString(_, "--timeunit"))
+      val specSource = CharStreams.fromFileName(tesslaFile)
+      if (tesslaDoc) {
+        println(unwrapResult(TesslaDoc.extractAsJSON(specSource, currentFileOnly = true)))
+        return
+      }
+      if (tesslaDocAll) {
+        println(unwrapResult(TesslaDoc.extractAsJSON(specSource, currentFileOnly = false)))
+        return
+      }
       if (verifyOnly || generateOsl || listInStreams || listOutStreams || computationDepth || recursionDepth || nodeCount) {
-        val result = new Compiler().compile(specSource, timeUnitSource)
+        val result = new Compiler().compile(specSource, timeUnit)
         if (generateOsl) {
           println(unwrapResult(result.andThen(new OSL.Generator)))
           return
@@ -69,11 +81,11 @@ object Main extends SexyOpt {
 
         val spec = unwrapResult(result)
         if (listInStreams) {
-          spec.inStreams.foreach { case (name, _, _) => println(name) }
+          spec.inStreams.foreach { is => println(is.name) }
           return
         }
         if (listOutStreams) {
-          spec.outStreams.foreach { case (name, _, _) => println(name) }
+          spec.outStreams.foreach { os => println(os.nameOpt.getOrElse(s"print ${os.stream}")) }
           return
         }
         if (computationDepth) {
@@ -95,17 +107,17 @@ object Main extends SexyOpt {
         }
         val abortAtValue = abortAt.map(BigInt(_))
         val output = unwrapResult {
-          Interpreter.runCtf(specSource, traceFile.get, timeUnit = timeUnitSource, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
+          Interpreter.runCtf(specSource, traceFile.get, timeUnit = timeUnit.value, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
         }
         output.foreach(println)
       } else {
         val abortAtValue = abortAt.map(BigInt(_))
-        val traceSource = traceFile.map(TesslaSource.fromFile).getOrElse(TesslaSource.stdin)
+        val traceSource = traceFile.map(CharStreams.fromFileName).getOrElse(CharStreams.fromStream(System.in))
         if (flattenInput) {
-          Interpreter.flattenInput(traceSource, timeUnitSource, abortAtValue).foreach(println)
+          Interpreter.flattenInput(traceSource, abortAtValue).foreach(println)
         } else {
           val output = unwrapResult {
-            Interpreter.runSpec(specSource, traceSource, timeUnit = timeUnitSource, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
+            Interpreter.runSpec(specSource, traceSource, timeUnit = timeUnit, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
           }
           output.foreach(println)
         }

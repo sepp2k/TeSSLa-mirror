@@ -11,6 +11,11 @@ object Evaluator {
     case v => throw InternalError(s"Type error should've been caught by type checker: Expected: Int, got: $v", v.loc)
   }
 
+  def getFloat(voe: TesslaCore.ValueOrError): Double = voe.forceValue match {
+    case floatLit: TesslaCore.FloatValue => floatLit.value
+    case v => throw InternalError(s"Type error should've been caught by type checker: Expected: Int, got: $v", v.loc)
+  }
+
   def getBool(voe: TesslaCore.ValueOrError): Boolean = voe.forceValue match {
     case boolLit: TesslaCore.BoolValue => boolLit.value
     case v => throw InternalError(s"Type error should've been caught by type checker: Expected: Bool, got: $v", v.loc)
@@ -46,6 +51,13 @@ object Evaluator {
     case v => throw InternalError(s"Type error should've been caught by type checker: Expected: List, got: $v", v.loc)
   }
 
+  def evalToString(arg: TesslaCore.ValueOrError): String = {
+    arg.forceValue match {
+      case s: TesslaCore.StringValue => s.value
+      case _ => arg.toString
+    }
+  }
+
   def evalPrimitiveOperator(op: BuiltIn.PrimitiveOperator,
                             arguments: Seq[TesslaCore.ValueOrError],
                             loc: Location): Option[TesslaCore.ValueOrError] = {
@@ -56,6 +68,15 @@ object Evaluator {
     def binIntComp(op: (BigInt, BigInt) => Boolean) = {
       Some(TesslaCore.BoolValue(op(getInt(arguments(0)), getInt(arguments(1))), loc))
     }
+
+    def binFloatOp(op: (Double, Double) => Double) = {
+      Some(TesslaCore.FloatValue(op(getFloat(arguments(0)), getFloat(arguments(1))), loc))
+    }
+
+    def binFloatComp(op: (Double, Double) => Boolean) = {
+      Some(TesslaCore.BoolValue(op(getFloat(arguments(0)), getFloat(arguments(1))), loc))
+    }
+
     // TODO: Replace try-catch using ValueOrError.mapValue (or add ValueOrError.flatMapValue if needed)
     try {
       op match {
@@ -67,6 +88,15 @@ object Evaluator {
           val y = getInt(arguments(1))
           if (y == 0) Some(TesslaCore.Error(DivideByZero(arguments(1).forceValue.loc)))
           else Some(TesslaCore.IntValue(x / y, loc))
+        case BuiltIn.FAdd => binFloatOp(_ + _)
+        case BuiltIn.FSub => binFloatOp(_ - _)
+        case BuiltIn.FMul => binFloatOp(_ * _)
+        case BuiltIn.FDiv => binFloatOp(_ / _)
+        case BuiltIn.Mod =>
+          val x = getInt(arguments(0))
+          val y = getInt(arguments(1))
+          if (y == 0) Some(TesslaCore.Error(DivideByZero(arguments(1).forceValue.loc)))
+          else Some(TesslaCore.IntValue(x % y, loc))
         case BuiltIn.LeftShift => binIntOp(_ << _.toInt)
         case BuiltIn.RightShift => binIntOp(_ >> _.toInt)
         case BuiltIn.BitAnd => binIntOp(_ & _)
@@ -74,12 +104,17 @@ object Evaluator {
         case BuiltIn.BitXor => binIntOp(_ ^ _)
         case BuiltIn.BitFlip => Some(TesslaCore.IntValue(~getInt(arguments(0)), loc))
         case BuiltIn.Negate => Some(TesslaCore.IntValue(-getInt(arguments(0)), loc))
+        case BuiltIn.FNegate => Some(TesslaCore.FloatValue(-getFloat(arguments(0)), loc))
         case BuiltIn.Eq => Some(TesslaCore.BoolValue(arguments(0).forceValue == arguments(1).forceValue, loc))
         case BuiltIn.Neq => Some(TesslaCore.BoolValue(arguments(0).forceValue != arguments(1).forceValue, loc))
         case BuiltIn.Lt => binIntComp(_ < _)
         case BuiltIn.Lte => binIntComp(_ <= _)
         case BuiltIn.Gt => binIntComp(_ > _)
         case BuiltIn.Gte => binIntComp(_ >= _)
+        case BuiltIn.FLt => binFloatComp(_ < _)
+        case BuiltIn.FLte => binFloatComp(_ <= _)
+        case BuiltIn.FGt => binFloatComp(_ > _)
+        case BuiltIn.FGte => binFloatComp(_ >= _)
         case BuiltIn.And => Some(TesslaCore.BoolValue(getBool(arguments(0)) && getBool(arguments(1)), loc))
         case BuiltIn.Or => Some(TesslaCore.BoolValue(getBool(arguments(0)) || getBool(arguments(1)), loc))
         case BuiltIn.Not => Some(TesslaCore.BoolValue(!getBool(arguments(0)), loc))
@@ -91,6 +126,14 @@ object Evaluator {
           else Some(arguments(2))
         case BuiltIn.First =>
           Some(arguments(0))
+        case BuiltIn.Pow =>
+          binFloatOp(math.pow)
+        case BuiltIn.Log =>
+          binFloatOp((x, base) => math.log(x) / math.log(base))
+        case BuiltIn.IntToFloat =>
+          Some(TesslaCore.FloatValue(getInt(arguments(0)).toDouble, loc))
+        case BuiltIn.FloatToInt =>
+          Some(TesslaCore.IntValue(BigDecimal(getFloat(arguments(0))).toBigInt, loc))
         case BuiltIn.None =>
           Some(TesslaCore.TesslaOption(None, loc))
         case BuiltIn.Some =>
@@ -199,10 +242,7 @@ object Evaluator {
           val s2 = getString(arguments(1))
           Some(TesslaCore.StringValue(s1 + s2, loc))
         case BuiltIn.ToString =>
-          arguments(0).forceValue match {
-            case s: TesslaCore.StringValue => Some(s.withLoc(loc))
-            case arg => Some(TesslaCore.StringValue(arg.toString, loc))
-          }
+          Some(TesslaCore.StringValue(evalToString(arguments(0)), loc))
         case BuiltIn.CtfGetInt =>
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))

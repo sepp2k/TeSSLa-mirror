@@ -5,8 +5,8 @@ def resetCount[T](values: Events[T], reset: Events[Unit]) := {
             then 0
             else if default(time(reset) == time(values), false)
             then 1
-            else last(rc, values) + 1
-        , 0)
+            else last(rc, values) + 1,
+            0)
     rc
 }
 

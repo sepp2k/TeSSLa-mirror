@@ -1,1 +1,1 @@
-0: stripped = Some(Some(${unknownBefore = 0, queue = List()}))
+0: stripped = Some(Some({unknownBefore = 0, queue = List()}))

@@ -1,0 +1,13 @@
+in event: Events[String]
+in id: Events[Int]
+in model: Events[Int]
+in taskset: Events[Int]
+
+@liftable
+def max2(x: Int, y: Int) := if x >= y then x else y
+
+def max(s: Events[Int]) := m where {
+  def m: Events[Int] := defaultFrom(max2(last(m, s), s), s)
+}
+
+out max(model)

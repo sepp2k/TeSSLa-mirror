@@ -1,4 +1,3 @@
-$timeunit = "ns"
 0: bar_count = 0
 0: foo_count = 0
 0: foobarmin = 0

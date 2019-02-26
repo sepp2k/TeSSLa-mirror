@@ -1,6 +1,7 @@
 {
   "spec": "timeunits-conversion-error.tessla",
   "input": "timeunits-conversion-error.input",
-  "expectedErrors": "timeunits-conversion-error.errors"
+  "expectedErrors": "timeunits-conversion-error.errors",
+  "timeUnit": "min"
 }
             

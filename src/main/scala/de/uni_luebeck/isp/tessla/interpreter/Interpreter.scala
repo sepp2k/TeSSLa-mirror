@@ -3,26 +3,28 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.util.Lazy
-import de.uni_luebeck.isp.tessla.{BuiltIn, Compiler, Errors, Evaluator, Location, TesslaCore, TesslaSource, TimeUnit, TranslationPhase}
+import de.uni_luebeck.isp.tessla._
+import org.antlr.v4.runtime.CharStream
 
 import scala.collection.mutable
 
 class Interpreter(val spec: TesslaCore.Specification) extends Specification {
-  val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.inStreams.map {
-    case (name, typ, _) =>
-      name -> (new Input, typ.elementType)
+  val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.inStreams.map {inStream =>
+    inStream.name -> (new Input, inStream.typ.elementType)
   }.toMap
 
   type Env = Map[TesslaCore.Identifier, TesslaCore.ValueOrError]
 
-  lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map {
-    case (name, exp) => (name, Lazy(eval(exp)))
+  lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map { stream =>
+    stream.id -> Lazy(eval(stream.expression))
   }.toMap
 
-  lazy val outStreams: Seq[(String, Stream, TesslaCore.Type)] = spec.outStreams.map {
-    case (name, streamRef: TesslaCore.Stream, typ) => (name, defs(streamRef.id).get, typ)
-    case (name, streamRef: TesslaCore.InputStream, typ) => (name, inStreams(streamRef.name)._1, typ)
-    case (name, _: TesslaCore.Nil, typ) => (name, nil, typ)
+  lazy val outStreams: Seq[(Option[String], Stream, TesslaCore.Type)] = spec.outStreams.map { os =>
+    os.stream match {
+      case streamRef: TesslaCore.Stream => (os.nameOpt, defs(streamRef.id).get, os.typ)
+      case streamRef: TesslaCore.InputStream => (os.nameOpt, inStreams(streamRef.name)._1, os.typ)
+      case _: TesslaCore.Nil => (os.nameOpt, nil, os.typ)
+    }
   }
 
   private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
@@ -33,12 +35,36 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.Nil(_) => nil
   }
 
+  def merge(stream1: Stream, stream2: Stream): Stream = {
+    lift(Seq(stream1, stream2)) {
+      case Seq(Some(value1), _) => Some(value1)
+      case Seq(None, value2Opt) => value2Opt
+    }
+  }
+
+  def slift(streams: Seq[Stream])(op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream = {
+    val ticks = lift(streams) { _ =>
+      Some(TesslaCore.TesslaObject(Map(), Location.builtIn))
+    }
+    val recentValueStreams = streams.map { stream =>
+      merge(stream, last(stream, ticks))
+    }
+    lift(recentValueStreams) { valueOptions =>
+      if (valueOptions.exists(_.isEmpty)) {
+        None
+      } else {
+        op(valueOptions.flatten)
+      }
+    }
+  }
+
+
   private def eval(exp: TesslaCore.Expression): Stream = exp match {
     case TesslaCore.SignalLift(op, argStreams, loc) =>
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)
       }
-      lift(argStreams.map(evalStream)) { arguments =>
+      slift(argStreams.map(evalStream)) { arguments =>
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => arg.mapValue(_.withLoc(stream.loc))
         }
@@ -48,7 +74,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)
       }
-      simpleLift(argStreams.map(evalStream)) { arguments =>
+      lift(argStreams.map(evalStream)) { arguments =>
         val args = arguments.zip(argStreams).map {
           case (Some(arg), stream) => arg.mapValue(a => TesslaCore.TesslaOption(Some(a), stream.loc))
           case (None, stream) => TesslaCore.TesslaOption(None, stream.loc)
@@ -64,11 +90,11 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.DefaultFrom(values, defaults, _) =>
       evalStream(values).default(evalStream(defaults))
     case TesslaCore.Const(value, stream, _) =>
-      lift(Seq(evalStream(stream))) { _ =>
+      slift(Seq(evalStream(stream))) { _ =>
         Some(value)
       }
     case TesslaCore.Last(values, clock, _) =>
-      last(evalStream(clock), evalStream(values))
+      last(evalStream(values), evalStream(clock))
     case TesslaCore.DelayedLast(values, delays, _) =>
       delayedLast(evalStream(delays), evalStream(values))
     case TesslaCore.Delay(delays, resets, _) =>
@@ -77,27 +103,16 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       evalStream(values).time(loc)
     case TesslaCore.StdLibCount(values, loc) =>
       val x = evalStream(values)
-      lazy val y: Stream = lift(Seq(last(x, y), nil.default(TesslaCore.IntValue(1, loc)))) { arguments =>
-        val args = arguments.map {
-          case arg => arg.mapValue(_.withLoc(loc))
-        }
-        Evaluator.evalPrimitiveOperator(BuiltIn.Add, args, exp.loc)
+      lazy val y: Stream = lift(Seq(x, last(y, x))) {
+        case Seq(Some(_), Some(b)) =>
+          Some(b.mapValue(value => TesslaCore.IntValue(getInt(value) + 1, loc)))
+        case _ => Some(TesslaCore.IntValue(0, loc))
       }.default(TesslaCore.IntValue(0, loc))
       y
-    case TesslaCore.Merge(arg1, arg2, loc) =>
+    case TesslaCore.Merge(arg1, arg2, _) =>
       val stream1 = evalStream(arg1)
       val stream2 = evalStream(arg2)
-      val zero = TesslaCore.IntValue(0, loc)
-      lift(Seq(
-        stream1.time(loc).default(zero),
-        stream2.time(loc).default(zero),
-        stream1.default(stream2),
-        stream2.default(stream1)
-      )) {
-        case Seq(time1, time2, value1, value2) =>
-          if (getInt(time1.forceValue) >= getInt(time2.forceValue)) Some(value1)
-          else Some(value2)
-      }
+      merge(stream1, stream2)
   }
 
   def getInt(value: TesslaCore.Value): BigInt = value match {
@@ -114,6 +129,10 @@ object ValueTypeChecker {
       if (elementType != TesslaCore.IntType) {
         throw InputTypeMismatch(value, "Int", name, elementType, value.loc)
       }
+    case _: TesslaCore.FloatValue =>
+      if (elementType != TesslaCore.FloatType) {
+        throw InputTypeMismatch(value, "Float", name, elementType, value.loc)
+      }
     case _: TesslaCore.StringValue =>
       if (elementType != TesslaCore.StringType) {
         throw InputTypeMismatch(value, "String", name, elementType, value.loc)
@@ -121,10 +140,6 @@ object ValueTypeChecker {
     case _: TesslaCore.BoolValue =>
       if (elementType != TesslaCore.BoolType) {
         throw InputTypeMismatch(value, "Bool", name, elementType, value.loc)
-      }
-    case _: TesslaCore.Unit =>
-      if (elementType != TesslaCore.UnitType) {
-        throw InputTypeMismatch(value, "Unit", name, elementType, value.loc)
       }
     case o: TesslaCore.TesslaOption =>
       elementType match {
@@ -159,7 +174,7 @@ object ValueTypeChecker {
           throw InputTypeMismatch(value, "List[?]", name, elementType, value.loc)
       }
     case o: TesslaCore.TesslaObject =>
-      val actual = o.value.keys.map {n => s"$n: ?"}.mkString("${", ", ", "}")
+      val actual = o.value.keys.map {n => s"$n: ?"}.mkString("{", ", ", "}")
       elementType match {
         case ot: TesslaCore.ObjectType =>
           if (ot.memberTypes.keySet != o.value.keySet) {
@@ -181,6 +196,8 @@ object ValueTypeChecker {
 }
 
 object Interpreter {
+  type Trace = Iterator[Trace.Event]
+
   class CoreToInterpreterSpec extends TranslationPhase[TesslaCore.Specification, Interpreter] {
     def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
   }
@@ -188,29 +205,29 @@ object Interpreter {
   class RunInterpreter(inputTrace: Trace, stopOn: Option[String]) extends TranslationPhase[Interpreter, Trace] {
 
     override def translateSpec(spec: Interpreter): Trace = {
-      val eventIterator = new Iterator[Trace.Event] {
+      new Iterator[Trace.Event] {
         private var nextEvents = new mutable.Queue[Trace.Event]
         private var stopped = false
         private val seen = mutable.Set.empty[String]
 
         spec.outStreams.foreach {
-          case (name, stream, _) =>
+          case (nameOpt, stream, _) =>
             stream.addListener {
               case Some(value) =>
                 if (!stopped) {
-                  if (stopOn.contains(name)) stopped = true
+                  if (stopOn.isDefined && stopOn == nameOpt) stopped = true
                   val timeStamp = Trace.TimeStamp(Location.unknown, spec.getTime)
-                  val id = Trace.Identifier(Location.unknown, name)
-                  nextEvents += Trace.Event(Location.unknown, timeStamp, id, value.forceValue)
+                  val idOpt = nameOpt.map(Trace.Identifier(_, Location.unknown))
+                  nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value.forceValue)
                 }
               case None =>
             }
         }
 
         private def gatherValues(): Unit = {
-          while (nextEvents.isEmpty && inputTrace.events.hasNext) {
+          while (nextEvents.isEmpty && inputTrace.hasNext) {
             val specTime = spec.getTime
-            val event = inputTrace.events.next
+            val event = inputTrace.next
             val eventTime = event.timeStamp.time
             if (eventTime > specTime) {
               try {
@@ -255,41 +272,38 @@ object Interpreter {
           nextEvents.dequeue
         }
       }
-      new Trace(inputTrace.timeStampUnit, eventIterator)
     }
   }
 
-  def runSpec(specSource: TesslaSource,
-              traceSource: TesslaSource,
+  def runSpec(specSource: CharStream,
+              traceSource: CharStream,
               stopOn: Option[String] = None,
-              timeUnit: Option[TesslaSource] = None,
+              timeUnit: Option[String] = None,
               printCore: Boolean = false,
               abortAt: Option[BigInt] = None,
              ): Result[Trace] = {
-    val flatTrace = flattenInput(traceSource, timeUnit, abortAt)
-    val core = new Compiler().applyPasses(specSource, flatTrace.timeStampUnit)
+    val flatTrace = flattenInput(traceSource, abortAt)
+    val tu = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
+    val core = new Compiler().applyPasses(specSource, tu)
     if (printCore) core.foreach(println)
     core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(flatTrace, stopOn))
   }
 
-  def flattenInput(traceSource: TesslaSource,
-              timeUnit: Option[TesslaSource] = None,
-              abortAt: Option[BigInt] = None,
-             ): Trace = {
-    val rawTrace: RawTrace = TraceParser.parseTrace(traceSource)
-    val tu = timeUnit.map(TimeUnit.parse).orElse(rawTrace.timeStampUnit)
-
-    new Trace(tu, new FlatEventIterator(rawTrace.eventRanges, abortAt))
+  def flattenInput(traceSource: CharStream,
+                   abortAt: Option[BigInt] = None,
+                  ): Trace = {
+    val rawTrace = new TraceParser().parseTrace(traceSource)
+    new FlatEventIterator(rawTrace, abortAt)
   }
 
-  def runCtf(specSource: TesslaSource,
+  def runCtf(specSource: CharStream,
              ctfFileName: String,
              stopOn: Option[String] = None,
-             timeUnit: Option[TesslaSource] = None,
+             timeUnit: Option[String] = None,
              printCore: Boolean = false,
              abortAt: Option[BigInt] = None,
             ): Result[Trace] = {
-    val tu = timeUnit.map(TimeUnit.parse)
+    val tu = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
     val core = new Compiler().applyPasses(specSource, tu)
     if (printCore) core.foreach(println)
     val trace = Trace.fromCtfFile(ctfFileName, abortAt)

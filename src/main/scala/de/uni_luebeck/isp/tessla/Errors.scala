@@ -153,16 +153,8 @@ object Errors {
     override def message: String = s"Unexpected value of type $valueType ($value), expected type $streamType, in input stream '$streamName'"
   }
 
-  case class TracesOperationError(loc: Location, op: String, args: TesslaCore.Value*) extends TesslaError {
-    override def message: String = s"Operation $op not defined for ${args.mkString(", ")}"
-  }
-
-  case class TracesUnknownIdentifierError(loc: Location, name: String) extends TesslaError {
-    override def message: String = s"Unknown identifier in traces: $name"
-  }
-
-  case class NegativeStepError(loc: Location, value: BigInt) extends TesslaError {
-    override def message: String = s"Negative step in time stamp range: $value"
+  case class NonPositiveStepError(value: BigInt, loc: Location) extends TesslaError {
+    override def message: String = s"Non-positive step in time stamp range: $value"
   }
 
   case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
@@ -203,5 +195,13 @@ object Errors {
 
   case class MemberNotDefined(ot: TypedTessla.ObjectType, member: String, loc: Location) extends TesslaError {
     override def message = s"Object of type $ot does not have a member named $member"
+  }
+
+  case class InvalidEscapeSequence(sequence: String, loc: Location) extends TesslaError {
+    override def message = s"Invalid escape sequence '$sequence' in string"
+  }
+
+  case class StringInterpolationInInclude(loc: Location) extends TesslaError {
+    override def message = "String interpolation is not allowed in include statement"
   }
 }

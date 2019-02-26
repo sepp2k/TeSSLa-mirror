@@ -1,0 +1,16 @@
+in i: Events[Int]
+in x: Events[Float]
+in y: Events[Float]
+
+@liftable
+def max(x: Float, y: Float) = if x >=. y then x else y
+
+out x +. y
+out x -. y
+out x *. y
+out x /. y
+out pow(x,y)
+out max(x,y)
+out floatToInt(x)
+out intToFloat(i)
+out log(x, 10.0)

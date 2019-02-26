@@ -86,42 +86,7 @@ class Specification() {
   }
 
   def lift(streams: Seq[Stream])
-    (op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream =
-    new Stream {
-      private var state: Seq[Option[TesslaCore.ValueOrError]] = streams.map(_ => None)
-      private var inputs: Array[Option[TesslaCore.ValueOrError]] = streams.map(_ => None).toArray
-      private var counter = 0
-
-      override protected def init(): Unit = {
-        for ((stream, i) <- streams.zipWithIndex) {
-          stream.addListener { value =>
-            counter += 1
-            inputs(i) = value
-            if (counter == streams.length) {
-              val newState = inputs.zip(state).map {
-                case (in, st) => in.orElse(st)
-              }
-              val newOutput =
-                if (inputs.exists(_.isDefined)) {
-                  val tmp = newState.foldLeft(Some(Nil): Option[Seq[TesslaCore.ValueOrError]]) {
-                    case (Some(list), Some(v)) => Some(v +: list)
-                    case _ => None
-                  }
-                  tmp.flatMap(x => op(x.reverse))
-                } else None
-              counter = 0
-              inputs = streams.map(_ => None).toArray
-              state = newState
-              propagate(newOutput)
-            }
-          }
-        }
-      }
-    }
-
-  // TODO: rename appropriately
-  def simpleLift(streams: Seq[Stream])
-    (op: Seq[Option[TesslaCore.ValueOrError]] => Option[TesslaCore.ValueOrError]): Stream =
+          (op: Seq[Option[TesslaCore.ValueOrError]] => Option[TesslaCore.ValueOrError]): Stream =
     new Stream {
       private var inputs: Array[Option[TesslaCore.ValueOrError]] = streams.map(_ => None).toArray
       private var counter = 0
@@ -146,7 +111,7 @@ class Specification() {
       }
     }
 
-  def last(times: Stream, values: => Stream): Stream =
+  def last(values: => Stream, times: Stream): Stream =
     new Stream {
       private var done = false
       private var oldValue: Option[TesslaCore.ValueOrError] = None
@@ -279,7 +244,7 @@ class Specification() {
           case Some(target) if target == getTime =>
             newTriggered = true
             targetTime = None
-            propagate(Some(TesslaCore.Unit(Location.builtIn)))
+            propagate(Some(TesslaCore.TesslaObject(Map(), Location.builtIn)))
           case _ =>
             newTriggered = false
             propagate(None)

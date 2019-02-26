@@ -5,13 +5,28 @@ import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
-  final case class Specification(streams: Seq[(Identifier, Expression)],
-                                 inStreams: Seq[(String, StreamType, Location)],
-                                 outStreams: Seq[(String, StreamRef, StreamType)]) {
+  final case class Specification(streams: Seq[StreamDescription],
+                                 inStreams: Seq[InStreamDescription],
+                                 outStreams: Seq[OutStreamDescription]) {
     override def toString = {
-      inStreams.map { case (name, typ, _) => s"in $name: $typ\n" }.mkString +
-        streams.map { case (name, expr) => s"def $name := $expr\n" }.mkString +
-        outStreams.map { case (name, stream, typ) => s"out $stream : $typ as $name\n" }.mkString
+      inStreams.map { is => s"$is\n" }.mkString +
+        streams.map { s => s"$s\n" }.mkString +
+        outStreams.map { os => s"$os\n" }.mkString
+    }
+  }
+
+  case class StreamDescription(id: Identifier, expression: Expression, typ: StreamType) {
+    override def toString = s"def $id: $typ = $expression"
+  }
+
+  case class InStreamDescription(name: String, typ: StreamType, loc: Location) {
+    override def toString = s"in $name: $typ"
+  }
+
+  case class OutStreamDescription(nameOpt: Option[String], stream: StreamRef, typ: StreamType) {
+    override def toString = nameOpt match {
+      case Some(name) => s"out $stream: $typ as $name\n"
+      case None => s"print $stream: $typ"
     }
   }
 
@@ -163,6 +178,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def withLoc(loc: Location): IntValue = copy(loc = loc)
   }
 
+  final case class FloatValue(value: Double, loc: Location) extends PrimitiveValue {
+    override def withLoc(loc: Location): FloatValue = copy(loc = loc)
+  }
+
   final case class BoolValue(value: Boolean, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): BoolValue = copy(loc = loc)
   }
@@ -170,11 +189,6 @@ object TesslaCore extends HasUniqueIdentifiers {
   final case class StringValue(value: String, loc: Location) extends PrimitiveValue {
     override def toString = s""""$value""""
     override def withLoc(loc: Location): StringValue = copy(loc = loc)
-  }
-
-  final case class Unit(loc: Location) extends PrimitiveValue {
-    override def value = ()
-    override def withLoc(loc: Location): Unit = copy(loc = loc)
   }
 
   final case class TesslaObject(value: Map[String, Value], loc: Location) extends PrimitiveValue {
@@ -185,7 +199,7 @@ object TesslaCore extends HasUniqueIdentifiers {
       if (value.keys.toSet == tupleKeys.toSet) {
         tupleKeys.map(k => value(k)).mkString("(", ", ", ")")
       } else {
-        value.map { case (name, v) => s"$name = $v" }.mkString("${", ", ", "}")
+        value.map { case (name, v) => s"$name = $v" }.mkString("{", ", ", "}")
       }
     }
   }
@@ -230,6 +244,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = "Int"
   }
 
+  case object FloatType extends ValueType {
+    override def toString = "Float"
+  }
+
   case object BoolType extends ValueType {
     override def toString = "Bool"
   }
@@ -251,7 +269,14 @@ object TesslaCore extends HasUniqueIdentifiers {
   }
 
   case class ObjectType(memberTypes: Map[String, ValueType]) extends ValueType {
-    override def toString = memberTypes.map {case (name, typ) => s"$name: $typ"}.mkString("${", ", ", "}")
+    override def toString = {
+      val tupleKeys = (1 to memberTypes.keys.size).map(i => s"_$i")
+      if (memberTypes.keys.toSet == tupleKeys.toSet) {
+        memberTypes.mkString("(", ", ", ")")
+      } else {
+        memberTypes.map { case (name, t) => s"$name: $t" }.mkString("{", ", ", "}")
+      }
+    }
   }
 
   case class MapType(keyType: ValueType, valueType: ValueType) extends ValueType {

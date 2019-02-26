@@ -8,6 +8,7 @@ import de.uni_luebeck.isp.tessla.Errors.{DecreasingTimeStampsError, SameTimeStam
 import de.uni_luebeck.isp.tessla.interpreter.{Interpreter, ValueTypeChecker}
 import de.uni_luebeck.isp.tessla.interpreter.Interpreter.CoreToInterpreterSpec
 import de.uni_luebeck.isp.tessla.interpreter.Specification.Time
+import org.antlr.v4.runtime.CharStreams
 
 import scala.collection.mutable
 
@@ -25,6 +26,8 @@ object JavaApi {
 
   abstract class EngineListener {
     def event(stream: String, time: Time, value: TesslaCore.Value)
+
+    def printEvent(time: Time, value: TesslaCore.Value)
   }
 
   case class CompilationResult(result: Result, engine: Engine)
@@ -34,10 +37,16 @@ object JavaApi {
 
     def addListener(listener: EngineListener) {
       spec.outStreams.foreach {
-        case (name, stream, _) =>
+        case (Some(name), stream, _) =>
           stream.addListener {
             case Some(value) =>
               listener.event(name, spec.getTime, value.forceValue)
+            case None =>
+          }
+        case (None, stream, _) =>
+          stream.addListener {
+            case Some(value) =>
+              listener.printEvent(spec.getTime, value.forceValue)
             case None =>
           }
       }
@@ -56,7 +65,7 @@ object JavaApi {
       provide(stream, TesslaCore.StringValue(value, Location.unknown))
 
     def provide(stream: String): Boolean =
-      provide(stream, TesslaCore.Unit(Location.unknown))
+      provide(stream, TesslaCore.TesslaObject(Map(), Location.unknown))
 
     def provide(stream: String, value: TesslaCore.Value): Boolean =  {
       if (seen.contains(stream)) {
@@ -120,15 +129,14 @@ object JavaApi {
     compile(tessla, fileName, null)
 
   def compile(tessla: String, fileName: String, timeUnit: String): CompilationResult = {
-    val specSource = TesslaSource.fromString(tessla, path = fileName)
-    val timeUnitSource = Option(timeUnit).map(TesslaSource.fromString(_, "timeunit"))
-    val spec = new Compiler().compile(specSource, timeUnitSource)
+    val specSource = CharStreams.fromString(tessla, fileName)
+    val spec = new Compiler().compile(specSource, Option(timeUnit))
     val interpreterResult = spec.andThen(new CoreToInterpreterSpec)
     interpreterResult match {
       case Success(interpreter, warnings) =>
-        new CompilationResult(Result(warnings.map(Diagnostic(_)).asJava, List().asJava), new Engine(interpreter))
+        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(interpreter))
       case Failure(errors, warnings) =>
-        new CompilationResult(Result(warnings.map(Diagnostic(_)).asJava, errors.map(Diagnostic(_)).asJava), null)
+        CompilationResult(Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava), null)
     }
   }
 }

@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import TranslationPhase._
-import de.uni_luebeck.isp.tessla.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.Errors._
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -13,23 +13,23 @@ import scala.collection.mutable.ArrayBuffer
   * @tparam T The type of representation that this phase will be applied to
   * @tparam U The result of applying this phase
   */
-trait TranslationPhase[T, U] {
-  def translateSpec(spec: T): U
+trait TranslationPhase[-T, +U] {
+  protected def translateSpec(spec: T): U
 
-  val warnings = ArrayBuffer[Diagnostic]()
-  val errors = ArrayBuffer[TesslaError]()
+  protected val warnings = ArrayBuffer[Diagnostic]()
+  protected val errors = ArrayBuffer[TesslaError]()
 
-  def warn(diagnostic: Diagnostic): Unit = {
+  protected def warn(diagnostic: Diagnostic): Unit = {
     warnings += diagnostic
   }
 
-  def error(error: TesslaError) {
+  protected def error(error: TesslaError) {
     errors += error
   }
 
-  def warn(loc: Location, message: String): Unit = warn(SimpleWarning(loc, message))
+  protected def warn(loc: Location, message: String): Unit = warn(SimpleWarning(loc, message))
 
-  def tryWithDefault[R](default: => R)(body: => R): R = {
+  protected def tryWithDefault[R](default: => R)(body: => R): R = {
     try {
       body
     } catch {
@@ -37,6 +37,18 @@ trait TranslationPhase[T, U] {
         errors += ex
         default
     }
+  }
+
+  protected def abortOnError(): Unit = {
+    if (errors.nonEmpty) {
+      val lastError = errors.remove(errors.length - 1)
+      throw lastError
+    }
+  }
+
+  protected def abort(): Nothing = {
+    abortOnError()
+    throw InternalError("abort() was called when no errors were present")
   }
 
   def translate(spec: T): Result[U] = {
@@ -53,9 +65,10 @@ trait TranslationPhase[T, U] {
 
 object TranslationPhase {
   sealed trait Result[+T] {
-    def warnings: Seq[Diagnostic]
+    val warnings: Seq[Diagnostic]
     def andThen[T2 >: T, U](f: TranslationPhase[T2, U]): Result[U]
-    def foreach(f: T => Unit): Unit
+    def map[U](f: T => U): Result[U]
+    def foreach(f: T => Unit): Unit = map(f)
   }
 
   case class Success[+T](value: T, warnings: Seq[Diagnostic]) extends Result[T] {
@@ -64,13 +77,13 @@ object TranslationPhase {
       case Failure(errors, newWarnings) => Failure(errors, warnings ++ newWarnings)
     }
 
-    override def foreach(f: T => Unit) = f(value)
+    override def map[U](f: T => U) = Success(f(value), warnings)
   }
 
   case class Failure(errors: Seq[TesslaError], warnings: Seq[Diagnostic]) extends Result[Nothing] {
     override def andThen[T2, U](f: TranslationPhase[T2, U]) = this
 
-    override def foreach(f: Nothing => Unit) = ()
+    override def map[U](f: Nothing => U) = this
   }
 
   case class SimpleWarning(loc: Location, message: String) extends Diagnostic

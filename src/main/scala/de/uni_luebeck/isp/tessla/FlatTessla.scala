@@ -73,7 +73,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def loc = Location.builtIn
   }
 
-  case class InputStream(name: String, streamType: Type, loc: Location) extends Expression {
+  case class InputStream(name: String, streamType: Type, typeLoc: Location, loc: Location) extends Expression {
     override def toString = s"in $name: $streamType"
   }
 
@@ -121,6 +121,12 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = "Int"
   }
 
+  case object FloatType extends Type {
+    override def isValueType = true
+
+    override def toString = "Float"
+  }
+
   case object StringType extends Type {
     override def isValueType = true
 
@@ -131,12 +137,6 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def isValueType = true
 
     override def toString = "Bool"
-  }
-
-  case object UnitType extends Type {
-    override def isValueType = true
-
-    override def toString = "Unit"
   }
 
   case class OptionType(elementType: Type) extends Type {
@@ -175,10 +175,21 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = s"Events[$elementType]"
   }
 
-  case class ObjectType(memberTypes: Map[String, Type]) extends Type {
+  case class ObjectType(memberTypes: Map[String, Type], isOpen: Boolean) extends Type {
     override def isValueType = memberTypes.values.forall(_.isValueType)
 
-    override def toString = memberTypes.map {case (name, t) => s"$name : $t"}.mkString("${", ", ", "}")
+    override def toString = {
+      val tupleKeys = (1 to memberTypes.keys.size).map(i => s"_$i")
+      if (memberTypes.keys.toSet == tupleKeys.toSet && !isOpen) {
+        memberTypes.mkString("(", ", ", ")")
+      } else {
+        var members = memberTypes.map { case (name, t) => s"$name: $t" }.toSeq
+        if (isOpen) {
+          members :+= "..."
+        }
+        members.mkString("{", ", ", "}")
+      }
+    }
   }
 
   case class FunctionType(typeParameters: Seq[Identifier], parameterTypes: Seq[Type], returnType: Type,
@@ -209,8 +220,11 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def hashCode() = id.hashCode()
   }
 
-  case class OutStream(id: Identifier, name: String, loc: Location) {
-    override def toString = s"out $id as $name"
+  case class OutStream(id: Identifier, nameOpt: Option[String], loc: Location) {
+    override def toString = nameOpt match {
+      case Some(name) => s"out $id as $name"
+      case None => s"print $id"
+    }
   }
 
   sealed abstract class Argument {

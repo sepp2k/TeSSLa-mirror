@@ -1,0 +1,5 @@
+{
+  "input": "floats.input",
+  "expectedOutput": "floats.output",
+  "spec": "floats.tessla"
+}

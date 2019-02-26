@@ -56,8 +56,11 @@ object Tessla {
   }
 
   case class OutAll(loc: Location) extends Statement {
-    def name = "out *"
-    override def toString = name
+    override def toString = "out *"
+  }
+
+  case class Print(expr: Expression, loc: Location) extends Statement {
+    override def toString = s"print $expr"
   }
 
   case class Parameter(id: Identifier, parameterType: Option[Type]) {
@@ -144,10 +147,8 @@ object Tessla {
   }
 
   object MemberDefinition {
-    case class Full(definition: Definition) extends MemberDefinition {
-      override def toString = definition.toString(objectNotation = true)
-
-      override def id = definition.id
+    case class Full(id: Identifier, value: Expression) extends MemberDefinition {
+      override def toString = s"$id: $value"
     }
 
     case class Simple(id: Identifier) extends MemberDefinition {
@@ -178,15 +179,13 @@ object Tessla {
     override def toString = s"$value $unit"
   }
 
+  case class FloatLiteral(value: Double) extends LiteralValue
+
   case class StringLiteral(value: String) extends LiteralValue {
     override def toString = s""""$value""""
   }
 
   case class BoolLiteral(value: Boolean) extends LiteralValue
-
-  case object Unit extends LiteralValue {
-    override def value = ()
-  }
 
   abstract class Argument {
     def loc: Location
@@ -223,8 +222,14 @@ object Tessla {
     def withLoc(loc: Location): FunctionType = copy(loc = loc)
   }
 
-  case class ObjectType(memberTypes: Seq[(Identifier, Type)], loc: Location) extends Type {
-    override def toString = memberTypes.map {case (name, t) => s"$name : $t"}.mkString("${", ", ", "}")
+  case class ObjectType(memberTypes: Seq[(Identifier, Type)], isOpen: Boolean, loc: Location) extends Type {
+    override def toString = {
+      var members = memberTypes.map {case (name, t) => s"$name : $t"}
+      if (isOpen) {
+        members :+= "..."
+      }
+      members.mkString("{", ", ", "}")
+    }
     def withLoc(loc: Location): ObjectType = copy(loc = loc)
   }
 
