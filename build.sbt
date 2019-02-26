@@ -56,3 +56,6 @@ antlr4Version in Antlr4 := "4.7.2"
 antlr4PackageName in Antlr4 := Some("de.uni_luebeck.isp.tessla")
 antlr4GenListener in Antlr4 := false
 antlr4GenVisitor in Antlr4 := true
+
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+scalacOptions += "-target:jvm-1.8"
