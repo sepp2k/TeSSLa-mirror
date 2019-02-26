@@ -1,3 +1,5 @@
+include "tessladoc-incl.tessla"
+
 --- f does stuff
 def f(x: Int) = g(y) where {
     def g(a: Int) = a+1

@@ -31,7 +31,7 @@ abstract class AbstractTesslaParser[Item, Result] extends TranslationPhase[CharS
     spec.includes.asScala.flatMap(translateInclude) ++ spec.statements.asScala.map(translateStatement)
   }
 
-  private def translateInclude(include: TesslaSyntax.IncludeContext): Seq[Item] = {
+  protected def translateInclude(include: TesslaSyntax.IncludeContext): Seq[Item] = {
     val currentFile = getFile(include)
     // getParent returns null for relative paths without subdirectories (i.e. just a file name), which is
     // annoying and stupid. So we wrap the call in an option and fall back to "." as the default.

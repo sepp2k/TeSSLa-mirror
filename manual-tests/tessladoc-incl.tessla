@@ -1,0 +1,2 @@
+--- This is a tessladoc from an included file
+def includedFunction(x: Int) = x+1

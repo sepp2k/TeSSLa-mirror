@@ -63,11 +63,16 @@ object TesslaDoc {
     }
   }
 
-  class Extractor extends AbstractTesslaParser[Seq[TesslaDoc], Seq[TesslaDoc]] {
+  class Extractor(currentFileOnly: Boolean) extends AbstractTesslaParser[Seq[TesslaDoc], Seq[TesslaDoc]] {
     override def aggregateItems(items: Seq[Seq[TesslaDoc]]) = items.flatten
 
     def translateStatement(definition: TesslaSyntax.StatementContext): Seq[TesslaDoc] = {
       new StatementVisitor(Global)(definition)
+    }
+
+    override def translateInclude(include: TesslaSyntax.IncludeContext) = {
+      if (currentFileOnly) Seq()
+      else super.translateInclude(include)
     }
 
     class StatementVisitor(scope: Scope) extends TesslaSyntaxBaseVisitor[Seq[TesslaDoc]]
@@ -117,12 +122,12 @@ object TesslaDoc {
     }
   }
 
-  def extract(src: CharStream) = {
-    new Extractor().translate(src)
+  def extract(src: CharStream, currentFileOnly: Boolean) = {
+    new Extractor(currentFileOnly = currentFileOnly).translate(src)
   }
 
-  def extractAsJSON(src: CharStream) = {
-    extract(src).map(_.mkString("[\n", ",\n", "\n]"))
+  def extractAsJSON(src: CharStream, currentFileOnly: Boolean) = {
+    extract(src, currentFileOnly = currentFileOnly).map(_.mkString("[\n", ",\n", "\n]"))
   }
 }
 

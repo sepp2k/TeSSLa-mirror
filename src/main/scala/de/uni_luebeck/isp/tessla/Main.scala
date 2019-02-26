@@ -39,6 +39,7 @@ object Main extends SexyOpt {
   val recursionDepth = flag("print-recursion-depth", "Print the length of the longest recursion")
   val nodeCount = flag("print-node-count", "Print the number of nodes in the TeSSLaCore graph")
   val tesslaDoc = flag("doc", "Generate tessla-doc documentation")
+  val tesslaDocAll = flag("doc-all", "Generate tessla-doc documentation including those of included files")
 
   val ctfTrace = flag("ctf", "The trace-file with the input data is in CTF format. With this option you must specify " +
     "a trace-file. stdin is not supported.")
@@ -64,7 +65,11 @@ object Main extends SexyOpt {
     try {
       val specSource = CharStreams.fromFileName(tesslaFile)
       if (tesslaDoc) {
-        println(unwrapResult(TesslaDoc.extractAsJSON(specSource)))
+        println(unwrapResult(TesslaDoc.extractAsJSON(specSource, currentFileOnly = true)))
+        return
+      }
+      if (tesslaDocAll) {
+        println(unwrapResult(TesslaDoc.extractAsJSON(specSource, currentFileOnly = false)))
         return
       }
       if (verifyOnly || generateOsl || listInStreams || listOutStreams || computationDepth || recursionDepth || nodeCount) {
