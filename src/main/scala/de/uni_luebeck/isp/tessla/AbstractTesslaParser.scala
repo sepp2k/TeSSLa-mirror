@@ -26,8 +26,7 @@ abstract class AbstractTesslaParser[Item, Result] extends TranslationPhase[CharS
     })
     val spec = parser.spec()
     if (parser.getNumberOfSyntaxErrors > 0) {
-      val lastError = errors.remove(errors.length - 1)
-      throw lastError
+      abortOnError()
     }
     spec.includes.asScala.flatMap(translateInclude) ++ spec.statements.asScala.map(translateStatement)
   }

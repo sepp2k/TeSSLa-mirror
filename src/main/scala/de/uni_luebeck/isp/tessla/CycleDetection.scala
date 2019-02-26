@@ -35,17 +35,10 @@ class CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCo
     }
     ReverseTopologicalSort.sort(streams.values)(requiredStreams) match {
       case ReverseTopologicalSort.Cycles(nodesInCycles) =>
-        val errors = nodesInCycles.flatMap { stream =>
-            stream.id.nameOpt.map(_ => Errors.InfiniteRecursion(stream.expression.loc))
-        }.toIndexedSeq
-        // Add all but the last error to the error list and then throw the last.
-        // We need to throw one of them, so the execution does not continue, but we also want to record the others. We
-        // exclude the last from iteration, so it isn't reported twice (once in the loop and then again when throwing
-        // it afterwards)
-        errors.init.foreach { err =>
-          error(err)
+        nodesInCycles.foreach { stream =>
+          stream.id.nameOpt.foreach(_ => error(Errors.InfiniteRecursion(stream.expression.loc)))
         }
-        throw errors.last
+        abort()
 
       case ReverseTopologicalSort.Sorted(sortedNodes) =>
         spec.copy(streams = sortedNodes)
