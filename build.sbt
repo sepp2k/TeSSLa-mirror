@@ -12,7 +12,7 @@ name := "tessla"
 
 organization := "de.uni_luebeck.isp"
 
-version := s"0.7.0-development-SNAPSHOT"
+version := s"0.7.1-development-SNAPSHOT"
 
 scalaVersion := "2.12.7"
 
