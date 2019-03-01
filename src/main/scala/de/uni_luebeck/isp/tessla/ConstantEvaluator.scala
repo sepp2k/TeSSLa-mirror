@@ -294,6 +294,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 stream {
                   TesslaCore.Merge(streamArg(0), streamArg(1), call.loc)
                 }
+              case BuiltIn.Filter =>
+                stream {
+                  TesslaCore.Filter(streamArg(0), streamArg(1), call.loc)
+                }
               case BuiltIn.Lift =>
                 stream {
                   val f = getFunction(env, call.args(2).id, call.args(2).loc)

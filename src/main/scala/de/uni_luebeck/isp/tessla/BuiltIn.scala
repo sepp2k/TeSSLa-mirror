@@ -51,6 +51,10 @@ object BuiltIn {
     override def name = "merge"
   }
 
+  case object Filter extends BuiltIn {
+    override def name = "filter"
+  }
+
   sealed abstract class PrimitiveOperator extends BuiltIn
 
   /**
@@ -369,6 +373,7 @@ object BuiltIn {
     Lift3,
     Const,
     Merge,
+    Filter,
     Add,
     Sub,
     Negate,

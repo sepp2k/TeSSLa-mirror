@@ -59,6 +59,8 @@ object RecursiveDepthChecker {
                 visitChild(d.resets)
             case m: TesslaCore.Merge =>
               Seq(visitChild(m.stream1), visitChild(m.stream2)).max
+            case f: TesslaCore.Filter =>
+              Seq(visitChild(f.events), visitChild(f.condition)).max
             case c: TesslaCore.Const =>
               visitChild(c.stream)
             case c: TesslaCore.StdLibCount =>

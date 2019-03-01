@@ -27,6 +27,7 @@ class CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCo
         case _: TesslaCore.DelayedLast => Seq() // ignore both operands because both are delayed
         case d: TesslaCore.Delay => resolveStream(d.resets) // ignore the delays stream which is delayed
         case m: TesslaCore.Merge => resolveStream(m.stream1) ++ resolveStream(m.stream2)
+        case f: TesslaCore.Filter => resolveStream(f.events) ++ resolveStream(f.condition)
         case t: TesslaCore.Time => resolveStream(t.stream)
         case l: TesslaCore.SignalLift => l.args.flatMap(resolveStream)
         case l: TesslaCore.Lift => l.args.flatMap(resolveStream)
