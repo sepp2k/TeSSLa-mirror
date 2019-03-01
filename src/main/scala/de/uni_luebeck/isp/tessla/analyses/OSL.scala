@@ -141,6 +141,7 @@ object OSL {
       case dl: TesslaCore.DelayedLast => translateStreamRef(dl.values) ++ translateStreamRef(dl.delays)
       case d: TesslaCore.Delay => translateStreamRef(d.delays) ++ translateStreamRef(d.resets)
       case m: TesslaCore.Merge => translateStreamRef(m.stream1) ++ translateStreamRef(m.stream2)
+      case f: TesslaCore.Filter => translateStreamRef(f.events) ++ translateStreamRef(f.condition)
       case t: TesslaCore.Time => translateStreamRef(t.stream)
       case c: TesslaCore.Const => translateStreamRef(c.stream)
       case c: TesslaCore.StdLibCount => translateStreamRef(c.stream)

@@ -86,6 +86,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"merge($stream1, $stream2)"
   }
 
+  final case class Filter(events: StreamRef, condition: StreamRef, loc: Location) extends Expression {
+    override def toString = s"filter($events, $condition)"
+  }
+
   final case class Lift(f: ValueArg, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
       args.mkString(s"lift($f", ", ", ")")

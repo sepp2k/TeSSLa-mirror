@@ -42,6 +42,15 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     }
   }
 
+  def filter(events: Stream, condition: Stream): Stream = {
+    val latestCondition = merge(condition, last(condition, events))
+    lift(Seq(events, latestCondition)) {
+      case Seq(value, Some(TesslaCore.BoolValue(true, _))) =>
+        value
+      case _ => None
+    }
+  }
+
   def slift(streams: Seq[Stream])(op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream = {
     val ticks = lift(streams) { _ =>
       Some(TesslaCore.TesslaObject(Map(), Location.builtIn))
@@ -113,6 +122,10 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       val stream1 = evalStream(arg1)
       val stream2 = evalStream(arg2)
       merge(stream1, stream2)
+    case TesslaCore.Filter(eventsArg, conditionArg, _) =>
+      val eventsStream = evalStream(eventsArg)
+      val conditionStream = evalStream(conditionArg)
+      filter(eventsStream, conditionStream)
   }
 
   def getInt(value: TesslaCore.Value): BigInt = value match {

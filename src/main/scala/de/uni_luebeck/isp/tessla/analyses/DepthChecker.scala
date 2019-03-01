@@ -49,6 +49,8 @@ object DepthChecker {
             visitChild(l.clock)
           case m: TesslaCore.Merge =>
             Math.max(visitChild(m.stream1), visitChild(m.stream2))
+          case f: TesslaCore.Filter =>
+            Math.max(visitChild(f.events), visitChild(f.condition))
           case c: TesslaCore.Const =>
             visitChild(c.stream)
           case _: TesslaCore.DelayedLast =>

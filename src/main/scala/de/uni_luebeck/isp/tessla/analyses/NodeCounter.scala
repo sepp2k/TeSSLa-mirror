@@ -40,6 +40,8 @@ object NodeCounter {
             visitChild(l.clock) + visitChild(l.values)
           case m: TesslaCore.Merge =>
             visitChild(m.stream1) + visitChild(m.stream2)
+          case f: TesslaCore.Filter =>
+            visitChild(f.events) + visitChild(f.condition)
           case c: TesslaCore.Const =>
             visitChild(c.stream)
           case dl: TesslaCore.DelayedLast =>
