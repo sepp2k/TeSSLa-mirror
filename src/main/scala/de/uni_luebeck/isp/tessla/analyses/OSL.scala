@@ -102,7 +102,7 @@ object OSL {
 
     def findBasicCondition(exp: TesslaCore.Expression): Option[Condition] = exp match {
       case l: TesslaCore.SignalLift =>
-        l.f match {
+        l.op.op match {
           case BuiltIn.And =>
             findBasicCondition(l.args(0)).flatMap { lhs =>
               findBasicCondition(l.args(1)).map { rhs =>
@@ -117,11 +117,10 @@ object OSL {
             }
           case BuiltIn.Eq =>
             l.args match {
-              case Seq(i: TesslaCore.InputStream, s: TesslaCore.Stream) =>
+              case Seq(i: TesslaCore.InputStream) =>
                 translateInputStreamName(i.name).flatMap { name =>
-                  getExp(s).flatMap {
-                    case TesslaCore.Default(_, v: TesslaCore.Value, _) =>
-                      Some(Equals(name, v))
+                  l.op.args.get(1).flatMap {
+                    case v: TesslaCore.Value => Some(Equals(name, v))
                     case _ => None
                   }
                 }

@@ -58,6 +58,23 @@ object Evaluator {
     }
   }
 
+  def evalPrimitiveOperator(op: TesslaCore.CurriedPrimitiveOperator,
+                            arguments: Seq[TesslaCore.ValueOrError],
+                            loc: Location): Option[TesslaCore.ValueOrError] =
+    if (op.args.isEmpty) {
+      evalPrimitiveOperator(op.op, arguments, loc)
+    } else {
+      def f(curried: Int, arg: Int, acc: Seq[TesslaCore.ValueOrError]): Seq[TesslaCore.ValueOrError] =
+        if (op.args.contains(curried)) {
+          f(curried + 1, arg, acc :+ op.args(curried))
+        } else if (arg < arguments.size) {
+          f(curried + 1, arg + 1, acc :+ arguments(arg))
+        } else {
+          acc
+        }
+      evalPrimitiveOperator(op.op, f(0, 0, Seq()), loc)
+    }
+
   def evalPrimitiveOperator(op: BuiltIn.PrimitiveOperator,
                             arguments: Seq[TesslaCore.ValueOrError],
                             loc: Location): Option[TesslaCore.ValueOrError] = {

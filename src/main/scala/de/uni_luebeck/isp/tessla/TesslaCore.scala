@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
+import scala.language.implicitConversions
 
 object TesslaCore extends HasUniqueIdentifiers {
   final case class Specification(streams: Seq[StreamDescription],
@@ -92,13 +93,27 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   final case class Lift(f: ValueArg, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
-      args.mkString(s"lift($f", ", ", ")")
+      args.mkString(s"lift($f)(", ", ", ")")
     }
   }
 
-  final case class SignalLift(f: BuiltIn.PrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
+  final case class CurriedPrimitiveOperator(op: BuiltIn.PrimitiveOperator, args: Map[Int, ValueOrError] = Map()) {
+    override def toString: String = if (args.isEmpty) {
+      op.toString
+    } else {
+      val a = (0 until args.keys.max + 1).map{
+        case i if args.contains(i) => args(i).toString
+        case _ => "_"
+      }.mkString(", ")
+      s"$op($a)"
+    }
+  }
+
+  implicit def builtInPrimitiveOperatorToCurriedPrimitiveOperator(op: BuiltIn.PrimitiveOperator) = CurriedPrimitiveOperator(op)
+
+  final case class SignalLift(op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
-      args.mkString(s"slift($f", ", ", ")")
+      args.mkString(s"slift($op)(", ", ", ")")
     }
   }
 

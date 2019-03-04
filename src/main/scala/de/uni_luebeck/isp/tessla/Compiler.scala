@@ -9,6 +9,7 @@ object Compiler {
       .andThen(new TypeChecker)
       .andThen(new ConstantEvaluator(unit))
       .andThen(new CycleDetection)
+      .andThen(new CurrySignalLift)
   }
 
   class Printer[T] extends TranslationPhase[T, T] {
