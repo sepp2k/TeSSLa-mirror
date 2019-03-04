@@ -5,6 +5,7 @@ import java.io.IOException
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.analyses._
+import de.uni_luebeck.isp.tessla.interpreter.Interpreter.{CoreToInterpreterSpec, RunInterpreter}
 import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
@@ -72,52 +73,62 @@ object Main extends SexyOpt {
         println(unwrapResult(TesslaDoc.extractAsJSON(specSource, currentFileOnly = false)))
         return
       }
-      if (verifyOnly || generateOsl || listInStreams || listOutStreams || computationDepth || recursionDepth || nodeCount) {
-        val result = new Compiler().compile(specSource, timeUnit)
-        if (generateOsl) {
-          println(unwrapResult(result.andThen(new OSL.Generator)))
-          return
-        }
 
-        val spec = unwrapResult(result)
-        if (listInStreams) {
-          spec.inStreams.foreach { is => println(is.name) }
-          return
-        }
-        if (listOutStreams) {
-          spec.outStreams.foreach { os => println(os.nameOpt.getOrElse(s"print ${os.stream}")) }
-          return
-        }
-        if (computationDepth) {
-          println(DepthChecker.nestingDepth(spec))
-          return
-        }
-        if (recursionDepth) {
-          println(RecursiveDepthChecker.nestingDepth(spec))
-          return
-        }
-        if (nodeCount) {
-          println(NodeCounter.nodeCount(spec))
-          return
-        }
-      } else if (ctfTrace) {
+      val core = unwrapResult(Compiler.compile(specSource, timeUnit))
+
+      if (generateOsl) {
+        println(unwrapResult(new OSL.Generator().translate(core)))
+        return
+      }
+
+      if (listInStreams) {
+        core.inStreams.foreach { is => println(is.name) }
+      }
+
+      if (listOutStreams) {
+        core.outStreams.foreach { os => println(os.nameOpt.getOrElse(s"print ${os.stream}")) }
+      }
+
+      if (computationDepth) {
+        println(DepthChecker.nestingDepth(core))
+      }
+
+      if (recursionDepth) {
+        println(RecursiveDepthChecker.nestingDepth(core))
+      }
+
+      if (nodeCount) {
+        println(NodeCounter.nodeCount(core))
+      }
+
+      if (printCore) {
+        println(core)
+      }
+
+      if (listInStreams || listOutStreams || computationDepth || recursionDepth || nodeCount || verifyOnly) {
+        return
+      }
+
+      val abortAtValue = abortAt.map(BigInt(_))
+
+      if (ctfTrace) {
         if (!traceFile.isDefined) {
           System.err.println("No CTF trace input given")
           sys.exit(17)
         }
-        val abortAtValue = abortAt.map(BigInt(_))
         val output = unwrapResult {
-          Interpreter.runCtf(specSource, traceFile.get, timeUnit = timeUnit.value, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
+          val trace = Trace.fromCtfFile(traceFile.get, abortAtValue)
+          new CoreToInterpreterSpec().translate(core).andThen(new RunInterpreter(trace, stopOn))
         }
         output.foreach(println)
       } else {
-        val abortAtValue = abortAt.map(BigInt(_))
         val traceSource = traceFile.map(CharStreams.fromFileName).getOrElse(CharStreams.fromStream(System.in))
+        val trace = Trace.fromTraceSource(traceSource, abortAtValue)
         if (flattenInput) {
-          Interpreter.flattenInput(traceSource, abortAtValue).foreach(println)
+          trace.foreach(println)
         } else {
           val output = unwrapResult {
-            Interpreter.runSpec(specSource, traceSource, timeUnit = timeUnit, stopOn = stopOn, printCore = printCore, abortAt = abortAtValue)
+            new CoreToInterpreterSpec().translate(core).andThen(new RunInterpreter(trace, stopOn))
           }
           output.foreach(println)
         }

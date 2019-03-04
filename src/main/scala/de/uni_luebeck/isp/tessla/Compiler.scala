@@ -2,8 +2,8 @@ package de.uni_luebeck.isp.tessla
 
 import org.antlr.v4.runtime.CharStream
 
-class Compiler {
-  def applyPasses(src: CharStream, unit: Option[TimeUnit]): TranslationPhase.Result[TesslaCore.Specification] = {
+object Compiler {
+  def compile(src: CharStream, unit: Option[TimeUnit]): TranslationPhase.Result[TesslaCore.Specification] = {
     new TesslaParser().translate(src)
       .andThen(new Flattener)
       .andThen(new TypeChecker)
@@ -19,12 +19,8 @@ class Compiler {
     }
   }
 
-  def compile(src: CharStream,
-              timeUnit: Option[String],
-              printCore: Boolean = false) = {
+  def compile(src: CharStream, timeUnit: Option[String])(implicit i1:DummyImplicit): TranslationPhase.Result[TesslaCore.Specification] = {
     val parsedTimeUnit = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
-    val result = applyPasses(src, parsedTimeUnit)
-    if (printCore) result.andThen(new Printer[TesslaCore.Specification])
-    else result
+    compile(src, parsedTimeUnit)
   }
 }

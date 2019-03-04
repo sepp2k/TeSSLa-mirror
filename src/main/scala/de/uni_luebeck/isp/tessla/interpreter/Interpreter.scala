@@ -215,7 +215,7 @@ object Interpreter {
     def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
   }
 
-  class RunInterpreter(inputTrace: Trace, stopOn: Option[String]) extends TranslationPhase[Interpreter, Trace] {
+  class RunInterpreter(inputTrace: Trace, stopOn: Option[String] = None) extends TranslationPhase[Interpreter, Trace] {
 
     override def translateSpec(spec: Interpreter): Trace = {
       new Iterator[Trace.Event] {
@@ -286,40 +286,5 @@ object Interpreter {
         }
       }
     }
-  }
-
-  def runSpec(specSource: CharStream,
-              traceSource: CharStream,
-              stopOn: Option[String] = None,
-              timeUnit: Option[String] = None,
-              printCore: Boolean = false,
-              abortAt: Option[BigInt] = None,
-             ): Result[Trace] = {
-    val flatTrace = flattenInput(traceSource, abortAt)
-    val tu = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
-    val core = new Compiler().applyPasses(specSource, tu)
-    if (printCore) core.foreach(println)
-    core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(flatTrace, stopOn))
-  }
-
-  def flattenInput(traceSource: CharStream,
-                   abortAt: Option[BigInt] = None,
-                  ): Trace = {
-    val rawTrace = new TraceParser().parseTrace(traceSource)
-    new FlatEventIterator(rawTrace, abortAt)
-  }
-
-  def runCtf(specSource: CharStream,
-             ctfFileName: String,
-             stopOn: Option[String] = None,
-             timeUnit: Option[String] = None,
-             printCore: Boolean = false,
-             abortAt: Option[BigInt] = None,
-            ): Result[Trace] = {
-    val tu = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
-    val core = new Compiler().applyPasses(specSource, tu)
-    if (printCore) core.foreach(println)
-    val trace = Trace.fromCtfFile(ctfFileName, abortAt)
-    core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(trace, stopOn))
   }
 }
