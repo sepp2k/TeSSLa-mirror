@@ -10,6 +10,7 @@ object Compiler {
       .andThen(new ConstantEvaluator(unit))
       .andThen(new CycleDetection)
       .andThen(new CurrySignalLift)
+      .andThen(new RemoveUnusedDefinitions)
   }
 
   class Printer[T] extends TranslationPhase[T, T] {
