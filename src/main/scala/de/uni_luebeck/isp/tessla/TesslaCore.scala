@@ -26,7 +26,7 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   case class OutStreamDescription(nameOpt: Option[String], stream: StreamRef, typ: StreamType) {
     override def toString = nameOpt match {
-      case Some(name) => s"out $stream: $typ as $name\n"
+      case Some(name) => s"out $stream: $typ as $name"
       case None => s"print $stream: $typ"
     }
   }
