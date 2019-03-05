@@ -3,7 +3,6 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
-import scala.language.implicitConversions
 
 object TesslaCore extends HasUniqueIdentifiers {
   final case class Specification(streams: Seq[StreamDescription],
@@ -108,8 +107,6 @@ object TesslaCore extends HasUniqueIdentifiers {
       s"$op($a)"
     }
   }
-
-  implicit def builtInPrimitiveOperatorToCurriedPrimitiveOperator(op: BuiltIn.PrimitiveOperator) = CurriedPrimitiveOperator(op)
 
   final case class SignalLift(op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {

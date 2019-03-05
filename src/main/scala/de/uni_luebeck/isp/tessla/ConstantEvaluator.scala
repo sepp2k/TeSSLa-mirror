@@ -2,6 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import scala.collection.mutable
 import de.uni_luebeck.isp.tessla.Errors._
+import de.uni_luebeck.isp.tessla.TesslaCore.CurriedPrimitiveOperator
 import de.uni_luebeck.isp.tessla.util.Lazy
 import de.uni_luebeck.isp.tessla.interpreter.BuildInfo
 import de.uni_luebeck.isp.tessla.util._
@@ -322,7 +323,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 typ match {
                   case _ : TypedTessla.StreamType =>
                     stream {
-                      TesslaCore.SignalLift(op, args.indices.map(streamArg), call.loc)
+                      TesslaCore.SignalLift(CurriedPrimitiveOperator(op), args.indices.map(streamArg), call.loc)
                     }
                   case _ =>
                     val value = Evaluator.evalPrimitiveOperator(op, args.map(getValue), call.loc)
