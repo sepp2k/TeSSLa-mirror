@@ -8,8 +8,12 @@ in instruction: Events[String]
 -- also log the current values of both instruction and functioncall (not just the one
 -- that fits the condition that's fulfilled now). If we don't, the other condition will
 -- use an outdated value and might evaluate to true when it isn't supposed to.
-out if function == "foo" && instruction == "ret" then ()
-out if function == "foo" && functioncall == "bar" then ()
+out filterConst((), function == "foo" && instruction == "ret")
+out filterConst((), function == "foo" && functioncall == "bar")
 
 -- The fact that we log all lines should not affect the logging of the other properties
 out line_reached
+
+def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
+    if getSome(c) then Some(x) else None[T]
+)

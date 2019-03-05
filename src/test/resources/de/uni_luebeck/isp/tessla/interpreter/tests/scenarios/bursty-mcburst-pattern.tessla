@@ -10,8 +10,12 @@ def resetCount[T](values: Events[T], reset: Events[Unit]) := {
     rc
 }
 
+def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
+    if getSome(c) then Some(x) else None[T]
+)
+
 def trigger(condition: Events[Bool]) :=
-    if condition && !last(condition, condition) then ()
+    filterConst((), condition && !last(condition, condition))
 
 def countSince[T](e: Events[T], condition: Events[Bool]) :=
     resetCount(e, trigger(condition))
@@ -28,8 +32,7 @@ def esSinceAGreaterThanB := countSince(e, a > b)
 -- burstLength = 5, wait = 4, burstAmount = 3
 def burstStarts: Events[Unit] :=
     defaultFrom(
-        if time(e) - last(time(burstStarts), e) >= 9
-        then e,
+        filter(e, time(e) - last(time(burstStarts), e) >= 9),
         e)
 out burstStarts
 

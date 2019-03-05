@@ -275,10 +275,6 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 stream {
                   TesslaCore.Last(streamArg(0), streamArg(1), call.loc)
                 }
-              case BuiltIn.DelayedLast =>
-                stream {
-                  TesslaCore.DelayedLast(streamArg(0), streamArg(1), call.loc)
-                }
               case BuiltIn.Delay =>
                 stream {
                   TesslaCore.Delay(streamArg(0), streamArg(1), call.loc)
@@ -327,7 +323,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                     }
                   case _ =>
                     val value = Evaluator.evalPrimitiveOperator(op, args.map(getValue), call.loc)
-                    wrapper.entry = Translated(Lazy(ValueEntry(value.get)))
+                    wrapper.entry = Translated(Lazy(ValueEntry(value)))
                 }
               case BuiltIn.TesslaInfo =>
                 throw InternalError(s"Applying non-macro/builtin (${builtIn.getClass.getSimpleName}) - should have been caught by the type checker.")

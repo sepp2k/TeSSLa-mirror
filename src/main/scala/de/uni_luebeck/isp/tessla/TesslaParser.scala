@@ -198,24 +198,16 @@ class TesslaParser extends AbstractTesslaParser[Tessla.Statement, Tessla.Specifi
       val cond = translateExpression(ite.condition)
       val thenCase = translateExpression(ite.thenCase)
       val loc = Location.fromNode(ite)
-      if (ite.elseCase == null) {
-        Tessla.MacroCall(
-          Tessla.Variable(Tessla.Identifier("if then", Location.fromToken(ite.ifToken))),
-          Seq(),
-          Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase)), loc
-        )
+      val elseCase = translateExpression(ite.elseCase)
+      if (ite.STATIC != null) {
+        Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
       } else {
-        val elseCase = translateExpression(ite.elseCase)
-        if (ite.STATIC != null) {
-          Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
-        } else {
-          Tessla.MacroCall(
-            Tessla.Variable(Tessla.Identifier("if then else", Location.fromToken(ite.ifToken))),
-            Seq(),
-            Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
-            loc
-          )
-        }
+        Tessla.MacroCall(
+          Tessla.Variable(Tessla.Identifier("if then else", Location.fromToken(ite.ifToken))),
+          Seq(),
+          Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
+          loc
+        )
       }
     }
 

@@ -1,7 +1,7 @@
 def duration := runtime("compute")
 out duration
 
-def error := if duration > 45ms then ()
+def error := filterConst((), duration > 45ms)
 out error # unit events
 
 out maximum(duration) as max
@@ -16,7 +16,7 @@ def runtime(name: String) := {
 }
 
 def at[A,B](x: Events[A], y: Events[B]) :=
-  if time(x) == time(y) then y
+  filter(y, time(x) == time(y))
 
 @liftable
 def max(a: Int, b: Int) := if a > b then a else b
@@ -38,6 +38,10 @@ in operandcount: Events[Int]
 in debug_slot: Events[Int]
 in debug_value: Events[Int]
 
-def code_line_exec(l: Int) := if line == l && last(line, line) != l then ()
-def function_call(name: String) := if functioncall == name then ()
-def function_return(name: String) := if function == name && instruction == "ret" then ()
+def code_line_exec(l: Int) := filterConst((), line == l && last(line, line) != l)
+def function_call(name: String) := filterConst((), functioncall == name)
+def function_return(name: String) := filterConst((), function == name && instruction == "ret")
+
+def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
+    if getSome(c) then Some(x) else None[T]
+)

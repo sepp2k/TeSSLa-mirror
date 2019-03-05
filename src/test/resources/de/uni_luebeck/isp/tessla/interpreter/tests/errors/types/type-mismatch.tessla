@@ -17,6 +17,3 @@ out generic(42, "string")
 -- Violating implicit value type constraint
 out generic(nil[Int], nil[Int])
 out generic(g, g)
-
--- No if-then for values
-def i: Int := if true then 42

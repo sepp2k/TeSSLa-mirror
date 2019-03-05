@@ -8,8 +8,12 @@ def eventCount(e: Events[Unit]) := {
   ec
 }
 
+def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
+    if getSome(c) then Some(x) else None[T]
+)
+
 def function_call(name: String) :=
-  if function == name && last(function, function) != name && last(instruction, instruction) == "call" then ()
+  filterConst((), function == name && last(function, function) != name && last(instruction, instruction) == "call")
 
 def f_count := eventCount(function_call("f"))
 

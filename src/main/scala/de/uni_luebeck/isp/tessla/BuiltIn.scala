@@ -35,10 +35,6 @@ object BuiltIn {
     override def name = "lift3"
   }
 
-  case object DelayedLast extends BuiltIn {
-    override def name = "delayedLast"
-  }
-
   case object Delay extends BuiltIn {
     override def name = "delay"
   }
@@ -199,10 +195,6 @@ object BuiltIn {
 
   case object IfThenElse extends PrimitiveOperator {
     override def name = "if then else"
-  }
-
-  case object IfThen extends PrimitiveOperator {
-    override def name = "if then"
   }
 
   // Float functions
@@ -366,7 +358,6 @@ object BuiltIn {
     Default,
     DefaultFrom,
     Last,
-    DelayedLast,
     Delay,
     Time,
     Lift,
@@ -405,7 +396,6 @@ object BuiltIn {
     Not,
     First,
     IfThenElse,
-    IfThen,
     Pow,
     Log,
     IntToFloat,

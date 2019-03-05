@@ -77,7 +77,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => arg.mapValue(_.withLoc(stream.loc))
         }
-        Evaluator.evalPrimitiveOperator(op, args, exp.loc)
+        Some(Evaluator.evalPrimitiveOperator(op, args, exp.loc))
       }
     case TesslaCore.Lift(f, argStreams, loc) =>
       if (argStreams.isEmpty) {
