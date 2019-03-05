@@ -9,9 +9,9 @@ class RemoveUnusedDefinitions extends TranslationPhase[TesslaCore.Specification,
     val used = MutableSet.empty[Long]
 
     def usageExp(exp: ValueExpression): Unit = exp match {
-      case Function(_, scope, body, _) =>
-        scope.values.foreach(usageExp)
-        usageValueArg(body)
+      case Function(_, body, result, _) =>
+        body.values.foreach(usageExp)
+        usageValueArg(result)
       case IfThenElse(cond, thenCase, elseCase, _) =>
         usageValueArg(cond)
         usageValueArg(thenCase.get)
@@ -24,21 +24,21 @@ class RemoveUnusedDefinitions extends TranslationPhase[TesslaCore.Specification,
     }
 
     def usageValueArg(valueArg: ValueArg): Unit = valueArg match {
-      case ValueExpressionRef(id) if function.scope.contains(id) =>
+      case ValueExpressionRef(id) if function.body.contains(id) =>
         used.add(id.uid)
-        usageExp(function.scope(id))
+        usageExp(function.body(id))
       case ObjectCreation(members, _) => members.values.foreach(usageValueArg)
       case _ => // no usage at all
     }
 
-    usageValueArg(function.body)
+    usageValueArg(function.result)
 
     // TODO handle nested functions
-    val newScope = function.scope.collect{
+    val newBody = function.body.collect{
       case (id, e) if used(id.uid) => (id, removeUnusedValueExpression(e))
     }
 
-    Function(function.parameters, newScope, function.body, function.loc)
+    Function(function.parameters, newBody, function.result, function.loc)
   }
 
   def removeUnusedValueExpression(e: ValueExpression): ValueExpression = e match {

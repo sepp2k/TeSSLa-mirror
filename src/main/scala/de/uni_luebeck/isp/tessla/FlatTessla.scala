@@ -3,11 +3,11 @@ package de.uni_luebeck.isp.tessla
 import scala.collection.mutable
 
 abstract class FlatTessla extends HasUniqueIdentifiers {
-  case class Specification(globalScope: Scope, outStreams: Seq[OutStream], outAllLocation: Option[Location],
+  case class Specification(globalDefs: Definitions, outStreams: Seq[OutStream], outAllLocation: Option[Location],
                            stdlibNames: Map[String, Identifier]) {
     override def toString = {
       val outAllString = if (outAll) "\nout *" else ""
-      s"$globalScope\n${outStreams.mkString("\n")}$outAllString"
+      s"$globalDefs\n${outStreams.mkString("\n")}$outAllString"
     }
 
     def outAll = outAllLocation.isDefined
@@ -19,7 +19,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   case class VariableEntry(id: Identifier, expression: Expression, typeInfo: TypeAnnotation, loc: Location)
   case class TypeEntry(id: Identifier, arity: Int, typeConstructor: Seq[Type] => Type, loc: Location)
 
-  class Scope(val parent: Option[Scope]) {
+  class Definitions(val parent: Option[Definitions]) {
     val variables = mutable.Map[Identifier, VariableEntry]()
     val types = mutable.Map[Identifier, TypeEntry]()
 
@@ -40,14 +40,14 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     }
 
     override def toString = {
-      s"-- Scope $hashCode\n" + variables.map {
+      s"-- Definitions $hashCode\n" + variables.map {
         case (id, entry) =>
           val typeAnnotation = typeAnnotationToString(entry.typeInfo)
           s"def $id$typeAnnotation = ${entry.expression}"
       }.mkString("\n") + types.map {
         case (id, entry) =>
           s"type $id[${entry.arity}] = ${entry.id}"
-      }.mkString("\n") + parent.map(p => s"\n-- Parent = Scope ${p.hashCode}\n").getOrElse("") ++ "-- /Scope"
+      }.mkString("\n") + parent.map(p => s"\n-- Parent = Definitions ${p.hashCode}\n").getOrElse("") ++ "-- /Definitions"
     }
   }
 
@@ -57,15 +57,15 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
   case class Macro(typeParameters: Seq[Identifier],
                    parameters: Seq[Parameter],
-                   scope: Scope,
+                   body: Definitions,
                    returnType: TypeAnnotation,
                    headerLoc: Location,
-                   body: Expression,
+                   result: Expression,
                    loc: Location,
                    isLiftable: Boolean) extends Expression {
     override def toString = {
       val annotationString = if (isLiftable) "@liftable " else ""
-      s"$annotationString[${typeParameters.mkString(", ")}](${parameters.mkString(", ")}) => {\n$scope\n$body\n}"
+      s"$annotationString[${typeParameters.mkString(", ")}](${parameters.mkString(", ")}) => {\n$body\n$result\n}"
     }
   }
 

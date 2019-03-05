@@ -129,14 +129,14 @@ object TesslaCore extends HasUniqueIdentifiers {
   }
 
   final case class Function(parameters: Seq[Identifier],
-                            scope: Map[Identifier, ValueExpression],
-                            body: ValueArg,
+                            body: Map[Identifier, ValueExpression],
+                            result: ValueArg,
                             loc: Location) extends ValueExpression {
     override def toString = {
-      val defs = scope.map {
+      val defs = body.map {
         case (id, exp) => s"const $id := $exp\n"
       }.mkString
-      s"(${parameters.mkString(", ")}) => {\n${defs}return $body\n}"
+      s"(${parameters.mkString(", ")}) => {\n${defs}return $result\n}"
     }
   }
 

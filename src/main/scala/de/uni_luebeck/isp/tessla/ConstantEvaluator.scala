@@ -38,9 +38,9 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
 
   override def translateSpec(spec: TypedTessla.Specification): TesslaCore.Specification = {
     try {
-      val env = createEnvForScopeWithParents(spec.globalScope)
+      val env = createEnvForDefsWithParents(spec.globalDefs)
       translateEnv(env)
-      val inputStreams = spec.globalScope.variables.collect {
+      val inputStreams = spec.globalDefs.variables.collect {
         case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
           TesslaCore.InStreamDescription(is.name, translateStreamType(typ, env), is.loc)
       }
@@ -60,16 +60,16 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     }
   }
 
-  def createEnvForScope(scope: TypedTessla.Scope, parent: Env): Env = {
-    val entries = mapValues(scope.variables)(entry => NotYetTranslated(entry, null, inFunction = false)).toMap
+  def createEnvForDefs(defs: TypedTessla.Definitions, parent: Env): Env = {
+    val entries = mapValues(defs.variables)(entry => NotYetTranslated(entry, null, inFunction = false)).toMap
     val env = parent ++ mapValues(entries)(EnvEntryWrapper)
     entries.values.foreach(_.closure = env)
     env
   }
 
-  def createEnvForScopeWithParents(scope: TypedTessla.Scope): Env = {
-    val outerEnv = scope.parent.map(createEnvForScopeWithParents).getOrElse(Map())
-    createEnvForScope(scope, outerEnv)
+  def createEnvForDefsWithParents(defs: TypedTessla.Definitions): Env = {
+    val outerEnv = defs.parent.map(createEnvForDefsWithParents).getOrElse(Map())
+    createEnvForDefs(defs, outerEnv)
   }
 
   def translateEnv(env: Env): Unit = {
@@ -348,17 +348,17 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                   case None => throw UndefinedNamedArg(arg)
                 }
             }.toMap
-            val scopeWithoutParameters = new TypedTessla.Scope(me.mac.scope.parent)
-            me.mac.scope.variables.foreach {
+            val defsWithoutParameters = new TypedTessla.Definitions(me.mac.body.parent)
+            me.mac.body.variables.foreach {
               case (_, entry) =>
                 entry.expression match {
                   case _: TypedTessla.Parameter => // do nothing
-                  case _ => scopeWithoutParameters.addVariable(entry)
+                  case _ => defsWithoutParameters.addVariable(entry)
                 }
             }
             stack.push(call.loc)
-            val innerEnv = createEnvForScope(scopeWithoutParameters, me.closure ++ args)
-            translateExpression(innerEnv, wrapper, me.mac.body, nameOpt, typ, inFunction)
+            val innerEnv = createEnvForDefs(defsWithoutParameters, me.closure ++ args)
+            translateExpression(innerEnv, wrapper, me.mac.result, nameOpt, typ, inFunction)
             stack.pop()
           case other =>
             throw InternalError(s"Applying non-macro/builtin (${other.getClass.getSimpleName}) - should have been caught by the type checker.")
@@ -376,10 +376,10 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case Translated(Lazy(BuiltInEntry(primOp: BuiltIn.PrimitiveOperator, typ: TypedTessla.FunctionType))) =>
         val arity = typ.parameterTypes.length
         val ids = (1 to arity).map(_ => makeIdentifier())
-        val scopeEntryID = makeIdentifier()
+        val defsEntryID = makeIdentifier()
         val builtIn = TesslaCore.BuiltInOperator(primOp, loc)
         val app = TesslaCore.Application(Lazy(builtIn), ids.map(id => Lazy(TesslaCore.ValueExpressionRef(id))), loc)
-        TesslaCore.Function(ids, Map(scopeEntryID -> app), TesslaCore.ValueExpressionRef(scopeEntryID), loc)
+        TesslaCore.Function(ids, Map(defsEntryID -> app), TesslaCore.ValueExpressionRef(defsEntryID), loc)
       case other => throw InternalError(s"Wrong type of environment entry: Expected macro or primitive function, found: $other")
     }
 
@@ -422,26 +422,26 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     val params = mac.parameters.map { param =>
       param.id -> makeIdentifier(param.name)
     }
-    val scopeNotYetTranslateds = mac.scope.variables.values.filter { entry =>
+    val defsNotYetTranslateds = mac.body.variables.values.filter { entry =>
       !entry.expression.isInstanceOf[TypedTessla.Parameter] && isValueCompatibleType(entry.typeInfo)
     }.map { entry =>
       NotYetTranslated(entry, null, inFunction = true)
     }
-    val scopeWrappers = scopeNotYetTranslateds.map(nyt => nyt.entry.id -> EnvEntryWrapper(nyt))
+    val defsWrappers = defsNotYetTranslateds.map(nyt => nyt.entry.id -> EnvEntryWrapper(nyt))
     val env: Env = closure ++ mapValues(params.toMap) { newId =>
         EnvEntryWrapper(Translated(Lazy(FunctionParameterEntry(newId))))
-    } ++ scopeWrappers
-    scopeNotYetTranslateds.foreach(_.closure = env)
-    scopeWrappers.foreach {
+    } ++ defsWrappers
+    defsNotYetTranslateds.foreach(_.closure = env)
+    defsWrappers.foreach {
       case (_, wrapper) =>
         translateEntry(env, wrapper)
     }
     // This null should be safe because we only use this entry to put into a NYT and no one ever uses the ID of a
     // VariableEntry in an NYT
-    val resultEntry = TypedTessla.VariableEntry(null, mac.body, mac.returnType, mac.body.loc)
+    val resultEntry = TypedTessla.VariableEntry(null, mac.result, mac.returnType, mac.result.loc)
     val resultWrapper = EnvEntryWrapper(NotYetTranslated(resultEntry, env, inFunction = true))
     translateEntry(env, resultWrapper)
-    val scope = (resultWrapper.entry +: scopeWrappers.map(_._2.entry).toSeq).flatMap {
+    val defs = (resultWrapper.entry +: defsWrappers.map(_._2.entry).toSeq).flatMap {
       case Translated(Lazy(fe: FunctionEntry)) =>
         Some(fe.id -> fe.f)
       case Translated(Lazy(ae: ValueExpressionEntry)) =>
@@ -449,7 +449,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
       case _ =>
         None
     }
-    TesslaCore.Function(params.map(_._2), scope.toMap, getValueArg(resultWrapper.entry), mac.loc)
+    TesslaCore.Function(params.map(_._2), defs.toMap, getValueArg(resultWrapper.entry), mac.loc)
   }
 
   def getValueArg(entry: EnvEntry): TesslaCore.ValueArg = entry match {

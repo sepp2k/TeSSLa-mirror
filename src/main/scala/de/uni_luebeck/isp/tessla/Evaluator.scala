@@ -289,10 +289,10 @@ object Evaluator {
       case c: TesslaCore.Closure =>
         val env = c.capturedEnvironment
         val argEnv = c.function.parameters.zip(args.map(arg => Lazy(arg))).toMap
-        lazy val innerEnv: Env =  env ++ argEnv ++ c.function.scope.map {
+        lazy val innerEnv: Env =  env ++ argEnv ++ c.function.body.map {
           case (id, e) => id -> Lazy(evalExpression(e, innerEnv))
         }
-        evalArg(c.function.body, innerEnv)
+        evalArg(c.function.result, innerEnv)
       case _ =>
         throw InternalError("Application of non-function should have been caught by the type checker")
     }
