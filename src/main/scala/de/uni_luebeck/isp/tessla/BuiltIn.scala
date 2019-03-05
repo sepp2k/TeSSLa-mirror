@@ -27,6 +27,10 @@ object BuiltIn {
     override def name = "time"
   }
 
+  case object Lift1 extends BuiltIn {
+    override def name = "lift1"
+  }
+
   case object Lift extends BuiltIn {
     override def name = "lift"
   }
@@ -360,6 +364,7 @@ object BuiltIn {
     Last,
     Delay,
     Time,
+    Lift1,
     Lift,
     Lift3,
     Const,

@@ -295,6 +295,12 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 stream {
                   TesslaCore.Filter(streamArg(0), streamArg(1), call.loc)
                 }
+              case BuiltIn.Lift1 =>
+                stream {
+                  val f = getFunctionForLift(env, call.args(1).id, call.args(1).loc)
+                  val liftArgs = Seq(getStream(args(0), call.args(0).loc))
+                  TesslaCore.Lift(f, liftArgs, call.loc)
+                }
               case BuiltIn.Lift =>
                 stream {
                   val f = getFunctionForLift(env, call.args(2).id, call.args(2).loc)

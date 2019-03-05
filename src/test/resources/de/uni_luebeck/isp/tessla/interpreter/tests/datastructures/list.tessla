@@ -1,8 +1,6 @@
 in list: Events[List[Int]]
 
 def sum(list: List[Int]) := List_fold(list, 0, fun(a: Int, b: Int) => a + b)
-def lift1[A,B](e: Events[A], f: (Option[A]) => Option[B]) :=
-  lift(e, nil[Unit], fun(a: Option[A], b: Option[Unit]) => f(a))
 def slift1[A,B](e: Events[A], f: (A) => B) :=
   lift1(e, fun(a: Option[A]) => if isNone(a) then None[B] else Some(f(getSome(a))))  
 
