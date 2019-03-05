@@ -90,7 +90,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"filter($events, $condition)"
   }
 
-  final case class Lift(f: ValueArg, args: Seq[StreamRef], loc: Location) extends Expression {
+  final case class Lift(f: Function, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
       args.mkString(s"lift($f)(", ", ", ")")
     }

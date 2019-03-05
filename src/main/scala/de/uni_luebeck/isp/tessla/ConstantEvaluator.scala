@@ -31,7 +31,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   case class MacroEntry(mac: TypedTessla.Macro, closure: Env, functionValue: Option[TesslaCore.Closure]) extends TranslationResult {
     override def toString = s"MacroEntry($mac, ...)"
   }
-  case class BuiltInEntry(builtIn: BuiltIn) extends TranslationResult
+  case class BuiltInEntry(builtIn: BuiltIn, typ: TypedTessla.Type) extends TranslationResult
   case class TypeEntry(typ: TesslaCore.ValueType) extends TranslationResult
   case class FunctionParameterEntry(id: TesslaCore.Identifier) extends TranslationResult
   case class ValueExpressionEntry(exp: TesslaCore.ValueExpression, id: TesslaCore.Identifier) extends TranslationResult
@@ -158,7 +158,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         )
         wrapper.entry = Translated(Lazy(ObjectEntry(members, Location.builtIn)))
       case TypedTessla.BuiltInOperator(builtIn) =>
-        wrapper.entry = Translated(Lazy(BuiltInEntry(builtIn)))
+        wrapper.entry = Translated(Lazy(BuiltInEntry(builtIn, typ)))
       case mac: TypedTessla.Macro if inFunction =>
         val f = translateFunction(env, mac)
         wrapper.entry = Translated(Lazy(FunctionEntry(f, makeIdentifier(nameOpt))))
@@ -249,7 +249,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         // would be caught by the type checker
         val callee = translateVar(env, call.macroID, call.macroLoc)
         callee match {
-          case Translated(Lazy(BuiltInEntry(builtIn))) =>
+          case Translated(Lazy(be: BuiltInEntry)) =>
             // This is lazy, so the arguments don't get evaluated until they're used below, allowing us to
             // initialize entries where appropriate before the evaluation takes place
             lazy val args = call.args.map {
@@ -259,7 +259,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 throw InternalError(s"Undefined keyword arg $name for built-in should've been caught by type checker", loc)
             }
             def streamArg(i: Int) = getStream(args(i), call.args(i).loc)
-            builtIn match {
+            be.builtIn match {
               case BuiltIn.Nil =>
                 val typ = TesslaCore.StreamType(translateValueType(call.typeArgs.head, env))
                 wrapper.entry = Translated(Lazy(NilEntry(TesslaCore.Nil(call.loc), typ)))
@@ -297,13 +297,13 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                 }
               case BuiltIn.Lift =>
                 stream {
-                  val f = getFunction(env, call.args(2).id, call.args(2).loc)
+                  val f = getFunctionForLift(env, call.args(2).id, call.args(2).loc)
                   val liftArgs = Seq(getStream(args(0), call.args(0).loc), getStream(args(1), call.args(1).loc))
                   TesslaCore.Lift(f, liftArgs, call.loc)
                 }
               case BuiltIn.Lift3 =>
                 stream {
-                  val f = getFunction(env, call.args(3).id, call.args(3).loc)
+                  val f = getFunctionForLift(env, call.args(3).id, call.args(3).loc)
                   val liftArgs = Seq(
                     getStream(args(0), call.args(0).loc),
                     getStream(args(1), call.args(1).loc),
@@ -326,7 +326,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
                     wrapper.entry = Translated(Lazy(ValueEntry(value)))
                 }
               case BuiltIn.TesslaInfo =>
-                throw InternalError(s"Applying non-macro/builtin (${builtIn.getClass.getSimpleName}) - should have been caught by the type checker.")
+                throw InternalError(s"Applying non-macro/builtin (${be.builtIn.getClass.getSimpleName}) - should have been caught by the type checker.")
             }
 
           case Translated(Lazy(me: MacroEntry)) =>
@@ -360,6 +360,25 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
     }
   }
 
+  def getFunctionForLift(env: Env, id: TypedTessla.Identifier, loc: Location): TesslaCore.Function = {
+    translateVar(env, id, loc) match {
+      case Translated(Lazy(me: MacroEntry)) =>
+        me.functionValue match {
+          case Some(f) => f.function
+          case None => throw InternalError("Lifting non-value macro - should have been caught by type checker")
+        }
+      case Translated(Lazy(BuiltInEntry(primOp: BuiltIn.PrimitiveOperator, typ: TypedTessla.FunctionType))) =>
+        val arity = typ.parameterTypes.length
+        val ids = (1 to arity).map(_ => makeIdentifier())
+        val scopeEntryID = makeIdentifier()
+        val builtIn = TesslaCore.BuiltInOperator(primOp, loc)
+        val app = TesslaCore.Application(Lazy(builtIn), ids.map(id => Lazy(TesslaCore.ValueExpressionRef(id))), loc)
+        TesslaCore.Function(ids, Map(scopeEntryID -> app), TesslaCore.ValueExpressionRef(scopeEntryID), loc)
+      case other => throw InternalError(s"Wrong type of environment entry: Expected macro or primitive function, found: $other")
+    }
+
+  }
+
   def getFunction(env: Env, id: TypedTessla.Identifier, loc: Location): TesslaCore.ValueArg = {
     translateVar(env, id, loc) match {
       case Translated(Lazy(me: MacroEntry)) =>
@@ -369,7 +388,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
         }
       case Translated(Lazy(fe: FunctionEntry)) =>
         TesslaCore.ValueExpressionRef(fe.id)
-      case Translated(Lazy(BuiltInEntry(primOp: BuiltIn.PrimitiveOperator))) =>
+      case Translated(Lazy(BuiltInEntry(primOp: BuiltIn.PrimitiveOperator, _))) =>
         TesslaCore.BuiltInOperator(primOp, loc)
       case Translated(Lazy(param: FunctionParameterEntry)) =>
         TesslaCore.ValueExpressionRef(param.id)
@@ -428,7 +447,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   }
 
   def getValueArg(entry: EnvEntry): TesslaCore.ValueArg = entry match {
-    case Translated(Lazy(BuiltInEntry(prim: BuiltIn.PrimitiveOperator))) =>
+    case Translated(Lazy(BuiltInEntry(prim: BuiltIn.PrimitiveOperator, _))) =>
       TesslaCore.BuiltInOperator(prim, Location.builtIn)
     case Translated(Lazy(me: MacroEntry)) =>
       me.functionValue match {

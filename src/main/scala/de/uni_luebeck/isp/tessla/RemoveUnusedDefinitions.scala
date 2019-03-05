@@ -46,11 +46,6 @@ class RemoveUnusedDefinitions extends TranslationPhase[TesslaCore.Specification,
     case x => x
   }
 
-  def removeUnusedValueArg(valueArg: ValueArg): ValueArg = valueArg match {
-    case Closure(f, env, loc) => Closure(removeUnusedFunction(f), env, loc)
-    case x => x
-  }
-
   override def translateSpec(spec: TesslaCore.Specification): TesslaCore.Specification = {
     val streams = spec.streams.map { stream => stream.id -> stream }.toMap
 
@@ -106,7 +101,7 @@ class RemoveUnusedDefinitions extends TranslationPhase[TesslaCore.Specification,
       case StreamDescription(id, expression, typ) if used(id.uid) =>
         val newExpression = expression match {
           case Lift(f, args, loc) =>
-            Lift(removeUnusedValueArg(f), args, loc)
+            Lift(removeUnusedFunction(f), args, loc)
           case _ => expression
         }
         StreamDescription(id, newExpression, typ)
