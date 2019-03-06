@@ -123,7 +123,7 @@ object Main extends SexyOpt {
         output.foreach(println)
       } else {
         val traceSource = traceFile.map(CharStreams.fromFileName).getOrElse(CharStreams.fromStream(System.in))
-        val trace = Trace.fromTraceSource(traceSource, abortAtValue)
+        val trace = Trace.fromSource(traceSource, abortAtValue)
         if (flattenInput) {
           trace.foreach(println)
         } else {

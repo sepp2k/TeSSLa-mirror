@@ -54,9 +54,11 @@ object Trace {
     }
   }
 
-  def fromTraceSource(traceSource: CharStream, abortAt: Option[BigInt]) = {
+  def fromSource(traceSource: CharStream, abortAt: Option[Specification.Time] = None) = {
     val rawTrace = new TraceParser().parseTrace(traceSource)
     new FlatEventIterator(rawTrace, abortAt)
   }
 
+  def fromFile(fileName: String, abortAt: Option[Specification.Time] = None) =
+    fromSource(CharStreams.fromFileName(fileName), abortAt)
 }

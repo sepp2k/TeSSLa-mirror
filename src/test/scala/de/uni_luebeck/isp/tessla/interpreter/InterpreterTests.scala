@@ -188,7 +188,7 @@ class InterpreterTests extends FunSuite {
         testCase.input match {
           case Some(input) =>
             try {
-              val trace = Trace.fromTraceSource(testStream(input), testCase.abortAt.map(BigInt(_)))
+              val trace = Trace.fromSource(testStream(input), testCase.abortAt.map(BigInt(_)))
               val result = Compiler.compile(src, timeUnit)
                 .andThen(new CoreToInterpreterSpec())
                 .andThen(new RunInterpreter(trace))
