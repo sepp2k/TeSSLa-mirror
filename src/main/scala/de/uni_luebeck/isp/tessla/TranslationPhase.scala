@@ -24,7 +24,7 @@ trait TranslationPhase[-T, +U] extends (T=>Result[U]) {
 }
 
 object TranslationPhase {
-  abstract class Translator[U] {
+  trait Translator[U] {
     protected def translateSpec(): U
 
     def translate(): Result[U] = {

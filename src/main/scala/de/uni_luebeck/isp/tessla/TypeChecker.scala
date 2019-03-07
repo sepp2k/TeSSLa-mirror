@@ -6,8 +6,7 @@ import util.mapValues
 import scala.collection.mutable
 
 class TypeChecker(spec: FlatTessla.Specification)
-  extends TranslationPhase.Translator[TypedTessla.Specification]
-    with TypedTessla.IdentifierFactory {
+  extends TranslationPhase.Translator[TypedTessla.Specification] with TypedTessla.IdentifierFactory {
   private val typeMap = mutable.Map[TypedTessla.Identifier, TypedTessla.Type]()
   type Env = Map[FlatTessla.Identifier, TypedTessla.Identifier]
 
