@@ -4,7 +4,8 @@ import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
 import util.mapValues
 
-class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
+class Flattener(spec: Tessla.Specification)
+  extends TranslationPhase.Translator[FlatTessla.Specification] with FlatTessla.IdentifierFactory {
   type IdMap = Map[String, FlatTessla.Identifier]
 
   case class Env(variables: IdMap, types: IdMap) {
@@ -72,7 +73,7 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
     }
   }
 
-  override def translateSpec(spec: Tessla.Specification) = {
+  override def translateSpec() = {
     val stdlibDefs = new FlatTessla.Definitions(None)
     stdlib.values.foreach { entry =>
       stdlibDefs.addVariable(entry)
@@ -360,5 +361,11 @@ class Flattener extends FlatTessla.IdentifierFactory with TranslationPhase[Tessl
       }
       val body = translateExpression(exp, innerDefs, innerEnv)
       FlatTessla.Macro(Seq(), parameters, innerDefs, None, lambda.headerLoc, body, lambda.loc, isLiftable = false)
+  }
+}
+
+object Flattener extends TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
+  override def translate(spec: Tessla.Specification) = {
+    new Flattener(spec).translate()
   }
 }

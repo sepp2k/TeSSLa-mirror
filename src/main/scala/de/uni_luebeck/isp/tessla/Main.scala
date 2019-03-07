@@ -5,7 +5,6 @@ import java.io.IOException
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.analyses._
-import de.uni_luebeck.isp.tessla.interpreter.Interpreter.{CoreToInterpreterSpec, RunInterpreter}
 import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
@@ -77,7 +76,7 @@ object Main extends SexyOpt {
       val core = unwrapResult(Compiler.compile(specSource, timeUnit))
 
       if (generateOsl) {
-        println(unwrapResult(new OSL.Generator().translate(core)))
+        println(unwrapResult(OSL.Generator.translate(core)))
         return
       }
 
@@ -118,7 +117,7 @@ object Main extends SexyOpt {
         }
         val output = unwrapResult {
           val trace = Trace.fromCtfFile(traceFile.get, abortAtValue)
-          new CoreToInterpreterSpec().translate(core).andThen(new RunInterpreter(trace, stopOn))
+          Interpreter.run(core, trace, stopOn)
         }
         output.foreach(println)
       } else {
@@ -127,9 +126,7 @@ object Main extends SexyOpt {
         if (flattenInput) {
           trace.foreach(println)
         } else {
-          val output = unwrapResult {
-            new CoreToInterpreterSpec().translate(core).andThen(new RunInterpreter(trace, stopOn))
-          }
+          val output = unwrapResult(Interpreter.run(core, trace, stopOn))
           output.foreach(println)
         }
       }

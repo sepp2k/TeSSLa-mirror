@@ -5,9 +5,7 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import scala.collection.JavaConverters._
 import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.{DecreasingTimeStampsError, SameTimeStampError, TesslaError, TesslaErrorWithTimestamp}
-import de.uni_luebeck.isp.tessla.interpreter.{Interpreter, ValueTypeChecker}
-import de.uni_luebeck.isp.tessla.interpreter.Interpreter.CoreToInterpreterSpec
-import de.uni_luebeck.isp.tessla.interpreter.Specification.Time
+import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.CharStreams
 
 import scala.collection.mutable
@@ -25,9 +23,9 @@ object JavaApi {
   case class Result(warnings: java.util.List[Diagnostic], errors: java.util.List[Diagnostic])
 
   abstract class EngineListener {
-    def event(stream: String, time: Time, value: TesslaCore.Value)
+    def event(stream: String, time: Specification.Time, value: TesslaCore.Value)
 
-    def printEvent(time: Time, value: TesslaCore.Value)
+    def printEvent(time: Specification.Time, value: TesslaCore.Value)
   }
 
   case class CompilationResult(result: Result, engine: Engine)
@@ -92,7 +90,7 @@ object JavaApi {
     /**
       * Propagates all inputs and progresses time to the given timestamp.
       */
-    def setTime(time: Time): Unit = {
+    def setTime(time: Specification.Time): Unit = {
       if (time > spec.getTime) {
         try {
           spec.step(time - spec.getTime)
@@ -130,11 +128,9 @@ object JavaApi {
 
   def compile(tessla: String, fileName: String, timeUnit: String): CompilationResult = {
     val specSource = CharStreams.fromString(tessla, fileName)
-    val spec = Compiler.compile(specSource, Option(timeUnit))
-    val interpreterResult = spec.andThen(new CoreToInterpreterSpec)
-    interpreterResult match {
-      case Success(interpreter, warnings) =>
-        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(interpreter))
+    Compiler.compile(specSource, Option(timeUnit)) match {
+      case Success(spec, warnings) =>
+        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(new Interpreter(spec)))
       case Failure(errors, warnings) =>
         CompilationResult(Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava), null)
     }

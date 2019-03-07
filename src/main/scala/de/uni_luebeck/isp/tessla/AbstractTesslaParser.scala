@@ -7,12 +7,12 @@ import org.antlr.v4.runtime._
 
 import scala.collection.JavaConverters._
 
-abstract class AbstractTesslaParser[Item, Result] extends TranslationPhase[CharStream, Result] {
+abstract class AbstractTesslaParser[Item, Result](src: CharStream) extends TranslationPhase.Translator[Result] {
   protected def translateStatement(statement: TesslaSyntax.StatementContext): Item
   protected def aggregateItems(items: Seq[Item]): Result
 
-  override def translateSpec(input: CharStream) = {
-    aggregateItems(translateFile(input))
+  override def translateSpec() = {
+    aggregateItems(translateFile(src))
   }
 
   private def translateFile(input: CharStream): Seq[Item] = {

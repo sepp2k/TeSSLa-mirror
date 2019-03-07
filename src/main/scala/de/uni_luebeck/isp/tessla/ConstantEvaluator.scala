@@ -7,7 +7,14 @@ import de.uni_luebeck.isp.tessla.util.Lazy
 import de.uni_luebeck.isp.tessla.interpreter.BuildInfo
 import de.uni_luebeck.isp.tessla.util._
 
-class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.IdentifierFactory with TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
+class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
+  override def translate(spec: TypedTessla.Specification) = {
+    new ConstantEvaluatorWorker(spec, baseTimeUnit).translate()
+  }
+}
+
+class ConstantEvaluatorWorker(spec: TypedTessla.Specification, baseTimeUnit: Option[TimeUnit])
+  extends TranslationPhase.Translator[TesslaCore.Specification] with TesslaCore.IdentifierFactory {
   type Env = Map[TypedTessla.Identifier, EnvEntryWrapper]
   private val translatedStreams = mutable.Map[TesslaCore.Identifier, (TesslaCore.Expression, TesslaCore.StreamType)]()
   private val stack = mutable.ArrayStack[Location]()
@@ -36,7 +43,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TesslaCore.Ident
   case class FunctionParameterEntry(id: TesslaCore.Identifier) extends TranslationResult
   case class ValueExpressionEntry(exp: TesslaCore.ValueExpression, id: TesslaCore.Identifier) extends TranslationResult
 
-  override def translateSpec(spec: TypedTessla.Specification): TesslaCore.Specification = {
+  override def translateSpec(): TesslaCore.Specification = {
     try {
       val env = createEnvForDefsWithParents(spec.globalDefs)
       translateEnv(env)

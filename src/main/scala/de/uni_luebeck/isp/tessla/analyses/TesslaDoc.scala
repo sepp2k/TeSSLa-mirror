@@ -63,7 +63,8 @@ object TesslaDoc {
     }
   }
 
-  class Extractor(currentFileOnly: Boolean) extends AbstractTesslaParser[Seq[TesslaDoc], Seq[TesslaDoc]] {
+  class Extractor(src: CharStream, currentFileOnly: Boolean)
+    extends AbstractTesslaParser[Seq[TesslaDoc], Seq[TesslaDoc]](src) {
     override def aggregateItems(items: Seq[Seq[TesslaDoc]]) = items.flatten
 
     def translateStatement(definition: TesslaSyntax.StatementContext): Seq[TesslaDoc] = {
@@ -123,7 +124,7 @@ object TesslaDoc {
   }
 
   def extract(src: CharStream, currentFileOnly: Boolean) = {
-    new Extractor(currentFileOnly = currentFileOnly).translate(src)
+    new Extractor(src, currentFileOnly = currentFileOnly).translate()
   }
 
   def extractAsJSON(src: CharStream, currentFileOnly: Boolean) = {

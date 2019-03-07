@@ -11,7 +11,6 @@ import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
 import de.uni_luebeck.isp.tessla.analyses.OSL
-import de.uni_luebeck.isp.tessla.interpreter.Interpreter.{CoreToInterpreterSpec, RunInterpreter}
 import org.antlr.v4.runtime.{CharStream, CharStreams}
 
 import scala.collection.mutable
@@ -180,7 +179,7 @@ class InterpreterTests extends FunSuite {
         val src = testStream(testCase.spec)
         testCase.expectedOsl.foreach { oslFile =>
           val expectedOSL = semiParseOsl(testSource(oslFile).getLines)
-          handleResult(Compiler.compile(src, timeUnit).andThen(new OSL.Generator)) { osl =>
+          handleResult(Compiler.compile(src, timeUnit).andThen(OSL.Generator)) { osl =>
             val actualOSL = semiParseOsl(osl.toString.linesIterator)
             assertEquals(actualOSL, expectedOSL, "OSL")
           }
@@ -189,9 +188,7 @@ class InterpreterTests extends FunSuite {
           case Some(input) =>
             try {
               val trace = Trace.fromSource(testStream(input), testCase.abortAt.map(BigInt(_)))
-              val result = Compiler.compile(src, timeUnit)
-                .andThen(new CoreToInterpreterSpec())
-                .andThen(new RunInterpreter(trace))
+              val result = Compiler.compile(src, timeUnit).andThen(spec => Interpreter.run(spec, trace, None))
 
               handleResult(result) { output =>
                 val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet

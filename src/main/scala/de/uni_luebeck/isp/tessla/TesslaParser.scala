@@ -6,7 +6,7 @@ import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-class TesslaParser extends AbstractTesslaParser[Tessla.Statement, Tessla.Specification] {
+class TesslaParser(src: CharStream) extends AbstractTesslaParser[Tessla.Statement, Tessla.Specification](src) {
   override def aggregateItems(statements: Seq[Tessla.Statement]) = {
     Tessla.Specification(statements)
   }
@@ -291,5 +291,11 @@ class TesslaParser extends AbstractTesslaParser[Tessla.Statement, Tessla.Specifi
         }
       }
     }
+  }
+}
+
+object TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
+  override def translate(src: CharStream) = {
+    new TesslaParser(src).translate()
   }
 }

@@ -2,8 +2,8 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.TesslaCore.{Default, Nil, SignalLift, StreamDescription, ValueOrError}
 
-class CurrySignalLift extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
-  override def translateSpec(spec: TesslaCore.Specification): TesslaCore.Specification = {
+class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.Translator[TesslaCore.Specification] {
+  override def translateSpec(): TesslaCore.Specification = {
     val streams = spec.streams.map { stream => stream.id -> stream }.toMap
 
     def getConst(ref: TesslaCore.StreamRef): Option[ValueOrError] = ref match {
@@ -47,5 +47,11 @@ class CurrySignalLift extends TranslationPhase[TesslaCore.Specification, TesslaC
     }
 
     TesslaCore.Specification(updatedStreams, spec.inStreams, spec.outStreams)
+  }
+}
+
+object CurrySignalLift extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
+  override def translate(spec: TesslaCore.Specification) = {
+    new CurrySignalLift(spec).translate()
   }
 }

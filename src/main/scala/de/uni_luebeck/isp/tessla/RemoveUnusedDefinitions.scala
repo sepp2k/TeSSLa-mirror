@@ -3,7 +3,8 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.TesslaCore._
 import scala.collection.mutable.{Set => MutableSet}
 
-class RemoveUnusedDefinitions extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
+class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
+  extends TranslationPhase.Translator[TesslaCore.Specification] {
 
   def removeUnusedFunction(function: Function): Function = {
     val used = MutableSet.empty[Long]
@@ -46,7 +47,7 @@ class RemoveUnusedDefinitions extends TranslationPhase[TesslaCore.Specification,
     case x => x
   }
 
-  override def translateSpec(spec: TesslaCore.Specification): TesslaCore.Specification = {
+  override def translateSpec(): TesslaCore.Specification = {
     val streams = spec.streams.map { stream => stream.id -> stream }.toMap
 
     val used = MutableSet.empty[Long]
@@ -108,5 +109,11 @@ class RemoveUnusedDefinitions extends TranslationPhase[TesslaCore.Specification,
     }
 
     TesslaCore.Specification(updatedStreams, spec.inStreams, spec.outStreams)
+  }
+}
+
+object RemoveUnusedDefinitions extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
+  override def translate(spec: TesslaCore.Specification) = {
+    new RemoveUnusedDefinitions(spec).translate()
   }
 }

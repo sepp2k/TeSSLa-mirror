@@ -5,7 +5,9 @@ import de.uni_luebeck.isp.tessla.FlatTessla.VariableEntry
 import util.mapValues
 import scala.collection.mutable
 
-class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[FlatTessla.Specification, TypedTessla.Specification] {
+class TypeChecker(spec: FlatTessla.Specification)
+  extends TranslationPhase.Translator[TypedTessla.Specification]
+    with TypedTessla.IdentifierFactory {
   private val typeMap = mutable.Map[TypedTessla.Identifier, TypedTessla.Type]()
   type Env = Map[FlatTessla.Identifier, TypedTessla.Identifier]
 
@@ -13,10 +15,9 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
   // the unlifted version to that of the lifted version
   private val liftedMacros = mutable.Map[TypedTessla.Identifier, TypedTessla.Identifier]()
 
-  private var stdlibNames: Map[String, FlatTessla.Identifier] = _
+  private val stdlibNames: Map[String, FlatTessla.Identifier] = spec.stdlibNames
 
-  override def translateSpec(spec: FlatTessla.Specification): TypedTessla.Specification = {
-    stdlibNames = spec.stdlibNames
+  override def translateSpec(): TypedTessla.Specification = {
     val (defs, env) = translateDefsWithParents(spec.globalDefs)
     var outputStreams = spec.outStreams.map(translateOutStream(_, defs, env))
     if (spec.outAll) {
@@ -720,5 +721,11 @@ class TypeChecker extends TypedTessla.IdentifierFactory with TranslationPhase[Fl
         }
         TypedTessla.Macro(tvarIDs, parameters, innerDefs, returnType, mac.headerLoc, body, mac.loc, mac.isLiftable) -> macroType
     }
+  }
+}
+
+object TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla.Specification] {
+  override def translate(spec: FlatTessla.Specification) = {
+    new TypeChecker(spec).translate()
   }
 }

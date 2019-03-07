@@ -43,7 +43,7 @@ object OSL {
     override lazy val properties = lhs.properties ++ rhs.properties
   }
 
-  class Generator extends TranslationPhase[TesslaCore.Specification, OSL] {
+  class Generator(spec: TesslaCore.Specification) extends TranslationPhase.Translator[OSL] {
     var streams: Map[TesslaCore.Identifier, TesslaCore.Expression] = _
     val visited = mutable.Set[TesslaCore.Identifier]()
 
@@ -51,7 +51,7 @@ object OSL {
     case class Uncond(property: String) extends ProtoStatement
     case class Cond(conditions: Condition) extends ProtoStatement
 
-    override def translateSpec(spec: TesslaCore.Specification) = {
+    override def translateSpec() = {
       streams = spec.streams.map(s => s.id -> s.expression).toMap
       val protoStatements = spec.outStreams.map(_.stream).flatMap(translateStreamRef)
       val mergedConditions = protoStatements.foldLeft(Map[Option[String], Set[String]]()) {
@@ -157,6 +157,12 @@ object OSL {
       case "thread_id" | "line_reached" => Some(name)
       case operandPattern() => Some("operands")
       case _ => None
+    }
+  }
+
+  object Generator extends TranslationPhase[TesslaCore.Specification, OSL] {
+    override def translate(spec: TesslaCore.Specification) = {
+      new Generator(spec).translate()
     }
   }
 }
