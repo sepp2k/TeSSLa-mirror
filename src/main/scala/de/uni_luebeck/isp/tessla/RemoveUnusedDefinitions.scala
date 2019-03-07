@@ -34,7 +34,6 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
 
     usageValueArg(function.result)
 
-    // TODO handle nested functions
     val newBody = function.body.collect{
       case (id, e) if used(id.uid) => (id, removeUnusedValueExpression(e))
     }
@@ -108,7 +107,14 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
         StreamDescription(id, newExpression, typ)
     }
 
-    TesslaCore.Specification(updatedStreams, spec.inStreams, spec.outStreams)
+    val updatedOutStreams = spec.outStreams.filter {
+      case TesslaCore.OutStreamDescription(_, ref, _) => ref match {
+        case Nil(_) => false
+        case _ => true
+      }
+    }
+
+    TesslaCore.Specification(updatedStreams, spec.inStreams, updatedOutStreams)
   }
 }
 
