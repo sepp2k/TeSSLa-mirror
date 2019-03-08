@@ -479,7 +479,7 @@ class TypeChecker(spec: FlatTessla.Specification)
     val streamType = TypedTessla.StreamType(typeOfConstant)
     val liftedId = makeIdentifier()
     val nilCall = TypedTessla.MacroCall(env(stdlibNames("nil")), loc, Seq(typeOfConstant), Seq(), loc)
-    val nilId = makeIdentifier("nil")
+    val nilId = makeIdentifier()
     val nilEntry = TypedTessla.VariableEntry(nilId, nilCall, streamType, loc)
     defs.addVariable(nilEntry)
     val defaultArgs = Seq(
