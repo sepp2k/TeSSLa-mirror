@@ -15,16 +15,16 @@ trait HasUniqueIdentifiers {
     }
   }
 
-  trait IdentifierFactory {
-    private var identifierCounter = 0l
+  abstract class IdentifierFactory(private var counter: Long = 0l) {
+    protected def identifierCounter = counter
 
-    def makeIdentifier(nameOpt: Option[String]): Identifier = {
-      identifierCounter += 1
-      new Identifier(identifierCounter, nameOpt)
+    protected def makeIdentifier(nameOpt: Option[String]): Identifier = {
+      counter += 1
+      new Identifier(counter, nameOpt)
     }
 
-    def makeIdentifier(): Identifier = makeIdentifier(None)
+    protected def makeIdentifier(): Identifier = makeIdentifier(None)
 
-    def makeIdentifier(name: String): Identifier = makeIdentifier(Some(name))
+    protected def makeIdentifier(name: String): Identifier = makeIdentifier(Some(name))
   }
 }

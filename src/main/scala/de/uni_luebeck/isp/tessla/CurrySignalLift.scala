@@ -46,7 +46,7 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
         StreamDescription(id, newExpression, typ)
     }
 
-    TesslaCore.Specification(updatedStreams, spec.inStreams, spec.outStreams)
+    spec.copy(streams = updatedStreams)
   }
 }
 

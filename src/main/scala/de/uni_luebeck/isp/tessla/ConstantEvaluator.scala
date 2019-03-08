@@ -14,7 +14,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase
 }
 
 class ConstantEvaluatorWorker(spec: TypedTessla.Specification, baseTimeUnit: Option[TimeUnit])
-  extends TranslationPhase.Translator[TesslaCore.Specification] with TesslaCore.IdentifierFactory {
+  extends TesslaCore.IdentifierFactory with TranslationPhase.Translator[TesslaCore.Specification]  {
   type Env = Map[TypedTessla.Identifier, EnvEntryWrapper]
   private val translatedStreams = mutable.Map[TesslaCore.Identifier, (TesslaCore.Expression, TesslaCore.StreamType)]()
   private val stack = mutable.ArrayStack[Location]()
@@ -58,7 +58,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.Specification, baseTimeUnit: Opt
       val streams = translatedStreams.map {
         case (n, (e, t)) => TesslaCore.StreamDescription(n,e,t)
       }
-      TesslaCore.Specification(streams.toSeq, inputStreams.toSeq, outputStreams)
+      TesslaCore.Specification(streams.toSeq, inputStreams.toSeq, outputStreams, identifierCounter)
     } catch {
       case err: TesslaError =>
         throw WithStackTrace(err, stack)

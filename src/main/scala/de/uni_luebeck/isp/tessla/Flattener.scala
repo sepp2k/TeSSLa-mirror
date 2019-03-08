@@ -5,7 +5,7 @@ import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
 import util.mapValues
 
 class Flattener(spec: Tessla.Specification)
-  extends TranslationPhase.Translator[FlatTessla.Specification] with FlatTessla.IdentifierFactory {
+  extends FlatTessla.IdentifierFactory with TranslationPhase.Translator[FlatTessla.Specification] {
   type IdMap = Map[String, FlatTessla.Identifier]
 
   case class Env(variables: IdMap, types: IdMap) {

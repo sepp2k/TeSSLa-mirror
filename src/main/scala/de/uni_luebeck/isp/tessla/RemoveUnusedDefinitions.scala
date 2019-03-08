@@ -114,7 +114,7 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
       }
     }
 
-    TesslaCore.Specification(updatedStreams, spec.inStreams, updatedOutStreams)
+    spec.copy(streams = updatedStreams, outStreams = updatedOutStreams)
   }
 }
 
