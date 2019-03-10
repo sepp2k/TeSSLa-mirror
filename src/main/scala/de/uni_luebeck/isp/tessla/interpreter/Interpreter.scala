@@ -67,6 +67,34 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     }
   }
 
+  // def foldTotal[A](x: Events[A], f: (A, A) => A) = {
+  //   def y: Events[A] := merge(lift(last(y, x), x, (a: Option[A], b: Option[A]) =>
+  //     if isNone(a) || isNone(b) then None[A] else Some(f(getSome(a), getSome(b)))), x)
+  //   y
+  // }
+  def foldTotal(x: Stream, f: (TesslaCore.Value, TesslaCore.Value) => TesslaCore.ValueOrError): Stream = {
+    lazy val y: Stream = merge(lift(Seq(last(y, x), x)) {
+      case Seq(Some(a), Some(b)) =>
+        Some(a.mapValue(aValue => b.mapValue(bValue => f(aValue, bValue))))
+      case _ => None
+    }, x)
+    y
+  }
+
+  // def foldTotalWithInit[A,B](x: Events[A], init: B, f: (B, A) => B) = {
+  //   def y: Events[B] := default(lift(last(y, x), x, (a: Option[B], b: Option[A]) =>
+  //     if isNone(a) || isNone(b) then None[B] else Some(f(getSome(a), getSome(b)))), init)
+  //   y
+  // }
+  def foldTotal(x: Stream, f: (TesslaCore.Value, TesslaCore.Value) => TesslaCore.ValueOrError, init: TesslaCore.ValueOrError): Stream = {
+    lazy val y: Stream = lift(Seq(last(y, x), x)) {
+      case Seq(Some(a), Some(b)) =>
+        Some(a.mapValue(aValue => b.mapValue(bValue => f(aValue, bValue))))
+      case _ => None
+    }.default(init)
+    y
+  }
+
 
   private def eval(exp: TesslaCore.Expression): Stream = exp match {
     case TesslaCore.SignalLift(op, argStreams, loc) =>
@@ -112,13 +140,19 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.Time(values, loc) =>
       evalStream(values).time(loc)
     case TesslaCore.StdLibCount(values, loc) =>
-      val x = evalStream(values)
-      lazy val y: Stream = lift(Seq(x, last(y, x))) {
-        case Seq(Some(_), Some(b)) =>
-          Some(b.mapValue(value => TesslaCore.IntValue(getInt(value) + 1, loc)))
-        case _ => Some(TesslaCore.IntValue(0, loc))
-      }.default(TesslaCore.IntValue(0, loc))
-      y
+      foldTotal(evalStream(values),
+        (a,_) => TesslaCore.IntValue(getInt(a) + 1, loc),
+        TesslaCore.IntValue(0, loc))
+    case TesslaCore.StdLibSum(values, loc) =>
+      foldTotal(evalStream(values),
+        (a,b) => TesslaCore.IntValue(getInt(b) + getInt(a), loc),
+        TesslaCore.IntValue(0, loc))
+    case TesslaCore.StdLibMinimum(values, loc) =>
+      foldTotal(evalStream(values),
+        (a,b) => TesslaCore.IntValue(getInt(a) min getInt(b), loc))
+    case TesslaCore.StdLibMaximum(values, loc) =>
+      foldTotal(evalStream(values),
+        (a,b) => TesslaCore.IntValue(getInt(a) max getInt(b), loc))
     case TesslaCore.Merge(arg1, arg2, _) =>
       val stream1 = evalStream(arg1)
       val stream2 = evalStream(arg2)

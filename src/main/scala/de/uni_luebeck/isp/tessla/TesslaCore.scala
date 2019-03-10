@@ -115,8 +115,29 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  final case class StdLibCount(stream: StreamRef, loc: Location) extends Expression {
+  sealed abstract class StdLibUnaryOp extends Expression {
+    def stream: StreamRef
+    def loc: Location
+  }
+  
+  object StdLibUnaryOp {
+    def unapply(op: StdLibUnaryOp): Option[(StreamRef, Location)] = Some((op.stream, op.loc))
+  }
+
+  final case class StdLibCount(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
     override def toString = s"count($stream)"
+  }
+
+  final case class StdLibSum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
+    override def toString = s"sum($stream)"
+  }
+
+  final case class StdLibMinimum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
+    override def toString = s"min($stream)"
+  }
+
+  final case class StdLibMaximum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
+    override def toString = s"max($stream)"
   }
 
   sealed abstract class ValueArg

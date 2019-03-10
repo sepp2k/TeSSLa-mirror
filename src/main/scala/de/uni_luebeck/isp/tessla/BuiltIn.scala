@@ -201,6 +201,15 @@ object BuiltIn {
     override def name = "if then else"
   }
 
+  // Int functions
+  case object Min extends PrimitiveOperator {
+    override def name = "min"
+  }
+
+  case object Max extends PrimitiveOperator {
+    override def name = "max"
+  }
+
   // Float functions
   case object Pow extends PrimitiveOperator {
     override def name = "pow"
@@ -357,6 +366,18 @@ object BuiltIn {
     override def name = "count"
   }
 
+  case object StdLibSum extends BuiltIn {
+    override def name = "sum"
+  }
+
+  case object StdLibMinimum extends BuiltIn {
+    override def name = "minimum"
+  }
+
+  case object StdLibMaximum extends BuiltIn {
+    override def name = "maximum"
+  }
+
   def builtIns: Map[String, BuiltIn] = Set(
     Nil,
     Default,
@@ -401,6 +422,8 @@ object BuiltIn {
     Not,
     First,
     IfThenElse,
+    Min,
+    Max,
     Pow,
     Log,
     IntToFloat,
@@ -437,6 +460,9 @@ object BuiltIn {
     CtfGetString,
     CtfGetInt,
     TesslaInfo,
-    StdLibCount
+    StdLibCount,
+    StdLibSum,
+    StdLibMinimum,
+    StdLibMaximum
   ).map(op => op.name -> op).toMap
 }

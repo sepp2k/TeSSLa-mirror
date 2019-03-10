@@ -142,7 +142,7 @@ object OSL {
       case f: TesslaCore.Filter => translateStreamRef(f.events) ++ translateStreamRef(f.condition)
       case t: TesslaCore.Time => translateStreamRef(t.stream)
       case c: TesslaCore.Const => translateStreamRef(c.stream)
-      case c: TesslaCore.StdLibCount => translateStreamRef(c.stream)
+      case c: TesslaCore.StdLibUnaryOp => translateStreamRef(c.stream)
     }
 
     val operandPattern = raw"operand\d+(?:type|int|bool|string)|operandcount".r

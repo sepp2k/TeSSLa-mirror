@@ -86,7 +86,7 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
         usageRef(resets)
       case TesslaCore.Time(values, _) =>
         usageRef(values)
-      case TesslaCore.StdLibCount(values, _) =>
+      case TesslaCore.StdLibUnaryOp(values, _) =>
         usageRef(values)
       case TesslaCore.Merge(arg1, arg2, _) =>
         usageRef(arg1)

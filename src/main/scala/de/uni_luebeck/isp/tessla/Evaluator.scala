@@ -140,6 +140,10 @@ object Evaluator {
           else arguments(2)
         case BuiltIn.First =>
           arguments(0)
+        case BuiltIn.Min =>
+          binIntOp(_ min _)
+        case BuiltIn.Max =>
+          binIntOp(_ max _)
         case BuiltIn.Pow =>
           binFloatOp(math.pow)
         case BuiltIn.Log =>

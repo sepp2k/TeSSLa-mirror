@@ -48,7 +48,7 @@ object NodeCounter {
             visitChild(dl.delays) + visitChild(dl.values)
           case d: TesslaCore.Delay =>
             visitChild(d.resets) + visitChild(d.delays)
-          case c: TesslaCore.StdLibCount =>
+          case c: TesslaCore.StdLibUnaryOp =>
             visitChild(c.stream)
         }
         1 + childDepth

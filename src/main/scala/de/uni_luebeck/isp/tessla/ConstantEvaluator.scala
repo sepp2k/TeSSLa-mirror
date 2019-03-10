@@ -328,6 +328,18 @@ class ConstantEvaluatorWorker(spec: TypedTessla.Specification, baseTimeUnit: Opt
                 stream {
                   TesslaCore.StdLibCount(streamArg(0), call.loc)
                 }
+              case BuiltIn.StdLibSum =>
+                stream {
+                  TesslaCore.StdLibSum(streamArg(0), call.loc)
+                }
+              case BuiltIn.StdLibMinimum =>
+                stream {
+                  TesslaCore.StdLibMinimum(streamArg(0), call.loc)
+                }
+              case BuiltIn.StdLibMaximum =>
+                stream {
+                  TesslaCore.StdLibMaximum(streamArg(0), call.loc)
+                }
               case op: BuiltIn.PrimitiveOperator =>
                 typ match {
                   case _ : TypedTessla.StreamType =>

@@ -1,0 +1,8 @@
+in x: Events[Int]
+in y: Events[Int]
+
+def small = min(x, y)
+def large = max(x, y)
+
+out small
+out large

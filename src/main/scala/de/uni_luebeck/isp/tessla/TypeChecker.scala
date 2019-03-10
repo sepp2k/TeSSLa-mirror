@@ -250,7 +250,7 @@ class TypeChecker(spec: FlatTessla.Specification)
       import TypedTessla._
       val typ = builtIn match {
         case BuiltIn.Add | BuiltIn.Sub | BuiltIn.Mul | BuiltIn.Div | BuiltIn.Mod | BuiltIn.BitAnd | BuiltIn.BitOr
-           | BuiltIn.BitXor | BuiltIn.LeftShift | BuiltIn.RightShift =>
+           | BuiltIn.BitXor | BuiltIn.LeftShift | BuiltIn.RightShift | BuiltIn.Min | BuiltIn.Max =>
           FunctionType(Seq(), Seq(IntType, IntType), IntType, isLiftable = true)
 
         case BuiltIn.FAdd | BuiltIn.FSub | BuiltIn.FMul | BuiltIn.FDiv | BuiltIn.Pow | BuiltIn.Log =>
@@ -470,6 +470,15 @@ class TypeChecker(spec: FlatTessla.Specification)
         case BuiltIn.StdLibCount =>
           val x = mkTVar("X")
           FunctionType(Seq(x.id), Seq(StreamType(x)), StreamType(IntType), isLiftable = false)
+
+        case BuiltIn.StdLibSum =>
+          FunctionType(Seq(), Seq(StreamType(IntType)), StreamType(IntType), isLiftable = false)
+
+        case BuiltIn.StdLibMaximum =>
+          FunctionType(Seq(), Seq(StreamType(IntType)), StreamType(IntType), isLiftable = false)
+
+        case BuiltIn.StdLibMinimum =>
+          FunctionType(Seq(), Seq(StreamType(IntType)), StreamType(IntType), isLiftable = false)
       }
       builtIn -> typ
   }

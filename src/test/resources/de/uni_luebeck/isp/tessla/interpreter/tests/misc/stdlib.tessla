@@ -1,5 +1,6 @@
 in x: Events[Int]
 
-def c := count(x)
-
-out c
+out minimum(x)
+out maximum(x)
+out count(x)
+out sum(x)
