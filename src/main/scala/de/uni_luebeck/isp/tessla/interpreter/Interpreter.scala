@@ -69,7 +69,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
 
   // def foldTotal[A](x: Events[A], f: (A, A) => A) = {
   //   def y: Events[A] := merge(lift(last(y, x), x, (a: Option[A], b: Option[A]) =>
-  //     if isNone(a) || isNone(b) then None[A] else Some(f(getSome(a), getSome(b)))), x)
+  //     if isNone(a) || isNone(b) then None[A]
+  //     else Some(f(getSome(a), getSome(b)))), x)
   //   y
   // }
   def foldTotal(x: Stream, f: (TesslaCore.Value, TesslaCore.Value) => TesslaCore.ValueOrError): Stream = {
@@ -83,11 +84,15 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
 
   // def foldTotalWithInit[A,B](x: Events[A], init: B, f: (B, A) => B) = {
   //   def y: Events[B] := default(lift(last(y, x), x, (a: Option[B], b: Option[A]) =>
-  //     if isNone(a) || isNone(b) then None[B] else Some(f(getSome(a), getSome(b)))), init)
+  //     if isNone(b) then None[B]
+  //     else if isNone(a) then Some(f(init, getSome(b)))
+  //     else Some(f(getSome(a), getSome(b)))), init)
   //   y
   // }
   def foldTotal(x: Stream, f: (TesslaCore.Value, TesslaCore.Value) => TesslaCore.ValueOrError, init: TesslaCore.ValueOrError): Stream = {
     lazy val y: Stream = lift(Seq(last(y, x), x)) {
+      case Seq(None, Some(b)) =>
+        Some(init.mapValue(aValue => b.mapValue(bValue => f(aValue, bValue))))
       case Seq(Some(a), Some(b)) =>
         Some(a.mapValue(aValue => b.mapValue(bValue => f(aValue, bValue))))
       case _ => None
