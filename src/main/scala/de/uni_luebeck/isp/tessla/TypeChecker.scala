@@ -259,7 +259,7 @@ class TypeChecker(spec: FlatTessla.Specification)
         case BuiltIn.Negate | BuiltIn.BitFlip =>
           FunctionType(Seq(), Seq(IntType), IntType, isLiftable = true)
 
-        case BuiltIn.FNegate =>
+        case BuiltIn.FNegate | BuiltIn.Sin | BuiltIn.Cos | BuiltIn.Tan | BuiltIn.Atan =>
           FunctionType(Seq(), Seq(FloatType), FloatType, isLiftable = true)
 
         case BuiltIn.FloatToInt =>

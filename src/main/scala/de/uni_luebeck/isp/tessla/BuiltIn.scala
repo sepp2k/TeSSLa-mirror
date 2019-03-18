@@ -219,6 +219,22 @@ object BuiltIn {
     override def name = "log"
   }
 
+  case object Sin extends PrimitiveOperator {
+    override def name = "sin"
+  }
+
+  case object Cos extends PrimitiveOperator {
+    override def name = "cos"
+  }
+
+  case object Tan extends PrimitiveOperator {
+    override def name = "tan"
+  }
+
+  case object Atan extends PrimitiveOperator {
+    override def name = "atan"
+  }
+
   case object IntToFloat extends PrimitiveOperator {
     override def name = "intToFloat"
   }
@@ -426,6 +442,10 @@ object BuiltIn {
     Max,
     Pow,
     Log,
+    Sin,
+    Cos,
+    Tan,
+    Atan,
     IntToFloat,
     FloatToInt,
     IsNone,

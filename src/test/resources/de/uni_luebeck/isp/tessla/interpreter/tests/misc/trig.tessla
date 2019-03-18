@@ -1,0 +1,6 @@
+in x: Events[Float]
+
+out sin(x)
+out cos(x)
+out tan(x)
+out atan(x)

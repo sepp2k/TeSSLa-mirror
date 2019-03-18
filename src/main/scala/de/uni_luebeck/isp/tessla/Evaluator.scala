@@ -148,6 +148,14 @@ object Evaluator {
           binFloatOp(math.pow)
         case BuiltIn.Log =>
           binFloatOp((x, base) => math.log(x) / math.log(base))
+        case BuiltIn.Sin =>
+          TesslaCore.FloatValue(Math.sin(getFloat(arguments(0))), loc)
+        case BuiltIn.Cos =>
+          TesslaCore.FloatValue(Math.cos(getFloat(arguments(0))), loc)
+        case BuiltIn.Tan =>
+          TesslaCore.FloatValue(Math.tan(getFloat(arguments(0))), loc)
+        case BuiltIn.Atan =>
+          TesslaCore.FloatValue(Math.atan(getFloat(arguments(0))), loc)
         case BuiltIn.IntToFloat =>
           TesslaCore.FloatValue(getInt(arguments(0)).toDouble, loc)
         case BuiltIn.FloatToInt =>
