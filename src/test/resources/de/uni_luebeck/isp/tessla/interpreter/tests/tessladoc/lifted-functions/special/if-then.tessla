@@ -1,4 +1,0 @@
-in b: Events[Bool]
-in y: Events[Int]
-def z := if b then y
-out z

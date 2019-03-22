@@ -27,16 +27,16 @@ object BuiltIn {
     override def name = "time"
   }
 
+  case object Lift1 extends BuiltIn {
+    override def name = "lift1"
+  }
+
   case object Lift extends BuiltIn {
     override def name = "lift"
   }
 
   case object Lift3 extends BuiltIn {
     override def name = "lift3"
-  }
-
-  case object DelayedLast extends BuiltIn {
-    override def name = "delayedLast"
   }
 
   case object Delay extends BuiltIn {
@@ -201,8 +201,13 @@ object BuiltIn {
     override def name = "if then else"
   }
 
-  case object IfThen extends PrimitiveOperator {
-    override def name = "if then"
+  // Int functions
+  case object Min extends PrimitiveOperator {
+    override def name = "min"
+  }
+
+  case object Max extends PrimitiveOperator {
+    override def name = "max"
   }
 
   // Float functions
@@ -212,6 +217,22 @@ object BuiltIn {
 
   case object Log extends PrimitiveOperator {
     override def name = "log"
+  }
+
+  case object Sin extends PrimitiveOperator {
+    override def name = "sin"
+  }
+
+  case object Cos extends PrimitiveOperator {
+    override def name = "cos"
+  }
+
+  case object Tan extends PrimitiveOperator {
+    override def name = "tan"
+  }
+
+  case object Atan extends PrimitiveOperator {
+    override def name = "atan"
   }
 
   case object IntToFloat extends PrimitiveOperator {
@@ -361,14 +382,26 @@ object BuiltIn {
     override def name = "count"
   }
 
+  case object StdLibSum extends BuiltIn {
+    override def name = "sum"
+  }
+
+  case object StdLibMinimum extends BuiltIn {
+    override def name = "minimum"
+  }
+
+  case object StdLibMaximum extends BuiltIn {
+    override def name = "maximum"
+  }
+
   def builtIns: Map[String, BuiltIn] = Set(
     Nil,
     Default,
     DefaultFrom,
     Last,
-    DelayedLast,
     Delay,
     Time,
+    Lift1,
     Lift,
     Lift3,
     Const,
@@ -405,9 +438,14 @@ object BuiltIn {
     Not,
     First,
     IfThenElse,
-    IfThen,
+    Min,
+    Max,
     Pow,
     Log,
+    Sin,
+    Cos,
+    Tan,
+    Atan,
     IntToFloat,
     FloatToInt,
     IsNone,
@@ -442,6 +480,9 @@ object BuiltIn {
     CtfGetString,
     CtfGetInt,
     TesslaInfo,
-    StdLibCount
+    StdLibCount,
+    StdLibSum,
+    StdLibMinimum,
+    StdLibMaximum
   ).map(op => op.name -> op).toMap
 }

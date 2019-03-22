@@ -7,7 +7,8 @@ import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 object TesslaCore extends HasUniqueIdentifiers {
   final case class Specification(streams: Seq[StreamDescription],
                                  inStreams: Seq[InStreamDescription],
-                                 outStreams: Seq[OutStreamDescription]) {
+                                 outStreams: Seq[OutStreamDescription],
+                                 identifierCount: Long) {
     override def toString = {
       inStreams.map { is => s"$is\n" }.mkString +
         streams.map { s => s"$s\n" }.mkString +
@@ -25,7 +26,7 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   case class OutStreamDescription(nameOpt: Option[String], stream: StreamRef, typ: StreamType) {
     override def toString = nameOpt match {
-      case Some(name) => s"out $stream: $typ as $name\n"
+      case Some(name) => s"out $stream: $typ as $name"
       case None => s"print $stream: $typ"
     }
   }
@@ -90,48 +91,83 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"filter($events, $condition)"
   }
 
-  final case class Lift(f: ValueArg, args: Seq[StreamRef], loc: Location) extends Expression {
+  final case class Lift(f: Function, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
-      args.mkString(s"lift($f", ", ", ")")
+      args.mkString(s"lift($f)(", ", ", ")")
     }
   }
 
-  final case class SignalLift(f: BuiltIn.PrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
-    override def toString = {
-      args.mkString(s"slift($f", ", ", ")")
+  final case class CurriedPrimitiveOperator(op: BuiltIn.PrimitiveOperator, args: Map[Int, ValueOrError] = Map()) {
+    override def toString: String = if (args.isEmpty) {
+      op.toString
+    } else {
+      val a = (0 until args.keys.max + 1).map{
+        case i if args.contains(i) => args(i).toString
+        case _ => "_"
+      }.mkString(", ")
+      s"$op($a)"
     }
   }
 
-  final case class StdLibCount(stream: StreamRef, loc: Location) extends Expression {
+  final case class SignalLift(op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
+    override def toString = {
+      args.mkString(s"slift($op)(", ", ", ")")
+    }
+  }
+
+  sealed abstract class StdLibUnaryOp extends Expression {
+    def stream: StreamRef
+    def loc: Location
+  }
+  
+  object StdLibUnaryOp {
+    def unapply(op: StdLibUnaryOp): Option[(StreamRef, Location)] = Some((op.stream, op.loc))
+  }
+
+  final case class StdLibCount(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
     override def toString = s"count($stream)"
+  }
+
+  final case class StdLibSum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
+    override def toString = s"sum($stream)"
+  }
+
+  final case class StdLibMinimum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
+    override def toString = s"min($stream)"
+  }
+
+  final case class StdLibMaximum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
+    override def toString = s"max($stream)"
   }
 
   sealed abstract class ValueArg
 
-  case class ValueExpressionRef(id: Identifier) extends ValueArg
+  case class ValueExpressionRef(id: Identifier) extends ValueArg {
+    override def toString = id.toString
+  }
 
   sealed abstract class ValueExpression {
     def loc: Location
   }
 
   final case class Function(parameters: Seq[Identifier],
-                            scope: Map[Identifier, ValueExpression],
-                            body: ValueArg,
+                            body: Map[Identifier, ValueExpression],
+                            result: ValueArg,
                             loc: Location) extends ValueExpression {
     override def toString = {
-      val defs = scope.map {
+      val defs = body.map {
         case (id, exp) => s"const $id := $exp\n"
       }.mkString
-      s"(${parameters.mkString(", ")}) => {\n${defs}return $body\n}"
+      s"(${parameters.mkString(", ")}) => {\n${defs}return $result\n}"
     }
   }
 
   case class IfThenElse(cond: ValueArg, thenCase: Lazy[ValueArg], elseCase: Lazy[ValueArg], loc: Location) extends ValueExpression {
-    override def toString = s"if $cond then $thenCase else $elseCase"
+    override def toString = s"if $cond then ${thenCase.get} else ${elseCase.get}"
   }
 
   case class Application(f: Lazy[ValueArg], args: Seq[Lazy[ValueArg]], loc: Location) extends ValueExpression {
-    override def toString = args.mkString(s"$f(", ", ", ")")
+    override def toString = args.map(_.get).mkString(s"${f.get}(", ", ", ")")
   }
 
   // TODO: Hack! This should be a ValueExpression, not a ValueArg

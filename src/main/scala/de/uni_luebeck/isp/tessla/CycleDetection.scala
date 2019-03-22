@@ -9,8 +9,8 @@ package de.uni_luebeck.isp.tessla
   * stamp in a linear order. The errors for lastless recursions are useful because any recursion without last would
   * cause an infinite loop in the interpreter (and either an infinite loop or an error during codegen in other backends).
   */
-class CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
-  override def translateSpec(spec: TesslaCore.Specification): TesslaCore.Specification = {
+class CycleDetection(spec: TesslaCore.Specification) extends TranslationPhase.Translator[TesslaCore.Specification] {
+  override def translateSpec(): TesslaCore.Specification = {
     val streams = spec.streams.map {s => s.id -> s}.toMap
 
     def resolveStream(s: TesslaCore.StreamRef): Seq[TesslaCore.StreamDescription] = s match {
@@ -31,7 +31,7 @@ class CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCo
         case t: TesslaCore.Time => resolveStream(t.stream)
         case l: TesslaCore.SignalLift => l.args.flatMap(resolveStream)
         case l: TesslaCore.Lift => l.args.flatMap(resolveStream)
-        case c: TesslaCore.StdLibCount => resolveStream(c.stream)
+        case c: TesslaCore.StdLibUnaryOp => resolveStream(c.stream)
       }
     }
     ReverseTopologicalSort.sort(streams.values)(requiredStreams) match {
@@ -44,5 +44,11 @@ class CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCo
       case ReverseTopologicalSort.Sorted(sortedNodes) =>
         spec.copy(streams = sortedNodes)
     }
+  }
+}
+
+object CycleDetection extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
+  override def translate(spec: TesslaCore.Specification) = {
+    new CycleDetection(spec).translate()
   }
 }

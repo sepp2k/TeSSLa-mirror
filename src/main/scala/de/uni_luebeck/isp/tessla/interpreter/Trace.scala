@@ -2,6 +2,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.{Location, Tessla, TesslaCore, TimeUnit}
 import de.uni_luebeck.isp.tessla.Errors.InternalError
+import org.antlr.v4.runtime.{CharStream, CharStreams}
 import org.eclipse.tracecompass.ctf.core.CTFException
 import org.eclipse.tracecompass.ctf.core.trace.{CTFTrace, CTFTraceReader}
 
@@ -53,4 +54,11 @@ object Trace {
     }
   }
 
+  def fromSource(traceSource: CharStream, abortAt: Option[Specification.Time] = None) = {
+    val rawTrace = new TraceParser().parseTrace(traceSource)
+    new FlatEventIterator(rawTrace, abortAt)
+  }
+
+  def fromFile(fileName: String, abortAt: Option[Specification.Time] = None) =
+    fromSource(CharStreams.fromFileName(fileName), abortAt)
 }

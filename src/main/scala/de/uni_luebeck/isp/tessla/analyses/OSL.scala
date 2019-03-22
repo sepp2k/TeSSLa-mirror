@@ -43,16 +43,15 @@ object OSL {
     override lazy val properties = lhs.properties ++ rhs.properties
   }
 
-  class Generator extends TranslationPhase[TesslaCore.Specification, OSL] {
-    var streams: Map[TesslaCore.Identifier, TesslaCore.Expression] = _
+  class Generator(spec: TesslaCore.Specification) extends TranslationPhase.Translator[OSL] {
+    val streams: Map[TesslaCore.Identifier, TesslaCore.Expression] = spec.streams.map(s => s.id -> s.expression).toMap
     val visited = mutable.Set[TesslaCore.Identifier]()
 
     sealed abstract class ProtoStatement
     case class Uncond(property: String) extends ProtoStatement
     case class Cond(conditions: Condition) extends ProtoStatement
 
-    override def translateSpec(spec: TesslaCore.Specification) = {
-      streams = spec.streams.map(s => s.id -> s.expression).toMap
+    override def translateSpec() = {
       val protoStatements = spec.outStreams.map(_.stream).flatMap(translateStreamRef)
       val mergedConditions = protoStatements.foldLeft(Map[Option[String], Set[String]]()) {
         case (m, Cond(cond)) =>
@@ -102,7 +101,7 @@ object OSL {
 
     def findBasicCondition(exp: TesslaCore.Expression): Option[Condition] = exp match {
       case l: TesslaCore.SignalLift =>
-        l.f match {
+        l.op.op match {
           case BuiltIn.And =>
             findBasicCondition(l.args(0)).flatMap { lhs =>
               findBasicCondition(l.args(1)).map { rhs =>
@@ -117,11 +116,10 @@ object OSL {
             }
           case BuiltIn.Eq =>
             l.args match {
-              case Seq(i: TesslaCore.InputStream, s: TesslaCore.Stream) =>
+              case Seq(i: TesslaCore.InputStream) =>
                 translateInputStreamName(i.name).flatMap { name =>
-                  getExp(s).flatMap {
-                    case TesslaCore.Default(_, v: TesslaCore.Value, _) =>
-                      Some(Equals(name, v))
+                  l.op.args.get(1).flatMap {
+                    case v: TesslaCore.Value => Some(Equals(name, v))
                     case _ => None
                   }
                 }
@@ -144,7 +142,7 @@ object OSL {
       case f: TesslaCore.Filter => translateStreamRef(f.events) ++ translateStreamRef(f.condition)
       case t: TesslaCore.Time => translateStreamRef(t.stream)
       case c: TesslaCore.Const => translateStreamRef(c.stream)
-      case c: TesslaCore.StdLibCount => translateStreamRef(c.stream)
+      case c: TesslaCore.StdLibUnaryOp => translateStreamRef(c.stream)
     }
 
     val operandPattern = raw"operand\d+(?:type|int|bool|string)|operandcount".r
@@ -158,6 +156,12 @@ object OSL {
       case "thread_id" | "line_reached" => Some(name)
       case operandPattern() => Some("operands")
       case _ => None
+    }
+  }
+
+  object Generator extends TranslationPhase[TesslaCore.Specification, OSL] {
+    override def translate(spec: TesslaCore.Specification) = {
+      new Generator(spec).translate()
     }
   }
 }

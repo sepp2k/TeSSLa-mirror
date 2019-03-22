@@ -67,6 +67,39 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     }
   }
 
+  // def foldTotal[A](x: Events[A], f: (A, A) => A) = {
+  //   def y: Events[A] := merge(lift(last(y, x), x, (a: Option[A], b: Option[A]) =>
+  //     if isNone(a) || isNone(b) then None[A]
+  //     else Some(f(getSome(a), getSome(b)))), x)
+  //   y
+  // }
+  def foldTotal(x: Stream, f: (TesslaCore.Value, TesslaCore.Value) => TesslaCore.ValueOrError): Stream = {
+    lazy val y: Stream = merge(lift(Seq(last(y, x), x)) {
+      case Seq(Some(a), Some(b)) =>
+        Some(a.mapValue(aValue => b.mapValue(bValue => f(aValue, bValue))))
+      case _ => None
+    }, x)
+    y
+  }
+
+  // def foldTotalWithInit[A,B](x: Events[A], init: B, f: (B, A) => B) = {
+  //   def y: Events[B] := default(lift(last(y, x), x, (a: Option[B], b: Option[A]) =>
+  //     if isNone(b) then None[B]
+  //     else if isNone(a) then Some(f(init, getSome(b)))
+  //     else Some(f(getSome(a), getSome(b)))), init)
+  //   y
+  // }
+  def foldTotal(x: Stream, f: (TesslaCore.Value, TesslaCore.Value) => TesslaCore.ValueOrError, init: TesslaCore.ValueOrError): Stream = {
+    lazy val y: Stream = lift(Seq(last(y, x), x)) {
+      case Seq(None, Some(b)) =>
+        Some(init.mapValue(aValue => b.mapValue(bValue => f(aValue, bValue))))
+      case Seq(Some(a), Some(b)) =>
+        Some(a.mapValue(aValue => b.mapValue(bValue => f(aValue, bValue))))
+      case _ => None
+    }.default(init)
+    y
+  }
+
 
   private def eval(exp: TesslaCore.Expression): Stream = exp match {
     case TesslaCore.SignalLift(op, argStreams, loc) =>
@@ -77,7 +110,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => arg.mapValue(_.withLoc(stream.loc))
         }
-        Evaluator.evalPrimitiveOperator(op, args, exp.loc)
+        Some(Evaluator.evalPrimitiveOperator(op, args, exp.loc))
       }
     case TesslaCore.Lift(f, argStreams, loc) =>
       if (argStreams.isEmpty) {
@@ -88,7 +121,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
           case (Some(arg), stream) => arg.mapValue(a => TesslaCore.TesslaOption(Some(a), stream.loc))
           case (None, stream) => TesslaCore.TesslaOption(None, stream.loc)
         }
-        Evaluator.evalApplication(f, args, loc) match {
+        val closure = TesslaCore.Closure(f, Map(), loc)
+        Evaluator.evalApplication(closure, args, loc) match {
           case to: TesslaCore.TesslaOption => to.value
           case other =>
             throw InternalError(s"Used lift on non-option function (return value: $other) - should have been caught by type checker")
@@ -111,13 +145,19 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case TesslaCore.Time(values, loc) =>
       evalStream(values).time(loc)
     case TesslaCore.StdLibCount(values, loc) =>
-      val x = evalStream(values)
-      lazy val y: Stream = lift(Seq(x, last(y, x))) {
-        case Seq(Some(_), Some(b)) =>
-          Some(b.mapValue(value => TesslaCore.IntValue(getInt(value) + 1, loc)))
-        case _ => Some(TesslaCore.IntValue(0, loc))
-      }.default(TesslaCore.IntValue(0, loc))
-      y
+      foldTotal(evalStream(values),
+        (a,_) => TesslaCore.IntValue(getInt(a) + 1, loc),
+        TesslaCore.IntValue(0, loc))
+    case TesslaCore.StdLibSum(values, loc) =>
+      foldTotal(evalStream(values),
+        (a,b) => TesslaCore.IntValue(getInt(b) + getInt(a), loc),
+        TesslaCore.IntValue(0, loc))
+    case TesslaCore.StdLibMinimum(values, loc) =>
+      foldTotal(evalStream(values),
+        (a,b) => TesslaCore.IntValue(getInt(a) min getInt(b), loc))
+    case TesslaCore.StdLibMaximum(values, loc) =>
+      foldTotal(evalStream(values),
+        (a,b) => TesslaCore.IntValue(getInt(a) max getInt(b), loc))
     case TesslaCore.Merge(arg1, arg2, _) =>
       val stream1 = evalStream(arg1)
       val stream2 = evalStream(arg2)
@@ -134,90 +174,17 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }
 }
 
-object ValueTypeChecker {
-  def check(value: TesslaCore.Value,
-            elementType: TesslaCore.ValueType,
-            name: String): Unit = value match {
-    case _: TesslaCore.IntValue =>
-      if (elementType != TesslaCore.IntType) {
-        throw InputTypeMismatch(value, "Int", name, elementType, value.loc)
-      }
-    case _: TesslaCore.FloatValue =>
-      if (elementType != TesslaCore.FloatType) {
-        throw InputTypeMismatch(value, "Float", name, elementType, value.loc)
-      }
-    case _: TesslaCore.StringValue =>
-      if (elementType != TesslaCore.StringType) {
-        throw InputTypeMismatch(value, "String", name, elementType, value.loc)
-      }
-    case _: TesslaCore.BoolValue =>
-      if (elementType != TesslaCore.BoolType) {
-        throw InputTypeMismatch(value, "Bool", name, elementType, value.loc)
-      }
-    case o: TesslaCore.TesslaOption =>
-      elementType match {
-        case ot: TesslaCore.OptionType =>
-          o.value.foreach(check(_, ot.elementType, name))
-        case _ =>
-          throw InputTypeMismatch(value, "Option[?]", name, elementType, value.loc)
-      }
-    case s: TesslaCore.TesslaSet =>
-      elementType match {
-        case st: TesslaCore.SetType =>
-          s.value.foreach(check(_, st.elementType, name))
-        case _ =>
-          throw InputTypeMismatch(value, "Set[?]", name, elementType, value.loc)
-      }
-    case m: TesslaCore.TesslaMap =>
-      elementType match {
-        case mt: TesslaCore.MapType =>
-          m.value.foreach {
-            case (k, v) =>
-              check(k, mt.keyType, name)
-              check(v, mt.valueType, name)
-          }
-        case _ =>
-          throw InputTypeMismatch(value, "Map[?, ?]", name, elementType, value.loc)
-      }
-    case s: TesslaCore.TesslaList =>
-      elementType match {
-        case st: TesslaCore.ListType =>
-          s.value.foreach(check(_, st.elementType, name))
-        case _ =>
-          throw InputTypeMismatch(value, "List[?]", name, elementType, value.loc)
-      }
-    case o: TesslaCore.TesslaObject =>
-      val actual = o.value.keys.map {n => s"$n: ?"}.mkString("{", ", ", "}")
-      elementType match {
-        case ot: TesslaCore.ObjectType =>
-          if (ot.memberTypes.keySet != o.value.keySet) {
-            throw InputTypeMismatch(value, actual, name, elementType, value.loc)
-          }
-          o.value.foreach {
-            case (n, v) => check(v, ot.memberTypes(n), s"$name.$n")
-          }
-        case _ =>
-          throw InputTypeMismatch(value, actual, name, elementType, value.loc)
-      }
-    case _: TesslaCore.Closure | _: TesslaCore.BuiltInOperator =>
-      throw InternalError("Functions should not currently be able to appear in input streams")
-    case _: TesslaCore.Ctf =>
-      if (elementType != TesslaCore.CtfType) {
-        throw InputTypeMismatch(value, "CTF", name, elementType, value.loc)
-      }
-  }
-}
-
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
-  class CoreToInterpreterSpec extends TranslationPhase[TesslaCore.Specification, Interpreter] {
-    def translateSpec(spec: TesslaCore.Specification): Interpreter = new Interpreter(spec)
+  def run(spec: TesslaCore.Specification, input: Trace, stopOn: Option[String]) = {
+    new RunInterpreter(new Interpreter(spec), input, stopOn).translate()
   }
 
-  class RunInterpreter(inputTrace: Trace, stopOn: Option[String]) extends TranslationPhase[Interpreter, Trace] {
+  class RunInterpreter(spec: Interpreter, inputTrace: Trace, stopOn: Option[String])
+    extends TranslationPhase.Translator[Trace] {
 
-    override def translateSpec(spec: Interpreter): Trace = {
+    override def translateSpec(): Trace = {
       new Iterator[Trace.Event] {
         private var nextEvents = new mutable.Queue[Trace.Event]
         private var stopped = false
@@ -286,40 +253,5 @@ object Interpreter {
         }
       }
     }
-  }
-
-  def runSpec(specSource: CharStream,
-              traceSource: CharStream,
-              stopOn: Option[String] = None,
-              timeUnit: Option[String] = None,
-              printCore: Boolean = false,
-              abortAt: Option[BigInt] = None,
-             ): Result[Trace] = {
-    val flatTrace = flattenInput(traceSource, abortAt)
-    val tu = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
-    val core = new Compiler().applyPasses(specSource, tu)
-    if (printCore) core.foreach(println)
-    core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(flatTrace, stopOn))
-  }
-
-  def flattenInput(traceSource: CharStream,
-                   abortAt: Option[BigInt] = None,
-                  ): Trace = {
-    val rawTrace = new TraceParser().parseTrace(traceSource)
-    new FlatEventIterator(rawTrace, abortAt)
-  }
-
-  def runCtf(specSource: CharStream,
-             ctfFileName: String,
-             stopOn: Option[String] = None,
-             timeUnit: Option[String] = None,
-             printCore: Boolean = false,
-             abortAt: Option[BigInt] = None,
-            ): Result[Trace] = {
-    val tu = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
-    val core = new Compiler().applyPasses(specSource, tu)
-    if (printCore) core.foreach(println)
-    val trace = Trace.fromCtfFile(ctfFileName, abortAt)
-    core.andThen(new CoreToInterpreterSpec).andThen(new RunInterpreter(trace, stopOn))
   }
 }

@@ -1,5 +1,7 @@
-def on[T](trigger: Events[Unit], stream: Events[T]) :=
-  if time(trigger) >= time(stream) then stream
+def on[T,U](trigger: Events[U], stream: Events[T]) = {
+  def z = merge(stream, last(stream, trigger))
+  lift(trigger, z, (t: Option[U], a: Option[T]) => if isNone(t) then None[T] else a)
+}
 
 in x: Events[Unit]
 in y: Events[Int]

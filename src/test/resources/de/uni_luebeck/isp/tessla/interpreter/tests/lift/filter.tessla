@@ -1,13 +1,4 @@
 in x: Events[Int]
 in c: Events[Bool]
 
-def filter[T](events: Events[T], condition: Events[Bool]): Events[T] := {
-  def c := merge(condition, last(condition, events))
-  def f(e: Option[T], c: Option[Bool]): Option[T] :=
-    if isNone(c) then None[T]
-    else if getSome(c)
-    then e else None[T]
-  return lift(events, c, f)
-}
-
 out filter(x, c) as z

@@ -1,4 +1,4 @@
 in x: Events[Int]
 in y: Events[Int]
-def z := delayedLast(x,y)
+def z := last(x, delay(y,y))
 out z

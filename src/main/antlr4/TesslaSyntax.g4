@@ -69,7 +69,7 @@ expression
     | lhs=expression op=('==' | '!=' | '<' | '>' | '<=' | '>=' | '<.' | '>.' | '<=.' | '>=.') NL* rhs=expression #InfixExpression
     | lhs=expression op='&&' NL* rhs=expression #InfixExpression
     | lhs=expression op='||' NL* rhs=expression #InfixExpression
-    | ifToken='if' condition=expression NL* 'then' NL* thenCase=expression NL* ('else' NL* elseCase=expression)? #ITE
+    | ifToken='if' condition=expression NL* 'then' NL* thenCase=expression NL* 'else' NL* elseCase=expression #ITE
     | 'static' 'if' condition=expression NL* 'then' NL* thenCase=expression NL* 'else' NL* elseCase=expression #ITE
     | funKW='fun'? openingParen='(' NL* params+=param (',' NL* params+=param)* NL* closingParen=')' '=>' NL* expression #Lambda
     ;

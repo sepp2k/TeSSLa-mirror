@@ -10,8 +10,8 @@ def resetCount[T](events: Events[T], reset: Events[Unit]) := {
   sum
 }
 
-def period(delay: Int) := {
-  def s: Events[Int] := default(delayedLast(s, s), delay)
+def period(amount: Int) := {
+  def s: Events[Int] := default(const(amount, delay(s, ())), amount)
   const((), s)
 }
 

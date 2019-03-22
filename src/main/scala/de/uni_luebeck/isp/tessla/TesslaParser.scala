@@ -6,7 +6,7 @@ import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-class TesslaParser extends AbstractTesslaParser[Tessla.Statement, Tessla.Specification] {
+class TesslaParser(src: CharStream) extends AbstractTesslaParser[Tessla.Statement, Tessla.Specification](src) {
   override def aggregateItems(statements: Seq[Tessla.Statement]) = {
     Tessla.Specification(statements)
   }
@@ -198,24 +198,16 @@ class TesslaParser extends AbstractTesslaParser[Tessla.Statement, Tessla.Specifi
       val cond = translateExpression(ite.condition)
       val thenCase = translateExpression(ite.thenCase)
       val loc = Location.fromNode(ite)
-      if (ite.elseCase == null) {
-        Tessla.MacroCall(
-          Tessla.Variable(Tessla.Identifier("if then", Location.fromToken(ite.ifToken))),
-          Seq(),
-          Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase)), loc
-        )
+      val elseCase = translateExpression(ite.elseCase)
+      if (ite.STATIC != null) {
+        Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
       } else {
-        val elseCase = translateExpression(ite.elseCase)
-        if (ite.STATIC != null) {
-          Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
-        } else {
-          Tessla.MacroCall(
-            Tessla.Variable(Tessla.Identifier("if then else", Location.fromToken(ite.ifToken))),
-            Seq(),
-            Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
-            loc
-          )
-        }
+        Tessla.MacroCall(
+          Tessla.Variable(Tessla.Identifier("if then else", Location.fromToken(ite.ifToken))),
+          Seq(),
+          Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
+          loc
+        )
       }
     }
 
@@ -299,5 +291,11 @@ class TesslaParser extends AbstractTesslaParser[Tessla.Statement, Tessla.Specifi
         }
       }
     }
+  }
+}
+
+object TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
+  override def translate(src: CharStream) = {
+    new TesslaParser(src).translate()
   }
 }

@@ -58,23 +58,40 @@ object Evaluator {
     }
   }
 
+  def evalPrimitiveOperator(op: TesslaCore.CurriedPrimitiveOperator,
+                            arguments: Seq[TesslaCore.ValueOrError],
+                            loc: Location): TesslaCore.ValueOrError =
+    if (op.args.isEmpty) {
+      evalPrimitiveOperator(op.op, arguments, loc)
+    } else {
+      def f(curried: Int, arg: Int, acc: Seq[TesslaCore.ValueOrError]): Seq[TesslaCore.ValueOrError] =
+        if (op.args.contains(curried)) {
+          f(curried + 1, arg, acc :+ op.args(curried))
+        } else if (arg < arguments.size) {
+          f(curried + 1, arg + 1, acc :+ arguments(arg))
+        } else {
+          acc
+        }
+      evalPrimitiveOperator(op.op, f(0, 0, Seq()), loc)
+    }
+
   def evalPrimitiveOperator(op: BuiltIn.PrimitiveOperator,
                             arguments: Seq[TesslaCore.ValueOrError],
-                            loc: Location): Option[TesslaCore.ValueOrError] = {
+                            loc: Location): TesslaCore.ValueOrError = {
     def binIntOp(op: (BigInt, BigInt) => BigInt) = {
-      Some(TesslaCore.IntValue(op(getInt(arguments(0)), getInt(arguments(1))), loc))
+      TesslaCore.IntValue(op(getInt(arguments(0)), getInt(arguments(1))), loc)
     }
 
     def binIntComp(op: (BigInt, BigInt) => Boolean) = {
-      Some(TesslaCore.BoolValue(op(getInt(arguments(0)), getInt(arguments(1))), loc))
+      TesslaCore.BoolValue(op(getInt(arguments(0)), getInt(arguments(1))), loc)
     }
 
     def binFloatOp(op: (Double, Double) => Double) = {
-      Some(TesslaCore.FloatValue(op(getFloat(arguments(0)), getFloat(arguments(1))), loc))
+      TesslaCore.FloatValue(op(getFloat(arguments(0)), getFloat(arguments(1))), loc)
     }
 
     def binFloatComp(op: (Double, Double) => Boolean) = {
-      Some(TesslaCore.BoolValue(op(getFloat(arguments(0)), getFloat(arguments(1))), loc))
+      TesslaCore.BoolValue(op(getFloat(arguments(0)), getFloat(arguments(1))), loc)
     }
 
     // TODO: Replace try-catch using ValueOrError.mapValue (or add ValueOrError.flatMapValue if needed)
@@ -86,8 +103,8 @@ object Evaluator {
         case BuiltIn.Div =>
           val x = getInt(arguments(0))
           val y = getInt(arguments(1))
-          if (y == 0) Some(TesslaCore.Error(DivideByZero(arguments(1).forceValue.loc)))
-          else Some(TesslaCore.IntValue(x / y, loc))
+          if (y == 0) TesslaCore.Error(DivideByZero(arguments(1).forceValue.loc))
+          else TesslaCore.IntValue(x / y, loc)
         case BuiltIn.FAdd => binFloatOp(_ + _)
         case BuiltIn.FSub => binFloatOp(_ - _)
         case BuiltIn.FMul => binFloatOp(_ * _)
@@ -95,18 +112,18 @@ object Evaluator {
         case BuiltIn.Mod =>
           val x = getInt(arguments(0))
           val y = getInt(arguments(1))
-          if (y == 0) Some(TesslaCore.Error(DivideByZero(arguments(1).forceValue.loc)))
-          else Some(TesslaCore.IntValue(x % y, loc))
+          if (y == 0) TesslaCore.Error(DivideByZero(arguments(1).forceValue.loc))
+          else TesslaCore.IntValue(x % y, loc)
         case BuiltIn.LeftShift => binIntOp(_ << _.toInt)
         case BuiltIn.RightShift => binIntOp(_ >> _.toInt)
         case BuiltIn.BitAnd => binIntOp(_ & _)
         case BuiltIn.BitOr => binIntOp(_ | _)
         case BuiltIn.BitXor => binIntOp(_ ^ _)
-        case BuiltIn.BitFlip => Some(TesslaCore.IntValue(~getInt(arguments(0)), loc))
-        case BuiltIn.Negate => Some(TesslaCore.IntValue(-getInt(arguments(0)), loc))
-        case BuiltIn.FNegate => Some(TesslaCore.FloatValue(-getFloat(arguments(0)), loc))
-        case BuiltIn.Eq => Some(TesslaCore.BoolValue(arguments(0).forceValue == arguments(1).forceValue, loc))
-        case BuiltIn.Neq => Some(TesslaCore.BoolValue(arguments(0).forceValue != arguments(1).forceValue, loc))
+        case BuiltIn.BitFlip => TesslaCore.IntValue(~getInt(arguments(0)), loc)
+        case BuiltIn.Negate => TesslaCore.IntValue(-getInt(arguments(0)), loc)
+        case BuiltIn.FNegate => TesslaCore.FloatValue(-getFloat(arguments(0)), loc)
+        case BuiltIn.Eq => TesslaCore.BoolValue(arguments(0).forceValue == arguments(1).forceValue, loc)
+        case BuiltIn.Neq => TesslaCore.BoolValue(arguments(0).forceValue != arguments(1).forceValue, loc)
         case BuiltIn.Lt => binIntComp(_ < _)
         case BuiltIn.Lte => binIntComp(_ <= _)
         case BuiltIn.Gt => binIntComp(_ > _)
@@ -115,146 +132,155 @@ object Evaluator {
         case BuiltIn.FLte => binFloatComp(_ <= _)
         case BuiltIn.FGt => binFloatComp(_ > _)
         case BuiltIn.FGte => binFloatComp(_ >= _)
-        case BuiltIn.And => Some(TesslaCore.BoolValue(getBool(arguments(0)) && getBool(arguments(1)), loc))
-        case BuiltIn.Or => Some(TesslaCore.BoolValue(getBool(arguments(0)) || getBool(arguments(1)), loc))
-        case BuiltIn.Not => Some(TesslaCore.BoolValue(!getBool(arguments(0)), loc))
-        case BuiltIn.IfThen =>
-          if (getBool(arguments(0))) Some(arguments(1))
-          else None
+        case BuiltIn.And => TesslaCore.BoolValue(getBool(arguments(0)) && getBool(arguments(1)), loc)
+        case BuiltIn.Or => TesslaCore.BoolValue(getBool(arguments(0)) || getBool(arguments(1)), loc)
+        case BuiltIn.Not => TesslaCore.BoolValue(!getBool(arguments(0)), loc)
         case BuiltIn.IfThenElse =>
-          if (getBool(arguments(0))) Some(arguments(1))
-          else Some(arguments(2))
+          if (getBool(arguments(0))) arguments(1)
+          else arguments(2)
         case BuiltIn.First =>
-          Some(arguments(0))
+          arguments(0)
+        case BuiltIn.Min =>
+          binIntOp(_ min _)
+        case BuiltIn.Max =>
+          binIntOp(_ max _)
         case BuiltIn.Pow =>
           binFloatOp(math.pow)
         case BuiltIn.Log =>
           binFloatOp((x, base) => math.log(x) / math.log(base))
+        case BuiltIn.Sin =>
+          TesslaCore.FloatValue(Math.sin(getFloat(arguments(0))), loc)
+        case BuiltIn.Cos =>
+          TesslaCore.FloatValue(Math.cos(getFloat(arguments(0))), loc)
+        case BuiltIn.Tan =>
+          TesslaCore.FloatValue(Math.tan(getFloat(arguments(0))), loc)
+        case BuiltIn.Atan =>
+          TesslaCore.FloatValue(Math.atan(getFloat(arguments(0))), loc)
         case BuiltIn.IntToFloat =>
-          Some(TesslaCore.FloatValue(getInt(arguments(0)).toDouble, loc))
+          TesslaCore.FloatValue(getInt(arguments(0)).toDouble, loc)
         case BuiltIn.FloatToInt =>
-          Some(TesslaCore.IntValue(BigDecimal(getFloat(arguments(0))).toBigInt, loc))
+          TesslaCore.IntValue(BigDecimal(getFloat(arguments(0))).toBigInt, loc)
         case BuiltIn.None =>
-          Some(TesslaCore.TesslaOption(None, loc))
+          TesslaCore.TesslaOption(None, loc)
         case BuiltIn.Some =>
-          Some(TesslaCore.TesslaOption(Some(arguments(0).forceValue), loc))
+          TesslaCore.TesslaOption(Some(arguments(0).forceValue), loc)
         case BuiltIn.IsNone =>
-          Some(TesslaCore.BoolValue(getOption(arguments(0)).value.isEmpty, loc))
+          TesslaCore.BoolValue(getOption(arguments(0)).value.isEmpty, loc)
         case BuiltIn.GetSome =>
           getOption(arguments(0)).value match {
             case None => throw CannotGetValueOfNone(loc)
-            case some => some
+            case Some(value) => value
           }
         case BuiltIn.MapEmpty =>
-          Some(TesslaCore.TesslaMap(Map(), loc))
+          TesslaCore.TesslaMap(Map(), loc)
         case BuiltIn.MapAdd =>
           val map = getMap(arguments(0))
-          Some(TesslaCore.TesslaMap(map.value + (arguments(1).forceValue -> arguments(2).forceValue), loc))
+          TesslaCore.TesslaMap(map.value + (arguments(1).forceValue -> arguments(2).forceValue), loc)
         case BuiltIn.MapGet =>
           val map = getMap(arguments(0))
           val key = arguments(1).forceValue
           try {
-            Some(map.value(key).withLoc(loc))
+            map.value(key).withLoc(loc)
           } catch {
             case _: NoSuchElementException =>
               throw KeyNotFound(key.forceValue, map.value, loc)
           }
         case BuiltIn.MapContains =>
-          Some(TesslaCore.BoolValue(getMap(arguments(0)).value.contains(arguments(1).forceValue), loc))
+          TesslaCore.BoolValue(getMap(arguments(0)).value.contains(arguments(1).forceValue), loc)
         case BuiltIn.MapRemove =>
           val map = getMap(arguments(0))
-          Some(TesslaCore.TesslaMap(map.value - arguments(1).forceValue, loc))
+          TesslaCore.TesslaMap(map.value - arguments(1).forceValue, loc)
         case BuiltIn.MapSize =>
           val map = getMap(arguments(0))
-          Some(TesslaCore.IntValue(map.value.size, loc))
+          TesslaCore.IntValue(map.value.size, loc)
         case BuiltIn.SetEmpty =>
-          Some(TesslaCore.TesslaSet(Set(), loc))
+          TesslaCore.TesslaSet(Set(), loc)
         case BuiltIn.SetAdd =>
           val set = getSet(arguments(0))
-          Some(TesslaCore.TesslaSet(set.value + arguments(1).forceValue, loc))
+          TesslaCore.TesslaSet(set.value + arguments(1).forceValue, loc)
         case BuiltIn.SetContains =>
-          Some(TesslaCore.BoolValue(getSet(arguments(0)).value.contains(arguments(1).forceValue), loc))
+          TesslaCore.BoolValue(getSet(arguments(0)).value.contains(arguments(1).forceValue), loc)
         case BuiltIn.SetRemove =>
           val set = getSet(arguments(0))
-          Some(TesslaCore.TesslaSet(set.value - arguments(1).forceValue, loc))
+          TesslaCore.TesslaSet(set.value - arguments(1).forceValue, loc)
         case BuiltIn.SetSize =>
           val set = getSet(arguments(0))
-          Some(TesslaCore.IntValue(set.value.size, loc))
+          TesslaCore.IntValue(set.value.size, loc)
         case BuiltIn.SetUnion =>
           val set1 = getSet(arguments(0))
           val set2 = getSet(arguments(1))
-          Some(TesslaCore.TesslaSet(set1.value | set2.value, loc))
+          TesslaCore.TesslaSet(set1.value | set2.value, loc)
         case BuiltIn.SetIntersection =>
           val set1 = getSet(arguments(0))
           val set2 = getSet(arguments(1))
-          Some(TesslaCore.TesslaSet(set1.value & set2.value, loc))
+          TesslaCore.TesslaSet(set1.value & set2.value, loc)
         case BuiltIn.SetFold =>
           val set = getSet(arguments(0)).value
           val z = arguments(1)
           val f = arguments(2)
-          Some(set.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc)))
+          set.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc))
         case BuiltIn.ListEmpty =>
-          Some(TesslaCore.TesslaList(List(), loc))
+          TesslaCore.TesslaList(List(), loc)
         case BuiltIn.ListSize =>
           val list = getList(arguments(0))
-          Some(TesslaCore.IntValue(list.value.size, loc))
+          TesslaCore.IntValue(list.value.size, loc)
         case BuiltIn.ListAppend =>
           val list = getList(arguments(0))
-          Some(TesslaCore.TesslaList(list.value :+ arguments(1).forceValue, loc))
+          TesslaCore.TesslaList(list.value :+ arguments(1).forceValue, loc)
         case BuiltIn.ListPrepend =>
           val list = getList(arguments(0))
-          Some(TesslaCore.TesslaList(arguments(1).forceValue +: list.value, loc))
+          TesslaCore.TesslaList(arguments(1).forceValue +: list.value, loc)
         case BuiltIn.ListTail =>
           val list = getList(arguments(0))
           if (list.value.isEmpty) {
-            Some(list)
+            list
           } else {
-            Some(TesslaCore.TesslaList(list.value.tail, loc))
+            TesslaCore.TesslaList(list.value.tail, loc)
           }
         case BuiltIn.ListInit =>
           val list = getList(arguments(0))
           if (list.value.isEmpty) {
-            Some(list)
+            list
           } else {
-            Some(TesslaCore.TesslaList(list.value.init, loc))
+            TesslaCore.TesslaList(list.value.init, loc)
           }
         case BuiltIn.ListHead =>
           val list = getList(arguments(0))
           if (list.value.isEmpty) {
             throw HeadOfEmptyList(loc)
           } else {
-            Some(list.value.head.withLoc(loc))
+            list.value.head.withLoc(loc)
           }
         case BuiltIn.ListLast =>
           val list = getList(arguments(0))
           if (list.value.isEmpty) {
             throw LastOfEmptyList(loc)
           } else {
-            Some(list.value.last.withLoc(loc))
+            list.value.last.withLoc(loc)
           }
         case BuiltIn.ListFold =>
           val list = getList(arguments(0)).value
           val z = arguments(1)
           val f = arguments(2)
-          Some(list.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc)))
+          list.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc))
         case BuiltIn.String_concat =>
           val s1 = getString(arguments(0))
           val s2 = getString(arguments(1))
-          Some(TesslaCore.StringValue(s1 + s2, loc))
+          TesslaCore.StringValue(s1 + s2, loc)
         case BuiltIn.ToString =>
-          Some(TesslaCore.StringValue(evalToString(arguments(0)), loc))
+          TesslaCore.StringValue(evalToString(arguments(0)), loc)
         case BuiltIn.CtfGetInt =>
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))
-          Some(TesslaCore.IntValue(Ctf.getInt(composite, key), loc))
+          TesslaCore.IntValue(Ctf.getInt(composite, key), loc)
         case BuiltIn.CtfGetString =>
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))
-          Some(TesslaCore.StringValue(Ctf.getString(composite, key), loc))
+          TesslaCore.StringValue(Ctf.getString(composite, key), loc)
       }
     } catch {
       case e: TesslaError =>
-        Some(TesslaCore.Error(e))
+        TesslaCore.Error(e)
     }
   }
 
@@ -271,14 +297,14 @@ object Evaluator {
                       env: Env = Map()): TesslaCore.ValueOrError = {
     evalArg(f, env) match {
       case b: TesslaCore.BuiltInOperator =>
-        evalPrimitiveOperator(b.value, args, loc).get
+        evalPrimitiveOperator(b.value, args, loc)
       case c: TesslaCore.Closure =>
         val env = c.capturedEnvironment
         val argEnv = c.function.parameters.zip(args.map(arg => Lazy(arg))).toMap
-        lazy val innerEnv: Env =  env ++ argEnv ++ c.function.scope.map {
+        lazy val innerEnv: Env =  env ++ argEnv ++ c.function.body.map {
           case (id, e) => id -> Lazy(evalExpression(e, innerEnv))
         }
-        evalArg(c.function.body, innerEnv)
+        evalArg(c.function.result, innerEnv)
       case _ =>
         throw InternalError("Application of non-function should have been caught by the type checker")
     }

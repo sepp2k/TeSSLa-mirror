@@ -9,5 +9,15 @@ out fac(5)
 
 out slift1(x, fac)
 
+def fac2(n: Int): Int := {
+    def go(n: Int, acc: Int): Int :=
+        static if n == 0
+        then acc
+        else go(n-1, n*acc)
+    go(n, 1)
+}
+
+out slift1(x, fac2)
+
 def slift1[T, U](s: Events[T], f: (T) => U): Events[U] :=
     lift(s, nil[Unit], fun (x: Option[T], y: Option[Unit]) => Some(f(getSome(x))))
