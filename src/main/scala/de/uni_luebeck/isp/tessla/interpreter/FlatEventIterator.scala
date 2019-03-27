@@ -116,7 +116,7 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
         } else {
           val values = tup.elems.asScala.map(visit)
           val members = values.zipWithIndex.map {
-            case (value, index) => s"_$index" -> value
+            case (value, index) => s"_${index+1}" -> value
           }.toMap
           TesslaCore.TesslaObject(members, Location.fromNode(tup))
         }
