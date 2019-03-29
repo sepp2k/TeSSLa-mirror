@@ -11,7 +11,7 @@
     expression ::= INT | FLOAT | STRING | "true" | "false" |
                  | ID
                  | "(" expression*, ")"
-                 | ("{" | "${") memberDef*, "}"
+                 | "{" memberDef*, "}"
                  | "Some" "(" expression ")"
                  | "None"
                  | "List" "(" (expression*, ")"
@@ -27,6 +27,7 @@
 
 * Here the notation `*,` is used to refer to 0 or more elements separated by "," tokens.
 * Tuples, lists, sets, maps and objects can have a trailing comma at the end
+* For backwards-compatibility an object literal can also start with ${ instead of {
 * The precedence of operators is the same as in the TeSSLa grammar.
 * The rules for literals and identifiers are also the same as in the TeSSLa grammar.
 * `DECINT` refers to an integer literal that's specifically written in decimal notation
