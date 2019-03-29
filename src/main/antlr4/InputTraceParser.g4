@@ -38,7 +38,7 @@ expression
     | 'Set' '(' (elems+=expression (',' elems+=expression)*)? ','? ')' #SetExpression
     | 'Map' '(' (elems+=keyVal (',' elems+=keyVal)*)? ','? ')' #MapExpression
     | op=('!' | '~' | '-') expression #UnaryExpression
-    | lhs=expression op=('*' | '/' | '%' | '*.' | '/.') rhs=expression #InfixExpression
+    | lhs=expression op=('*' | '/' | '%') rhs=expression #InfixExpression
     | lhs=expression op=('+' | '-') rhs=expression #InfixExpression
     | lhs=expression op=('<<' | '>>') rhs=expression #InfixExpression
     | lhs=expression op='&' rhs=expression #InfixExpression
