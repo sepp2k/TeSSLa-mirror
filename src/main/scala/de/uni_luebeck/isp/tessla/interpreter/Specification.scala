@@ -173,7 +173,7 @@ class Specification() {
               if (value > 0) {
                 value
               } else {
-                throw NegativeDelayError(value, loc)
+                throw NonPositiveDelayError(value, loc)
               }
             case _ =>
               throw InternalError("Uncaught type error: delayedLast called with non-int delay")
@@ -226,7 +226,7 @@ class Specification() {
               if (value > 0) {
                 value
               } else {
-                throw NegativeDelayError(value, loc)
+                throw NonPositiveDelayError(value, loc)
               }
             case _ =>
               throw InternalError("Uncaught type error: delay called with non-int delay")

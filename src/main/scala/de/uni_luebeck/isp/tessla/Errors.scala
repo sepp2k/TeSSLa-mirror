@@ -145,8 +145,8 @@ object Errors {
     InternalError(s"Tried to provide inputs after their propagation at time $time", loc)
   }
 
-  case class NegativeDelayError(value: BigInt, loc: Location) extends TesslaError {
-    override def message: String = s"Negative delay $value"
+  case class NonPositiveDelayError(value: BigInt, loc: Location) extends TesslaError {
+    override def message: String = s"Non-positive delay $value"
   }
 
   case class InputTypeMismatch(value: TesslaCore.Value, valueType: String, streamName: String, streamType: TesslaCore.Type, loc: Location) extends TesslaError {
