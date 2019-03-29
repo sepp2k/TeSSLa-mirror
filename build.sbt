@@ -49,7 +49,7 @@ cancelable in Global := true
 
 enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion)
-buildInfoPackage := "de.uni_luebeck.isp.tessla.interpreter"
+buildInfoPackage := "de.uni_luebeck.isp.tessla"
 
 enablePlugins(Antlr4Plugin)
 antlr4Version in Antlr4 := "4.7.2"

@@ -4,7 +4,6 @@ import scala.collection.mutable
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TesslaCore.CurriedPrimitiveOperator
 import de.uni_luebeck.isp.tessla.util.Lazy
-import de.uni_luebeck.isp.tessla.interpreter.BuildInfo
 import de.uni_luebeck.isp.tessla.util._
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.Specification, TesslaCore.Specification] {
