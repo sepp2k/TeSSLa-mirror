@@ -62,6 +62,7 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
         case "\\a" => "\u0007"
         case "\\\\" => "\\"
         case "\\\"" => "\""
+        case "\\$" => "$"
         case other => throw InvalidEscapeSequence(other, loc)
       }
 

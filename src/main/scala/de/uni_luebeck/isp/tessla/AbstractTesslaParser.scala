@@ -63,6 +63,7 @@ abstract class AbstractTesslaParser[Item, Result](src: CharStream) extends Trans
     case "\\a" => "\u0007"
     case "\\\\" => "\\"
     case "\\\"" => "\""
+    case "\\$" => "$"
     case other =>
       error(InvalidEscapeSequence(other, loc))
       other
