@@ -14,6 +14,7 @@
     print         ::= "print" expression EOS
     in            ::= "in" ID ":" type EOS
     expression    ::= "static"? "if" expression "then" expression "else" expression
+                    | "fun"? paramList "=>" expression
                     | expression infixOperator expression
                     | unaryOperator expression
                     | "(" expression ")"
@@ -64,7 +65,7 @@
   * As part of an empty line that only consists of whitespace
 * Comments start with `--` or `#` and extend to the end of the line. They are ignored by the parser.
 * TesslaDoc comments are comments that start with `---` or `##`. They can only appear in front of definitions.
-* Use of the keyword `return` is deprecated
+* Use of the keywords `return` and `fun` is deprecated
 * Anything that appears within quotes in the grammar, except for time units, is a keyword and can not be used as an identifier.
 * The precedence of the infix operators is as follows (lowest-to-highest):
   * `||`
