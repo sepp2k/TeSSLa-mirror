@@ -1,5 +1,44 @@
 # Changelog
 
+## Version 0.7.3 (upcoming)
+
+### Additions and Fixes
+* String literals can now contain dollar signs by escaping them with a backslash: `\$`
+* A bug has been fixed that prevented the use of non-emtpy tuples in input streams
+
+### API Changes
+* The generated `BuildInfo` class has been moved from the `interpreter` package to the `tessla` package
+
+## Version 0.7.2
+
+### Breaking Changes
+* It is no longer possible to write if-statements without an else-clause. Use `filter` instead.
+* `delayedLast` no longer exists. Use `delay` instead. Examples:
+  * A non-recursive `delayedLast(x,y)` becomes `last(x, delay(y,y))`
+  * `def s: Events[Int] := default(delayedLast(s, s), delay)` becomes `def s: Events[Int] := default(const(amount, delay(s, ())), amount)`
+  * TODO Malte: expand this
+
+### Additions
+* Some TesslaCore-to-TesslaCore optimizations have been added
+* `lift1`, `min`, `max`, `minimum`, `maximum` and `sum` have been added as built-in functions
+* The float operations `sin`, `cos`, `tan` and `atan` have been added as built-in functions
+* Aggregating functions in the standard library now take into account events at t=0
+
+### API Changes
+
+* `Compiler.applyPasses` is now `Compiler.compile`
+* Instead of `Interpreter.run*` taking Strings/streams there is now a single `Interpreter.run` that takes the TesslaCore.Specification as returned by `compile` and a `Trace`
+* `TesslaCore.Lift`'s function is now represented as a `TesslaCore.Function`, not `TesslaCore.ValueArg`
+* Scope and body have been renamed to body and result
+* Translation phases now consist of a `TranslationPhase.Translator` that does the actual work and a `TranslationPhase` that wraps the `Translator` and can be composed with other translation phases or functions
+
+## Version 0.7.1
+
+### Additions
+
+* `filter` now exists as a built-in function
+
+
 ## Version 0.7.0 (Changes Since 0.6.5)
 
 ### Breaking Changes
@@ -42,41 +81,3 @@
 * The TesslaSource class no longer exists. ANTLR's CharStream class should be used instead.
 * The TesslaCore.Specification class now contains proper case classes to describe the contained streams instead of using tuples. Type information for streams is included again.
 * TesslaCore.Unit no longer exists - you'll need to check for / use empty objects instead
-
-## Version 0.7.1
-
-### Additions
-
-* `filter` now exists as a built-in function
-
-## Version 0.7.2
-
-### Breaking Changes
-* It is no longer possible to write if-statements without an else-clause. Use `filter` instead.
-* `delayedLast` no longer exists. Use `delay` instead. Examples:
-** A non-recursive `delayedLast(x,y)` becomes `last(x, delay(y,y))`
-** `def s: Events[Int] := default(delayedLast(s, s), delay)` becomes `def s: Events[Int] := default(const(amount, delay(s, ())), amount)`
-** TODO Malte: expand this
-
-### Additions
-* Some TesslaCore-to-TesslaCore optimizations have been added
-* `lift1`, `min`, `max`, `minimum`, `maximum` and `sum` have been added as built-in functions
-* The float operations `sin`, `cos`, `tan` and `atan` have been added as built-in functions
-* Aggregating functions in the standard library now take into account events at t=0
-
-### API Changes
-
-* `Compiler.applyPasses` is now `Compiler.compile`
-* Instead of `Interpreter.run*` taking Strings/streams there is now a single `Interpreter.run` that takes the TesslaCore.Specification as returned by `compile` and a `Trace`
-* `TesslaCore.Lift`'s function is now represented as a `TesslaCore.Function`, not `TesslaCore.ValueArg`
-* Scope and body have been renamed to body and result
-* Translation phases now consist of a `TranslationPhase.Translator` that does the actual work and a `TranslationPhase` that wraps the `Translator` and can be composed with other translation phases or functions
-
-## Version 0.7.3 (upcoming)
-
-### Additions and Fixes
-* String literals can now contain dollar signs by escaping them with a backslash: `\$`
-* A bug has been fixed that prevented the use of non-emtpy tuples in input streams
-
-### API Changes
-* The generated `BuildInfo` class has been moved from the `interpreter` package to the `tessla` package
