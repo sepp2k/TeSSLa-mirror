@@ -119,10 +119,6 @@ object TesslaCore extends HasUniqueIdentifiers {
     def stream: StreamRef
     def loc: Location
   }
-  
-  object StdLibUnaryOp {
-    def unapply(op: StdLibUnaryOp): Option[(StreamRef, Location)] = Some((op.stream, op.loc))
-  }
 
   final case class StdLibCount(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
     override def toString = s"count($stream)"
