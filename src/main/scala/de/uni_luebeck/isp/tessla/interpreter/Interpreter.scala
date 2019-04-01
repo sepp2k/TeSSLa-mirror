@@ -1,10 +1,8 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors._
-import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.util.Lazy
 import de.uni_luebeck.isp.tessla._
-import org.antlr.v4.runtime.CharStream
 
 import scala.collection.mutable
 
