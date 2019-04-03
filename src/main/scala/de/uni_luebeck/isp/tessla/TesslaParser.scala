@@ -249,15 +249,26 @@ class TesslaParser(src: CharStream) extends AbstractTesslaParser[Tessla.Statemen
       var curStr = new StringBuilder
       var curStrLoc: Option[Location] = Some(Location.fromToken(str.stringLit.openingQuote))
       val parts = new ArrayBuffer[Tessla.Expression]
-      str.stringLit.stringContents.forEach {part =>
-        val partLoc = Location.fromNode(part)
-        if (part.TEXT != null) {
-          curStr ++= part.TEXT.getText
-          curStrLoc = Some(curStrLoc.map(_.merge(partLoc)).getOrElse(partLoc))
-        } else if (part.ESCAPE_SEQUENCE != null) {
-          curStr ++= parseEscapeSequence(part.ESCAPE_SEQUENCE.getText, partLoc)
-          curStrLoc = Some(curStrLoc.map(_.merge(partLoc)).getOrElse(partLoc))
-        } else {
+      str.stringLit.stringContents.forEach {
+        case text: TesslaSyntax.TextContext =>
+          curStr ++= text.getText
+          val loc = Location.fromNode(text)
+          curStrLoc = Some(curStrLoc.map(_.merge(loc)).getOrElse(loc))
+        case escapeSequence: TesslaSyntax.EscapeSequenceContext =>
+          val loc = Location.fromNode(escapeSequence)
+          curStr ++= parseEscapeSequence(escapeSequence.getText, loc)
+          curStrLoc = Some(curStrLoc.map(_.merge(loc)).getOrElse(loc))
+        case format: TesslaSyntax.FormatContext =>
+          val formatLoc = Location.fromNode(format)
+          AbstractTesslaParser.parseFormatString(format.getText, formatLoc) match {
+            case invalid: AbstractTesslaParser.InvalidFormat =>
+              error(invalid.err)
+            case noArgs: AbstractTesslaParser.NoArgFormat =>
+              curStr ++= noArgs.processedString
+            case oneArg: AbstractTesslaParser.SingleArgFormat =>
+              error(FormatNeedsArgument(format.getText, formatLoc))
+          }
+        case part: TesslaSyntax.StringInterpolationContext =>
           if (curStr.nonEmpty) {
             parts += Tessla.Literal(Tessla.StringLiteral(curStr.toString), curStrLoc.get)
             curStrLoc = None
@@ -268,11 +279,31 @@ class TesslaParser(src: CharStream) extends AbstractTesslaParser[Tessla.Statemen
           } else {
             translateExpression(part.expression)
           }
-          parts += Tessla.MacroCall(
-            Tessla.Variable(Tessla.Identifier("toString", exp.loc)),
-            Seq(), Seq(Tessla.PositionalArgument(exp)), exp.loc
-          )
-        }
+          if (part.FORMAT == null) {
+            parts += Tessla.MacroCall(
+              Tessla.Variable(Tessla.Identifier("toString", exp.loc)),
+              Seq(), Seq(Tessla.PositionalArgument(exp)), exp.loc
+            )
+          } else {
+            val format = part.FORMAT.getText
+            val formatLoc = Location.fromToken(part.FORMAT)
+            AbstractTesslaParser.parseFormatString(format, formatLoc) match {
+              case invalid: AbstractTesslaParser.InvalidFormat =>
+                error(invalid.err)
+              case noArgs: AbstractTesslaParser.NoArgFormat =>
+                parts += Tessla.MacroCall(
+                  Tessla.Variable(Tessla.Identifier("toString", exp.loc)),
+                  Seq(), Seq(Tessla.PositionalArgument(exp)), exp.loc
+                )
+                curStr ++= noArgs.processedString
+              case oneArg: AbstractTesslaParser.SingleArgFormat =>
+                val formatString = Tessla.Literal(Tessla.StringLiteral(format), formatLoc)
+                parts += Tessla.MacroCall(
+                  Tessla.Variable(Tessla.Identifier(oneArg.formatFunction, exp.loc)),
+                  Seq(), Seq(Tessla.PositionalArgument(formatString), Tessla.PositionalArgument(exp)), exp.loc
+                )
+            }
+          }
       }
       if (curStr.nonEmpty) {
         val loc = curStrLoc.get.merge(Location.fromToken(str.stringLit.closingQuote))

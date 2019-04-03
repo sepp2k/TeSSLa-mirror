@@ -55,17 +55,11 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
         TesslaCore.FloatValue(floatLit.FLOAT.getText.toDouble, Location.fromNode(floatLit))
       }
 
-      def parseEscapeSequence(sequence: String, loc: Location): String = sequence match {
-        case "\\r" => "\r"
-        case "\\n" => "\n"
-        case "\\t" => "\t"
-        case "\\a" => "\u0007"
-        case "\\\\" => "\\"
-        case "\\\"" => "\""
-        case "\\$" => "$"
-        case other => throw InvalidEscapeSequence(other, loc)
+      def parseEscapeSequence(sequence: String, loc: Location): String = {
+        AbstractTesslaParser.parseEscapeSequence(sequence).getOrElse{
+          throw InvalidEscapeSequence(sequence, loc)
+        }
       }
-
 
       override def visitStringLiteral(str: StringLiteralContext) = {
         val result = new StringBuilder

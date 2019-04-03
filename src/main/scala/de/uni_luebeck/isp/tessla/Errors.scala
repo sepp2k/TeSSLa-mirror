@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
+import java.util.IllegalFormatException
+
 object Errors {
   abstract class TesslaError extends Exception with Diagnostic
 
@@ -201,7 +203,19 @@ object Errors {
     override def message = s"Invalid escape sequence '$sequence' in string"
   }
 
-  case class StringInterpolationInInclude(loc: Location) extends TesslaError {
-    override def message = "String interpolation is not allowed in include statement"
+  case class StringInterpolationOrFormatInInclude(loc: Location) extends TesslaError {
+    override def message = "String interpolation or format specifiers are not allowed in include statements"
+  }
+
+  case class StringFormatError(error: IllegalFormatException, loc: Location) extends TesslaError {
+    override def message = s"Error in format string: '${error.getClass.getSimpleName}: ${error.getMessage}'"
+  }
+
+  case class FormatNeedsArgument(format: String, loc: Location) extends TesslaError {
+    override def message = s"The format specifier $format requires a value and thus can only be used after a string interpolation"
+  }
+
+  case class UnsupportedConversion(loc: Location) extends TesslaError {
+    override def message = s"TeSSLa does not support conversion specifiers for date/times or characters as TeSSLa does not have those types"
   }
 }

@@ -458,6 +458,16 @@ class TypeChecker(spec: FlatTessla.Specification)
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(t), StringType, isLiftable = true)
 
+        case BuiltIn.Format =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(StringType, t), StringType, isLiftable = true)
+
+        case BuiltIn.FormatInt =>
+          FunctionType(Seq(), Seq(StringType, IntType), StringType, isLiftable = true)
+
+        case BuiltIn.FormatFloat =>
+          FunctionType(Seq(), Seq(StringType, FloatType), StringType, isLiftable = true)
+
         case BuiltIn.CtfGetInt =>
           FunctionType(Seq(), Seq(CtfType, StringType), IntType, isLiftable = true)
 

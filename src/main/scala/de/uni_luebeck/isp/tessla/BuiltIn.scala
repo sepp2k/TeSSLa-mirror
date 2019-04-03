@@ -363,6 +363,18 @@ object BuiltIn {
     override def name = "toString"
   }
 
+  case object Format extends PrimitiveOperator {
+    override def name = "format"
+  }
+
+  case object FormatInt extends PrimitiveOperator {
+    override def name = "formatInt"
+  }
+
+  case object FormatFloat extends PrimitiveOperator {
+    override def name = "formatFloat"
+  }
+
   // CTF operators
   case object CtfGetString extends PrimitiveOperator {
     override def name = "CTF_getString"
@@ -477,6 +489,9 @@ object BuiltIn {
     ListTail,
     String_concat,
     ToString,
+    Format,
+    FormatInt,
+    FormatFloat,
     CtfGetString,
     CtfGetInt,
     TesslaInfo,

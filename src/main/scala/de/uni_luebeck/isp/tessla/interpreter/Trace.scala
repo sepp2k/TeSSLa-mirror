@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{Location, Tessla, TesslaCore, TimeUnit}
+import de.uni_luebeck.isp.tessla.{Location, Tessla, TesslaCore}
 import de.uni_luebeck.isp.tessla.Errors.InternalError
 import org.antlr.v4.runtime.{CharStream, CharStreams}
 import org.eclipse.tracecompass.ctf.core.CTFException

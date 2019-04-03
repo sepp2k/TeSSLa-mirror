@@ -78,11 +78,12 @@ memberDefinition: name=ID ((':'|'=') value=expression)?;
 
 arg: (name=ID '=')? expression;
 
-stringLit: openingQuote=DQUOTE stringContents* closingQuote=DQUOTE;
+stringLit: openingQuote=(DQUOTE | 'f"') stringContents* closingQuote=DQUOTE;
 
 stringContents
-    : TEXT
-    | ESCAPE_SEQUENCE
-    | '${' expression '}'
-    | '$' ID
+    : TEXT #Text
+    | FORMAT #Format
+    | ESCAPE_SEQUENCE #EscapeSequence
+    | '${' expression '}' FORMAT? #StringInterpolation
+    | '$' ID FORMAT? #StringInterpolation
     ;

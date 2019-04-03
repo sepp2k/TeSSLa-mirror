@@ -65,6 +65,8 @@ NOT: '!';
 
 DQUOTE: '"' -> pushMode(IN_STRING);
 
+FORMAT_STRING_START: 'f"' -> pushMode(IN_FORMAT_STRING);
+
 LBRACE: '{' {
     nesting++;
     pushMode(DEFAULT_MODE);
@@ -110,6 +112,18 @@ DOLLAR_BRACE_IN_STRING: '${' {
 DOLLAR: '$' -> pushMode(SINGLE_ID);
 ESCAPE_SEQUENCE: '\\' . ;
 DQUOTE_IN_STRING: '"' -> type(DQUOTE), popMode;
+
+mode IN_FORMAT_STRING;
+
+TEXTF: ~[\\$%"]+ -> type(TEXT);
+DOLLAR_BRACE_IN_STRINGF: '${' {
+    nesting++;
+} -> pushMode(DEFAULT_MODE), type(DOLLAR_BRACE);
+DOLLARF: '$' -> pushMode(SINGLE_ID), type(DOLLAR);
+FORMAT: '%' [-#+ 0,(]* ([1-9][0-9]*)? ('.' [0-9]*)? ~[\\$"]? ;
+ESCAPE_SEQUENCEF: '\\' .  -> type(ESCAPE_SEQUENCE);
+DQUOTE_IN_STRINGF: '"' -> type(DQUOTE), popMode;
+
 
 mode SINGLE_ID;
 
