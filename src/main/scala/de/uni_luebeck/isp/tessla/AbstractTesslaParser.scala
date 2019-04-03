@@ -93,7 +93,7 @@ object AbstractTesslaParser {
           case 'h' | 'H' | 's' | 'S' => SingleArgFormat("format")
           case 'd' | 'o' | 'x' | 'X' => SingleArgFormat("formatInt")
           case 'e' | 'E' | 'f' | 'g' | 'G' | 'a' | 'A' => SingleArgFormat("formatFloat")
-          case _ => InvalidFormat(UnsupportedConversion(loc))
+          case _ => InvalidFormat(UnsupportedConversion(format.last, loc))
         }
       case err: IllegalFormatException =>
         InvalidFormat(StringFormatError(err, loc))

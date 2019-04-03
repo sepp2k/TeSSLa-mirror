@@ -215,7 +215,7 @@ object Errors {
     override def message = s"The format specifier $format requires a value and thus can only be used after a string interpolation"
   }
 
-  case class UnsupportedConversion(loc: Location) extends TesslaError {
-    override def message = s"TeSSLa does not support conversion specifiers for date/times or characters as TeSSLa does not have those types"
+  case class UnsupportedConversion(conversion: Char, loc: Location) extends TesslaError {
+    override def message = s"TeSSLa does not support the conversion specifier $conversion"
   }
 }
