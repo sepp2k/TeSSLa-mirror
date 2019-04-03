@@ -1,0 +1,5 @@
+{
+  "input": "trig.input",
+  "expectedOutput": "trig.output",
+  "spec": "trig.tessla"
+}
