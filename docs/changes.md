@@ -2,6 +2,10 @@
 
 ## Version 0.7.3 (upcoming)
 
+### Breaking Changes
+
+* `tessla.version` is now `Tessla.version`
+
 ### Additions and Fixes
 * String literals can now contain dollar signs by escaping them with a backslash: `\$`
 * A bug has been fixed that prevented the use of non-emtpy tuples in input streams

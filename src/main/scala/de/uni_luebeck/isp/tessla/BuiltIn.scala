@@ -386,7 +386,7 @@ object BuiltIn {
 
   // TeSSLa info object
   case object TesslaInfo extends BuiltIn {
-    override def name = "tessla"
+    override def name = "Tessla"
   }
 
   // Standard Library Macros
