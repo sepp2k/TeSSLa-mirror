@@ -2,7 +2,8 @@
 
 ## Grammar:
 
-    spec          ::= statement*
+    spec          ::= include* statement*
+    include       ::= "include" STRING
     statement     ::= definition | typeDef | out | outAll | print | in
     definition    ::= TESSLADOC? annotation* "def" ID typeParamList? paramList? (":" type)? "=" expression EOS
     typeDef       ::= TESSLADOC? "type" ID typeParamList? '=' type EOS
@@ -54,6 +55,7 @@
 * `DECIMAL_DIGIT` and `HEX_DIGIT` aren't tokens, just helper definitions used in the definitions of `FLOAT` and `INT`
 * String literals start and end with ASCII double quotes. Inside a string literal any character that's not a double quote, a backslash or a dollar sign can be used to refer to themselves. A backslash can be used to espace these special characters, so `\"`, `\$` and `\\` refer to a double quote, dollar and backslash respectively. `\%` can also be used to refer to the percent sign, though you can also just write `%` without the backslash in regular string literals. Further the escape sequences `\r`, `\n`, `\t` and `\a` can be used to refer to carriage return, newline, tabulator and the system bell (Unicode code point 0007) respectively. An unescaped dollar can either be followed by an identifier or by `"{" expression "}"`. This will cause the value of the given identifier or expression to be converted to string using the `toString` function and then inserted into the string (string interpolation).
 * A string literal can also be a formatted string literal that starts with `f"` instead of `"`. In that case printf-style format specifiers starting with `%` can be used. Format specifiers that take an argument (`%d`, `%f`) can only be used directly after a string interpolation and will be applied to that interpolation (e.g. `f"$x%02d"`), zero-argument specifiers (such as `%%` or `%n`) can be used anywhere. To write a literal percent sign inside a formatted string literal, use `%%` or `\%`. The supported sequences are the same as that of Java's `String.format` and `PrintStream.printf` methods, except that `%b`, `%c`, `%C`, `%t` and `%T` are not supported.
+* A string literal used as an argument to `include` can not contain string interpolations or format specifiers
 * Newlines that are directly preceded by a backslash are ignored and do not constitute an EOS token.
 * Additionally newlines can be used in the following positions without creating an EOS token:
   * Directly after an infix operator
