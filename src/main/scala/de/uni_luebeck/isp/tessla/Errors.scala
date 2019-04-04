@@ -163,6 +163,10 @@ object Errors {
     override def message: String = s"Key $key was not found in $map"
   }
 
+  case class IndexOutOfRange(index: BigInt, list: IndexedSeq[_], loc: Location) extends TesslaError {
+    override def message: String = s"Index $index is out of range for list of size ${list.length}"
+  }
+
   case class HeadOfEmptyList(loc: Location) extends TesslaError {
     override def message: String = "Head of empty list"
   }

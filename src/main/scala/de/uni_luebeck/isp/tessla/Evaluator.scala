@@ -265,6 +265,15 @@ object Evaluator {
           val z = arguments(1)
           val f = arguments(2)
           list.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc))
+        case BuiltIn.ListGet =>
+          val list = getList(arguments(0))
+          val index = getInt(arguments(1)).toInt
+          try {
+            list.value(index).withLoc(loc)
+          } catch {
+            case _: IndexOutOfBoundsException =>
+              throw IndexOutOfRange(index, list.value, loc)
+          }
         case BuiltIn.String_concat =>
           val s1 = getString(arguments(0))
           val s2 = getString(arguments(1))

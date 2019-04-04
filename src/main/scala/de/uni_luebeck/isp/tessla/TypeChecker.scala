@@ -451,6 +451,10 @@ class TypeChecker(spec: FlatTessla.Specification)
           val fType = FunctionType(Seq(), Seq(b, a), b, isLiftable = false)
           FunctionType(Seq(a.id, b.id), Seq(ListType(a), b, fType), b, isLiftable = false)
 
+        case BuiltIn.ListGet =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(ListType(t), t), t, isLiftable = true)
+
         case BuiltIn.String_concat =>
           FunctionType(Seq(), Seq(StringType, StringType), StringType, isLiftable = true)
 

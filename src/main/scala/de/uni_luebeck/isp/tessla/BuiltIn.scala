@@ -355,6 +355,10 @@ object BuiltIn {
     override def name = "List_fold"
   }
 
+  case object ListGet extends PrimitiveOperator {
+    override def name = "List_get"
+  }
+
   case object String_concat extends PrimitiveOperator {
     override def name = "String_concat"
   }
@@ -487,6 +491,7 @@ object BuiltIn {
     ListLast,
     ListPrepend,
     ListTail,
+    ListGet,
     String_concat,
     ToString,
     Format,
