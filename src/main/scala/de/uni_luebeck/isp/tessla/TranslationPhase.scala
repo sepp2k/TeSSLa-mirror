@@ -81,6 +81,20 @@ object TranslationPhase {
     def foreach(f: T => Unit): Unit = map(f)
   }
 
+  object Result {
+    /**
+      * Turn a list of results into a result of list
+      */
+    def sequence[T](results: Seq[Result[T]]): Result[Seq[T]] = {
+      val empty: Result[Seq[T]] = Success(Seq(), Seq())
+      results.foldRight(empty) { (result, acc) =>
+        acc.andThen { items =>
+          result.map(item => item +: items)
+        }
+      }
+    }
+  }
+
   case class Success[+T](value: T, warnings: Seq[Diagnostic]) extends Result[T] {
     override def andThen[U](t: T=>Result[U]): Result[U] = t(value) match {
       case Success(newValue, newWarnings) => Success(newValue, warnings ++ newWarnings)
