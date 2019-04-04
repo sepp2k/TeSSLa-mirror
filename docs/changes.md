@@ -8,7 +8,7 @@
 
 ### Additions and Fixes
 * String literals can now contain dollar signs by escaping them with a backslash: `\$`
-* A bug has been fixed that prevented the use of non-emtpy tuples in input streams
+* A bug has been fixed that prevented the use of non-empty tuples in input streams
 * TeSSLa now supports formatted string literals that start with `f"` instead of just `"` and allow printf-style format-specifiers after string interpolations (e.g. `$myInt%04x`)
 * The functions `format(String, Any): String`, `formatInt(String, Int): String` and `formatFloat(String, Float): String` have been added. They apply a format string to a single argument. These mainly exist because formatted string literals are desugared to calls to the functions. You probably don't want to use them directly. Note that calling these functions with an illegal format string will cause a runtime-exception, whereas formatted string literals would detect the error at compile time.
 
@@ -44,8 +44,7 @@
 
 * `filter` now exists as a built-in function
 
-
-## Version 0.7.0 (Changes Since 0.6.5)
+## Version 0.7.0
 
 ### Breaking Changes
 
@@ -53,7 +52,7 @@
 * Line breaks are now significant and can no longer be used in arbitrary places. For a detailed lists of where line breaks can be used, see syntax.md (that is the syntax.md of version 0.6.3 as that's the earliest it has been updated). Line breaks can also be escaped with a backslash
 * Object members can now only have the form `ID = expression` (or equivalently `ID: expression`) or `ID`. The other forms were barely documented and never used and are now gone.
 * Backslashes and dollar signs can no longer be used unescaped inside string literals (see string interpolation and escape sequences below)
-* There no longer is sub-typing for tuples and normal object types. That is, if you have, say, a 3-element tuple or an object with members `x` and `y`, you can now no longer pass them to functions expecting 2-elment tuples or objects with only an `x` member. If you want subtyping for objects, use open object types instead (see below)
+* There no longer is sub-typing for tuples and normal object types. That is, if you have, say, a 3-element tuple or an object with members `x` and `y`, you can now no longer pass them to functions expecting 2-element tuples or objects with only an `x` member. If you want subtyping for objects, use open object types instead (see below)
 * Some of the syntactic variations to specify time ranges in the extended input format have been removed as they've been undocumented, untested and often buggy. This is a breaking change in the sense that if there had been any code using these features, it would now no longer work. However, it is an utterly irrelevant change in the sense that no one ever used these features or even knew they existed or how they were supposed to work.
 
 ### Deprecations
@@ -70,7 +69,7 @@
   * `\r`: a carriage return
   * `\n`: a newline
   * `\t`: a tabulator
-  * `\a`: the system bell (unicode code point 0007)
+  * `\a`: the system bell (Unicode code point 0007)
 * Strings now support string interpolation by writing `$identifier` or `${expression}` inside a string literal. This will call `toString` on the value of the given identifier or expression and insert it into the string at the given point.
 * You can now use `print` instead of `out` to print a given value (applying `toString` if the value isn't already a string) without adding the standard formatting (i.e. `timestamp: name = value`) to it. That is, you can now print information using arbitrary formatting by building a custom string using string interpolation and then `print` to print it
 * Identifiers can now contain Unicode characters
@@ -87,3 +86,76 @@
 * The TesslaSource class no longer exists. ANTLR's CharStream class should be used instead.
 * The TesslaCore.Specification class now contains proper case classes to describe the contained streams instead of using tuples. Type information for streams is included again.
 * TesslaCore.Unit no longer exists - you'll need to check for / use empty objects instead
+
+## Version 0.6.5
+
+### Additions
+
+* Add the option `--print-node-count` to print the number of nodes in the TeSSLaCore graph
+
+## Version 0.6.4
+
+### Additions
+
+* Static-if-then-else can now be used inside lifted functions. This makes it possible to lift recursive functions
+* Add built-in functions `toString[T](x: T): String` and `String_concat(x: String, y: String): String`
+
+## Version 0.6.3
+
+### Additions
+
+* Add the ability to execute a TeSSLa specification through the Java API
+
+## Version 0.6.2
+
+### Additions
+
+* A built-in function `count` has been added
+
+## Version 0.6.1
+
+### Additions
+
+* Objects, set, maps and options can now be used in input streams
+* Add delay operator as described in the TeSSLa paper
+* Add built-in function `Set_fold`
+* The type `List[T]` has been added with the functions `List_empty`, `List_size`, `List_append`, `List_prepend`, `List_head`, `List_tail`, `List_init`, `List_last`, `List_fold`
+
+
+## Version 0.6.0
+
+### Additions
+
+* Lambda functions are now supported with the syntax `fun (paramList) => body` (the need for the keyword `fun` will be dropped in version 0.7.0)
+* Add option types (type `Option[T]` with constructor functions `Some[T](x: T)` and `None[T]` and the functions `isNone` and `getSome`)
+* Add built-in function `lift` that takes two streams and a function taking two values and then lifts that function to the streams as per the lift semantics from the TeSSLa paper. Also add `lift3` that does the same thing for three streams.
+* Objects are now value types if all their members have value types. It is now possible to have streams of such objects.
+* There now is a Java API
+
+### API changes
+
+* The old `TesslaCore.Lift` is now called `TesslaCore.SignalLift`, `TesslaCore.Lift` now refers to the new lift operator
+
+## Version 0.5.3
+
+### Additions
+
+* Explicitly set stream encoding
+
+## Version 0.5.2
+
+### Additions
+
+* `tessla.version` has been added to return the version of the current TeSSLa implementation
+* Objects whose members are assigned to local variables of the same name can now be defined using the shorthand `${x, y}`
+* The syntaxes `expression "where" { definition* }` and `{ definition* "return" expression }` have been added as a replacement for regular block syntax, which suffered from ambiguities. Note that this will change again in version 0.7.0 and regular block syntax, now unambiguous, will be preferred again.
+
+## Version 0.5.1 (Changes Since 0.5.0)
+
+### Additions
+
+* CTF support
+* It is now possible to use multiple unary operators in a row
+* Add support for objects and tuples
+* The syntax of function calls now allows non-identifier expressions as functions (that is, first-class functions can now be called without storing the function in a variable first)
+* Type aliases can now be defined using the `type` keyword
