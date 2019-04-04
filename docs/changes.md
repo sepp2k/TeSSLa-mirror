@@ -11,6 +11,7 @@
 * A bug has been fixed that prevented the use of non-empty tuples in input streams
 * TeSSLa now supports formatted string literals that start with `f"` instead of just `"` and allow printf-style format-specifiers after string interpolations (e.g. `$myInt%04x`)
 * The functions `format(String, Any): String`, `formatInt(String, Int): String` and `formatFloat(String, Float): String` have been added. They apply a format string to a single argument. These mainly exist because formatted string literals are desugared to calls to the functions. You probably don't want to use them directly. Note that calling these functions with an illegal format string will cause a runtime-exception, whereas formatted string literals would detect the error at compile time.
+* Change the implementation of TeSSLa's `List` to use Scala's `Vector` instead of Scala's `List`. That way `List_append` and `List_last` are no longer O(n)
 
 ### API Changes
 * The generated `BuildInfo` class has been moved from the `interpreter` package to the `tessla` package

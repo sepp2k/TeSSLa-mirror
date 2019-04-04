@@ -92,7 +92,7 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
 
       override def visitListExpression(list: ListExpressionContext) = {
         val elements = list.elems.asScala.map(visit)
-        TesslaCore.TesslaList(elements.toList, Location.fromNode(list))
+        TesslaCore.TesslaList(elements.toIndexedSeq, Location.fromNode(list))
       }
 
       override def visitSetExpression(set: SetExpressionContext) = {

@@ -222,7 +222,7 @@ object Evaluator {
           val f = arguments(2)
           set.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc))
         case BuiltIn.ListEmpty =>
-          TesslaCore.TesslaList(List(), loc)
+          TesslaCore.TesslaList(Vector(), loc)
         case BuiltIn.ListSize =>
           val list = getList(arguments(0))
           TesslaCore.IntValue(list.value.size, loc)

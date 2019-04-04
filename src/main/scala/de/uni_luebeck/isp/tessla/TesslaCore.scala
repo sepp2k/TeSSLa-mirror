@@ -252,8 +252,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def withLoc(loc: Location): TesslaSet = copy(loc = loc)
   }
 
-  final case class TesslaList(value: List[Value], loc: Location) extends PrimitiveValue {
+  final case class TesslaList(value: IndexedSeq[Value], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaList = copy(loc = loc)
+
+    override def toString = value.mkString("List(", ", ", ")")
   }
 
   final case class Ctf(value: ICompositeDefinition, loc: Location) extends PrimitiveValue {
