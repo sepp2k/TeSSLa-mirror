@@ -1,5 +1,6 @@
-package de.uni_luebeck.isp.tessla.analyses
+package de.uni_luebeck.isp.tessla.tessladoc
 
+import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla._
 import org.antlr.v4.runtime.{CharStream, ParserRuleContext, Token}
 
@@ -129,6 +130,12 @@ object TesslaDoc {
 
   def extractAsJSON(src: CharStream, currentFileOnly: Boolean) = {
     extract(src, currentFileOnly = currentFileOnly).map(_.mkString("[\n", ",\n", "\n]"))
+  }
+
+  def extractAsJSON(srcs: Seq[CharStream], currentFileOnly: Boolean) = {
+    Result.runSequentially(srcs) {src =>
+      extract(src, currentFileOnly = currentFileOnly)
+    }.map(_.flatten.mkString("[\n", ",\n", "\n]"))
   }
 }
 

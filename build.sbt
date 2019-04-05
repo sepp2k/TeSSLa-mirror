@@ -40,6 +40,9 @@ libraryDependencies ++= Seq(
   "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT"
 )
 
+mainClass in (Compile, run) := Some("de.uni_luebeck.isp.tessla.Main")
+mainClass in (Compile, packageBin) := Some("de.uni_luebeck.isp.tessla.Main")
+
 scalacOptions += "-feature"
 scalacOptions += "-unchecked"
 scalacOptions += "-deprecation"

@@ -5,6 +5,7 @@
 ### Breaking Changes
 
 * `tessla.version` is now `Tessla.version`
+* TesslaDoc is now invoked via the new `tessladoc` script rather than `tessla --doc`
 
 ### Additions and Fixes
 * String literals can now contain dollar signs by escaping them with a backslash: `\$`

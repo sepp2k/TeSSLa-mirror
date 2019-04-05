@@ -15,31 +15,41 @@ object Main extends SexyOpt {
   override val programDescription = "Evaluate the given Tessla specification on the input streams provided by the given trace file."
 
   val tesslaFile = posArg("tessla-file", "The file containing the Tessla specification")
+
   val traceFile = optionalPosArg("trace-file", "The file containing the trace data used as input for the specification." +
     " If this is not provided, input is read from stdin")
+
   val verifyOnly = flag("verify-only", "Only check the Tessla spec for errors and don't execute it")
+
   val noDiagnostics = flag("no-diagnostics", "Don't print error messages and warnings")
 
   def diagnostics = !noDiagnostics.value
 
   val printCore = flag("print-core", "Print the Tessla Core representation generated from the Tessla specification")
+
   val debug = flag("debug", "Print stack traces for runtime errors")
+
   val stopOn = option("stop-on", "Stop when the output stream with the given name generates its first event")
+
   val listOutStreams =
     flag("list-out-streams", "Print a list of the output streams defined in the given tessla spec and then exit")
+
   val listInStreams =
     flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
+
   val timeUnit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
 
   val generateOsl = flag("generate-osl", "Print the corresponding osl file")
 
   val abortAt = option("abort-at", "Stop the interpreter after a given amount of events.")
+
   val flattenInput = flag("flatten-input", "Print the input trace in a flattened form.")
+
   val computationDepth = flag("print-computation-depth", "Print the length of the longest path a propagation message travels")
+
   val recursionDepth = flag("print-recursion-depth", "Print the length of the longest recursion")
+
   val nodeCount = flag("print-node-count", "Print the number of nodes in the TeSSLaCore graph")
-  val tesslaDoc = flag("doc", "Generate tessla-doc documentation")
-  val tesslaDocAll = flag("doc-all", "Generate tessla-doc documentation including those of included files")
 
   val ctfTrace = flag("ctf", "The trace-file with the input data is in CTF format. With this option you must specify " +
     "a trace-file. stdin is not supported.")
@@ -64,15 +74,6 @@ object Main extends SexyOpt {
     parse(args)
     try {
       val specSource = CharStreams.fromFileName(tesslaFile)
-      if (tesslaDoc) {
-        println(unwrapResult(TesslaDoc.extractAsJSON(specSource, currentFileOnly = true)))
-        return
-      }
-      if (tesslaDocAll) {
-        println(unwrapResult(TesslaDoc.extractAsJSON(specSource, currentFileOnly = false)))
-        return
-      }
-
       val core = unwrapResult(Compiler.compile(specSource, timeUnit))
 
       if (generateOsl) {
