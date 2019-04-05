@@ -16,6 +16,7 @@
 
 ### API Changes
 * The generated `BuildInfo` class has been moved from the `interpreter` package to the `tessla` package
+* Methods `Result.combineAll`, `Result.runSequentially` and `Result#combine` have been added to more conventiently work with Result objects
 
 ## Version 0.7.2
 
