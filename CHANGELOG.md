@@ -23,10 +23,28 @@
 
 ### Breaking Changes
 * It is no longer possible to write if-statements without an else-clause. Use `filter` instead.
-* `delayedLast` no longer exists. Use `delay` instead. Examples:
-  * A non-recursive `delayedLast(x,y)` becomes `last(x, delay(y,y))`
-  * `def s: Events[Int] := default(delayedLast(s, s), delay)` becomes `def s: Events[Int] := default(const(amount, delay(s, ())), amount)`
-  * TODO Malte: expand this
+  * `if c then a` treats `c` and `a` with signal semantics and produces an event for each event on `c` or `a`. The new `filter(a, c)` treats `c` as a signal and `a` as an event stream. Hence you a get a real filter of the event stream `a` without any additional events, which is in most cases what you want. If you really need the additional events you can reproduce this behaviour with `filter(first(a, c), c)`.
+  * `if c then x` for a constant `x`, e.g. `5`, implicitly converts `x` to the constant stream `const(x, ())` and hence produces an event with value `x` for every truthy event on `c`. You can reproduce this behaviour with `filter(const(x, c), c)`.
+* `delayedLast` no longer exists. Use `delay` instead.
+  * `delayedLast` was a delayed `last` in the sense that the last seen value on `x` was used for events produced when the delay was over. The new `delay` no longer has this build-in `last` and produces unit events instead. `delay(d, r)` considers new events on the delay stream `d` only when they arrive simultaneously with an event on the reset stream `r` or when an old delay is over at that timestamp. An event on the reset stream without a simultaneous event on the delay stream cancels the currently active delay.
+  * A non-recursive `delayedLast(v,d)` can be realized as `last(v, delay(d,d))` where the stream `d` is used as delay and as reset stream, which is possible if `d` is not recusively defined.
+  * The recursive definition
+    ```ruby
+    def s: Events[Int] := default(delayedLast(s, s), f)
+    ```
+    which produces an event every `f` timeunits starting with `t=0` can now be realized as
+    ```ruby
+    def s: Events[Int] := const(f, default(delay(s, ()), ()), f)
+    ```
+    with the only reset event at `t=0`.
+  * In the most general case where new delays are started by old delays _and_ external events one has to use every external event as reset, e.g. the specification
+    ```ruby
+    def s: Events[Int] := merge(delayedLast(s,s), f)
+    ```
+    can now be realized as
+    ```ruby
+    def s: Events[Int] := merge(first(f, delay(s,f)), f)
+    ```
 
 ### Additions
 * Some TesslaCore-to-TesslaCore optimizations have been added
