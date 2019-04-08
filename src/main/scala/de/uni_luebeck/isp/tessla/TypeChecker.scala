@@ -349,6 +349,15 @@ class TypeChecker(spec: FlatTessla.Specification)
           val fType = FunctionType(Seq(), Seq(OptionType(t), OptionType(u), OptionType(v)), OptionType(w), isLiftable = false)
           FunctionType(Seq(t.id, u.id, v.id, w.id), Seq(StreamType(t), StreamType(u), StreamType(v), fType), StreamType(w), isLiftable = false)
 
+        case BuiltIn.Lift4 =>
+          val t = mkTVar("T")
+          val u = mkTVar("U")
+          val v = mkTVar("V")
+          val w = mkTVar("W")
+          val x = mkTVar("X")
+          val fType = FunctionType(Seq(), Seq(OptionType(t), OptionType(u), OptionType(v), OptionType(w)), OptionType(x), isLiftable = false)
+          FunctionType(Seq(t.id, u.id, v.id, w.id, x.id), Seq(StreamType(t), StreamType(u), StreamType(v), StreamType(w), fType), StreamType(x), isLiftable = false)          
+          
         case BuiltIn.None =>
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(), OptionType(t), isLiftable = false)

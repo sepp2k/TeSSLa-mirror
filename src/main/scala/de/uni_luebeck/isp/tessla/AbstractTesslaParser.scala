@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import java.nio.file.Paths
-import java.util.{IllegalFormatException, MissingFormatArgumentException}
+import java.util.{ IllegalFormatException, MissingFormatArgumentException }
 import de.uni_luebeck.isp.tessla.Errors._
 import org.antlr.v4.runtime._
 import scala.collection.JavaConverters._
@@ -55,7 +55,7 @@ abstract class AbstractTesslaParser[Item, Result](src: CharStream) extends Trans
   }
 
   protected def parseEscapeSequence(sequence: String, loc: Location): String = {
-    AbstractTesslaParser.parseEscapeSequence(sequence).getOrElse{
+    AbstractTesslaParser.parseEscapeSequence(sequence).getOrElse {
       error(InvalidEscapeSequence(sequence, loc))
       sequence
     }

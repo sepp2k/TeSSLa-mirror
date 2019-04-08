@@ -323,6 +323,17 @@ class ConstantEvaluatorWorker(spec: TypedTessla.Specification, baseTimeUnit: Opt
                   )
                   TesslaCore.Lift(f, liftArgs, call.loc)
                 }
+              case BuiltIn.Lift4 =>
+                stream {
+                  val f = getFunctionForLift(env, call.args(4).id, call.args(4).loc)
+                  val liftArgs = Seq(
+                    getStream(args(0), call.args(0).loc),
+                    getStream(args(1), call.args(1).loc),
+                    getStream(args(2), call.args(2).loc),
+                    getStream(args(3), call.args(3).loc)
+                  )
+                  TesslaCore.Lift(f, liftArgs, call.loc)
+                }
               case BuiltIn.StdLibCount =>
                 stream {
                   TesslaCore.StdLibCount(streamArg(0), call.loc)

@@ -38,6 +38,10 @@ object BuiltIn {
   case object Lift3 extends BuiltIn {
     override def name = "lift3"
   }
+  
+  case object Lift4 extends BuiltIn {
+    override def name = "lift4"
+  }
 
   case object Delay extends BuiltIn {
     override def name = "delay"
@@ -420,6 +424,7 @@ object BuiltIn {
     Lift1,
     Lift,
     Lift3,
+    Lift4,
     Const,
     Merge,
     Filter,
