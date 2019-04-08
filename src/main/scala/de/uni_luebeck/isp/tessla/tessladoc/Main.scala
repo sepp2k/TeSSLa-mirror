@@ -17,7 +17,7 @@ object Main extends SexyOpt {
   def main(args: Array[String]) = {
     parse(args)
     val streams = files.map(CharStreams.fromFileName)
-    TesslaDoc.extractAsJSON(streams, currentFileOnly = !includes) match {
+    TesslaDoc.extract(streams, currentFileOnly = !includes) match {
       case Success(tesslaDocs, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         println(tesslaDocs)

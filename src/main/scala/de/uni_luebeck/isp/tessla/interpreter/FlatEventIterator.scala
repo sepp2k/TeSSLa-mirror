@@ -56,7 +56,7 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
       }
 
       def parseEscapeSequence(sequence: String, loc: Location): String = {
-        AbstractTesslaParser.parseEscapeSequence(sequence).getOrElse{
+        TesslaParser.parseEscapeSequence(sequence).getOrElse{
           throw InvalidEscapeSequence(sequence, loc)
         }
       }

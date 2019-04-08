@@ -5,6 +5,7 @@ import org.antlr.v4.runtime.CharStream
 object Compiler {
   def instantiatePipeline(unit: Option[TimeUnit]): TranslationPhase[CharStream, TesslaCore.Specification] = {
     TesslaParser
+      .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
       .andThen(new ConstantEvaluator(unit))

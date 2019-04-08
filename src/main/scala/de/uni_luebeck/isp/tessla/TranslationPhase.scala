@@ -72,6 +72,16 @@ object TranslationPhase {
       abortOnError()
       throw InternalError("abort() was called when no errors were present")
     }
+
+    protected def unwrapResult[T](result: Result[T]): T = result match {
+      case Success(value, resultWarnings) =>
+        warnings ++= resultWarnings
+        value
+      case Failure(resultErrors, resultWarnings) =>
+        warnings ++= resultWarnings
+        errors ++= resultErrors.view.init
+        throw resultErrors.last
+    }
   }
 
   sealed trait Result[+T] {
