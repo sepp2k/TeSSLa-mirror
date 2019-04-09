@@ -5,7 +5,7 @@
     spec          ::= include* statement*
     include       ::= "include" STRING
     statement     ::= definition | typeDef | out | outAll | print | in
-    definition    ::= TESSLADOC? annotation* "def" ID typeParamList? paramList? (":" type)? "=" expression EOS
+    definition    ::= TESSLADOC? annotation* "def" ID typeParamList? paramList? (":" type)? "=" expression ("where" "{" definition* "}")? EOS
     typeDef       ::= TESSLADOC? "type" ID typeParamList? '=' type EOS
     annotation    ::= "@" ID
     paramList     ::= "(" ID ":" type ("," ID (":" type)?)* ")"
