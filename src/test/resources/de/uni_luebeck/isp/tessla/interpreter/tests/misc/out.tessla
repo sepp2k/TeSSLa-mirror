@@ -4,6 +4,8 @@ in a: Events[Int]
 def f[T](x: T) := x
 
 out a + 1
+out a+1
 out f(a)
 out a + 1 as aPlusOne
 out f(a) as fOfA
+out "${a+1}"

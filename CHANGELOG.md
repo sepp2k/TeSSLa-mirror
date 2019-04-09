@@ -15,6 +15,7 @@
 * Change the implementation of TeSSLa's `List` to use Scala's `Vector` instead of Scala's `List`. That way `List_append` and `List_last` are no longer O(n)
 * Add built-in function `List_get` to access a list at a specified index
 * Add built-in function `lift4`
+* If `out expr` is used (rather than `out expr as name`), the inferred name will now be the actual source code of `expr`, not a "pretty-printed" version as before. This way something like `out "$x"` will now produce the output `23: "$x" = "42"` rather than being "pretty-printed" as `23: toString(x) = "42"`.
 
 ### API Changes
 * The generated `BuildInfo` class has been moved from the `interpreter` package to the `tessla` package

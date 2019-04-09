@@ -48,7 +48,7 @@ class TesslaSyntaxToTessla(spec: TesslaSyntax.SpecContext) extends TranslationPh
 
     override def visitOut(out: TesslaSyntax.OutContext) = {
       val loc = Option(out.ID).map(Location.fromToken).getOrElse(Location.fromNode(out.expression))
-      Tessla.Out(translateExpression(out.expression), Option(out.ID).map(mkID), loc)
+      Tessla.Out(translateExpression(out.expression), mkID(out.ID), loc)
     }
 
     override def visitOutAll(outAll: TesslaSyntax.OutAllContext) = {

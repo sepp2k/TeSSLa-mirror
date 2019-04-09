@@ -10,7 +10,9 @@ import org.antlr.v4.runtime._
 import scala.collection.JavaConverters._
 
 class TesslaParser(src: CharStream, expandIncludes: Boolean) extends TranslationPhase.Translator[TesslaSyntax.SpecContext] {
-  val tokens = new CommonTokenStream(new TesslaLexer(src))
+  val lexer = new TesslaLexer(src)
+  val tokens = new CommonTokenStream(lexer)
+  val sourcePair: misc.Pair[TokenSource, CharStream] = new misc.Pair(lexer, src)
   val parser = new TesslaSyntax(tokens)
   parser.removeErrorListeners()
   parser.addErrorListener(new BaseErrorListener {
@@ -26,6 +28,20 @@ class TesslaParser(src: CharStream, expandIncludes: Boolean) extends Translation
   override def translateSpec() = {
     if (expandIncludes) {
       spec.statements.addAll(0, spec.includes.asScala.flatMap(translateInclude).asJava)
+    }
+    spec.statements.asScala.foreach {
+      case out: TesslaSyntax.OutContext =>
+        if (out.ID == null) {
+          val expr = out.expression
+          val start = expr.start.getStartIndex
+          val stop = expr.stop.getStopIndex
+          val line = expr.start.getLine
+          val column = expr.start.getCharPositionInLine
+          val token = lexer.getTokenFactory.create(sourcePair, TesslaLexer.ID, null, 0, start, stop, line, column)
+          val node = parser.createTerminalNode(out, token)
+          out.addChild(node)
+        }
+      case _ => // Do nothing
     }
     spec
   }

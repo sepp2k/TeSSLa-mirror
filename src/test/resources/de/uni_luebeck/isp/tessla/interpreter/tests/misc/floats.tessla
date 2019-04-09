@@ -9,8 +9,8 @@ out x +. y
 out x -. y
 out x *. y
 out x /. y
-out pow(x,y)
-out max(x,y)
+out pow(x, y)
+out max(x, y)
 out floatToInt(x)
 out intToFloat(i)
 out log(x, 10.0)
