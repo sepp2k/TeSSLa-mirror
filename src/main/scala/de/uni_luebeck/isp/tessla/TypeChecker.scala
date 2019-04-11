@@ -543,6 +543,17 @@ class TypeChecker(spec: FlatTessla.Specification)
   }
 
   def isSubtypeOrEqual(parent: TypedTessla.Type, child: TypedTessla.Type): Boolean = (parent, child) match {
+    case (parent: TypedTessla.FunctionType, child: TypedTessla.FunctionType) =>
+      // TODO: This completely ignores type parameters because functions with type parameters can't currently
+      //       be passed around anyway. Once that is possible, this code needs to be adjusted.
+      val compatibleLiftedness = !parent.isLiftable || child.isLiftable
+      val compatibleReturnTypes = isSubtypeOrEqual(parent.returnType, child.returnType)
+      val compatibleParameterTypes = parent.parameterTypes.length == child.parameterTypes.length &&
+        parent.parameterTypes.zip(child.parameterTypes).forall {
+          // function parameters are contravariant, so the order of arguments to isSubtypeOrEqual is switched
+          case (parentParamType, childParamType) => isSubtypeOrEqual(childParamType, parentParamType)
+        }
+      compatibleLiftedness && compatibleReturnTypes && compatibleParameterTypes
     case (parent: TypedTessla.ObjectType, child: TypedTessla.ObjectType) =>
       parent.memberTypes.forall {
         case (name, typ) =>
