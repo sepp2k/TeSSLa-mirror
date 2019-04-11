@@ -2,7 +2,7 @@ in list: Events[List[Int]]
 
 def sum(list: List[Int]) := List_fold(list, 0, fun(a: Int, b: Int) => a + b)
 def slift1[A,B](e: Events[A], f: (A) => B) :=
-  lift1(e, fun(a: Option[A]) => if isNone(a) then None[B] else Some(f(getSome(a))))  
+  lift1(e, fun(a: Option[A]) => if isNone(a) then None[B] else Some(f(getSome(a))))
 
 out slift1(list, sum) as s
 out List_size(list) as size
