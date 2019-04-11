@@ -1,0 +1,3 @@
+module Tessla {
+  def version: String = __builtin__(version)
+}

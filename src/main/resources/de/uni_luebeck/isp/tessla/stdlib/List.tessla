@@ -1,0 +1,36 @@
+module List {
+  def empty[T]: List[T] = __builtin__(List_empty)
+
+  @liftable
+  def size[T](list: List[T]): Int = __builtin__(List_size)
+
+  @liftable
+  def append[T](list: List[T], element: T): List[T] = __builtin__(List_append)
+
+  @liftable
+  def prepend[T](element: T, list: List[T]): List[T] = __builtin__(List_prepend)
+
+  @liftable
+  def tail[T](list: List[T]): List[T] = __builtin__(List_tail)
+
+  @liftable
+  def init[T](list: List[T]): List[T] = __builtin__(List_init)
+
+  @liftable
+  def get[T](list: List[T], index: Int): T = __builtin__(List_get)
+
+  @liftable
+  def head[T](list: List[T]): T = get(list, 0)
+
+  @liftable
+  def last[T](list: List[T]): T = get(list, size(list)-1)
+
+  -- def fold[T, U](list: List[T], start: U, f: (U, T) => U): U = {
+  --  static if size(list) == 0
+  --  then start
+  --  else fold(tail(list), f(start, head(list)), f)
+  -- }
+
+  @liftable
+  def fold[T, U](list: List[T], start: U, f: (U, T) => U): U = __builtin__(fold)
+}

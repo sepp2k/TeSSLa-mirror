@@ -1,0 +1,9 @@
+module CTF {
+  type Object = __builtin__(CTF_Object)
+
+  @liftable
+  def getInt(ctfObject: Object, member: String): Int = __builtin__(CTF_getInt)
+
+  @liftable
+  def getString(ctfObject: Object, member: String): Int = __builtin__(CTF_getString)
+}
