@@ -3,6 +3,8 @@ include "List"
 include "Set"
 include "Map"
 include "String"
+include "Ctf"
+include "Tessla"
 
 module Predef {
   # Fundamental types
@@ -149,6 +151,10 @@ module Predef {
   def lift[T, U, V](stream1: Events[T], stream2: Events[U], f: (Option[T], Option[U]) => Option[V]) = __builtin__(lift)
 
   # More stream functions
+  def const[T, U](value: T, stream: Events[U]): Events[T] = lift(stream, (_: U) => value)
+
+  def first[T, U](stream1: Events[T], stream2: Events[U]): Events[T] = slift(stream1, stream2, (x: T, _: U) => x)
+
   def lift1[T, U](stream: Events[T], f: (Option[T]) => Option[U]): Events[U] =
     lift(stream, nil[Unit], (x: Option[T], dontCare: Option[Unit]) => f(x))
 
@@ -174,6 +180,39 @@ module Predef {
         def v1and2 = getSome(v1and2opt)
         f(v1and2._1, v1and2._2, v3, v4)
       })
+  }
+
+  def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] =
+    lift(stream, (x: Option[T]) => Some(f(getSome(x))))
+
+  def slift[T,U,V](a: Events[T], b: Events[U], f: (T,U) => V): Events[V] = {
+    def aa = merge(a, last(a, b))
+    def bb = merge(b, last(b, a))
+    lift(aa, bb, (x: Option[T], y: Option[U]) =>
+      if isNone(x) || isNone(y)
+      then None[C]
+      else Some(f(getSome(x), getSome(y))))
+  }
+
+  def slift3[T1, T2, T3, T4](a: Events[T1], b: Events[T2], c: Events[T3], f: (T1, T2, T3) => T4): Events[T4] = {
+    def aa = merge(a, last(a, merge(b, c)))
+    def bb = merge(b, last(b, merge(a, c)))
+    def cc = merge(c, last(c, merge(a, b)))
+    lift3(aa, bb, cc, (x: Option[T1], y: Option[T2], z: Option[T3]) =>
+      if isNone(x) || isNone(y) || isNone(z)
+      then None[C]
+      else Some(f(getSome(x), getSome(y), getSome(z))))
+  }
+
+  def slift4[T1, T2, T3, T4, T5](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], f: (T1, T2, T3, T4) => T5): Events[T5] = {
+    def ss1 = merge(ss1, last(ss1, merge3(ss2, ss3, ss4)))
+    def ss2 = merge(ss2, last(ss2, merge3(ss1, ss3, ss4)))
+    def ss3 = merge(ss3, last(ss3, merge3(ss1, ss2, ss4)))
+    def ss4 = merge(ss4, last(ss4, merge3(ss1, ss2, ss3)))
+    lift4(ss1, ss2, ss3, ss4, (v1: Option[T1], v2: Option[T2], v3: Option[T3], v4: Option[T4]) =>
+      if isNone(v1) || isNone(v2) || isNone(v3) || isNone(v4)
+      then None[C]
+      else Some(f(getSome(v1), getSome(v2), getSome(v3), getSome(v4))))
   }
 
   ## Return the previous event of `a`
