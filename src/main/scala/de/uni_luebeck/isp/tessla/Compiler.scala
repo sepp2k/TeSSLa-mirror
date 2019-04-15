@@ -3,19 +3,23 @@ package de.uni_luebeck.isp.tessla
 import org.antlr.v4.runtime.CharStream
 
 object Compiler {
-  def instantiatePipeline(unit: Option[TimeUnit]): TranslationPhase[CharStream, TesslaCore.Specification] = {
-    TesslaParser
+  case class Options(timeUnitString: Option[String], resolveInclude: String => Option[CharStream]) {
+    lazy val timeUnit = timeUnitString.map(TimeUnit.fromString(_, Location.option("timeunit")))
+  }
+
+  def instantiatePipeline(options: Options): TranslationPhase[CharStream, TesslaCore.Specification] = {
+    new TesslaParser.WithIncludes(options.resolveInclude)
       .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
-      .andThen(new ConstantEvaluator(unit))
+      .andThen(new ConstantEvaluator(options.timeUnit))
       .andThen(CycleDetection)
       .andThen(CurrySignalLift)
       .andThen(RemoveUnusedDefinitions)
   }
 
-  def compile(src: CharStream, unit: Option[TimeUnit]): TranslationPhase.Result[TesslaCore.Specification] = {
-    instantiatePipeline(unit).translate(src)
+  def compile(src: CharStream, options: Options): TranslationPhase.Result[TesslaCore.Specification] = {
+    instantiatePipeline(options).translate(src)
   }
 
   class Printer[T] extends TranslationPhase[T, T] {
@@ -24,10 +28,5 @@ object Compiler {
       println(spec)
       TranslationPhase.Success(spec, Seq())
     }
-  }
-
-  def compile(src: CharStream, timeUnit: Option[String])(implicit dummy:DummyImplicit): TranslationPhase.Result[TesslaCore.Specification] = {
-    val parsedTimeUnit = timeUnit.map(TimeUnit.fromString(_, Location.option("timeunit")))
-    compile(src, parsedTimeUnit)
   }
 }

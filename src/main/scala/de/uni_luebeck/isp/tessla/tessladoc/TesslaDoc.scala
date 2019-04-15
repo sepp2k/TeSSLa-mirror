@@ -70,9 +70,9 @@ object TesslaDoc {
     }
   }
 
-  class Extractor(spec: TesslaSyntax.SpecContext) extends TranslationPhase.Translator[ModuleDoc] {
+  class Extractor(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[ModuleDoc] {
     override protected def translateSpec() = {
-      ModuleDoc(spec.statements.asScala.flatMap(translateStatement))
+      ModuleDoc(spec.flatMap(_.tree.statements.asScala.flatMap(translateStatement)))
     }
 
     def translateStatement(definition: TesslaSyntax.StatementContext): Seq[TesslaDoc] = {
@@ -126,9 +126,13 @@ object TesslaDoc {
     }
   }
 
-  def extract(srcs: Seq[CharStream], currentFileOnly: Boolean) = {
+  def extract(srcs: Seq[CharStream], includeResolver: Option[String => Option[CharStream]]) = {
     Result.runSequentially(srcs) { src =>
-      TesslaParser.parse(src, expandIncludes = !currentFileOnly).andThen(new Extractor(_).translate())
+      val results =
+        includeResolver.map(new TesslaParser.WithIncludes(_).translate(src)).getOrElse {
+          TesslaParser.SingleFile.translate(src).map(Seq(_))
+        }
+      results.andThen(new Extractor(_).translate())
     }.map(modules => ModuleDoc(modules.flatMap(_.items)))
   }
 }

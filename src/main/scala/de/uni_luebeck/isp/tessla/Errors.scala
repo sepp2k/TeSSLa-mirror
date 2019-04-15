@@ -222,4 +222,12 @@ object Errors {
   case class UnsupportedConversion(conversion: Char, loc: Location) extends TesslaError {
     override def message = s"TeSSLa does not support the conversion specifier $conversion"
   }
+
+  case class FileNotFound(name: String, loc: Location) extends TesslaError {
+    override def message = s"Could not find a TeSSLa file named $name"
+  }
+
+  case class AbsoluteIncludePath(loc: Location) extends TesslaError {
+    override def message = "Absolute paths are not allowed in includes"
+  }
 }

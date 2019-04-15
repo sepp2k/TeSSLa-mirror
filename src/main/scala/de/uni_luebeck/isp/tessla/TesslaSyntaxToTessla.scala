@@ -6,9 +6,9 @@ import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-class TesslaSyntaxToTessla(spec: TesslaSyntax.SpecContext) extends TranslationPhase.Translator[Tessla.Specification] {
+class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[Tessla.Specification] {
   override def translateSpec() = {
-    Tessla.Specification(spec.statements.asScala.map(translateStatement))
+    Tessla.Specification(spec.flatMap(res => res.tree.statements.asScala.map(translateStatement(_, res.tokens))))
   }
 
   trait TesslaVisitor[T] extends TesslaSyntaxBaseVisitor[T] {
@@ -17,7 +17,9 @@ class TesslaSyntaxToTessla(spec: TesslaSyntax.SpecContext) extends TranslationPh
     }
   }
 
-  def translateStatement(stat: TesslaSyntax.StatementContext): Tessla.Statement = StatementVisitor.visit(stat)
+  def translateStatement(stat: TesslaSyntax.StatementContext, tokens: CommonTokenStream): Tessla.Statement = {
+    new StatementVisitor(tokens).visit(stat)
+  }
 
   def translateDefinition(definition: TesslaSyntax.DefContext) = {
     val annotations = definition.header.annotations.asScala.map(_.ID).map(mkID)
@@ -41,14 +43,17 @@ class TesslaSyntaxToTessla(spec: TesslaSyntax.SpecContext) extends TranslationPh
     }
   }
 
-  object StatementVisitor extends TesslaVisitor[Tessla.Statement] {
+  class StatementVisitor(tokens: CommonTokenStream) extends TesslaVisitor[Tessla.Statement] {
     override def visitDefinition(definition: TesslaSyntax.DefinitionContext) = {
       translateDefinition(definition.`def`)
     }
 
     override def visitOut(out: TesslaSyntax.OutContext) = {
       val loc = Option(out.ID).map(Location.fromToken).getOrElse(Location.fromNode(out.expression))
-      Tessla.Out(translateExpression(out.expression), mkID(out.ID), loc)
+      val id = Option(out.ID).map(mkID).getOrElse {
+        Tessla.Identifier(tokens.getText(out.expression), Location.fromNode(out.expression))
+      }
+      Tessla.Out(translateExpression(out.expression), id, loc)
     }
 
     override def visitOutAll(outAll: TesslaSyntax.OutAllContext) = {
@@ -332,8 +337,8 @@ class TesslaSyntaxToTessla(spec: TesslaSyntax.SpecContext) extends TranslationPh
   }
 }
 
-object TesslaSyntaxToTessla extends TranslationPhase[TesslaSyntax.SpecContext, Tessla.Specification] {
-  override def translate(spec: TesslaSyntax.SpecContext) = {
+object TesslaSyntaxToTessla extends TranslationPhase[Seq[TesslaParser.ParseResult], Tessla.Specification] {
+  override def translate(spec: Seq[TesslaParser.ParseResult]) = {
     new TesslaSyntaxToTessla(spec).translate()
   }
 }

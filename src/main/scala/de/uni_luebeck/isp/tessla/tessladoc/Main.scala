@@ -1,9 +1,10 @@
 package de.uni_luebeck.isp.tessla.tessladoc
 
-import de.uni_luebeck.isp.tessla.BuildInfo
+import de.uni_luebeck.isp.tessla.{BuildInfo, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
+import de.uni_luebeck.isp.tessla.util._
 
 object Main extends SexyOpt {
   override def programName = "tessladoc"
@@ -17,7 +18,8 @@ object Main extends SexyOpt {
   def main(args: Array[String]) = {
     parse(args)
     val streams = files.map(CharStreams.fromFileName)
-    TesslaDoc.extract(streams, currentFileOnly = !includes) match {
+    val includeResolver = optionIf(includes)(IncludeResolvers.fromFile _)
+    TesslaDoc.extract(streams, includeResolver) match {
       case Success(tesslaDocs, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         println(tesslaDocs)

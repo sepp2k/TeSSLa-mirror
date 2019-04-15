@@ -4,7 +4,7 @@ import java.nio.channels.Channels
 import java.nio.charset.{CodingErrorAction, StandardCharsets}
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
@@ -65,8 +65,6 @@ class InterpreterTests extends FunSuite {
       .getLines.flatMap { file =>
       if (isDir(file)) getFilesRecursively(s"$path/$file")
       else Stream((path, file))
-
-
     }.toStream
   }
 
@@ -137,12 +135,10 @@ class InterpreterTests extends FunSuite {
     SemiOsl(ifs.toSet, globalLogs.toSet)
   }
 
-
   testCases.foreach {
     case (path, name) =>
       def testStream(file: String): CharStream = {
-        val channel = Channels.newChannel(getClass.getResourceAsStream(s"$root/$path/$file"))
-        CharStreams.fromChannel(channel, StandardCharsets.UTF_8, 4096, CodingErrorAction.REPLACE, s"$path/$file", -1)
+        IncludeResolvers.fromResource(getClass, root)(s"$path/$file").get
       }
       def testSource(file: String): Source = {
         Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$file"))(StandardCharsets.UTF_8)
@@ -175,11 +171,11 @@ class InterpreterTests extends FunSuite {
           }
         }
 
-        val timeUnit = testCase.timeUnit
+        val options = Compiler.Options(testCase.timeUnit, IncludeResolvers.fromResource(getClass, root))
         val src = testStream(testCase.spec)
         testCase.expectedOsl.foreach { oslFile =>
           val expectedOSL = semiParseOsl(testSource(oslFile).getLines)
-          handleResult(Compiler.compile(src, timeUnit).andThen(OSL.Generator)) { osl =>
+          handleResult(Compiler.compile(src, options).andThen(OSL.Generator)) { osl =>
             val actualOSL = semiParseOsl(osl.toString.linesIterator)
             assertEquals(actualOSL, expectedOSL, "OSL")
           }
@@ -188,7 +184,7 @@ class InterpreterTests extends FunSuite {
           case Some(input) =>
             try {
               val trace = Trace.fromSource(testStream(input), testCase.abortAt.map(BigInt(_)))
-              val result = Compiler.compile(src, timeUnit).andThen(spec => Interpreter.run(spec, trace, None))
+              val result = Compiler.compile(src, options).andThen(spec => Interpreter.run(spec, trace, None))
 
               handleResult(result) { output =>
                 val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
@@ -208,7 +204,7 @@ class InterpreterTests extends FunSuite {
                 }
             }
           case None =>
-            handleResult(Compiler.compile(src, timeUnit))(_ => ())
+            handleResult(Compiler.compile(src, options))(_ => ())
         }
       }
   }
