@@ -294,10 +294,6 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = "String"
   }
 
-  case object UnitType extends ValueType {
-    override def toString = "Unit"
-  }
-
   case object FunctionType extends ValueType {
     override def toString = "? => ?"
   }
