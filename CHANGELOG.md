@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 1.0.0 (upcoming)
+
+### Breaking Changes
+
+* The following keywords have been added and can no longer be used as variable names: `module`
+
+### Additions and Fixes
+
+* A module system has been added. You can define modules using `module ModuleName { definitions }` and then access the module's definitions with `ModuleName.DefinitionName`. Modules can also be passed around as objects.
+* Types can now be used before the definition
+
 ## Version 0.7.3 (upcoming)
 
 ### Breaking Changes

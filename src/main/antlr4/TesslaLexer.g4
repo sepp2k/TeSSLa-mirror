@@ -8,6 +8,7 @@ DEF: 'def';
 WHERE: 'where';
 INCLUDE: 'include';
 TYPE: 'type';
+MODULE: 'module';
 IN: 'in';
 OUT: 'out';
 PRINT: 'print';

@@ -74,6 +74,11 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
       val loc = Location.fromToken(typeDef.TYPE).merge(Location.fromNode(typeDef.`type`))
       Tessla.TypeDefinition(mkID(typeDef.name), typeParams, translateType(typeDef.`type`), loc)
     }
+
+    override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext) = {
+      val contents = module.contents.asScala.map(visit)
+      Tessla.Module(mkID(module.name), contents, Location.fromNode(module))
+    }
   }
 
   def translateParameter(parameter: TesslaSyntax.ParamContext): Tessla.Parameter = {

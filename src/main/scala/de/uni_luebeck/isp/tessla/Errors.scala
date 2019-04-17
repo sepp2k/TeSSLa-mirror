@@ -230,4 +230,8 @@ object Errors {
   case class AbsoluteIncludePath(loc: Location) extends TesslaError {
     override def message = "Absolute paths are not allowed in includes"
   }
+
+  case class InOutStatementInModule(loc: Location) extends TesslaError {
+    override def message = "Input and output statements are not allowed inside of modules"
+  }
 }

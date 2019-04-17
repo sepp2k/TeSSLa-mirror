@@ -56,6 +56,7 @@ class Flattener(spec: Tessla.Specification)
   def getId(statement: Tessla.Statement): Option[Tessla.Identifier] = statement match {
     case definition: Tessla.Definition => Some(definition.id)
     case in: Tessla.In => Some(in.id)
+    case module: Tessla.Module => Some(module.id)
     case _ => None
   }
 
@@ -90,6 +91,12 @@ class Flattener(spec: Tessla.Specification)
     val stdlibNames = mapValues(stdlib)(_.id)
     val emptySpec = FlatTessla.Specification(globalDefs, Seq(), outAllLocation = None, stdlibNames)
     checkForDuplicates(spec.statements.flatMap(getId))
+    // Process type definitions before anything else, so that types can be used before they're defined
+    spec.statements.foreach {
+      case typeDef: Tessla.TypeDefinition =>
+        addTypeDefinition(typeDef, globalDefs, globalEnv)
+      case _ => // do nothing
+    }
     spec.statements.foldLeft(emptySpec) {
       case (result, outAll : Tessla.OutAll) =>
         if(result.outAll) warn(ConflictingOut(outAll.loc, previous = result.outAllLocation.get))
@@ -114,16 +121,56 @@ class Flattener(spec: Tessla.Specification)
         result
 
       case (result, typeDef: Tessla.TypeDefinition) =>
-        addTypeDefinition(typeDef, globalDefs, globalEnv)
         result
 
       case (result, in: Tessla.In) =>
-        val streamType = translateType(in.streamType, globalDefs, globalEnv)
-        val inputStream = FlatTessla.InputStream(in.id.name, streamType, in.streamType.loc, in.loc)
-        val entry = FlatTessla.VariableEntry(globalEnv.variables(in.id.name), inputStream, Some(streamType), in.loc)
-        globalDefs.addVariable(entry)
+        addInStream(in, globalDefs, globalEnv)
+        result
+
+      case (result, module: Tessla.Module) =>
+        addModule(module, globalDefs, globalEnv)
         result
     }
+  }
+
+  def addInStream(in: Tessla.In, defs: FlatTessla.Definitions, env: Env): Unit = {
+    val streamType = translateType(in.streamType, defs, env)
+    val inputStream = FlatTessla.InputStream(in.id.name, streamType, in.streamType.loc, in.loc)
+    val entry = FlatTessla.VariableEntry(env.variables(in.id.name), inputStream, Some(streamType), in.loc)
+    defs.addVariable(entry)
+  }
+
+  def addModule(module: Tessla.Module, defs: FlatTessla.Definitions, outerEnv: Env): Unit = {
+    val variableIdMap = createIdMap(module.contents.flatMap(getName))
+    val typeIdMap = createIdMap(module.contents.collect {
+      case typeDef: Tessla.TypeDefinition => typeDef.id.name
+    })
+    val env = outerEnv ++ Env(variableIdMap, typeIdMap)
+    // Process type definitions before anything else, so that types can be used before they're defined
+    module.contents.foreach {
+      case typeDef: Tessla.TypeDefinition =>
+        addTypeDefinition(typeDef, defs, env)
+      case _ => // do nothing
+    }
+    module.contents.foreach {
+      case definition: Tessla.Definition =>
+        addDefinition(definition, defs, env)
+
+      case module: Tessla.Module =>
+        addModule(module, defs, env)
+
+      case inout@(_: Tessla.Out | _: Tessla.OutAll | _: Tessla.Print | _: Tessla.In) =>
+        error(InOutStatementInModule(inout.loc))
+
+      case _: Tessla.TypeDefinition => // Do nothing because types have already been handled
+    }
+    val valueMembers = module.contents.flatMap { stat =>
+      getName(stat).map { name =>
+        name -> FlatTessla.IdLoc(variableIdMap(name), stat.loc)
+      }
+    }.toMap
+    val obj = FlatTessla.ObjectLiteral(valueMembers, module.loc)
+    defs.addVariable(FlatTessla.VariableEntry(outerEnv.variables(module.name), obj, None, module.loc))
   }
 
   def translateParameter(param: Tessla.Parameter, idMap: IdMap, defs: FlatTessla.Definitions, env: Env): FlatTessla.Parameter = {

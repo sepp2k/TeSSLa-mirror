@@ -1,0 +1,5 @@
+{
+  "input": "modules.input",
+  "expectedOutput": "modules.output",
+  "spec": "modules.tessla"
+}

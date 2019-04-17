@@ -37,6 +37,12 @@ object Tessla {
     }
   }
 
+  case class Module(id: Identifier, contents: Seq[Statement], loc: Location) extends Statement {
+    override def toString = contents.mkString(s"module $id {\n", "\n", "\n}")
+
+    def name: String = id.name
+  }
+
   case class TypeDefinition(id: Identifier, typeParameters: Seq[Identifier], body: Type, loc: Location) extends Statement {
     override def toString = {
       val typeParameterList =
