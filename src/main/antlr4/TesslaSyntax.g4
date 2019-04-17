@@ -14,7 +14,7 @@ statement
     : def #Definition
     | tessladoc+=DOCLINE* NL* 'type' name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* type eos #TypeDefinition
     | tessladoc+=DOCLINE* NL* 'module' name=ID NL* '{' NL* contents+=statement* NL* '}' NL* #ModuleDefinition
-    | 'in' ID (':' type)? eos #In
+    | 'in' ID (':' type) eos #In
     | 'out' expression ('as' ID)? eos #Out
     | 'print' expression eos #Print
     | 'out' '*' eos #OutAll

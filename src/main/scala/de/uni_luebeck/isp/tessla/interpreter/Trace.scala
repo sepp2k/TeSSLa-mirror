@@ -2,9 +2,10 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.{Location, Tessla, TesslaCore}
 import de.uni_luebeck.isp.tessla.Errors.InternalError
-import org.antlr.v4.runtime.{CharStream, CharStreams}
 import org.eclipse.tracecompass.ctf.core.CTFException
 import org.eclipse.tracecompass.ctf.core.trace.{CTFTrace, CTFTraceReader}
+
+import scala.io.Source
 
 object Trace {
   type Identifier = Tessla.Identifier
@@ -29,7 +30,7 @@ object Trace {
     override def toString = time.toString
   }
 
-  def fromCtfFile(ctfFileName: String, abortAt: Option[BigInt]) = {
+  def fromCtfFile(ctfFileName: String, abortAt: Option[BigInt]): Interpreter.Trace = {
     val reader = new CTFTraceReader(new CTFTrace(ctfFileName))
 
     new Iterator[Trace.Event] {
@@ -54,11 +55,18 @@ object Trace {
     }
   }
 
-  def fromSource(traceSource: CharStream, abortAt: Option[Specification.Time] = None) = {
-    val rawTrace = new TraceParser().parseTrace(traceSource)
+  def fromLineIterator(lineIterator: Iterator[String], fileName: String, abortAt: Option[Specification.Time] = None) = {
+    val rawTrace = new TraceParser(lineIterator, fileName).parseTrace()
     new FlatEventIterator(rawTrace, abortAt)
   }
 
+  def fromSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {
+    fromLineIterator(traceSource.getLines, fileName, abortAt)
+  }
+
   def fromFile(fileName: String, abortAt: Option[Specification.Time] = None) =
-    fromSource(CharStreams.fromFileName(fileName), abortAt)
+    fromSource(Source.fromFile(fileName), fileName, abortAt)
+
+  def fromString(string: String, fileName: String, abortAt: Option[Specification.Time] = None) =
+    fromSource(Source.fromString(string), fileName, abortAt)
 }

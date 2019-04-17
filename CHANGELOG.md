@@ -11,7 +11,28 @@
 * A module system has been added. You can define modules using `module ModuleName { definitions }` and then access the module's definitions with `ModuleName.DefinitionName`. Modules can also be passed around as objects.
 * Types can now be used before the definition
 
-## Version 0.7.3 (upcoming)
+## Version 0.7.5
+
+### Additions and Fixes
+
+* Brings back online monitoring, which was broken since 0.7.0.
+
+### API Changes
+
+* `Trace.fromSource` now no longer takes an ANTLR `CharStream` but a `scala.io.Source` and there is a new `Trace.fromLineIterator` which takes an iterator of the lines of the trace.
+
+## Version 0.7.4
+
+### Additions and Fixes
+
+* Fixed error handling for missing type annotations at input streams
+* Fixed error handling for syntax errors which were reported wrongly as runtime errors
+
+### API Changes
+
+* The interpreter is not longer a translation phase. `Interpreter.run` is now just a normal function.
+
+## Version 0.7.3
 
 ### Breaking Changes
 

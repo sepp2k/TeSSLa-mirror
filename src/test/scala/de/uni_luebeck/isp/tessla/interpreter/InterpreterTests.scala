@@ -183,8 +183,8 @@ class InterpreterTests extends FunSuite {
         testCase.input match {
           case Some(input) =>
             try {
-              val trace = Trace.fromSource(testStream(input), testCase.abortAt.map(BigInt(_)))
-              val result = Compiler.compile(src, options).andThen(spec => Interpreter.run(spec, trace, None))
+              val trace = Trace.fromSource(testSource(input), s"$path/$input", testCase.abortAt.map(BigInt(_)))
+              val result = Compiler.compile(src, options).map(spec => Interpreter.run(spec, trace, None))
 
               handleResult(result) { output =>
                 val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
