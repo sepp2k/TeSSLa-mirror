@@ -66,4 +66,7 @@ object Trace {
 
   def fromFile(fileName: String, abortAt: Option[Specification.Time] = None) =
     fromSource(Source.fromFile(fileName), fileName, abortAt)
+
+  def fromString(string: String, fileName: String, abortAt: Option[Specification.Time] = None) =
+    fromSource(Source.fromString(string), fileName, abortAt)
 }
