@@ -4,9 +4,27 @@ import de.uni_luebeck.isp.tessla.{Location, InputTraceLexer, InputTraceParser}
 import de.uni_luebeck.isp.tessla.Errors._
 import org.antlr.v4.runtime._
 
-class TraceParser {
-  def parseTrace(input: CharStream): Iterator[InputTraceParser.EventRangeContext] = {
-    val tokens = new CommonTokenStream(new InputTraceLexer(input))
+class TraceParser(input: Iterator[String], fileName: String) {
+  def parseTrace(): Iterator[InputTraceParser.EventRangeContext] = {
+    input.flatMap { line =>
+      parseLine(line) match {
+        case Some(l) => Iterator(l)
+        case None => Iterator()
+      }
+    }
+  }
+
+  def parseLine(line: String): Option[InputTraceParser.EventRangeContext] = {
+    parseLine(CharStreams.fromString(line, fileName))
+  }
+
+  var lineNumber = 0
+
+  def parseLine(line: CharStream): Option[InputTraceParser.EventRangeContext] = {
+    lineNumber += 1
+    val lexer = new InputTraceLexer(line)
+    lexer.setLine(lineNumber)
+    val tokens = new CommonTokenStream(lexer)
     val parser = new InputTraceParser(tokens)
     parser.removeErrorListeners()
     parser.addErrorListener(new BaseErrorListener {
@@ -14,13 +32,6 @@ class TraceParser {
         throw ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token]))
       }
     })
-    parser.skipEmptyLines
-    new TraceIterator(parser)
-  }
-
-  private class TraceIterator(parser: InputTraceParser) extends Iterator[InputTraceParser.EventRangeContext] {
-    override def hasNext = !parser.isMatchedEOF
-
-    override def next() = parser.line().eventRange()
+    Option(parser.line().eventRange)
   }
 }
