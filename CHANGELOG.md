@@ -1,6 +1,8 @@
 # Changelog
 
-## Version 0.7.3 (upcoming)
+## Version 0.7.4 (upcoming)
+
+## Version 0.7.3
 
 ### Breaking Changes
 
