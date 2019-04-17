@@ -2,6 +2,15 @@
 
 ## Version 0.7.4 (upcoming)
 
+### Additions and Fixes
+
+* Fixed error handling for missing type annotations at input streams
+* Fixed error handling for syntax errors which were reported wrongly as runtime errors
+
+### API Changes
+
+* The interpreter is not longer a translation phase. `Interpreter.run` is now just a normal function.
+
 ## Version 0.7.3
 
 ### Breaking Changes
