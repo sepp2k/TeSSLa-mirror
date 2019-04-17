@@ -175,80 +175,73 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
-  def run(spec: TesslaCore.Specification, input: Trace, stopOn: Option[String]) = {
-    new RunInterpreter(new Interpreter(spec), input, stopOn).translate()
-  }
+  def run(spec: TesslaCore.Specification, input: Trace, stopOn: Option[String]): Trace = {
+    val interpreter = new Interpreter(spec)
+    new Iterator[Trace.Event] {
+      private var nextEvents = new mutable.Queue[Trace.Event]
+      private var stopped = false
+      private val seen = mutable.Set.empty[String]
 
-  class RunInterpreter(spec: Interpreter, inputTrace: Trace, stopOn: Option[String])
-    extends TranslationPhase.Translator[Trace] {
-
-    override def translateSpec(): Trace = {
-      new Iterator[Trace.Event] {
-        private var nextEvents = new mutable.Queue[Trace.Event]
-        private var stopped = false
-        private val seen = mutable.Set.empty[String]
-
-        spec.outStreams.foreach {
-          case (nameOpt, stream, _) =>
-            stream.addListener {
-              case Some(value) =>
-                if (!stopped) {
-                  if (stopOn.isDefined && stopOn == nameOpt) stopped = true
-                  val timeStamp = Trace.TimeStamp(Location.unknown, spec.getTime)
-                  val idOpt = nameOpt.map(Trace.Identifier(_, Location.unknown))
-                  nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value.forceValue)
-                }
-              case None =>
-            }
-        }
-
-        private def gatherValues(): Unit = {
-          while (nextEvents.isEmpty && inputTrace.hasNext) {
-            val specTime = spec.getTime
-            val event = inputTrace.next
-            val eventTime = event.timeStamp.time
-            if (eventTime > specTime) {
-              try {
-                spec.step(eventTime - specTime)
-                seen.clear()
-              } catch {
-                case err: TesslaError => throw TesslaErrorWithTimestamp(err, specTime)
+      interpreter.outStreams.foreach {
+        case (nameOpt, stream, _) =>
+          stream.addListener {
+            case Some(value) =>
+              if (!stopped) {
+                if (stopOn.isDefined && stopOn == nameOpt) stopped = true
+                val timeStamp = Trace.TimeStamp(Location.unknown, interpreter.getTime)
+                val idOpt = nameOpt.map(Trace.Identifier(_, Location.unknown))
+                nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value.forceValue)
               }
-            }else if (eventTime < specTime){
-              throw DecreasingTimeStampsError(specTime, eventTime, event.timeStamp.loc)
-            }
-            spec.inStreams.get(event.stream.name) match {
-              case Some((inStream, elementType)) =>
-                ValueTypeChecker.check(event.value, elementType, event.stream.name)
-                if (seen.contains(event.stream.name)) {
-                  throw SameTimeStampError(eventTime, event.stream.name, event.timeStamp.loc)
-                }
-                inStream.provide(event.value)
-                seen += event.stream.name
-                if (stopped) return
-              case None =>
-                // ignore undeclared input streams
-            }
+            case None =>
           }
-          if (nextEvents.isEmpty) {
+      }
+
+      private def gatherValues(): Unit = {
+        while (nextEvents.isEmpty && input.hasNext) {
+          val specTime = interpreter.getTime
+          val event = input.next
+          val eventTime = event.timeStamp.time
+          if (eventTime > specTime) {
             try {
-              spec.step()
+              interpreter.step(eventTime - specTime)
+              seen.clear()
             } catch {
-              case err: TesslaError => throw TesslaErrorWithTimestamp(err, spec.getTime)
+              case err: TesslaError => throw TesslaErrorWithTimestamp(err, specTime)
             }
-            stopped = true
+          } else if (eventTime < specTime) {
+            throw DecreasingTimeStampsError(specTime, eventTime, event.timeStamp.loc)
+          }
+          interpreter.inStreams.get(event.stream.name) match {
+            case Some((inStream, elementType)) =>
+              ValueTypeChecker.check(event.value, elementType, event.stream.name)
+              if (seen.contains(event.stream.name)) {
+                throw SameTimeStampError(eventTime, event.stream.name, event.timeStamp.loc)
+              }
+              inStream.provide(event.value)
+              seen += event.stream.name
+              if (stopped) return
+            case None =>
+            // ignore undeclared input streams
           }
         }
-
-        override def hasNext = {
-          if (!stopped) gatherValues()
-          nextEvents.nonEmpty
+        if (nextEvents.isEmpty) {
+          try {
+            interpreter.step()
+          } catch {
+            case err: TesslaError => throw TesslaErrorWithTimestamp(err, interpreter.getTime)
+          }
+          stopped = true
         }
+      }
 
-        override def next = {
-          if (!stopped) gatherValues()
-          nextEvents.dequeue
-        }
+      override def hasNext = {
+        if (!stopped) gatherValues()
+        nextEvents.nonEmpty
+      }
+
+      override def next = {
+        if (!stopped) gatherValues()
+        nextEvents.dequeue
       }
     }
   }
