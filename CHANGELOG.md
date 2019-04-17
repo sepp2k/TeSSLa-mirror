@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 0.7.5
+
+### Additions and Fixes
+
+* Brings back online monitoring, which was broken since 0.7.0.
+
+### API Changes
+
+* `Trace.fromSource` now no longer takes an ANTLR `CharStream` but a `scala.io.Source` and there is a new `Trace.fromLineIterator` which takes an iterator of the lines of the trace.
+
 ## Version 0.7.4
 
 ### Additions and Fixes

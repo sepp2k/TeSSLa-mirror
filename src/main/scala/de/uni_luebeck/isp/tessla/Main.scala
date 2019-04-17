@@ -9,6 +9,8 @@ import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
 
+import scala.io.Source
+
 object Main extends SexyOpt {
   override val programName = BuildInfo.name
   override val version = Some(BuildInfo.version)
@@ -120,8 +122,8 @@ object Main extends SexyOpt {
         val output = Interpreter.run(core, trace, stopOn)
         output.foreach(println)
       } else {
-        val traceSource = traceFile.map(CharStreams.fromFileName).getOrElse(CharStreams.fromStream(System.in))
-        val trace = Trace.fromSource(traceSource, abortAtValue)
+        val trace = traceFile.map(Trace.fromFile(_, abortAtValue))
+          .getOrElse(Trace.fromSource(Source.stdin, "<stdin>", abortAtValue))
         if (flattenInput) {
           trace.foreach(println)
         } else {

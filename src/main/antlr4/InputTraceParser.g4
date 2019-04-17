@@ -4,16 +4,7 @@ options {
     tokenVocab = 'InputTraceLexer';
 }
 
-// This rule should be called to skip empty lines at the beginning of the file and so
-// the EOF flag is set if the file is empty (so it won't try to call the line rule on
-// an empty file)
-skipEmptyLines: NL* EOF?;
-
-
-// Allow either a line break or the end of file to
-// terminate the line. Consume multiple consecutive line breaks and possibly EOF at the end,
-// so we'll always have matched the end of file after parsing the last line.
-line: eventRange (NL+ EOF? | EOF);
+line: eventRange? NL? EOF;
 
 eventRange: timeRange ':' streamName=ID ('=' expression)?;
 
