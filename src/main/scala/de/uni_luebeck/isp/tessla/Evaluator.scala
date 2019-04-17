@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
+import java.util.Locale
+
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
@@ -220,7 +222,7 @@ object Evaluator {
           val f = arguments(2)
           set.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc))
         case BuiltIn.ListEmpty =>
-          TesslaCore.TesslaList(List(), loc)
+          TesslaCore.TesslaList(Vector(), loc)
         case BuiltIn.ListSize =>
           val list = getList(arguments(0))
           TesslaCore.IntValue(list.value.size, loc)
@@ -263,12 +265,27 @@ object Evaluator {
           val z = arguments(1)
           val f = arguments(2)
           list.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc))
+        case BuiltIn.ListGet =>
+          val list = getList(arguments(0))
+          val index = getInt(arguments(1)).toInt
+          try {
+            list.value(index).withLoc(loc)
+          } catch {
+            case _: IndexOutOfBoundsException =>
+              throw IndexOutOfRange(index, list.value, loc)
+          }
         case BuiltIn.String_concat =>
           val s1 = getString(arguments(0))
           val s2 = getString(arguments(1))
           TesslaCore.StringValue(s1 + s2, loc)
         case BuiltIn.ToString =>
           TesslaCore.StringValue(evalToString(arguments(0)), loc)
+        case BuiltIn.Format =>
+          TesslaCore.StringValue(String.format(Locale.ROOT, getString(arguments(0)), getFormatArg(arguments(1))), loc)
+        case BuiltIn.FormatInt =>
+          TesslaCore.StringValue(String.format(Locale.ROOT, getString(arguments(0)), getFormatArg(arguments(1))), loc)
+        case BuiltIn.FormatFloat =>
+          TesslaCore.StringValue(String.format(Locale.ROOT, getString(arguments(0)), getFormatArg(arguments(1))), loc)
         case BuiltIn.CtfGetInt =>
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))
@@ -282,6 +299,12 @@ object Evaluator {
       case e: TesslaError =>
         TesslaCore.Error(e)
     }
+  }
+
+  def getFormatArg(arg: TesslaCore.ValueOrError): AnyRef = arg.forceValue match {
+    case i: TesslaCore.IntValue => i.value.bigInteger
+    case p: TesslaCore.PrimitiveValue => p.value.asInstanceOf[AnyRef]
+    case other => other
   }
 
   // The laziness here (and by extension in TesslaCore.Closure) is necessary, so that the

@@ -12,7 +12,7 @@ name := "tessla"
 
 organization := "de.uni_luebeck.isp"
 
-version := s"0.7.2-SNAPSHOT"
+version := s"0.7.3-SNAPSHOT"
 
 scalaVersion := "2.12.7"
 
@@ -40,6 +40,9 @@ libraryDependencies ++= Seq(
   "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT"
 )
 
+mainClass in (Compile, run) := Some("de.uni_luebeck.isp.tessla.Main")
+mainClass in (Compile, packageBin) := Some("de.uni_luebeck.isp.tessla.Main")
+
 scalacOptions += "-feature"
 scalacOptions += "-unchecked"
 scalacOptions += "-deprecation"
@@ -49,7 +52,7 @@ cancelable in Global := true
 
 enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion)
-buildInfoPackage := "de.uni_luebeck.isp.tessla.interpreter"
+buildInfoPackage := "de.uni_luebeck.isp.tessla"
 
 enablePlugins(Antlr4Plugin)
 antlr4Version in Antlr4 := "4.7.2"

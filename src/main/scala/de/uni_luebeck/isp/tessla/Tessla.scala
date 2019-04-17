@@ -50,8 +50,9 @@ object Tessla {
     override def toString = s"in $id: $streamType"
   }
 
-  case class Out(expr: Expression, idOpt: Option[Identifier], loc: Location) extends Statement {
-    def name = idOpt.map(_.name).getOrElse(expr.toString)
+  case class Out(expr: Expression, id: Identifier, loc: Location) extends Statement {
+    def name = id.name
+
     override def toString = s"out $expr as $name"
   }
 

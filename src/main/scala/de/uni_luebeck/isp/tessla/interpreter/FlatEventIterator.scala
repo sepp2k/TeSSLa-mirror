@@ -55,16 +55,11 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
         TesslaCore.FloatValue(floatLit.FLOAT.getText.toDouble, Location.fromNode(floatLit))
       }
 
-      def parseEscapeSequence(sequence: String, loc: Location): String = sequence match {
-        case "\\r" => "\r"
-        case "\\n" => "\n"
-        case "\\t" => "\t"
-        case "\\a" => "\u0007"
-        case "\\\\" => "\\"
-        case "\\\"" => "\""
-        case other => throw InvalidEscapeSequence(other, loc)
+      def parseEscapeSequence(sequence: String, loc: Location): String = {
+        TesslaParser.parseEscapeSequence(sequence).getOrElse{
+          throw InvalidEscapeSequence(sequence, loc)
+        }
       }
-
 
       override def visitStringLiteral(str: StringLiteralContext) = {
         val result = new StringBuilder
@@ -97,7 +92,7 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
 
       override def visitListExpression(list: ListExpressionContext) = {
         val elements = list.elems.asScala.map(visit)
-        TesslaCore.TesslaList(elements.toList, Location.fromNode(list))
+        TesslaCore.TesslaList(elements.toIndexedSeq, Location.fromNode(list))
       }
 
       override def visitSetExpression(set: SetExpressionContext) = {
@@ -116,7 +111,7 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
         } else {
           val values = tup.elems.asScala.map(visit)
           val members = values.zipWithIndex.map {
-            case (value, index) => s"_$index" -> value
+            case (value, index) => s"_${index+1}" -> value
           }.toMap
           TesslaCore.TesslaObject(members, Location.fromNode(tup))
         }

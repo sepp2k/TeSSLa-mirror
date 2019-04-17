@@ -20,3 +20,4 @@ def l2 :=
 
 out l1
 out l2
+out filter(List_get(list, 1), List_size(list) > 1) as x

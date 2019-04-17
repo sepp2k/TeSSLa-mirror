@@ -38,6 +38,10 @@ object BuiltIn {
   case object Lift3 extends BuiltIn {
     override def name = "lift3"
   }
+  
+  case object Lift4 extends BuiltIn {
+    override def name = "lift4"
+  }
 
   case object Delay extends BuiltIn {
     override def name = "delay"
@@ -355,12 +359,28 @@ object BuiltIn {
     override def name = "List_fold"
   }
 
+  case object ListGet extends PrimitiveOperator {
+    override def name = "List_get"
+  }
+
   case object String_concat extends PrimitiveOperator {
     override def name = "String_concat"
   }
 
   case object ToString extends PrimitiveOperator {
     override def name = "toString"
+  }
+
+  case object Format extends PrimitiveOperator {
+    override def name = "format"
+  }
+
+  case object FormatInt extends PrimitiveOperator {
+    override def name = "formatInt"
+  }
+
+  case object FormatFloat extends PrimitiveOperator {
+    override def name = "formatFloat"
   }
 
   // CTF operators
@@ -374,7 +394,7 @@ object BuiltIn {
 
   // TeSSLa info object
   case object TesslaInfo extends BuiltIn {
-    override def name = "tessla"
+    override def name = "Tessla"
   }
 
   // Standard Library Macros
@@ -404,6 +424,7 @@ object BuiltIn {
     Lift1,
     Lift,
     Lift3,
+    Lift4,
     Const,
     Merge,
     Filter,
@@ -475,8 +496,12 @@ object BuiltIn {
     ListLast,
     ListPrepend,
     ListTail,
+    ListGet,
     String_concat,
     ToString,
+    Format,
+    FormatInt,
+    FormatFloat,
     CtfGetString,
     CtfGetInt,
     TesslaInfo,

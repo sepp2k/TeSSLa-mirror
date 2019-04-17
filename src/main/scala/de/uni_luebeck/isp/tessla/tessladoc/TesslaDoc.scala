@@ -1,9 +1,12 @@
-package de.uni_luebeck.isp.tessla.analyses
+package de.uni_luebeck.isp.tessla.tessladoc
 
+import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla._
 import org.antlr.v4.runtime.{CharStream, ParserRuleContext, Token}
 
 import scala.collection.JavaConverters._
+
+sealed abstract class TesslaDoc extends TesslaDoc.DocElement
 
 object TesslaDoc {
   trait DocElement {
@@ -12,6 +15,10 @@ object TesslaDoc {
   }
 
   private def enquote(str: String) = "\"" + str + "\""
+
+  case class ModuleDoc(items: Seq[TesslaDoc]) extends TesslaDoc {
+    override def toJSON = items.mkString("[\n", ",\n", "\n]")
+  }
 
   case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, loc: Location) extends TesslaDoc {
     override def toJSON = {
@@ -63,17 +70,13 @@ object TesslaDoc {
     }
   }
 
-  class Extractor(src: CharStream, currentFileOnly: Boolean)
-    extends AbstractTesslaParser[Seq[TesslaDoc], Seq[TesslaDoc]](src) {
-    override def aggregateItems(items: Seq[Seq[TesslaDoc]]) = items.flatten
+  class Extractor(spec: TesslaSyntax.SpecContext) extends TranslationPhase.Translator[ModuleDoc] {
+    override protected def translateSpec() = {
+      ModuleDoc(spec.statements.asScala.flatMap(translateStatement))
+    }
 
     def translateStatement(definition: TesslaSyntax.StatementContext): Seq[TesslaDoc] = {
       new StatementVisitor(Global)(definition)
-    }
-
-    override def translateInclude(include: TesslaSyntax.IncludeContext) = {
-      if (currentFileOnly) Seq()
-      else super.translateInclude(include)
     }
 
     class StatementVisitor(scope: Scope) extends TesslaSyntaxBaseVisitor[Seq[TesslaDoc]]
@@ -123,13 +126,9 @@ object TesslaDoc {
     }
   }
 
-  def extract(src: CharStream, currentFileOnly: Boolean) = {
-    new Extractor(src, currentFileOnly = currentFileOnly).translate()
-  }
-
-  def extractAsJSON(src: CharStream, currentFileOnly: Boolean) = {
-    extract(src, currentFileOnly = currentFileOnly).map(_.mkString("[\n", ",\n", "\n]"))
+  def extract(srcs: Seq[CharStream], currentFileOnly: Boolean) = {
+    Result.runSequentially(srcs) { src =>
+      TesslaParser.parse(src, expandIncludes = !currentFileOnly).andThen(new Extractor(_).translate())
+    }.map(modules => ModuleDoc(modules.flatMap(_.items)))
   }
 }
-
-sealed abstract class TesslaDoc extends TesslaDoc.DocElement

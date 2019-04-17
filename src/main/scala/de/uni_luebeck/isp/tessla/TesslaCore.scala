@@ -119,10 +119,6 @@ object TesslaCore extends HasUniqueIdentifiers {
     def stream: StreamRef
     def loc: Location
   }
-  
-  object StdLibUnaryOp {
-    def unapply(op: StdLibUnaryOp): Option[(StreamRef, Location)] = Some((op.stream, op.loc))
-  }
 
   final case class StdLibCount(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
     override def toString = s"count($stream)"
@@ -256,8 +252,10 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def withLoc(loc: Location): TesslaSet = copy(loc = loc)
   }
 
-  final case class TesslaList(value: List[Value], loc: Location) extends PrimitiveValue {
+  final case class TesslaList(value: IndexedSeq[Value], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaList = copy(loc = loc)
+
+    override def toString = value.mkString("List(", ", ", ")")
   }
 
   final case class Ctf(value: ICompositeDefinition, loc: Location) extends PrimitiveValue {
@@ -294,10 +292,6 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   case object StringType extends ValueType {
     override def toString = "String"
-  }
-
-  case object UnitType extends ValueType {
-    override def toString = "Unit"
   }
 
   case object FunctionType extends ValueType {

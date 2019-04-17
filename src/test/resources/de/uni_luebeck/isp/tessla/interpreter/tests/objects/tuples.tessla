@@ -14,4 +14,4 @@ def sumPair(t: EventPair[Int, Int]) := t._1 + t._2
 out sumPair(t1)
 out sumPair(t2)
 
-out (1,"lala",())._2
+out (1, "lala", ())._2

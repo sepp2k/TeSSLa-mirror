@@ -11,4 +11,7 @@ def slift[A,B,C](a: Events[A], b: Events[B], f: (A,B) => C): Events[C] := {
   return lift(aa, bb, ff)
 }
 
-out slift(x, y, fun(a: Int, b: Int) => a + b) as z
+@liftable
+def add(a: Int, b: Int) = a + b
+
+out slift(x, y, add) as z

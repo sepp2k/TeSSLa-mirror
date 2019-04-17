@@ -7,5 +7,11 @@ def o2 = {x = a-1, y = a+2, z = b}
 
 def sumXY(o: {x: Events[Int], y: Events[Int], ..}) = o.x + o.y
 
+type Pos3 = {x: Events[Int], y: Events[Int], z: Events[Int]}
+
+def hof(o: Pos3, f: (Pos3) => Events[Int]) = f(o)
+
 out sumXY(o1)
-out sumXY(o2)
+
+def sumXYo2 = hof(o2, sumXY)
+print "${time(sumXYo2)}: sumXY(o2) = $sumXYo2"

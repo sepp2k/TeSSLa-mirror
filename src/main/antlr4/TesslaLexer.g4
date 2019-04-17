@@ -65,6 +65,8 @@ NOT: '!';
 
 DQUOTE: '"' -> pushMode(IN_STRING);
 
+FORMAT_STRING_START: 'f"' -> pushMode(IN_FORMAT_STRING);
+
 LBRACE: '{' {
     nesting++;
     pushMode(DEFAULT_MODE);
@@ -89,7 +91,7 @@ fragment NameStartChar
 ID: NameStartChar NameChar*;
 DECINT: [\p{Nd}]+;
 HEXINT: '0x'[\p{Nd}a-fA-F\uFF21-\uFF26\uFF41-\uFF46]+;
-FLOAT: [\p{Nd}]+ ('.' [\p{Nd}]+ ('e' [\p{Nd}]+)? | 'e' [\p{Nd}]+);
+FLOAT: [\p{Nd}]+ ('.' [\p{Nd}]+ ('e' ('+'|'-')? [\p{Nd}]+)? | 'e' ('+'|'-')? [\p{Nd}]+);
 
 DOCLINE: ('---' | '##') ~'\n'* ('\r'? '\n')+;
 // Skip the comment, but not the linebreak at the end of the comment. This way the parser will still see a
@@ -110,6 +112,18 @@ DOLLAR_BRACE_IN_STRING: '${' {
 DOLLAR: '$' -> pushMode(SINGLE_ID);
 ESCAPE_SEQUENCE: '\\' . ;
 DQUOTE_IN_STRING: '"' -> type(DQUOTE), popMode;
+
+mode IN_FORMAT_STRING;
+
+TEXTF: ~[\\$%"]+ -> type(TEXT);
+DOLLAR_BRACE_IN_STRINGF: '${' {
+    nesting++;
+} -> pushMode(DEFAULT_MODE), type(DOLLAR_BRACE);
+DOLLARF: '$' -> pushMode(SINGLE_ID), type(DOLLAR);
+FORMAT: '%' [-#+ 0,(]* ([1-9][0-9]*)? ('.' [0-9]*)? ~[\\$"]? ;
+ESCAPE_SEQUENCEF: '\\' .  -> type(ESCAPE_SEQUENCE);
+DQUOTE_IN_STRINGF: '"' -> type(DQUOTE), popMode;
+
 
 mode SINGLE_ID;
 

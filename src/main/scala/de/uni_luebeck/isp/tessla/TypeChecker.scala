@@ -349,6 +349,15 @@ class TypeChecker(spec: FlatTessla.Specification)
           val fType = FunctionType(Seq(), Seq(OptionType(t), OptionType(u), OptionType(v)), OptionType(w), isLiftable = false)
           FunctionType(Seq(t.id, u.id, v.id, w.id), Seq(StreamType(t), StreamType(u), StreamType(v), fType), StreamType(w), isLiftable = false)
 
+        case BuiltIn.Lift4 =>
+          val t = mkTVar("T")
+          val u = mkTVar("U")
+          val v = mkTVar("V")
+          val w = mkTVar("W")
+          val x = mkTVar("X")
+          val fType = FunctionType(Seq(), Seq(OptionType(t), OptionType(u), OptionType(v), OptionType(w)), OptionType(x), isLiftable = false)
+          FunctionType(Seq(t.id, u.id, v.id, w.id, x.id), Seq(StreamType(t), StreamType(u), StreamType(v), StreamType(w), fType), StreamType(x), isLiftable = false)          
+          
         case BuiltIn.None =>
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(), OptionType(t), isLiftable = false)
@@ -451,12 +460,26 @@ class TypeChecker(spec: FlatTessla.Specification)
           val fType = FunctionType(Seq(), Seq(b, a), b, isLiftable = false)
           FunctionType(Seq(a.id, b.id), Seq(ListType(a), b, fType), b, isLiftable = false)
 
+        case BuiltIn.ListGet =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(ListType(t), t), t, isLiftable = true)
+
         case BuiltIn.String_concat =>
           FunctionType(Seq(), Seq(StringType, StringType), StringType, isLiftable = true)
 
         case BuiltIn.ToString =>
           val t = mkTVar("T")
           FunctionType(Seq(t.id), Seq(t), StringType, isLiftable = true)
+
+        case BuiltIn.Format =>
+          val t = mkTVar("T")
+          FunctionType(Seq(t.id), Seq(StringType, t), StringType, isLiftable = true)
+
+        case BuiltIn.FormatInt =>
+          FunctionType(Seq(), Seq(StringType, IntType), StringType, isLiftable = true)
+
+        case BuiltIn.FormatFloat =>
+          FunctionType(Seq(), Seq(StringType, FloatType), StringType, isLiftable = true)
 
         case BuiltIn.CtfGetInt =>
           FunctionType(Seq(), Seq(CtfType, StringType), IntType, isLiftable = true)
@@ -520,6 +543,17 @@ class TypeChecker(spec: FlatTessla.Specification)
   }
 
   def isSubtypeOrEqual(parent: TypedTessla.Type, child: TypedTessla.Type): Boolean = (parent, child) match {
+    case (parent: TypedTessla.FunctionType, child: TypedTessla.FunctionType) =>
+      // TODO: This completely ignores type parameters because functions with type parameters can't currently
+      //       be passed around anyway. Once that is possible, this code needs to be adjusted.
+      val compatibleLiftedness = !parent.isLiftable || child.isLiftable
+      val compatibleReturnTypes = isSubtypeOrEqual(parent.returnType, child.returnType)
+      val compatibleParameterTypes = parent.parameterTypes.length == child.parameterTypes.length &&
+        parent.parameterTypes.zip(child.parameterTypes).forall {
+          // function parameters are contravariant, so the order of arguments to isSubtypeOrEqual is switched
+          case (parentParamType, childParamType) => isSubtypeOrEqual(childParamType, parentParamType)
+        }
+      compatibleLiftedness && compatibleReturnTypes && compatibleParameterTypes
     case (parent: TypedTessla.ObjectType, child: TypedTessla.ObjectType) =>
       parent.memberTypes.forall {
         case (name, typ) =>

@@ -1,301 +1,126 @@
 package de.uni_luebeck.isp.tessla
 
+import java.nio.file.Paths
+import java.util.{IllegalFormatException, MissingFormatArgumentException}
+
 import de.uni_luebeck.isp.tessla.Errors._
+import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import org.antlr.v4.runtime._
-import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
+
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ArrayBuffer
 
-class TesslaParser(src: CharStream) extends AbstractTesslaParser[Tessla.Statement, Tessla.Specification](src) {
-  override def aggregateItems(statements: Seq[Tessla.Statement]) = {
-    Tessla.Specification(statements)
+class TesslaParser(src: CharStream, expandIncludes: Boolean) extends TranslationPhase.Translator[TesslaSyntax.SpecContext] {
+  val lexer = new TesslaLexer(src)
+  val tokens = new CommonTokenStream(lexer)
+  val sourcePair: misc.Pair[TokenSource, CharStream] = new misc.Pair(lexer, src)
+  val parser = new TesslaSyntax(tokens)
+  parser.removeErrorListeners()
+  parser.addErrorListener(new BaseErrorListener {
+    override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException) = {
+      error(ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token])))
+    }
+  })
+  val spec = parser.spec()
+  if (parser.getNumberOfSyntaxErrors > 0) {
+    abortOnError()
   }
 
-  trait TesslaVisitor[T] extends TesslaSyntaxBaseVisitor[T] {
-    override final def visitChildren(node: RuleNode) = {
-      throw InternalError("Undefined visitor method", Location.fromNode(node.asInstanceOf[ParserRuleContext]))
+  override def translateSpec() = {
+    if (expandIncludes) {
+      spec.statements.addAll(0, spec.includes.asScala.flatMap(translateInclude).asJava)
     }
-  }
-
-  override def translateStatement(stat: TesslaSyntax.StatementContext): Tessla.Statement = StatementVisitor.visit(stat)
-
-  def translateDefinition(definition: TesslaSyntax.DefContext) = {
-    val annotations = definition.header.annotations.asScala.map(_.ID).map(mkID)
-    val typeParameters = definition.header.typeParameters.asScala.map(mkID)
-    val parameters = definition.header.parameters.asScala.map(translateParameter)
-    val body = translateBody(definition.body)
-    val loc = Location.fromToken(definition.header.DEF).merge(Location.fromNode(definition.body))
-    Tessla.Definition(
-      annotations, mkID(definition.header.name), typeParameters, parameters,
-      Option(definition.header.resultType).map(translateType),
-      Location.fromNode(definition.header), body, loc
-    )
-  }
-
-  def translateBody(body: TesslaSyntax.BodyContext): Tessla.Expression = {
-    val exp = translateExpression(body.expression)
-    if (body.defs.isEmpty) {
-      exp
-    } else {
-      Tessla.Block(body.defs.asScala.map(translateDefinition), exp, Location.fromNode(body))
-    }
-  }
-
-  object StatementVisitor extends TesslaVisitor[Tessla.Statement] {
-    override def visitDefinition(definition: TesslaSyntax.DefinitionContext) = {
-      translateDefinition(definition.`def`)
-    }
-
-    override def visitOut(out: TesslaSyntax.OutContext) = {
-      val loc = Option(out.ID).map(Location.fromToken).getOrElse(Location.fromNode(out.expression))
-      Tessla.Out(translateExpression(out.expression), Option(out.ID).map(mkID), loc)
-    }
-
-    override def visitOutAll(outAll: TesslaSyntax.OutAllContext) = {
-      Tessla.OutAll(Location.fromNode(outAll))
-    }
-
-    override def visitPrint(print: TesslaSyntax.PrintContext) = {
-      val loc = Location.fromNode(print.expression)
-      Tessla.Print(translateExpression(print.expression), loc)
-    }
-
-    override def visitIn(in: TesslaSyntax.InContext) = {
-      Tessla.In(mkID(in.ID), translateType(in.`type`), Location.fromNode(in))
-    }
-
-    override def visitTypeDefinition(typeDef: TesslaSyntax.TypeDefinitionContext) = {
-      val typeParams = typeDef.typeParameters.asScala.map(mkID)
-      val loc = Location.fromToken(typeDef.TYPE).merge(Location.fromNode(typeDef.`type`))
-      Tessla.TypeDefinition(mkID(typeDef.name), typeParams, translateType(typeDef.`type`), loc)
-    }
-  }
-
-  def translateParameter(parameter: TesslaSyntax.ParamContext): Tessla.Parameter = {
-    Tessla.Parameter(mkID(parameter.ID), Option(parameter.parameterType).map(translateType))
-  }
-
-  def translateType(typ: TesslaSyntax.TypeContext): Tessla.Type = TypeVisitor.visit(typ)
-
-  object TypeVisitor extends TesslaVisitor[Tessla.Type] {
-    override def visitSimpleType(typ: TesslaSyntax.SimpleTypeContext) = {
-      Tessla.SimpleType(mkID(typ.ID))
-    }
-
-    override def visitTypeApplication(typ: TesslaSyntax.TypeApplicationContext) = {
-      val loc = Location.fromNode(typ)
-      Tessla.TypeApplication(mkID(typ.ID), typ.typeArguments.asScala.map(translateType), loc)
-    }
-
-    override def visitFunctionType(typ: TesslaSyntax.FunctionTypeContext) = {
-      val loc = Location.fromNode(typ)
-      Tessla.FunctionType(typ.parameterTypes.asScala.map(translateType), translateType(typ.resultType), loc)
-    }
-
-    override def visitObjectType(typ: TesslaSyntax.ObjectTypeContext) = {
-      if (typ.DOLLAR_BRACE != null) {
-        warn(Location.fromToken(typ.DOLLAR_BRACE), "Use of '${' for objects is deprecated, use '{' instead")
-      }
-      val memberTypes = typ.memberSigs.asScala.map { sig =>
-        (mkID(sig.name), translateType(sig.`type`))
-      }
-      Tessla.ObjectType(memberTypes, isOpen = typ.DOTDOT != null, Location.fromNode(typ))
-    }
-
-    override def visitTupleType(typ: TesslaSyntax.TupleTypeContext) = {
-      Tessla.TupleType(typ.elementTypes.asScala.map(translateType), Location.fromNode(typ))
-    }
-  }
-
-  def mkID(id: Token): Tessla.Identifier = {
-    Tessla.Identifier(id.getText, Location.fromToken(id))
-  }
-
-  def mkID(id: TerminalNode): Tessla.Identifier = {
-    mkID(id.getSymbol)
-  }
-
-  def translateExpression(exp: TesslaSyntax.ExpressionContext): Tessla.Expression = ExpressionVisitor.visit(exp)
-
-  object ExpressionVisitor extends TesslaVisitor[Tessla.Expression] {
-    override def visitVariable(variable: TesslaSyntax.VariableContext): Tessla.Variable = {
-      Tessla.Variable(mkID(variable.ID))
-    }
-
-    override def visitFunctionCall(funCall: TesslaSyntax.FunctionCallContext) = {
-      val typeArgs = funCall.typeArguments.asScala.map(translateType)
-      val args = funCall.arguments.asScala.map(translateArgument)
-      val loc = Location.fromNode(funCall)
-      Tessla.MacroCall(translateExpression(funCall.function), typeArgs, args, loc)
-    }
-
-    def translateArgument(arg: TesslaSyntax.ArgContext): Tessla.Argument = {
-      if (arg.name != null) {
-        Tessla.NamedArgument(mkID(arg.name), translateExpression(arg.expression))
-      } else {
-        Tessla.PositionalArgument(translateExpression(arg.expression))
-      }
-    }
-
-    override def visitTupleExpression(exp: TesslaSyntax.TupleExpressionContext) = {
-      if (exp.elems.size == 1 && exp.lastComma == null) {
-        visit(exp.elems.get(0))
-      } else {
-        Tessla.Tuple(exp.elems.asScala.map(visit), Location.fromNode(exp))
-      }
-    }
-
-    override def visitObjectLiteral(obj: TesslaSyntax.ObjectLiteralContext) = {
-      if (obj.DOLLAR_BRACE != null) {
-        warn(Location.fromToken(obj.DOLLAR_BRACE), "Use of '${' for objects is deprecated, use '{' instead")
-      }
-      Tessla.ObjectLiteral(obj.members.asScala.map(translateMemberDefinition), Location.fromNode(obj))
-    }
-
-    def translateMemberDefinition(memDef: TesslaSyntax.MemberDefinitionContext) = {
-      if (memDef.value == null) Tessla.MemberDefinition.Simple(mkID(memDef.name))
-      else Tessla.MemberDefinition.Full(mkID(memDef.name), translateExpression(memDef.value))
-    }
-
-    override def visitBlock(block: TesslaSyntax.BlockContext) = {
-      val defs = block.definitions.asScala.map(translateDefinition)
-      if (block.RETURN != null) {
-        warn(Location.fromToken(block.RETURN), "The keyword 'return' is deprecated")
-      }
-      Tessla.Block(defs, translateExpression(block.expression), Location.fromNode(block))
-    }
-
-    override def visitLambda(lambda: TesslaSyntax.LambdaContext) = {
-      val startHeaderLoc = Location.fromToken(Option(lambda.funKW).getOrElse(lambda.openingParen))
-      val endHeaderLoc = Location.fromToken(lambda.closingParen)
-      val headerLoc = startHeaderLoc.merge(endHeaderLoc)
-      val body = translateExpression(lambda.expression)
-      if (lambda.funKW != null) {
-        warn(Location.fromToken(lambda.funKW), "The keyword 'fun' is deprecated")
-      }
-      Tessla.Lambda(lambda.params.asScala.map(translateParameter), headerLoc, body, Location.fromNode(lambda))
-    }
-
-    override def visitUnaryExpression(exp: TesslaSyntax.UnaryExpressionContext) = {
-      Tessla.MacroCall(
-        Tessla.Variable(Tessla.Identifier(s"unary ${exp.op.getText}", Location.fromToken(exp.op))),
-        Seq(),
-        Seq(Tessla.PositionalArgument(translateExpression(exp.expression))),
-        Location.fromNode(exp)
-      )
-    }
-
-    override def visitInfixExpression(exp: TesslaSyntax.InfixExpressionContext) = {
-      Tessla.MacroCall(
-        Tessla.Variable(mkID(exp.op)),
-        Seq(),
-        Seq(Tessla.PositionalArgument(translateExpression(exp.lhs)), Tessla.PositionalArgument(translateExpression(exp.rhs))),
-        Location.fromNode(exp)
-      )
-    }
-
-    override def visitITE(ite: TesslaSyntax.ITEContext) = {
-      val cond = translateExpression(ite.condition)
-      val thenCase = translateExpression(ite.thenCase)
-      val loc = Location.fromNode(ite)
-      val elseCase = translateExpression(ite.elseCase)
-      if (ite.STATIC != null) {
-        Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
-      } else {
-        Tessla.MacroCall(
-          Tessla.Variable(Tessla.Identifier("if then else", Location.fromToken(ite.ifToken))),
-          Seq(),
-          Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
-          loc
-        )
-      }
-    }
-
-    override def visitMemberAccess(ma: TesslaSyntax.MemberAccessContext) = {
-      Tessla.MemberAccess(translateExpression(ma.obj), mkID(ma.fieldName), Location.fromNode(ma))
-    }
-
-    override def visitTrue(trueExp: TesslaSyntax.TrueContext) = {
-      Tessla.Literal(Tessla.BoolLiteral(true), Location.fromNode(trueExp))
-    }
-
-    override def visitFalse(falseExp: TesslaSyntax.FalseContext) = {
-      Tessla.Literal(Tessla.BoolLiteral(false), Location.fromNode(falseExp))
-    }
-
-    override def visitIntLiteral(intLit: TesslaSyntax.IntLiteralContext) = {
-      def mkLit(x: BigInt) = {
-        if (intLit.timeUnit == null) {
-          Tessla.IntLiteral(x)
-        } else {
-          Tessla.TimeLiteral(x, TimeUnit.fromString(intLit.timeUnit.getText, Location.fromToken(intLit.timeUnit)))
+    spec.statements.asScala.foreach {
+      case out: TesslaSyntax.OutContext =>
+        if (out.ID == null) {
+          val expr = out.expression
+          val start = expr.start.getStartIndex
+          val stop = expr.stop.getStopIndex
+          val line = expr.start.getLine
+          val column = expr.start.getCharPositionInLine
+          val token = lexer.getTokenFactory.create(sourcePair, TesslaLexer.ID, null, 0, start, stop, line, column)
+          val node = parser.createTerminalNode(out, token)
+          out.addChild(node)
         }
-      }
-      if (intLit.DECINT != null) {
-        Tessla.Literal(mkLit(BigInt(intLit.DECINT.getText)), Location.fromNode(intLit))
-      } else {
-        require(intLit.HEXINT != null)
-        require(intLit.HEXINT.getText.startsWith("0x"))
-        val x = BigInt(intLit.HEXINT.getText.substring(2), 16)
-        Tessla.Literal(mkLit(x), Location.fromNode(intLit))
-      }
+      case _ => // Do nothing
     }
+    spec
+  }
 
-    override def visitFloatLiteral(floatLit: TesslaSyntax.FloatLiteralContext) = {
-      Tessla.Literal(Tessla.FloatLiteral(floatLit.FLOAT.getText.toDouble), Location.fromNode(floatLit))
-    }
+  protected def translateInclude(include: TesslaSyntax.IncludeContext): Seq[TesslaSyntax.StatementContext] = {
+    val currentFile = getFile(include)
+    // getParent returns null for relative paths without subdirectories (i.e. just a file name), which is
+    // annoying and stupid. So we wrap the call in an option and fall back to "." as the default.
+    val dir = Option(Paths.get(currentFile).getParent).getOrElse(Paths.get("."))
+    val includePath = dir.resolve(getIncludeString(include.file))
+    unwrapResult(TesslaParser.translate(CharStreams.fromFileName(includePath.toString))).statements.asScala
+  }
 
-    override def visitStringLiteral(str: TesslaSyntax.StringLiteralContext): Tessla.Expression = {
-      var curStr = new StringBuilder
-      var curStrLoc: Option[Location] = Some(Location.fromToken(str.stringLit.openingQuote))
-      val parts = new ArrayBuffer[Tessla.Expression]
-      str.stringLit.stringContents.forEach {part =>
-        val partLoc = Location.fromNode(part)
-        if (part.TEXT != null) {
-          curStr ++= part.TEXT.getText
-          curStrLoc = Some(curStrLoc.map(_.merge(partLoc)).getOrElse(partLoc))
-        } else if (part.ESCAPE_SEQUENCE != null) {
-          curStr ++= parseEscapeSequence(part.ESCAPE_SEQUENCE.getText, partLoc)
-          curStrLoc = Some(curStrLoc.map(_.merge(partLoc)).getOrElse(partLoc))
-        } else {
-          if (curStr.nonEmpty) {
-            parts += Tessla.Literal(Tessla.StringLiteral(curStr.toString), curStrLoc.get)
-            curStrLoc = None
-            curStr = new StringBuilder
-          }
-          val exp = if (part.ID != null) {
-            Tessla.Variable(mkID(part.ID))
-          } else {
-            translateExpression(part.expression)
-          }
-          parts += Tessla.MacroCall(
-            Tessla.Variable(Tessla.Identifier("toString", exp.loc)),
-            Seq(), Seq(Tessla.PositionalArgument(exp)), exp.loc
-          )
-        }
-      }
-      if (curStr.nonEmpty) {
-        val loc = curStrLoc.get.merge(Location.fromToken(str.stringLit.closingQuote))
-        parts += Tessla.Literal(Tessla.StringLiteral(curStr.toString), loc)
-      }
-      if (parts.isEmpty) {
-        Tessla.Literal(Tessla.StringLiteral(""), Location.fromNode(str))
-      } else {
-        parts.reduceLeft { (acc, exp) =>
-          Tessla.MacroCall(
-            Tessla.Variable(Tessla.Identifier("String_concat", exp.loc)),
-            Seq(),
-            Seq(Tessla.PositionalArgument(acc), Tessla.PositionalArgument(exp)),
-            exp.loc
-          )
-        }
-      }
+  private def getIncludeString(stringLit: TesslaSyntax.StringLitContext): String = {
+    stringLit.stringContents.asScala.map {
+      case text: TesslaSyntax.TextContext => text.getText
+      case escapeSequence: TesslaSyntax.EscapeSequenceContext =>
+        parseEscapeSequence(escapeSequence.getText, Location.fromNode(escapeSequence))
+      case part =>
+        error(StringInterpolationOrFormatInInclude(Location.fromNode(part)))
+        ""
+    }.mkString
+  }
+
+  protected def getFile(node: ParserRuleContext) = {
+    node.getStart.getTokenSource.getSourceName
+  }
+
+  protected def parseEscapeSequence(sequence: String, loc: Location): String = {
+    TesslaParser.parseEscapeSequence(sequence).getOrElse {
+      error(InvalidEscapeSequence(sequence, loc))
+      sequence
     }
   }
 }
 
-object TesslaParser extends TranslationPhase[CharStream, Tessla.Specification] {
-  override def translate(src: CharStream) = {
-    new TesslaParser(src).translate()
+object TesslaParser extends TranslationPhase[CharStream, TesslaSyntax.SpecContext] {
+  override def translate(spec: CharStream): Result[TesslaSyntax.SpecContext] = {
+    parse(spec)
+  }
+
+  def parse(spec: CharStream, expandIncludes: Boolean = true): Result[TesslaSyntax.SpecContext] = {
+    new TesslaParser(spec, expandIncludes = expandIncludes).translate()
+  }
+
+  def parseEscapeSequence(sequence: String): Option[String] = sequence match {
+    case "\\r" => Some("\r")
+    case "\\n" => Some("\n")
+    case "\\t" => Some("\t")
+    case "\\a" => Some("\u0007")
+    case "\\\\" => Some("\\")
+    case "\\\"" => Some("\"")
+    case "\\$" => Some("$")
+    case "\\%" => Some("%")
+    case _ => None
+  }
+
+  sealed abstract class FormatSpecifierInfo
+  case class InvalidFormat(err: TesslaError) extends FormatSpecifierInfo
+  case class NoArgFormat(processedString: String) extends FormatSpecifierInfo
+  case class SingleArgFormat(formatFunction: String) extends FormatSpecifierInfo
+
+  def parseFormatString(format: String, loc: Location): FormatSpecifierInfo = {
+    try {
+      val processedString = String.format(format)
+      // If no exception is thrown that means that we have a zero-argument format-specifier
+      NoArgFormat(processedString)
+    } catch {
+      case _: MissingFormatArgumentException =>
+        // If a MissingFormatArgumentException is thrown that means that the format string was syntactically correct
+        // and takes one argument
+        format.last match {
+          case 'h' | 'H' | 's' | 'S' => SingleArgFormat("format")
+          case 'd' | 'o' | 'x' | 'X' => SingleArgFormat("formatInt")
+          case 'e' | 'E' | 'f' | 'g' | 'G' | 'a' | 'A' => SingleArgFormat("formatFloat")
+          case _ => InvalidFormat(UnsupportedConversion(format.last, loc))
+        }
+      case err: IllegalFormatException =>
+        InvalidFormat(StringFormatError(err, loc))
+    }
   }
 }

@@ -1,0 +1,4 @@
+in tup: Events[(Int, Int, Int)]
+in obj: Events[{x: Float, y: Float}]
+
+out *

@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
+import java.util.IllegalFormatException
+
 object Errors {
   abstract class TesslaError extends Exception with Diagnostic
 
@@ -145,8 +147,8 @@ object Errors {
     InternalError(s"Tried to provide inputs after their propagation at time $time", loc)
   }
 
-  case class NegativeDelayError(value: BigInt, loc: Location) extends TesslaError {
-    override def message: String = s"Negative delay $value"
+  case class NonPositiveDelayError(value: BigInt, loc: Location) extends TesslaError {
+    override def message: String = s"Non-positive delay $value"
   }
 
   case class InputTypeMismatch(value: TesslaCore.Value, valueType: String, streamName: String, streamType: TesslaCore.Type, loc: Location) extends TesslaError {
@@ -159,6 +161,10 @@ object Errors {
 
   case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
     override def message: String = s"Key $key was not found in $map"
+  }
+
+  case class IndexOutOfRange(index: BigInt, list: IndexedSeq[_], loc: Location) extends TesslaError {
+    override def message: String = s"Index $index is out of range for list of size ${list.length}"
   }
 
   case class HeadOfEmptyList(loc: Location) extends TesslaError {
@@ -201,7 +207,19 @@ object Errors {
     override def message = s"Invalid escape sequence '$sequence' in string"
   }
 
-  case class StringInterpolationInInclude(loc: Location) extends TesslaError {
-    override def message = "String interpolation is not allowed in include statement"
+  case class StringInterpolationOrFormatInInclude(loc: Location) extends TesslaError {
+    override def message = "String interpolation or format specifiers are not allowed in include statements"
+  }
+
+  case class StringFormatError(error: IllegalFormatException, loc: Location) extends TesslaError {
+    override def message = s"Error in format string: '${error.getClass.getSimpleName}: ${error.getMessage}'"
+  }
+
+  case class FormatNeedsArgument(format: String, loc: Location) extends TesslaError {
+    override def message = s"The format specifier $format requires a value and thus can only be used after a string interpolation"
+  }
+
+  case class UnsupportedConversion(conversion: Char, loc: Location) extends TesslaError {
+    override def message = s"TeSSLa does not support the conversion specifier $conversion"
   }
 }
