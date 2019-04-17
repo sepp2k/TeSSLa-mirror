@@ -1,6 +1,8 @@
 # Changelog
 
-## Version 0.7.5 (upcoming)
+## Version 0.7.6 (upcoming)
+
+## Version 0.7.5
 
 ### Additions and Fixes
 
