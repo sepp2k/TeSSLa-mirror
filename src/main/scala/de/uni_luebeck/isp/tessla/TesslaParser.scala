@@ -13,19 +13,20 @@ class TesslaParser(src: CharStream, expandIncludes: Boolean) extends Translation
   val lexer = new TesslaLexer(src)
   val tokens = new CommonTokenStream(lexer)
   val sourcePair: misc.Pair[TokenSource, CharStream] = new misc.Pair(lexer, src)
-  val parser = new TesslaSyntax(tokens)
-  parser.removeErrorListeners()
-  parser.addErrorListener(new BaseErrorListener {
-    override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException) = {
-      error(ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token])))
-    }
-  })
-  val spec = parser.spec()
-  if (parser.getNumberOfSyntaxErrors > 0) {
-    abortOnError()
-  }
 
   override def translateSpec() = {
+    val parser = new TesslaSyntax(tokens)
+    parser.removeErrorListeners()
+    parser.addErrorListener(new BaseErrorListener {
+      override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException) = {
+        error(ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token])))
+      }
+    })
+    val spec = parser.spec()
+    if (parser.getNumberOfSyntaxErrors > 0) {
+      abortOnError()
+    }
+
     if (expandIncludes) {
       spec.statements.addAll(0, spec.includes.asScala.flatMap(translateInclude).asJava)
     }
