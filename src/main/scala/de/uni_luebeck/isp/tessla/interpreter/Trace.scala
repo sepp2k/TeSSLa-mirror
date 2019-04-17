@@ -29,7 +29,7 @@ object Trace {
     override def toString = time.toString
   }
 
-  def fromCtfFile(ctfFileName: String, abortAt: Option[BigInt]) = {
+  def fromCtfFile(ctfFileName: String, abortAt: Option[BigInt]): Interpreter.Trace = {
     val reader = new CTFTraceReader(new CTFTrace(ctfFileName))
 
     new Iterator[Trace.Event] {

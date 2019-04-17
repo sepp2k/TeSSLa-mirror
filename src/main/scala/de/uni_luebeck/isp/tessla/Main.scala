@@ -116,10 +116,8 @@ object Main extends SexyOpt {
           System.err.println("No CTF trace input given")
           sys.exit(17)
         }
-        val output = unwrapResult {
-          val trace = Trace.fromCtfFile(traceFile.get, abortAtValue)
-          Interpreter.run(core, trace, stopOn)
-        }
+        val trace = Trace.fromCtfFile(traceFile.get, abortAtValue)
+        val output = Interpreter.run(core, trace, stopOn)
         output.foreach(println)
       } else {
         val traceSource = traceFile.map(CharStreams.fromFileName).getOrElse(CharStreams.fromStream(System.in))
@@ -127,7 +125,7 @@ object Main extends SexyOpt {
         if (flattenInput) {
           trace.foreach(println)
         } else {
-          val output = unwrapResult(Interpreter.run(core, trace, stopOn))
+          val output = Interpreter.run(core, trace, stopOn)
           output.foreach(println)
         }
       }
