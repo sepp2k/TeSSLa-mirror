@@ -1,8 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import java.nio.channels.Channels
-import java.nio.charset.{CodingErrorAction, StandardCharsets}
-
+import java.nio.charset.StandardCharsets
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
@@ -11,7 +9,7 @@ import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
 import de.uni_luebeck.isp.tessla.analyses.OSL
-import org.antlr.v4.runtime.{CharStream, CharStreams}
+import org.antlr.v4.runtime.CharStream
 
 import scala.collection.mutable
 import scala.io.Source
