@@ -1,1 +1,1 @@
-/errors/missing-input-type.tessla(1,5 - 2,0): Invalid syntax: mismatched input '\n' expecting ':'
+/errors/missing-input-type.tessla(2,1 - 2,4): Invalid syntax: extraneous input 'out' expecting {':', NL}

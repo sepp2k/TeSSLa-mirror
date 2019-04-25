@@ -2,6 +2,10 @@
 
 ## Version 0.7.6 (upcoming)
 
+### Additions and Fixes
+
+* Allow more line breaks. For a detailed lists of where line breaks can be used, see syntax.md.
+
 ## Version 0.7.5
 
 ### Additions and Fixes
