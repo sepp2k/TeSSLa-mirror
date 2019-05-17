@@ -4,54 +4,59 @@ import de.uni_luebeck.isp.tessla.Errors.{InputTypeMismatch, InternalError}
 import de.uni_luebeck.isp.tessla.TesslaCore
 
 object ValueTypeChecker {
+  def isType(typ: TesslaCore.ValueType, name: String) = typ match {
+    case b: TesslaCore.BuiltInType => b.name == name
+    case _ => false
+  }
+
   def check(value: TesslaCore.Value,
             elementType: TesslaCore.ValueType,
             name: String): Unit = value match {
     case _: TesslaCore.IntValue =>
-      if (elementType != TesslaCore.IntType) {
+      if (!isType(elementType, "Int")) {
         throw InputTypeMismatch(value, "Int", name, elementType, value.loc)
       }
     case _: TesslaCore.FloatValue =>
-      if (elementType != TesslaCore.FloatType) {
+      if (!isType(elementType, "Float")) {
         throw InputTypeMismatch(value, "Float", name, elementType, value.loc)
       }
     case _: TesslaCore.StringValue =>
-      if (elementType != TesslaCore.StringType) {
+      if (!isType(elementType, "String")) {
         throw InputTypeMismatch(value, "String", name, elementType, value.loc)
       }
     case _: TesslaCore.BoolValue =>
-      if (elementType != TesslaCore.BoolType) {
+      if (!isType(elementType, "Bool")) {
         throw InputTypeMismatch(value, "Bool", name, elementType, value.loc)
       }
     case o: TesslaCore.TesslaOption =>
       elementType match {
-        case ot: TesslaCore.OptionType =>
-          o.value.foreach(check(_, ot.elementType, name))
+        case ot: TesslaCore.BuiltInType if ot.name == "Option" =>
+          o.value.foreach(check(_, ot.typeArgs.head, name))
         case _ =>
           throw InputTypeMismatch(value, "Option[?]", name, elementType, value.loc)
       }
     case s: TesslaCore.TesslaSet =>
       elementType match {
-        case st: TesslaCore.SetType =>
-          s.value.foreach(check(_, st.elementType, name))
+        case st: TesslaCore.BuiltInType if st.name == "Set" =>
+          s.value.foreach(check(_, st.typeArgs.head, name))
         case _ =>
           throw InputTypeMismatch(value, "Set[?]", name, elementType, value.loc)
       }
     case m: TesslaCore.TesslaMap =>
       elementType match {
-        case mt: TesslaCore.MapType =>
+        case mt: TesslaCore.BuiltInType if mt.name == "Map" =>
           m.value.foreach {
             case (k, v) =>
-              check(k, mt.keyType, name)
-              check(v, mt.valueType, name)
+              check(k, mt.typeArgs.head, name)
+              check(v, mt.typeArgs(1), name)
           }
         case _ =>
           throw InputTypeMismatch(value, "Map[?, ?]", name, elementType, value.loc)
       }
-    case s: TesslaCore.TesslaList =>
+    case l: TesslaCore.TesslaList =>
       elementType match {
-        case st: TesslaCore.ListType =>
-          s.value.foreach(check(_, st.elementType, name))
+        case lt: TesslaCore.BuiltInType if lt.name == "List" =>
+          l.value.foreach(check(_, lt.typeArgs.head, name))
         case _ =>
           throw InputTypeMismatch(value, "List[?]", name, elementType, value.loc)
       }
@@ -71,7 +76,7 @@ object ValueTypeChecker {
     case _: TesslaCore.Closure | _: TesslaCore.BuiltInOperator =>
       throw InternalError("Functions should not currently be able to appear in input streams")
     case _: TesslaCore.Ctf =>
-      if (elementType != TesslaCore.CtfType) {
+      if (!isType(elementType, "CTF")) {
         throw InputTypeMismatch(value, "CTF", name, elementType, value.loc)
       }
   }

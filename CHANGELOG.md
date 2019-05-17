@@ -68,7 +68,7 @@
     ```
     which produces an event every `f` timeunits starting with `t=0` can now be realized as
     ```ruby
-    def s: Events[Int] := const(f, default(delay(s, ()), ()), f)
+    def s: Events[Int] := const(f, default(delay(s, ()), ()))
     ```
     with the only reset event at `t=0`.
   * In the most general case where new delays are started by old delays _and_ external events one has to use every external event as reset, e.g. the specification

@@ -3,10 +3,19 @@ include "List"
 include "Set"
 include "Map"
 include "String"
-include "Ctf"
+include "CTF"
 include "Tessla"
 
 module Predef {
+  def nil[T]: Events[T] = __builtin__(nil)
+  def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)
+  def first[T, U](stream1: Events[T], stream2: Events[U]): Events[T] = slift(stream1, stream2, (x: T, _: U) => x)
+  def fold[T,R](f: (Events[R],Events[T]) => Events[R], stream: Events[T], init: R) = result where {
+    def result: Events[R] = default(f(last(result, stream), stream), init)
+  }
+}
+
+#module Predef {
   # Fundamental types
   type Events[T] = __builtin__(Events)
   type Bool = __builtin__(Bool)
@@ -26,9 +35,11 @@ module Predef {
   @liftable
   def __not__(arg: Bool): Bool = __builtin__(__not__)
   @liftable
-  def __and__(lhs: Bool, rhs: Bool): Bool = __builtin__(__and__)
+  def __ite__[T](cond: Bool, thenCase: T, elseCase: T): T = __builtin__(__ite__)
   @liftable
-  def __or__(lhs: Bool, rhs: Bool): Bool = __builtin__(__or__)
+  def __and__(lhs: Bool, rhs: Bool): Bool = if lhs then rhs else lhs
+  @liftable
+  def __or__(lhs: Bool, rhs: Bool): Bool = if lhs then lhs else rhs
 
   @liftable
   def __eq__[T](lhs: T, rhs: T): Bool = __builtin__(__eq__)
@@ -95,12 +106,6 @@ module Predef {
   def toString[T](arg: T): String = __builtin__(toString)
 
   @liftable
-  def min(x: Int, y: Int): Int = if x <= y then x else y
-
-  @liftable
-  def max(x: Int, y: Int): Int = if x >= y then x else y
-
-  @liftable
   def pow(base: Float, exponent: Float): Float = __builtin__(pow)
 
   @liftable
@@ -128,7 +133,7 @@ module Predef {
   # Note that the core of the option functionality is defined here because options are fundamental
   # enough (lift etc. make use of options) that having the functions in Predef makes sense.
   # Further functionality (such as map etc.) will be defined in the Option module
-  type Option[T] = __builtin__(Option)
+type Option[T] = __builtin__(Option)
   def None[T]: Option[T] = __builtin__(None)
   def Some[T](value: T): Option[T] = __builtin__(Some)
 
@@ -142,16 +147,16 @@ module Predef {
   def getSome[T](opt: Option[T]): T = __builtin__(getSome)
 
   # Built-in stream functions
-  def nil[T] = __builtin__(nil)
+  def nil[T]: Events[T] = __builtin__(nil)
   def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)
-  def defaultFrom[T](valueStream: Events[T], defaultStream: T): Events[T] = __builtin__(defaultFrom)
+  def defaultFrom[T](valueStream: Events[T], defaultStream: Events[T]): Events[T] = __builtin__(defaultFrom)
   def last[T, U](stream: Events[T], trigger: Events[U]): Events[T] = __builtin__(last)
   def time[T](stream: Events[T]): Events[Int] = __builtin__(time)
   def delay[T](delays: Events[Int], resets: Events[T]): Events[Unit] = __builtin__(delay)
-  def lift[T, U, V](stream1: Events[T], stream2: Events[U], f: (Option[T], Option[U]) => Option[V]) = __builtin__(lift)
+  def lift[T, U, V](stream1: Events[T], stream2: Events[U], f: (Option[T], Option[U]) => Option[V]): Events[V] = __builtin__(lift)
 
   # More stream functions
-  def const[T, U](value: T, stream: Events[U]): Events[T] = lift(stream, (_: U) => value)
+  def const[T, U](value: T, stream: Events[U]): Events[T] = slift1(stream, (_: U) => value)
 
   def first[T, U](stream1: Events[T], stream2: Events[U]): Events[T] = slift(stream1, stream2, (x: T, _: U) => x)
 
@@ -160,7 +165,7 @@ module Predef {
 
   def lift3[T1, T2, T3, T4](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3],
                             f: (Option[T1], Option[T2], Option[T3]) => Option[T4]): Events[T4] = {
-    def stream2and3 = lift(stream2, stream3, (x: Option[T2], y: Option[T3]) => Some(x, y))
+    def stream2and3 = lift(stream2, stream3, (x: Option[T2], y: Option[T3]) => Some((x, y)))
     lift(stream1, stream2and3, (v1: Option[T1], v2and3opt: Option[(Option[T2], Option[T3])]) =>
       if isNone(v2and3opt)
       then f(v1, None[T2], None[T3])
@@ -172,8 +177,8 @@ module Predef {
 
   def lift4[T1, T2, T3, T4, T5](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3], stream4: Events[T4],
                                 f: (Option[T1], Option[T2], Option[T3], Option[T4]) => Option[T5]): Events[T5] = {
-    def stream1and2 = lift(stream1, stream2, (x: Option[T1], y: Option[T2]) => Some(x, y))
-    lift3(stream1and2, stream2, stream3, (v1and2opt: Option[(Option[T1], Option[T2])], v3: Option[T3], v4: Option[T4]) =>
+    def stream1and2 = lift(stream1, stream2, (x: Option[T1], y: Option[T2]) => Some((x, y)))
+    lift3(stream1and2, stream3, stream4, (v1and2opt: Option[(Option[T1], Option[T2])], v3: Option[T3], v4: Option[T4]) =>
       if isNone(v1and2opt)
       then f(None[T1], None[T2], v3, v4)
       else {
@@ -183,35 +188,35 @@ module Predef {
   }
 
   def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] =
-    lift(stream, (x: Option[T]) => Some(f(getSome(x))))
+    lift1(stream, (x: Option[T]) => Some(f(getSome(x))))
 
   def slift[T,U,V](a: Events[T], b: Events[U], f: (T,U) => V): Events[V] = {
     def aa = merge(a, last(a, b))
     def bb = merge(b, last(b, a))
     lift(aa, bb, (x: Option[T], y: Option[U]) =>
       if isNone(x) || isNone(y)
-      then None[C]
+      then None[V]
       else Some(f(getSome(x), getSome(y))))
   }
 
   def slift3[T1, T2, T3, T4](a: Events[T1], b: Events[T2], c: Events[T3], f: (T1, T2, T3) => T4): Events[T4] = {
-    def aa = merge(a, last(a, merge(b, c)))
-    def bb = merge(b, last(b, merge(a, c)))
-    def cc = merge(c, last(c, merge(a, b)))
+    def aa = merge(a, last(a, mergeUnit(b, c)))
+    def bb = merge(b, last(b, mergeUnit(a, c)))
+    def cc = merge(c, last(c, mergeUnit(a, b)))
     lift3(aa, bb, cc, (x: Option[T1], y: Option[T2], z: Option[T3]) =>
       if isNone(x) || isNone(y) || isNone(z)
-      then None[C]
+      then None[T4]
       else Some(f(getSome(x), getSome(y), getSome(z))))
   }
 
   def slift4[T1, T2, T3, T4, T5](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], f: (T1, T2, T3, T4) => T5): Events[T5] = {
-    def ss1 = merge(ss1, last(ss1, merge3(ss2, ss3, ss4)))
-    def ss2 = merge(ss2, last(ss2, merge3(ss1, ss3, ss4)))
-    def ss3 = merge(ss3, last(ss3, merge3(ss1, ss2, ss4)))
-    def ss4 = merge(ss4, last(ss4, merge3(ss1, ss2, ss3)))
+    def ss1 = merge(s1, last(s1, mergeUnit3(s2, s3, s4)))
+    def ss2 = merge(s2, last(s2, mergeUnit3(s1, s3, s4)))
+    def ss3 = merge(s3, last(s3, mergeUnit3(s1, s2, s4)))
+    def ss4 = merge(s4, last(s4, mergeUnit3(s1, s2, s3)))
     lift4(ss1, ss2, ss3, ss4, (v1: Option[T1], v2: Option[T2], v3: Option[T3], v4: Option[T4]) =>
       if isNone(v1) || isNone(v2) || isNone(v3) || isNone(v4)
-      then None[C]
+      then None[T5]
       else Some(f(getSome(v1), getSome(v2), getSome(v3), getSome(v4))))
   }
 
@@ -219,13 +224,13 @@ module Predef {
   def prev[A](a: Events[A]) = last(a,a)
 
   def merge[T](stream1: Events[T], stream2: Events[T]): Events[T] =
-    lift(stream1, stream2, (x: Option[T], y: Option[U]) => if isNone(stream1) then stream2 else stream1)
+    lift(stream1, stream2, (x: Option[T], y: Option[T]) => if isNone(x) then y else x)
 
   ## Filter the event stream `events` based on the last known value
   ## of the boolean signal `condition`.
   def filter[A](events: Events[A], condition: Events[Bool]) =
     lift(events, merge(condition, prev(condition)), (e: Option[A], c: Option[Bool]) =>
-      if isSome(c) && getSome(c) then e else None[A]
+      if isSome(c) && getSome(c) then e else None[A])
 
   ## Remove events with the same value
   def pure[T](x: Events[T]) =
@@ -235,7 +240,7 @@ module Predef {
   def isFirst[A](x: Events[A]) = merge3(const(false, last(x,x)), const(true, x), false)
 
   ## Filters `x` such that only the first event on `x` remains
-  def firstEvent[A](x: Events[A]) = filter(isFirst(x), x)
+  def firstEvent[A](x: Events[A]) = filter(x, isFirst(x))
 
   ## Signal, which becomes `true` with the first event on `x`
   def hadAnyEvent[T](x: Events[T]) = merge(const(true, x), false)
@@ -326,9 +331,9 @@ module Predef {
       # `reset` and `events` latest event happen simultaneously
       else if default(time(reset) == time(events), false)
       then 1
-      # `events` contains the latest event --> increment counter
-      else last(count, events) + 1
-    , 0)
+      # `events` contains the latest event > increment counter
+      else last(count, events) + 1,
+      0)
   }
 
   ## Check if events on `e` follow the burst pattern:
@@ -340,7 +345,7 @@ module Predef {
     def burstStarts: Events[A] =
       defaultFrom(
         filter(e, last(time(burstStarts), e) < on(e, time(since)) ||
-          time(e) - last(time(burstStarts), e) >= burstLength + waitingPeriod)
+          time(e) - last(time(burstStarts), e) >= burstLength + waitingPeriod),
         e)
     eventCount(e, reset = burstStarts) <= burstAmount &&
       default(time(e) < time(burstStarts) + burstLength, true)
@@ -368,8 +373,8 @@ module Predef {
       if isNone(current)
       then previous
       else current)
-    -- Alternatively:
-    -- filter(first(stream, trigger), time(trigger) >= time(stream))
+     # Alternatively:
+     # filter(first(stream, trigger), time(trigger) >= time(stream))
 
   ## Compute the average value of all events on `x`. For every input
   ## event on `x` an output event is produced whose value is the average
@@ -384,13 +389,17 @@ module Predef {
   ## value of `false` to get a completely defined signal.
   def defined[A](a: Events[A]) = default(const(true, a), false)
 
-  def merge[T](a: Events[T], b: Events[T]) =
-    lift(a, b, (x: Option[T], y: Option[T])
+  ## Merges streams of different types, resulting in a stream that contains a unit
+  ## event whenever any of the input streams produces an event.
+  def mergeUnit[T, U](a: Events[T], b: Events[U]) = merge(const((), a), const((), b))
 
   ## Merges the given event streams. Prioritizing the event streams
   ## from the left to the right in case of simultaneous events.
-  def merge3[T](a: Events[T], b: Events[T], c: Events[T]) =
-    merge(merge(a, b), c)
+  def merge3[T](a: Events[T], b: Events[T], c: Events[T]) = merge(merge(a, b), c)
+
+  ## Merges streams of different types, resulting in a stream that contains a unit
+  ## event whenever any of the input streams produces an event.
+  def mergeUnit3[T, U, V](a: Events[T], b: Events[U], c: Events[V]) = merge3(const((), a), const((), b), const((), c))
 
   ## Merges the given event streams. Prioritizing the event streams
   ## from the left to the right in case of simultaneous events.
@@ -419,8 +428,8 @@ module Predef {
 
   ## Produce an event stream with a unit event every `delay` time units.
   ## Starting with an event at timestamp 0.
-  def period(delay: Int) = {
-    def s: Events[Int] = const(f, default(delay(s, ()), ()), f)
+  def period(freq: Int) = {
+    def s: Events[Int] = const(freq, default(delay(s, ()), ()))
     const((), s)
   }
 
@@ -429,4 +438,4 @@ module Predef {
   type List[T] = __builtin__(List)
   type Set[T] = __builtin__(Set)
   type Map[K, V] = __builtin__(Map)
-}
+#}

@@ -19,7 +19,7 @@ object Tessla {
                          parameters: Seq[Parameter],
                          returnType: Option[Type],
                          headerLoc: Location,
-                         body: Expression,
+                         body: Body,
                          loc: Location) extends Statement {
     override def toString = toString(objectNotation = false)
 
@@ -37,19 +37,45 @@ object Tessla {
     }
   }
 
+  sealed abstract class Body {
+    def loc: Location
+  }
+
+  case class ExpressionBody(exp: Expression) extends Body {
+    override def toString = exp.toString
+
+    override def loc = exp.loc
+  }
+
+  case class BuiltInBody(id: Identifier) extends Body {
+    override def toString = s"__builtin__($id)"
+
+    override def loc = id.loc
+  }
+
   case class Module(id: Identifier, contents: Seq[Statement], loc: Location) extends Statement {
     override def toString = contents.mkString(s"module $id {\n", "\n", "\n}")
 
     def name: String = id.name
   }
 
-  case class TypeDefinition(id: Identifier, typeParameters: Seq[Identifier], body: Type, loc: Location) extends Statement {
+  case class TypeDefinition(id: Identifier, typeParameters: Seq[Identifier], body: TypeBody, loc: Location) extends Statement {
     override def toString = {
       val typeParameterList =
         if (typeParameters.isEmpty) ""
         else typeParameters.mkString("[", ", ", "]")
       s"type $id$typeParameterList = $body"
     }
+  }
+
+  sealed abstract class TypeBody
+
+  case class TypeAlias(typ: Type) extends TypeBody {
+    override def toString = typ.toString
+  }
+
+  case class BuiltInType(id: Identifier) extends TypeBody {
+    override def toString = s"__builtin__($id)"
   }
 
   case class In(id: Identifier, streamType: Type, loc: Location) extends Statement {
@@ -191,8 +217,6 @@ object Tessla {
   case class StringLiteral(value: String) extends LiteralValue {
     override def toString = s""""$value""""
   }
-
-  case class BoolLiteral(value: Boolean) extends LiteralValue
 
   abstract class Argument {
     def loc: Location

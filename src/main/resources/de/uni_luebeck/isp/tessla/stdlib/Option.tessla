@@ -1,5 +1,3 @@
-include "List"
-
 module Option {
   def map[T, U](opt: Option[T], f: (T) => U): Option[U] =
     if isNone(opt)

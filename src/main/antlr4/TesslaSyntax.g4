@@ -12,8 +12,9 @@ include: 'include' file=stringLit eos;
 
 statement
     : def #Definition
-    | tessladoc+=DOCLINE* NL* 'type' name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* type eos #TypeDefinition
+    | tessladoc+=DOCLINE* NL* 'type' name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* typeBody eos #TypeDefinition
     | tessladoc+=DOCLINE* NL* 'module' name=ID NL* '{' NL* contents+=statement* NL* '}' NL* #ModuleDefinition
+    | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement
     | 'in' ID (':' type) eos #In
     | 'out' expression ('as' ID)? eos #Out
     | 'print' expression eos #Print
@@ -22,7 +23,10 @@ statement
 
 def: header=definitionHeader (':='|'=') NL* body eos;
 
-body: expression ('where' '{' NL* defs+=def+ '}')?;
+body
+    : expression ('where' '{' NL* defs+=def+ '}')? #ExpressionBody
+    | '__builtin__' '(' name=ID ')' #BuiltInBody
+    ;
 
 definitionHeader:
     tessladoc+=DOCLINE* NL*
@@ -35,6 +39,11 @@ definitionHeader:
 annotation: '@' ID NL*;
 
 param: ID (':' parameterType=type)?;
+
+typeBody
+    : type #TypeAliasBody
+    | '__builtin__' '(' name=ID ')' #BuiltInTypeBody
+    ;
 
 type
     : name=ID #SimpleType
@@ -51,8 +60,6 @@ expression
     | stringLit #StringLiteral
     | (DECINT | HEXINT) timeUnit=ID? #IntLiteral
     | FLOAT #FloatLiteral
-    | 'true' #True
-    | 'false' #False
     | '(' NL* (elems+=expression (',' NL* elems+=expression)*)? lastComma=','? NL* ')' #TupleExpression
     | '{' NL* definitions+=def+ RETURN? expression NL* '}' #Block
     | ('${' | '{') NL* (members+=memberDefinition (',' NL* members+=memberDefinition)* ','?)? NL* '}' #ObjectLiteral

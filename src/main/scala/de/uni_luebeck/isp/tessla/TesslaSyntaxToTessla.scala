@@ -34,13 +34,16 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
     )
   }
 
-  def translateBody(body: TesslaSyntax.BodyContext): Tessla.Expression = {
-    val exp = translateExpression(body.expression)
-    if (body.defs.isEmpty) {
-      exp
-    } else {
-      Tessla.Block(body.defs.asScala.map(translateDefinition), exp, Location.fromNode(body))
-    }
+  def translateBody(body: TesslaSyntax.BodyContext): Tessla.Body = body match {
+    case expBody: TesslaSyntax.ExpressionBodyContext =>
+      val exp = translateExpression(expBody.expression)
+      if (expBody.defs.isEmpty) {
+        Tessla.ExpressionBody(exp)
+      } else {
+        Tessla.ExpressionBody(Tessla.Block(expBody.defs.asScala.map(translateDefinition), exp, Location.fromNode(body)))
+      }
+    case builtIn: TesslaSyntax.BuiltInBodyContext =>
+      Tessla.BuiltInBody(mkID(builtIn.name))
   }
 
   class StatementVisitor(tokens: CommonTokenStream) extends TesslaVisitor[Tessla.Statement] {
@@ -71,8 +74,14 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
 
     override def visitTypeDefinition(typeDef: TesslaSyntax.TypeDefinitionContext) = {
       val typeParams = typeDef.typeParameters.asScala.map(mkID)
-      val loc = Location.fromToken(typeDef.TYPE).merge(Location.fromNode(typeDef.`type`))
-      Tessla.TypeDefinition(mkID(typeDef.name), typeParams, translateType(typeDef.`type`), loc)
+      val loc = Location.fromToken(typeDef.TYPE).merge(Location.fromNode(typeDef.typeBody))
+      val body = typeDef.typeBody match {
+        case typ: TesslaSyntax.TypeAliasBodyContext =>
+          Tessla.TypeAlias(translateType(typ.`type`))
+        case builtIn: TesslaSyntax.BuiltInTypeBodyContext =>
+          Tessla.BuiltInType(mkID(builtIn.name))
+      }
+      Tessla.TypeDefinition(mkID(typeDef.name), typeParams, body, loc)
     }
 
     override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext) = {
@@ -193,9 +202,53 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
       Tessla.Lambda(lambda.params.asScala.map(translateParameter), headerLoc, body, Location.fromNode(lambda))
     }
 
+    val unaryOperators = Map(
+      "!" -> "__not__",
+      "-" -> "__negate__",
+      "-." -> "__fnegate__",
+      "~" -> "__bitflip__"
+    )
+
+    val binaryOperators = Map(
+      "&&" -> "__and__",
+      "||" -> "__or__",
+      "==" -> "__eq__",
+      "!=" -> "__neq__",
+      ">" -> "__gt__",
+      "<" -> "__lt__",
+      ">=" -> "__geq__",
+      "<=" -> "__leq__",
+      ">." -> "__fgt__",
+      "<." -> "__flt__",
+      ">=." -> "__fgeq__",
+      "<=." -> "__fleq__",
+      "+" -> "__add__",
+      "-" -> "__sub__",
+      "*" -> "__mul__",
+      "/" -> "__div__",
+      "%" -> "__mod__",
+      "&" -> "__bitand__",
+      "|" -> "__bitor__",
+      "^" -> "__bitxor__",
+      "<<" -> "__leftshift__",
+      ">>" -> "__rightshift__",
+      "+." -> "__fadd__",
+      "-." -> "__fsub__",
+      "*." -> "__fmul__",
+      "/." -> "__fdiv__"
+    )
+
+    def translateOperator(operator: Token, operatorMap: Map[String, String]) = {
+      val loc = Location.fromToken(operator)
+      val functionName = Tessla.Identifier(operatorMap(operator.getText), loc)
+      // TODO: Once the operators are properly located in Predef
+      // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("Predef", loc)), functionName, loc)
+      Tessla.Variable(functionName)
+    }
+
     override def visitUnaryExpression(exp: TesslaSyntax.UnaryExpressionContext) = {
       Tessla.MacroCall(
-        Tessla.Variable(Tessla.Identifier(s"unary ${exp.op.getText}", Location.fromToken(exp.op))),
+        translateOperator(exp.op, unaryOperators),
         Seq(),
         Seq(Tessla.PositionalArgument(translateExpression(exp.expression))),
         Location.fromNode(exp)
@@ -204,7 +257,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
 
     override def visitInfixExpression(exp: TesslaSyntax.InfixExpressionContext) = {
       Tessla.MacroCall(
-        Tessla.Variable(mkID(exp.op)),
+        translateOperator(exp.op, binaryOperators),
         Seq(),
         Seq(Tessla.PositionalArgument(translateExpression(exp.lhs)), Tessla.PositionalArgument(translateExpression(exp.rhs))),
         Location.fromNode(exp)
@@ -220,7 +273,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
         Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
       } else {
         Tessla.MacroCall(
-          Tessla.Variable(Tessla.Identifier("if then else", Location.fromToken(ite.ifToken))),
+          translateOperator(ite.ifToken, Map("if" -> "__ite__")),
           Seq(),
           Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
           loc
@@ -230,14 +283,6 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
 
     override def visitMemberAccess(ma: TesslaSyntax.MemberAccessContext) = {
       Tessla.MemberAccess(translateExpression(ma.obj), mkID(ma.fieldName), Location.fromNode(ma))
-    }
-
-    override def visitTrue(trueExp: TesslaSyntax.TrueContext) = {
-      Tessla.Literal(Tessla.BoolLiteral(true), Location.fromNode(trueExp))
-    }
-
-    override def visitFalse(falseExp: TesslaSyntax.FalseContext) = {
-      Tessla.Literal(Tessla.BoolLiteral(false), Location.fromNode(falseExp))
     }
 
     override def visitIntLiteral(intLit: TesslaSyntax.IntLiteralContext) = {

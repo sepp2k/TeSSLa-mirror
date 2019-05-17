@@ -1,16 +1,32 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Errors.InternalError
+import de.uni_luebeck.isp.tessla.util.mapValues
 import scala.collection.mutable
 
 abstract class FlatTessla extends HasUniqueIdentifiers {
   case class Specification(globalDefs: Definitions, outStreams: Seq[OutStream], outAllLocation: Option[Location],
-                           stdlibNames: Map[String, Identifier]) {
+                           globalNames: Map[String, Identifier]) {
     override def toString = {
       val outAllString = if (outAll) "\nout *" else ""
       s"$globalDefs\n${outStreams.mkString("\n")}$outAllString"
     }
 
     def outAll = outAllLocation.isDefined
+
+    def lookupID(qname: String*): Option[Identifier] = lookupID(globalNames, qname)
+
+    private def lookupID(names: Map[String, Identifier], qname: Seq[String]): Option[Identifier] = qname match {
+      case Seq() => throw InternalError("Called lookup ID with empty list")
+      case Seq(name) => names.get(name)
+      case Seq(name, rest @ _*) => names.get(name).flatMap { id =>
+        globalDefs.resolveVariable(id).flatMap {
+          case VariableEntry(_, mod: ObjectLiteral, _, _) =>
+            lookupID(mapValues(mod.members)(_.id), rest)
+          case _ => None
+        }
+      }
+    }
   }
 
   type TypeAnnotation
@@ -69,8 +85,8 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     }
   }
 
-  case class BuiltInOperator(builtIn: BuiltIn) extends Expression {
-    override def loc = Location.builtIn
+  case class BuiltInOperator(name: String, loc: Location) extends Expression {
+    override def toString = s"__builtin__($name)"
   }
 
   case class InputStream(name: String, streamType: Type, typeLoc: Location, loc: Location) extends Expression {
@@ -113,66 +129,20 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
   sealed abstract class Type {
     def isValueType: Boolean
+    def isStreamType = false
+    def isLiftableFunctionType = false
   }
 
-  case object IntType extends Type {
-    override def isValueType = true
+  case class BuiltInType(name: String, typeArgs: Seq[Type]) extends Type {
+    //TODO: Make this less stupid
+    override def isValueType = name != "Events"
 
-    override def toString = "Int"
-  }
+    override def isStreamType = name == "Events"
 
-  case object FloatType extends Type {
-    override def isValueType = true
-
-    override def toString = "Float"
-  }
-
-  case object StringType extends Type {
-    override def isValueType = true
-
-    override def toString = "String"
-  }
-
-  case object BoolType extends Type {
-    override def isValueType = true
-
-    override def toString = "Bool"
-  }
-
-  case class OptionType(elementType: Type) extends Type {
-    override def isValueType = true
-
-    override def toString = s"Option[$elementType]"
-  }
-
-  case object CtfType extends Type {
-    override def isValueType = true
-
-    override def toString = "CTF"
-  }
-
-  case class MapType(keyType: Type, valueType: Type) extends Type {
-    override def isValueType = true
-
-    override def toString = s"Map[$keyType, $valueType]"
-  }
-
-  case class SetType(elementType: Type) extends Type {
-    override def isValueType = true
-
-    override def toString = s"Set[$elementType]"
-  }
-
-  case class ListType(elementType: Type) extends Type {
-    override def isValueType = true
-
-    override def toString = s"List[$elementType]"
-  }
-
-  case class StreamType(elementType: Type) extends Type {
-    override def isValueType = false
-
-    override def toString = s"Events[$elementType]"
+    override def toString = {
+      if (typeArgs.isEmpty) name
+      else typeArgs.mkString(s"$name[", ", ", "]")
+    }
   }
 
   case class ObjectType(memberTypes: Map[String, Type], isOpen: Boolean) extends Type {
@@ -195,6 +165,8 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   case class FunctionType(typeParameters: Seq[Identifier], parameterTypes: Seq[Type], returnType: Type,
                           isLiftable: Boolean) extends Type {
     override def isValueType = false
+
+    override def isLiftableFunctionType = isLiftable
 
     override def toString = {
       val annotationString = if (isLiftable) "@liftable " else ""

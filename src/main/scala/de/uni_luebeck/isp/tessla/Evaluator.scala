@@ -64,7 +64,7 @@ object Evaluator {
                             arguments: Seq[TesslaCore.ValueOrError],
                             loc: Location): TesslaCore.ValueOrError =
     if (op.args.isEmpty) {
-      evalPrimitiveOperator(op.op, arguments, loc)
+      evalPrimitiveOperator(op.name, arguments, loc)
     } else {
       def f(curried: Int, arg: Int, acc: Seq[TesslaCore.ValueOrError]): Seq[TesslaCore.ValueOrError] =
         if (op.args.contains(curried)) {
@@ -74,10 +74,10 @@ object Evaluator {
         } else {
           acc
         }
-      evalPrimitiveOperator(op.op, f(0, 0, Seq()), loc)
+      evalPrimitiveOperator(op.name, f(0, 0, Seq()), loc)
     }
 
-  def evalPrimitiveOperator(op: BuiltIn.PrimitiveOperator,
+  def evalPrimitiveOperator(name: String,
                             arguments: Seq[TesslaCore.ValueOrError],
                             loc: Location): TesslaCore.ValueOrError = {
     def binIntOp(op: (BigInt, BigInt) => BigInt) = {
@@ -98,87 +98,81 @@ object Evaluator {
 
     // TODO: Replace try-catch using ValueOrError.mapValue (or add ValueOrError.flatMapValue if needed)
     try {
-      op match {
-        case BuiltIn.Add => binIntOp(_ + _)
-        case BuiltIn.Sub => binIntOp(_ - _)
-        case BuiltIn.Mul => binIntOp(_ * _)
-        case BuiltIn.Div =>
+      name match {
+        case "__add__" => binIntOp(_ + _)
+        case "__sub__" => binIntOp(_ - _)
+        case "__mul__" => binIntOp(_ * _)
+        case "__div__" =>
           val x = getInt(arguments(0))
           val y = getInt(arguments(1))
           if (y == 0) TesslaCore.Error(DivideByZero(arguments(1).forceValue.loc))
           else TesslaCore.IntValue(x / y, loc)
-        case BuiltIn.FAdd => binFloatOp(_ + _)
-        case BuiltIn.FSub => binFloatOp(_ - _)
-        case BuiltIn.FMul => binFloatOp(_ * _)
-        case BuiltIn.FDiv => binFloatOp(_ / _)
-        case BuiltIn.Mod =>
+        case "__mod__" =>
           val x = getInt(arguments(0))
           val y = getInt(arguments(1))
           if (y == 0) TesslaCore.Error(DivideByZero(arguments(1).forceValue.loc))
           else TesslaCore.IntValue(x % y, loc)
-        case BuiltIn.LeftShift => binIntOp(_ << _.toInt)
-        case BuiltIn.RightShift => binIntOp(_ >> _.toInt)
-        case BuiltIn.BitAnd => binIntOp(_ & _)
-        case BuiltIn.BitOr => binIntOp(_ | _)
-        case BuiltIn.BitXor => binIntOp(_ ^ _)
-        case BuiltIn.BitFlip => TesslaCore.IntValue(~getInt(arguments(0)), loc)
-        case BuiltIn.Negate => TesslaCore.IntValue(-getInt(arguments(0)), loc)
-        case BuiltIn.FNegate => TesslaCore.FloatValue(-getFloat(arguments(0)), loc)
-        case BuiltIn.Eq => TesslaCore.BoolValue(arguments(0).forceValue == arguments(1).forceValue, loc)
-        case BuiltIn.Neq => TesslaCore.BoolValue(arguments(0).forceValue != arguments(1).forceValue, loc)
-        case BuiltIn.Lt => binIntComp(_ < _)
-        case BuiltIn.Lte => binIntComp(_ <= _)
-        case BuiltIn.Gt => binIntComp(_ > _)
-        case BuiltIn.Gte => binIntComp(_ >= _)
-        case BuiltIn.FLt => binFloatComp(_ < _)
-        case BuiltIn.FLte => binFloatComp(_ <= _)
-        case BuiltIn.FGt => binFloatComp(_ > _)
-        case BuiltIn.FGte => binFloatComp(_ >= _)
-        case BuiltIn.And => TesslaCore.BoolValue(getBool(arguments(0)) && getBool(arguments(1)), loc)
-        case BuiltIn.Or => TesslaCore.BoolValue(getBool(arguments(0)) || getBool(arguments(1)), loc)
-        case BuiltIn.Not => TesslaCore.BoolValue(!getBool(arguments(0)), loc)
-        case BuiltIn.IfThenElse =>
+        case "__fadd__" => binFloatOp(_ + _)
+        case "__fsub__" => binFloatOp(_ - _)
+        case "__fmul__" => binFloatOp(_ * _)
+        case "__fdiv__" => binFloatOp(_ / _)
+        case "__leftshift__" => binIntOp(_ << _.toInt)
+        case "__rightshift__" => binIntOp(_ >> _.toInt)
+        case "__bitand__" => binIntOp(_ & _)
+        case "__bitor__" => binIntOp(_ | _)
+        case "__bitxor__" => binIntOp(_ ^ _)
+        case "__bitflip__" => TesslaCore.IntValue(~getInt(arguments(0)), loc)
+        case "__negate__" => TesslaCore.IntValue(-getInt(arguments(0)), loc)
+        case "__fnegate__" => TesslaCore.FloatValue(-getFloat(arguments(0)), loc)
+        case "__eq__" => TesslaCore.BoolValue(arguments(0).forceValue == arguments(1).forceValue, loc)
+        case "__neq__" => TesslaCore.BoolValue(arguments(0).forceValue != arguments(1).forceValue, loc)
+        case "__lt__" => binIntComp(_ < _)
+        case "__leq__" => binIntComp(_ <= _)
+        case "__gt__" => binIntComp(_ > _)
+        case "__geq__" => binIntComp(_ >= _)
+        case "__flt__" => binFloatComp(_ < _)
+        case "__fleq__" => binFloatComp(_ <= _)
+        case "__fgt__" => binFloatComp(_ > _)
+        case "__fgeq__" => binFloatComp(_ >= _)
+        case "__and__" => TesslaCore.BoolValue(getBool(arguments(0)) && getBool(arguments(1)), loc)
+        case "__or__" => TesslaCore.BoolValue(getBool(arguments(0)) || getBool(arguments(1)), loc)
+        case "__not__" => TesslaCore.BoolValue(!getBool(arguments(0)), loc)
+        case "__ite__" =>
           if (getBool(arguments(0))) arguments(1)
           else arguments(2)
-        case BuiltIn.First =>
-          arguments(0)
-        case BuiltIn.Min =>
-          binIntOp(_ min _)
-        case BuiltIn.Max =>
-          binIntOp(_ max _)
-        case BuiltIn.Pow =>
+        case "pow" =>
           binFloatOp(math.pow)
-        case BuiltIn.Log =>
+        case "log" =>
           binFloatOp((x, base) => math.log(x) / math.log(base))
-        case BuiltIn.Sin =>
+        case "sin" =>
           TesslaCore.FloatValue(Math.sin(getFloat(arguments(0))), loc)
-        case BuiltIn.Cos =>
+        case "cos" =>
           TesslaCore.FloatValue(Math.cos(getFloat(arguments(0))), loc)
-        case BuiltIn.Tan =>
+        case "tan" =>
           TesslaCore.FloatValue(Math.tan(getFloat(arguments(0))), loc)
-        case BuiltIn.Atan =>
+        case "atan" =>
           TesslaCore.FloatValue(Math.atan(getFloat(arguments(0))), loc)
-        case BuiltIn.IntToFloat =>
+        case "intToFloat" =>
           TesslaCore.FloatValue(getInt(arguments(0)).toDouble, loc)
-        case BuiltIn.FloatToInt =>
+        case "floatToInt" =>
           TesslaCore.IntValue(BigDecimal(getFloat(arguments(0))).toBigInt, loc)
-        case BuiltIn.None =>
+        case "None" =>
           TesslaCore.TesslaOption(None, loc)
-        case BuiltIn.Some =>
+        case "Some" =>
           TesslaCore.TesslaOption(Some(arguments(0).forceValue), loc)
-        case BuiltIn.IsNone =>
+        case "isNone" =>
           TesslaCore.BoolValue(getOption(arguments(0)).value.isEmpty, loc)
-        case BuiltIn.GetSome =>
+        case "getSome" =>
           getOption(arguments(0)).value match {
             case None => throw CannotGetValueOfNone(loc)
             case Some(value) => value
           }
-        case BuiltIn.MapEmpty =>
+        case "Map_empty" =>
           TesslaCore.TesslaMap(Map(), loc)
-        case BuiltIn.MapAdd =>
+        case "Map_add" =>
           val map = getMap(arguments(0))
           TesslaCore.TesslaMap(map.value + (arguments(1).forceValue -> arguments(2).forceValue), loc)
-        case BuiltIn.MapGet =>
+        case "Map_get" =>
           val map = getMap(arguments(0))
           val key = arguments(1).forceValue
           try {
@@ -187,85 +181,71 @@ object Evaluator {
             case _: NoSuchElementException =>
               throw KeyNotFound(key.forceValue, map.value, loc)
           }
-        case BuiltIn.MapContains =>
+        case "Map_contains" =>
           TesslaCore.BoolValue(getMap(arguments(0)).value.contains(arguments(1).forceValue), loc)
-        case BuiltIn.MapRemove =>
+        case "Map_remove" =>
           val map = getMap(arguments(0))
           TesslaCore.TesslaMap(map.value - arguments(1).forceValue, loc)
-        case BuiltIn.MapSize =>
+        case "Map_size" =>
           val map = getMap(arguments(0))
           TesslaCore.IntValue(map.value.size, loc)
-        case BuiltIn.SetEmpty =>
+        case "Set_empty" =>
           TesslaCore.TesslaSet(Set(), loc)
-        case BuiltIn.SetAdd =>
+        case "Set_add" =>
           val set = getSet(arguments(0))
           TesslaCore.TesslaSet(set.value + arguments(1).forceValue, loc)
-        case BuiltIn.SetContains =>
+        case "Set_contains" =>
           TesslaCore.BoolValue(getSet(arguments(0)).value.contains(arguments(1).forceValue), loc)
-        case BuiltIn.SetRemove =>
+        case "Set_remove" =>
           val set = getSet(arguments(0))
           TesslaCore.TesslaSet(set.value - arguments(1).forceValue, loc)
-        case BuiltIn.SetSize =>
+        case "Set_size" =>
           val set = getSet(arguments(0))
           TesslaCore.IntValue(set.value.size, loc)
-        case BuiltIn.SetUnion =>
+        case "Set_union" =>
           val set1 = getSet(arguments(0))
           val set2 = getSet(arguments(1))
           TesslaCore.TesslaSet(set1.value | set2.value, loc)
-        case BuiltIn.SetIntersection =>
+        case "Set_intersection" =>
           val set1 = getSet(arguments(0))
           val set2 = getSet(arguments(1))
           TesslaCore.TesslaSet(set1.value & set2.value, loc)
-        case BuiltIn.SetFold =>
+        case "Set_fold" =>
           val set = getSet(arguments(0)).value
           val z = arguments(1)
           val f = arguments(2)
           set.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc))
-        case BuiltIn.ListEmpty =>
+        case "List_empty" =>
           TesslaCore.TesslaList(Vector(), loc)
-        case BuiltIn.ListSize =>
+        case "List_size" =>
           val list = getList(arguments(0))
           TesslaCore.IntValue(list.value.size, loc)
-        case BuiltIn.ListAppend =>
+        case "List_append" =>
           val list = getList(arguments(0))
           TesslaCore.TesslaList(list.value :+ arguments(1).forceValue, loc)
-        case BuiltIn.ListPrepend =>
+        case "List_prepend" =>
           val list = getList(arguments(0))
           TesslaCore.TesslaList(arguments(1).forceValue +: list.value, loc)
-        case BuiltIn.ListTail =>
+        case "List_tail" =>
           val list = getList(arguments(0))
           if (list.value.isEmpty) {
             list
           } else {
             TesslaCore.TesslaList(list.value.tail, loc)
           }
-        case BuiltIn.ListInit =>
+        case "List_init" =>
           val list = getList(arguments(0))
           if (list.value.isEmpty) {
             list
           } else {
             TesslaCore.TesslaList(list.value.init, loc)
           }
-        case BuiltIn.ListHead =>
-          val list = getList(arguments(0))
-          if (list.value.isEmpty) {
-            throw HeadOfEmptyList(loc)
-          } else {
-            list.value.head.withLoc(loc)
-          }
-        case BuiltIn.ListLast =>
-          val list = getList(arguments(0))
-          if (list.value.isEmpty) {
-            throw LastOfEmptyList(loc)
-          } else {
-            list.value.last.withLoc(loc)
-          }
-        case BuiltIn.ListFold =>
+        case "List_fold" =>
           val list = getList(arguments(0)).value
           val z = arguments(1)
           val f = arguments(2)
           list.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc))
-        case BuiltIn.ListGet =>
+        case "List_get" =>
           val list = getList(arguments(0))
           val index = getInt(arguments(1)).toInt
           try {
@@ -274,23 +254,19 @@ object Evaluator {
             case _: IndexOutOfBoundsException =>
               throw IndexOutOfRange(index, list.value, loc)
           }
-        case BuiltIn.String_concat =>
+        case "String_concat" =>
           val s1 = getString(arguments(0))
           val s2 = getString(arguments(1))
           TesslaCore.StringValue(s1 + s2, loc)
-        case BuiltIn.ToString =>
+        case "toString" =>
           TesslaCore.StringValue(evalToString(arguments(0)), loc)
-        case BuiltIn.Format =>
+        case "String_format" =>
           TesslaCore.StringValue(String.format(Locale.ROOT, getString(arguments(0)), getFormatArg(arguments(1))), loc)
-        case BuiltIn.FormatInt =>
-          TesslaCore.StringValue(String.format(Locale.ROOT, getString(arguments(0)), getFormatArg(arguments(1))), loc)
-        case BuiltIn.FormatFloat =>
-          TesslaCore.StringValue(String.format(Locale.ROOT, getString(arguments(0)), getFormatArg(arguments(1))), loc)
-        case BuiltIn.CtfGetInt =>
+        case "CTF_getInt" =>
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))
           TesslaCore.IntValue(Ctf.getInt(composite, key), loc)
-        case BuiltIn.CtfGetString =>
+        case "CTF_getString" =>
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))
           TesslaCore.StringValue(Ctf.getString(composite, key), loc)

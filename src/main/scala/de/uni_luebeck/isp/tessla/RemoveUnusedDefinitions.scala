@@ -73,27 +73,16 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
       case TesslaCore.DefaultFrom(values, defaults, _) =>
         usageRef(values)
         usageRef(defaults)
-      case TesslaCore.Const(_, stream, _) =>
-        usageRef(stream)
       case TesslaCore.Last(values, clock, _) =>
         usageRef(values)
         usageRef(clock)
-      case TesslaCore.DelayedLast(values, delays, _) =>
-        usageRef(values)
-        usageRef(delays)
       case TesslaCore.Delay(delays, resets, _) =>
         usageRef(delays)
         usageRef(resets)
       case TesslaCore.Time(values, _) =>
         usageRef(values)
-      case op: TesslaCore.StdLibUnaryOp =>
-        usageRef(op.stream)
-      case TesslaCore.Merge(arg1, arg2, _) =>
-        usageRef(arg1)
-        usageRef(arg2)
-      case TesslaCore.Filter(events, condition, _) =>
-        usageRef(events)
-        usageRef(condition)
+      case c: TesslaCore.CustomBuiltInCall =>
+        c.streamArgs.foreach(usageRef)
     }
     spec.outStreams.foreach(usageOut)
 

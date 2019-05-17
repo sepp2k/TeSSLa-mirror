@@ -97,9 +97,14 @@ object TesslaDoc {
           loc = Location.fromNode(definition)
         )
         val body = definition.body
-        val whereLoc = Option(body.LBRACE).map(lb => Location.fromToken(lb).merge(Location.fromToken(body.RBRACE)))
-        val whereDefs = whereLoc.map(loc => body.defs.asScala.flatMap(new StatementVisitor(Local(loc))))
-        doc +: (this(body.expression) ++ whereDefs.getOrElse(Seq()))
+        body match {
+          case body: TesslaSyntax.ExpressionBodyContext =>
+            val whereLoc = Option(body.LBRACE).map(lb => Location.fromToken(lb).merge(Location.fromToken(body.RBRACE)))
+            val whereDefs = whereLoc.map(loc => body.defs.asScala.flatMap(new StatementVisitor(Local(loc))))
+            doc +: (this(body.expression) ++ whereDefs.getOrElse(Seq()))
+          case _ =>
+            Seq(doc)
+        }
       }
 
       override def visitTypeDefinition(typeDef: TesslaSyntax.TypeDefinitionContext) = {

@@ -10,7 +10,9 @@ object Compiler {
   def instantiatePipeline(options: Options): TranslationPhase[CharStream, TesslaCore.Specification] = {
     new TesslaParser.WithIncludes(options.resolveInclude)
       .andThen(TesslaSyntaxToTessla)
+//      .andThen(new Printer[Tessla.Specification])
       .andThen(Flattener)
+//      .andThen(new Printer[FlatTessla.Specification])
       .andThen(TypeChecker)
       .andThen(new ConstantEvaluator(options.timeUnit))
       .andThen(CycleDetection)

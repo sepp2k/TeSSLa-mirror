@@ -125,10 +125,7 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
       }
 
       def getOperator(name: String, loc: Location): TesslaCore.BuiltInOperator = {
-        BuiltIn.builtIns.get(name) match {
-          case Some(prim: BuiltIn.PrimitiveOperator) => TesslaCore.BuiltInOperator(prim, loc)
-          case _ => throw InternalError("Unknown or non-primitive operator", loc)
-        }
+        TesslaCore.BuiltInOperator(name, loc)
       }
 
       override def visitUnaryExpression(exp: UnaryExpressionContext) = {

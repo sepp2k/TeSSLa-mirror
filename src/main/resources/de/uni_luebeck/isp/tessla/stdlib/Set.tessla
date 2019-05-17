@@ -26,15 +26,4 @@ module Set {
     def set: Events[Set[T]] = default(add(last(set, value), value), empty[T])
     set
   }
-
-  def collectOrRemove[T](addValue: Events[T], removeValue: Events[T]) = {
-    def trigger = merge(addValue, removeValue)
-    def old = last(set, trigger)
-    def operation = merge(
-      if time(trigger) == time(addValue) then add(old, addValue),
-      if time(trigger) == time(removeValue) then remove(old, removeValue)
-    )
-    def set: Events[Set[T]] = default(operation, empty[T])
-    set
-  }
 }

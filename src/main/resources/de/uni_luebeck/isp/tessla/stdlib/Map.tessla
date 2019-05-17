@@ -1,23 +1,23 @@
 module Map {
-  def empty[K, V]: Map[K, V] = __builtins__(Map_empty)
+  def empty[K, V]: Map[K, V] = __builtin__(Map_empty)
 
   @liftable
-  def add[K, V](map: Map[K, V], key: K, value: V): Map[K, V] = __builtins__(Map_add)
+  def add[K, V](map: Map[K, V], key: K, value: V): Map[K, V] = __builtin__(Map_add)
 
   @liftable
-  def contains[K, V](map: Map[K, V], key: K): Bool = __builtins__(Map_contains)
+  def contains[K, V](map: Map[K, V], key: K): Bool = __builtin__(Map_contains)
 
   @liftable
-  def get[K, V](map: Map[K, V], key: K): V = __builtins__(Map_get)
+  def get[K, V](map: Map[K, V], key: K): V = __builtin__(Map_get)
 
   @liftable
-  def remove[K, V](map: Map[K, V], key: K): Map[K, V] = __builtins__(Map_remove)
+  def remove[K, V](map: Map[K, V], key: K): Map[K, V] = __builtin__(Map_remove)
 
   @liftable
   def size[K, V](map: Map[K, V]): Int = __builtin__(Map_size)
 
   @liftable
-  def getOrElse[A,B](map: Map[K, V], key: K, default: V): V =
+  def getOrElse[K,V](map: Map[K, V], key: K, default: V): V =
     if contains(map, key)
     then get(map, key)
     else default
@@ -26,13 +26,15 @@ module Map {
   def inc[K](counts: Map[K, Int], key: K): Map[K, Int] =
     add(counts, key, getOrElse(counts, key, 0) + 1)
 
-  def collectCount[T](events: Events[T]): Map[T, Int] =
-    Predef.fold(inc, events, empty[T,Int])
+  def collectCount[T](events: Events[T]): Events[Map[T, Int]] =
+    Predef.fold((m: Events[Map[T, Int]], k: Events[T]) => inc(m, k),
+                events,
+                empty[T,Int])
 
-  def collectMax[K](key: Events[K], value: Events[Int]): Map[K, Int] = {
+  def collectMax[K](key: Events[K], value: Events[Int]): Events[Map[K, Int]] = {
     def oldMap = last(map, value)
     def maxValue: Events[Int] = max(getOrElse(oldMap, on(value, key), value), value)
-    def map: Events[Map[A, Int]] = default(add(oldMap, on(value, key), maxValue), empty[A, Int])
+    def map: Events[Map[K, Int]] = default(add(oldMap, on(value, key), maxValue), empty[K, Int])
     map
   }
 
@@ -49,14 +51,15 @@ module Map {
       default(
         if !contains(last(map, x), x)
         then last(counter, x) + 1
-        else last(counter, x)
-      , 0)
+        else last(counter, x),
+        0)
 
     def map: Events[Map[A, Int]] =
       default(
         if !contains(last(map, x), x)
         then add(last(map, x), x, counter)
-        else last(map, x)
-      , empty[A, Int])
+        else last(map, x),
+        empty[A, Int])
     map
   }
+}

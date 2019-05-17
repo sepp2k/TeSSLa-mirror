@@ -40,15 +40,6 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     }
   }
 
-  def filter(events: Stream, condition: Stream): Stream = {
-    val latestCondition = merge(condition, last(condition, events))
-    lift(Seq(events, latestCondition)) {
-      case Seq(value, Some(TesslaCore.BoolValue(true, _))) =>
-        value
-      case _ => None
-    }
-  }
-
   def slift(streams: Seq[Stream])(op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream = {
     val ticks = lift(streams) { _ =>
       Some(TesslaCore.TesslaObject(Map(), Location.builtIn))
@@ -64,40 +55,6 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       }
     }
   }
-
-  // def foldTotal[A](x: Events[A], f: (A, A) => A) = {
-  //   def y: Events[A] := merge(lift(last(y, x), x, (a: Option[A], b: Option[A]) =>
-  //     if isNone(a) || isNone(b) then None[A]
-  //     else Some(f(getSome(a), getSome(b)))), x)
-  //   y
-  // }
-  def foldTotal(x: Stream, f: (TesslaCore.Value, TesslaCore.Value) => TesslaCore.ValueOrError): Stream = {
-    lazy val y: Stream = merge(lift(Seq(last(y, x), x)) {
-      case Seq(Some(a), Some(b)) =>
-        Some(a.mapValue(aValue => b.mapValue(bValue => f(aValue, bValue))))
-      case _ => None
-    }, x)
-    y
-  }
-
-  // def foldTotalWithInit[A,B](x: Events[A], init: B, f: (B, A) => B) = {
-  //   def y: Events[B] := default(lift(last(y, x), x, (a: Option[B], b: Option[A]) =>
-  //     if isNone(b) then None[B]
-  //     else if isNone(a) then Some(f(init, getSome(b)))
-  //     else Some(f(getSome(a), getSome(b)))), init)
-  //   y
-  // }
-  def foldTotal(x: Stream, f: (TesslaCore.Value, TesslaCore.Value) => TesslaCore.ValueOrError, init: TesslaCore.ValueOrError): Stream = {
-    lazy val y: Stream = lift(Seq(last(y, x), x)) {
-      case Seq(None, Some(b)) =>
-        Some(init.mapValue(aValue => b.mapValue(bValue => f(aValue, bValue))))
-      case Seq(Some(a), Some(b)) =>
-        Some(a.mapValue(aValue => b.mapValue(bValue => f(aValue, bValue))))
-      case _ => None
-    }.default(init)
-    y
-  }
-
 
   private def eval(exp: TesslaCore.Expression): Stream = exp match {
     case TesslaCore.SignalLift(op, argStreams, loc) =>
@@ -130,40 +87,14 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       evalStream(values).default(defaultValue)
     case TesslaCore.DefaultFrom(values, defaults, _) =>
       evalStream(values).default(evalStream(defaults))
-    case TesslaCore.Const(value, stream, _) =>
-      slift(Seq(evalStream(stream))) { _ =>
-        Some(value)
-      }
     case TesslaCore.Last(values, clock, _) =>
       last(evalStream(values), evalStream(clock))
-    case TesslaCore.DelayedLast(values, delays, _) =>
-      delayedLast(evalStream(delays), evalStream(values))
     case TesslaCore.Delay(delays, resets, _) =>
       delay(evalStream(delays), evalStream(resets))
     case TesslaCore.Time(values, loc) =>
       evalStream(values).time(loc)
-    case TesslaCore.StdLibCount(values, loc) =>
-      foldTotal(evalStream(values),
-        (a,_) => TesslaCore.IntValue(getInt(a) + 1, loc),
-        TesslaCore.IntValue(0, loc))
-    case TesslaCore.StdLibSum(values, loc) =>
-      foldTotal(evalStream(values),
-        (a,b) => TesslaCore.IntValue(getInt(b) + getInt(a), loc),
-        TesslaCore.IntValue(0, loc))
-    case TesslaCore.StdLibMinimum(values, loc) =>
-      foldTotal(evalStream(values),
-        (a,b) => TesslaCore.IntValue(getInt(a) min getInt(b), loc))
-    case TesslaCore.StdLibMaximum(values, loc) =>
-      foldTotal(evalStream(values),
-        (a,b) => TesslaCore.IntValue(getInt(a) max getInt(b), loc))
-    case TesslaCore.Merge(arg1, arg2, _) =>
-      val stream1 = evalStream(arg1)
-      val stream2 = evalStream(arg2)
-      merge(stream1, stream2)
-    case TesslaCore.Filter(eventsArg, conditionArg, _) =>
-      val eventsStream = evalStream(eventsArg)
-      val conditionStream = evalStream(conditionArg)
-      filter(eventsStream, conditionStream)
+    case customCall: TesslaCore.CustomBuiltInCall =>
+      throw InternalError(s"The interpreter does not support any custom built-ins (${customCall.name})")
   }
 
   def getInt(value: TesslaCore.Value): BigInt = value match {

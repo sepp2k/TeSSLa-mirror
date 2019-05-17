@@ -12,10 +12,6 @@ object DepthChecker {
       s.expression match {
         case l: TesslaCore.Last =>
           Some(nestingDepth(streams, l.values, memTable))
-        case dl: TesslaCore.DelayedLast =>
-          Some(Math.max(
-            nestingDepth(streams, dl.values, memTable),
-            nestingDepth(streams, dl.delays, memTable)))
         case d: TesslaCore.Delay =>
           Some(nestingDepth(streams, d.delays, memTable))
         case _ =>
@@ -47,18 +43,10 @@ object DepthChecker {
             Math.max(visitChild(d.valueStream), visitChild(d.defaultStream))
           case l: TesslaCore.Last =>
             visitChild(l.clock)
-          case m: TesslaCore.Merge =>
-            Math.max(visitChild(m.stream1), visitChild(m.stream2))
-          case f: TesslaCore.Filter =>
-            Math.max(visitChild(f.events), visitChild(f.condition))
-          case c: TesslaCore.Const =>
-            visitChild(c.stream)
-          case _: TesslaCore.DelayedLast =>
-            0
           case d: TesslaCore.Delay =>
             visitChild(d.resets)
-          case c: TesslaCore.StdLibUnaryOp =>
-            visitChild(c.stream)
+          case c: TesslaCore.CustomBuiltInCall =>
+            c.streamArgs.map(visitChild).max
         }
         memoized(s.id) = 1 + childDepth
         1 + childDepth

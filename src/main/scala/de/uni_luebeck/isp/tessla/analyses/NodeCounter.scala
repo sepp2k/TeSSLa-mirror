@@ -38,18 +38,10 @@ object NodeCounter {
             visitChild(d.valueStream) + visitChild(d.defaultStream)
           case l: TesslaCore.Last =>
             visitChild(l.clock) + visitChild(l.values)
-          case m: TesslaCore.Merge =>
-            visitChild(m.stream1) + visitChild(m.stream2)
-          case f: TesslaCore.Filter =>
-            visitChild(f.events) + visitChild(f.condition)
-          case c: TesslaCore.Const =>
-            visitChild(c.stream)
-          case dl: TesslaCore.DelayedLast =>
-            visitChild(dl.delays) + visitChild(dl.values)
           case d: TesslaCore.Delay =>
             visitChild(d.resets) + visitChild(d.delays)
-          case c: TesslaCore.StdLibUnaryOp =>
-            visitChild(c.stream)
+          case c: TesslaCore.CustomBuiltInCall =>
+            c.streamArgs.map(visitChild).sum
         }
         1 + childDepth
     }

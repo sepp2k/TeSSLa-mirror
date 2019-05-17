@@ -34,7 +34,7 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
                 case None => (newArgs :+ arg, newCurry)
               }
             }
-            val newOp = TesslaCore.CurriedPrimitiveOperator(op.op, newCurry)
+            val newOp = TesslaCore.CurriedPrimitiveOperator(op.name, newCurry)
             if (newArgs.isEmpty) {
               val value = Evaluator.evalPrimitiveOperator(newOp, Seq(), loc)
               TesslaCore.Default(TesslaCore.Nil(loc), value, loc)
