@@ -101,7 +101,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
 
   def translateValueType(typ: TypedTessla.Type, env: Env): TesslaCore.ValueType = typ match {
     case b: TypedTessla.BuiltInType if b.isValueType => TesslaCore.BuiltInType(b.name, b.typeArgs.map(translateValueType(_, env)))
-    case b: TypedTessla.BuiltInType =>
+    case _: TypedTessla.BuiltInType =>
       throw InternalError(s"Non-value type where value type expected - should have been caught by type checker")
     case ot : TypedTessla.ObjectType =>
       TesslaCore.ObjectType(mapValues(ot.memberTypes)(translateValueType(_, env)))

@@ -10,7 +10,7 @@ module Predef {
   def nil[T]: Events[T] = __builtin__(nil)
   def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)
   def first[T, U](stream1: Events[T], stream2: Events[U]): Events[T] = slift(stream1, stream2, (x: T, _: U) => x)
-  def fold[T,R](f: (Events[R],Events[T]) => Events[R], stream: Events[T], init: R) = result where {
+  def fold[T,R](stream: Events[T], init: R, f: (Events[R],Events[T]) => Events[R]) = result where {
     def result: Events[R] = default(f(last(result, stream), stream), init)
   }
 }
@@ -263,24 +263,24 @@ type Option[T] = __builtin__(Option)
   ## Compute the maximum value of all events on `x`.
   ## Provides for every input event and output event
   ## whose value is the maximum up to this point.
-  def maximum(x: Events[Int]) = reduce(max, x)
+  def maximum(x: Events[Int]) = reduce(x, max)
 
   ## Compute the minimum value of all events on `x`.
   ## Provides for every input event and output event
   ## whose value is the minimum up to this point.
-  def minimum(x: Events[Int]) = reduce(min, x)
+  def minimum(x: Events[Int]) = reduce(x, min)
 
   ## Count the number of events on `x`. Provides for
   ## every input event an output event whose value is
   ## the number of events seen so far.
   ## See `eventCount` for a counting macro with an
   ## external reset.
-  def count(x: Events[Int]) = fold((x: Events[Int], _: Events[Int]) => x+1, x, 0)
+  def count(x: Events[Int]) = fold(x, 0, (x: Events[Int], _: Events[Int]) => x+1)
 
   ## Sum up the values of all events on `x`. Provides
   ## for every input event an output event whose value
   ## is the sum of the values of all events seen so far.
-  def sum(x: Events[Int]) = fold(__add__, x, 0)
+  def sum(x: Events[Int]) = fold(x, 0, __add__)
 
   ## Fold a function on values over all events on `stream`. Starting with
   ## the initial value `init` the function `f` is called for every event
@@ -298,7 +298,7 @@ type Option[T] = __builtin__(Option)
   ## 4: y = f(f(0,2),6)
   ## 5: y = f(f(f(0,2),6),1)
   ## ```
-  def fold[T,R](f: (Events[R],Events[T]) => Events[R], stream: Events[T], init: R) = result where {
+  def fold[T,R](stream: Events[T], init: R, f: (Events[R],Events[T]) => Events[R]) = result where {
     def result: Events[R] = default(f(last(result, stream), stream), init)
   }
 
@@ -317,7 +317,7 @@ type Option[T] = __builtin__(Option)
   ## 4: y = f(2,6)
   ## 5: y = f(f(2,6),1)
   ## ```
-  def reduce[T](f: (Events[T],Events[T]) => Events[T], stream: Events[T]) = result where {
+  def reduce[T](stream: Events[T], f: (Events[T],Events[T]) => Events[T]) = result where {
     def result: Events[T] = defaultFrom(f(last(result, stream), stream), stream)
   }
 

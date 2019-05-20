@@ -27,9 +27,7 @@ module Map {
     add(counts, key, getOrElse(counts, key, 0) + 1)
 
   def collectCount[T](events: Events[T]): Events[Map[T, Int]] =
-    Predef.fold((m: Events[Map[T, Int]], k: Events[T]) => inc(m, k),
-                events,
-                empty[T,Int])
+    Predef.fold(events, empty[T,Int], inc)
 
   def collectMax[K](key: Events[K], value: Events[Int]): Events[Map[K, Int]] = {
     def oldMap = last(map, value)

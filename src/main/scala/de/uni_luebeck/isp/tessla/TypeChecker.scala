@@ -161,13 +161,14 @@ class TypeChecker(spec: FlatTessla.Specification)
   }
 
   def typeSubst(expected: TypedTessla.Type, actual: TypedTessla.Type, typeParams: Set[TypedTessla.Identifier],
-                substitutions: mutable.Map[TypedTessla.Identifier, TypedTessla.Type], loc: Location): TypedTessla.Type = {
+                substitutions: mutable.Map[TypedTessla.Identifier, TypedTessla.Type]): TypedTessla.Type = {
     (expected, actual) match {
       case (tparam: TypedTessla.TypeParameter, _) =>
         if (!actual.isValueType) {
-          error(TypeMismatch("value type", actual, loc))
-        }
-        if (typeParams.contains(tparam.id)) {
+          // Ugly hack: By returning an unexpanded type variable named "value type", the error message will say
+          // "Expected value type"
+          TypedTessla.TypeParameter(makeIdentifier("value type"), tparam.loc)
+        } else if (typeParams.contains(tparam.id)) {
           substitutions.getOrElseUpdate(tparam.id, actual)
         } else {
           tparam
@@ -179,25 +180,25 @@ class TypeChecker(spec: FlatTessla.Specification)
         // variables.
         val parameterTypes = expectedFunctionType.parameterTypes.zip(actualFunctionType.parameterTypes).map {
           case (expectedParamType, actualParamType) =>
-            typeSubst(expectedParamType, actualParamType, typeParams, substitutions, loc)
+            typeSubst(expectedParamType, actualParamType, typeParams, substitutions)
         }
-        val returnType = typeSubst(expectedFunctionType.returnType, actualFunctionType.returnType, typeParams, substitutions, loc)
+        val returnType = typeSubst(expectedFunctionType.returnType, actualFunctionType.returnType, typeParams, substitutions)
         TypedTessla.FunctionType(Seq(), parameterTypes, returnType, expectedFunctionType.isLiftable)
       case (expectedType: TypedTessla.BuiltInType, actualType: TypedTessla.BuiltInType) if expectedType.name == actualType.name =>
         val typeArgs = expectedType.typeArgs.zip(actualType.typeArgs).map {
           case (expectedElementType, actualElementType) =>
-            typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc)
+            typeSubst(expectedElementType, actualElementType, typeParams, substitutions)
         }
         TypedTessla.BuiltInType(expectedType.name, typeArgs)
       // Allow for auto-lifting of values
       case (b: TypedTessla.BuiltInType, actualElementType) if b.isStreamType =>
         val expectedElementType = b.typeArgs.head
-        TypedTessla.BuiltInType(b.name, typeSubst(expectedElementType, actualElementType, typeParams, substitutions, loc) +: b.typeArgs.tail)
+        TypedTessla.BuiltInType(b.name, typeSubst(expectedElementType, actualElementType, typeParams, substitutions) +: b.typeArgs.tail)
       case (expected: TypedTessla.ObjectType, actual: TypedTessla.ObjectType) =>
         val members = expected.memberTypes.map {
           case (name, expectedMemberType) =>
             name -> actual.memberTypes.get(name).map { actualMemberType =>
-              typeSubst(expectedMemberType, actualMemberType, typeParams, substitutions, loc)
+              typeSubst(expectedMemberType, actualMemberType, typeParams, substitutions)
             }.getOrElse(expectedMemberType)
         }
         TypedTessla.ObjectType(members, expected.isOpen)
@@ -246,9 +247,12 @@ class TypeChecker(spec: FlatTessla.Specification)
   }
 
   def isSubtypeOrEqual(parent: TypedTessla.Type, child: TypedTessla.Type): Boolean = (parent, child) match {
-    case (parent: TypedTessla.FunctionType, child: TypedTessla.FunctionType) =>
-      // TODO: This completely ignores type parameters because functions with type parameters can't currently
-      //       be passed around anyway. Once that is possible, this code needs to be adjusted.
+    case (parent: TypedTessla.FunctionType, genericChild: TypedTessla.FunctionType) =>
+      // TODO: This ignores type parameters of the expected type because functions with type parameters can't
+      //       currently be passed around anyway. Once that is possible, this code needs to be adjusted.
+      val typeSubstitutions = mutable.Map[TypedTessla.Identifier, TypedTessla.Type]()
+      val child = typeSubst(genericChild, parent, genericChild.typeParameters.toSet, typeSubstitutions).
+        asInstanceOf[TypedTessla.FunctionType]
       val compatibleLiftedness = !parent.isLiftable || child.isLiftable
       val compatibleReturnTypes = isSubtypeOrEqual(parent.returnType, child.returnType)
       val compatibleParameterTypes = parent.parameterTypes.length == child.parameterTypes.length &&
@@ -356,7 +360,7 @@ class TypeChecker(spec: FlatTessla.Specification)
               case (arg, genericExpected) =>
                 val id = env(arg.id)
                 val actual = typeMap(id)
-                val expected = typeSubst(genericExpected, actual, typeParams, typeSubstitutions, arg.loc)
+                val expected = typeSubst(genericExpected, actual, typeParams, typeSubstitutions)
                 val possiblyLifted =
                   if (isSubtypeOrEqual(parent = expected, child = actual)) {
                     id
@@ -365,7 +369,7 @@ class TypeChecker(spec: FlatTessla.Specification)
                   } else {
                     (actual, expected) match {
                       case (a: TypedTessla.FunctionType, e: TypedTessla.FunctionType)
-                        if a.isLiftable && isSubtypeOrEqual(parent= e, liftFunctionType(a)) =>
+                        if a.isLiftable && isSubtypeOrEqual(parent = e, child = liftFunctionType(a)) =>
                         liftedMacros(id)
                       case _ =>
                         error(TypeMismatch(expected, actual, arg.loc))
@@ -384,7 +388,7 @@ class TypeChecker(spec: FlatTessla.Specification)
               throw TypeArgumentsNotInferred(name, call.macroLoc)
             }
             val returnType = typeSubst(possiblyLiftedType.returnType, possiblyLiftedType.returnType,
-              typeParams, typeSubstitutions, call.loc)
+              typeParams, typeSubstitutions)
             TypedTessla.MacroCall(macroID, call.macroLoc, typeArgs, args, call.loc) -> returnType
           case other =>
             throw TypeMismatch("function", other, call.macroLoc)

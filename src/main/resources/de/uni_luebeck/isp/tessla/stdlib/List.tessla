@@ -25,12 +25,6 @@ module List {
   @liftable
   def last[T](list: List[T]): T = get(list, size(list)-1)
 
-  -- def fold[T, U](list: List[T], start: U, f: (U, T) => U): U = {
-  --  static if size(list) == 0
-  --  then start
-  --  else fold(tail(list), f(start, head(list)), f)
-  -- }
-
   @liftable
   def fold[T, U](list: List[T], start: U, f: (U, T) => U): U = __builtin__(fold)
 }
