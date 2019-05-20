@@ -464,11 +464,17 @@ class TypeChecker(spec: FlatTessla.Specification)
           }
           // Add a lifted projection operator so that there is a new event whenever any of the parameters get a new
           // event (as per the lift semantics)
-          val resultId = makeIdentifier()
-          val resultEntry = TypedTessla.VariableEntry(resultId, body, liftedType.returnType, mac.loc)
-          innerDefs.addVariable(resultEntry)
-          val firstParams = (resultId +: parameters.map(_.id)).map(TypedTessla.PositionalArgument(_, body.loc))
-          val firstCall = TypedTessla.MacroCall(findPredef("first", env), Location.builtIn, Seq(), firstParams, body.loc)
+          val firstID = findPredef(s"first", env)
+          val firstCall = parameters.foldLeft(body) { (result, param) =>
+            val resultId = makeIdentifier()
+            val resultEntry = TypedTessla.VariableEntry(resultId, body, liftedType.returnType, mac.loc)
+            innerDefs.addVariable(resultEntry)
+            val args = Seq(
+              TypedTessla.PositionalArgument(resultId, result.loc),
+              TypedTessla.PositionalArgument(param.id, param.loc)
+            )
+            TypedTessla.MacroCall(firstID, Location.builtIn, Seq(), args, body.loc)
+          }
           val lifted = TypedTessla.Macro(tvarIDs, parameters, innerDefs, returnType, mac.headerLoc, firstCall, mac.loc, mac.isLiftable)
           val liftedId = makeIdentifier(id.get.nameOpt)
           val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, mac.loc)
