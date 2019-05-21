@@ -22,5 +22,8 @@ object IncludeResolvers {
     }
   }
 
+  def fromStdlibResource =
+    fromResource(this.getClass, "/de/uni_luebeck/isp/tessla/stdlib")_
+
   def empty(fileName: String) = None
 }

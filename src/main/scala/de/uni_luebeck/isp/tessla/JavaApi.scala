@@ -128,7 +128,12 @@ object JavaApi {
 
   def compile(tessla: String, fileName: String, timeUnit: String): CompilationResult = {
     val specSource = CharStreams.fromString(tessla, fileName)
-    val compilerOptions = Compiler.Options(Option(timeUnit), IncludeResolvers.empty)
+    val compilerOptions = Compiler.Options(
+      timeUnitString = Option(timeUnit),
+      includeResolver = IncludeResolvers.empty,
+      stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
+      stdlibPath = "Predef.tessla"
+    )
     Compiler.compile(specSource, compilerOptions) match {
       case Success(spec, warnings) =>
         CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(new Interpreter(spec)))

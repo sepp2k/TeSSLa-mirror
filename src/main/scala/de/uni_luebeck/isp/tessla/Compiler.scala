@@ -3,16 +3,20 @@ package de.uni_luebeck.isp.tessla
 import org.antlr.v4.runtime.CharStream
 
 object Compiler {
-  case class Options(timeUnitString: Option[String], resolveInclude: String => Option[CharStream]) {
+  case class Options(
+    timeUnitString: Option[String],
+    includeResolver: String => Option[CharStream],
+    stdlibIncludeResolver: String => Option[CharStream],
+    stdlibPath: String
+  ) {
     lazy val timeUnit = timeUnitString.map(TimeUnit.fromString(_, Location.option("timeunit")))
   }
 
   def instantiatePipeline(options: Options): TranslationPhase[CharStream, TesslaCore.Specification] = {
-    new TesslaParser.WithIncludes(options.resolveInclude)
+    new TesslaParser.WithIncludes(options.includeResolver)
+      .andThen(new StdlibIncluder(options.stdlibIncludeResolver, options.stdlibPath))
       .andThen(TesslaSyntaxToTessla)
-//      .andThen(new Printer[Tessla.Specification])
       .andThen(Flattener)
-//      .andThen(new Printer[FlatTessla.Specification])
       .andThen(TypeChecker)
       .andThen(new ConstantEvaluator(options.timeUnit))
       .andThen(CycleDetection)

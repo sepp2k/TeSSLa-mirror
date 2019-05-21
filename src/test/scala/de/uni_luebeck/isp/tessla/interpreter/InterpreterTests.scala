@@ -169,7 +169,12 @@ class InterpreterTests extends FunSuite {
           }
         }
 
-        val options = Compiler.Options(testCase.timeUnit, IncludeResolvers.fromResource(getClass, root))
+        val options = Compiler.Options(
+          timeUnitString = testCase.timeUnit,
+          includeResolver = IncludeResolvers.fromResource(getClass, root),
+          stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
+          stdlibPath = "Predef.tessla"
+        )
         val src = testStream(testCase.spec)
         testCase.expectedOsl.foreach { oslFile =>
           val expectedOSL = semiParseOsl(testSource(oslFile).getLines)

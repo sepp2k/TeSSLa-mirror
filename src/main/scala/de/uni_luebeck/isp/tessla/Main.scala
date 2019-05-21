@@ -76,7 +76,12 @@ object Main extends SexyOpt {
     parse(args)
     try {
       val specSource = CharStreams.fromFileName(tesslaFile)
-      val compilerOptions = Compiler.Options(timeUnit, IncludeResolvers.fromFile)
+      val compilerOptions = Compiler.Options(
+        timeUnitString = timeUnit,
+        includeResolver = IncludeResolvers.fromFile,
+        stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
+        stdlibPath = "Predef.tessla"
+      )
       val core = unwrapResult(Compiler.compile(specSource, compilerOptions))
 
       if (generateOsl) {
