@@ -5,6 +5,7 @@
 ### Additions and Fixes
 
 * Allow more line breaks. For a detailed lists of where line breaks can be used, see syntax.md.
+* Add type information to TesslaCore.Nil
 
 ## Version 0.7.5
 

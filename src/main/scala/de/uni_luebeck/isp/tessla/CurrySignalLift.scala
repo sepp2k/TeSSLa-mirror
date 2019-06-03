@@ -10,7 +10,7 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
       case TesslaCore.Stream(id, _) =>
         val exp = streams(id).expression
         exp match {
-          case Default(Nil(_), value, _) => Some(value)
+          case Default(_: Nil, value, _) => Some(value)
           case SignalLift(op, args, loc) =>
             val values = args.map(getConst)
             if (values.exists(_.isEmpty)) {
@@ -37,7 +37,7 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
             val newOp = TesslaCore.CurriedPrimitiveOperator(op.op, newCurry)
             if (newArgs.isEmpty) {
               val value = Evaluator.evalPrimitiveOperator(newOp, Seq(), loc)
-              TesslaCore.Default(TesslaCore.Nil(loc), value, loc)
+              TesslaCore.Default(TesslaCore.Nil(typ, loc), value, loc)
             } else {
               TesslaCore.SignalLift(newOp, newArgs, loc)
             }
