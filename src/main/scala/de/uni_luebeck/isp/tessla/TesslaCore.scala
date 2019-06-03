@@ -50,7 +50,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     def withLoc(loc: Location): InputStream = copy(loc = loc)
   }
 
-  final case class Nil(loc: Location) extends StreamRef {
+  final case class Nil(typ: StreamType, loc: Location) extends StreamRef {
     override def toString = "nil"
     def withLoc(loc: Location): Nil = copy(loc = loc)
   }

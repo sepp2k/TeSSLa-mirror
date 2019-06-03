@@ -58,13 +58,16 @@
 * A string literal used as an argument to `include` can not contain string interpolations or format specifiers
 * Newlines that are directly preceded by a backslash are ignored and do not constitute an EOS token.
 * Additionally newlines can be used in the following positions without creating an EOS token:
+  * Directly after a prefix operator
   * Directly after an infix operator
   * Directly after an opening brace, bracket or parenthesis
   * Directly before an opening brace, bracket or parenthesis
   * Directly after a comma
+  * Directly after the keywords `in`, `out`, `print`, `def` and/or `type`
+  * Directly after a the `:` of a type annotation
   * Directly before and/or after the `then` and/or `else` keywords
   * Directly after the `=>` of a lambda expression
-  * Directly after the `=` (or `:=`) of a definition
+  * Directly after the `=` (or `:=`) of a definition or a member definition
   * As part of an empty line that only consists of whitespace
 * Comments start with `--` or `#` and extend to the end of the line. They are ignored by the parser.
 * TesslaDoc comments are comments that start with `---` or `##`. They can only appear in front of definitions.

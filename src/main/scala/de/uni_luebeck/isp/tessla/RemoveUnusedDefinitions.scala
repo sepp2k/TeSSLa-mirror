@@ -109,7 +109,7 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
 
     val updatedOutStreams = spec.outStreams.filter {
       case TesslaCore.OutStreamDescription(_, ref, _) => ref match {
-        case Nil(_) => false
+        case _: Nil => false
         case _ => true
       }
     }
