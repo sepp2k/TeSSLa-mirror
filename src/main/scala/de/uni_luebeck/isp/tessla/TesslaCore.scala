@@ -129,11 +129,11 @@ object TesslaCore extends HasUniqueIdentifiers {
   }
 
   final case class StdLibMinimum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
-    override def toString = s"min($stream)"
+    override def toString = s"minimum($stream)"
   }
 
   final case class StdLibMaximum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
-    override def toString = s"max($stream)"
+    override def toString = s"maximum($stream)"
   }
 
   sealed abstract class ValueArg
