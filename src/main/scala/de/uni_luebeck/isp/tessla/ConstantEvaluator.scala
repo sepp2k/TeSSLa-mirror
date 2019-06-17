@@ -148,8 +148,6 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
                           typ: TypedTessla.Type, inFunction: Boolean): Unit = {
     wrapper.entry = Translating(expression.loc)
     expression match {
-      case b: TypedTessla.BuiltInOperator if b.name == "version" =>
-        wrapper.entry = Translated(Lazy(ValueEntry(TesslaCore.StringValue(BuildInfo.version, expression.loc))))
       case b: TypedTessla.BuiltInOperator =>
         wrapper.entry = Translated(Lazy(BuiltInEntry(b.name, typ)))
       case mac: TypedTessla.Macro if inFunction =>
