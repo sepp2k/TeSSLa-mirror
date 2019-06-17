@@ -256,7 +256,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
             be.name match {
               case "nil" =>
                 val typ = TesslaCore.StreamType(translateValueType(call.typeArgs.head, env))
-                wrapper.entry = Translated(Lazy(NilEntry(TesslaCore.Nil(call.loc), typ)))
+                wrapper.entry = Translated(Lazy(NilEntry(TesslaCore.Nil(typ, call.loc), typ)))
               case "default" =>
                 stream {
                   TesslaCore.Default(streamArg(0), getValue(args(1)), call.loc)

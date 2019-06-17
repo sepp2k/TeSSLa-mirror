@@ -20,6 +20,16 @@
 * Types can now be used before their definition
 * Generic macros can be passed as arguments to other macros and the type arguments will be inferred when possible
 
+## Version 0.7.6
+
+### Additions and Fixes
+
+* Allow more line breaks. For a detailed lists of where line breaks can be used, see syntax.md.
+
+### API Changes
+
+* TesslaCore.Nil now has a member named `typ`
+
 ## Version 0.7.5
 
 ### Additions and Fixes

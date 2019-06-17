@@ -12,13 +12,13 @@ include: 'include' file=stringLit eos;
 
 statement
     : def #Definition
-    | tessladoc+=DOCLINE* NL* 'type' name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* typeBody eos #TypeDefinition
-    | tessladoc+=DOCLINE* NL* 'module' name=ID NL* '{' NL* contents+=statement* NL* '}' NL* #ModuleDefinition
+    | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* typeBody eos #TypeDefinition
+    | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=statement* NL* '}' NL* #ModuleDefinition
     | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement
-    | 'in' ID (':' type) eos #In
-    | 'out' expression ('as' ID)? eos #Out
-    | 'print' expression eos #Print
-    | 'out' '*' eos #OutAll
+    | 'in' NL* ID NL* ':' NL* type eos #In
+    | 'out' NL* expression ('as' NL* ID)? eos #Out
+    | 'print' NL* expression eos #Print
+    | 'out' NL* '*' eos #OutAll
     ;
 
 def: header=definitionHeader (':='|'=') NL* body eos;
@@ -31,14 +31,14 @@ body
 definitionHeader:
     tessladoc+=DOCLINE* NL*
     annotations+=annotation*
-    DEF name=ID
+    'def' NL* name=ID
     ('[' NL* typeParameters+=ID (',' NL* typeParameters+=ID)* NL* ']')?
     ('(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')')?
-    (':' resultType=type)?;
+    (':' NL* resultType=type)?;
 
 annotation: '@' ID NL*;
 
-param: ID (':' parameterType=type)?;
+param: ID (':' NL* parameterType=type)?;
 
 typeBody
     : type #TypeAliasBody
@@ -47,10 +47,10 @@ typeBody
 
 type
     : name=ID #SimpleType
-    | name=ID '[' typeArguments+=type (',' typeArguments+=type)* ']' #TypeApplication
-    | '(' parameterTypes+=type (',' parameterTypes+=type)* ')' '=>' resultType=type #FunctionType
+    | name=ID '[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']' #TypeApplication
+    | '(' NL* parameterTypes+=type (',' NL* parameterTypes+=type)* NL* ')' NL* '=>' NL* resultType=type #FunctionType
     | ('${' | '{') NL* (memberSigs+=memberSig (',' NL* memberSigs+=memberSig)* (',' '..'?)?)? NL* '}' #ObjectType
-    | '(' (elementTypes+=type (',' elementTypes+=type)*)? ')' #TupleType
+    | '(' NL* (elementTypes+=type (',' NL* elementTypes+=type)* NL*)? ')' #TupleType
     ;
 
 memberSig: name=ID ':' type;
@@ -62,13 +62,13 @@ expression
     | FLOAT #FloatLiteral
     | '(' NL* (elems+=expression (',' NL* elems+=expression)*)? lastComma=','? NL* ')' #TupleExpression
     | '{' NL* definitions+=def+ RETURN? expression NL* '}' #Block
-    | ('${' | '{') NL* (members+=memberDefinition (',' NL* members+=memberDefinition)* ','?)? NL* '}' #ObjectLiteral
+    | ('${' | '{') NL* (members+=memberDefinition (',' NL* members+=memberDefinition)* ','? NL*)? '}' #ObjectLiteral
     | function=expression (
         ('[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']')? '(' NL* arguments+=arg (',' NL* arguments+=arg)* NL* ')'
       | ('[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']')
       )  #FunctionCall
     | obj=expression '.' NL* fieldName=ID #MemberAccess
-    | op=('!' | '~' | '-' | '-.') expression #UnaryExpression
+    | op=('!' | '~' | '-' | '-.') NL* expression #UnaryExpression
     | lhs=expression op=('*' | '/' | '%' | '*.' | '/.') NL* rhs=expression #InfixExpression
     | lhs=expression op=('+' | '-' | '+.' | '-.') NL* rhs=expression #InfixExpression
     | lhs=expression op=('<<' | '>>') NL* rhs=expression #InfixExpression
@@ -82,9 +82,9 @@ expression
     | funKW='fun'? openingParen='(' NL* params+=param (',' NL* params+=param)* NL* closingParen=')' '=>' NL* expression #Lambda
     ;
 
-memberDefinition: name=ID ((':'|'=') value=expression)?;
+memberDefinition: name=ID ((':'|'=') NL* value=expression)?;
 
-arg: (name=ID '=')? expression;
+arg: (name=ID '=' NL*)? expression;
 
 stringLit: openingQuote=(DQUOTE | 'f"') stringContents* closingQuote=DQUOTE;
 

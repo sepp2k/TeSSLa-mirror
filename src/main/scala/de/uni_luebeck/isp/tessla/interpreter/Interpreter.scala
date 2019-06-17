@@ -30,7 +30,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       defs.getOrElse(id, throw InternalError(s"Couldn't find stream named $id", loc)).get
     case TesslaCore.InputStream(name, loc) =>
       inStreams.getOrElse(name, throw InternalError(s"Couldn't find input stream named $name", loc))._1
-    case TesslaCore.Nil(_) => nil
+    case _: TesslaCore.Nil => nil
   }
 
   def merge(stream1: Stream, stream2: Stream): Stream = {
