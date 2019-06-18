@@ -40,7 +40,8 @@ object TesslaParser {
     }
   }
 
-  class WithIncludesTranslator(src: CharStream, resolveInclude: String => Option[CharStream]) extends TranslationPhase.Translator[IndexedSeq[ParseResult]] {
+  class WithIncludesTranslator(src: CharStream, resolveInclude: String => Option[CharStream])
+      extends TranslationPhase.Translator[IndexedSeq[ParseResult]] with CanParseConstantString {
     override def translateSpec(): IndexedSeq[ParseResult] = {
       parseWithIncludes(src)
     }
@@ -48,7 +49,7 @@ object TesslaParser {
     private def parseWithIncludes(src: CharStream): IndexedSeq[ParseResult] = {
       val (mainResult, mainErrors) = parse(src)
       val includes = mainResult.tree.includes.asScala.toVector.flatMap {include =>
-        val fileName = getIncludeString(include.file)
+        val fileName = getConstantString(include.file)
         val loc = Location.fromNode(include.file)
         lookupInclude(fileName, mainResult.fileName, loc).map(parseWithIncludes).getOrElse {
             error(FileNotFound(fileName, Location.fromNode(include.file)))
@@ -69,8 +70,11 @@ object TesslaParser {
         resolveInclude(path).orElse(resolveInclude(s"$path.tessla"))
       }
     }
+  }
 
-    private def getIncludeString(stringLit: TesslaSyntax.StringLitContext): String = {
+  trait CanParseConstantString {
+    self: TranslationPhase.Translator[_] =>
+    def getConstantString(stringLit: TesslaSyntax.StringLitContext): String = {
       stringLit.stringContents.asScala.map {
         case text: TesslaSyntax.TextContext => text.getText
         case escapeSequence: TesslaSyntax.EscapeSequenceContext =>
@@ -79,7 +83,7 @@ object TesslaParser {
             escapeSequence.getText
           }
         case part =>
-          error(StringInterpolationOrFormatInInclude(Location.fromNode(part)))
+          error(StringInterpolationOrFormatInConstantString(Location.fromNode(part)))
           part.getText
       }.mkString
     }

@@ -86,14 +86,14 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
     }
     spec.outStreams.foreach(usageOut)
 
-    val updatedStreams = spec.streams.collect{
-      case StreamDescription(id, expression, typ) if used(id.uid) =>
-        val newExpression = expression match {
+    val updatedStreams = spec.streams.collect {
+      case sd if used(sd.id.uid) =>
+        val newExpression = sd.expression match {
           case Lift(f, args, loc) =>
             Lift(removeUnusedFunction(f), args, loc)
-          case _ => expression
+          case _ => sd.expression
         }
-        StreamDescription(id, newExpression, typ)
+        sd.copy(expression = newExpression)
     }
 
     val updatedOutStreams = spec.outStreams.filter {

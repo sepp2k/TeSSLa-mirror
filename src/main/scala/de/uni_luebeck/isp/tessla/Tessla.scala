@@ -13,7 +13,7 @@ object Tessla {
     def loc: Location
   }
 
-  case class Definition( annotations: Seq[Identifier],
+  case class Definition( annotations: Seq[Annotation],
                          id: Identifier,
                          typeParameters: Seq[Identifier],
                          parameters: Seq[Parameter],
@@ -35,6 +35,10 @@ object Tessla {
       val assign = if (objectNotation) "=" else ":="
       s"$annotationList$defString$id$typeParameterList$parameterList $assign $body"
     }
+  }
+
+  case class Annotation(id: Identifier, arguments: Seq[Argument[Literal]], loc: Location) {
+    def name: String = id.name
   }
 
   sealed abstract class Body {
@@ -59,6 +63,8 @@ object Tessla {
     def name: String = id.name
   }
 
+  case class AnnotationDefinition(id: Identifier, parameters: Seq[Parameter], loc: Location) extends Statement
+
   case class TypeDefinition(id: Identifier, typeParameters: Seq[Identifier], body: TypeBody, loc: Location) extends Statement {
     override def toString = {
       val typeParameterList =
@@ -78,7 +84,7 @@ object Tessla {
     override def toString = s"__builtin__($id)"
   }
 
-  case class In(id: Identifier, streamType: Type, loc: Location) extends Statement {
+  case class In(id: Identifier, streamType: Type, annotations: Seq[Annotation], loc: Location) extends Statement {
     override def toString = s"in $id: $streamType"
   }
 
@@ -102,6 +108,8 @@ object Tessla {
       case None => id.name
     }
 
+    def name: String = id.name
+
     def loc: Location = parameterType match {
       case Some(t) => id.loc.merge(t.loc)
       case None => id.loc
@@ -111,7 +119,7 @@ object Tessla {
   sealed abstract class Expression {
     def loc: Location
     def toString(inner: Boolean): String
-    override def toString = toString(false)
+    override def toString: String = toString(false)
   }
 
   case class Variable(id: Identifier) extends Expression {
@@ -121,7 +129,7 @@ object Tessla {
 
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
-  case class MacroCall(mac: Expression, typeArgs: Seq[Type], args: Seq[Argument], loc: Location) extends Expression {
+  case class MacroCall(mac: Expression, typeArgs: Seq[Type], args: Seq[Argument[Expression]], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
       val typeArgList =
         if (typeArgs.isEmpty) ""
@@ -218,17 +226,18 @@ object Tessla {
     override def toString = s""""$value""""
   }
 
-  abstract class Argument {
+  abstract class Argument[E <: Expression] {
     def loc: Location
   }
 
-  case class PositionalArgument(expr: Expression) extends Argument {
+  case class PositionalArgument[E <: Expression](expr: E) extends Argument[E] {
     override def toString = expr.toString
     def loc = expr.loc
   }
 
-  case class NamedArgument(id: Identifier, expr: Expression) extends Argument {
+  case class NamedArgument[E <: Expression](id: Identifier, expr: E) extends Argument[E] {
     override def toString = s"$id = $expr"
+    def name = id.name
     def loc = id.loc.merge(expr.loc)
   }
 

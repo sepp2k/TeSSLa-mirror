@@ -21,7 +21,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
       case Seq(name) => names.get(name)
       case Seq(name, rest @ _*) => names.get(name).flatMap { id =>
         globalDefs.resolveVariable(id).flatMap {
-          case VariableEntry(_, mod: ObjectLiteral, _, _) =>
+          case VariableEntry(_, mod: ObjectLiteral, _, _, _) =>
             lookupID(mapValues(mod.members)(_.id), rest)
           case _ => None
         }
@@ -32,7 +32,10 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   type TypeAnnotation
   def typeAnnotationToString(typeAnnotation: TypeAnnotation): String
 
-  case class VariableEntry(id: Identifier, expression: Expression, typeInfo: TypeAnnotation, loc: Location)
+  case class Annotation(name: String, arguments: Map[String, Tessla.LiteralValue], loc: Location)
+
+  case class VariableEntry(id: Identifier, expression: Expression, typeInfo: TypeAnnotation,
+                           annotations: Seq[Annotation], loc: Location)
   case class TypeEntry(id: Identifier, arity: Int, typeConstructor: Seq[Type] => Type, loc: Location)
 
   class Definitions(val parent: Option[Definitions]) {

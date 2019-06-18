@@ -16,12 +16,20 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  case class StreamDescription(id: Identifier, expression: Expression, typ: StreamType) {
-    override def toString = s"def $id: $typ = $expression"
+  type Annotation = TypedTessla.Annotation
+
+  case class StreamDescription(id: Identifier, expression: Expression, typ: StreamType, annotations: Seq[Annotation]) {
+    val annotationString = annotations.map { annotation =>
+      s"@${annotation.name}(${annotation.arguments.mkString(", ")})\n"
+    }.mkString
+    override def toString = s"$annotationString def $id: $typ = $expression"
   }
 
-  case class InStreamDescription(name: String, typ: StreamType, loc: Location) {
-    override def toString = s"in $name: $typ"
+  case class InStreamDescription(name: String, typ: StreamType, annotations: Seq[Annotation], loc: Location) {
+    val annotationString = annotations.map { annotation =>
+      s"@${annotation.name}(${annotation.arguments.mkString(", ")})\n"
+    }.mkString
+    override def toString = s"$annotationString in $name: $typ"
   }
 
   case class OutStreamDescription(nameOpt: Option[String], stream: StreamRef, typ: StreamType) {

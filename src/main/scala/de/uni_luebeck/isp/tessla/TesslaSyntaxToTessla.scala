@@ -6,7 +6,8 @@ import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[Tessla.Specification] {
+class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
+    extends TranslationPhase.Translator[Tessla.Specification] with TesslaParser.CanParseConstantString {
   override def translateSpec() = {
     Tessla.Specification(spec.flatMap(res => res.tree.statements.asScala.map(translateStatement(_, res.tokens))))
   }
@@ -22,7 +23,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
   }
 
   def translateDefinition(definition: TesslaSyntax.DefContext) = {
-    val annotations = definition.header.annotations.asScala.map(_.ID).map(mkID)
+    val annotations = definition.header.annotations.asScala.map(translateAnnotation)
     val typeParameters = definition.header.typeParameters.asScala.map(mkID)
     val parameters = definition.header.parameters.asScala.map(translateParameter)
     val body = translateBody(definition.body)
@@ -32,6 +33,33 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
       Option(definition.header.resultType).map(translateType),
       Location.fromNode(definition.header), body, loc
     )
+  }
+
+  def translateLiteral(literal: TesslaSyntax.LiteralContext): Tessla.Literal = {
+    val lit = if (literal.stringLit != null) {
+      Tessla.StringLiteral(getConstantString(literal.stringLit))
+    } else if (literal.DECINT != null) {
+      Tessla.IntLiteral(BigInt(literal.DECINT.getText))
+    } else if (literal.HEXINT != null) {
+      require(literal.HEXINT.getText.startsWith("0x"))
+      Tessla.IntLiteral(BigInt(literal.HEXINT.getText.substring(2), 16))
+    } else if (literal.FLOAT != null) {
+      Tessla.FloatLiteral(literal.FLOAT.getText.toDouble)
+    } else {
+      throw InternalError("Unexpected type of literal", Location.fromNode(literal))
+    }
+    Tessla.Literal(lit, Location.fromNode(literal))
+  }
+
+  def translateAnnotation(annotation: TesslaSyntax.AnnotationContext): Tessla.Annotation = {
+    val args = annotation.arguments.asScala.map { arg =>
+      if (arg.name != null) {
+        Tessla.NamedArgument(mkID(arg.name), translateLiteral(arg.literal))
+      } else {
+        Tessla.PositionalArgument(translateLiteral(arg.literal))
+      }
+    }
+    Tessla.Annotation(mkID(annotation.ID), args, Location.fromNode(annotation))
   }
 
   def translateBody(body: TesslaSyntax.BodyContext): Tessla.Body = body match {
@@ -49,6 +77,12 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
   class StatementVisitor(tokens: CommonTokenStream) extends TesslaVisitor[Tessla.Statement] {
     override def visitDefinition(definition: TesslaSyntax.DefinitionContext) = {
       translateDefinition(definition.`def`)
+    }
+
+    override def visitAnnotationDefinition(annotationDef: TesslaSyntax.AnnotationDefinitionContext) = {
+      val loc = Location.fromNode(annotationDef)
+      val params = annotationDef.parameters.asScala.map(translateParameter)
+      Tessla.AnnotationDefinition(mkID(annotationDef.ID), params, loc)
     }
 
     override def visitOut(out: TesslaSyntax.OutContext) = {
@@ -69,7 +103,8 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
     }
 
     override def visitIn(in: TesslaSyntax.InContext) = {
-      Tessla.In(mkID(in.ID), translateType(in.`type`), Location.fromNode(in))
+      val annotations = in.annotations.asScala.map(translateAnnotation)
+      Tessla.In(mkID(in.ID), translateType(in.`type`), annotations, Location.fromNode(in))
     }
 
     override def visitTypeDefinition(typeDef: TesslaSyntax.TypeDefinitionContext) = {
@@ -155,7 +190,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult]) extends Translat
       Tessla.MacroCall(translateExpression(funCall.function), typeArgs, args, loc)
     }
 
-    def translateArgument(arg: TesslaSyntax.ArgContext): Tessla.Argument = {
+    def translateArgument(arg: TesslaSyntax.ArgContext): Tessla.Argument[Tessla.Expression] = {
       if (arg.name != null) {
         Tessla.NamedArgument(mkID(arg.name), translateExpression(arg.expression))
       } else {

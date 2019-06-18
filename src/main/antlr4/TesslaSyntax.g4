@@ -12,10 +12,11 @@ include: 'include' file=stringLit eos;
 
 statement
     : def #Definition
+    | 'def' '@' ID ( '(' parameters+=param (',' parameters+=param)* ')' )? eos #AnnotationDefinition
     | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* typeBody eos #TypeDefinition
     | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=statement* NL* '}' NL* #ModuleDefinition
     | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement
-    | 'in' NL* ID NL* ':' NL* type eos #In
+    | annotations+=annotation* 'in' NL* ID NL* ':' NL* type eos #In
     | 'out' NL* expression ('as' NL* ID)? eos #Out
     | 'print' NL* expression eos #Print
     | 'out' NL* '*' eos #OutAll
@@ -36,7 +37,12 @@ definitionHeader:
     ('(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')')?
     (':' NL* resultType=type)?;
 
-annotation: '@' ID NL*;
+annotation: '@' ID ( '(' arguments+=annotationArg (',' arguments+=annotationArg)* ')' )? NL*;
+
+annotationArg: (name=ID '=' NL*)? literal;
+
+literal: stringLit | DECINT | HEXINT | FLOAT;
+
 
 param: ID (':' NL* parameterType=type)?;
 

@@ -24,6 +24,9 @@ module Predef {
   type String = __builtin__(String)
   type Unit = ()
 
+  # Annotations
+  def @liftable
+
   # Primitive constants and operators
 
   ## A Boolean value representing that a given proposition is true

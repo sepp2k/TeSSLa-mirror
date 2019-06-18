@@ -15,7 +15,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase
 class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit])
   extends TesslaCore.IdentifierFactory with TranslationPhase.Translator[TesslaCore.Specification]  {
   type Env = Map[TypedTessla.Identifier, EnvEntryWrapper]
-  private val translatedStreams = mutable.Map[TesslaCore.Identifier, (TesslaCore.Expression, TesslaCore.StreamType)]()
+  private val translatedStreams = mutable.Map[TesslaCore.Identifier, TesslaCore.StreamDescription]()
   private val stack = mutable.ArrayStack[Location]()
 
   case class EnvEntryWrapper(var entry: EnvEntry)
@@ -47,17 +47,14 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
       val env = createEnvForDefsWithParents(spec.globalDefs)
       translateEnv(env)
       val inputStreams = spec.globalDefs.variables.collect {
-        case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, _)) =>
-          TesslaCore.InStreamDescription(is.name, translateStreamType(typ, env), is.loc)
+        case (_, TypedTessla.VariableEntry(_, is: TypedTessla.InputStream, typ, annotations, _)) =>
+          TesslaCore.InStreamDescription(is.name, translateStreamType(typ, env), annotations, is.loc)
       }
       val outputStreams = spec.outStreams.map { os =>
         val s = getStream(env(os.id).entry, os.loc)
         TesslaCore.OutStreamDescription(os.nameOpt, s, getStreamType(env(os.id).entry))
       }
-      val streams = translatedStreams.map {
-        case (n, (e, t)) => TesslaCore.StreamDescription(n,e,t)
-      }
-      TesslaCore.Specification(streams.toSeq, inputStreams.toSeq, outputStreams, identifierCounter)
+      TesslaCore.Specification(translatedStreams.values.toSeq, inputStreams.toSeq, outputStreams, identifierCounter)
     } catch {
       case err: TesslaError =>
         throw WithStackTrace(err, stack)
@@ -133,7 +130,8 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
     case NotYetTranslated(entry, closure, inFunction) =>
       // TODO: replace with just entry.id.nameOpt once the resultWrapper-hack is fixed
       val nameOpt = Option(entry.id).flatMap(_.nameOpt)
-      translateExpression(closure, wrapper, entry.expression, nameOpt, entry.typeInfo, inFunction)
+      println(s"${entry.id}: ${entry.annotations}")
+      translateExpression(closure, wrapper, entry.expression, nameOpt, entry.typeInfo, inFunction, entry.annotations)
     case Translating(loc) =>
       throw InfiniteRecursion(loc)
     case _ =>
@@ -145,7 +143,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
   }
 
   def translateExpression(env: Env, wrapper: EnvEntryWrapper, expression: TypedTessla.Expression, nameOpt: Option[String],
-                          typ: TypedTessla.Type, inFunction: Boolean): Unit = {
+                          typ: TypedTessla.Type, inFunction: Boolean, annotations: Seq[TesslaCore.Annotation]): Unit = {
     wrapper.entry = Translating(expression.loc)
     expression match {
       case b: TypedTessla.BuiltInOperator =>
@@ -233,7 +231,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
           val id = makeIdentifier(nameOpt)
           val translatedType = translateStreamType(typ, env)
           wrapper.entry = Translated(Lazy(StreamEntry(id, translatedType)))
-          translatedStreams(id) = (coreExp, translatedType)
+          translatedStreams(id) = TesslaCore.StreamDescription(id, coreExp, translatedType, annotations)
           wrapper.entry
         }
         // No checks regarding arity or non-existing or duplicate named arguments because those mistakes
@@ -306,7 +304,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
               case arg: TypedTessla.NamedArgument =>
                 me.mac.parameters.find(_.name == arg.name) match {
                   case Some(param) => param.id -> env(arg.id)
-                  case None => throw UndefinedNamedArg(arg)
+                  case None => throw UndefinedNamedArg(arg.name, arg.loc)
                 }
             }.toMap
             val defsWithoutParameters = new TypedTessla.Definitions(me.mac.body.parent)
@@ -319,7 +317,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
             }
             stack.push(call.loc)
             val innerEnv = createEnvForDefs(defsWithoutParameters, me.closure ++ args)
-            translateExpression(innerEnv, wrapper, me.mac.result, nameOpt, typ, inFunction)
+            translateExpression(innerEnv, wrapper, me.mac.result, nameOpt, typ, inFunction, Seq())
             stack.pop()
           case other =>
             throw InternalError(s"Applying non-macro/builtin (${other.getClass.getSimpleName}) - should have been caught by the type checker.")
@@ -399,7 +397,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
     }
     // This null should be safe because we only use this entry to put into a NYT and no one ever uses the ID of a
     // VariableEntry in an NYT
-    val resultEntry = TypedTessla.VariableEntry(null, mac.result, mac.returnType, mac.result.loc)
+    val resultEntry = TypedTessla.VariableEntry(null, mac.result, mac.returnType, Seq(), mac.result.loc)
     val resultWrapper = EnvEntryWrapper(NotYetTranslated(resultEntry, env, inFunction = true))
     translateEntry(env, resultWrapper)
     val defs = (resultWrapper.entry +: defsWrappers.map(_._2.entry).toSeq).flatMap {

@@ -157,7 +157,10 @@ class TypeChecker(spec: FlatTessla.Specification)
     val id = env(entry.id)
     val (exp, typ) = translateExpression(entry.expression, typeMap.get(id), Some(id), defs, env)
     insertInferredType(id, typ, exp.loc)
-    TypedTessla.VariableEntry(id, exp, typ, entry.loc)
+    val annotations = entry.annotations.map { annotation =>
+      TypedTessla.Annotation(annotation.name, annotation.arguments, annotation.loc)
+    }
+    TypedTessla.VariableEntry(id, exp, typ, annotations, entry.loc)
   }
 
   def typeSubst(expected: TypedTessla.Type, actual: TypedTessla.Type, typeParams: Set[TypedTessla.Identifier],
@@ -221,14 +224,14 @@ class TypeChecker(spec: FlatTessla.Specification)
     val liftedId = makeIdentifier()
     val nilCall = TypedTessla.MacroCall(findPredef("nil", env), loc, Seq(typeOfConstant), Seq(), loc)
     val nilId = makeIdentifier()
-    val nilEntry = TypedTessla.VariableEntry(nilId, nilCall, liftedType, loc)
+    val nilEntry = TypedTessla.VariableEntry(nilId, nilCall, liftedType, Seq(), loc)
     defs.addVariable(nilEntry)
     val defaultArgs = Seq(
       TypedTessla.PositionalArgument(nilId, loc),
       TypedTessla.PositionalArgument(constant, loc)
     )
     val defaultCall = TypedTessla.MacroCall(findPredef("default", env), loc, Seq(typeOfConstant), defaultArgs, loc)
-    val entry = TypedTessla.VariableEntry(liftedId, defaultCall, liftedType, loc)
+    val entry = TypedTessla.VariableEntry(liftedId, defaultCall, liftedType, Seq(), loc)
     defs.addVariable(entry)
     liftedId
   }
@@ -467,7 +470,7 @@ class TypeChecker(spec: FlatTessla.Specification)
           val firstID = findPredef(s"first", env)
           val firstCall = parameters.foldLeft(body) { (result, param) =>
             val resultId = makeIdentifier()
-            val resultEntry = TypedTessla.VariableEntry(resultId, body, liftedType.returnType, mac.loc)
+            val resultEntry = TypedTessla.VariableEntry(resultId, body, liftedType.returnType, Seq(), mac.loc)
             innerDefs.addVariable(resultEntry)
             val args = Seq(
               TypedTessla.PositionalArgument(resultId, result.loc),
@@ -477,7 +480,7 @@ class TypeChecker(spec: FlatTessla.Specification)
           }
           val lifted = TypedTessla.Macro(tvarIDs, parameters, innerDefs, returnType, mac.headerLoc, firstCall, mac.loc, mac.isLiftable)
           val liftedId = makeIdentifier(id.get.nameOpt)
-          val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, mac.loc)
+          val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, Seq(), mac.loc)
           defs.addVariable(liftedEntry)
           liftedMacros(id.get) = liftedId
         }

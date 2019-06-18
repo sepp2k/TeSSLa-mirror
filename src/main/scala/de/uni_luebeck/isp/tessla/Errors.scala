@@ -91,10 +91,8 @@ object Errors {
     override def message = s"Undefined macro or operator ${id.name}/$arity"
   }
 
-  case class UndefinedNamedArg(arg: TypedTessla.NamedArgument) extends TesslaError {
-    override def loc = arg.idLoc.loc
-
-    override def message = s"Undefined keyword argument ${arg.name}"
+  case class UndefinedNamedArg(name: String, loc: Location) extends TesslaError {
+    override def message = s"Undefined keyword argument $name"
   }
 
   case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {
@@ -188,7 +186,7 @@ object Errors {
   }
 
   case class UndefinedAnnotation(id: Tessla.Identifier) extends TesslaError {
-    override def message = s"Undefined annotation $id; currently the only supported annotation is @liftable"
+    override def message = s"Undefined annotation $id"
 
     override def loc = id.loc
   }
@@ -211,8 +209,8 @@ object Errors {
     override def message = s"Invalid escape sequence '$sequence' in string"
   }
 
-  case class StringInterpolationOrFormatInInclude(loc: Location) extends TesslaError {
-    override def message = "String interpolation or format specifiers are not allowed in include statements"
+  case class StringInterpolationOrFormatInConstantString(loc: Location) extends TesslaError {
+    override def message = "String interpolation or format specifiers are not allowed in include statements and annotation arguments"
   }
 
   case class StringFormatError(error: IllegalFormatException, loc: Location) extends TesslaError {
