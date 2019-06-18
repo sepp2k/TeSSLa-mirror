@@ -236,4 +236,8 @@ object Errors {
   case class InOutStatementInModule(loc: Location) extends TesslaError {
     override def message = "Input and output statements are not allowed inside of modules"
   }
+
+  case class AnnotationDefInModule(loc: Location) extends TesslaError {
+    override def message = "Annotation definitions are not allowed inside of modules"
+  }
 }

@@ -128,6 +128,9 @@ class Flattener(spec: Tessla.Specification)
       case inout@(_: Tessla.Out | _: Tessla.OutAll | _: Tessla.Print | _: Tessla.In) =>
         error(InOutStatementInModule(inout.loc))
 
+      case annoDef: Tessla.AnnotationDefinition =>
+        error(AnnotationDefInModule(annoDef.loc))
+
       case _: Tessla.TypeDefinition => // Do nothing because types have already been handled
     }
     val valueMembers = module.contents.flatMap { stat =>

@@ -80,7 +80,8 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
 
     override def visitAnnotationDefinition(annotationDef: TesslaSyntax.AnnotationDefinitionContext) = {
-      val loc = Location.fromNode(annotationDef)
+      val endLoc = Location.fromToken(Option(annotationDef.RPAR).getOrElse(annotationDef.ID))
+      val loc = Location.fromToken(annotationDef.DEF).merge(endLoc)
       val params = annotationDef.parameters.asScala.map(translateParameter)
       Tessla.AnnotationDefinition(mkID(annotationDef.ID), params, loc)
     }
