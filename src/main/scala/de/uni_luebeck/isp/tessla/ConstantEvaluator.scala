@@ -130,7 +130,6 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
     case NotYetTranslated(entry, closure, inFunction) =>
       // TODO: replace with just entry.id.nameOpt once the resultWrapper-hack is fixed
       val nameOpt = Option(entry.id).flatMap(_.nameOpt)
-      println(s"${entry.id}: ${entry.annotations}")
       translateExpression(closure, wrapper, entry.expression, nameOpt, entry.typeInfo, inFunction, entry.annotations)
     case Translating(loc) =>
       throw InfiniteRecursion(loc)
