@@ -239,6 +239,34 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
         // No checks regarding arity or non-existing or duplicate named arguments because those mistakes
         // would be caught by the type checker
         val callee = translateVar(env, call.macroID, call.macroLoc)
+
+        def applyMacro(me: MacroEntry): Unit = {
+          var posArgIdx = 0
+          val args = call.args.map {
+            case arg: TypedTessla.PositionalArgument =>
+              val param = me.mac.parameters(posArgIdx)
+              posArgIdx += 1
+              param.id -> env(arg.id)
+            case arg: TypedTessla.NamedArgument =>
+              me.mac.parameters.find(_.name == arg.name) match {
+                case Some(param) => param.id -> env(arg.id)
+                case None => throw UndefinedNamedArg(arg.name, arg.loc)
+              }
+          }.toMap
+          val defsWithoutParameters = new TypedTessla.Definitions(me.mac.body.parent)
+          me.mac.body.variables.foreach {
+            case (_, entry) =>
+              entry.expression match {
+                case _: TypedTessla.Parameter => // do nothing
+                case _ => defsWithoutParameters.addVariable(entry)
+              }
+          }
+          stack.push(call.loc)
+          val innerEnv = createEnvForDefs(defsWithoutParameters, me.closure ++ args)
+          translateExpression(innerEnv, wrapper, me.mac.result, nameOpt, typ, inFunction, Seq())
+          stack.pop()
+        }
+
         callee match {
           case Translated(Lazy(be: BuiltInEntry)) =>
             var posArgIdx = 0
@@ -298,36 +326,22 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
                     TesslaCore.CustomBuiltInCall(op, (0 until args.size).map(arg), call.loc)
                   }
                 } else {
-                  val value = Evaluator.evalPrimitiveOperator(op, (0 until args.size).map(i => getValue(argAt(i))), call.loc)
-                  wrapper.entry = Translated(Lazy(ValueEntry(value)))
+                  be.builtIn.referenceImplementation match {
+                    case None =>
+                      val value = Evaluator.evalPrimitiveOperator(op, (0 until args.size).map(i => getValue(argAt(i))), call.loc)
+                      wrapper.entry = Translated(Lazy(ValueEntry(value)))
+                    case Some(refImpl) =>
+                      val me = translateVar(env, refImpl, call.macroLoc) match {
+                        case Translated(Lazy(me: MacroEntry)) => me
+                        case _ => throw InternalError(s"Reference implementation of called built-in resolved to non-macro entry", call.macroLoc)
+                      }
+                      applyMacro(me)
+                  }
                 }
             }
 
           case Translated(Lazy(me: MacroEntry)) =>
-            var posArgIdx = 0
-            val args = call.args.map {
-              case arg: TypedTessla.PositionalArgument =>
-                val param = me.mac.parameters(posArgIdx)
-                posArgIdx += 1
-                param.id -> env(arg.id)
-              case arg: TypedTessla.NamedArgument =>
-                me.mac.parameters.find(_.name == arg.name) match {
-                  case Some(param) => param.id -> env(arg.id)
-                  case None => throw UndefinedNamedArg(arg.name, arg.loc)
-                }
-            }.toMap
-            val defsWithoutParameters = new TypedTessla.Definitions(me.mac.body.parent)
-            me.mac.body.variables.foreach {
-              case (_, entry) =>
-                entry.expression match {
-                  case _: TypedTessla.Parameter => // do nothing
-                  case _ => defsWithoutParameters.addVariable(entry)
-                }
-            }
-            stack.push(call.loc)
-            val innerEnv = createEnvForDefs(defsWithoutParameters, me.closure ++ args)
-            translateExpression(innerEnv, wrapper, me.mac.result, nameOpt, typ, inFunction, Seq())
-            stack.pop()
+            applyMacro(me)
           case other =>
             throw InternalError(s"Applying non-macro/builtin (${other.getClass.getSimpleName}) - should have been caught by the type checker.")
         }

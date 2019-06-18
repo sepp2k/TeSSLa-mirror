@@ -106,9 +106,11 @@ class TypeChecker(spec: FlatTessla.Specification)
     expression match {
       case v: FlatTessla.Variable =>
         resolve(v.id)
-      case _: FlatTessla.Literal | _: FlatTessla.InputStream | _ : FlatTessla.Parameter
-           | _ : FlatTessla.BuiltInOperator =>
+      case _: FlatTessla.Literal | _: FlatTessla.InputStream | _ : FlatTessla.Parameter =>
         Seq()
+
+      case builtIn: FlatTessla.BuiltInOperator =>
+        builtIn.referenceImplementation.toSeq.flatMap(resolve)
 
       case ite: FlatTessla.StaticIfThenElse =>
         resolve(ite.condition.id) ++ resolve(ite.thenCase.id) ++ resolve(ite.elseCase.id)
@@ -433,7 +435,8 @@ class TypeChecker(spec: FlatTessla.Specification)
           val t = translateType(p.parameterType, innerEnv)
           TypedTessla.Parameter(p.param, t, innerEnv(p.id))
         }
-        TypedTessla.BuiltInOperator(b.name, typeParameters, parameters, b.loc) -> t
+        val refImpl = b.referenceImplementation.map(env)
+        TypedTessla.BuiltInOperator(b.name, typeParameters, parameters, refImpl, b.loc) -> t
 
       case mac: FlatTessla.Macro =>
         val (tvarIDs, expectedReturnType) = declaredType match {

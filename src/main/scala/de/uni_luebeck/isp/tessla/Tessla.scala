@@ -51,7 +51,7 @@ object Tessla {
     override def loc = exp.loc
   }
 
-  case class BuiltInBody(id: Identifier) extends Body {
+  case class BuiltInBody(id: Identifier, referenceImplementation: Option[Expression]) extends Body {
     override def toString = s"__builtin__($id)"
 
     override def loc = id.loc

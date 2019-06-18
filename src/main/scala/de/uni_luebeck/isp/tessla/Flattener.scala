@@ -210,7 +210,11 @@ class Flattener(spec: Tessla.Specification)
       }
       val exp = defBody match {
         case b: Tessla.ExpressionBody => translateExpression(b.exp, defs, innerEnv)
-        case b: Tessla.BuiltInBody => FlatTessla.BuiltInOperator(b.id.name, Seq(), Seq(), b.id.loc)
+        case b: Tessla.BuiltInBody =>
+          val referenceImplementation = b.referenceImplementation.map { exp =>
+            expToId(translateExpression(exp, defs, env), defs)
+          }
+          FlatTessla.BuiltInOperator(b.id.name, Seq(), Seq(), referenceImplementation, b.id.loc)
       }
       val typ = definition.returnType.map(translateType(_, defs, innerEnv))
       defs.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), exp, typ, annotations, definition.headerLoc))
@@ -238,22 +242,30 @@ class Flattener(spec: Tessla.Specification)
       // Get the values of the type map in the order in which they appeared in the type parameter list
       val typeParameters = definition.typeParameters.map(tp => paramEnv.types(tp.name))
       val returnTypeOpt = definition.returnType.map(translateType(_, innerDefs, paramEnv))
+      def expBody(tesslaExp: Tessla.Expression, id: FlatTessla.Identifier) = {
+        val exp = translateExpression(tesslaExp, innerDefs, innerEnv)
+        val mac = FlatTessla.Macro(
+          typeParameters, parameters, innerDefs, returnTypeOpt, definition.headerLoc, exp, definition.loc,
+          isLiftable = liftableAnnotation.isDefined
+        )
+        val typ = returnTypeOpt.map { returnType =>
+          FlatTessla.FunctionType(typeParameters, parameters.map(_.parameterType), returnType, mac.isLiftable)
+        }
+        defs.addVariable(FlatTessla.VariableEntry(id, mac, typ, annotations, definition.headerLoc))
+      }
       defBody match {
         case b: Tessla.ExpressionBody =>
-          val exp = translateExpression(b.exp, innerDefs, innerEnv)
-          val mac = FlatTessla.Macro(
-            typeParameters, parameters, innerDefs, returnTypeOpt, definition.headerLoc, exp, definition.loc,
-            isLiftable = liftableAnnotation.isDefined
-          )
-          val typ = returnTypeOpt.map { returnType =>
-            FlatTessla.FunctionType(typeParameters, parameters.map(_.parameterType), returnType, mac.isLiftable)
-          }
-          defs.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), mac, typ, annotations, definition.headerLoc))
+          expBody(b.exp, env.variables(definition.id.name))
         case b: Tessla.BuiltInBody =>
           val typ = returnTypeOpt.map { returnType =>
             FlatTessla.FunctionType(typeParameters, parameters.map(_.parameterType), returnType, liftableAnnotation.isDefined)
           }
-          val builtIn = FlatTessla.BuiltInOperator(b.id.name, typeParameters, parameters, b.id.loc)
+          val referenceImplementation = b.referenceImplementation.map { exp =>
+            val id = makeIdentifier()
+            expBody(exp, id)
+            id
+          }
+          val builtIn = FlatTessla.BuiltInOperator(b.id.name, typeParameters, parameters, referenceImplementation, b.loc)
           defs.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), builtIn, typ, annotations, definition.headerLoc))
       }
     }

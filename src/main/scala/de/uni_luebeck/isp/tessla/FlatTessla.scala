@@ -88,7 +88,11 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     }
   }
 
-  case class BuiltInOperator(name: String, typeParameters: Seq[Identifier], parameters: Seq[Parameter], loc: Location) extends Expression {
+  case class BuiltInOperator(name: String,
+                             typeParameters: Seq[Identifier],
+                             parameters: Seq[Parameter],
+                             referenceImplementation: Option[Identifier],
+                             loc: Location) extends Expression {
     override def toString = s"__builtin__($name)"
   }
 

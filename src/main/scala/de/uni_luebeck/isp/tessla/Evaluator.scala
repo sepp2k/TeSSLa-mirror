@@ -134,8 +134,6 @@ object Evaluator {
         case "__fleq__" => binFloatComp(_ <= _)
         case "__fgt__" => binFloatComp(_ > _)
         case "__fgeq__" => binFloatComp(_ >= _)
-        case "__and__" => TesslaCore.BoolValue(getBool(arguments(0)) && getBool(arguments(1)), loc)
-        case "__or__" => TesslaCore.BoolValue(getBool(arguments(0)) || getBool(arguments(1)), loc)
         case "__not__" => TesslaCore.BoolValue(!getBool(arguments(0)), loc)
         case "__ite__" =>
           if (getBool(arguments(0))) arguments(1)
@@ -270,6 +268,8 @@ object Evaluator {
           val composite = getCtf(arguments(0))
           val key = getString(arguments(1))
           TesslaCore.StringValue(Ctf.getString(composite, key), loc)
+        case other =>
+          throw InternalError(s"Unknown built-in in constant folder: $other", loc)
       }
     } catch {
       case e: TesslaError =>

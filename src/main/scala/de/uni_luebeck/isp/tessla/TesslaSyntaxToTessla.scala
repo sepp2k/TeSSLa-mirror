@@ -71,7 +71,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         Tessla.ExpressionBody(Tessla.Block(expBody.defs.asScala.map(translateDefinition), exp, Location.fromNode(body)))
       }
     case builtIn: TesslaSyntax.BuiltInBodyContext =>
-      Tessla.BuiltInBody(mkID(builtIn.name))
+      Tessla.BuiltInBody(mkID(builtIn.name), Option(builtIn.expression).map(translateExpression))
   }
 
   class StatementVisitor(tokens: CommonTokenStream) extends TesslaVisitor[Tessla.Statement] {
