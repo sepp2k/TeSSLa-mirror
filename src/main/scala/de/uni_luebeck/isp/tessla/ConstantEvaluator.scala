@@ -37,7 +37,10 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
   case class MacroEntry(mac: TypedTessla.Macro, closure: Env, functionValue: Option[TesslaCore.Closure]) extends TranslationResult {
     override def toString = s"MacroEntry($mac, ...)"
   }
-  case class BuiltInEntry(name: String, typ: TypedTessla.Type) extends TranslationResult
+  case class BuiltInEntry(builtIn: TypedTessla.BuiltInOperator, typ: TypedTessla.Type) extends TranslationResult {
+    def name = builtIn.name
+    def parameters = builtIn.parameters
+  }
   case class TypeEntry(typ: TesslaCore.ValueType) extends TranslationResult
   case class FunctionParameterEntry(id: TesslaCore.Identifier) extends TranslationResult
   case class ValueExpressionEntry(exp: TesslaCore.ValueExpression, id: TesslaCore.Identifier) extends TranslationResult
@@ -146,7 +149,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
     wrapper.entry = Translating(expression.loc)
     expression match {
       case b: TypedTessla.BuiltInOperator =>
-        wrapper.entry = Translated(Lazy(BuiltInEntry(b.name, typ)))
+        wrapper.entry = Translated(Lazy(BuiltInEntry(b, typ)))
       case mac: TypedTessla.Macro if inFunction =>
         val f = translateFunction(env, mac)
         wrapper.entry = Translated(Lazy(FunctionEntry(f, makeIdentifier(nameOpt))))
@@ -238,23 +241,30 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
         val callee = translateVar(env, call.macroID, call.macroLoc)
         callee match {
           case Translated(Lazy(be: BuiltInEntry)) =>
+            var posArgIdx = 0
             // This is lazy, so the arguments don't get evaluated until they're used below, allowing us to
             // initialize entries where appropriate before the evaluation takes place
             lazy val args = call.args.map {
-              case TypedTessla.PositionalArgument(id, loc) =>
-                translateVar(env, id, loc)
-              case TypedTessla.NamedArgument(name, _, loc) =>
-                throw InternalError(s"Undefined keyword arg $name for built-in should've been caught by type checker", loc)
-            }
-            def streamArg(i: Int) = getStream(args(i), call.args(i).loc)
-            def arg(i: Int) = getArg(args(i), call.args(i).loc)
+              case arg: TypedTessla.PositionalArgument =>
+                val param = be.parameters(posArgIdx)
+                posArgIdx += 1
+                param.id -> translateVar(env, arg.id, arg.loc)
+              case arg: TypedTessla.NamedArgument =>
+                be.parameters.find(_.name == arg.name) match {
+                  case Some(param) => param.id -> translateVar(env, arg.id, arg.loc)
+                  case None => throw UndefinedNamedArg(arg.name, arg.loc)
+                }
+            }.toMap
+            def argAt(i: Int) = args(be.parameters(i).id)
+            def streamArg(i: Int) = getStream(argAt(i), call.args(i).loc)
+            def arg(i: Int) = getArg(argAt(i), call.args(i).loc)
             be.name match {
               case "nil" =>
                 val typ = TesslaCore.StreamType(translateValueType(call.typeArgs.head, env))
                 wrapper.entry = Translated(Lazy(NilEntry(TesslaCore.Nil(typ, call.loc), typ)))
               case "default" =>
                 stream {
-                  TesslaCore.Default(streamArg(0), getValue(args(1)), call.loc)
+                  TesslaCore.Default(streamArg(0), getValue(argAt(1)), call.loc)
                 }
               case "defaultFrom" =>
                 stream {
@@ -275,20 +285,20 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
               case "lift" =>
                 stream {
                   val f = getFunctionForLift(env, call.args(2).id, call.args(2).loc)
-                  val liftArgs = Seq(getStream(args(0), call.args(0).loc), getStream(args(1), call.args(1).loc))
+                  val liftArgs = Seq(getStream(argAt(0), call.args(0).loc), getStream(argAt(1), call.args(1).loc))
                   TesslaCore.Lift(f, liftArgs, call.loc)
                 }
               case op =>
                 if (typ.isStreamType) {
                   if (be.typ.isLiftableFunctionType) {
                     stream {
-                      TesslaCore.SignalLift(CurriedPrimitiveOperator(op), args.indices.map(streamArg), call.loc)
+                      TesslaCore.SignalLift(CurriedPrimitiveOperator(op), (0 until args.size).map(streamArg), call.loc)
                     }
                   } else {
-                    TesslaCore.CustomBuiltInCall(op, args.indices.map(arg), call.loc)
+                    TesslaCore.CustomBuiltInCall(op, (0 until args.size).map(arg), call.loc)
                   }
                 } else {
-                  val value = Evaluator.evalPrimitiveOperator(op, args.map(getValue), call.loc)
+                  val value = Evaluator.evalPrimitiveOperator(op, (0 until args.size).map(i => getValue(argAt(i))), call.loc)
                   wrapper.entry = Translated(Lazy(ValueEntry(value)))
                 }
             }
@@ -331,11 +341,11 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
           case Some(f) => f.function
           case None => throw InternalError("Lifting non-value macro - should have been caught by type checker")
         }
-      case Translated(Lazy(BuiltInEntry(name, typ: TypedTessla.FunctionType))) =>
+      case Translated(Lazy(BuiltInEntry(b, typ: TypedTessla.FunctionType))) =>
         val arity = typ.parameterTypes.length
         val ids = (1 to arity).map(_ => makeIdentifier())
         val defsEntryID = makeIdentifier()
-        val builtIn = TesslaCore.BuiltInOperator(name, loc)
+        val builtIn = TesslaCore.BuiltInOperator(b.name, loc)
         val app = TesslaCore.Application(Lazy(builtIn), ids.map(id => Lazy(TesslaCore.ValueExpressionRef(id))), loc)
         TesslaCore.Function(ids, Map(defsEntryID -> app), TesslaCore.ValueExpressionRef(defsEntryID), loc)
       case other => throw InternalError(s"Wrong type of environment entry: Expected macro or primitive function, found: $other")
@@ -352,8 +362,8 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
         }
       case Translated(Lazy(fe: FunctionEntry)) =>
         TesslaCore.ValueExpressionRef(fe.id)
-      case Translated(Lazy(BuiltInEntry(name, _))) =>
-        TesslaCore.BuiltInOperator(name, loc)
+      case Translated(Lazy(be: BuiltInEntry)) =>
+        TesslaCore.BuiltInOperator(be.name, loc)
       case Translated(Lazy(param: FunctionParameterEntry)) =>
         TesslaCore.ValueExpressionRef(param.id)
       case Translated(Lazy(vee: ValueExpressionEntry)) =>
@@ -411,8 +421,8 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
   }
 
   def getValueArg(entry: EnvEntry): TesslaCore.ValueArg = entry match {
-    case Translated(Lazy(BuiltInEntry(name, _))) =>
-      TesslaCore.BuiltInOperator(name, Location.builtIn)
+    case Translated(Lazy(be: BuiltInEntry)) =>
+      TesslaCore.BuiltInOperator(be.name, Location.builtIn)
     case Translated(Lazy(me: MacroEntry)) =>
       me.functionValue match {
         case Some(f) => f

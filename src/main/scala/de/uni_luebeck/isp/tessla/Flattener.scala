@@ -210,7 +210,7 @@ class Flattener(spec: Tessla.Specification)
       }
       val exp = defBody match {
         case b: Tessla.ExpressionBody => translateExpression(b.exp, defs, innerEnv)
-        case b: Tessla.BuiltInBody => FlatTessla.BuiltInOperator(b.id.name, b.id.loc)
+        case b: Tessla.BuiltInBody => FlatTessla.BuiltInOperator(b.id.name, Seq(), Seq(), b.id.loc)
       }
       val typ = definition.returnType.map(translateType(_, defs, innerEnv))
       defs.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), exp, typ, annotations, definition.headerLoc))
@@ -253,7 +253,7 @@ class Flattener(spec: Tessla.Specification)
           val typ = returnTypeOpt.map { returnType =>
             FlatTessla.FunctionType(typeParameters, parameters.map(_.parameterType), returnType, liftableAnnotation.isDefined)
           }
-          val builtIn = FlatTessla.BuiltInOperator(b.id.name, b.id.loc)
+          val builtIn = FlatTessla.BuiltInOperator(b.id.name, typeParameters, parameters, b.id.loc)
           defs.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), builtIn, typ, annotations, definition.headerLoc))
       }
     }

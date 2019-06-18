@@ -422,7 +422,18 @@ class TypeChecker(spec: FlatTessla.Specification)
           liftedMacros(id) = id
         }
         val t = declaredType.getOrElse(throw MissingTypeAnnotationBuiltIn(b.name, b.loc))
-        TypedTessla.BuiltInOperator(b.name, b.loc) -> t
+        val typeParameters = t match {
+          case ft: TypedTessla.FunctionType => ft.typeParameters
+          case _ => Seq()
+        }
+        val innerEnv = env ++ b.typeParameters.zip(typeParameters) ++ b.parameters.map(_.id).map { id =>
+          id -> makeIdentifier(id.nameOpt)
+        }
+        val parameters = b.parameters.map { p =>
+          val t = translateType(p.parameterType, innerEnv)
+          TypedTessla.Parameter(p.param, t, innerEnv(p.id))
+        }
+        TypedTessla.BuiltInOperator(b.name, typeParameters, parameters, b.loc) -> t
 
       case mac: FlatTessla.Macro =>
         val (tvarIDs, expectedReturnType) = declaredType match {
