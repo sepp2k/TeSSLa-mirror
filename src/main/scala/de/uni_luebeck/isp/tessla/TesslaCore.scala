@@ -22,14 +22,14 @@ object TesslaCore extends HasUniqueIdentifiers {
     val annotationString = annotations.map { annotation =>
       s"@${annotation.name}(${annotation.arguments.mkString(", ")})\n"
     }.mkString
-    override def toString = s"$annotationString def $id: $typ = $expression"
+    override def toString = s"${annotationString}def $id: $typ = $expression"
   }
 
   case class InStreamDescription(name: String, typ: StreamType, annotations: Seq[Annotation], loc: Location) {
     val annotationString = annotations.map { annotation =>
       s"@${annotation.name}(${annotation.arguments.mkString(", ")})\n"
     }.mkString
-    override def toString = s"$annotationString in $name: $typ"
+    override def toString = s"${annotationString}in $name: $typ"
   }
 
   case class OutStreamDescription(nameOpt: Option[String], stream: StreamRef, typ: StreamType) {
