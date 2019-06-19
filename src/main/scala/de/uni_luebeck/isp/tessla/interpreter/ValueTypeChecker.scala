@@ -31,7 +31,7 @@ object ValueTypeChecker {
     case o: TesslaCore.TesslaOption =>
       elementType match {
         case ot: TesslaCore.BuiltInType if ot.name == "Option" =>
-          o.value.foreach(check(_, ot.typeArgs.head, name))
+          o.value.foreach(v => check(v.forceValue, ot.typeArgs.head, name))
         case _ =>
           throw InputTypeMismatch(value, "Option[?]", name, elementType, value.loc)
       }

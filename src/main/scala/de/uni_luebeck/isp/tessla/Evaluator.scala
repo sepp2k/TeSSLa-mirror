@@ -157,7 +157,7 @@ object Evaluator {
         case "None" =>
           TesslaCore.TesslaOption(None, loc)
         case "Some" =>
-          TesslaCore.TesslaOption(Some(arguments(0).forceValue), loc)
+          TesslaCore.TesslaOption(Some(arguments(0)), loc)
         case "isNone" =>
           TesslaCore.BoolValue(getOption(arguments(0)).value.isEmpty, loc)
         case "getSome" =>
