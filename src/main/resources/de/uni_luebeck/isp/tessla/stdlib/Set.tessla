@@ -20,7 +20,7 @@ module Set {
   def intersection[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_intersection)
 
   @liftable
-  def fold[T, U](list: List[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
+  def fold[T, U](list: Set[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
 
   def collect[T](value: Events[T]) = {
     def set: Events[Set[T]] = default(add(last(set, value), value), empty[T])
@@ -48,4 +48,4 @@ def Set_union[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_union)
 def Set_intersection[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_intersection)
 
 @liftable
-def Set_fold[T, U](list: List[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
+def Set_fold[T, U](list: Set[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
