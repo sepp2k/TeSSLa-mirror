@@ -277,4 +277,40 @@ object Tessla {
     override def toString = elementTypes.mkString("(", ", ", ")")
     def withLoc(loc: Location): TupleType = copy(loc = loc)
   }
+
+  val unaryOperators = Map(
+    "!" -> "__not__",
+    "-" -> "__negate__",
+    "-." -> "__fnegate__",
+    "~" -> "__bitflip__"
+  )
+
+  val binaryOperators = Map(
+    "&&" -> "__and__",
+    "||" -> "__or__",
+    "==" -> "__eq__",
+    "!=" -> "__neq__",
+    ">" -> "__gt__",
+    "<" -> "__lt__",
+    ">=" -> "__geq__",
+    "<=" -> "__leq__",
+    ">." -> "__fgt__",
+    "<." -> "__flt__",
+    ">=." -> "__fgeq__",
+    "<=." -> "__fleq__",
+    "+" -> "__add__",
+    "-" -> "__sub__",
+    "*" -> "__mul__",
+    "/" -> "__div__",
+    "%" -> "__mod__",
+    "&" -> "__bitand__",
+    "|" -> "__bitor__",
+    "^" -> "__bitxor__",
+    "<<" -> "__leftshift__",
+    ">>" -> "__rightshift__",
+    "+." -> "__fadd__",
+    "-." -> "__fsub__",
+    "*." -> "__fmul__",
+    "/." -> "__fdiv__"
+  )
 }

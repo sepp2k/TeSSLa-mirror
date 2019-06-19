@@ -129,17 +129,18 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
       }
 
       override def visitUnaryExpression(exp: UnaryExpressionContext) = {
-        val operatorName = s"unary ${exp.op.getText}"
+        val operatorName = Tessla.unaryOperators(exp.op.getText)
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
         Evaluator.evalApplication(getOperator(operatorName, opLoc), Seq(visit(exp.expression)), loc).forceValue
       }
 
       override def visitInfixExpression(exp: InfixExpressionContext) = {
+        val operatorName = Tessla.binaryOperators(exp.op.getText)
         val args = Seq(visit(exp.lhs), visit(exp.rhs))
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
-        Evaluator.evalApplication(getOperator(exp.op.getText, opLoc), args, loc).forceValue
+        Evaluator.evalApplication(getOperator(operatorName, opLoc), args, loc).forceValue
       }
 
       override def visitITE(ite: ITEContext) = {

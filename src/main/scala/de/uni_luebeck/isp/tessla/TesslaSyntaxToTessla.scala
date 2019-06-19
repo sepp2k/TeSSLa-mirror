@@ -238,42 +238,6 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       Tessla.Lambda(lambda.params.asScala.map(translateParameter), headerLoc, body, Location.fromNode(lambda))
     }
 
-    val unaryOperators = Map(
-      "!" -> "__not__",
-      "-" -> "__negate__",
-      "-." -> "__fnegate__",
-      "~" -> "__bitflip__"
-    )
-
-    val binaryOperators = Map(
-      "&&" -> "__and__",
-      "||" -> "__or__",
-      "==" -> "__eq__",
-      "!=" -> "__neq__",
-      ">" -> "__gt__",
-      "<" -> "__lt__",
-      ">=" -> "__geq__",
-      "<=" -> "__leq__",
-      ">." -> "__fgt__",
-      "<." -> "__flt__",
-      ">=." -> "__fgeq__",
-      "<=." -> "__fleq__",
-      "+" -> "__add__",
-      "-" -> "__sub__",
-      "*" -> "__mul__",
-      "/" -> "__div__",
-      "%" -> "__mod__",
-      "&" -> "__bitand__",
-      "|" -> "__bitor__",
-      "^" -> "__bitxor__",
-      "<<" -> "__leftshift__",
-      ">>" -> "__rightshift__",
-      "+." -> "__fadd__",
-      "-." -> "__fsub__",
-      "*." -> "__fmul__",
-      "/." -> "__fdiv__"
-    )
-
     def translateOperator(operator: Token, operatorMap: Map[String, String]) = {
       val loc = Location.fromToken(operator)
       val functionName = Tessla.Identifier(operatorMap(operator.getText), loc)
@@ -284,7 +248,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
 
     override def visitUnaryExpression(exp: TesslaSyntax.UnaryExpressionContext) = {
       Tessla.MacroCall(
-        translateOperator(exp.op, unaryOperators),
+        translateOperator(exp.op, Tessla.unaryOperators),
         Seq(),
         Seq(Tessla.PositionalArgument(translateExpression(exp.expression))),
         Location.fromNode(exp)
@@ -293,7 +257,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
 
     override def visitInfixExpression(exp: TesslaSyntax.InfixExpressionContext) = {
       Tessla.MacroCall(
-        translateOperator(exp.op, binaryOperators),
+        translateOperator(exp.op, Tessla.binaryOperators),
         Seq(),
         Seq(Tessla.PositionalArgument(translateExpression(exp.lhs)), Tessla.PositionalArgument(translateExpression(exp.rhs))),
         Location.fromNode(exp)
