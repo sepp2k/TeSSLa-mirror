@@ -79,6 +79,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         val closure = TesslaCore.Closure(f, Map(), loc)
         Evaluator.evalApplication(closure, args, loc) match {
           case to: TesslaCore.TesslaOption => to.value
+          case err: TesslaCore.Error => Some(err)
           case other =>
             throw InternalError(s"Used lift on non-option function (return value: $other) - should have been caught by type checker")
         }
