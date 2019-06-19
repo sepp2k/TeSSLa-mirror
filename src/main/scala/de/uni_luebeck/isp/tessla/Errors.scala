@@ -3,15 +3,15 @@ package de.uni_luebeck.isp.tessla
 import java.util.IllegalFormatException
 
 object Errors {
-  abstract class TesslaError extends Exception with Diagnostic
+  trait TesslaError extends Exception with Diagnostic
 
-  case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends TesslaError {
+  case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends Exception(error) with TesslaError {
     override def loc: Location = error.loc
 
     override def message: String = s"${error.message} (t = $timestamp)"
   }
 
-  case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location]) extends TesslaError {
+  case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location]) extends Exception(inner) with TesslaError {
     override def loc = inner.loc
 
     override def message = inner.message
@@ -19,6 +19,12 @@ object Errors {
     def stackTraceString = stackTrace.map(loc => s"\n    called from $loc").mkString("")
 
     override def toString = super.toString() + stackTraceString
+  }
+
+  case class RuntimeError(inner: TesslaError) extends Exception(inner) with TesslaError {
+    override def loc = inner.loc
+
+    override def message = inner.message
   }
 
   case class MissingBody(id: Tessla.Identifier) extends TesslaError {

@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.Errors.{RuntimeError, TesslaError}
 import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
@@ -166,7 +166,7 @@ object TesslaCore extends HasUniqueIdentifiers {
   }
 
   final case class Error(error: TesslaError) extends ValueOrError {
-    override def forceValue = throw error
+    override def forceValue = throw RuntimeError(error)
 
     override def mapValue(f: Value => ValueOrError) = this
   }
@@ -224,7 +224,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  final case class TesslaOption(value: Option[Value], loc: Location) extends PrimitiveValue {
+  final case class TesslaOption(value: Option[ValueOrError], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaOption = copy(loc = loc)
   }
 
