@@ -27,3 +27,25 @@ module Set {
     set
   }
 }
+
+# TODO: Remove these once liftable functions can properly be called through modules
+@liftable
+def Set_add[T](set: Set[T], item: T): Set[T] = __builtin__(Set_add)
+
+@liftable
+def Set_contains[T](set: Set[T], item: T): Bool = __builtin__(Set_contains)
+
+@liftable
+def Set_remove[T](set: Set[T], item: T): Set[T] = __builtin__(Set_remove)
+
+@liftable
+def Set_size[T](set: Set[T]): Int = __builtin__(Set_size)
+
+@liftable
+def Set_union[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_union)
+
+@liftable
+def Set_intersection[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_intersection)
+
+@liftable
+def Set_fold[T, U](list: List[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
