@@ -3,11 +3,11 @@ def op(acc: Int, value: (Int, Int)) := {
   return add(acc, value._1, value._2)
 }
 
-def ss := const(Set_add(Set_add(Set_empty[(Int, Int)], (2,1)), (4,7)), ())
+def ss := const(Set_add(Set_add(Set.empty[(Int, Int)], (2,1)), (4,7)), ())
 def os := lift(s, nil[Unit], fun(x: Option[Set[(Int,Int)]], y: Option[Unit]) =>
   Some(Set_fold(getSome(x), 0, op)))
 out os
 
-def s := Set_add(Set_add(Set_empty[(Int, Int)], (1,2)), (3,4))
+def s := Set_add(Set_add(Set.empty[(Int, Int)], (1,2)), (3,4))
 def o := Set_fold(s, 0, op)
 out o
