@@ -222,8 +222,8 @@ object Evaluator {
           val list = getList(arguments(0))
           TesslaCore.TesslaList(list.value :+ arguments(1).forceValue, loc)
         case "List_prepend" =>
-          val list = getList(arguments(0))
-          TesslaCore.TesslaList(arguments(1).forceValue +: list.value, loc)
+          val list = getList(arguments(1))
+          TesslaCore.TesslaList(arguments(0).forceValue +: list.value, loc)
         case "List_tail" =>
           val list = getList(arguments(0))
           if (list.value.isEmpty) {
