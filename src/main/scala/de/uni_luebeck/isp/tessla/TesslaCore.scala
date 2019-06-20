@@ -219,13 +219,15 @@ object TesslaCore extends HasUniqueIdentifiers {
       if (value.keys.toSet == tupleKeys.toSet) {
         tupleKeys.map(k => value(k)).mkString("(", ", ", ")")
       } else {
-        value.map { case (name, v) => s"$name = $v" }.mkString("{", ", ", "}")
+        value.map { case (name, v) => s"$name = ${v.forceValue}" }.mkString("{", ", ", "}")
       }
     }
   }
 
   final case class TesslaOption(value: Option[ValueOrError], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaOption = copy(loc = loc)
+
+    override def toString = value.map(_.forceValue).toString
   }
 
   final case class TesslaMap(value: Map[Value, Value], loc: Location) extends PrimitiveValue {
