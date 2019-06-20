@@ -211,7 +211,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def withLoc(loc: Location): StringValue = copy(loc = loc)
   }
 
-  final case class TesslaObject(value: Map[String, Value], loc: Location) extends PrimitiveValue {
+  final case class TesslaObject(value: Map[String, ValueOrError], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaObject = copy(loc = loc)
 
     override def toString = {

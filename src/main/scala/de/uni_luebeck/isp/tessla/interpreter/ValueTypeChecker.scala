@@ -68,7 +68,7 @@ object ValueTypeChecker {
             throw InputTypeMismatch(value, actual, name, elementType, value.loc)
           }
           o.value.foreach {
-            case (n, v) => check(v, ot.memberTypes(n), s"$name.$n")
+            case (n, v) => check(v.forceValue, ot.memberTypes(n), s"$name.$n")
           }
         case _ =>
           throw InputTypeMismatch(value, actual, name, elementType, value.loc)
