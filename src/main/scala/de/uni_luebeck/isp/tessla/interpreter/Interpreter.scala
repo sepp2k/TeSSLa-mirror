@@ -73,7 +73,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       }
       lift(argStreams.map(evalStream)) { arguments =>
         val args = arguments.zip(argStreams).map {
-          case (Some(arg), stream) => arg.mapValue(a => TesslaCore.TesslaOption(Some(a), stream.loc))
+          case (Some(arg), stream) => TesslaCore.TesslaOption(Some(arg), stream.loc)
           case (None, stream) => TesslaCore.TesslaOption(None, stream.loc)
         }
         val closure = TesslaCore.Closure(f, Map(), loc)
