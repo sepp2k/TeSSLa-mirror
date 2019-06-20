@@ -177,7 +177,7 @@ class Flattener(spec: Tessla.Specification)
             case arg: Tessla.NamedArgument[Tessla.Literal] =>
               annotationDef.parameters.find(_.name == arg.name) match {
                 case Some(param) => param.name -> arg.expr.value
-                case None => throw UndefinedNamedArg(arg.name, arg.loc)
+                case None => throw UndefinedNamedArg(arg.name, arg.id.loc)
               }
           }.toMap
           FlatTessla.Annotation(annotation.name, args, annotation.loc)

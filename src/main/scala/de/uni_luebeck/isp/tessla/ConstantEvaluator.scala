@@ -250,7 +250,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
             case arg: TypedTessla.NamedArgument =>
               me.mac.parameters.find(_.name == arg.name) match {
                 case Some(param) => param.id -> env(arg.id)
-                case None => throw UndefinedNamedArg(arg.name, arg.loc)
+                case None => throw UndefinedNamedArg(arg.name, arg.idLoc.loc)
               }
           }.toMap
           val defsWithoutParameters = new TypedTessla.Definitions(me.mac.body.parent)
@@ -280,7 +280,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
               case arg: TypedTessla.NamedArgument =>
                 be.parameters.find(_.name == arg.name) match {
                   case Some(param) => param.id -> translateVar(env, arg.id, arg.loc)
-                  case None => throw UndefinedNamedArg(arg.name, arg.loc)
+                  case None => throw UndefinedNamedArg(arg.name, arg.idLoc.loc)
                 }
             }.toMap
             def argAt(i: Int) = args(be.parameters(i).id)
