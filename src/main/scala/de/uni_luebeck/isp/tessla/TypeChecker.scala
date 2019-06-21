@@ -484,7 +484,7 @@ class TypeChecker(spec: FlatTessla.Specification)
           val firstID = findPredef(s"first", env)
           val firstCall = parameters.foldLeft(body) { (result, param) =>
             val resultId = makeIdentifier()
-            val resultEntry = TypedTessla.VariableEntry(resultId, body, liftedType.returnType, Seq(), mac.loc)
+            val resultEntry = TypedTessla.VariableEntry(resultId, result, liftedType.returnType, Seq(), mac.loc)
             innerDefs.addVariable(resultEntry)
             val args = Seq(
               TypedTessla.PositionalArgument(resultId, result.loc),
