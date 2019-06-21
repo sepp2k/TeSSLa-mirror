@@ -343,6 +343,8 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
           }
           if (part.FORMAT == null) {
             parts += Tessla.MacroCall(
+              // TODO: Once the operators are properly located in Predef
+              // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("Predef", loc)), "toString", exp.loc)
               Tessla.Variable(Tessla.Identifier("toString", exp.loc)),
               Seq(), Seq(Tessla.PositionalArgument(exp)), exp.loc
             )
@@ -354,6 +356,8 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
                 error(invalid.err)
               case noArgs: TesslaParser.NoArgFormat =>
                 parts += Tessla.MacroCall(
+                  // TODO: Once the operators are properly located in Predef
+                  // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("Predef", loc)), "toString", exp.loc)
                   Tessla.Variable(Tessla.Identifier("toString", exp.loc)),
                   Seq(), Seq(Tessla.PositionalArgument(exp)), exp.loc
                 )
@@ -361,7 +365,9 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
               case oneArg: TesslaParser.SingleArgFormat =>
                 val formatString = Tessla.Literal(Tessla.StringLiteral(format), formatLoc)
                 parts += Tessla.MacroCall(
-                  Tessla.Variable(Tessla.Identifier(oneArg.formatFunction, exp.loc)),
+                  // TODO: Once liftable functions can be accessed through modules
+                  // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("String", loc)), oneArg.formatFunction, exp.loc)
+                  Tessla.Variable(Tessla.Identifier(s"String_${oneArg.formatFunction}", exp.loc)),
                   Seq(), Seq(Tessla.PositionalArgument(formatString), Tessla.PositionalArgument(exp)), exp.loc
                 )
             }
@@ -376,6 +382,8 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       } else {
         parts.reduceLeft { (acc, exp) =>
           Tessla.MacroCall(
+            // TODO: Once liftable functions can be accessed through modules
+            // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("String", loc)), "concat", exp.loc)
             Tessla.Variable(Tessla.Identifier("String_concat", exp.loc)),
             Seq(),
             Seq(Tessla.PositionalArgument(acc), Tessla.PositionalArgument(exp)),

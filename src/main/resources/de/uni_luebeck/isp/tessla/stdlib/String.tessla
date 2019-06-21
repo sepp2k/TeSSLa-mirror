@@ -11,3 +11,16 @@ module String {
   @liftable
   def formatFloat(formatString: String, value: Float): String = format(formatString, value)
 }
+
+# TODO: Remove these once liftable functions can properly be called through modules
+@liftable
+def String_concat(str1: String, str2: String): String = __builtin__(String_concat)
+
+@liftable
+def String_format[T](formatString: String, value: T): String = __builtin__(String_format)
+
+@liftable
+def String_formatInt(formatString: String, value: Int): String = String_format(formatString, value)
+
+@liftable
+def String_formatFloat(formatString: String, value: Float): String = String_format(formatString, value)
