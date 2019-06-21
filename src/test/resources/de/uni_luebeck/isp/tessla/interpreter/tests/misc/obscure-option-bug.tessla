@@ -3,7 +3,7 @@ type Queue[D] := List[(Int, D)]
 def enq[D](t: Int, d: D, q: Queue[D]) :=
   List_append(q, (t, d))
 
-def Queue_empty[D] := List_empty[(Int, D)]
+def Queue_empty[D] := List.empty[(Int, D)]
 
 type QueueA[D] := ${unknownBefore: Int, queue: Queue[D]}
 
@@ -21,17 +21,12 @@ def remNewerA[D](t: Int, qOpt: Option[QueueA[D]]) :=
   then QueueA(t, Queue_empty[D])
   else QueueA(min(t, getSome(qOpt).unknownBefore), Queue_empty[D])
 
-def max(a: Int, b: Int) := if a > b then a else b
-def min(a: Int, b: Int) := if a > b then b else a
 def sig[A](a: A) := const(a, ())
 def totalA(f: (Option[Int], Option[QueueA[Int]]) => Option[QueueA[Int]]) :=
   fun(a: Option[Option[Option[Int]]], b: Option[Option[Option[QueueA[Int]]]]) =>
     if isSome(a) && isNone(getSome(a)) || isSome(b) && isNone(getSome(b)) then Some(None[Option[QueueA[Int]]])
     else if isNone(a) || isNone(b) then None[Option[Option[QueueA[Int]]]]
     else Some(Some(f(getSome(getSome(a)), getSome(getSome(b)))))
-
-@liftable
-def isSome[T](x: Option[T]) := !isNone(x)
 
 in l: Events[Int]
 

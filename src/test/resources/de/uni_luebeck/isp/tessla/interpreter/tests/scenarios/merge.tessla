@@ -2,11 +2,7 @@ in x: Events[Int]
 in y: Events[Int]
 in z: Events[Int]
 
-def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
-    if getSome(c) then Some(x) else None[T]
-)
-
-def merge[T,U](x: Events[T], y: Events[U]): Events[Unit] :=
+def myMergeUnit[T,U](x: Events[T], y: Events[U]): Events[Unit] :=
   filterConst((), default(x==x, false) || default(y==y, false))
 
 def mergeValues[T](a: Events[T], b: Events[T]): Events[T] :=
@@ -14,7 +10,7 @@ def mergeValues[T](a: Events[T], b: Events[T]): Events[T] :=
   then defaultFrom(a,b)
   else defaultFrom(b,a)
 
-def a := merge(x,y)
+def a := myMergeUnit(x,y)
 def b := mergeValues(x,y)
 
 out a
