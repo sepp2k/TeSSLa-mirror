@@ -237,7 +237,7 @@ type Option[T] = __builtin__(Option)
   ## Filter the event stream `events` based on the last known value
   ## of the boolean signal `condition`.
   def filter[A](events: Events[A], condition: Events[Bool]) =
-    lift(events, merge(condition, prev(condition)), (e: Option[A], c: Option[Bool]) =>
+    lift(events, merge(condition, last(condition, events)), (e: Option[A], c: Option[Bool]) =>
       if isSome(c) && getSome(c) then e else None[A])
 
   ## Remove events with the same value
