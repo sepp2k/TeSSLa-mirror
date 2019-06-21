@@ -136,7 +136,7 @@ module Predef {
   # Note that the core of the option functionality is defined here because options are fundamental
   # enough (lift etc. make use of options) that having the functions in Predef makes sense.
   # Further functionality (such as map etc.) will be defined in the Option module
-type Option[T] = __builtin__(Option)
+  type Option[T] = __builtin__(Option)
   def None[T]: Option[T] = __builtin__(None)
 
   @liftable
@@ -283,7 +283,7 @@ type Option[T] = __builtin__(Option)
   ## the number of events seen so far.
   ## See `eventCount` for a counting macro with an
   ## external reset.
-  def count(x: Events[Int]) = fold(x, 0, (x: Events[Int], _: Events[Int]) => x+1)
+  def count(x: Events[Int]) = fold(x, 0, (x: Int, _: Int) => x+1)
 
   ## Sum up the values of all events on `x`. Provides
   ## for every input event an output event whose value
@@ -306,8 +306,16 @@ type Option[T] = __builtin__(Option)
   ## 4: y = f(f(0,2),6)
   ## 5: y = f(f(f(0,2),6),1)
   ## ```
-  def fold[T,R](stream: Events[T], init: R, f: (Events[R],Events[T]) => Events[R]) = result where {
-    def result: Events[R] = default(f(last(result, stream), stream), init)
+  def fold[T,R](stream: Events[T], init: R, f: (R,T) => R) = result where {
+    def result: Events[R] =
+      default(
+        lift(last(result, stream), stream, (acc: Option[R], curr: Option[T]) =>
+          if isNone(curr) then None[R]
+          else if isNone(acc) then Some(f(init, getSome(curr)))
+          else Some(f(getSome(acc), getSome(curr)))
+        ),
+        init
+      )
   }
 
   ## Fold a function on values over all events on `stream`. Starting with
