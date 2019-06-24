@@ -40,9 +40,9 @@ module Predef {
   @liftable
   def __ite__[T](cond: Bool, thenCase: T, elseCase: T): T = __builtin__(__ite__)
   @liftable
-  def __and__(lhs: Bool, rhs: Bool): Bool = if lhs then rhs else lhs
+  def __and__(lhs: Bool, rhs: Bool): Bool = __builtin__(__and__)
   @liftable
-  def __or__(lhs: Bool, rhs: Bool): Bool = if lhs then lhs else rhs
+  def __or__(lhs: Bool, rhs: Bool): Bool = __builtin__(__or__)
 
   @liftable
   def __eq__[T](lhs: T, rhs: T): Bool = __builtin__(__eq__)
