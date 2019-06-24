@@ -1,8 +1,3 @@
-def period(amount: Int) := {
-  def s: Events[Int] := default(const(amount, delay(s, ())), amount)
-  const((), s)
-}
-
 in x: Events[Unit]
 def z := period(5)
 out z

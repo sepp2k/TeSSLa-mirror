@@ -1,4 +1,4 @@
-def duration := runtime("compute")
+def duration := rt("compute")
 out duration
 
 def error := filterConst((), duration > 45ms)
@@ -9,7 +9,7 @@ out maximum(duration) as max
 
 
 -- Standard Library
-def runtime(name: String) := {
+def rt(name: String) := {
   def call := function_call(name)
   def ret := function_return(name)
   return at(ret, time(ret) - time(call))
@@ -18,30 +18,9 @@ def runtime(name: String) := {
 def at[A,B](x: Events[A], y: Events[B]) :=
   filter(y, time(x) == time(y))
 
-@liftable
-def max(a: Int, b: Int) := if a > b then a else b
-
-def maximum(x: Events[Int]) := fold(max, x, 0)
-
-def fold[T,R](f: (Events[R],Events[T]) => Events[R], stream: Events[T], init: R) := result where {
-  def result: Events[R] := default(f(last(result, stream), stream), init)
-}
-
-in line: Events[Int]
-in column: Events[Int]
-in thread_id: Events[Int]
 in instruction: Events[String]
 in function: Events[String]
 in functioncall: Events[String]
-in operandcount: Events[Int]
 
-in debug_slot: Events[Int]
-in debug_value: Events[Int]
-
-def code_line_exec(l: Int) := filterConst((), line == l && last(line, line) != l)
 def function_call(name: String) := filterConst((), functioncall == name)
 def function_return(name: String) := filterConst((), function == name && instruction == "ret")
-
-def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
-    if getSome(c) then Some(x) else None[T]
-)

@@ -2,65 +2,9 @@ def send := function_call("sendValue")
 out send # unit events
 
 def property :=
-    bursts(send, burstLength = 3s,
-      waitingPeriod = 2s, burstAmount = 4)
+    bursts(send, burstLength = 3s, waitingPeriod = 2s, burstAmount = 4, since = ())
 out pure(property) as property # signal
 
-
-
-
-
-
-
-
-
-
-
-
-
-
--- Standard Library
-
-def resetCount[A,B](values: Events[A], reset: Events[B]) := {
-    def count: Events[Int] := default(
-        if default(time(reset) > time(values), false)
-        then 0
-        else if default(time(reset) == time(values), false)
-        then 1
-        else last(count, values) + 1,
-        0)
-    count
-}
-
-def bursts[A](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int) := {
-    def burstStarts: Events[A] :=
-        defaultFrom(
-            filter(e, time(e) - last(time(burstStarts), e) >= burstLength + waitingPeriod),
-            e)
-    resetCount(e, burstStarts) <= burstAmount &&
-        time(e) < time(burstStarts) + burstLength
-}
-
-# Return the previous event of `a`
-def prev[A](a: Events[A]) := last(a,a)
-
-# Filter events with the same value
-def pure[A](x: Events[A]) := filter(x, default(x != prev(x), true))
-
-in line: Events[Int]
-in column: Events[Int]
-in thread_id: Events[Int]
-in instruction: Events[String]
-in function: Events[String]
 in functioncall: Events[String]
 
-in debug_slot: Events[Int]
-in debug_value: Events[Int]
-
-def code_line_exec(l: Int) := filterConst((), line == l && last(line, line) != l)
 def function_call(name: String) := filterConst((), functioncall == name)
-def function_return(name: String) := filterConst((), function == name && instruction == "ret")
-
-def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
-    if getSome(c) then Some(x) else None[T]
-)

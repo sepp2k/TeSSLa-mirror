@@ -1,6 +1,5 @@
 in functioncall: Events[String]
 in line_reached: Events[Int]
-in column: Events[Int]
 in function: Events[String]
 in instruction: Events[String]
 
@@ -13,7 +12,3 @@ out filterConst((), function == "foo" && functioncall == "bar")
 
 -- The fact that we log all lines should not affect the logging of the other properties
 out line_reached
-
-def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
-    if getSome(c) then Some(x) else None[T]
-)
