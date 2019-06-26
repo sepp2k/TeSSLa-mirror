@@ -203,7 +203,11 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       if (exp.elems.size == 1 && exp.lastComma == null) {
         visit(exp.elems.get(0))
       } else {
-        Tessla.Tuple(exp.elems.asScala.map(visit), Location.fromNode(exp))
+        val members = exp.elems.asScala.zipWithIndex.map {
+          case (elem, index) =>
+            Tessla.MemberDefinition.Full(Tessla.Identifier(s"_${index + 1}", Location.fromNode(elem)), visit(elem))
+        }
+        Tessla.ObjectLiteral(members, Location.fromNode(exp))
       }
     }
 

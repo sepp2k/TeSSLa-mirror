@@ -197,10 +197,6 @@ object Tessla {
     }
   }
 
-  case class Tuple(elements: Seq[Expression], loc: Location) extends Expression {
-    override def toString(inner: Boolean) = elements.mkString("(", ", ", ")")
-  }
-
   case class MemberAccess(receiver: Expression, member: Identifier, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"${receiver.toString(inner = true)}.$member"
   }

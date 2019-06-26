@@ -404,13 +404,6 @@ class Flattener(spec: Tessla.Specification)
       }
       FlatTessla.ObjectLiteral(members.toMap, objectLit.loc)
 
-    case tuple: Tessla.Tuple =>
-      val members = tuple.elements.zipWithIndex.map {
-        case (element, index) =>
-          s"_${index+1}" -> FlatTessla.IdLoc(expToId(translateExpression(element, defs, env), defs), element.loc)
-      }
-      FlatTessla.ObjectLiteral(members.toMap, tuple.loc)
-
     case memberAccess: Tessla.MemberAccess =>
       val receiverId = expToId(translateExpression(memberAccess.receiver, defs, env), defs)
       val receiver = FlatTessla.IdLoc(receiverId, memberAccess.receiver.loc)

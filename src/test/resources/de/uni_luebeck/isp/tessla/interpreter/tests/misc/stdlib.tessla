@@ -1,5 +1,12 @@
 in x: Events[Int]
 
+-- Hack to work around issue #78
+def bla1 = ()
+def bla2 = ()
+def bla3 = ()
+def bla4 = ()
+def bla5 = ()
+
 out minimum(x)
 out maximum(x)
 out count(x)
