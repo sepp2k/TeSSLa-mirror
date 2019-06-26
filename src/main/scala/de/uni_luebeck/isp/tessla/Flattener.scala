@@ -169,14 +169,14 @@ class Flattener(spec: Tessla.Specification)
           FlatTessla.Annotation(annotation.name, Map(), annotation.loc)
         } else {
           var posArgIdx = 0
-          val args: Map[String, Tessla.LiteralValue] = annotation.arguments.map {
-            case arg: Tessla.PositionalArgument[Tessla.Literal] =>
+          val args: Map[String, Tessla.ConstantExpression] = annotation.arguments.map {
+            case arg: Tessla.PositionalArgument[Tessla.ConstantExpression] =>
               val param = annotationDef.parameters(posArgIdx)
               posArgIdx += 1
-              param.name -> arg.expr.value
-            case arg: Tessla.NamedArgument[Tessla.Literal] =>
+              param.name -> arg.expr
+            case arg: Tessla.NamedArgument[Tessla.ConstantExpression] =>
               annotationDef.parameters.find(_.name == arg.name) match {
-                case Some(param) => param.name -> arg.expr.value
+                case Some(param) => param.name -> arg.expr
                 case None => throw UndefinedNamedArg(arg.name, arg.id.loc)
               }
           }.toMap
@@ -362,10 +362,10 @@ class Flattener(spec: Tessla.Specification)
     case call: Tessla.MacroCall =>
       val mac = expToId(translateExpression(call.mac, defs, env), defs)
       val args = call.args.map {
-        case arg: Tessla.NamedArgument[_] =>
+        case arg: Tessla.NamedArgument[Tessla.Expression] =>
           val id = expToId(translateExpression(arg.expr, defs, env), defs)
           FlatTessla.NamedArgument(arg.id.name, FlatTessla.IdLoc(id, arg.id.loc), arg.loc)
-        case arg: Tessla.PositionalArgument[_] =>
+        case arg: Tessla.PositionalArgument[Tessla.Expression] =>
           val id = expToId(translateExpression(arg.expr, defs, env), defs)
           FlatTessla.PositionalArgument(id, arg.loc)
       }

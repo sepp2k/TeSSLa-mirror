@@ -32,7 +32,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   type TypeAnnotation
   def typeAnnotationToString(typeAnnotation: TypeAnnotation): String
 
-  case class Annotation(name: String, arguments: Map[String, Tessla.LiteralValue], loc: Location)
+  case class Annotation(name: String, arguments: Map[String, Tessla.ConstantExpression], loc: Location)
 
   case class VariableEntry(id: Identifier, expression: Expression, typeInfo: TypeAnnotation,
                            annotations: Seq[Annotation], loc: Location)

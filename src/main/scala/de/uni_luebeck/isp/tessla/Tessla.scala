@@ -5,11 +5,11 @@ object Tessla {
     override def toString = statements.mkString("\n")
   }
 
-  case class Identifier(name: String, loc: Location) {
+  case class Identifier(name: String, loc: Location) extends Location.HasLoc {
     override def toString = name
   }
 
-  abstract sealed class Statement {
+  abstract sealed class Statement extends Location.HasLoc {
     def loc: Location
   }
 
@@ -37,11 +37,11 @@ object Tessla {
     }
   }
 
-  case class Annotation(id: Identifier, arguments: Seq[Argument[Literal]], loc: Location) {
+  case class Annotation(id: Identifier, arguments: Seq[Argument[ConstantExpression]], loc: Location) {
     def name: String = id.name
   }
 
-  sealed abstract class Body {
+  sealed abstract class Body extends Location.HasLoc {
     def loc: Location
   }
 
@@ -102,7 +102,7 @@ object Tessla {
     override def toString = s"print $expr"
   }
 
-  case class Parameter(id: Identifier, parameterType: Option[Type]) {
+  case class Parameter(id: Identifier, parameterType: Option[Type]) extends Location.HasLoc {
     override def toString = parameterType match {
       case Some(t) => s"${id.name}: $t"
       case None => id.name
@@ -116,7 +116,7 @@ object Tessla {
     }
   }
 
-  sealed abstract class Expression {
+  sealed abstract class Expression extends Location.HasLoc {
     def loc: Location
     def toString(inner: Boolean): String
     override def toString: String = toString(false)
@@ -222,16 +222,32 @@ object Tessla {
     override def toString = s""""$value""""
   }
 
-  abstract class Argument[E <: Expression] {
+  sealed abstract class ConstantExpression extends Location.HasLoc
+
+  object ConstantExpression {
+    case class Literal(value: LiteralValue, loc: Location) extends ConstantExpression {
+      override def toString = value.toString
+    }
+
+    case class Object(members: Map[String, ConstantExpression], loc: Location) extends ConstantExpression {
+      override def toString = {
+        members.map {
+          case (name, value) => s"$name = $value"
+        }.mkString("{", ", ", "}")
+      }
+    }
+  }
+
+  abstract class Argument[T <: Location.HasLoc] extends Location.HasLoc {
     def loc: Location
   }
 
-  case class PositionalArgument[E <: Expression](expr: E) extends Argument[E] {
+  case class PositionalArgument[T <: Location.HasLoc](expr: T) extends Argument[T] {
     override def toString = expr.toString
     def loc = expr.loc
   }
 
-  case class NamedArgument[E <: Expression](id: Identifier, expr: E) extends Argument[E] {
+  case class NamedArgument[T <: Location.HasLoc](id: Identifier, expr: T) extends Argument[T] {
     override def toString = s"$id = $expr"
     def name = id.name
     def loc = id.loc.merge(expr.loc)

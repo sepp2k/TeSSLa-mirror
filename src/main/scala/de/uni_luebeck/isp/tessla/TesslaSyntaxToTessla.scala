@@ -35,7 +35,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     )
   }
 
-  def translateLiteral(literal: TesslaSyntax.LiteralContext): Tessla.Literal = {
+  def translateConstantExpression(literal: TesslaSyntax.LiteralContext): Tessla.ConstantExpression = {
     val lit = if (literal.stringLit != null) {
       Tessla.StringLiteral(getConstantString(literal.stringLit))
     } else if (literal.DECINT != null) {
@@ -48,15 +48,15 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     } else {
       throw InternalError("Unexpected type of literal", Location.fromNode(literal))
     }
-    Tessla.Literal(lit, Location.fromNode(literal))
+    Tessla.ConstantExpression.Literal(lit, Location.fromNode(literal))
   }
 
   def translateAnnotation(annotation: TesslaSyntax.AnnotationContext): Tessla.Annotation = {
     val args = annotation.arguments.asScala.map { arg =>
       if (arg.name != null) {
-        Tessla.NamedArgument(mkID(arg.name), translateLiteral(arg.literal))
+        Tessla.NamedArgument(mkID(arg.name), translateConstantExpression(arg.literal))
       } else {
-        Tessla.PositionalArgument(translateLiteral(arg.literal))
+        Tessla.PositionalArgument(translateConstantExpression(arg.literal))
       }
     }
     Tessla.Annotation(mkID(annotation.ID), args, Location.fromNode(annotation))
