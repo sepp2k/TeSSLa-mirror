@@ -69,4 +69,19 @@ object Trace {
 
   def fromString(string: String, fileName: String, abortAt: Option[Specification.Time] = None) =
     fromSource(Source.fromString(string), fileName, abortAt)
+
+  def fromCsvLineIterator(lineIterator: Iterator[String], fileName: String, abortAt: Option[Specification.Time] = None) = {
+    val rawTrace = new CsvTraceParser(lineIterator, fileName).parseTrace()
+    new FlatEventIterator(rawTrace, abortAt)
+  }
+
+  def fromCsvSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {
+    fromCsvLineIterator(traceSource.getLines, fileName, abortAt)
+  }
+
+  def fromCsvFile(fileName: String, abortAt: Option[Specification.Time] = None) =
+    fromCsvSource(Source.fromFile(fileName), fileName, abortAt)
+
+  def fromCsvString(string: String, fileName: String, abortAt: Option[Specification.Time] = None) =
+    fromCsvSource(Source.fromString(string), fileName, abortAt)
 }

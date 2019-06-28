@@ -56,6 +56,8 @@ object Main extends SexyOpt {
   val ctfTrace = flag("ctf", "The trace-file with the input data is in CTF format. With this option you must specify " +
     "a trace-file. stdin is not supported.")
 
+  val csvTrace = flag("csv", "The trace-file or the input stream is in CSV format.")
+
   def main(args: Array[String]): Unit = {
     def unwrapResult[T](result: Result[T]): T = result match {
       case Success(res, warnings) =>
@@ -122,8 +124,13 @@ object Main extends SexyOpt {
         val output = Interpreter.run(core, trace, stopOn)
         output.foreach(println)
       } else {
-        val trace = traceFile.map(Trace.fromFile(_, abortAtValue))
-          .getOrElse(Trace.fromSource(Source.stdin, "<stdin>", abortAtValue))
+        val trace = if (csvTrace) {
+          traceFile.map(Trace.fromCsvFile(_, abortAtValue))
+            .getOrElse(Trace.fromCsvSource(Source.stdin, "<stdin>", abortAtValue))
+        } else {
+          traceFile.map(Trace.fromFile(_, abortAtValue))
+            .getOrElse(Trace.fromSource(Source.stdin, "<stdin>", abortAtValue))
+        }
         if (flattenInput) {
           trace.foreach(println)
         } else {

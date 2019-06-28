@@ -2,6 +2,10 @@
 
 ## Version 0.7.7 (upcoming)
 
+### Additions and Fixes
+
+* Add CSV input parser.
+
 ## Version 0.7.6
 
 ### Additions and Fixes

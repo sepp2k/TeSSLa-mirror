@@ -10,7 +10,7 @@ import org.antlr.v4.runtime.tree.RuleNode
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 
-class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
+class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
   val queue: mutable.PriorityQueue[EventRange] =
     new mutable.PriorityQueue[EventRange]()(Ordering.by((ev: EventRange) => ev.from).reverse)
   var nextEvents = new mutable.Queue[Trace.Event]
@@ -158,16 +158,15 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
   }
 
   object EventRange {
-    def apply(erc: EventRangeContext): EventRange = {
-      val id = Trace.Identifier(erc.streamName.getText, Location.fromToken(erc.ID))
+    def apply(parserEventRange: ParserEventRange): EventRange = {
+      val id = Trace.Identifier(parserEventRange.streamName.getText, Location.fromToken(parserEventRange.streamName))
       val t = Trace.Identifier("t", Location.builtIn)
-      val exp = Option(erc.expression)
-      val trLoc = Location.fromNode(erc.timeRange)
-      val loc = Location.fromNode(erc)
-      erc.timeRange match {
+      val exp = Option(parserEventRange.expression)
+      val trLoc = Location.fromNode(parserEventRange.timeRange)
+      parserEventRange.timeRange match {
         case stc: SingleTimeContext =>
           val time = BigInt(stc.DECINT.getText)
-          new EventRange(time, Some(time), 1, t, trLoc, id, exp, loc)
+          new EventRange(time, Some(time), 1, t, trLoc, id, exp, parserEventRange.loc)
         case crc: CompRangeContext =>
           val lower =
             if (crc.lowerOp.getText == "<") BigInt(crc.lowerBound.getText) + 1
@@ -177,14 +176,14 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
             else BigInt(bound.getText)
           }
           val tID = Trace.Identifier(crc.ID.getText, Location.fromToken(crc.ID))
-          EventRange(lower, upper, 1, tID, trLoc, id, exp, loc)
+          EventRange(lower, upper, 1, tID, trLoc, id, exp, parserEventRange.loc)
         case rc: RangeContext =>
           val first = BigInt(rc.first.getText)
           val step =
             if (rc.second != null) BigInt(rc.second.getText) - first
             else BigInt(1)
           val last = Option(rc.last).map(l => BigInt(l.getText))
-          EventRange(first, last, step, t, trLoc, id, exp, loc)
+          EventRange(first, last, step, t, trLoc, id, exp, parserEventRange.loc)
       }
     }
   }
