@@ -1,0 +1,4 @@
+#module OSL {
+  def @FunctionCalled(name: String)
+  def @FunctionReturns(name: String)
+#}

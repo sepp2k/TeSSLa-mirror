@@ -41,7 +41,7 @@ object Main extends SexyOpt {
 
   val timeUnit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
 
-  val generateOsl = flag("generate-osl", "Print the corresponding osl file")
+  val observations = flag("observations", "Generate observation specification file from the corresponding annotations")
 
   val abortAt = option("abort-at", "Stop the interpreter after a given amount of events.")
 
@@ -87,8 +87,8 @@ object Main extends SexyOpt {
       )
       val core = unwrapResult(Compiler.compile(specSource, compilerOptions))
 
-      if (generateOsl) {
-        println(unwrapResult(OSL.Generator.translate(core)))
+      if (observations) {
+        println(unwrapResult(Observations.Generator.translate(core)))
         return
       }
 

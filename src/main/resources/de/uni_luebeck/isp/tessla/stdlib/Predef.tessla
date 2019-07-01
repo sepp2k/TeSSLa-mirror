@@ -5,6 +5,7 @@ include "Map"
 include "String"
 include "CTF"
 include "Tessla"
+include "OSL"
 
 module Predef {
   def nil[T]: Events[T] = __builtin__(nil)
