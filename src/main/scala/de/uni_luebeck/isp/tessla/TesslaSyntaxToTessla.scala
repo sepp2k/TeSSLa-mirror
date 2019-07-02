@@ -9,7 +9,15 @@ import scala.collection.mutable.ArrayBuffer
 class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     extends TranslationPhase.Translator[Tessla.Specification] with TesslaParser.CanParseConstantString {
   override def translateSpec() = {
-    Tessla.Specification(spec.flatMap(res => res.tree.statements.asScala.map(translateStatement(_, res.tokens))))
+    val statements = spec.flatMap(res => res.tree.statements.asScala.map(translateStatement(_, res.tokens)))
+    checkForDuplicates(statements.flatMap(Tessla.getId))
+    checkForDuplicates(statements.flatMap(getTypeDefID))
+    Tessla.Specification(statements)
+  }
+
+  def getTypeDefID(stat: Tessla.Statement) = stat match {
+    case typeDef: Tessla.TypeDefinition => Some(typeDef.id)
+    case _ => None
   }
 
   trait TesslaVisitor[T] extends TesslaSyntaxBaseVisitor[T] {
@@ -25,8 +33,20 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
   def translateDefinition(definition: TesslaSyntax.DefContext) = {
     val annotations = definition.header.annotations.asScala.map(translateAnnotation)
     val typeParameters = definition.header.typeParameters.asScala.map(mkID)
+    checkForDuplicates(typeParameters)
     val parameters = definition.header.parameters.asScala.map(translateParameter)
+    val paramIDs = parameters.map(_.id)
+    checkForDuplicates(paramIDs)
     val body = translateBody(definition.body)
+    body match {
+      case Tessla.ExpressionBody(block: Tessla.Block) =>
+        block.definitions.foreach { definition =>
+          paramIDs.find(_ == definition.id).foreach { paramID =>
+            error(MultipleDefinitionsError(definition.id, paramID.loc))
+          }
+        }
+      case _ =>
+    }
     val loc = Location.fromToken(definition.header.DEF).merge(Location.fromNode(definition.body))
     Tessla.Definition(
       annotations, mkID(definition.header.name), typeParameters, parameters,
@@ -49,6 +69,18 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       throw InternalError("Unexpected type of literal", Location.fromNode(literal))
     }
     Tessla.ConstantExpression.Literal(lit, Location.fromNode(literal))
+  def checkForDuplicates(identifiers: Seq[Tessla.Identifier]): Unit = {
+    identifiers.groupBy(_.name).foreach {
+      case (_, duplicates) if duplicates.lengthCompare(1) > 0 =>
+        val firstLoc = duplicates.head.loc
+        duplicates.tail.foreach { duplicate =>
+          error(MultipleDefinitionsError(duplicate, firstLoc))
+        }
+
+      case _ => /* Do nothing */
+    }
+  }
+
   }
 
   def translateAnnotation(annotation: TesslaSyntax.AnnotationContext): Tessla.Annotation = {
@@ -117,6 +149,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         case builtIn: TesslaSyntax.BuiltInTypeBodyContext =>
           Tessla.BuiltInType(mkID(builtIn.name))
       }
+      checkForDuplicates(typeParams)
       Tessla.TypeDefinition(mkID(typeDef.name), typeParams, body, loc)
     }
 
@@ -131,6 +164,13 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
   }
 
   def translateType(typ: TesslaSyntax.TypeContext): Tessla.Type = TypeVisitor.visit(typ)
+
+  def tupleToObject[T <: Location.HasLoc](elems: Seq[T]): Map[Tessla.Identifier, T] = {
+    elems.zipWithIndex.map {
+      case (elem, index) =>
+        Tessla.Identifier(s"_${index + 1}", elem.loc) -> elem
+    }.toMap
+  }
 
   object TypeVisitor extends TesslaVisitor[Tessla.Type] {
     override def visitSimpleType(typ: TesslaSyntax.SimpleTypeContext) = {
@@ -154,11 +194,13 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       val memberTypes = typ.memberSigs.asScala.map { sig =>
         (mkID(sig.name), translateType(sig.`type`))
       }
-      Tessla.ObjectType(memberTypes, isOpen = typ.DOTDOT != null, Location.fromNode(typ))
+      checkForDuplicates(memberTypes.map(_._1))
+      Tessla.ObjectType(memberTypes.toMap, isOpen = typ.DOTDOT != null, Location.fromNode(typ))
     }
 
     override def visitTupleType(typ: TesslaSyntax.TupleTypeContext) = {
-      Tessla.TupleType(typ.elementTypes.asScala.map(translateType), Location.fromNode(typ))
+      val types = typ.elementTypes.asScala.map(translateType)
+      Tessla.ObjectType(tupleToObject(types), isOpen = false, Location.fromNode(typ))
     }
   }
 
@@ -203,10 +245,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       if (exp.elems.size == 1 && exp.lastComma == null) {
         visit(exp.elems.get(0))
       } else {
-        val members = exp.elems.asScala.zipWithIndex.map {
-          case (elem, index) =>
-            Tessla.MemberDefinition.Full(Tessla.Identifier(s"_${index + 1}", Location.fromNode(elem)), visit(elem))
-        }
+        val members = tupleToObject(exp.elems.asScala.map(visit))
         Tessla.ObjectLiteral(members, Location.fromNode(exp))
       }
     }
@@ -215,16 +254,20 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       if (obj.DOLLAR_BRACE != null) {
         warn(Location.fromToken(obj.DOLLAR_BRACE), "Use of '${' for objects is deprecated, use '{' instead")
       }
-      Tessla.ObjectLiteral(obj.members.asScala.map(translateMemberDefinition), Location.fromNode(obj))
+      val members = obj.members.asScala.map(translateMemberDefinition)
+      checkForDuplicates(members.map(_._1))
+      Tessla.ObjectLiteral(members.toMap, Location.fromNode(obj))
     }
 
     def translateMemberDefinition(memDef: TesslaSyntax.MemberDefinitionContext) = {
-      if (memDef.value == null) Tessla.MemberDefinition.Simple(mkID(memDef.name))
-      else Tessla.MemberDefinition.Full(mkID(memDef.name), translateExpression(memDef.value))
+      val id = mkID(memDef.name)
+      if (memDef.value == null) id -> Tessla.Variable(id)
+      else id -> translateExpression(memDef.value)
     }
 
     override def visitBlock(block: TesslaSyntax.BlockContext) = {
       val defs = block.definitions.asScala.map(translateDefinition)
+      checkForDuplicates(defs.map(_.id))
       if (block.RETURN != null) {
         warn(Location.fromToken(block.RETURN), "The keyword 'return' is deprecated")
       }
@@ -239,7 +282,9 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       if (lambda.funKW != null) {
         warn(Location.fromToken(lambda.funKW), "The keyword 'fun' is deprecated")
       }
-      Tessla.Lambda(lambda.params.asScala.map(translateParameter), headerLoc, body, Location.fromNode(lambda))
+      val params = lambda.params.asScala.map(translateParameter)
+      checkForDuplicates(params.map(_.id))
+      Tessla.Lambda(params, headerLoc, body, Location.fromNode(lambda))
     }
 
     def translateOperator(operator: Token, operatorMap: Map[String, String]) = {

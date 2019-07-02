@@ -15,26 +15,7 @@ class Flattener(spec: Tessla.Specification)
     names.map(name => name -> makeIdentifier(name)).toMap
   }
 
-  def getId(statement: Tessla.Statement): Option[Tessla.Identifier] = statement match {
-    case definition: Tessla.Definition => Some(definition.id)
-    case in: Tessla.In => Some(in.id)
-    case module: Tessla.Module => Some(module.id)
-    case _ => None
-  }
-
-  def getName(statement: Tessla.Statement): Option[String] = getId(statement).map(_.name)
-
-  def checkForDuplicates(identifiers: Seq[Tessla.Identifier]): Unit = {
-    identifiers.groupBy(_.name).foreach {
-      case (_, duplicates) if duplicates.lengthCompare(1) > 0 =>
-        val firstLoc = duplicates.head.loc
-        duplicates.tail.foreach { duplicate =>
-          error(MultipleDefinitionsError(duplicate, firstLoc))
-        }
-
-      case _ => /* Do nothing */
-    }
-  }
+  def getName(statement: Tessla.Statement): Option[String] = Tessla.getId(statement).map(_.name)
 
   val annotationDefs = spec.statements.collect {
     case annotationDef: Tessla.AnnotationDefinition =>
@@ -54,7 +35,6 @@ class Flattener(spec: Tessla.Specification)
     })
     val globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
     val emptySpec = FlatTessla.Specification(globalDefs, Seq(), outAllLocation = None, globalVariableIdMap)
-    checkForDuplicates(spec.statements.flatMap(getId))
     // Process type definitions before anything else, so that types can be used before they're defined
     spec.statements.foreach {
       case typeDef: Tessla.TypeDefinition =>
@@ -193,8 +173,6 @@ class Flattener(spec: Tessla.Specification)
       case Tessla.ExpressionBody(block: Tessla.Block) => (block.definitions, Tessla.ExpressionBody(block.expression))
       case b => (Seq(), b)
     }
-    checkForDuplicates(definition.parameters.map(_.id) ++ blockDefs.map(_.id))
-    checkForDuplicates(definition.typeParameters)
     val annotations = definition.annotations.map(translateAnnotation)
     val liftableAnnotation = definition.annotations.find(_.name == "liftable")
     if (definition.parameters.isEmpty && definition.typeParameters.isEmpty) {
@@ -272,7 +250,6 @@ class Flattener(spec: Tessla.Specification)
   }
 
   def addTypeDefinition(definition: Tessla.TypeDefinition, defs: FlatTessla.Definitions, env: Env): Unit = {
-    checkForDuplicates(definition.typeParameters)
     def constructType(typeArgs: Seq[FlatTessla.Type]) = {
       val innerDefs = new FlatTessla.Definitions(Some(defs))
       val typeParamIdMap = createIdMap(definition.typeParameters.map(_.name))
@@ -337,19 +314,11 @@ class Flattener(spec: Tessla.Specification)
       )
 
     case ot: Tessla.ObjectType =>
-      checkForDuplicates(ot.memberTypes.map(_._1))
       val memberTypes = ot.memberTypes.map {
         case (id, t) =>
           id.name -> translateType(t, defs, env)
       }
-      FlatTessla.ObjectType(memberTypes.toMap, ot.isOpen)
-
-    case tt: Tessla.TupleType =>
-      val memberTypes = tt.elementTypes.zipWithIndex.map {
-        case (t, idx) =>
-          s"_${idx+1}" -> translateType(t, defs, env)
-      }
-      FlatTessla.ObjectType(memberTypes.toMap, isOpen = false)
+      FlatTessla.ObjectType(memberTypes, ot.isOpen)
   }
 
   def translateExpression(expr: Tessla.Expression, defs: FlatTessla.Definitions, env: Env): FlatTessla.Expression = expr match {
@@ -387,22 +356,17 @@ class Flattener(spec: Tessla.Specification)
       FlatTessla.Variable(id, block.expression.loc)
 
     case objectLit: Tessla.ObjectLiteral =>
-      checkForDuplicates(objectLit.members.map(_.id))
-      val innerEnv = env ++ Env(variables = createIdMap(objectLit.members.map(_.id.name)), types = Map())
-      val members = objectLit.members.map { member =>
-        val id = member.id
-        val exp = member match {
-          case full: Tessla.MemberDefinition.Full => full.value
-          case _: Tessla.MemberDefinition.Simple => Tessla.Variable(id)
-        }
-        // Use env instead of innerEnv here because for `{x=x, y=y}` or just `{x, y}` we specifically want to look
-        // up the values of x and y in the defs outside of the object, not inside the object, which would just lead
-        // to infinite recursion.
-        val body = translateExpression(exp, defs, env)
-        defs.addVariable(FlatTessla.VariableEntry(innerEnv.variables(id.name), body, None, Seq(), id.loc))
-        id.name -> FlatTessla.IdLoc(innerEnv.variables(id.name), exp.loc)
+      val innerEnv = env ++ Env(variables = createIdMap(objectLit.members.keys.map(_.name)), types = Map())
+      val members = objectLit.members.map {
+        case (id, exp) =>
+          // Use env instead of innerEnv here because for `{x=x, y=y}` or just `{x, y}` we specifically want to look
+          // up the values of x and y in the defs outside of the object, not inside the object, which would just lead
+          // to infinite recursion.
+          val body = translateExpression(exp, defs, env)
+          defs.addVariable(FlatTessla.VariableEntry(innerEnv.variables(id.name), body, None, Seq(), id.loc))
+          id.name -> FlatTessla.IdLoc(innerEnv.variables(id.name), exp.loc)
       }
-      FlatTessla.ObjectLiteral(members.toMap, objectLit.loc)
+      FlatTessla.ObjectLiteral(members, objectLit.loc)
 
     case memberAccess: Tessla.MemberAccess =>
       val receiverId = expToId(translateExpression(memberAccess.receiver, defs, env), defs)
@@ -414,7 +378,6 @@ class Flattener(spec: Tessla.Specification)
         case block: Tessla.Block => (block.definitions, block.expression)
         case e => (Seq(), e)
       }
-      checkForDuplicates(lambda.parameters.map(_.id) ++ blockDefs.map(_.id))
       val innerDefs = new FlatTessla.Definitions(Some(defs))
       val paramIdMap = createIdMap(lambda.parameters.map(_.id.name))
       val innerEnv = env ++ Env(variables = paramIdMap ++ createIdMap(blockDefs.map(_.id.name)), types = Map())
