@@ -102,6 +102,13 @@ object Tessla {
     override def toString = s"print $expr"
   }
 
+  def getId(statement: Tessla.Statement): Option[Tessla.Identifier] = statement match {
+    case definition: Tessla.Definition => Some(definition.id)
+    case in: Tessla.In => Some(in.id)
+    case module: Tessla.Module => Some(module.id)
+    case _ => None
+  }
+
   case class Parameter(id: Identifier, parameterType: Option[Type]) extends Location.HasLoc {
     override def toString = parameterType match {
       case Some(t) => s"${id.name}: $t"
@@ -170,7 +177,7 @@ object Tessla {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
   }
 
-  case class ObjectLiteral(members: Seq[MemberDefinition], loc: Location) extends Expression {
+  case class ObjectLiteral(members: Map[Identifier, Expression], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
       members.mkString("${", ", ", "}")
     }
@@ -180,20 +187,6 @@ object Tessla {
     override def toString(inner: Boolean) = {
       val str = s"fun (${parameters.mkString(", ")}) => $body"
       if (inner) s"($str)" else str
-    }
-  }
-
-  sealed abstract class MemberDefinition {
-    def id: Identifier
-  }
-
-  object MemberDefinition {
-    case class Full(id: Identifier, value: Expression) extends MemberDefinition {
-      override def toString = s"$id: $value"
-    }
-
-    case class Simple(id: Identifier) extends MemberDefinition {
-      override def toString = id.name
     }
   }
 
@@ -229,7 +222,7 @@ object Tessla {
       override def toString = value.toString
     }
 
-    case class Object(members: Map[String, ConstantExpression], loc: Location) extends ConstantExpression {
+    case class Object(members: Map[Identifier, ConstantExpression], loc: Location) extends ConstantExpression {
       override def toString = {
         members.map {
           case (name, value) => s"$name = $value"
@@ -253,7 +246,7 @@ object Tessla {
     def loc = id.loc.merge(expr.loc)
   }
 
-  sealed abstract class Type {
+  sealed abstract class Type extends Location.HasLoc {
     def loc: Location
     def withLoc(loc: Location): Type
   }
@@ -274,20 +267,15 @@ object Tessla {
     def withLoc(loc: Location): FunctionType = copy(loc = loc)
   }
 
-  case class ObjectType(memberTypes: Seq[(Identifier, Type)], isOpen: Boolean, loc: Location) extends Type {
+  case class ObjectType(memberTypes: Map[Identifier, Type], isOpen: Boolean, loc: Location) extends Type {
     override def toString = {
-      var members = memberTypes.map {case (name, t) => s"$name : $t"}
+      var members = memberTypes.toSeq.map {case (name, t) => s"$name : $t"}
       if (isOpen) {
         members :+= "..."
       }
       members.mkString("{", ", ", "}")
     }
     def withLoc(loc: Location): ObjectType = copy(loc = loc)
-  }
-
-  case class TupleType(elementTypes: Seq[Type], loc: Location) extends Type {
-    override def toString = elementTypes.mkString("(", ", ", ")")
-    def withLoc(loc: Location): TupleType = copy(loc = loc)
   }
 
   val unaryOperators = Map(
