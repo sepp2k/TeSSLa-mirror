@@ -39,9 +39,15 @@ definitionHeader:
 
 annotation: '@' ID ( '(' arguments+=annotationArg (',' arguments+=annotationArg)* ')' )? NL*;
 
-annotationArg: (name=ID '=' NL*)? literal;
+annotationArg: (name=ID '=' NL*)? constantExpression;
 
-literal: stringLit | DECINT | HEXINT | FLOAT;
+constantExpression
+    : (stringLit | DECINT | HEXINT | FLOAT) #ConstantLiteral
+    | '(' NL* (elems+=constantExpression (',' NL* elems+=constantExpression)*)?  NL* ')' #ConstantTuple
+    | '{' NL* (members+=constantMemberDefinition (',' NL* members+=constantMemberDefinition)*)?  NL* '}' #ConstantObject
+    ;
+
+constantMemberDefinition: name=ID ((':'|'=') NL* value=constantExpression)?;
 
 
 param: ID (':' NL* parameterType=type)?;

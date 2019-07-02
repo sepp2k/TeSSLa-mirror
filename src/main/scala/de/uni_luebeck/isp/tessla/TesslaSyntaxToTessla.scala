@@ -55,20 +55,6 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     )
   }
 
-  def translateConstantExpression(literal: TesslaSyntax.LiteralContext): Tessla.ConstantExpression = {
-    val lit = if (literal.stringLit != null) {
-      Tessla.StringLiteral(getConstantString(literal.stringLit))
-    } else if (literal.DECINT != null) {
-      Tessla.IntLiteral(BigInt(literal.DECINT.getText))
-    } else if (literal.HEXINT != null) {
-      require(literal.HEXINT.getText.startsWith("0x"))
-      Tessla.IntLiteral(BigInt(literal.HEXINT.getText.substring(2), 16))
-    } else if (literal.FLOAT != null) {
-      Tessla.FloatLiteral(literal.FLOAT.getText.toDouble)
-    } else {
-      throw InternalError("Unexpected type of literal", Location.fromNode(literal))
-    }
-    Tessla.ConstantExpression.Literal(lit, Location.fromNode(literal))
   def checkForDuplicates(identifiers: Seq[Tessla.Identifier]): Unit = {
     identifiers.groupBy(_.name).foreach {
       case (_, duplicates) if duplicates.lengthCompare(1) > 0 =>
@@ -81,14 +67,38 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
   }
 
+  def translateConstantExpression(exp: TesslaSyntax.ConstantExpressionContext): Tessla.ConstantExpression = exp match {
+    case lit: TesslaSyntax.ConstantLiteralContext =>
+      val translatedLit = if (lit.stringLit != null) {
+        Tessla.StringLiteral(getConstantString(lit.stringLit))
+      } else if (lit.DECINT != null) {
+        Tessla.IntLiteral(BigInt(lit.DECINT.getText))
+      } else if (lit.HEXINT != null) {
+        require(lit.HEXINT.getText.startsWith("0x"))
+        Tessla.IntLiteral(BigInt(lit.HEXINT.getText.substring(2), 16))
+      } else if (lit.FLOAT != null) {
+        Tessla.FloatLiteral(lit.FLOAT.getText.toDouble)
+      } else {
+        throw InternalError("Unexpected type of literal", Location.fromNode(lit))
+      }
+      Tessla.ConstantExpression.Literal(translatedLit, Location.fromNode(lit))
+    case obj: TesslaSyntax.ConstantObjectContext =>
+      val members = obj.members.asScala.map { member =>
+        mkID(member.name) -> translateConstantExpression(member.value)
+      }
+      checkForDuplicates(members.map(_._1))
+      Tessla.ConstantExpression.Object(members.toMap, Location.fromNode(obj))
+    case tup: TesslaSyntax.ConstantTupleContext =>
+      val elements = tup.elems.asScala.map(translateConstantExpression)
+      Tessla.ConstantExpression.Object(tupleToObject(elements), Location.fromNode(tup))
   }
 
   def translateAnnotation(annotation: TesslaSyntax.AnnotationContext): Tessla.Annotation = {
     val args = annotation.arguments.asScala.map { arg =>
       if (arg.name != null) {
-        Tessla.NamedArgument(mkID(arg.name), translateConstantExpression(arg.literal))
+        Tessla.NamedArgument(mkID(arg.name), translateConstantExpression(arg.constantExpression))
       } else {
-        Tessla.PositionalArgument(translateConstantExpression(arg.literal))
+        Tessla.PositionalArgument(translateConstantExpression(arg.constantExpression))
       }
     }
     Tessla.Annotation(mkID(annotation.ID), args, Location.fromNode(annotation))
