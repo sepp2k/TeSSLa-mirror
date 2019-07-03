@@ -30,13 +30,10 @@ class InterpreterTests extends FunSuite {
     /*Validates a test of a given type using its json instance and a schema for that test type
     (Schema for type X must be named XSchema.json and located in the root directory).
     Returns the test if successful, throws an Exception otherwise.*/
-    def validate(test: TestCase, testjson: JsValue): JsResult[TestCase] = {
-      val fileName = test.getClass.getTypeName.substring(test.getClass.getTypeName.lastIndexOf("$") + 1) + "Schema"
-      val schema = Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root/$fileName.json"))).get
-      SchemaValidator().validate(schema, testjson) match {
-        case JsSuccess(_, path) => JsSuccess(test, path)
-        case e: JsError => e
-      }
+    def validate(testjson: JsValue): JsResult[JsValue] = {
+      val fileName = "TestCaseSchema.json"
+      val schema = Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root/$fileName"))).get
+      SchemaValidator().validate(schema, testjson)
     }
 
     def jsErrorToString(jsError: JsError): String = {
@@ -72,7 +69,7 @@ class InterpreterTests extends FunSuite {
   }
 
   def assertEquals[T](actual: T, expected: T, name: String): Unit = {
-    assert(expected == actual, s"Actual $name did not equal expected $name. Expected: $expected. Actual: $actual.")
+    assert(expected == actual/*, s"Actual $name did not equal expected $name. Expected: $expected. Actual: $actual."*/)
   }
 
   def assertEqualSets[T: Ordering](actual: Set[T], expected: Set[T], name: String, stringify: T => String = (x: T) => x.toString): Unit = {
@@ -93,13 +90,17 @@ class InterpreterTests extends FunSuite {
 
   def unsplitOutput(pair: (BigInt, String)): String = s"${pair._1}:${pair._2}"
 
-  /*Parse the given file specified by the given relative path as json file, and convert it to a 'Tests' instance.*/
-  def parseJson(path: String): JSON.TestCase = {
-    val json = Json.parse(getClass.getResourceAsStream(s"$root/$path.json"))
-    Json.fromJson[JSON.TestCase](json).flatMap(JSON.validate(_, json)) match {
+  def parseJson[T: Reads](path: String, validate: JsValue => JsResult[_] = x => JsSuccess(x)): T = {
+    val json = Json.parse(getClass.getResourceAsStream(s"$root/$path"))
+    validate(json).flatMap(_ => Json.fromJson[T](json)) match {
       case JsSuccess(value, _) => value
       case e: JsError => sys.error(s"Error in Json parsing: ${JSON.jsErrorToString(e)}")
     }
+  }
+
+  /*Parse the given file specified by the given relative path as json file, and convert it to a 'Tests' instance.*/
+  def parseTestCase(path: String): JSON.TestCase = {
+    parseJson[JSON.TestCase](s"$path.json", JSON.validate)
   }
 
   testCases.foreach {
@@ -111,7 +112,7 @@ class InterpreterTests extends FunSuite {
         Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$file"))(StandardCharsets.UTF_8)
       }
 
-      val testCase = parseJson(s"$path/$name")
+      val testCase = parseTestCase(s"$path/$name")
       test(s"$path/$name (Interpreter)") {
         def handleResult[T](result: TranslationPhase.Result[T])(onSuccess: T => Unit): Unit = {
           result match {
@@ -147,9 +148,8 @@ class InterpreterTests extends FunSuite {
         )
         val src = testStream(testCase.spec)
         testCase.expectedObservations.foreach { observationFile =>
-          val expectedObservation = testSource(observationFile).mkString
-          handleResult(Compiler.compile(src, options).andThen(Observations.Generator)) { observation =>
-            val actualObservation = observation.toString
+          val expectedObservation = parseJson[Observations](s"$path/$observationFile")
+          handleResult(Compiler.compile(src, options).andThen(Observations.Generator)) { actualObservation =>
             assertEquals(actualObservation, expectedObservation, "Observation")
           }
         }
