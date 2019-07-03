@@ -5,7 +5,8 @@ import play.api.libs.json.{Format, Json}
 import Observations._
 
 case class Observations(FunctionCalled: Seq[FunctionCalled] = Seq(),
-                        FunctionReturns: Seq[FunctionReturns] = Seq()) {
+                        FunctionReturns: Seq[FunctionReturns] = Seq(),
+                        userCbPrefix: String) {
   override def toString: String = {
     Json.prettyPrint(Json.toJson(this))
   }
@@ -34,8 +35,9 @@ object Observations {
 
       val setup = FunctionCalled("main", code = """trace_setup();""")
       val teardown = FunctionReturns("main", code = """trace_teardown();""")
+      val prefix = "#include \"instrumentation.h\"\n"
 
-      Observations(FunctionCalled = setup +: functionCalled, FunctionReturns = Seq(teardown))
+      Observations(FunctionCalled = setup +: functionCalled, FunctionReturns = Seq(teardown), userCbPrefix = prefix)
     }
   }
 
