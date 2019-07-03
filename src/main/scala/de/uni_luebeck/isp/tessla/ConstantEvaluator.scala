@@ -327,7 +327,9 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
                       TesslaCore.SignalLift(CurriedPrimitiveOperator(op), (0 until args.size).map(streamArg), call.loc)
                     }
                   } else {
-                    TesslaCore.CustomBuiltInCall(op, (0 until args.size).map(arg), call.loc)
+                    stream {
+                      TesslaCore.CustomBuiltInCall(op, (0 until args.size).map(arg), call.loc)
+                    }
                   }
                 } else {
                   be.builtIn.referenceImplementation match {
