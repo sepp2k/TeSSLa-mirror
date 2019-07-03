@@ -29,7 +29,7 @@ object Observations {
             case _ => throw new InternalError("Name must be a string, should have been caught by the (not yet implemented) type checker.")
           }
           FunctionCalled(FunctionName = name,
-            code = s"""fprintf(trace_outfile, "%lu: ${in.name}\\n", trace_get_normalized_timestamp());\\nfflush(trace_outfile);""")
+            code = s"""fprintf(trace_outfile, "%lu: ${in.name}\\n", trace_get_normalized_timestamp());\nfflush(trace_outfile);""")
         }
       }
 
