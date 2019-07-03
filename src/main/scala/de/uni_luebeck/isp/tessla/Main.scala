@@ -80,7 +80,8 @@ object Main extends SexyOpt {
         timeUnitString = timeUnit,
         includeResolver = IncludeResolvers.fromFile,
         stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-        stdlibPath = "Predef.tessla"
+        stdlibPath = "Predef.tessla",
+        currySignalLift = true
       )
       val core = unwrapResult(Compiler.compile(specSource, compilerOptions))
 

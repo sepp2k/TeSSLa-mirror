@@ -173,7 +173,8 @@ class InterpreterTests extends FunSuite {
           timeUnitString = testCase.timeUnit,
           includeResolver = IncludeResolvers.fromResource(getClass, root),
           stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-          stdlibPath = "Predef.tessla"
+          stdlibPath = "Predef.tessla",
+          currySignalLift = true
         )
         val src = testStream(testCase.spec)
         testCase.expectedOsl.foreach { oslFile =>

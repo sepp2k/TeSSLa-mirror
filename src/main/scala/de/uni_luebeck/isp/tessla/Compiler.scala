@@ -7,7 +7,8 @@ object Compiler {
     timeUnitString: Option[String],
     includeResolver: String => Option[CharStream],
     stdlibIncludeResolver: String => Option[CharStream],
-    stdlibPath: String
+    stdlibPath: String,
+    currySignalLift: Boolean
   ) {
     lazy val timeUnit = timeUnitString.map(TimeUnit.fromString(_, Location.option("timeunit")))
   }
@@ -20,7 +21,7 @@ object Compiler {
       .andThen(TypeChecker)
       .andThen(new ConstantEvaluator(options.timeUnit))
       .andThen(CycleDetection)
-      .andThen(CurrySignalLift)
+      .andThen(new EnableIf[TesslaCore.Specification](options.currySignalLift, CurrySignalLift))
       .andThen(RemoveUnusedDefinitions)
   }
 
@@ -33,6 +34,16 @@ object Compiler {
       println(s"=== ${spec.getClass.toString} ===")
       println(spec)
       TranslationPhase.Success(spec, Seq())
+    }
+  }
+
+  class EnableIf[T](condition: Boolean, phase: TranslationPhase[T,T]) extends TranslationPhase[T, T] {
+    override def translate(spec: T) = {
+      if (condition) {
+        phase.translate(spec)
+      } else {
+        TranslationPhase.Success(spec, Seq())
+      }
     }
   }
 }
