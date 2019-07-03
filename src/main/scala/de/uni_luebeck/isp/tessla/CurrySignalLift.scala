@@ -10,7 +10,7 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
         exp match {
           case TesslaCore.Default(_: TesslaCore.Nil, value, _) => Some(value)
           case TesslaCore.SignalLift(op, args, loc) =>
-            val values = args.map(getConst)
+            val values = args.toStream.map(getConst)
             if (values.exists(_.isEmpty)) {
               None
             } else {
