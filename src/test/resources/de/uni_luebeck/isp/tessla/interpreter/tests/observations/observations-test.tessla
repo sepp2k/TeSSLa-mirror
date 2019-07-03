@@ -1,0 +1,5 @@
+@FunctionCalled("add")
+in add: Events[Unit]
+
+@FunctionCalled("sub")
+in sub: Events[Unit]

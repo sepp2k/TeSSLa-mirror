@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import java.nio.charset.StandardCharsets
+
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
@@ -8,7 +9,7 @@ import org.scalatest.FunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
-import de.uni_luebeck.isp.tessla.analyses.OSL
+import de.uni_luebeck.isp.tessla.analyses.Observations
 import org.antlr.v4.runtime.CharStream
 
 import scala.collection.mutable
@@ -20,7 +21,7 @@ class InterpreterTests extends FunSuite {
 
     case class TestCase(spec: String, input: Option[String], expectedOutput: Option[String],
                         expectedErrors: Option[String], expectedWarnings: Option[String],
-                        expectedRuntimeErrors: Option[String], expectedOsl: Option[String],
+                        expectedRuntimeErrors: Option[String], expectedObservations: Option[String],
                         abortAt: Option[Int], timeUnit: Option[String])
 
     implicit val timeUnitReads: Reads[Option[String]] = (__ \ "timeunit").readNullable[String](verifying(List("ns", "us", "ms", "s", "min", "h", "d").contains))
@@ -101,38 +102,6 @@ class InterpreterTests extends FunSuite {
     }
   }
 
-
-  // A small, partial OSL parser so we can meaningfully compare the contents of the expected OSL files with the
-  // actual results
-  case class SemiOsl(ifs: Set[SemiIf], logs: Set[String]) {
-    override def toString = ifs.mkString("\n") + "\n" + logs.map("log " + _ + "\n").mkString
-  }
-  case class SemiIf(condition: String, thenCase: Set[String]) {
-    override def toString = s"if $condition then\n${thenCase.mkString("\n")}\nfi"
-  }
-
-  val logPattern = "log (.+)".r
-  val ifPattern = "if (.+) then".r
-
-  def semiParseOsl(lines: Iterator[String]): SemiOsl = {
-    val globalLogs = mutable.ArrayBuffer[String]()
-    val ifs = mutable.ArrayBuffer[SemiIf]()
-    var currentCondition: Option[String] = None
-    var currentLogs = globalLogs
-    lines.foreach {
-      case logPattern(prop) =>
-        currentLogs += prop
-      case ifPattern(cond) =>
-        currentCondition = Some(cond)
-        currentLogs = mutable.ArrayBuffer[String]()
-      case "fi" =>
-        ifs += SemiIf(currentCondition.get, currentLogs.toSet)
-        currentCondition = None
-        currentLogs = globalLogs
-    }
-    SemiOsl(ifs.toSet, globalLogs.toSet)
-  }
-
   testCases.foreach {
     case (path, name) =>
       def testStream(file: String): CharStream = {
@@ -177,11 +146,11 @@ class InterpreterTests extends FunSuite {
           currySignalLift = true
         )
         val src = testStream(testCase.spec)
-        testCase.expectedOsl.foreach { oslFile =>
-          val expectedOSL = semiParseOsl(testSource(oslFile).getLines)
-          handleResult(Compiler.compile(src, options).andThen(OSL.Generator)) { osl =>
-            val actualOSL = semiParseOsl(osl.toString.linesIterator)
-            assertEquals(actualOSL, expectedOSL, "OSL")
+        testCase.expectedObservations.foreach { observationFile =>
+          val expectedObservation = testSource(observationFile).mkString
+          handleResult(Compiler.compile(src, options).andThen(Observations.Generator)) { observation =>
+            val actualObservation = observation.toString
+            assertEquals(actualObservation, expectedObservation, "Observation")
           }
         }
         testCase.input match {

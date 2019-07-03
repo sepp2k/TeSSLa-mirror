@@ -1,7 +1,0 @@
-log lines
-log columns
-if |([function_calls: "foo"], &([functions: "bar"], [opcodes: "ret"])) then
-log function_calls
-log functions
-log opcodes
-fi

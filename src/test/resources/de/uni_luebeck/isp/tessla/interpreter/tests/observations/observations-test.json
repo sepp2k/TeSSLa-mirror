@@ -1,0 +1,4 @@
+{
+  "spec": "observations-test.tessla",
+  "expectedObservations": "observations.observations"
+}
