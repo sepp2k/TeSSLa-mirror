@@ -1,0 +1,3 @@
+in foo: Events[Option[Int]]
+
+out isSome(foo)

@@ -123,10 +123,14 @@ class TypeChecker(spec: FlatTessla.Specification)
 
       case mac: FlatTessla.Macro =>
         // Since identifiers used in the macro may either be defined inside or outside the
-        // macro (and we only want the outside ones), we use the outer defs for lookup
+        // macro (and we only want the outside ones), we need to filter them out afterwards.
+        // We still need to use the inner scope to find the required entries, so that the
+        // dependencies of inner definitions are still considered.
         // Note that identifiers are unique at this stage, so we won't run into a situation
         // where the macro contains a local identifier that shadows an outer one.
-        requiredEntries(defs, mac.result) ++ mac.body.variables.values.flatMap(requiredEntries(defs, _))
+        requiredEntries(defs, mac.result) ++ mac.body.variables.values.flatMap(requiredEntries(mac.body, _)).filter {
+          definition => defs.resolveVariable(definition.id).isDefined
+        }
 
       case obj: FlatTessla.ObjectLiteral =>
         obj.members.values.flatMap(member => resolve(member.id)).toSeq
@@ -148,7 +152,7 @@ class TypeChecker(spec: FlatTessla.Specification)
         }
         abort()
       case ReverseTopologicalSort.Sorted(sorted) =>
-        sorted.foreach { entry =>
+        sorted.filter(defs.variables.values.toSeq.contains(_)).foreach { entry =>
           resultingDefs.addVariable(translateEntry(entry, resultingDefs, env))
         }
     }
