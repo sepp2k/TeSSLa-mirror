@@ -265,10 +265,24 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
                 case _ => defsWithoutParameters.addVariable(entry)
               }
           }
-          stack.push(call.loc)
-          val innerEnv = createEnvForDefs(defsWithoutParameters, me.closure ++ args)
-          wrapper.entry = translateVar(innerEnv, me.mac.result.id, me.mac.result.loc)
-          stack.pop()
+
+
+          if (me.mac.returnType.isStreamType) {
+            stream {
+              val innerEnv = createEnvForDefs(defsWithoutParameters, me.closure ++ args)
+              translateVar(innerEnv, me.mac.result.id, me.mac.result.loc) match {
+                case Translated(Lazy(t: StreamEntry)) => translatedStreams(t.streamId).expression
+                // TODO: Allow id1 = id2 in TeSSLa Core to get rid of this hack
+                case Translated(Lazy(t: InputStreamEntry)) => TesslaCore.DefaultFrom(TesslaCore.InputStream(t.name, Location.unknown), TesslaCore.Nil(t.typ, Location.unknown), Location.unknown)
+                case other => throw InternalError("Expected stream entry but got: " + other.toString)
+              }
+            }
+          } else {
+            stack.push(call.loc)
+            val innerEnv = createEnvForDefs(defsWithoutParameters, me.closure ++ args)
+            wrapper.entry = translateVar(innerEnv, me.mac.result.id, me.mac.result.loc)
+            stack.pop()
+          }
         }
 
         callee match {
