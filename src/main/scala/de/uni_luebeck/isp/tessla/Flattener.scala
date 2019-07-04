@@ -186,15 +186,15 @@ class Flattener(spec: Tessla.Specification)
       blockDefs.foreach { blockDef =>
         addDefinition(blockDef, defs, innerEnv)
       }
+      val typ = definition.returnType.map(translateType(_, defs, innerEnv))
       val exp = defBody match {
         case b: Tessla.ExpressionBody => translateExpression(b.exp, defs, innerEnv)
         case b: Tessla.BuiltInBody =>
           val referenceImplementation = b.referenceImplementation.map { exp =>
-            expToId(translateExpression(exp, defs, env), defs)
+            expToId(translateExpression(exp, defs, env), defs, typ)
           }
           FlatTessla.BuiltInOperator(b.id.name, Seq(), Seq(), referenceImplementation, b.id.loc)
       }
-      val typ = definition.returnType.map(translateType(_, defs, innerEnv))
       defs.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), exp, typ, annotations, definition.headerLoc))
     } else {
       val innerDefs = new FlatTessla.Definitions(Some(defs))
@@ -222,9 +222,10 @@ class Flattener(spec: Tessla.Specification)
       val returnTypeOpt = definition.returnType.map(translateType(_, innerDefs, paramEnv))
       def expBody(tesslaExp: Tessla.Expression, id: FlatTessla.Identifier) = {
         val exp = translateExpression(tesslaExp, innerDefs, innerEnv)
+        val expId = expToId(exp, innerDefs, returnTypeOpt)
         val mac = FlatTessla.Macro(
-          typeParameters, parameters, innerDefs, returnTypeOpt, definition.headerLoc, exp, definition.loc,
-          isLiftable = liftableAnnotation.isDefined
+          typeParameters, parameters, innerDefs, returnTypeOpt, definition.headerLoc, FlatTessla.IdLoc(expId, exp.loc),
+          definition.loc, isLiftable = liftableAnnotation.isDefined
         )
         val typ = returnTypeOpt.map { returnType =>
           FlatTessla.FunctionType(typeParameters, parameters.map(_.parameterType), returnType, mac.isLiftable)
@@ -283,11 +284,11 @@ class Flattener(spec: Tessla.Specification)
     * Turn an arbitrary expression into an identifier by either creating a new identifier and making it point to the
     * expression or, if the expression is a variable reference, returning the referenced identifier.
     */
-  def expToId(exp: FlatTessla.Expression, defs: FlatTessla.Definitions) = exp match {
+  def expToId(exp: FlatTessla.Expression, defs: FlatTessla.Definitions, typeAnnotation: FlatTessla.TypeAnnotation = None) = exp match {
     case v: FlatTessla.Variable => v.id
     case _ =>
       val id = makeIdentifier()
-      defs.addVariable(FlatTessla.VariableEntry(id, exp, None, Seq(), exp.loc))
+      defs.addVariable(FlatTessla.VariableEntry(id, exp, typeAnnotation, Seq(), exp.loc))
       id
   }
 
@@ -389,8 +390,10 @@ class Flattener(spec: Tessla.Specification)
       blockDefs.foreach { innerDef =>
         addDefinition(innerDef, innerDefs, innerEnv)
       }
-      val body = translateExpression(exp, innerDefs, innerEnv)
-      FlatTessla.Macro(Seq(), parameters, innerDefs, None, lambda.headerLoc, body, lambda.loc, isLiftable = false)
+      val resultExp = translateExpression(exp, innerDefs, innerEnv)
+      val resultId = expToId(resultExp, innerDefs)
+      FlatTessla.Macro(Seq(), parameters, innerDefs, None, lambda.headerLoc, FlatTessla.IdLoc(resultId, resultExp.loc),
+        lambda.loc, isLiftable = false)
   }
 }
 

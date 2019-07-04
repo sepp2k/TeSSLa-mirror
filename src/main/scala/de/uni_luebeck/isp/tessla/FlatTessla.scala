@@ -79,7 +79,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
                    body: Definitions,
                    returnType: TypeAnnotation,
                    headerLoc: Location,
-                   result: Expression,
+                   result: IdLoc,
                    loc: Location,
                    isLiftable: Boolean) extends Expression {
     override def toString = {

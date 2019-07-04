@@ -128,7 +128,7 @@ class TypeChecker(spec: FlatTessla.Specification)
         // dependencies of inner definitions are still considered.
         // Note that identifiers are unique at this stage, so we won't run into a situation
         // where the macro contains a local identifier that shadows an outer one.
-        requiredEntries(defs, mac.result) ++ mac.body.variables.values.flatMap(requiredEntries(mac.body, _)).filter {
+        resolve(mac.result.id) ++ mac.body.variables.values.flatMap(requiredEntries(mac.body, _)).filter {
           definition => defs.resolveVariable(definition.id).isDefined
         }
 
@@ -443,16 +443,16 @@ class TypeChecker(spec: FlatTessla.Specification)
         TypedTessla.BuiltInOperator(b.name, typeParameters, parameters, refImpl, b.loc) -> t
 
       case mac: FlatTessla.Macro =>
-        val (tvarIDs, expectedReturnType) = declaredType match {
+        val tvarIDs = declaredType match {
           case Some(f: TypedTessla.FunctionType) =>
-            (f.typeParameters, Some(f.returnType))
+            f.typeParameters
           case _ =>
-            val ids = mac.typeParameters.map(tvar => makeIdentifier(tvar.nameOpt))
-            (ids, None)
+            mac.typeParameters.map(tvar => makeIdentifier(tvar.nameOpt))
         }
         val tvarEnv = mac.typeParameters.zip(tvarIDs).toMap
         val (innerDefs, innerEnv) = translateDefs(mac.body, Some(defs), env ++ tvarEnv)
-        val (body, returnType) = translateExpression(mac.result, expectedReturnType, None, innerDefs, innerEnv)
+        val result = TypedTessla.IdLoc(innerEnv(mac.result.id), mac.result.loc)
+        val returnType = typeMap(result.id)
         val paramTypes = parameterTypes(mac).map(translateType(_, env ++ tvarEnv))
         val macroType = TypedTessla.FunctionType(tvarIDs, paramTypes, returnType, isLiftable = mac.isLiftable)
         val parameters = mac.parameters.map { p =>
@@ -470,15 +470,15 @@ class TypeChecker(spec: FlatTessla.Specification)
             liftedDefs.addType(entry)
           }
           mac.body.variables.values.foreach { entry =>
-            if (parameterIDs.contains(entry.id)) {
+            if (parameterIDs.contains(entry.id) || entry.id == mac.result.id) {
               liftedDefs.addVariable(entry.copy(typeInfo = entry.typeInfo.map(t => FlatTessla.BuiltInType("Events", Seq(t)))))
             } else {
               liftedDefs.addVariable(entry)
             }
           }
           val (innerDefs, innerEnv) = translateDefs(liftedDefs, Some(defs), env ++ tvarEnv)
-          val expected = expectedReturnType.map(streamType)
-          val (body, returnType) = translateExpression(mac.result, expected, None, innerDefs, innerEnv)
+          val result = TypedTessla.IdLoc(innerEnv(mac.result.id), mac.result.loc)
+          val returnType = typeMap(result.id)
           val parameters = mac.parameters.map { p =>
             val t = translateType(p.parameterType, innerEnv)
             TypedTessla.Parameter(p.param, t, innerEnv(p.id))
@@ -486,15 +486,16 @@ class TypeChecker(spec: FlatTessla.Specification)
           // Add a lifted projection operator so that there is a new event whenever any of the parameters get a new
           // event (as per the lift semantics)
           val firstID = findPredef(s"first", env)
-          val firstCall = parameters.foldLeft(body) { (result, param) =>
-            val resultId = makeIdentifier()
-            val resultEntry = TypedTessla.VariableEntry(resultId, result, liftedType.returnType, Seq(), mac.loc)
-            innerDefs.addVariable(resultEntry)
+          val firstCall = parameters.foldLeft(result) { (acc, param) =>
             val args = Seq(
-              TypedTessla.PositionalArgument(resultId, result.loc),
+              TypedTessla.PositionalArgument(acc.id, acc.loc),
               TypedTessla.PositionalArgument(param.id, param.loc)
             )
-            TypedTessla.MacroCall(firstID, Location.builtIn, Seq(), args, body.loc)
+            val call = TypedTessla.MacroCall(firstID, Location.builtIn, Seq(), args, result.loc)
+            val callId = makeIdentifier()
+            val callEntry = TypedTessla.VariableEntry(callId, call, liftedType.returnType, Seq(), mac.loc)
+            innerDefs.addVariable(callEntry)
+            TypedTessla.IdLoc(callId, call.loc)
           }
           val lifted = TypedTessla.Macro(tvarIDs, parameters, innerDefs, returnType, mac.headerLoc, firstCall, mac.loc, mac.isLiftable)
           val liftedId = makeIdentifier(id.get.nameOpt)
@@ -502,7 +503,7 @@ class TypeChecker(spec: FlatTessla.Specification)
           defs.addVariable(liftedEntry)
           liftedMacros(id.get) = liftedId
         }
-        TypedTessla.Macro(tvarIDs, parameters, innerDefs, returnType, mac.headerLoc, body, mac.loc, mac.isLiftable) -> macroType
+        TypedTessla.Macro(tvarIDs, parameters, innerDefs, returnType, mac.headerLoc, result, mac.loc, mac.isLiftable) -> macroType
     }
   }
 }

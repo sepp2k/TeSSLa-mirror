@@ -267,7 +267,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
           }
           stack.push(call.loc)
           val innerEnv = createEnvForDefs(defsWithoutParameters, me.closure ++ args)
-          translateExpression(innerEnv, wrapper, me.mac.result, nameOpt, typ, inFunction, Seq())
+          wrapper.entry = translateVar(innerEnv, me.mac.result.id, me.mac.result.loc)
           stack.pop()
         }
 
@@ -424,20 +424,15 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
       case (_, wrapper) =>
         translateEntry(env, wrapper)
     }
-    // This null should be safe because we only use this entry to put into a NYT and no one ever uses the ID of a
-    // VariableEntry in an NYT
-    val resultEntry = TypedTessla.VariableEntry(null, mac.result, mac.returnType, Seq(), mac.result.loc)
-    val resultWrapper = EnvEntryWrapper(NotYetTranslated(resultEntry, env, inFunction = true))
-    translateEntry(env, resultWrapper)
-    val defs = (resultWrapper.entry +: defsWrappers.map(_._2.entry).toSeq).flatMap {
+    val defs = defsWrappers.map(_._2.entry).toSeq.flatMap {
       case Translated(Lazy(fe: FunctionEntry)) =>
         Some(fe.id -> fe.f)
       case Translated(Lazy(ae: ValueExpressionEntry)) =>
         Some(ae.id -> ae.exp)
       case _ =>
         None
-    }
-    TesslaCore.Function(params.map(_._2), defs.toMap, getValueArg(resultWrapper.entry), mac.loc)
+    }.toMap
+    TesslaCore.Function(params.map(_._2), defs, getValueArg(env(mac.result.id).entry), mac.loc)
   }
 
   def getValueArg(entry: EnvEntry): TesslaCore.ValueArg = entry match {
