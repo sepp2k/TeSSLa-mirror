@@ -446,7 +446,9 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
       case _ =>
         None
     }.toMap
-    TesslaCore.Function(params.map(_._2), defs, getValueArg(env(mac.result.id).entry), mac.loc)
+    val resultEntryWrapper = env(mac.result.id)
+    translateEntry(env, resultEntryWrapper)
+    TesslaCore.Function(params.map(_._2), defs, getValueArg(resultEntryWrapper.entry), mac.loc)
   }
 
   def getValueArg(entry: EnvEntry): TesslaCore.ValueArg = entry match {
