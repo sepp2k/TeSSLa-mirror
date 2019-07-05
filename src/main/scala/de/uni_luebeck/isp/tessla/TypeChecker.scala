@@ -486,17 +486,28 @@ class TypeChecker(spec: FlatTessla.Specification)
           // Add a lifted projection operator so that there is a new event whenever any of the parameters get a new
           // event (as per the lift semantics)
           val firstID = findPredef(s"first", env)
-          val firstCall = parameters.foldLeft(result) { (acc, param) =>
-            val args = Seq(
-              TypedTessla.PositionalArgument(acc.id, acc.loc),
-              TypedTessla.PositionalArgument(param.id, param.loc)
-            )
-            val call = TypedTessla.MacroCall(firstID, Location.builtIn, Seq(), args, result.loc)
-            val callId = makeIdentifier()
-            val callEntry = TypedTessla.VariableEntry(callId, call, liftedType.returnType, Seq(), mac.loc)
-            innerDefs.addVariable(callEntry)
-            TypedTessla.IdLoc(callId, call.loc)
+
+          def firstTree(args: Seq[TypedTessla.IdLoc]): TypedTessla.IdLoc = {
+            val firsts = args.grouped(2).map {
+              case Seq(arg1, arg2) =>
+                val firstArgs = Seq(
+                  TypedTessla.PositionalArgument(args(0).id, args(0).loc),
+                  TypedTessla.PositionalArgument(args(1).id, args(1).loc)
+                )
+                val firstCall = TypedTessla.MacroCall(firstID, Location.builtIn, Seq(), firstArgs, result.loc)
+                val firstCallId = makeIdentifier()
+                val firstCallEntry = TypedTessla.VariableEntry(firstCallId, firstCall, liftedType.returnType, Seq(), mac.loc)
+                innerDefs.addVariable(firstCallEntry)
+                TypedTessla.IdLoc(firstCallId, result.loc)
+
+              case Seq(arg) =>
+                arg
+            }.toSeq
+            if (firsts.size > 1) firstTree(firsts)
+            else firsts.head
           }
+
+          val firstCall = firstTree(result +: parameters.map(_.idLoc))
           val lifted = TypedTessla.Macro(tvarIDs, parameters, innerDefs, returnType, mac.headerLoc, firstCall, mac.loc, mac.isLiftable)
           val liftedId = makeIdentifier(id.get.nameOpt)
           val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, Seq(), mac.loc)

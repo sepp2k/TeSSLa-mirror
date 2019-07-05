@@ -105,6 +105,8 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
     def nameWithLoc = param.id
 
+    def idLoc: IdLoc = IdLoc(id, loc)
+
     override def loc = param.loc
 
     override def toString = s"param $name: $parameterType"
