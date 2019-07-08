@@ -491,8 +491,8 @@ class TypeChecker(spec: FlatTessla.Specification)
             val firsts = args.grouped(2).map {
               case Seq(arg1, arg2) =>
                 val firstArgs = Seq(
-                  TypedTessla.PositionalArgument(args(0).id, args(0).loc),
-                  TypedTessla.PositionalArgument(args(1).id, args(1).loc)
+                  TypedTessla.PositionalArgument(arg1.id, arg1.loc),
+                  TypedTessla.PositionalArgument(arg2.id, arg2.loc)
                 )
                 val firstCall = TypedTessla.MacroCall(firstID, Location.builtIn, Seq(), firstArgs, result.loc)
                 val firstCallId = makeIdentifier()
