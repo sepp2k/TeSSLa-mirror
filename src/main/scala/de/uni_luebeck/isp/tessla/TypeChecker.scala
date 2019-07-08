@@ -487,27 +487,29 @@ class TypeChecker(spec: FlatTessla.Specification)
           // event (as per the lift semantics)
           val firstID = findPredef(s"first", env)
 
-          def firstTree(args: Seq[TypedTessla.IdLoc]): TypedTessla.IdLoc = {
+          def firstTree(args: Seq[(TypedTessla.IdLoc, TypedTessla.Type)]): TypedTessla.IdLoc = {
             val firsts = args.grouped(2).map {
-              case Seq(arg1, arg2) =>
+              case Seq((arg1, type1), (arg2, type2)) =>
                 val firstArgs = Seq(
                   TypedTessla.PositionalArgument(arg1.id, arg1.loc),
                   TypedTessla.PositionalArgument(arg2.id, arg2.loc)
                 )
-                val firstCall = TypedTessla.MacroCall(firstID, Location.builtIn, Seq(), firstArgs, result.loc)
+                val firstCall = TypedTessla.MacroCall(firstID, Location.builtIn, Seq(type1, type2), firstArgs, result.loc)
                 val firstCallId = makeIdentifier()
                 val firstCallEntry = TypedTessla.VariableEntry(firstCallId, firstCall, liftedType.returnType, Seq(), mac.loc)
                 innerDefs.addVariable(firstCallEntry)
-                TypedTessla.IdLoc(firstCallId, result.loc)
+                (TypedTessla.IdLoc(firstCallId, result.loc), type1)
 
               case Seq(arg) =>
                 arg
             }.toSeq
-            if (firsts.size > 1) firstTree(firsts)
-            else firsts.head
+            firsts match {
+              case Seq((first, _)) => first
+              case _ => firstTree(firsts)
+            }
           }
 
-          val firstCall = firstTree(result +: parameters.map(_.idLoc))
+          val firstCall = firstTree((result, macroType.returnType) +: parameters.map(p => (p.idLoc, p.parameterType)))
           val lifted = TypedTessla.Macro(tvarIDs, parameters, innerDefs, returnType, mac.headerLoc, firstCall, mac.loc, mac.isLiftable)
           val liftedId = makeIdentifier(id.get.nameOpt)
           val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, Seq(), mac.loc)
