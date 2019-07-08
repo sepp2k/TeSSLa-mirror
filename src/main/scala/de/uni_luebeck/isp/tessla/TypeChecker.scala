@@ -396,9 +396,10 @@ class TypeChecker(spec: FlatTessla.Specification)
             if (leftOverTypeParameters.nonEmpty) {
               throw TypeArgumentsNotInferred(name, call.macroLoc)
             }
+            val calculatedTypeArgs = t.typeParameters.map(typeSubstitutions)
             val returnType = typeSubst(possiblyLiftedType.returnType, possiblyLiftedType.returnType,
               typeParams, typeSubstitutions)
-            TypedTessla.MacroCall(macroID, call.macroLoc, typeArgs, args, call.loc) -> returnType
+            TypedTessla.MacroCall(macroID, call.macroLoc, calculatedTypeArgs, args, call.loc) -> returnType
           case other =>
             throw TypeMismatch("function", other, call.macroLoc)
         }
