@@ -274,14 +274,17 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
           }.toMap
           if (me.mac.returnType.isStreamType) {
             val translatedType = translateStreamType(typ, env ++ innerTypeEnv)
-            stream(translatedType) {
-              val innerEnv = createEnvForDefs(defsWithoutParameters, me.closure ++ args ++ innerTypeEnv)
-              translateVar(innerEnv, me.mac.result.id, me.mac.result.loc) match {
-                case Translated(Lazy(t: StreamEntry)) => translatedStreams(t.streamId).expression
-                // TODO: Allow id1 = id2 in TeSSLa Core to get rid of this hack
-                case Translated(Lazy(t: InputStreamEntry)) => TesslaCore.DefaultFrom(TesslaCore.InputStream(t.name, t.typ, Location.unknown), TesslaCore.Nil(t.typ, Location.unknown), Location.unknown)
-                case other => throw InternalError("Expected stream entry but got: " + other.toString)
-              }
+            val id = makeIdentifier(nameOpt)
+            wrapper.entry = Translated(Lazy(StreamEntry(id, translatedType)))
+            val innerEnv = createEnvForDefs(defsWithoutParameters, me.closure ++ args ++ innerTypeEnv)
+            translateVar(innerEnv, me.mac.result.id, me.mac.result.loc) match {
+              case Translated(Lazy(se: StreamEntry)) =>
+                translatedStreams(id) = translatedStreams(se.streamId).copy(id = id)
+              case Translated(Lazy(ise: InputStreamEntry)) =>
+                // We discard the temporary entry and will not create an entry for the new id, but if we get to an input
+                // stream, that means that we don't have a cycle and no one will have read the id
+                wrapper.entry = Translated(Lazy(ise))
+              case other => throw InternalError(s"Expected stream entry but got: $other")
             }
           } else {
             stack.push(call.loc)
