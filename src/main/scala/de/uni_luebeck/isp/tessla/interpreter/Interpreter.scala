@@ -14,7 +14,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   type Env = Map[TesslaCore.Identifier, TesslaCore.ValueOrError]
 
   lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map { stream =>
-    stream.id -> Lazy(eval(stream.expression))
+    stream.id -> Lazy(eval(stream))
   }.toMap
 
   lazy val outStreams: Seq[(Option[String], Stream, TesslaCore.Type)] = spec.outStreams.map { os =>
@@ -26,10 +26,10 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
   }
 
   private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
-    case TesslaCore.Stream(id, loc) =>
-      defs.getOrElse(id, throw InternalError(s"Couldn't find stream named $id", loc)).get
-    case TesslaCore.InputStream(name, loc) =>
-      inStreams.getOrElse(name, throw InternalError(s"Couldn't find input stream named $name", loc))._1
+    case s: TesslaCore.Stream =>
+      defs.getOrElse(s.id, throw InternalError(s"Couldn't find stream named ${s.id}", s.loc)).get
+    case i: TesslaCore.InputStream =>
+      inStreams.getOrElse(i.name, throw InternalError(s"Couldn't find input stream named ${i.name}", i.loc))._1
     case _: TesslaCore.Nil => nil
   }
 
@@ -56,7 +56,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     }
   }
 
-  private def eval(exp: TesslaCore.Expression): Stream = exp match {
+  private def eval(sd: TesslaCore.StreamDescription): Stream = sd.expression match {
     case TesslaCore.SignalLift(op, argStreams, loc) =>
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)
@@ -65,7 +65,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => arg.mapValue(_.withLoc(stream.loc))
         }
-        Some(Evaluator.evalPrimitiveOperator(op, args, exp.loc))
+        Some(Evaluator.evalPrimitiveOperator(op, args, sd.typ.elementType, sd.loc))
       }
     case TesslaCore.Lift(f, argStreams, loc) =>
       if (argStreams.isEmpty) {
@@ -73,11 +73,11 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
       }
       lift(argStreams.map(evalStream)) { arguments =>
         val args = arguments.zip(argStreams).map {
-          case (Some(arg), stream) => TesslaCore.TesslaOption(Some(arg), stream.loc)
-          case (None, stream) => TesslaCore.TesslaOption(None, stream.loc)
+          case (Some(arg), stream) => TesslaCore.TesslaOption(Some(arg), stream.typ.elementType, stream.loc)
+          case (None, stream) => TesslaCore.TesslaOption(None, sd.typ.elementType, stream.loc)
         }
         val closure = TesslaCore.Closure(f, Map(), loc)
-        Evaluator.evalApplication(closure, args, loc) match {
+        Evaluator.evalApplication(closure, args, sd.typ.elementType, loc) match {
           case to: TesslaCore.TesslaOption => to.value
           case err: TesslaCore.Error => Some(err)
           case other =>

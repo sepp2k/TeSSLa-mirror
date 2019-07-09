@@ -62,23 +62,25 @@ object Evaluator {
 
   def evalPrimitiveOperator(op: TesslaCore.CurriedPrimitiveOperator,
                             arguments: Seq[TesslaCore.ValueOrError],
+                            resultType: TesslaCore.ValueType,
                             loc: Location): TesslaCore.ValueOrError =
     if (op.args.isEmpty) {
-      evalPrimitiveOperator(op.name, arguments, loc)
+      evalPrimitiveOperator(op.name, arguments, resultType, loc)
     } else {
-      def f(curried: Int, arg: Int, acc: Seq[TesslaCore.ValueOrError]): Seq[TesslaCore.ValueOrError] =
-        if (op.args.contains(curried)) {
-          f(curried + 1, arg, acc :+ op.args(curried))
-        } else if (arg < arguments.size) {
-          f(curried + 1, arg + 1, acc :+ arguments(arg))
+      def gatherArguments(curriedIdx: Int, argIdx: Int, acc: Seq[TesslaCore.ValueOrError]): Seq[TesslaCore.ValueOrError] =
+        if (op.args.contains(curriedIdx)) {
+          gatherArguments(curriedIdx + 1, argIdx, acc :+ op.args(curriedIdx))
+        } else if (argIdx < arguments.size) {
+          gatherArguments(curriedIdx + 1, argIdx + 1, acc :+ arguments(argIdx))
         } else {
           acc
         }
-      evalPrimitiveOperator(op.name, f(0, 0, Seq()), loc)
+      evalPrimitiveOperator(op.name, gatherArguments(0, 0, Seq()), resultType, loc)
     }
 
   def evalPrimitiveOperator(name: String,
                             arguments: Seq[TesslaCore.ValueOrError],
+                            resultType: TesslaCore.ValueType,
                             loc: Location): TesslaCore.ValueOrError = {
     def binIntOp(op: (BigInt, BigInt) => BigInt) = {
       TesslaCore.IntValue(op(getInt(arguments(0)), getInt(arguments(1))), loc)
@@ -157,9 +159,9 @@ object Evaluator {
         case "floatToInt" =>
           TesslaCore.IntValue(BigDecimal(getFloat(arguments(0))).toBigInt, loc)
         case "None" =>
-          TesslaCore.TesslaOption(None, loc)
+          TesslaCore.TesslaOption(None, resultType, loc)
         case "Some" =>
-          TesslaCore.TesslaOption(Some(arguments(0)), loc)
+          TesslaCore.TesslaOption(Some(arguments(0)), resultType, loc)
         case "isNone" =>
           TesslaCore.BoolValue(getOption(arguments(0)).value.isEmpty, loc)
         case "getSome" =>
@@ -168,10 +170,10 @@ object Evaluator {
             case Some(value) => value
           }
         case "Map_empty" =>
-          TesslaCore.TesslaMap(Map(), loc)
+          TesslaCore.TesslaMap(Map(), resultType, loc)
         case "Map_add" =>
           val map = getMap(arguments(0))
-          TesslaCore.TesslaMap(map.value + (arguments(1).forceValue -> arguments(2).forceValue), loc)
+          TesslaCore.TesslaMap(map.value + (arguments(1).forceValue -> arguments(2).forceValue), resultType, loc)
         case "Map_get" =>
           val map = getMap(arguments(0))
           val key = arguments(1).forceValue
@@ -185,66 +187,66 @@ object Evaluator {
           TesslaCore.BoolValue(getMap(arguments(0)).value.contains(arguments(1).forceValue), loc)
         case "Map_remove" =>
           val map = getMap(arguments(0))
-          TesslaCore.TesslaMap(map.value - arguments(1).forceValue, loc)
+          TesslaCore.TesslaMap(map.value - arguments(1).forceValue, resultType, loc)
         case "Map_size" =>
           val map = getMap(arguments(0))
           TesslaCore.IntValue(map.value.size, loc)
         case "Set_empty" =>
-          TesslaCore.TesslaSet(Set(), loc)
+          TesslaCore.TesslaSet(Set(), resultType, loc)
         case "Set_add" =>
           val set = getSet(arguments(0))
-          TesslaCore.TesslaSet(set.value + arguments(1).forceValue, loc)
+          TesslaCore.TesslaSet(set.value + arguments(1).forceValue, resultType, loc)
         case "Set_contains" =>
           TesslaCore.BoolValue(getSet(arguments(0)).value.contains(arguments(1).forceValue), loc)
         case "Set_remove" =>
           val set = getSet(arguments(0))
-          TesslaCore.TesslaSet(set.value - arguments(1).forceValue, loc)
+          TesslaCore.TesslaSet(set.value - arguments(1).forceValue, resultType, loc)
         case "Set_size" =>
           val set = getSet(arguments(0))
           TesslaCore.IntValue(set.value.size, loc)
         case "Set_union" =>
           val set1 = getSet(arguments(0))
           val set2 = getSet(arguments(1))
-          TesslaCore.TesslaSet(set1.value | set2.value, loc)
+          TesslaCore.TesslaSet(set1.value | set2.value, resultType, loc)
         case "Set_intersection" =>
           val set1 = getSet(arguments(0))
           val set2 = getSet(arguments(1))
-          TesslaCore.TesslaSet(set1.value & set2.value, loc)
+          TesslaCore.TesslaSet(set1.value & set2.value, resultType, loc)
         case "Set_fold" =>
           val set = getSet(arguments(0)).value
           val z = arguments(1)
           val f = arguments(2)
-          set.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc))
+          set.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), resultType, loc))
         case "List_empty" =>
-          TesslaCore.TesslaList(Vector(), loc)
+          TesslaCore.TesslaList(Vector(), resultType, loc)
         case "List_size" =>
           val list = getList(arguments(0))
           TesslaCore.IntValue(list.value.size, loc)
         case "List_append" =>
           val list = getList(arguments(0))
-          TesslaCore.TesslaList(list.value :+ arguments(1).forceValue, loc)
+          TesslaCore.TesslaList(list.value :+ arguments(1).forceValue, resultType, loc)
         case "List_prepend" =>
           val list = getList(arguments(1))
-          TesslaCore.TesslaList(arguments(0).forceValue +: list.value, loc)
+          TesslaCore.TesslaList(arguments(0).forceValue +: list.value, resultType, loc)
         case "List_tail" =>
           val list = getList(arguments(0))
           if (list.value.isEmpty) {
             list
           } else {
-            TesslaCore.TesslaList(list.value.tail, loc)
+            TesslaCore.TesslaList(list.value.tail, resultType, loc)
           }
         case "List_init" =>
           val list = getList(arguments(0))
           if (list.value.isEmpty) {
             list
           } else {
-            TesslaCore.TesslaList(list.value.init, loc)
+            TesslaCore.TesslaList(list.value.init, resultType, loc)
           }
         case "List_fold" =>
           val list = getList(arguments(0)).value
           val z = arguments(1)
           val f = arguments(2)
-          list.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), loc))
+          list.foldLeft(z)((acc, value) => evalApplication(f, Seq(acc, value), resultType, loc))
         case "List_get" =>
           val list = getList(arguments(0))
           val index = getInt(arguments(1)).toInt
@@ -294,11 +296,12 @@ object Evaluator {
 
   def evalApplication(f: TesslaCore.ValueArg,
                       args: Seq[TesslaCore.ValueOrError],
+                      resultType: TesslaCore.ValueType,
                       loc: Location,
                       env: Env = Map()): TesslaCore.ValueOrError = {
     evalArg(f, env) match {
       case b: TesslaCore.BuiltInOperator =>
-        evalPrimitiveOperator(b.value, args, loc)
+        evalPrimitiveOperator(b.value, args, resultType, loc)
       case c: TesslaCore.Closure =>
         val env = c.capturedEnvironment
         val argEnv = c.function.parameters.zip(args.map(arg => Lazy(arg))).toMap
@@ -333,13 +336,13 @@ object Evaluator {
     }
   }
 
-  def evalExpression(exp: TesslaCore.ValueExpression, env: Env): TesslaCore.ValueOrError = exp match {
+  def evalExpression(desc: TesslaCore.ValueExpressionDescription, env: Env): TesslaCore.ValueOrError = desc.exp match {
     case f: TesslaCore.Function =>
-      TesslaCore.Closure(f, env, exp.loc)
+      TesslaCore.Closure(f, env, f.loc)
     case ite: TesslaCore.IfThenElse =>
       evalIfThenElse(ite.cond, ite.thenCase, ite.elseCase, env, ite.loc)
     case a: TesslaCore.Application =>
-      evalApplication(a.f.get, a.args.map(arg => evalArg(arg.get, env)), a.loc, env)
+      evalApplication(a.f.get, a.args.map(arg => evalArg(arg.get, env)), desc.typ, a.loc, env)
     case ma: TesslaCore.MemberAccess =>
       evalArg(ma.obj, env).mapValue {
         case obj: TesslaCore.TesslaObject =>

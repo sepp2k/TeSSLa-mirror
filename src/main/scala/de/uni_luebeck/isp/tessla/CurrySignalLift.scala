@@ -5,8 +5,8 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
     val streams = spec.streams.map { stream => stream.id -> stream }.toMap
 
     def getConst(ref: TesslaCore.StreamRef): Option[TesslaCore.ValueOrError] = ref match {
-      case TesslaCore.Stream(id, _) =>
-        val exp = streams(id).expression
+      case s: TesslaCore.Stream =>
+        val exp = streams(s.id).expression
         exp match {
           case TesslaCore.Default(_: TesslaCore.Nil, value, _) => Some(value)
           case TesslaCore.SignalLift(op, args, loc) =>
@@ -15,7 +15,7 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
               None
             } else {
               val vs = values.map(_.get)
-              Some(Evaluator.evalPrimitiveOperator(op, vs, loc))
+              Some(Evaluator.evalPrimitiveOperator(op, vs, streams(s.id).typ.elementType, loc))
             }
           case _ => None
         }
@@ -33,7 +33,7 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
           }
           val newOp = TesslaCore.CurriedPrimitiveOperator(op.name, newCurry)
           if (newArgs.isEmpty) {
-            val value = Evaluator.evalPrimitiveOperator(newOp, Seq(), loc)
+            val value = Evaluator.evalPrimitiveOperator(newOp, Seq(), sd.typ.elementType, loc)
             TesslaCore.Default(TesslaCore.Nil(sd.typ, loc), value, loc)
           } else {
             TesslaCore.SignalLift(newOp, newArgs, loc)
