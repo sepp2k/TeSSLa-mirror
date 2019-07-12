@@ -4,7 +4,7 @@
 
 ### Breaking Changes
 
-* The following keywords have been added and can no longer be used as variable names: `module`, `__builtin__`, `import`, `imexport`
+* The following keywords have been added and can no longer be used as variable names: `module`, `__builtin__`, `import`, `imexport` (`module`, `import` and `imexport` have been added in preparation for 1.1.0 and aren't meant to be used yet)
 
 ### API Changes
 
@@ -14,21 +14,19 @@
 
 ### Additions and Fixes
 
-* A module system has been added. You can define modules using `module ModuleName { definitions }` and then access the module's definitions with `ModuleName.DefinitionName`. Modules can also be passed around as objects.
 * Built-in macros and types can now be defined using `def ... = __builtin__(name)` and `type ... = __builtin__(name)` respectively
 * There is now a standard library that is included automatically into all TeSSLa specs
 * Types can now be used before their definition
 * Generic macros can be passed as arguments to other macros and the type arguments will be inferred when possible
-
-### Additions and Fixes
-
-* Add CSV input parser.
+* Annotations can now be defined using `def @annotationName(arguments)`, applied to arbitratry streams and then queried in the generated TesslaCore
+* Certain bugs have been fixed that could cause KeyNotFound exceptions or spurious infinite recursion errors
+* A CSV input parser has been added
 
 ## Version 0.7.6
 
 ### Additions and Fixes
 
-* Allow more line breaks. For a detailed lists of where line breaks can be used, see syntax.md.
+* Allow more line breaks. For a detailed list of where line breaks can be used, see syntax.md.
 
 ### API Changes
 
