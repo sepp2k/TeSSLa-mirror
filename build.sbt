@@ -12,7 +12,11 @@ name := "tessla"
 
 organization := "de.uni_luebeck.isp"
 
-version := s"0.7.6-SNAPSHOT"
+val versionFile = new File("src/main/resources/de/uni_luebeck/isp/tessla/stdlib/Tessla.tessla")
+
+val versionPattern = "def\\s+version(?:\\s*:\\s*String)?\\s*=\\s*\"([^\"]+)\"".r
+
+version := versionPattern.findFirstMatchIn(IO.read(versionFile)).get.group(1)
 
 scalaVersion := "2.12.7"
 

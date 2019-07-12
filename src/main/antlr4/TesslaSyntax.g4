@@ -12,16 +12,22 @@ include: 'include' file=stringLit eos;
 
 statement
     : def #Definition
-    | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* type eos #TypeDefinition
-    | 'in' NL* ID NL* ':' NL* type eos # In
-    | 'out' NL* expression ('as' NL* ID)? eos # Out
-    | 'print' NL* expression eos # Print
-    | 'out' NL* '*' eos # OutAll
+    | 'def' '@' ID ( '(' parameters+=param (',' parameters+=param)* ')' )? eos #AnnotationDefinition
+    | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* typeBody eos #TypeDefinition
+    | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=statement* NL* '}' NL* #ModuleDefinition
+    | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement
+    | annotations+=annotation* 'in' NL* ID NL* ':' NL* type eos #In
+    | 'out' NL* expression ('as' NL* ID)? eos #Out
+    | 'print' NL* expression eos #Print
+    | 'out' NL* '*' eos #OutAll
     ;
 
 def: header=definitionHeader (':='|'=') NL* body eos;
 
-body: expression ('where' '{' NL* defs+=def+ '}')?;
+body
+    : expression ('where' '{' NL* defs+=def+ '}')? #ExpressionBody
+    | '__builtin__' '(' name=ID (',' expression)? ')' #BuiltInBody
+    ;
 
 definitionHeader:
     tessladoc+=DOCLINE* NL*
@@ -31,9 +37,25 @@ definitionHeader:
     ('(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')')?
     (':' NL* resultType=type)?;
 
-annotation: '@' ID NL*;
+annotation: '@' ID ( '(' arguments+=annotationArg (',' arguments+=annotationArg)* ')' )? NL*;
+
+annotationArg: (name=ID '=' NL*)? constantExpression;
+
+constantExpression
+    : (stringLit | DECINT | HEXINT | FLOAT) #ConstantLiteral
+    | '(' NL* (elems+=constantExpression (',' NL* elems+=constantExpression)*)?  NL* ')' #ConstantTuple
+    | '{' NL* (members+=constantMemberDefinition (',' NL* members+=constantMemberDefinition)*)?  NL* '}' #ConstantObject
+    ;
+
+constantMemberDefinition: name=ID ((':'|'=') NL* value=constantExpression)?;
+
 
 param: ID (':' NL* parameterType=type)?;
+
+typeBody
+    : type #TypeAliasBody
+    | '__builtin__' '(' name=ID ')' #BuiltInTypeBody
+    ;
 
 type
     : name=ID #SimpleType
@@ -50,8 +72,6 @@ expression
     | stringLit #StringLiteral
     | (DECINT | HEXINT) timeUnit=ID? #IntLiteral
     | FLOAT #FloatLiteral
-    | 'true' #True
-    | 'false' #False
     | '(' NL* (elems+=expression (',' NL* elems+=expression)*)? lastComma=','? NL* ')' #TupleExpression
     | '{' NL* definitions+=def+ RETURN? expression NL* '}' #Block
     | ('${' | '{') NL* (members+=memberDefinition (',' NL* members+=memberDefinition)* ','? NL*)? '}' #ObjectLiteral

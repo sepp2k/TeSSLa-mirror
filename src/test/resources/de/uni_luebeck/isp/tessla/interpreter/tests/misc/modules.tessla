@@ -1,0 +1,15 @@
+in x: Events[Int]
+
+module Foo {
+  def foo: Events[I] = x+1
+
+  def bar = double(foo)
+
+  @liftable
+  def double(i: I) = i*2
+
+  type I = Int
+}
+
+out Foo.double(17)
+out Foo.bar

@@ -10,7 +10,7 @@ import org.antlr.v4.runtime.tree.RuleNode
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 
-class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
+class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
   val queue: mutable.PriorityQueue[EventRange] =
     new mutable.PriorityQueue[EventRange]()(Ordering.by((ev: EventRange) => ev.from).reverse)
   var nextEvents = new mutable.Queue[Trace.Event]
@@ -83,26 +83,30 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
       }
 
       override def visitNone(none: NoneContext) = {
-        TesslaCore.TesslaOption(None, Location.fromNode(none))
+        // The type of values generated from input streams is never used anywhere, so we can just use a random type
+        // We'll use Never here
+        // TODO: Think about creating a separate class family for runtime values (as opposed to values that are part
+        //       of the TesslaCore AST) that don't have type information attached
+        TesslaCore.TesslaOption(None, TesslaCore.NeverType, Location.fromNode(none))
       }
 
       override def visitSome(some: SomeContext) = {
-        TesslaCore.TesslaOption(Some(visit(some.expression)), Location.fromNode(some))
+        TesslaCore.TesslaOption(Some(visit(some.expression)), TesslaCore.NeverType, Location.fromNode(some))
       }
 
       override def visitListExpression(list: ListExpressionContext) = {
         val elements = list.elems.asScala.map(visit)
-        TesslaCore.TesslaList(elements.toIndexedSeq, Location.fromNode(list))
+        TesslaCore.TesslaList(elements.toIndexedSeq, TesslaCore.NeverType, Location.fromNode(list))
       }
 
       override def visitSetExpression(set: SetExpressionContext) = {
         val elements = set.elems.asScala.map(visit).toSet
-        TesslaCore.TesslaSet(elements, Location.fromNode(set))
+        TesslaCore.TesslaSet(elements, TesslaCore.NeverType, Location.fromNode(set))
       }
 
       override def visitMapExpression(map: MapExpressionContext) = {
         val elements = map.elems.asScala.map(kv => visit(kv.key) -> visit(kv.value)).toMap
-        TesslaCore.TesslaMap(elements, Location.fromNode(map))
+        TesslaCore.TesslaMap(elements, TesslaCore.NeverType, Location.fromNode(map))
       }
 
       override def visitTupleExpression(tup: TupleExpressionContext) = {
@@ -125,24 +129,22 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
       }
 
       def getOperator(name: String, loc: Location): TesslaCore.BuiltInOperator = {
-        BuiltIn.builtIns.get(name) match {
-          case Some(prim: BuiltIn.PrimitiveOperator) => TesslaCore.BuiltInOperator(prim, loc)
-          case _ => throw InternalError("Unknown or non-primitive operator", loc)
-        }
+        TesslaCore.BuiltInOperator(name, loc)
       }
 
       override def visitUnaryExpression(exp: UnaryExpressionContext) = {
-        val operatorName = s"unary ${exp.op.getText}"
+        val operatorName = Tessla.unaryOperators(exp.op.getText)
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
-        Evaluator.evalApplication(getOperator(operatorName, opLoc), Seq(visit(exp.expression)), loc).forceValue
+        Evaluator.evalApplication(getOperator(operatorName, opLoc), Seq(visit(exp.expression)), TesslaCore.NeverType, loc).forceValue
       }
 
       override def visitInfixExpression(exp: InfixExpressionContext) = {
+        val operatorName = Tessla.binaryOperators(exp.op.getText)
         val args = Seq(visit(exp.lhs), visit(exp.rhs))
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
-        Evaluator.evalApplication(getOperator(exp.op.getText, opLoc), args, loc).forceValue
+        Evaluator.evalApplication(getOperator(operatorName, opLoc), args, TesslaCore.NeverType, loc).forceValue
       }
 
       override def visitITE(ite: ITEContext) = {
@@ -158,16 +160,15 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
   }
 
   object EventRange {
-    def apply(erc: EventRangeContext): EventRange = {
-      val id = Trace.Identifier(erc.streamName.getText, Location.fromToken(erc.ID))
+    def apply(parserEventRange: ParserEventRange): EventRange = {
+      val id = Trace.Identifier(parserEventRange.streamName.getText, Location.fromToken(parserEventRange.streamName))
       val t = Trace.Identifier("t", Location.builtIn)
-      val exp = Option(erc.expression)
-      val trLoc = Location.fromNode(erc.timeRange)
-      val loc = Location.fromNode(erc)
-      erc.timeRange match {
+      val exp = Option(parserEventRange.expression)
+      val trLoc = Location.fromNode(parserEventRange.timeRange)
+      parserEventRange.timeRange match {
         case stc: SingleTimeContext =>
           val time = BigInt(stc.DECINT.getText)
-          new EventRange(time, Some(time), 1, t, trLoc, id, exp, loc)
+          new EventRange(time, Some(time), 1, t, trLoc, id, exp, parserEventRange.loc)
         case crc: CompRangeContext =>
           val lower =
             if (crc.lowerOp.getText == "<") BigInt(crc.lowerBound.getText) + 1
@@ -177,14 +178,14 @@ class FlatEventIterator(eventRanges: Iterator[EventRangeContext], abortAt: Optio
             else BigInt(bound.getText)
           }
           val tID = Trace.Identifier(crc.ID.getText, Location.fromToken(crc.ID))
-          EventRange(lower, upper, 1, tID, trLoc, id, exp, loc)
+          EventRange(lower, upper, 1, tID, trLoc, id, exp, parserEventRange.loc)
         case rc: RangeContext =>
           val first = BigInt(rc.first.getText)
           val step =
             if (rc.second != null) BigInt(rc.second.getText) - first
             else BigInt(1)
           val last = Option(rc.last).map(l => BigInt(l.getText))
-          EventRange(first, last, step, t, trLoc, id, exp, loc)
+          EventRange(first, last, step, t, trLoc, id, exp, parserEventRange.loc)
       }
     }
   }

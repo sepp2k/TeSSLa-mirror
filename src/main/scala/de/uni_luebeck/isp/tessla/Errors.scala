@@ -3,15 +3,15 @@ package de.uni_luebeck.isp.tessla
 import java.util.IllegalFormatException
 
 object Errors {
-  abstract class TesslaError extends Exception with Diagnostic
+  trait TesslaError extends Exception with Diagnostic
 
-  case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends TesslaError {
+  case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends Exception(error) with TesslaError {
     override def loc: Location = error.loc
 
     override def message: String = s"${error.message} (t = $timestamp)"
   }
 
-  case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location]) extends TesslaError {
+  case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location]) extends Exception(inner) with TesslaError {
     override def loc = inner.loc
 
     override def message = inner.message
@@ -19,6 +19,12 @@ object Errors {
     def stackTraceString = stackTrace.map(loc => s"\n    called from $loc").mkString("")
 
     override def toString = super.toString() + stackTraceString
+  }
+
+  case class RuntimeError(inner: TesslaError) extends Exception(inner) with TesslaError {
+    override def loc = inner.loc
+
+    override def message = inner.message
   }
 
   case class MissingBody(id: Tessla.Identifier) extends TesslaError {
@@ -63,6 +69,10 @@ object Errors {
     override def message = s"Parameter $name needs a type annotation"
   }
 
+  case class MissingTypeAnnotationBuiltIn(name: String, loc: Location) extends TesslaError {
+    override def message = s"Built-in definition $name needs a type annotation"
+  }
+
   case class StreamOfNonValueType(loc: Location) extends TesslaError {
     override def message = "Streams may only contain value types; not other streams or functions"
   }
@@ -87,10 +97,8 @@ object Errors {
     override def message = s"Undefined macro or operator ${id.name}/$arity"
   }
 
-  case class UndefinedNamedArg(arg: TypedTessla.NamedArgument) extends TesslaError {
-    override def loc = arg.idLoc.loc
-
-    override def message = s"Undefined keyword argument ${arg.name}"
+  case class UndefinedNamedArg(name: String, loc: Location) extends TesslaError {
+    override def message = s"Undefined keyword argument $name"
   }
 
   case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {
@@ -184,7 +192,7 @@ object Errors {
   }
 
   case class UndefinedAnnotation(id: Tessla.Identifier) extends TesslaError {
-    override def message = s"Undefined annotation $id; currently the only supported annotation is @liftable"
+    override def message = s"Undefined annotation $id"
 
     override def loc = id.loc
   }
@@ -207,8 +215,8 @@ object Errors {
     override def message = s"Invalid escape sequence '$sequence' in string"
   }
 
-  case class StringInterpolationOrFormatInInclude(loc: Location) extends TesslaError {
-    override def message = "String interpolation or format specifiers are not allowed in include statements"
+  case class StringInterpolationOrFormatInConstantString(loc: Location) extends TesslaError {
+    override def message = "String interpolation or format specifiers are not allowed in include statements and annotation arguments"
   }
 
   case class StringFormatError(error: IllegalFormatException, loc: Location) extends TesslaError {
@@ -221,5 +229,21 @@ object Errors {
 
   case class UnsupportedConversion(conversion: Char, loc: Location) extends TesslaError {
     override def message = s"TeSSLa does not support the conversion specifier $conversion"
+  }
+
+  case class FileNotFound(name: String, loc: Location) extends TesslaError {
+    override def message = s"Could not find a TeSSLa file named $name"
+  }
+
+  case class AbsoluteIncludePath(loc: Location) extends TesslaError {
+    override def message = "Absolute paths are not allowed in includes"
+  }
+
+  case class InOutStatementInModule(loc: Location) extends TesslaError {
+    override def message = "Input and output statements are not allowed inside of modules"
+  }
+
+  case class AnnotationDefInModule(loc: Location) extends TesslaError {
+    override def message = "Annotation definitions are not allowed inside of modules"
   }
 }

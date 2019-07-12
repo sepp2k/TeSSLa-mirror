@@ -1,0 +1,457 @@
+include "Option"
+include "List"
+include "Set"
+include "Map"
+include "String"
+include "CTF"
+include "Tessla"
+
+module Predef {
+  def nil[T]: Events[T] = __builtin__(nil)
+  def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)
+  def first[T, U](stream1: Events[T], stream2: Events[U]): Events[T] = slift(stream1, stream2, (x: T, _: U) => x)
+  def fold[T,R](stream: Events[T], init: R, f: (Events[R],Events[T]) => Events[R]) = result where {
+    def result: Events[R] = default(f(last(result, stream), stream), init)
+  }
+}
+
+#module Predef {
+  # Fundamental types
+  type Events[T] = __builtin__(Events)
+  type Bool = __builtin__(Bool)
+  type Int = __builtin__(Int)
+  type Float = __builtin__(Float)
+  type String = __builtin__(String)
+  type Unit = ()
+
+  # Annotations
+  def @liftable
+
+  # Primitive constants and operators
+
+  ## A Boolean value representing that a given proposition is true
+  def true: Bool = __builtin__(true)
+
+  ## A Boolean value representing that a given proposition is false
+  def false: Bool = __builtin__(false)
+
+  @liftable
+  def __not__(arg: Bool): Bool = __builtin__(__not__)
+  @liftable
+  def __ite__[T](cond: Bool, thenCase: T, elseCase: T): T = __builtin__(__ite__)
+  @liftable
+  def __and__(lhs: Bool, rhs: Bool): Bool = __builtin__(__and__)
+  @liftable
+  def __or__(lhs: Bool, rhs: Bool): Bool = __builtin__(__or__)
+
+  @liftable
+  def __eq__[T](lhs: T, rhs: T): Bool = __builtin__(__eq__)
+  @liftable
+  def __neq__[T](lhs: T, rhs: T): Bool = __builtin__(__neq__)
+
+  @liftable
+  def __gt__(lhs: Int, rhs: Int): Bool = __builtin__(__gt__)
+  @liftable
+  def __lt__(lhs: Int, rhs: Int): Bool = __builtin__(__lt__)
+  @liftable
+  def __geq__(lhs: Int, rhs: Int): Bool = __builtin__(__geq__)
+  @liftable
+  def __leq__(lhs: Int, rhs: Int): Bool = __builtin__(__leq__)
+
+  @liftable
+  def __fgt__(lhs: Float, rhs: Float): Bool = __builtin__(__fgt__)
+  @liftable
+  def __flt__(lhs: Float, rhs: Float): Bool = __builtin__(__flt__)
+  @liftable
+  def __fgeq__(lhs: Float, rhs: Float): Bool = __builtin__(__fgeq__)
+  @liftable
+  def __fleq__(lhs: Float, rhs: Float): Bool = __builtin__(__fleq__)
+
+  @liftable
+  def __add__(lhs: Int, rhs: Int): Int = __builtin__(__add__)
+  @liftable
+  def __sub__(lhs: Int, rhs: Int): Int = __builtin__(__sub__)
+  @liftable
+  def __mul__(lhs: Int, rhs: Int): Int = __builtin__(__mul__)
+  @liftable
+  def __div__(lhs: Int, rhs: Int): Int = __builtin__(__div__)
+  @liftable
+  def __mod__(lhs: Int, rhs: Int): Int = __builtin__(__mod__)
+  @liftable
+  def __negate__(arg: Int): Int = __builtin__(__negate__)
+
+  @liftable
+  def __bitand__(lhs: Int, rhs: Int): Int = __builtin__(__bitand__)
+  @liftable
+  def __bitor__(lhs: Int, rhs: Int): Int = __builtin__(__bitor__)
+  @liftable
+  def __bitxor__(lhs: Int, rhs: Int): Int = __builtin__(__bitxor__)
+  @liftable
+  def __bitflip__(arg: Int): Int = __builtin__(__bitflip__)
+  @liftable
+  def __leftshift__(lhs: Int, rhs: Int): Int = __builtin__(__leftshift__)
+  @liftable
+  def __rightshift__(lhs: Int, rhs: Int): Int = __builtin__(__rightshift__)
+
+  @liftable
+  def __fadd__(lhs: Float, rhs: Float): Float = __builtin__(__fadd__)
+  @liftable
+  def __fsub__(lhs: Float, rhs: Float): Float = __builtin__(__fsub__)
+  @liftable
+  def __fmul__(lhs: Float, rhs: Float): Float = __builtin__(__fmul__)
+  @liftable
+  def __fdiv__(lhs: Float, rhs: Float): Float = __builtin__(__fdiv__)
+  @liftable
+  def __fnegate__(arg: Float): Float = __builtin__(__fnegate__)
+
+  # Functions for primitive types
+  @liftable
+  def toString[T](arg: T): String = __builtin__(toString)
+
+  @liftable
+  def pow(base: Float, exponent: Float): Float = __builtin__(pow)
+
+  @liftable
+  def log(x: Float, base: Float): Float = __builtin__(log)
+
+  @liftable
+  def sin(x: Float): Float = __builtin__(sin)
+
+  @liftable
+  def cos(x: Float): Float = __builtin__(cos)
+
+  @liftable
+  def tan(x: Float): Float = __builtin__(tan)
+
+  @liftable
+  def atan(x: Float): Float = __builtin__(atan)
+
+  @liftable
+  def intToFloat(x: Int): Float = __builtin__(intToFloat)
+
+  @liftable
+  def floatToInt(x: Float): Int = __builtin__(floatToInt)
+
+  # Predef option functionality
+  # Note that the core of the option functionality is defined here because options are fundamental
+  # enough (lift etc. make use of options) that having the functions in Predef makes sense.
+  # Further functionality (such as map etc.) will be defined in the Option module
+  type Option[T] = __builtin__(Option)
+  def None[T]: Option[T] = __builtin__(None)
+
+  @liftable
+  def Some[T](value: T): Option[T] = __builtin__(Some)
+
+  ## Return true if the given option is a `None` or false if it is a `Some`
+  @liftable
+  def isNone[T](opt: Option[T]): Bool = __builtin__(isNone)
+
+  ## Return true if the given option is a `Some` or false if it is a `None`
+  @liftable
+  def isSome[T](opt: Option[T]): Bool = !isNone(opt)
+
+  ## Get the value contained in a `Some`. If the given option is a `None`, a run-time error will occur
+  @liftable
+  def getSome[T](opt: Option[T]): T = __builtin__(getSome)
+
+  # Built-in stream functions
+  def nil[T]: Events[T] = __builtin__(nil)
+  def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)
+  def defaultFrom[T](valueStream: Events[T], defaultStream: Events[T]): Events[T] = __builtin__(defaultFrom)
+  def last[T, U](stream: Events[T], trigger: Events[U]): Events[T] = __builtin__(last)
+  def time[T](stream: Events[T]): Events[Int] = __builtin__(time)
+  def delay[T](delays: Events[Int], resets: Events[T]): Events[Unit] = __builtin__(delay)
+  def lift[T, U, V](stream1: Events[T], stream2: Events[U], f: (Option[T], Option[U]) => Option[V]): Events[V] = __builtin__(lift)
+
+  # More stream functions
+  def const[T, U](value: T, stream: Events[U]): Events[T] = slift1(stream, (_: U) => value)
+
+  def first[T, U](stream1: Events[T], stream2: Events[U]): Events[T] = slift(stream1, stream2, (x: T, _: U) => x)
+
+  def lift1[T, U](stream: Events[T], f: (Option[T]) => Option[U]): Events[U] =
+    lift(stream, nil[Unit], (x: Option[T], dontCare: Option[Unit]) => f(x))
+
+  def lift3[T1, T2, T3, T4](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3],
+                            f: (Option[T1], Option[T2], Option[T3]) => Option[T4]): Events[T4] = {
+    def stream2and3 = lift(stream2, stream3, (x: Option[T2], y: Option[T3]) => Some((x, y)))
+    lift(stream1, stream2and3, (v1: Option[T1], v2and3opt: Option[(Option[T2], Option[T3])]) =>
+      if isNone(v2and3opt)
+      then f(v1, None[T2], None[T3])
+      else {
+        def v2and3 = getSome(v2and3opt)
+        f(v1, v2and3._1, v2and3._2)
+      })
+  }
+
+  def lift4[T1, T2, T3, T4, T5](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3], stream4: Events[T4],
+                                f: (Option[T1], Option[T2], Option[T3], Option[T4]) => Option[T5]): Events[T5] = {
+    def stream1and2 = lift(stream1, stream2, (x: Option[T1], y: Option[T2]) => Some((x, y)))
+    lift3(stream1and2, stream3, stream4, (v1and2opt: Option[(Option[T1], Option[T2])], v3: Option[T3], v4: Option[T4]) =>
+      if isNone(v1and2opt)
+      then f(None[T1], None[T2], v3, v4)
+      else {
+        def v1and2 = getSome(v1and2opt)
+        f(v1and2._1, v1and2._2, v3, v4)
+      })
+  }
+
+  def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] =
+    lift1(stream, (x: Option[T]) => Some(f(getSome(x))))
+
+  def slift[T,U,V](a: Events[T], b: Events[U], f: (T,U) => V): Events[V] = {
+    def aa = merge(a, last(a, b))
+    def bb = merge(b, last(b, a))
+    lift(aa, bb, (x: Option[T], y: Option[U]) =>
+      if isNone(x) || isNone(y)
+      then None[V]
+      else Some(f(getSome(x), getSome(y))))
+  }
+
+  def slift3[T1, T2, T3, T4](a: Events[T1], b: Events[T2], c: Events[T3], f: (T1, T2, T3) => T4): Events[T4] = {
+    def aa = merge(a, last(a, mergeUnit(b, c)))
+    def bb = merge(b, last(b, mergeUnit(a, c)))
+    def cc = merge(c, last(c, mergeUnit(a, b)))
+    lift3(aa, bb, cc, (x: Option[T1], y: Option[T2], z: Option[T3]) =>
+      if isNone(x) || isNone(y) || isNone(z)
+      then None[T4]
+      else Some(f(getSome(x), getSome(y), getSome(z))))
+  }
+
+  def slift4[T1, T2, T3, T4, T5](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], f: (T1, T2, T3, T4) => T5): Events[T5] = {
+    def ss1 = merge(s1, last(s1, mergeUnit3(s2, s3, s4)))
+    def ss2 = merge(s2, last(s2, mergeUnit3(s1, s3, s4)))
+    def ss3 = merge(s3, last(s3, mergeUnit3(s1, s2, s4)))
+    def ss4 = merge(s4, last(s4, mergeUnit3(s1, s2, s3)))
+    lift4(ss1, ss2, ss3, ss4, (v1: Option[T1], v2: Option[T2], v3: Option[T3], v4: Option[T4]) =>
+      if isNone(v1) || isNone(v2) || isNone(v3) || isNone(v4)
+      then None[T5]
+      else Some(f(getSome(v1), getSome(v2), getSome(v3), getSome(v4))))
+  }
+
+  ## Return the previous event of `a`
+  def prev[A](a: Events[A]) = last(a,a)
+
+  def merge[T](stream1: Events[T], stream2: Events[T]): Events[T] =
+    lift(stream1, stream2, (x: Option[T], y: Option[T]) => if isNone(x) then y else x)
+
+  ## Filter the event stream `events` based on the last known value
+  ## of the boolean signal `condition`.
+  def filter[A](events: Events[A], condition: Events[Bool]) =
+    lift(events, merge(condition, last(condition, events)), (e: Option[A], c: Option[Bool]) =>
+      if isSome(c) && getSome(c) then e else None[A])
+
+  ## Remove events with the same value
+  def pure[T](x: Events[T]) =
+    filter(x, merge(last(x,x) != x, true))
+
+  ## Signal which is only true with first event on `x`
+  def isFirst[A](x: Events[A]) = merge3(const(false, last(x,x)), const(true, x), false)
+
+  ## Filters `x` such that only the first event on `x` remains
+  def firstEvent[A](x: Events[A]) = filter(x, isFirst(x))
+
+  ## Signal, which becomes `true` with the first event on `x`
+  def hadAnyEvent[T](x: Events[T]) = merge(const(true, x), false)
+
+  ## Compute the runtime of a function on every `ret` event.
+  ## The runtime is the time passed between the last `call`
+  ## event and the `ret` event. The values of the events are
+  ## ignored.
+  def runtime[A,B](call: Events[A], ret: Events[B]) =
+    on(ret, time(ret) - time(call))
+
+  ## Compute the maximum of two integer values.
+  @liftable
+  def max(a: Int, b: Int) = if a > b then a else b
+
+  ## Compute the minimum of two integer values.
+  @liftable
+  def min(a: Int, b: Int) = if a < b then a else b
+
+  ## Compute the maximum value of all events on `x`.
+  ## Provides for every input event and output event
+  ## whose value is the maximum up to this point.
+  def maximum(x: Events[Int]) = reduce(x, max)
+
+  ## Compute the minimum value of all events on `x`.
+  ## Provides for every input event and output event
+  ## whose value is the minimum up to this point.
+  def minimum(x: Events[Int]) = reduce(x, min)
+
+  ## Count the number of events on `x`. Provides for
+  ## every input event an output event whose value is
+  ## the number of events seen so far.
+  ## See `eventCount` for a counting macro with an
+  ## external reset.
+  def count[T](x: Events[T]) = fold(x, 0, (x: Int, _: T) => x+1)
+
+  ## Sum up the values of all events on `x`. Provides
+  ## for every input event an output event whose value
+  ## is the sum of the values of all events seen so far.
+  def sum(x: Events[Int]) = fold(x, 0, __add__)
+
+  ## Fold a function on values over all events on `stream`. Starting with
+  ## the initial value `init` the function `f` is called for every event
+  ## on `stream` with the last result and the current event’s value as arguments.
+  ## So for the input stream `x`
+  ## ```
+  ## 2: x = 2
+  ## 4: x = 6
+  ## 5: x = 1
+  ## ```
+  ## the call `def y = fold(f, x, 0)` produces the following stream `y`:
+  ## ```
+  ## 0: y = 0
+  ## 2: y = f(0,2)
+  ## 4: y = f(f(0,2),6)
+  ## 5: y = f(f(f(0,2),6),1)
+  ## ```
+  def fold[T,R](stream: Events[T], init: R, f: (R,T) => R) = result where {
+    def result: Events[R] =
+      default(
+        lift(last(result, stream), stream, (acc: Option[R], curr: Option[T]) =>
+          if isNone(curr) then None[R]
+          else if isNone(acc) then Some(f(init, getSome(curr)))
+          else Some(f(getSome(acc), getSome(curr)))
+        ),
+        init
+      )
+  }
+
+  ## Fold a function on values over all events on `stream`. Starting with
+  ## the first event on `stream` as initial value, the function `f` is called for every later event
+  ## on `stream` with the last result and the current event’s value as arguments.
+  ## So for the input stream `x`
+  ## ```
+  ## 2: x = 2
+  ## 4: x = 6
+  ## 5: x = 1
+  ## ```
+  ## the call `def y = reduce(f, x)` produces the following stream `y`:
+  ## ```
+  ## 2: y = 2
+  ## 4: y = f(2,6)
+  ## 5: y = f(f(2,6),1)
+  ## ```
+  def reduce[T](stream: Events[T], f: (Events[T],Events[T]) => Events[T]) = result where {
+    def result: Events[T] = defaultFrom(f(last(result, stream), stream), stream)
+  }
+
+  ## Count the number of events on `events`. Reset the output to 0
+  ## on every event on `reset`.
+  def eventCount[A,B](events: Events[A], reset: Events[B]) = count where {
+    def count: Events[Int] = default(
+      # `reset` contains the latest event
+      if default(time(reset) > time(events), false)
+      then 0
+      # `reset` and `events` latest event happen simultaneously
+      else if default(time(reset) == time(events), false)
+      then 1
+      # `events` contains the latest event > increment counter
+      else last(count, events) + 1,
+      0)
+  }
+
+  ## Check if events on `e` follow the burst pattern:
+  ## After first event on `e` only `burstAmount` many events allowed
+  ## during `burstLength` time. After `burstLength` during `waitingPeriod`
+  ## time no event allowed. After `waitingPeriod` we wait for the next event
+  ## on `e`.
+  def bursts[A,B](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int, since: Events[B]) = {
+    def burstStarts: Events[A] =
+      defaultFrom(
+        filter(e, last(time(burstStarts), e) < on(e, time(since)) ||
+          time(e) - last(time(burstStarts), e) >= burstLength + waitingPeriod),
+        e)
+    eventCount(e, reset = burstStarts) <= burstAmount &&
+      default(time(e) < time(burstStarts) + burstLength, true)
+  }
+
+  ## Check if no event happened on `on` after last event on `since`.
+  def noEvent[A,B](on: Events[A], since: Events[B]) =
+    eventCount(on, reset = since) == 0
+
+  ## Produce an event with the given value every time that the condition is met
+  def filterConst[T](value: T, condition: Events[Bool]): Events[T] =
+    filter(const(value, condition), condition)
+
+  ## Detect rising edge on `condition`.
+  def rising(condition: Events[Bool]) =
+    filterConst((), condition && !prev(condition))
+
+  ## Detect falling edge on `condition`
+  def falling(condition: Events[Bool]) =
+    filterConst((), !condition && prev(condition))
+
+  ## Produce the current or last value on `stream` for every `trigger`
+  def on[A,B](trigger: Events[A], stream: Events[B]) =
+    lift(stream, last(stream, trigger), (current: Option[B], previous: Option[B]) =>
+      if isNone(current)
+      then previous
+      else current)
+     # Alternatively:
+     # filter(first(stream, trigger), time(trigger) >= time(stream))
+
+  ## Compute the average value of all events on `x`. For every input
+  ## event on `x` an output event is produced whose value is the average
+  ## of all values seen so far.
+  def average(x: Events[Int]) = {
+    def c = count(x)
+    filter(sum(x) / c, c != 0)
+  }
+
+  ## Provides an event with value `true` for the first event on `a` and
+  ## if there is no event on `a` with timestamp 0 then adds a default
+  ## value of `false` to get a completely defined signal.
+  def defined[A](a: Events[A]) = default(const(true, a), false)
+
+  ## Merges streams of different types, resulting in a stream that contains a unit
+  ## event whenever any of the input streams produces an event.
+  def mergeUnit[T, U](a: Events[T], b: Events[U]) = merge(const((), a), const((), b))
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  def merge3[T](a: Events[T], b: Events[T], c: Events[T]) = merge(merge(a, b), c)
+
+  ## Merges streams of different types, resulting in a stream that contains a unit
+  ## event whenever any of the input streams produces an event.
+  def mergeUnit3[T, U, V](a: Events[T], b: Events[U], c: Events[V]) = merge3(const((), a), const((), b), const((), c))
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  def merge4[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T]) =
+    merge(merge(a, b), merge(c, d))
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  def merge5[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T], e: Events[T]) =
+    merge(merge(merge(a, b), merge(c, d)), e)
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  def merge6[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T], e: Events[T], f: Events[T]) =
+    merge(merge(merge(a, b), merge(c, d)), merge(e, f))
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  def merge7[A](a: Events[A], b: Events[A], c: Events[A], d: Events[A], e: Events[A], f: Events[A], g: Events[A]) =
+    merge(merge(merge(a, b), merge(c, d)), merge(merge(e, f), g))
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  def merge8[A](a: Events[A], b: Events[A], c: Events[A], d: Events[A], e: Events[A], f: Events[A], g: Events[A], h: Events[A]) =
+    merge(merge(merge(a, b), merge(c, d)), merge(merge(e, f), merge(g, h)))
+
+  ## Produce an event stream with a unit event every `delay` time units.
+  ## Starting with an event at timestamp 0.
+  def period(freq: Int) = {
+    def s: Events[Int] = const(freq, default(delay(s, ()), ()))
+    const((), s)
+  }
+
+  # Additional types. Their functionality can be found in their respective modules, but the types are defined here,
+  # so one can write, say, `List[Int]` instead of `List.List[Int]`.
+  type List[T] = __builtin__(List)
+  type Set[T] = __builtin__(Set)
+  type Map[K, V] = __builtin__(Map)
+#}

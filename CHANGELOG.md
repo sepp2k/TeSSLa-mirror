@@ -1,11 +1,36 @@
 # Changelog
 
+## Version 1.0.0
+
+### Breaking Changes
+
+* The following keywords have been added and can no longer be used as variable names: `module`, `__builtin__`, `import`, `imexport` (`module`, `import` and `imexport` have been added in preparation for 1.1.0 and aren't meant to be used yet)
+
+### API Changes
+
+* In the generated TeSSLa-Core many built-in operators are removed because they're defined in the standard library instead. Backend-defined built-ins are supported via the CustomBuiltIn class.
+* Most TeSSLa-Core types have been replaced by BuiltInType(name: String)
+* The `Compiler` methods now require additional options to select the used standard library and how to resolve includes
+
+### Additions and Fixes
+
+* Built-in macros and types can now be defined using `def ... = __builtin__(name)` and `type ... = __builtin__(name)` respectively
+* There is now a standard library that is included automatically into all TeSSLa specs
+* Types can now be used before their definition
+* Generic macros can be passed as arguments to other macros and the type arguments will be inferred when possible
+* Annotations can now be defined using `def @annotationName(arguments)`, applied to arbitratry streams and then queried in the generated TesslaCore
+* Certain bugs have been fixed that could cause KeyNotFound exceptions or spurious infinite recursion errors
+* A CSV input parser has been added
+
 ## Version 0.7.6
 
 ### Additions and Fixes
 
-* Allow more line breaks. For a detailed lists of where line breaks can be used, see syntax.md.
-* Add type information to TesslaCore.Nil
+* Allow more line breaks. For a detailed list of where line breaks can be used, see syntax.md.
+
+### API Changes
+
+* TesslaCore.Nil now has a member named `typ`
 
 ## Version 0.7.5
 
@@ -64,7 +89,7 @@
     ```
     which produces an event every `f` timeunits starting with `t=0` can now be realized as
     ```ruby
-    def s: Events[Int] := const(f, default(delay(s, ()), ()), f)
+    def s: Events[Int] := const(f, default(delay(s, ()), ()))
     ```
     with the only reset event at `t=0`.
   * In the most general case where new delays are started by old delays _and_ external events one has to use every external event as reset, e.g. the specification

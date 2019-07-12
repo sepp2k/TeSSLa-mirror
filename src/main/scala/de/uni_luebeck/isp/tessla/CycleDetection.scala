@@ -20,18 +20,14 @@ class CycleDetection(spec: TesslaCore.Specification) extends TranslationPhase.Tr
 
     def requiredStreams(streamDef: TesslaCore.StreamDescription): Seq[TesslaCore.StreamDescription] = {
       streamDef.expression match {
-        case c: TesslaCore.Const => resolveStream(c.stream)
         case d: TesslaCore.Default => resolveStream(d.stream)
         case d: TesslaCore.DefaultFrom => resolveStream(d.valueStream) ++ resolveStream(d.defaultStream)
         case l: TesslaCore.Last => resolveStream(l.clock) // ignore the value stream because it goes to another time
-        case _: TesslaCore.DelayedLast => Seq() // ignore both operands because both are delayed
         case d: TesslaCore.Delay => resolveStream(d.resets) // ignore the delays stream which is delayed
-        case m: TesslaCore.Merge => resolveStream(m.stream1) ++ resolveStream(m.stream2)
-        case f: TesslaCore.Filter => resolveStream(f.events) ++ resolveStream(f.condition)
         case t: TesslaCore.Time => resolveStream(t.stream)
         case l: TesslaCore.SignalLift => l.args.flatMap(resolveStream)
         case l: TesslaCore.Lift => l.args.flatMap(resolveStream)
-        case c: TesslaCore.StdLibUnaryOp => resolveStream(c.stream)
+        case c: TesslaCore.CustomBuiltInCall => c.streamArgs.flatMap(resolveStream)
       }
     }
     ReverseTopologicalSort.sort(streams.values)(requiredStreams) match {

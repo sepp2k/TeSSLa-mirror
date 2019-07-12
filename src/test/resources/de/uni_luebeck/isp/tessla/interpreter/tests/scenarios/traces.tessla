@@ -3,18 +3,9 @@ in function: Events[String]
 in line: Events[Int]
 in column: Events[Int]
 
-def eventCount(e: Events[Unit]) := {
-  def ec: Events[Int] := default(last(ec, e) + 1, 0)
-  ec
-}
-
-def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
-    if getSome(c) then Some(x) else None[T]
-)
-
 def function_call(name: String) :=
   filterConst((), function == name && last(function, function) != name && last(instruction, instruction) == "call")
 
-def f_count := eventCount(function_call("f"))
+def f_count := count(function_call("f"))
 
 out f_count

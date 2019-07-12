@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.util.Lazy
+import de.uni_luebeck.isp.tessla.Errors.{RuntimeError, TesslaError}
+import de.uni_luebeck.isp.tessla.util._
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
@@ -16,12 +16,26 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  case class StreamDescription(id: Identifier, expression: Expression, typ: StreamType) {
-    override def toString = s"def $id: $typ = $expression"
+  type Annotation = TypedTessla.Annotation
+
+  case class StreamDescription(id: Identifier, expression: Expression, typ: StreamType, annotations: Seq[Annotation]) {
+    override def toString = {
+      val annotationString = annotations.map { annotation =>
+        s"@${annotation.name}(${annotation.arguments.mkString(", ")})\n"
+      }.mkString
+      s"${annotationString}def $id: $typ = $expression"
+    }
+
+    def loc = expression.loc
   }
 
-  case class InStreamDescription(name: String, typ: StreamType, loc: Location) {
-    override def toString = s"in $name: $typ"
+  case class InStreamDescription(name: String, typ: StreamType, annotations: Seq[Annotation], loc: Location) {
+    override def toString = {
+      val annotationString = annotations.map { annotation =>
+        s"@${annotation.name}(${annotation.arguments.mkString(", ")})\n"
+      }.mkString
+      s"${annotationString}in $name: $typ"
+    }
   }
 
   case class OutStreamDescription(nameOpt: Option[String], stream: StreamRef, typ: StreamType) {
@@ -35,17 +49,20 @@ object TesslaCore extends HasUniqueIdentifiers {
     def loc: Location
   }
 
-  sealed abstract class StreamRef {
+  sealed abstract class Arg
+
+  sealed abstract class StreamRef extends Arg {
     def loc: Location
     def withLoc(loc: Location): StreamRef
+    def typ: StreamType
   }
 
-  final case class Stream(id: Identifier, loc: Location) extends StreamRef {
+  final case class Stream(id: Identifier, typ: StreamType, loc: Location) extends StreamRef {
     override def toString = id.toString
     def withLoc(loc: Location): Stream = copy(loc = loc)
   }
 
-  final case class InputStream(name: String, loc: Location) extends StreamRef {
+  final case class InputStream(name: String, typ: StreamType, loc: Location) extends StreamRef {
     override def toString = s"input($name)"
     def withLoc(loc: Location): InputStream = copy(loc = loc)
   }
@@ -63,10 +80,6 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"defaultFrom($valueStream, $defaultStream)"
   }
 
-  final case class Const(value: ValueOrError, stream: StreamRef, loc: Location) extends Expression {
-    override def toString = s"const($value, $stream)"
-  }
-
   final case class Time(stream: StreamRef, loc: Location) extends Expression {
     override def toString = s"time($stream)"
   }
@@ -75,37 +88,13 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"last($values, $clock)"
   }
 
-  final case class DelayedLast(values: StreamRef, delays: StreamRef, loc: Location) extends Expression {
-    override def toString = s"delayedLast($values, $delays)"
-  }
-
   final case class Delay(delays: StreamRef, resets: StreamRef, loc: Location) extends Expression {
     override def toString = s"delay($delays, $resets)"
-  }
-
-  final case class Merge(stream1: StreamRef, stream2: StreamRef, loc: Location) extends Expression {
-    override def toString = s"merge($stream1, $stream2)"
-  }
-
-  final case class Filter(events: StreamRef, condition: StreamRef, loc: Location) extends Expression {
-    override def toString = s"filter($events, $condition)"
   }
 
   final case class Lift(f: Function, args: Seq[StreamRef], loc: Location) extends Expression {
     override def toString = {
       args.mkString(s"lift($f)(", ", ", ")")
-    }
-  }
-
-  final case class CurriedPrimitiveOperator(op: BuiltIn.PrimitiveOperator, args: Map[Int, ValueOrError] = Map()) {
-    override def toString: String = if (args.isEmpty) {
-      op.toString
-    } else {
-      val a = (0 until args.keys.max + 1).map{
-        case i if args.contains(i) => args(i).toString
-        case _ => "_"
-      }.mkString(", ")
-      s"$op($a)"
     }
   }
 
@@ -115,28 +104,30 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  sealed abstract class StdLibUnaryOp extends Expression {
-    def stream: StreamRef
-    def loc: Location
+  final case class CurriedPrimitiveOperator(name: String, args: Map[Int, ValueOrError] = Map()) {
+    override def toString: String = if (args.isEmpty) {
+      name
+    } else {
+      val a = (0 until args.keys.max + 1).map{
+        case i if args.contains(i) => args(i).toString
+        case _ => "_"
+      }.mkString(", ")
+      s"$name($a)"
+    }
   }
 
-  final case class StdLibCount(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
-    override def toString = s"count($stream)"
+  final case class CustomBuiltInCall(name: String, args: Seq[Arg], loc: Location) extends Expression {
+    override def toString = {
+      if (args.isEmpty) name
+      else args.mkString(s"$name(", ", ", ")")
+    }
+
+    def streamArgs: Seq[StreamRef] = args.collect {
+      case s: StreamRef => s
+    }
   }
 
-  final case class StdLibSum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
-    override def toString = s"sum($stream)"
-  }
-
-  final case class StdLibMinimum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
-    override def toString = s"min($stream)"
-  }
-
-  final case class StdLibMaximum(stream: StreamRef, loc: Location) extends StdLibUnaryOp {
-    override def toString = s"max($stream)"
-  }
-
-  sealed abstract class ValueArg
+  sealed trait ValueArg
 
   case class ValueExpressionRef(id: Identifier) extends ValueArg {
     override def toString = id.toString
@@ -146,13 +137,15 @@ object TesslaCore extends HasUniqueIdentifiers {
     def loc: Location
   }
 
+  case class ValueExpressionDescription(exp: ValueExpression, typ: ValueType)
+
   final case class Function(parameters: Seq[Identifier],
-                            body: Map[Identifier, ValueExpression],
+                            body: Map[Identifier, ValueExpressionDescription],
                             result: ValueArg,
                             loc: Location) extends ValueExpression {
     override def toString = {
       val defs = body.map {
-        case (id, exp) => s"const $id := $exp\n"
+        case (id, desc) => s"const $id := ${desc.exp}: ${desc.typ}\n"
       }.mkString
       s"(${parameters.mkString(", ")}) => {\n${defs}return $result\n}"
     }
@@ -175,16 +168,20 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"$obj.$member"
   }
 
-  sealed trait ValueOrError extends ValueArg {
+  sealed trait ValueOrError extends Arg with ValueArg {
     def forceValue: Value
 
     def mapValue(f: Value => ValueOrError): ValueOrError
+
+    def typ: ValueType
   }
 
   final case class Error(error: TesslaError) extends ValueOrError {
-    override def forceValue = throw error
+    override def forceValue = throw RuntimeError(error)
 
     override def mapValue(f: Value => ValueOrError) = this
+
+    override def typ = NeverType
   }
 
   sealed abstract class Value extends ValueOrError {
@@ -212,22 +209,30 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   final case class IntValue(value: BigInt, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): IntValue = copy(loc = loc)
+
+    override def typ = BuiltInType("Int", Seq())
   }
 
   final case class FloatValue(value: Double, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): FloatValue = copy(loc = loc)
+
+    override def typ = BuiltInType("Float", Seq())
   }
 
   final case class BoolValue(value: Boolean, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): BoolValue = copy(loc = loc)
+
+    override def typ = BuiltInType("Bool", Seq())
   }
 
   final case class StringValue(value: String, loc: Location) extends PrimitiveValue {
     override def toString = s""""$value""""
     override def withLoc(loc: Location): StringValue = copy(loc = loc)
+
+    override def typ = BuiltInType("String", Seq())
   }
 
-  final case class TesslaObject(value: Map[String, Value], loc: Location) extends PrimitiveValue {
+  final case class TesslaObject(value: Map[String, ValueOrError], loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaObject = copy(loc = loc)
 
     override def toString = {
@@ -235,24 +240,28 @@ object TesslaCore extends HasUniqueIdentifiers {
       if (value.keys.toSet == tupleKeys.toSet) {
         tupleKeys.map(k => value(k)).mkString("(", ", ", ")")
       } else {
-        value.map { case (name, v) => s"$name = $v" }.mkString("{", ", ", "}")
+        value.map { case (name, v) => s"$name = ${v.forceValue}" }.mkString("{", ", ", "}")
       }
     }
+
+    override def typ = ObjectType(mapValues(value)(_.typ))
   }
 
-  final case class TesslaOption(value: Option[Value], loc: Location) extends PrimitiveValue {
+  final case class TesslaOption(value: Option[ValueOrError], typ: ValueType, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaOption = copy(loc = loc)
+
+    override def toString = value.map(_.forceValue).toString
   }
 
-  final case class TesslaMap(value: Map[Value, Value], loc: Location) extends PrimitiveValue {
+  final case class TesslaMap(value: Map[Value, Value], typ: ValueType, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaMap = copy(loc = loc)
   }
 
-  final case class TesslaSet(value: Set[Value], loc: Location) extends PrimitiveValue {
+  final case class TesslaSet(value: Set[Value], typ: ValueType, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaSet = copy(loc = loc)
   }
 
-  final case class TesslaList(value: IndexedSeq[Value], loc: Location) extends PrimitiveValue {
+  final case class TesslaList(value: IndexedSeq[Value], typ: ValueType, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): TesslaList = copy(loc = loc)
 
     override def toString = value.mkString("List(", ", ", ")")
@@ -260,10 +269,16 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   final case class Ctf(value: ICompositeDefinition, loc: Location) extends PrimitiveValue {
     override def withLoc(loc: Location): Ctf = copy(loc = loc)
+
+    override def typ = BuiltInType("CTF_Object", Seq())
   }
 
-  case class BuiltInOperator(value: BuiltIn.PrimitiveOperator, loc: Location) extends PrimitiveValue {
+  case class BuiltInOperator(name: String, loc: Location) extends PrimitiveValue {
+    override def value = name
+
     override def withLoc(loc: Location): BuiltInOperator = copy(loc = loc)
+
+    override def typ = FunctionType
   }
 
   case class Closure(function: Function, var capturedEnvironment: Map[Identifier, Lazy[ValueOrError]], loc: Location) extends Value {
@@ -272,34 +287,23 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = {
       s"$function (closure)"
     }
+
+    override def typ = FunctionType
   }
 
   sealed abstract class Type
 
   sealed abstract class ValueType extends Type
 
-  case object IntType extends ValueType {
-    override def toString = "Int"
-  }
-
-  case object FloatType extends ValueType {
-    override def toString = "Float"
-  }
-
-  case object BoolType extends ValueType {
-    override def toString = "Bool"
-  }
-
-  case object StringType extends ValueType {
-    override def toString = "String"
+  case class BuiltInType(name: String, typeArgs: Seq[ValueType]) extends ValueType {
+    override def toString = {
+      if (typeArgs.isEmpty) name
+      else typeArgs.mkString(s"$name[", ", ", "]")
+    }
   }
 
   case object FunctionType extends ValueType {
     override def toString = "? => ?"
-  }
-
-  case class OptionType(elementType: ValueType) extends ValueType {
-    override def toString = s"Option[$elementType]"
   }
 
   case class ObjectType(memberTypes: Map[String, ValueType]) extends ValueType {
@@ -313,21 +317,15 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  case class MapType(keyType: ValueType, valueType: ValueType) extends ValueType {
-    override def toString = s"Map[$keyType, $valueType]"
-  }
+  /**
+    * The type of error expressions
+    */
+  case object NeverType extends ValueType
 
-  case class SetType(elementType: ValueType) extends ValueType {
-    override def toString = s"Set[$elementType]"
-  }
-
-  case class ListType(elementType: ValueType) extends ValueType {
-    override def toString = s"List[$elementType]"
-  }
-
-  case object CtfType extends ValueType {
-    override def toString = "CTF"
-  }
+  /**
+    * The type of definitions inside a lifted generic function whose type depends on the function's type parameters.
+    */
+  case object UnresolvedGenericType extends ValueType
 
   case class StreamType(elementType: ValueType) extends Type {
     override def toString = s"Events[$elementType]"

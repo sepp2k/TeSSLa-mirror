@@ -14,6 +14,10 @@ sealed abstract class Location {
 }
 
 object Location {
+  trait HasLoc {
+    def loc: Location
+  }
+
   case class SourceRange(fromLine: Int, fromColumn: Int, toLine: Int, toColumn: Int) {
     override def toString = s"($fromLine,$fromColumn - $toLine,$toColumn)"
 

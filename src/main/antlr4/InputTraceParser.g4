@@ -6,6 +6,12 @@ options {
 
 line: eventRange? NL? EOF;
 
+csvHeader: streamNames+=ID (',' streamNames+=ID)+ NL? EOF;
+
+csvLine: timeRange commaExpression+ NL? EOF;
+
+commaExpression: ',' expression?;
+
 eventRange: timeRange ':' streamName=ID ('=' expression)?;
 
 timeRange

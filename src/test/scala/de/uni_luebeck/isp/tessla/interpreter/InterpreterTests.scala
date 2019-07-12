@@ -1,17 +1,15 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import java.nio.channels.Channels
-import java.nio.charset.{CodingErrorAction, StandardCharsets}
-
+import java.nio.charset.StandardCharsets
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
 import de.uni_luebeck.isp.tessla.analyses.OSL
-import org.antlr.v4.runtime.{CharStream, CharStreams}
+import org.antlr.v4.runtime.CharStream
 
 import scala.collection.mutable
 import scala.io.Source
@@ -65,8 +63,6 @@ class InterpreterTests extends FunSuite {
       .getLines.flatMap { file =>
       if (isDir(file)) getFilesRecursively(s"$path/$file")
       else Stream((path, file))
-
-
     }.toStream
   }
 
@@ -137,12 +133,10 @@ class InterpreterTests extends FunSuite {
     SemiOsl(ifs.toSet, globalLogs.toSet)
   }
 
-
   testCases.foreach {
     case (path, name) =>
       def testStream(file: String): CharStream = {
-        val channel = Channels.newChannel(getClass.getResourceAsStream(s"$root/$path/$file"))
-        CharStreams.fromChannel(channel, StandardCharsets.UTF_8, 4096, CodingErrorAction.REPLACE, s"$path/$file", -1)
+        IncludeResolvers.fromResource(getClass, root)(s"$path/$file").get
       }
       def testSource(file: String): Source = {
         Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$file"))(StandardCharsets.UTF_8)
@@ -175,11 +169,17 @@ class InterpreterTests extends FunSuite {
           }
         }
 
-        val timeUnit = testCase.timeUnit
+        val options = Compiler.Options(
+          timeUnitString = testCase.timeUnit,
+          includeResolver = IncludeResolvers.fromResource(getClass, root),
+          stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
+          stdlibPath = "Predef.tessla",
+          currySignalLift = true
+        )
         val src = testStream(testCase.spec)
         testCase.expectedOsl.foreach { oslFile =>
           val expectedOSL = semiParseOsl(testSource(oslFile).getLines)
-          handleResult(Compiler.compile(src, timeUnit).andThen(OSL.Generator)) { osl =>
+          handleResult(Compiler.compile(src, options).andThen(OSL.Generator)) { osl =>
             val actualOSL = semiParseOsl(osl.toString.linesIterator)
             assertEquals(actualOSL, expectedOSL, "OSL")
           }
@@ -188,7 +188,7 @@ class InterpreterTests extends FunSuite {
           case Some(input) =>
             try {
               val trace = Trace.fromSource(testSource(input), s"$path/$input", testCase.abortAt.map(BigInt(_)))
-              val result = Compiler.compile(src, timeUnit).map(spec => Interpreter.run(spec, trace, None))
+              val result = Compiler.compile(src, options).map(spec => Interpreter.run(spec, trace, None))
 
               handleResult(result) { output =>
                 val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
@@ -208,7 +208,7 @@ class InterpreterTests extends FunSuite {
                 }
             }
           case None =>
-            handleResult(Compiler.compile(src, timeUnit))(_ => ())
+            handleResult(Compiler.compile(src, options))(_ => ())
         }
       }
   }

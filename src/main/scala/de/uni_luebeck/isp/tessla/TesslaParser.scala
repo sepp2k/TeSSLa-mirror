@@ -4,88 +4,95 @@ import java.nio.file.Paths
 import java.util.{IllegalFormatException, MissingFormatArgumentException}
 
 import de.uni_luebeck.isp.tessla.Errors._
-import de.uni_luebeck.isp.tessla.TranslationPhase.Result
+import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import org.antlr.v4.runtime._
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
-class TesslaParser(src: CharStream, expandIncludes: Boolean) extends TranslationPhase.Translator[TesslaSyntax.SpecContext] {
-  val lexer = new TesslaLexer(src)
-  val tokens = new CommonTokenStream(lexer)
-  val sourcePair: misc.Pair[TokenSource, CharStream] = new misc.Pair(lexer, src)
+object TesslaParser {
+  case class ParseResult(fileName: String, tokens: CommonTokenStream, tree: TesslaSyntax.SpecContext)
 
-  override def translateSpec() = {
+  private def parse(src: CharStream): (ParseResult, Seq[TesslaError]) = {
+    val lexer = new TesslaLexer(src)
+    val tokens = new CommonTokenStream(lexer)
     val parser = new TesslaSyntax(tokens)
+    val errors = mutable.ArrayBuffer[TesslaError]()
     parser.removeErrorListeners()
     parser.addErrorListener(new BaseErrorListener {
       override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException) = {
-        error(ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token])))
+        errors += ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token]))
       }
     })
-    val spec = parser.spec()
-    if (parser.getNumberOfSyntaxErrors > 0) {
-      abortOnError()
+
+    val tree = parser.spec()
+    (ParseResult(src.getSourceName, tokens, tree), errors)
+  }
+
+  object SingleFile extends TranslationPhase[CharStream, ParseResult] {
+    override def translate(src: CharStream): Result[ParseResult] = {
+      val (result, errors) = parse(src)
+      if (errors.isEmpty) {
+        Success(result, Seq())
+      } else {
+        Failure(errors, Seq())
+      }
+    }
+  }
+
+  class WithIncludesTranslator(src: CharStream, resolveInclude: String => Option[CharStream])
+      extends TranslationPhase.Translator[IndexedSeq[ParseResult]] with CanParseConstantString {
+    override def translateSpec(): IndexedSeq[ParseResult] = {
+      parseWithIncludes(src)
     }
 
-    if (expandIncludes) {
-      spec.statements.addAll(0, spec.includes.asScala.flatMap(translateInclude).asJava)
-    }
-    spec.statements.asScala.foreach {
-      case out: TesslaSyntax.OutContext =>
-        if (out.ID == null) {
-          val expr = out.expression
-          val start = expr.start.getStartIndex
-          val stop = expr.stop.getStopIndex
-          val line = expr.start.getLine
-          val column = expr.start.getCharPositionInLine
-          val token = lexer.getTokenFactory.create(sourcePair, TesslaLexer.ID, null, 0, start, stop, line, column)
-          val node = parser.createTerminalNode(out, token)
-          out.addChild(node)
+    private def parseWithIncludes(src: CharStream): IndexedSeq[ParseResult] = {
+      val (mainResult, mainErrors) = parse(src)
+      val includes = mainResult.tree.includes.asScala.toVector.flatMap {include =>
+        val fileName = getConstantString(include.file)
+        val loc = Location.fromNode(include.file)
+        lookupInclude(fileName, mainResult.fileName, loc).map(parseWithIncludes).getOrElse {
+            error(FileNotFound(fileName, Location.fromNode(include.file)))
+            Seq()
         }
-      case _ => // Do nothing
+      }
+      mainErrors.foreach(error)
+      includes :+ mainResult
     }
-    spec
-  }
 
-  protected def translateInclude(include: TesslaSyntax.IncludeContext): Seq[TesslaSyntax.StatementContext] = {
-    val currentFile = getFile(include)
-    // getParent returns null for relative paths without subdirectories (i.e. just a file name), which is
-    // annoying and stupid. So we wrap the call in an option and fall back to "." as the default.
-    val dir = Option(Paths.get(currentFile).getParent).getOrElse(Paths.get("."))
-    val includePath = dir.resolve(getIncludeString(include.file))
-    unwrapResult(TesslaParser.translate(CharStreams.fromFileName(includePath.toString))).statements.asScala
-  }
-
-  private def getIncludeString(stringLit: TesslaSyntax.StringLitContext): String = {
-    stringLit.stringContents.asScala.map {
-      case text: TesslaSyntax.TextContext => text.getText
-      case escapeSequence: TesslaSyntax.EscapeSequenceContext =>
-        parseEscapeSequence(escapeSequence.getText, Location.fromNode(escapeSequence))
-      case part =>
-        error(StringInterpolationOrFormatInInclude(Location.fromNode(part)))
-        ""
-    }.mkString
-  }
-
-  protected def getFile(node: ParserRuleContext) = {
-    node.getStart.getTokenSource.getSourceName
-  }
-
-  protected def parseEscapeSequence(sequence: String, loc: Location): String = {
-    TesslaParser.parseEscapeSequence(sequence).getOrElse {
-      error(InvalidEscapeSequence(sequence, loc))
-      sequence
+    private def lookupInclude(includee: String, includer: String, loc: Location): Option[CharStream] = {
+      val includePath = Paths.get(includee)
+      if (includePath.isAbsolute) {
+        error(AbsoluteIncludePath(loc))
+        None
+      } else {
+        val path = Paths.get(includer).resolveSibling(includePath).toString
+        resolveInclude(path).orElse(resolveInclude(s"$path.tessla"))
+      }
     }
   }
-}
 
-object TesslaParser extends TranslationPhase[CharStream, TesslaSyntax.SpecContext] {
-  override def translate(spec: CharStream): Result[TesslaSyntax.SpecContext] = {
-    parse(spec)
+  trait CanParseConstantString {
+    self: TranslationPhase.Translator[_] =>
+    def getConstantString(stringLit: TesslaSyntax.StringLitContext): String = {
+      stringLit.stringContents.asScala.map {
+        case text: TesslaSyntax.TextContext => text.getText
+        case escapeSequence: TesslaSyntax.EscapeSequenceContext =>
+          parseEscapeSequence(escapeSequence.getText).getOrElse {
+            error(InvalidEscapeSequence(escapeSequence.getText, Location.fromNode(escapeSequence)))
+            escapeSequence.getText
+          }
+        case part =>
+          error(StringInterpolationOrFormatInConstantString(Location.fromNode(part)))
+          part.getText
+      }.mkString
+    }
   }
 
-  def parse(spec: CharStream, expandIncludes: Boolean = true): Result[TesslaSyntax.SpecContext] = {
-    new TesslaParser(spec, expandIncludes = expandIncludes).translate()
+  class WithIncludes(resolveInclude: String => Option[CharStream]) extends TranslationPhase[CharStream, IndexedSeq[ParseResult]] {
+    override def translate(src: CharStream) = {
+      new WithIncludesTranslator(src, resolveInclude).translate()
+    }
   }
 
   def parseEscapeSequence(sequence: String): Option[String] = sequence match {
