@@ -1,24 +1,7 @@
-def resetCount[T](events: Events[T], reset: Events[Unit]) := {
-  def s: Events[Int] :=
-    if time(events) == default(time(reset),0) then
-      1
-    else if time(events) > default(time(reset),0) then
-      last(sum, events) + 1
-    else
-      0
-  def sum := default(s, 0)
-  sum
-}
-
-def period(amount: Int) := {
-  def s: Events[Int] := default(const(amount, delay(s, ())), amount)
-  const((), s)
-}
-
 in x: Events[Unit]
 def p := period(5)
 out p
-def c := resetCount(x, p)
+def c := eventCount(x, p)
 out c
 def e := c > 2
 out e

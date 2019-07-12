@@ -2,9 +2,6 @@ in x: Events[Int]
 in y: Events[Int]
 in z: Events[Int]
 
-def mergeUnit[T,U](x: Events[T], y: Events[U]): Events[Unit] :=
-  merge(const((), x), const((), y))
-
 def a := mergeUnit(x,y)
 def b := merge(x,y)
 

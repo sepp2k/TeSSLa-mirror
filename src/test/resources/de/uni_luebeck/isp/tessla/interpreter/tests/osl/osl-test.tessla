@@ -10,7 +10,3 @@ out functioncall == "foo" || function == "bar" && instruction == "ret"
 -- This should not affect the OSL
 in bla: Events[String]
 out filterConst((), bla == "hello")
-
-def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
-    if getSome(c) then Some(x) else None[T]
-)

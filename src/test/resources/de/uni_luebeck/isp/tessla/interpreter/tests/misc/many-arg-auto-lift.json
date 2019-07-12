@@ -1,0 +1,5 @@
+{
+  "input": "many-arg-auto-lift.input",
+  "expectedOutput": "many-arg-auto-lift.output",
+  "spec": "many-arg-auto-lift.tessla"
+}

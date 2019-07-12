@@ -10,10 +10,6 @@ def resetCount[T](values: Events[T], reset: Events[Unit]) := {
     rc
 }
 
-def filterConst[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
-    if getSome(c) then Some(x) else None[T]
-)
-
 def trigger(condition: Events[Bool]) :=
     filterConst((), condition && !last(condition, condition))
 

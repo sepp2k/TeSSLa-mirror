@@ -7,9 +7,3 @@ def union := Set_union(xSet, ySet)
 def intersection := Set_intersection(xSet, ySet)
 out union
 out intersection
-
--- stdlib
-def Set_collect[T](x: Events[T]) := {
-  def set: Events[Set[T]] := default(Set_add(last(set, x), x), Set_empty[T])
-  set
-}

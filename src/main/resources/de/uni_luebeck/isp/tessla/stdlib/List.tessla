@@ -1,0 +1,32 @@
+#module List {
+  # TODO: Remove the List_ prefix once liftable functions work inside modules
+
+  def List_empty[T]: List[T] = __builtin__(List_empty)
+
+  @liftable
+  def List_size[T](list: List[T]): Int = __builtin__(List_size)
+
+  @liftable
+  def List_append[T](list: List[T], element: T): List[T] = __builtin__(List_append)
+
+  @liftable
+  def List_prepend[T](element: T, list: List[T]): List[T] = __builtin__(List_prepend)
+
+  @liftable
+  def List_tail[T](list: List[T]): List[T] = __builtin__(List_tail)
+
+  @liftable
+  def List_init[T](list: List[T]): List[T] = __builtin__(List_init)
+
+  @liftable
+  def List_get[T](list: List[T], index: Int): T = __builtin__(List_get)
+
+  @liftable
+  def List_head[T](list: List[T]): T =List_get(list, 0)
+
+  @liftable
+  def List_last[T](list: List[T]): T = List_get(list, List_size(list)-1)
+
+  @liftable
+  def List_fold[T, U](list: List[T], start: U, f: (U, T) => U): U = __builtin__(List_fold)
+#}

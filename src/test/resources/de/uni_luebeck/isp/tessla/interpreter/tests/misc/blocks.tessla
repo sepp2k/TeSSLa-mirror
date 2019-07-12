@@ -22,8 +22,6 @@ out s1
 out s2
 out s3
 
-def filterConst[T](x: T, cond: Events[Bool]): Events[T] = filter(const(x, cond), cond)
-
 def filterConst_[T](x: T, cond: Events[Bool]): Events[T] = lift(cond, nil[Unit], (c: Option[Bool], nix: Option[Unit]) =>
     if getSome(c) then Some(x) else None[T]
 )

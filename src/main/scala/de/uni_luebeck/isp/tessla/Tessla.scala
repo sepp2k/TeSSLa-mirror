@@ -5,21 +5,21 @@ object Tessla {
     override def toString = statements.mkString("\n")
   }
 
-  case class Identifier(name: String, loc: Location) {
+  case class Identifier(name: String, loc: Location) extends Location.HasLoc {
     override def toString = name
   }
 
-  abstract sealed class Statement {
+  abstract sealed class Statement extends Location.HasLoc {
     def loc: Location
   }
 
-  case class Definition( annotations: Seq[Identifier],
+  case class Definition( annotations: Seq[Annotation],
                          id: Identifier,
                          typeParameters: Seq[Identifier],
                          parameters: Seq[Parameter],
                          returnType: Option[Type],
                          headerLoc: Location,
-                         body: Expression,
+                         body: Body,
                          loc: Location) extends Statement {
     override def toString = toString(objectNotation = false)
 
@@ -37,7 +37,35 @@ object Tessla {
     }
   }
 
-  case class TypeDefinition(id: Identifier, typeParameters: Seq[Identifier], body: Type, loc: Location) extends Statement {
+  case class Annotation(id: Identifier, arguments: Seq[Argument[ConstantExpression]], loc: Location) {
+    def name: String = id.name
+  }
+
+  sealed abstract class Body extends Location.HasLoc {
+    def loc: Location
+  }
+
+  case class ExpressionBody(exp: Expression) extends Body {
+    override def toString = exp.toString
+
+    override def loc = exp.loc
+  }
+
+  case class BuiltInBody(id: Identifier, referenceImplementation: Option[Expression]) extends Body {
+    override def toString = s"__builtin__($id)"
+
+    override def loc = id.loc
+  }
+
+  case class Module(id: Identifier, contents: Seq[Statement], loc: Location) extends Statement {
+    override def toString = contents.mkString(s"module $id {\n", "\n", "\n}")
+
+    def name: String = id.name
+  }
+
+  case class AnnotationDefinition(id: Identifier, parameters: Seq[Parameter], loc: Location) extends Statement
+
+  case class TypeDefinition(id: Identifier, typeParameters: Seq[Identifier], body: TypeBody, loc: Location) extends Statement {
     override def toString = {
       val typeParameterList =
         if (typeParameters.isEmpty) ""
@@ -46,7 +74,17 @@ object Tessla {
     }
   }
 
-  case class In(id: Identifier, streamType: Type, loc: Location) extends Statement {
+  sealed abstract class TypeBody
+
+  case class TypeAlias(typ: Type) extends TypeBody {
+    override def toString = typ.toString
+  }
+
+  case class BuiltInType(id: Identifier) extends TypeBody {
+    override def toString = s"__builtin__($id)"
+  }
+
+  case class In(id: Identifier, streamType: Type, annotations: Seq[Annotation], loc: Location) extends Statement {
     override def toString = s"in $id: $streamType"
   }
 
@@ -64,11 +102,20 @@ object Tessla {
     override def toString = s"print $expr"
   }
 
-  case class Parameter(id: Identifier, parameterType: Option[Type]) {
+  def getId(statement: Tessla.Statement): Option[Tessla.Identifier] = statement match {
+    case definition: Tessla.Definition => Some(definition.id)
+    case in: Tessla.In => Some(in.id)
+    case module: Tessla.Module => Some(module.id)
+    case _ => None
+  }
+
+  case class Parameter(id: Identifier, parameterType: Option[Type]) extends Location.HasLoc {
     override def toString = parameterType match {
       case Some(t) => s"${id.name}: $t"
       case None => id.name
     }
+
+    def name: String = id.name
 
     def loc: Location = parameterType match {
       case Some(t) => id.loc.merge(t.loc)
@@ -76,10 +123,10 @@ object Tessla {
     }
   }
 
-  sealed abstract class Expression {
+  sealed abstract class Expression extends Location.HasLoc {
     def loc: Location
     def toString(inner: Boolean): String
-    override def toString = toString(false)
+    override def toString: String = toString(false)
   }
 
   case class Variable(id: Identifier) extends Expression {
@@ -89,7 +136,7 @@ object Tessla {
 
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
-  case class MacroCall(mac: Expression, typeArgs: Seq[Type], args: Seq[Argument], loc: Location) extends Expression {
+  case class MacroCall(mac: Expression, typeArgs: Seq[Type], args: Seq[Argument[Expression]], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
       val typeArgList =
         if (typeArgs.isEmpty) ""
@@ -130,7 +177,7 @@ object Tessla {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
   }
 
-  case class ObjectLiteral(members: Seq[MemberDefinition], loc: Location) extends Expression {
+  case class ObjectLiteral(members: Map[Identifier, Expression], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
       members.mkString("${", ", ", "}")
     }
@@ -141,24 +188,6 @@ object Tessla {
       val str = s"fun (${parameters.mkString(", ")}) => $body"
       if (inner) s"($str)" else str
     }
-  }
-
-  sealed abstract class MemberDefinition {
-    def id: Identifier
-  }
-
-  object MemberDefinition {
-    case class Full(id: Identifier, value: Expression) extends MemberDefinition {
-      override def toString = s"$id: $value"
-    }
-
-    case class Simple(id: Identifier) extends MemberDefinition {
-      override def toString = id.name
-    }
-  }
-
-  case class Tuple(elements: Seq[Expression], loc: Location) extends Expression {
-    override def toString(inner: Boolean) = elements.mkString("(", ", ", ")")
   }
 
   case class MemberAccess(receiver: Expression, member: Identifier, loc: Location) extends Expression {
@@ -186,23 +215,38 @@ object Tessla {
     override def toString = s""""$value""""
   }
 
-  case class BoolLiteral(value: Boolean) extends LiteralValue
+  sealed abstract class ConstantExpression extends Location.HasLoc
 
-  abstract class Argument {
+  object ConstantExpression {
+    case class Literal(value: LiteralValue, loc: Location) extends ConstantExpression {
+      override def toString = value.toString
+    }
+
+    case class Object(members: Map[Identifier, ConstantExpression], loc: Location) extends ConstantExpression {
+      override def toString = {
+        members.map {
+          case (name, value) => s"$name = $value"
+        }.mkString("{", ", ", "}")
+      }
+    }
+  }
+
+  abstract class Argument[T <: Location.HasLoc] extends Location.HasLoc {
     def loc: Location
   }
 
-  case class PositionalArgument(expr: Expression) extends Argument {
+  case class PositionalArgument[T <: Location.HasLoc](expr: T) extends Argument[T] {
     override def toString = expr.toString
     def loc = expr.loc
   }
 
-  case class NamedArgument(id: Identifier, expr: Expression) extends Argument {
+  case class NamedArgument[T <: Location.HasLoc](id: Identifier, expr: T) extends Argument[T] {
     override def toString = s"$id = $expr"
+    def name = id.name
     def loc = id.loc.merge(expr.loc)
   }
 
-  sealed abstract class Type {
+  sealed abstract class Type extends Location.HasLoc {
     def loc: Location
     def withLoc(loc: Location): Type
   }
@@ -223,9 +267,9 @@ object Tessla {
     def withLoc(loc: Location): FunctionType = copy(loc = loc)
   }
 
-  case class ObjectType(memberTypes: Seq[(Identifier, Type)], isOpen: Boolean, loc: Location) extends Type {
+  case class ObjectType(memberTypes: Map[Identifier, Type], isOpen: Boolean, loc: Location) extends Type {
     override def toString = {
-      var members = memberTypes.map {case (name, t) => s"$name : $t"}
+      var members = memberTypes.toSeq.map {case (name, t) => s"$name : $t"}
       if (isOpen) {
         members :+= "..."
       }
@@ -234,8 +278,39 @@ object Tessla {
     def withLoc(loc: Location): ObjectType = copy(loc = loc)
   }
 
-  case class TupleType(elementTypes: Seq[Type], loc: Location) extends Type {
-    override def toString = elementTypes.mkString("(", ", ", ")")
-    def withLoc(loc: Location): TupleType = copy(loc = loc)
-  }
+  val unaryOperators = Map(
+    "!" -> "__not__",
+    "-" -> "__negate__",
+    "-." -> "__fnegate__",
+    "~" -> "__bitflip__"
+  )
+
+  val binaryOperators = Map(
+    "&&" -> "__and__",
+    "||" -> "__or__",
+    "==" -> "__eq__",
+    "!=" -> "__neq__",
+    ">" -> "__gt__",
+    "<" -> "__lt__",
+    ">=" -> "__geq__",
+    "<=" -> "__leq__",
+    ">." -> "__fgt__",
+    "<." -> "__flt__",
+    ">=." -> "__fgeq__",
+    "<=." -> "__fleq__",
+    "+" -> "__add__",
+    "-" -> "__sub__",
+    "*" -> "__mul__",
+    "/" -> "__div__",
+    "%" -> "__mod__",
+    "&" -> "__bitand__",
+    "|" -> "__bitor__",
+    "^" -> "__bitxor__",
+    "<<" -> "__leftshift__",
+    ">>" -> "__rightshift__",
+    "+." -> "__fadd__",
+    "-." -> "__fsub__",
+    "*." -> "__fmul__",
+    "/." -> "__fdiv__"
+  )
 }

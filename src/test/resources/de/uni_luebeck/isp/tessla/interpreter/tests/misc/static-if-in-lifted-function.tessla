@@ -18,6 +18,3 @@ def fac2(n: Int): Int := {
 }
 
 out slift1(x, fac2)
-
-def slift1[T, U](s: Events[T], f: (T) => U): Events[U] :=
-    lift(s, nil[Unit], fun (x: Option[T], y: Option[Unit]) => Some(f(getSome(x))))

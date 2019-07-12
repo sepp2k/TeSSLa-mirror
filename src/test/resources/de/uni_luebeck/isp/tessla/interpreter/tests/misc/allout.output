@@ -4,8 +4,8 @@
 1: defined(a) = true
 2: b = 1
 2: incb = 2
-2: sum = 2
-2: sum2 = 2
+2: add = 2
+2: add2 = 2
 2: sub = 0
 2: diff = 0
 2: a * b = 1
@@ -13,8 +13,8 @@
 2: div = 1
 3: a = 7
 3: inca = 8
-3: sum = 8
-3: sum2 = 8
+3: add = 8
+3: add2 = 8
 3: sub = 6
 3: diff = 6
 3: a * b = 7
@@ -23,8 +23,8 @@
 3: defined(a) = true
 4: b = 5
 4: incb = 6
-4: sum = 12
-4: sum2 = 12
+4: add = 12
+4: add2 = 12
 4: sub = 2
 4: diff = 2
 4: a * b = 35
@@ -32,8 +32,8 @@
 4: div = 1
 7: b = 8
 7: incb = 9
-7: sum = 15
-7: sum2 = 15
+7: add = 15
+7: add2 = 15
 7: sub = -1
 7: diff = 1
 7: a * b = 56
@@ -41,8 +41,8 @@
 7: div = 0
 19: a = 3
 19: inca = 4
-19: sum = 11
-19: sum2 = 11
+19: add = 11
+19: add2 = 11
 19: sub = -5
 19: diff = 5
 19: a * b = 24

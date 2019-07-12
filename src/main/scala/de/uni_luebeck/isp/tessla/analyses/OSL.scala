@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.analyses
 
-import de.uni_luebeck.isp.tessla.{BuiltIn, TesslaCore, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{TesslaCore, TranslationPhase}
 
 import scala.collection.mutable
 
@@ -101,20 +101,20 @@ object OSL {
 
     def findBasicCondition(exp: TesslaCore.Expression): Option[Condition] = exp match {
       case l: TesslaCore.SignalLift =>
-        l.op.op match {
-          case BuiltIn.And =>
+        l.op.name match {
+          case "__and__" =>
             findBasicCondition(l.args(0)).flatMap { lhs =>
               findBasicCondition(l.args(1)).map { rhs =>
                 And(lhs,rhs)
               }
             }
-          case BuiltIn.Or =>
+          case "__or__" =>
             findBasicCondition(l.args(0)).flatMap { lhs =>
               findBasicCondition(l.args(1)).map { rhs =>
                 Or(lhs, rhs)
               }
             }
-          case BuiltIn.Eq =>
+          case "__eq__" =>
             l.args match {
               case Seq(i: TesslaCore.InputStream) =>
                 translateInputStreamName(i.name).flatMap { name =>
@@ -136,13 +136,9 @@ object OSL {
       case d: TesslaCore.Default => translateStreamRef(d.stream)
       case d: TesslaCore.DefaultFrom => translateStreamRef(d.valueStream) ++ translateStreamRef(d.defaultStream)
       case l: TesslaCore.Last => translateStreamRef(l.values) ++ translateStreamRef(l.clock)
-      case dl: TesslaCore.DelayedLast => translateStreamRef(dl.values) ++ translateStreamRef(dl.delays)
       case d: TesslaCore.Delay => translateStreamRef(d.delays) ++ translateStreamRef(d.resets)
-      case m: TesslaCore.Merge => translateStreamRef(m.stream1) ++ translateStreamRef(m.stream2)
-      case f: TesslaCore.Filter => translateStreamRef(f.events) ++ translateStreamRef(f.condition)
       case t: TesslaCore.Time => translateStreamRef(t.stream)
-      case c: TesslaCore.Const => translateStreamRef(c.stream)
-      case c: TesslaCore.StdLibUnaryOp => translateStreamRef(c.stream)
+      case c: TesslaCore.CustomBuiltInCall => c.streamArgs.flatMap(translateStreamRef)
     }
 
     val operandPattern = raw"operand\d+(?:type|int|bool|string)|operandcount".r

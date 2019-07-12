@@ -8,6 +8,10 @@ DEF: 'def';
 WHERE: 'where';
 INCLUDE: 'include';
 TYPE: 'type';
+MODULE: 'module';
+IMPORT: 'import';
+IMEXPORT: 'imexport';
+BUILTIN: '__builtin__';
 IN: 'in';
 OUT: 'out';
 PRINT: 'print';
@@ -18,8 +22,6 @@ THEN: 'then';
 ELSE: 'else';
 FUN: 'fun';
 RETURN: 'return';
-TRUE: 'true';
-FALSE: 'false';
 LBRACKET: '[';
 RBRACKET: ']';
 LPAR: '(';
@@ -96,10 +98,10 @@ FLOAT: [\p{Nd}]+ ('.' [\p{Nd}]+ ('e' ('+'|'-')? [\p{Nd}]+)? | 'e' ('+'|'-')? [\p
 DOCLINE: ('---' | '##') ~'\n'* ('\r'? '\n')+;
 // Skip the comment, but not the linebreak at the end of the comment. This way the parser will still see a
 // linebreak that terminates a statement when a comment is written on the same line as a statement.
-LINE_COMMENT: ('--' | '#') ~'\n'* -> skip;
-ESCAPED_NEWLINE: '\\\n' -> skip;
+LINE_COMMENT: ('--' | '#') ~'\n'* -> channel(HIDDEN);
+ESCAPED_NEWLINE: '\\\n' -> channel(HIDDEN);
 NL: '\r'? '\n';
-WS: [ \t]+ -> skip;
+WS: [ \t]+ -> channel(HIDDEN);
 
 INVALID: .;
 

@@ -11,7 +11,7 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
 
     def usageExp(exp: ValueExpression): Unit = exp match {
       case Function(_, body, result, _) =>
-        body.values.foreach(usageExp)
+        body.values.map(_.exp).foreach(usageExp)
         usageValueArg(result)
       case IfThenElse(cond, thenCase, elseCase, _) =>
         usageValueArg(cond)
@@ -27,7 +27,7 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
     def usageValueArg(valueArg: ValueArg): Unit = valueArg match {
       case ValueExpressionRef(id) if function.body.contains(id) =>
         used.add(id.uid)
-        usageExp(function.body(id))
+        usageExp(function.body(id).exp)
       case ObjectCreation(members, _) => members.values.foreach(usageValueArg)
       case _ => // no usage at all
     }
@@ -35,7 +35,7 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
     usageValueArg(function.result)
 
     val newBody = function.body.collect{
-      case (id, e) if used(id.uid) => (id, removeUnusedValueExpression(e))
+      case (id, desc) if used(id.uid) => (id, desc.copy(exp = removeUnusedValueExpression(desc.exp)))
     }
 
     Function(function.parameters, newBody, function.result, function.loc)
@@ -52,10 +52,10 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
     val used = MutableSet.empty[Long]
     def usageRef(ref: StreamRef): Unit = {
       ref match {
-        case Stream(id, _) =>
-          if (!used(id.uid)) {
-            used.add(id.uid)
-            usageExp(streams(id).expression)
+        case s: Stream =>
+          if (!used(s.id.uid)) {
+            used.add(s.id.uid)
+            usageExp(streams(s.id).expression)
           }
         case _ => // ignore nil and input streams
       }
@@ -64,47 +64,36 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
       case OutStreamDescription(_, ref, _) => usageRef(ref)
     }
     def usageExp(exp: Expression): Unit = exp match {
-      case TesslaCore.SignalLift(op, argStreams, _)  =>
+      case TesslaCore.SignalLift(_, argStreams, _)  =>
         argStreams.foreach(usageRef)
-      case TesslaCore.Lift(f, argStreams, _) =>
+      case TesslaCore.Lift(_, argStreams, _) =>
         argStreams.foreach(usageRef)
       case TesslaCore.Default(values, _, _) =>
         usageRef(values)
       case TesslaCore.DefaultFrom(values, defaults, _) =>
         usageRef(values)
         usageRef(defaults)
-      case TesslaCore.Const(_, stream, _) =>
-        usageRef(stream)
       case TesslaCore.Last(values, clock, _) =>
         usageRef(values)
         usageRef(clock)
-      case TesslaCore.DelayedLast(values, delays, _) =>
-        usageRef(values)
-        usageRef(delays)
       case TesslaCore.Delay(delays, resets, _) =>
         usageRef(delays)
         usageRef(resets)
       case TesslaCore.Time(values, _) =>
         usageRef(values)
-      case op: TesslaCore.StdLibUnaryOp =>
-        usageRef(op.stream)
-      case TesslaCore.Merge(arg1, arg2, _) =>
-        usageRef(arg1)
-        usageRef(arg2)
-      case TesslaCore.Filter(events, condition, _) =>
-        usageRef(events)
-        usageRef(condition)
+      case c: TesslaCore.CustomBuiltInCall =>
+        c.streamArgs.foreach(usageRef)
     }
     spec.outStreams.foreach(usageOut)
 
-    val updatedStreams = spec.streams.collect{
-      case StreamDescription(id, expression, typ) if used(id.uid) =>
-        val newExpression = expression match {
+    val updatedStreams = spec.streams.collect {
+      case sd if used(sd.id.uid) =>
+        val newExpression = sd.expression match {
           case Lift(f, args, loc) =>
             Lift(removeUnusedFunction(f), args, loc)
-          case _ => expression
+          case _ => sd.expression
         }
-        StreamDescription(id, newExpression, typ)
+        sd.copy(expression = newExpression)
     }
 
     val updatedOutStreams = spec.outStreams.filter {
