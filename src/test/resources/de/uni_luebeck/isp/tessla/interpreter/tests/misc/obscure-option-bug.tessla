@@ -3,7 +3,7 @@ type Queue[D] := List[(Int, D)]
 def enq[D](t: Int, d: D, q: Queue[D]) :=
   List_append(q, (t, d))
 
-def Queue_empty[D] := List.empty[(Int, D)]
+def Queue_empty[D] := List_empty[(Int, D)]
 
 type QueueA[D] := ${unknownBefore: Int, queue: Queue[D]}
 

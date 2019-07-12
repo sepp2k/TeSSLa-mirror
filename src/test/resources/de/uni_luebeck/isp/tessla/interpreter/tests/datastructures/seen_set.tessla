@@ -1,6 +1,6 @@
 in x: Events[Int]
 
-def seen: Events[Set[Int]] := default(Set_add(last(seen, x), x), Set.empty[Int])
+def seen: Events[Set[Int]] := default(Set_add(last(seen, x), x), Set_empty[Int])
 
 def newOrOld :=
     if Set_contains(last(seen, seen), x)

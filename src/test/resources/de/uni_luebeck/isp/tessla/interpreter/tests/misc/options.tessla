@@ -1,6 +1,6 @@
 in keys: Events[String]
 
-def map := Map_add(Map.empty[String, String], "foo", "zweiundvierzig")
+def map := Map_add(Map_empty[String, String], "foo", "zweiundvierzig")
 
 @liftable
 def safeGet[K,V](map: Map[K, V], key: K): Option[V] :=

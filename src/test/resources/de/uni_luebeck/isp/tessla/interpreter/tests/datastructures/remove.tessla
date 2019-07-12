@@ -18,9 +18,9 @@ def add(set: Set[Int], key: Int) :=
     then Set_remove(set, -key)
     else Set_add(set, key)
 
-def counts: Events[Map[Int, Int]] := default(incCount(last(counts, x), x), Map.empty[Int, Int])
+def counts: Events[Map[Int, Int]] := default(incCount(last(counts, x), x), Map_empty[Int, Int])
 
-def seen: Events[Set[Int]] := default(add(last(seen, x), x), Set.empty[Int])
+def seen: Events[Set[Int]] := default(add(last(seen, x), x), Set_empty[Int])
 
 out x
 out counts

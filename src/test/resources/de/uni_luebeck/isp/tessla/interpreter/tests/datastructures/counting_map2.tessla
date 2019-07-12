@@ -10,7 +10,7 @@ def inc_count(counts: Map[Int, Int], key: Int) :=
     then Map_add(counts, key, Map_get(counts, key) + 1)
     else Map_add(counts, key, 1)
 
-def counts: Events[Map[Int, Int]] := default(inc_count(last(counts, x), x), Map.empty[Int, Int])
+def counts: Events[Map[Int, Int]] := default(inc_count(last(counts, x), x), Map_empty[Int, Int])
 
 def size := Map_size(counts)
 
