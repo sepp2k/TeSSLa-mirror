@@ -1,6 +1,8 @@
 # Changelog
 
-## Version 1.0.0 (upcoming)
+## Version 1.0.1 (upcoming)
+
+## Version 1.0.0
 
 ### Breaking Changes
 
