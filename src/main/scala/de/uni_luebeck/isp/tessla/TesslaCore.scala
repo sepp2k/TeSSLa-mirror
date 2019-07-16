@@ -155,8 +155,8 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = s"if $cond then ${thenCase.get} else ${elseCase.get}"
   }
 
-  case class Application(f: Lazy[ValueArg], args: Seq[Lazy[ValueArg]], loc: Location) extends ValueExpression {
-    override def toString = args.map(_.get).mkString(s"${f.get}(", ", ", ")")
+  case class Application(f: Lazy[ValueArg], args: Seq[ValueArg], loc: Location) extends ValueExpression {
+    override def toString = args.mkString(s"$f(", ", ", ")")
   }
 
   // TODO: Hack! This should be a ValueExpression, not a ValueArg
