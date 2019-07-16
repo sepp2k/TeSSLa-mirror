@@ -7,7 +7,9 @@ class Lazy[+A](a: => A) {
 
   lazy val get: A = a
 
-  def map[B](f: A => B): Lazy[B] = Lazy(f(a))
+  def map[B](f: A => B): Lazy[B] = Lazy(f(get))
+
+  def flatMap[B](f: A => Lazy[B]): Lazy[B] = f(get)
 }
 
 object Lazy {
