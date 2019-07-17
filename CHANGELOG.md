@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 1.0.1
+
+### Additions and Fixes
+
+* More spurious infinite-recursion errors have been fixed
+
 ## Version 1.0.0
 
 ### Breaking Changes

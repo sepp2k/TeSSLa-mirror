@@ -19,7 +19,7 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
         usageValueArg(elseCase.get)
       case Application(f, args, _) =>
         usageValueArg(f.get)
-        args.map(_.get).foreach(usageValueArg)
+        args.foreach(usageValueArg)
       case MemberAccess(obj, _, _) =>
         usageValueArg(obj)
     }

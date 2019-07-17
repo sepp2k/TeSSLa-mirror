@@ -1,0 +1,124 @@
+in threadid: Events[Int]
+in varsize: Events[Int]
+in varoffset: Events[Int]
+in readaddr: Events[Int]
+in writeaddr: Events[Int]
+in readvar: Events[String]
+in writevar: Events[String]
+in mutexlockaddr: Events[Int]
+in mutexunlockaddr: Events[Int]
+in pcreateid: Events[Int]
+in line: Events[Int]
+in column: Events[Int]
+in function: Events[String]
+---------------------------------------------------------------------------------
+# locking_or_unlocking is not the same as mutexlockid because there is mutexlockini
+def locking_or_unlocking := merge(mutexlockaddr,mutexunlockaddr)
+def at[A,B](x: Events[A], y: Events[B]) := {  # changed according to https://gitlab.isp.uni-luebeck.de/tessla/tessla/blob/master/CHANGELOG.md#breaking-changes-2
+  def filterPredicate = time(x) == time(y)
+  filter(first(y, filterPredicate), filterPredicate)
+}
+def countingMap[A](x: Events[A]) := {
+  def counter: Events[Int] :=
+    default(if !Map_contains(last(map, x), x) then last(counter, x) + 1 else last(counter, x), 0)
+
+  def map: Events[Map[A,Int]] :=
+    default(if !Map_contains(last(map, x), x) then Map_add(last(map, x), x, counter) else last(map, x), Map_empty[A,Int])
+
+  map
+}
+
+def collectSet[A](value: Events[A]) := {
+  def set: Events[Set[A]] := default(Set_add(last(set, value), value), Set_empty[A])
+  set
+}
+
+def collectMap[A,B](key: Events[A], value: Events[B]) := {
+  def map: Events[Map[A,B]] := default(Map_add(last(map, key), key, value), Map_empty[A,B])
+  map
+}
+---------------------------------------------------------------------------------
+-------THREADS-------------------------------------------------------------------
+---------------------------------------------------------------------------------
+def thread_ids := countingMap(threadid)
+def mapped_thread_id := Map_get(thread_ids, threadid)-1
+---------------------------------------------------------------------------------
+-------SHARED VARIABLES----------------------------------------------------------
+---------------------------------------------------------------------------------
+def access:=merge(readvar,writevar)
+out access
+def thread_accessing:=at(access,mapped_thread_id)
+out thread_accessing
+---------------------------------------------------------------------------------
+-------HOLDING LOCKS-------------------------------------------------------------
+---------------------------------------------------------------------------------
+def locking_map := Map_add(Map_empty[Int,Int],at(mutexlockaddr,mapped_thread_id),mutexlockaddr)
+def unlocking_map := Map_add(Map_empty[Int,Int],at(mutexunlockaddr,mapped_thread_id),mutexunlockaddr)
+def holding_map: Events[Map[Int, Set[Int]]] := {
+  def filterPredicate1 := time(locking_or_unlocking) == time(mutexlockaddr)
+  def aux1 :=
+     defaultFrom(
+        Map_add(
+           last(holding_map, locking_or_unlocking),
+           at(locking_or_unlocking,mapped_thread_id),
+           Set_add(
+              if Map_contains(last(holding_map,locking_or_unlocking),at(mutexlockaddr,mapped_thread_id)) then
+                 Map_get(last(holding_map,locking_or_unlocking),at(mutexlockaddr,mapped_thread_id)) else
+                 Set_empty[Int],
+              Map_get(locking_map,at(mutexlockaddr,mapped_thread_id)))),
+        at(
+           mutexlockaddr,
+           collectMap(at(mutexlockaddr,mapped_thread_id), collectSet(Map_get(locking_map,at(mutexlockaddr,mapped_thread_id))))))
+
+  def filterPredicate2 := time(locking_or_unlocking) == time(mutexunlockaddr)
+  def aux2 :=
+     Map_add(
+        last(holding_map, locking_or_unlocking),
+        at(mutexunlockaddr,mapped_thread_id),
+        Set_remove(
+           Map_get(last(holding_map,locking_or_unlocking),at(mutexunlockaddr,mapped_thread_id)),
+           Map_get(unlocking_map,at(mutexunlockaddr,mapped_thread_id))))
+
+   merge(filter(first(aux1, filterPredicate1), filterPredicate1), filter(first(aux2, filterPredicate2), filterPredicate2))
+}
+--out holding_map
+def holding := defaultFrom(last(holding_map, access),Map_empty[Int, Set[Int]])
+--out holding
+--
+---------------------------------------------------------------------------------
+-------CHECKING------------------------------------------------------------------
+---------------------------------------------------------------------------------
+def guarding: Events[Map[String,Set[Int]]] :={
+   def l:= last(guarding,access)
+   def g:=collectMap(
+      access,
+      defaultFrom(
+         Set_intersection(
+            if Map_contains(holding,thread_accessing) then
+               Map_get(holding,thread_accessing) else
+               Set_empty[Int],
+            if Map_contains(l,access) then
+               Map_get(l,access) else
+               if Map_contains(holding,thread_accessing) then
+                  Map_get(holding,thread_accessing) else
+                  Set_empty[Int]
+         ),
+         if Map_contains(holding,thread_accessing) then
+               Map_get(holding,thread_accessing) else
+               Set_empty[Int]
+      )
+   )
+   g
+}
+out guarding
+---------------------------------------------------------------------------------
+-------ERRORS--------------------------------------------------------------------
+---------------------------------------------------------------------------------
+def e: Events[String] := filter(access, Map_contains(guarding,access) &&
+                                        Map_get(guarding,access)==Set_empty[Int])
+def error_set:=collectSet(e)
+--out error_set
+def error := filter(access, !Set_contains(prev(error_set), e))
+out error
+--def error_in_line := at(error,line)
+--out error_in_line

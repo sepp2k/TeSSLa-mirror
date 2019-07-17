@@ -342,7 +342,7 @@ object Evaluator {
     case ite: TesslaCore.IfThenElse =>
       evalIfThenElse(ite.cond, ite.thenCase, ite.elseCase, env, ite.loc)
     case a: TesslaCore.Application =>
-      evalApplication(a.f.get, a.args.map(arg => evalArg(arg.get, env)), desc.typ, a.loc, env)
+      evalApplication(a.f.get, a.args.map(arg => evalArg(arg, env)), desc.typ, a.loc, env)
     case ma: TesslaCore.MemberAccess =>
       evalArg(ma.obj, env).mapValue {
         case obj: TesslaCore.TesslaObject =>
