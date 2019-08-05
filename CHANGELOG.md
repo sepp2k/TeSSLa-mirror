@@ -2,6 +2,10 @@
 
 ## Version 1.0.2 (upcoming)
 
+### Additions and Fixes
+
+* A bug has been fixed where a closed object type would fail to reject objects with additional members if they went through a variable with an open object type first
+
 ## Version 1.0.1
 
 ### Additions and Fixes

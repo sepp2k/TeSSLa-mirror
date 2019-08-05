@@ -271,7 +271,7 @@ object Tessla {
     override def toString = {
       var members = memberTypes.toSeq.map {case (name, t) => s"$name : $t"}
       if (isOpen) {
-        members :+= "..."
+        members :+= ".."
       }
       members.mkString("{", ", ", "}")
     }
