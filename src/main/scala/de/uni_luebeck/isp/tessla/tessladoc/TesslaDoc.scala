@@ -1,12 +1,15 @@
 package de.uni_luebeck.isp.tessla.tessladoc
 
-import de.uni_luebeck.isp.tessla.TranslationPhase.Result
+import de.uni_luebeck.isp.tessla.Errors.InternalError
+import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla._
 import org.antlr.v4.runtime.{CharStream, ParserRuleContext, Token}
 
 import scala.collection.JavaConverters._
 
-sealed abstract class TesslaDoc extends TesslaDoc.DocElement
+sealed abstract class TesslaDoc extends TesslaDoc.DocElement {
+  def isGlobal: Boolean
+}
 
 object TesslaDoc {
   trait DocElement {
@@ -16,8 +19,15 @@ object TesslaDoc {
 
   private def enquote(str: String) = "\"" + str + "\""
 
+  private def jsonEscape(str: String) =
+    str.replace("\n", "\\n").replace("\"", "\\\"")
+
   case class ModuleDoc(items: Seq[TesslaDoc]) extends TesslaDoc {
     override def toJSON = items.mkString("[\n", ",\n", "\n]")
+
+    override def isGlobal = true
+
+    def globalsOnly = ModuleDoc(items.filter(_.isGlobal))
   }
 
   case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, loc: Location) extends TesslaDoc {
@@ -28,9 +38,11 @@ object TesslaDoc {
          |  "scope": "global",
          |  "name": "$name",
          |  "typeParameters": ${typeParameters.map(enquote).mkString("[", ", ", "]")},
-         |  "doc": "$doc"
+         |  "doc": "${jsonEscape(doc)}"
          |}""".stripMargin
     }
+
+    override def isGlobal = true
   }
 
   case class Param(name: String, typ: String) extends DocElement {
@@ -66,8 +78,10 @@ object TesslaDoc {
            |  "parameters": ${parameters.mkString("[", ", ", "]")},
            |""".stripMargin
       returnType.foreach(typ => str += s"""  "returnType": "$typ",\n""")
-      str + s"""  "doc": "$doc"\n}"""
+      str + s"""  "doc": "${jsonEscape(doc)}"\n}"""
     }
+
+    override def isGlobal = scope == Global
   }
 
   class Extractor(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[ModuleDoc] {
@@ -122,22 +136,36 @@ object TesslaDoc {
       }
     }
 
-    def jsonEscape(str: String) = str.replace("\n", "\\n").replace("\"", "\\\"")
-
     def getDoc(lines: Seq[Token]): String = {
       // Filter out the empty lines and only keep the ones with tessladoc comments
       val docLines = lines.filter(_.getType == TesslaLexer.DOCLINE)
-      jsonEscape(docLines.map(_.getText.replaceAll("--- ?|## ?", "")).mkString)
+      docLines.map(_.getText.replaceAll("^--- ?|^## ?", "")).mkString
     }
   }
 
-  def extract(srcs: Seq[CharStream], includeResolver: Option[String => Option[CharStream]]) = {
+  def extract(srcs: Seq[CharStream], includeResolver: Option[String => Option[CharStream]], includeStdlib: Boolean): Result[ModuleDoc] = {
     Result.runSequentially(srcs) { src =>
       val results =
         includeResolver.map(new TesslaParser.WithIncludes(_).translate(src)).getOrElse {
           TesslaParser.SingleFile.translate(src).map(Seq(_))
         }
       results.andThen(new Extractor(_).translate())
+    }.andThen { docsForFiles =>
+      if(includeStdlib) {
+        forStdlib.map { docsForStdlib =>
+          docsForStdlib +: docsForFiles
+        }
+      } else {
+        Success(docsForFiles, Seq())
+      }
     }.map(modules => ModuleDoc(modules.flatMap(_.items)))
+  }
+
+  def forStdlib: Result[ModuleDoc] = {
+    IncludeResolvers.fromStdlibResource("Predef.tessla").map { predef =>
+      extract(Seq(predef), Some(IncludeResolvers.fromStdlibResource), includeStdlib = false)
+    }.getOrElse {
+      Failure(Seq(InternalError("Could not find standard library")), Seq())
+    }
   }
 }

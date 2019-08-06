@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import java.nio.charset.StandardCharsets
+
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
@@ -8,8 +9,9 @@ import org.scalatest.FunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
-import de.uni_luebeck.isp.tessla.analyses.OSL
+import de.uni_luebeck.isp.tessla.analyses.Observations
 import org.antlr.v4.runtime.CharStream
+import spray.json.JsonParser
 
 import scala.collection.mutable
 import scala.io.Source
@@ -20,7 +22,7 @@ class InterpreterTests extends FunSuite {
 
     case class TestCase(spec: String, input: Option[String], expectedOutput: Option[String],
                         expectedErrors: Option[String], expectedWarnings: Option[String],
-                        expectedRuntimeErrors: Option[String], expectedOsl: Option[String],
+                        expectedRuntimeErrors: Option[String], expectedObservations: Option[String],
                         abortAt: Option[Int], timeUnit: Option[String])
 
     implicit val timeUnitReads: Reads[Option[String]] = (__ \ "timeunit").readNullable[String](verifying(List("ns", "us", "ms", "s", "min", "h", "d").contains))
@@ -29,13 +31,10 @@ class InterpreterTests extends FunSuite {
     /*Validates a test of a given type using its json instance and a schema for that test type
     (Schema for type X must be named XSchema.json and located in the root directory).
     Returns the test if successful, throws an Exception otherwise.*/
-    def validate(test: TestCase, testjson: JsValue): JsResult[TestCase] = {
-      val fileName = test.getClass.getTypeName.substring(test.getClass.getTypeName.lastIndexOf("$") + 1) + "Schema"
-      val schema = Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root/$fileName.json"))).get
-      SchemaValidator().validate(schema, testjson) match {
-        case JsSuccess(_, path) => JsSuccess(test, path)
-        case e: JsError => e
-      }
+    def validate(testjson: JsValue): JsResult[JsValue] = {
+      val fileName = "TestCaseSchema.json"
+      val schema = Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root/$fileName"))).get
+      SchemaValidator().validate(schema, testjson)
     }
 
     def jsErrorToString(jsError: JsError): String = {
@@ -71,14 +70,14 @@ class InterpreterTests extends FunSuite {
   }
 
   def assertEquals[T](actual: T, expected: T, name: String): Unit = {
-    assert(expected == actual, s"Actual $name did not equal expected $name. Expected: $expected. Actual: $actual.")
+    assert(actual == expected)
   }
 
   def assertEqualSets[T: Ordering](actual: Set[T], expected: Set[T], name: String, stringify: T => String = (x: T) => x.toString): Unit = {
     val onlyExpected = (expected -- actual).map(x => (x, "-"))
     val onlyActual = (actual -- expected).map(x => (x, "+"))
     val diff = (onlyExpected ++ onlyActual).toSeq.sorted.map { case (entry, prefix) => s"$prefix ${stringify(entry)}" }.mkString("\n")
-    assert(expected == actual, s"Actual $name did not equal expected $name. Diff:\n$diff\n")
+    assert(actual == expected, s"Actual $name did not equal expected $name. Diff:\n$diff\n")
   }
 
   def splitOutput(line: String): (BigInt, String) = {
@@ -92,45 +91,17 @@ class InterpreterTests extends FunSuite {
 
   def unsplitOutput(pair: (BigInt, String)): String = s"${pair._1}:${pair._2}"
 
-  /*Parse the given file specified by the given relative path as json file, and convert it to a 'Tests' instance.*/
-  def parseJson(path: String): JSON.TestCase = {
-    val json = Json.parse(getClass.getResourceAsStream(s"$root/$path.json"))
-    Json.fromJson[JSON.TestCase](json).flatMap(JSON.validate(_, json)) match {
+  def parseJson[T: Reads](path: String, validate: JsValue => JsResult[_] = x => JsSuccess(x)): T = {
+    val json = Json.parse(getClass.getResourceAsStream(s"$root/$path"))
+    validate(json).flatMap(_ => Json.fromJson[T](json)) match {
       case JsSuccess(value, _) => value
       case e: JsError => sys.error(s"Error in Json parsing: ${JSON.jsErrorToString(e)}")
     }
   }
 
-
-  // A small, partial OSL parser so we can meaningfully compare the contents of the expected OSL files with the
-  // actual results
-  case class SemiOsl(ifs: Set[SemiIf], logs: Set[String]) {
-    override def toString = ifs.mkString("\n") + "\n" + logs.map("log " + _ + "\n").mkString
-  }
-  case class SemiIf(condition: String, thenCase: Set[String]) {
-    override def toString = s"if $condition then\n${thenCase.mkString("\n")}\nfi"
-  }
-
-  val logPattern = "log (.+)".r
-  val ifPattern = "if (.+) then".r
-
-  def semiParseOsl(lines: Iterator[String]): SemiOsl = {
-    val globalLogs = mutable.ArrayBuffer[String]()
-    val ifs = mutable.ArrayBuffer[SemiIf]()
-    var currentCondition: Option[String] = None
-    var currentLogs = globalLogs
-    lines.foreach {
-      case logPattern(prop) =>
-        currentLogs += prop
-      case ifPattern(cond) =>
-        currentCondition = Some(cond)
-        currentLogs = mutable.ArrayBuffer[String]()
-      case "fi" =>
-        ifs += SemiIf(currentCondition.get, currentLogs.toSet)
-        currentCondition = None
-        currentLogs = globalLogs
-    }
-    SemiOsl(ifs.toSet, globalLogs.toSet)
+  /*Parse the given file specified by the given relative path as json file, and convert it to a 'Tests' instance.*/
+  def parseTestCase(path: String): JSON.TestCase = {
+    parseJson[JSON.TestCase](s"$path.json", JSON.validate)
   }
 
   testCases.foreach {
@@ -142,7 +113,7 @@ class InterpreterTests extends FunSuite {
         Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$file"))(StandardCharsets.UTF_8)
       }
 
-      val testCase = parseJson(s"$path/$name")
+      val testCase = parseTestCase(s"$path/$name")
       test(s"$path/$name (Interpreter)") {
         def handleResult[T](result: TranslationPhase.Result[T])(onSuccess: T => Unit): Unit = {
           result match {
@@ -177,11 +148,10 @@ class InterpreterTests extends FunSuite {
           currySignalLift = true
         )
         val src = testStream(testCase.spec)
-        testCase.expectedOsl.foreach { oslFile =>
-          val expectedOSL = semiParseOsl(testSource(oslFile).getLines)
-          handleResult(Compiler.compile(src, options).andThen(OSL.Generator)) { osl =>
-            val actualOSL = semiParseOsl(osl.toString.linesIterator)
-            assertEquals(actualOSL, expectedOSL, "OSL")
+        testCase.expectedObservations.foreach { observationFile =>
+          val expectedObservation = JsonParser(Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$observationFile")).mkString).convertTo[Observations]
+          handleResult(Compiler.compile(src, options).andThen(Observations.Generator)) { actualObservation =>
+            assertEquals(actualObservation, expectedObservation, "Observation")
           }
         }
         testCase.input match {

@@ -39,7 +39,7 @@
         "d"
       ]
     },
-    "expectedOsl": {
+    "expectedObservations": {
       "type": "string"
     }
   },
@@ -57,7 +57,7 @@
       "required": ["expectedErrors"]
     },
     {
-      "required": ["expectedOsl"]
+      "required": ["expectedObservations"]
     }
   ],
   "dependencies": {

@@ -2,6 +2,8 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors._
 import util.mapValues
+
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 class TypeChecker(spec: FlatTessla.Specification)
@@ -274,7 +276,7 @@ class TypeChecker(spec: FlatTessla.Specification)
       parent.memberTypes.forall {
         case (name, typ) =>
           child.memberTypes.get(name).exists(childTyp => isSubtypeOrEqual(parent = typ, child = childTyp))
-      } && (parent.isOpen || parent.memberTypes.keySet == child.memberTypes.keySet)
+      } && (parent.isOpen || !child.isOpen && parent.memberTypes.keySet == child.memberTypes.keySet)
     case _ =>
       parent == child
   }
@@ -488,6 +490,7 @@ class TypeChecker(spec: FlatTessla.Specification)
           // event (as per the lift semantics)
           val firstID = findPredef(s"first", env)
 
+          @tailrec
           def firstTree(args: Seq[(TypedTessla.IdLoc, TypedTessla.Type)]): TypedTessla.IdLoc = {
             val firsts = args.grouped(2).map {
               case Seq((arg1, type1), (arg2, type2)) =>

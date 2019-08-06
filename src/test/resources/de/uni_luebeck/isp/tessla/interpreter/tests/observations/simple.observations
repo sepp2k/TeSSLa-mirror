@@ -1,0 +1,21 @@
+{
+  "FunctionCalls": [],
+  "FunctionReturned": [],
+  "Assignments": [],
+  "VarReads": [],
+  "FunctionCalled" : [ {
+    "FunctionName" : "main",
+    "code" : "trace_setup();"
+  }, {
+    "FunctionName" : "sub",
+    "code" : "fprintf(trace_outfile, \"%lu: sub\\n\", trace_get_normalized_timestamp());\nfflush(trace_outfile);"
+  }, {
+    "FunctionName" : "add",
+    "code" : "fprintf(trace_outfile, \"%lu: add\\n\", trace_get_normalized_timestamp());\nfflush(trace_outfile);"
+  } ],
+  "FunctionReturns" : [ {
+    "FunctionName" : "main",
+    "code" : "trace_teardown();"
+  } ],
+  "userCbPrefix" : "#include \"instrumentation.h\"\n"
+}
