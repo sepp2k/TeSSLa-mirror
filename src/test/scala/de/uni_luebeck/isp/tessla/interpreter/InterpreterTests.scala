@@ -69,14 +69,14 @@ class InterpreterTests extends FunSuite {
   }
 
   def assertEquals[T](actual: T, expected: T, name: String): Unit = {
-    assert(expected == actual/*, s"Actual $name did not equal expected $name. Expected: $expected. Actual: $actual."*/)
+    assert(actual == expected)
   }
 
   def assertEqualSets[T: Ordering](actual: Set[T], expected: Set[T], name: String, stringify: T => String = (x: T) => x.toString): Unit = {
     val onlyExpected = (expected -- actual).map(x => (x, "-"))
     val onlyActual = (actual -- expected).map(x => (x, "+"))
     val diff = (onlyExpected ++ onlyActual).toSeq.sorted.map { case (entry, prefix) => s"$prefix ${stringify(entry)}" }.mkString("\n")
-    assert(expected == actual, s"Actual $name did not equal expected $name. Diff:\n$diff\n")
+    assert(actual == expected, s"Actual $name did not equal expected $name. Diff:\n$diff\n")
   }
 
   def splitOutput(line: String): (BigInt, String) = {
