@@ -19,6 +19,9 @@ object TesslaDoc {
 
   private def enquote(str: String) = "\"" + str + "\""
 
+  private def jsonEscape(str: String) =
+    str.replace("\n", "\\n").replace("\"", "\\\"")
+
   case class ModuleDoc(items: Seq[TesslaDoc]) extends TesslaDoc {
     override def toJSON = items.mkString("[\n", ",\n", "\n]")
 
@@ -35,7 +38,7 @@ object TesslaDoc {
          |  "scope": "global",
          |  "name": "$name",
          |  "typeParameters": ${typeParameters.map(enquote).mkString("[", ", ", "]")},
-         |  "doc": "$doc"
+         |  "doc": "${jsonEscape(doc)}"
          |}""".stripMargin
     }
 
@@ -75,7 +78,7 @@ object TesslaDoc {
            |  "parameters": ${parameters.mkString("[", ", ", "]")},
            |""".stripMargin
       returnType.foreach(typ => str += s"""  "returnType": "$typ",\n""")
-      str + s"""  "doc": "$doc"\n}"""
+      str + s"""  "doc": "${jsonEscape(doc)}"\n}"""
     }
 
     override def isGlobal = scope == Global
@@ -133,12 +136,10 @@ object TesslaDoc {
       }
     }
 
-    def jsonEscape(str: String) = str.replace("\n", "\\n").replace("\"", "\\\"")
-
     def getDoc(lines: Seq[Token]): String = {
       // Filter out the empty lines and only keep the ones with tessladoc comments
       val docLines = lines.filter(_.getType == TesslaLexer.DOCLINE)
-      jsonEscape(docLines.map(_.getText.replaceAll("--- ?|## ?", "")).mkString)
+      docLines.map(_.getText.replaceAll("^--- ?|^## ?", "")).mkString
     }
   }
 

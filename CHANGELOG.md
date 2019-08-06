@@ -6,6 +6,7 @@
 
 * A bug has been fixed where a closed object type would fail to reject objects with additional members if they went through a variable with an open object type first
 * The tessladoc tool can now generate documentation for the standard library using the `--stdlib` (or `-s`) option. It can also be told to only document global definitions using the `--globals-only` (or `-g` option)
+* The tessladoc tool can now generate HTML with the `--html` flag
 
 ## Version 1.0.1
 

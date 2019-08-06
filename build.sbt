@@ -38,6 +38,7 @@ credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-rep
 
 libraryDependencies ++= Seq(
   "com.github.sepp2k" %% "sexyopt" % "0.1.1",
+  "com.github.rjeschke" % "txtmark" % "0.13",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "com.typesafe.play" %% "play-json" % "2.6.6" % "test",
   "com.eclipsesource" %% "play-json-schema-validator" % "0.9.4" % "test",
