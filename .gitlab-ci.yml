@@ -1,4 +1,4 @@
-image: hseeberger/scala-sbt
+image: hseeberger/scala-sbt:11.0.3_1.2.8_2.13.0
 before_script:
   # Log the Java version
   - java -version
@@ -8,6 +8,7 @@ before_script:
 test:
   only:
     - master
+    - development
   tags:
     - docker
   script:
