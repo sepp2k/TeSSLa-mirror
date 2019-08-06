@@ -7,6 +7,17 @@
 * A bug has been fixed where a closed object type would fail to reject objects with additional members if they went through a variable with an open object type first
 * The tessladoc tool can now generate documentation for the standard library using the `--stdlib` (or `-s`) option. It can also be told to only document global definitions using the `--globals-only` (or `-g` option)
 * The tessladoc tool can now generate HTML with the `--html` flag
+* The new instrumentation annotations have been added to the standard library. The new `--observations` option exports an instrumentation configuration generated from the instrumentation annotations placed at the input streams of the given TeSSLa specification. The following annotations have been added:
+  * `@InstFunctionCall(name: String)`
+  * `@InstFunctionCallArg(name: String, index: Int)`
+  * `@InstFunctionCalled(name: String)`
+  * `@InstFunctionCalledArg(name: String, index: Int)`
+  * `@InstFunctionReturn(name: String)`
+  * `@InstFunctionReturned(name: String)`
+  * `@GlobalRead(lvalue: String)`
+  * `@LocalRead(lvalue: String, function: String)`
+  * `@GlobalWrite(lvalue: String)`
+  * `@LocalWrite(lvalue: String, function: String)`
 
 ## Version 1.0.1
 
