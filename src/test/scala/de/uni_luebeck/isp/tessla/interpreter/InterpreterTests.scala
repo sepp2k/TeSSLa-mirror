@@ -11,6 +11,7 @@ import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
 import de.uni_luebeck.isp.tessla.analyses.Observations
 import org.antlr.v4.runtime.CharStream
+import spray.json.JsonParser
 
 import scala.collection.mutable
 import scala.io.Source
@@ -148,7 +149,7 @@ class InterpreterTests extends FunSuite {
         )
         val src = testStream(testCase.spec)
         testCase.expectedObservations.foreach { observationFile =>
-          val expectedObservation = parseJson[Observations](s"$path/$observationFile")
+          val expectedObservation = JsonParser(Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$observationFile")).mkString).convertTo[Observations]
           handleResult(Compiler.compile(src, options).andThen(Observations.Generator)) { actualObservation =>
             assertEquals(actualObservation, expectedObservation, "Observation")
           }

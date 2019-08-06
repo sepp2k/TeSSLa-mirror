@@ -1,4 +1,8 @@
 {
+  "FunctionCalls": [],
+  "FunctionReturned": [],
+  "Assignments": [],
+  "VarReads": [],
   "FunctionCalled" : [ {
     "FunctionName" : "main",
     "code" : "trace_setup();"
