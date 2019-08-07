@@ -1,9 +1,11 @@
 package de.uni_luebeck.isp.tessla.tessladoc
 
-import de.uni_luebeck.isp.tessla.{BuildInfo, IncludeResolvers}
-import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
+import java.io.IOException
+import java.nio.file.{Files, Paths}
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
+import de.uni_luebeck.isp.tessla.{BuildInfo, IncludeResolvers}
+import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import de.uni_luebeck.isp.tessla.util._
 
 object Main extends SexyOpt {
@@ -16,22 +18,34 @@ object Main extends SexyOpt {
   val includes = flag("includes", 'i', "Include documentation from included files")
   val globalsOnly = flag("globals-only", 'g', "Do not show information for local definitions")
   val html = flag("html", "Generate documentation as HTML")
+  val outFile = option("outfile", 'o', "Write the generated docs to the given file instead of stdout")
 
-  def main(args: Array[String]) = {
+  def main(args: Array[String]): Unit = {
     parse(args)
     val streams = files.map(CharStreams.fromFileName)
     val includeResolver = optionIf(includes)(IncludeResolvers.fromFile _)
-    TesslaDoc.extract(streams, includeResolver, includeStdlib = stdLib) match {
+    val output = TesslaDoc.extract(streams, includeResolver, includeStdlib = stdLib) match {
       case Success(tesslaDocs, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         val relevantDocs = if(globalsOnly) tesslaDocs.globalsOnly else tesslaDocs
-        val output = if (html) HtmlGenerator.generateHTML(relevantDocs) else relevantDocs.toString
-        println(output)
+        if (html) HtmlGenerator.generateHTML(relevantDocs) else relevantDocs.toString
       case Failure(errors, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         errors.foreach(e => System.err.println(s"Error: $e"))
         System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors")
         sys.exit(1)
+    }
+    outFile.value match {
+      case Some(file) =>
+        try {
+          Files.write(Paths.get(file), output.getBytes("UTF-8"))
+        } catch {
+          case ex: IOException =>
+            System.err.println(s"Could not write to output file: $ex")
+            sys.exit(2)
+        }
+      case None =>
+        println(output)
     }
   }
 }

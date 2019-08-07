@@ -2,6 +2,8 @@
 
 ## Version 1.0.3 (upcoming)
 
+* The tessladoc tool now has the option `--outfile` (or `-o` for short) to write the generated documentation to a file instead of stdout
+
 ## Version 1.0.2
 
 ### Additions and Fixes
