@@ -135,10 +135,10 @@ object Observations {
       s"""fprintf(trace_outfile, "%lu: ${in.name}\\n", trace_get_normalized_timestamp());\nfflush(trace_outfile);"""
 
     protected def printIntEventVariable(in: InStreamDescription) =
-      s"""fprintf(trace_outfile, "%lu: ${in.name} = %lu\\n", trace_get_normalized_timestamp(), (uint64_t) value);\nfflush(trace_outfile);"""
+      s"""fprintf(trace_outfile, "%lu: ${in.name} = %ld\\n", trace_get_normalized_timestamp(), (int64_t) value);\nfflush(trace_outfile);"""
 
     protected def printIntEventArgument(in: InStreamDescription, index: Int) =
-      s"""fprintf(trace_outfile, "%lu: ${in.name} = %lu\\n", trace_get_normalized_timestamp(), (uint64_t) arg$index);\nfflush(trace_outfile);"""
+      s"""fprintf(trace_outfile, "%lu: ${in.name} = %ld\\n", trace_get_normalized_timestamp(), (int64_t) arg$index);\nfflush(trace_outfile);"""
 
     protected val setups = Seq(Function("main", code = """trace_setup();"""))
     protected val teardowns = Seq(Function("main", code = """trace_teardown();"""))
