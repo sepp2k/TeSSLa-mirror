@@ -20,7 +20,7 @@ in calledY: Events[Int]
 in ret: Events[Int]
 
 @InstFunctionReturned("add")
-in returned: Events[Unit]
+in returned: Events[Int]
 
 @GlobalWrite("arr[]")
 in globalWrite: Events[Int]

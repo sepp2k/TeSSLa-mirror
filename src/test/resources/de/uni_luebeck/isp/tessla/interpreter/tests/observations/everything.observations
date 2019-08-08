@@ -46,11 +46,11 @@
   }],
   "FunctionReturned": [{
     "FunctionName": "add",
-    "code": "fprintf(trace_outfile, \"%lu: returned\\n\", trace_get_normalized_timestamp());\nfflush(trace_outfile);"
+    "code": "fprintf(trace_outfile, \"%lu: returned = %lu\\n\", trace_get_normalized_timestamp(), (uint64_t) value);\nfflush(trace_outfile);"
   }],
   "FunctionReturns": [{
     "FunctionName": "sub",
-    "code": "fprintf(trace_outfile, \"%lu: ret\\n\", trace_get_normalized_timestamp());\nfflush(trace_outfile);"
+    "code": "fprintf(trace_outfile, \"%lu: ret = %lu\\n\", trace_get_normalized_timestamp(), (uint64_t) value);\nfflush(trace_outfile);"
   }, {
     "FunctionName": "main",
     "code": "trace_teardown();"
