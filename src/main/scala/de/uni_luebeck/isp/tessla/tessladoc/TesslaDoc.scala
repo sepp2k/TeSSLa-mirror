@@ -22,12 +22,10 @@ object TesslaDoc {
   private def jsonEscape(str: String) =
     str.replace("\n", "\\n").replace("\"", "\\\"")
 
-  case class ModuleDoc(items: Seq[TesslaDoc]) extends TesslaDoc {
+  case class Docs(items: Seq[TesslaDoc]) extends DocElement {
     override def toJSON = items.mkString("[\n", ",\n", "\n]")
 
-    override def isGlobal = true
-
-    def globalsOnly = ModuleDoc(items.filter(_.isGlobal))
+    def globalsOnly = Docs(items.filter(_.isGlobal))
   }
 
   case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, loc: Location) extends TesslaDoc {
@@ -84,9 +82,9 @@ object TesslaDoc {
     override def isGlobal = scope == Global
   }
 
-  class Extractor(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[ModuleDoc] {
+  class Extractor(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[Docs] {
     override protected def translateSpec() = {
-      ModuleDoc(spec.flatMap(_.tree.statements.asScala.flatMap(translateStatement)))
+      Docs(spec.flatMap(_.tree.statements.asScala.flatMap(translateStatement)))
     }
 
     def translateStatement(definition: TesslaSyntax.StatementContext): Seq[TesslaDoc] = {
@@ -143,7 +141,7 @@ object TesslaDoc {
     }
   }
 
-  def extract(srcs: Seq[CharStream], includeResolver: Option[String => Option[CharStream]], includeStdlib: Boolean): Result[ModuleDoc] = {
+  def extract(srcs: Seq[CharStream], includeResolver: Option[String => Option[CharStream]], includeStdlib: Boolean): Result[Docs] = {
     Result.runSequentially(srcs) { src =>
       val results =
         includeResolver.map(new TesslaParser.WithIncludes(_).translate(src)).getOrElse {
@@ -158,10 +156,10 @@ object TesslaDoc {
       } else {
         Success(docsForFiles, Seq())
       }
-    }.map(modules => ModuleDoc(modules.flatMap(_.items)))
+    }.map(docs => Docs(docs.flatMap(_.items)))
   }
 
-  def forStdlib: Result[ModuleDoc] = {
+  def forStdlib: Result[Docs] = {
     IncludeResolvers.fromStdlibResource("Predef.tessla").map { predef =>
       extract(Seq(predef), Some(IncludeResolvers.fromStdlibResource), includeStdlib = false)
     }.getOrElse {
