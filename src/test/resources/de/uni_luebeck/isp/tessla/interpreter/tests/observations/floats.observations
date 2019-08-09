@@ -1,0 +1,93 @@
+{
+  "Assignments": [{
+    "DeRef": {
+      "Ref": {
+        "StructUnionAccess": {
+          "Base": {
+            "ArrayAccess": {
+              "ArrayAccess": {
+                "Variable": {
+                  "VarName": "thing"
+                }
+              }
+            }
+          },
+          "Field": "foo"
+        }
+      }
+    },
+    "code": "fprintf(trace_outfile, \"%lu: thingWrite = %f\\n\", trace_get_normalized_timestamp(), (double) value);\nfflush(trace_outfile);"
+  }, {
+    "DeRef": {
+      "Variable": {
+        "Function": "bar",
+        "VarName": "foo"
+      }
+    },
+    "code": "fprintf(trace_outfile, \"%lu: localWrite = %f\\n\", trace_get_normalized_timestamp(), (double) value);\nfflush(trace_outfile);"
+  }, {
+    "ArrayAccess": {
+      "Variable": {
+        "VarName": "arr"
+      }
+    },
+    "code": "fprintf(trace_outfile, \"%lu: globalWrite = %f\\n\", trace_get_normalized_timestamp(), (double) value);\nfflush(trace_outfile);"
+  }],
+  "FunctionCalled": [{
+    "FunctionName": "main",
+    "code": "trace_setup();"
+  }, {
+    "FunctionName": "add",
+    "code": "fprintf(trace_outfile, \"%lu: called\\n\", trace_get_normalized_timestamp());\nfflush(trace_outfile);\nfprintf(trace_outfile, \"%lu: calledY = %f\\n\", trace_get_normalized_timestamp(), (double) arg1);\nfflush(trace_outfile);\nfprintf(trace_outfile, \"%lu: calledX = %f\\n\", trace_get_normalized_timestamp(), (double) arg0);\nfflush(trace_outfile);"
+  }],
+  "FunctionCalls": [{
+    "FunctionName": "sub",
+    "code": "fprintf(trace_outfile, \"%lu: call\\n\", trace_get_normalized_timestamp());\nfflush(trace_outfile);\nfprintf(trace_outfile, \"%lu: callY = %f\\n\", trace_get_normalized_timestamp(), (double) arg1);\nfflush(trace_outfile);\nfprintf(trace_outfile, \"%lu: callX = %f\\n\", trace_get_normalized_timestamp(), (double) arg0);\nfflush(trace_outfile);"
+  }],
+  "FunctionReturned": [{
+    "FunctionName": "add",
+    "code": "fprintf(trace_outfile, \"%lu: returned = %f\\n\", trace_get_normalized_timestamp(), (double) value);\nfflush(trace_outfile);"
+  }],
+  "FunctionReturns": [{
+    "FunctionName": "sub",
+    "code": "fprintf(trace_outfile, \"%lu: ret = %f\\n\", trace_get_normalized_timestamp(), (double) value);\nfflush(trace_outfile);"
+  }, {
+    "FunctionName": "main",
+    "code": "trace_teardown();"
+  }],
+  "VarReads": [{
+    "DeRef": {
+      "Ref": {
+        "StructUnionAccess": {
+          "Base": {
+            "ArrayAccess": {
+              "ArrayAccess": {
+                "Variable": {
+                  "VarName": "thing"
+                }
+              }
+            }
+          },
+          "Field": "foo"
+        }
+      }
+    },
+    "code": "fprintf(trace_outfile, \"%lu: thingRead = %f\\n\", trace_get_normalized_timestamp(), (double) value);\nfflush(trace_outfile);"
+  }, {
+    "DeRef": {
+      "Variable": {
+        "Function": "bar",
+        "VarName": "foo"
+      }
+    },
+    "code": "fprintf(trace_outfile, \"%lu: localRead = %f\\n\", trace_get_normalized_timestamp(), (double) value);\nfflush(trace_outfile);"
+  }, {
+    "ArrayAccess": {
+      "Variable": {
+        "VarName": "arr"
+      }
+    },
+    "code": "fprintf(trace_outfile, \"%lu: globalRead = %f\\n\", trace_get_normalized_timestamp(), (double) value);\nfflush(trace_outfile);"
+  }],
+  "userCbPrefix": "#include \"instrumentation.h\"\n"
+}

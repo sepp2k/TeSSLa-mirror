@@ -22,6 +22,7 @@ class InterpreterTests extends FunSuite {
 
     case class TestCase(spec: String, input: Option[String], expectedOutput: Option[String],
                         expectedErrors: Option[String], expectedWarnings: Option[String],
+                        expectedObservationErrors: Option[String],
                         expectedRuntimeErrors: Option[String], expectedObservations: Option[String],
                         abortAt: Option[Int], timeUnit: Option[String])
 
@@ -113,33 +114,33 @@ class InterpreterTests extends FunSuite {
         Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$file"))(StandardCharsets.UTF_8)
       }
 
+      def handleResult[T](result: TranslationPhase.Result[T], expectedErrors: Option[String], expectedWarnings: Option[String])(onSuccess: T => Unit): Unit = {
+        result match {
+          case Success(output, _) =>
+            assert(expectedErrors.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
+            onSuccess(output)
+          case Failure(errors, _) =>
+            expectedErrors match {
+              case None =>
+                fail(s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
+              case Some(expectedErrorsFile) =>
+                // Only split on new lines if the next line is not indented because otherwise it's a continuation
+                // and still part of the same error message (e.g. a stack trace)
+                val expectedErrors = testSource(expectedErrorsFile).mkString.split("\n(?! )").toSet
+                assertEqualSets(errors.map(_.toString).toSet, expectedErrors, "errors")
+            }
+        }
+        expectedWarnings match {
+          case Some(expectedWarnings) =>
+            assertEqualSets(result.warnings.map(_.toString).toSet, testSource(expectedWarnings).getLines.toSet, "warnings")
+          case None =>
+          // If there is no expected warnings file, we don't care whether there were warnings or not.
+          // To assert that there should be no warnings, one should create an empty expected warnings file.
+        }
+      }
+
       val testCase = parseTestCase(s"$path/$name")
       test(s"$path/$name (Interpreter)") {
-        def handleResult[T](result: TranslationPhase.Result[T])(onSuccess: T => Unit): Unit = {
-          result match {
-            case Success(output, _) =>
-              assert(testCase.expectedErrors.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
-              onSuccess(output)
-            case Failure(errors, _) =>
-              testCase.expectedErrors match {
-                case None =>
-                  fail(s"Expected: Compilation success. Actual: Compilation failure:\n(${errors.mkString("\n")})")
-                case Some(expectedErrorsFile) =>
-                  // Only split on new lines if the next line is not indented because otherwise it's a continuation
-                  // and still part of the same error message (e.g. a stack trace)
-                  val expectedErrors = testSource(expectedErrorsFile).mkString.split("\n(?! )").toSet
-                  assertEqualSets(errors.map(_.toString).toSet, expectedErrors, "errors")
-              }
-          }
-          testCase.expectedWarnings match {
-            case Some(expectedWarnings) =>
-              assertEqualSets(result.warnings.map(_.toString).toSet, testSource(expectedWarnings).getLines.toSet, "warnings")
-            case None =>
-              // If there is no expected warnings file, we don't care whether there were warnings or not.
-              // To assert that there should be no warnings, one should create an empty expected warnings file.
-          }
-        }
-
         val options = Compiler.Options(
           timeUnitString = testCase.timeUnit,
           includeResolver = IncludeResolvers.fromResource(getClass, root),
@@ -150,9 +151,12 @@ class InterpreterTests extends FunSuite {
         val src = testStream(testCase.spec)
         testCase.expectedObservations.foreach { observationFile =>
           val expectedObservation = JsonParser(Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$observationFile")).mkString).convertTo[Observations]
-          handleResult(Compiler.compile(src, options).andThen(Observations.Generator)) { actualObservation =>
+          handleResult(Compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedErrors, testCase.expectedWarnings) { actualObservation =>
             assertEquals(actualObservation, expectedObservation, "Observation")
           }
+        }
+        testCase.expectedObservationErrors.foreach { _ =>
+          handleResult(Compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedObservationErrors, testCase.expectedWarnings)(_ => ())
         }
         testCase.input match {
           case Some(input) =>
@@ -160,7 +164,7 @@ class InterpreterTests extends FunSuite {
               val trace = Trace.fromSource(testSource(input), s"$path/$input", testCase.abortAt.map(BigInt(_)))
               val result = Compiler.compile(src, options).map(spec => Interpreter.run(spec, trace, None))
 
-              handleResult(result) { output =>
+              handleResult(result, testCase.expectedErrors, testCase.expectedWarnings) { output =>
                 val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
                 val actualOutput = output.toSet
 
@@ -178,7 +182,7 @@ class InterpreterTests extends FunSuite {
                 }
             }
           case None =>
-            handleResult(Compiler.compile(src, options))(_ => ())
+            handleResult(Compiler.compile(src, options), testCase.expectedErrors, testCase.expectedWarnings)(_ => ())
         }
       }
   }

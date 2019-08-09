@@ -2,7 +2,11 @@
 
 ## Version 1.0.3 (upcoming)
 
+### Additions and Fixes
+
 * The tessladoc tool now has the option `--outfile` (or `-o` for short) to write the generated documentation to a file instead of stdout
+* Fix observation configuration for @InstFunctionReturn and @InstFunctionReturned so that the generated events carry values
+* Add support for signed integers and floats to observation annotations
 
 ## Version 1.0.2
 

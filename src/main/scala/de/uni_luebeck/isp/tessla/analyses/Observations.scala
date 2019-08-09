@@ -1,11 +1,10 @@
 package de.uni_luebeck.isp.tessla.analyses
 
-import de.uni_luebeck.isp.tessla.{Location, Tessla, TesslaCore, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaCore, TranslationPhase}
 import Observations._
-import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError}
+import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError, TesslaErrorWithTimestamp}
 import de.uni_luebeck.isp.tessla.CPatternParser.{ArrayContext, DerefContext, MemberContext, PatternContext, RefContext, VariableContext}
 import de.uni_luebeck.isp.tessla.TesslaCore.InStreamDescription
-import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser}
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
@@ -131,14 +130,33 @@ object Observations {
         }
       }
 
-    protected def printUnitEvent(in: InStreamDescription) =
-      s"""fprintf(trace_outfile, "%lu: ${in.name}\\n", trace_get_normalized_timestamp());\nfflush(trace_outfile);"""
+    protected def printUnitEvent(name: String): String =
+      s"""fprintf(trace_outfile, "%lu: $name\\n", trace_get_normalized_timestamp());\nfflush(trace_outfile);"""
 
-    protected def printIntEventVariable(in: InStreamDescription) =
-      s"""fprintf(trace_outfile, "%lu: ${in.name} = %ld\\n", trace_get_normalized_timestamp(), (int64_t) value);\nfflush(trace_outfile);"""
+    protected def printIntEvent(name: String, value: String): String =
+      s"""fprintf(trace_outfile, "%lu: $name = %ld\\n", trace_get_normalized_timestamp(), (int64_t) $value);\nfflush(trace_outfile);"""
 
-    protected def printIntEventArgument(in: InStreamDescription, index: Int) =
-      s"""fprintf(trace_outfile, "%lu: ${in.name} = %ld\\n", trace_get_normalized_timestamp(), (int64_t) arg$index);\nfflush(trace_outfile);"""
+    protected def printFloatEvent(name: String, value: String): String =
+      s"""fprintf(trace_outfile, "%lu: $name = %f\\n", trace_get_normalized_timestamp(), (double) $value);\nfflush(trace_outfile);"""
+
+    protected def printEvent(in: InStreamDescription, value: String): String = in.typ.elementType match {
+      case TesslaCore.BuiltInType("Int", Seq()) => printIntEvent(in.name, value)
+      case TesslaCore.BuiltInType("Float", Seq()) => printFloatEvent(in.name, value)
+      case typ =>
+        error(Errors.WrongType("Events[Int] or Events[Float]", in.typ, in.loc))
+        ""
+    }
+
+    protected def printUnitEvent(in: InStreamDescription): String = in.typ.elementType match {
+      case TesslaCore.ObjectType(memberTypes) if memberTypes.isEmpty => printUnitEvent(in.name)
+      case typ =>
+        error(Errors.WrongType("Events[Unit]", in.typ, in.loc))
+        ""
+    }
+
+    protected def printEventValue(in: InStreamDescription): String = printEvent(in, "value")
+
+    protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
 
     protected val setups = Seq(Function("main", code = """trace_setup();"""))
     protected val teardowns = Seq(Function("main", code = """trace_teardown();"""))
@@ -149,31 +167,31 @@ object Observations {
         (_, in) => printUnitEvent(in))
 
       val functionCallArgs = createFunctionObservations("InstFunctionCallArg",
-        (annotation, in) => printIntEventArgument(in, argumentAsInt(annotation, "index")))
+        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
 
       val functionCalled = createFunctionObservations("InstFunctionCalled",
         (_, in) => printUnitEvent(in))
 
       val functionCalledArgs = createFunctionObservations("InstFunctionCalledArg",
-        (annotation, in) => printIntEventArgument(in, argumentAsInt(annotation, "index")))
+        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
 
       val functionReturns = createFunctionObservations("InstFunctionReturn",
-        (_, in) => printIntEventVariable(in))
+        (_, in) => printEventValue(in))
 
       val functionReturned = createFunctionObservations("InstFunctionReturned",
-        (_, in) => printIntEventVariable(in))
+        (_, in) => printEventValue(in))
 
       val globalAssignments = createPatternObservations("GlobalWrite",
-        (annotation, in) => printIntEventVariable(in))
+        (annotation, in) => printEventValue(in))
 
       val localAssignments = createPatternObservations("LocalWrite",
-        (annotation, in) => printIntEventVariable(in))
+        (annotation, in) => printEventValue(in))
 
       val globalReads = createPatternObservations("GlobalRead",
-        (annotation, in) => printIntEventVariable(in))
+        (annotation, in) => printEventValue(in))
 
       val localReads = createPatternObservations("LocalRead",
-        (annotation, in) => printIntEventVariable(in))
+        (annotation, in) => printEventValue(in))
 
       val observations = Observations(
         FunctionCalls = mergeFunctions(functionCalls ++ functionCallArgs),
