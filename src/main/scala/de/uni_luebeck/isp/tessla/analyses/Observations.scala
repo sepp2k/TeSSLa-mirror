@@ -47,7 +47,11 @@ object Observations {
   implicit val patternFormat: JsonFormat[Pattern] = lazyFormat(jsonFormat6(Pattern))
   implicit val observationsFormat: JsonFormat[Observations] = jsonFormat7(Observations.apply)
 
-  class Generator(spec: TesslaCore.Specification) extends TranslationPhase.Translator[Observations] {
+  class Generator(pthread: Boolean) extends TranslationPhase[TesslaCore.Specification, Observations] {
+    override def translate(spec: TesslaCore.Specification) = new Translator(spec, pthread).translate()
+  }
+
+  class Translator(spec: TesslaCore.Specification, pthread: Boolean) extends TranslationPhase.Translator[Observations] {
     def parsePattern(str: String, loc: Location, function: Option[String] = None): Pattern = {
       val src = CharStreams.fromString(str, loc.path)
       val lexer = new CPatternLexer(src)
@@ -97,15 +101,40 @@ object Observations {
       }
     }
 
-    private def mergeFunctions(functions: Seq[Function]): Seq[Function] =
+    val threadIdInStreams = spec.inStreams.filter{ in =>
+      in.annotations.exists(_.name == "ThreadId")
+    }
+
+    if (!pthread) {
+      threadIdInStreams.foreach { in =>
+        error(Errors.BadAnnotation("The annotation @ThreadId cannot be used without enabling pthread support.", in.loc))
+      }
+    }
+
+    protected def encloseInstrumentationCode(code: String): String =
+      (if (pthread) "pthread_mutex_lock(&lock);\n" else "") +
+        "uint64_t timestamp = trace_get_normalized_timestamp();\n" +
+        code +
+        (if (threadIdInStreams.nonEmpty) "pthread_t thread = pthread_self();\n" else "") +
+        threadIdInStreams.map{ in => "\n" + printIntEvent(in.name, "thread")}.mkString("") +
+        "\n" + "fflush(trace_outfile);" +
+        (if (pthread) "\npthread_mutex_unlock(&lock);" else "")
+
+    private def merge(functions: Seq[Function]): Seq[Function] =
       functions.groupBy(_.FunctionName).values.map{ functions =>
         functions.reduce((a,b) => a.copy(code = a.code + "\n" + b.code))
       }.toSeq
 
-    private def mergePatterns(patterns: Seq[Pattern]): Seq[Pattern] =
+    private def merge(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
       patterns.groupBy(_.copy(code = None)).values.map { patterns =>
         patterns.reduce((a,b) => a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr))))
       }.toSeq
+
+    private def enclose(function: Function): Function =
+      function.copy(code = encloseInstrumentationCode(function.code))
+
+    private def enclose(pattern: Pattern): Pattern =
+      pattern.copy(code = pattern.code.map(encloseInstrumentationCode))
 
     private def createFunctionObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Function] =
       spec.inStreams.flatMap { in =>
@@ -131,13 +160,13 @@ object Observations {
       }
 
     protected def printUnitEvent(name: String): String =
-      s"""fprintf(trace_outfile, "%lu: $name\\n", trace_get_normalized_timestamp());\nfflush(trace_outfile);"""
+      s"""fprintf(trace_outfile, "%lu: $name\\n", timestamp);"""
 
     protected def printIntEvent(name: String, value: String): String =
-      s"""fprintf(trace_outfile, "%lu: $name = %ld\\n", trace_get_normalized_timestamp(), (int64_t) $value);\nfflush(trace_outfile);"""
+      s"""fprintf(trace_outfile, "%lu: $name = %ld\\n", timestamp, (int64_t) $value);"""
 
     protected def printFloatEvent(name: String, value: String): String =
-      s"""fprintf(trace_outfile, "%lu: $name = %f\\n", trace_get_normalized_timestamp(), (double) $value);\nfflush(trace_outfile);"""
+      s"""fprintf(trace_outfile, "%lu: $name = %f\\n", timestamp, (double) $value);"""
 
     protected def printEvent(in: InStreamDescription, value: String): String = in.typ.elementType match {
       case TesslaCore.BuiltInType("Int", Seq()) => printIntEvent(in.name, value)
@@ -158,9 +187,8 @@ object Observations {
 
     protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
 
-    protected val setups = Seq(Function("main", code = """trace_setup();"""))
-    protected val teardowns = Seq(Function("main", code = """trace_teardown();"""))
-    protected val prefix = "#include \"instrumentation.h\"\n"
+    protected val setup = Function("main", code = """trace_setup();""")
+    protected val prefix = if (pthread) "#include \"instrumentation-pthread.h\"\n" else "#include \"instrumentation.h\"\n"
 
     override protected def translateSpec() = {
       val functionCalls = createFunctionObservations("InstFunctionCall",
@@ -194,21 +222,15 @@ object Observations {
         (annotation, in) => printEventValue(in))
 
       val observations = Observations(
-        FunctionCalls = mergeFunctions(functionCalls ++ functionCallArgs),
-        FunctionCalled = mergeFunctions((setups ++ functionCalled) ++ functionCalledArgs),
-        FunctionReturns = mergeFunctions(teardowns ++ functionReturns),
-        FunctionReturned = mergeFunctions(functionReturned),
-        Assignments = mergePatterns(globalAssignments ++ localAssignments),
-        VarReads = mergePatterns(globalReads ++ localReads),
+        FunctionCalls = merge(functionCalls ++ functionCallArgs).map(enclose),
+        FunctionCalled = merge(merge(functionCalled ++ functionCalledArgs).map(enclose) :+ setup),
+        FunctionReturns = merge(functionReturns).map(enclose),
+        FunctionReturned = merge(functionReturned).map(enclose),
+        Assignments = merge(globalAssignments ++ localAssignments).map(enclose),
+        VarReads = merge(globalReads ++ localReads).map(enclose),
         userCbPrefix = prefix)
 
       observations
-    }
-  }
-
-  object Generator extends TranslationPhase[TesslaCore.Specification, Observations] {
-    override def translate(spec: TesslaCore.Specification) = {
-      new Generator(spec).translate()
     }
   }
 }

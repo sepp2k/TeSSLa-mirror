@@ -16,7 +16,7 @@
         }
       }
     },
-    "code": "fprintf(trace_outfile, \"%lu: thingWrite = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) value);\nfflush(trace_outfile);"
+    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: thingWrite = %ld\\n\", timestamp, (int64_t) value);\nfflush(trace_outfile);"
   }, {
     "DeRef": {
       "Variable": {
@@ -24,36 +24,33 @@
         "VarName": "foo"
       }
     },
-    "code": "fprintf(trace_outfile, \"%lu: localWrite = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) value);\nfflush(trace_outfile);"
+    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: localWrite = %ld\\n\", timestamp, (int64_t) value);\nfflush(trace_outfile);"
   }, {
     "ArrayAccess": {
       "Variable": {
         "VarName": "arr"
       }
     },
-    "code": "fprintf(trace_outfile, \"%lu: globalWrite = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) value);\nfflush(trace_outfile);"
+    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: globalWrite = %ld\\n\", timestamp, (int64_t) value);\nfflush(trace_outfile);"
   }],
   "FunctionCalled": [{
     "FunctionName": "main",
     "code": "trace_setup();"
   }, {
     "FunctionName": "add",
-    "code": "fprintf(trace_outfile, \"%lu: called\\n\", trace_get_normalized_timestamp());\nfflush(trace_outfile);\nfprintf(trace_outfile, \"%lu: calledY = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) arg1);\nfflush(trace_outfile);\nfprintf(trace_outfile, \"%lu: calledX = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) arg0);\nfflush(trace_outfile);"
+    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: called\\n\", timestamp);\nfprintf(trace_outfile, \"%lu: calledY = %ld\\n\", timestamp, (int64_t) arg1);\nfprintf(trace_outfile, \"%lu: calledX = %ld\\n\", timestamp, (int64_t) arg0);\nfflush(trace_outfile);"
   }],
   "FunctionCalls": [{
     "FunctionName": "sub",
-    "code": "fprintf(trace_outfile, \"%lu: call\\n\", trace_get_normalized_timestamp());\nfflush(trace_outfile);\nfprintf(trace_outfile, \"%lu: callY = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) arg1);\nfflush(trace_outfile);\nfprintf(trace_outfile, \"%lu: callX = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) arg0);\nfflush(trace_outfile);"
+    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: call\\n\", timestamp);\nfprintf(trace_outfile, \"%lu: callY = %ld\\n\", timestamp, (int64_t) arg1);\nfprintf(trace_outfile, \"%lu: callX = %ld\\n\", timestamp, (int64_t) arg0);\nfflush(trace_outfile);"
   }],
   "FunctionReturned": [{
     "FunctionName": "add",
-    "code": "fprintf(trace_outfile, \"%lu: returned = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) value);\nfflush(trace_outfile);"
+    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: returned = %ld\\n\", timestamp, (int64_t) value);\nfflush(trace_outfile);"
   }],
   "FunctionReturns": [{
     "FunctionName": "sub",
-    "code": "fprintf(trace_outfile, \"%lu: ret = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) value);\nfflush(trace_outfile);"
-  }, {
-    "FunctionName": "main",
-    "code": "trace_teardown();"
+    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: ret = %ld\\n\", timestamp, (int64_t) value);\nfflush(trace_outfile);"
   }],
   "VarReads": [{
     "DeRef": {
@@ -72,7 +69,7 @@
         }
       }
     },
-    "code": "fprintf(trace_outfile, \"%lu: thingRead = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) value);\nfflush(trace_outfile);"
+    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: thingRead = %ld\\n\", timestamp, (int64_t) value);\nfflush(trace_outfile);"
   }, {
     "DeRef": {
       "Variable": {
@@ -80,14 +77,14 @@
         "VarName": "foo"
       }
     },
-    "code": "fprintf(trace_outfile, \"%lu: localRead = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) value);\nfflush(trace_outfile);"
+    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: localRead = %ld\\n\", timestamp, (int64_t) value);\nfflush(trace_outfile);"
   }, {
     "ArrayAccess": {
       "Variable": {
         "VarName": "arr"
       }
     },
-    "code": "fprintf(trace_outfile, \"%lu: globalRead = %ld\\n\", trace_get_normalized_timestamp(), (int64_t) value);\nfflush(trace_outfile);"
+    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: globalRead = %ld\\n\", timestamp, (int64_t) value);\nfflush(trace_outfile);"
   }],
   "userCbPrefix": "#include \"instrumentation.h\"\n"
 }

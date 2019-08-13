@@ -1,0 +1,4 @@
+{
+  "spec": "badAnnotation.tessla",
+  "expectedObservationErrors": "badAnnotation.errors"
+}

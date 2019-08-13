@@ -1,0 +1,5 @@
+{
+  "spec": "pthread.tessla",
+  "expectedObservations": "pthread.observations",
+  "observationsPthread": true
+}

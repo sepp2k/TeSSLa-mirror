@@ -28,4 +28,7 @@
   # Instrument every writing access of a local variable with the given name inside the given function.
   # Can handle more complex patterns, e.g. *&bar[][].foo
   def @LocalWrite(lvalue: String, function: String)
+
+  # Writes the current thread ID to the annotated stream every time any other instrumentation produces any event
+  def @ThreadId
 #}

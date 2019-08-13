@@ -1,0 +1,49 @@
+@InstFunctionCall("sub")
+in call: Events[Unit]
+
+@InstFunctionCallArg("sub", 0)
+in callX: Events[Int]
+
+@InstFunctionCallArg("sub", 1)
+in callY: Events[Int]
+
+@InstFunctionCalled("add")
+in called: Events[Unit]
+
+@InstFunctionCalledArg("add", 0)
+in calledX: Events[Int]
+
+@InstFunctionCalledArg("add", 1)
+in calledY: Events[Int]
+
+@InstFunctionReturn("sub")
+in ret: Events[Int]
+
+@InstFunctionReturned("add")
+in returned: Events[Int]
+
+@GlobalWrite("arr[]")
+in globalWrite: Events[Int]
+
+@GlobalRead("arr[]")
+in globalRead: Events[Int]
+
+@GlobalWrite("*&thing[][].foo")
+in thingWrite: Events[Int]
+
+@GlobalRead("*&thing[][].foo")
+in thingRead: Events[Int]
+
+@LocalWrite("*foo", "bar")
+in localWrite: Events[Int]
+
+@LocalRead("*foo", "bar")
+in localRead: Events[Int]
+
+@ThreadId
+in thread: Events[Int]
+
+@ThreadId
+in threadToo: Events[Int]
+
+out *

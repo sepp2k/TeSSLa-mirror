@@ -43,6 +43,8 @@ object Main extends SexyOpt {
 
   val observations = flag("observations", "Generate observation specification file from the corresponding annotations")
 
+  val observationsPthread = flag("observations-pthread", "Generate thread-safe observation specification file from the corresponding annotations")
+
   val abortAt = option("abort-at", "Stop the interpreter after a given amount of events.")
 
   val flattenInput = flag("flatten-input", "Print the input trace in a flattened form.")
@@ -87,8 +89,9 @@ object Main extends SexyOpt {
       )
       val core = unwrapResult(Compiler.compile(specSource, compilerOptions))
 
-      if (observations) {
-        println(unwrapResult(Observations.Generator.translate(core)))
+      if (observations || observationsPthread) {
+        val generator = new Observations.Generator(observationsPthread)
+        println(unwrapResult(generator.translate(core)))
         return
       }
 
