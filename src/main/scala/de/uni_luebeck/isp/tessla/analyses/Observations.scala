@@ -47,11 +47,7 @@ object Observations {
   implicit val patternFormat: JsonFormat[Pattern] = lazyFormat(jsonFormat6(Pattern))
   implicit val observationsFormat: JsonFormat[Observations] = jsonFormat7(Observations.apply)
 
-  class Generator(pthread: Boolean) extends TranslationPhase[TesslaCore.Specification, Observations] {
-    override def translate(spec: TesslaCore.Specification) = new Translator(spec, pthread).translate()
-  }
-
-  class Translator(spec: TesslaCore.Specification, pthread: Boolean) extends TranslationPhase.Translator[Observations] {
+  class Generator(spec: TesslaCore.Specification) extends TranslationPhase.Translator[Observations] {
     def parsePattern(str: String, loc: Location, function: Option[String] = None): Pattern = {
       val src = CharStreams.fromString(str, loc.path)
       val lexer = new CPatternLexer(src)
@@ -105,20 +101,13 @@ object Observations {
       in.annotations.exists(_.name == "ThreadId")
     }
 
-    if (!pthread) {
-      threadIdInStreams.foreach { in =>
-        error(Errors.BadAnnotation("The annotation @ThreadId cannot be used without enabling pthread support.", in.loc))
-      }
+    protected def encloseInstrumentationCode(code: String): String = {
+      val numEvents = code.split("\n").length + threadIdInStreams.length
+      s"uint8_t* events = trace_create_events($numEvents);\n" +
+        code + "\n" +
+        threadIdInStreams.map{ in => s"""trace_push_thread_id(events, "${in.name}");\n"""}.mkString("") +
+        "trace_write(events);"
     }
-
-    protected def encloseInstrumentationCode(code: String): String =
-      (if (pthread) "pthread_mutex_lock(&lock);\n" else "") +
-        "uint64_t timestamp = trace_get_normalized_timestamp();\n" +
-        code +
-        (if (threadIdInStreams.nonEmpty) "pthread_t thread = pthread_self();\n" else "") +
-        threadIdInStreams.map{ in => "\n" + printIntEvent(in.name, "thread")}.mkString("") +
-        "\n" + "fflush(trace_outfile);" +
-        (if (pthread) "\npthread_mutex_unlock(&lock);" else "")
 
     private def merge(functions: Seq[Function]): Seq[Function] =
       functions.groupBy(_.FunctionName).values.map{ functions =>
@@ -160,17 +149,21 @@ object Observations {
       }
 
     protected def printUnitEvent(name: String): String =
-      s"""fprintf(trace_outfile, "%lu: $name\\n", timestamp);"""
+      s"""trace_push_unit(events, "$name");"""
 
     protected def printIntEvent(name: String, value: String): String =
-      s"""fprintf(trace_outfile, "%lu: $name = %ld\\n", timestamp, (int64_t) $value);"""
+      s"""trace_push_int(events, "$name", (int64_t) $value);"""
 
     protected def printFloatEvent(name: String, value: String): String =
-      s"""fprintf(trace_outfile, "%lu: $name = %f\\n", timestamp, (double) $value);"""
+      s"""trace_push_float(events, "$name", (double) $value);"""
+
+    protected def printBoolEvent(name: String, value: String): String =
+      s"""trace_push_bool(events, "$name", (bool) $value);"""
 
     protected def printEvent(in: InStreamDescription, value: String): String = in.typ.elementType match {
       case TesslaCore.BuiltInType("Int", Seq()) => printIntEvent(in.name, value)
       case TesslaCore.BuiltInType("Float", Seq()) => printFloatEvent(in.name, value)
+      case TesslaCore.BuiltInType("Bool", Seq()) => printBoolEvent(in.name, value)
       case typ =>
         error(Errors.WrongType("Events[Int] or Events[Float]", in.typ, in.loc))
         ""
@@ -187,8 +180,9 @@ object Observations {
 
     protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
 
-    protected val setup = Function("main", code = """trace_setup();""")
-    protected val prefix = if (pthread) "#include \"instrumentation-pthread.h\"\n" else "#include \"instrumentation.h\"\n"
+    protected val setup = Function("main", code = """trace_init();""")
+    protected val teardown = Function("main", code = """trace_close();""")
+    protected val prefix = "#include \"instrumentation.h\"\n"
 
     override protected def translateSpec() = {
       val functionCalls = createFunctionObservations("InstFunctionCall",
@@ -224,13 +218,19 @@ object Observations {
       val observations = Observations(
         FunctionCalls = merge(functionCalls ++ functionCallArgs).map(enclose),
         FunctionCalled = merge(merge(functionCalled ++ functionCalledArgs).map(enclose) :+ setup),
-        FunctionReturns = merge(functionReturns).map(enclose),
+        FunctionReturns = merge(merge(functionReturns).map(enclose) :+ teardown),
         FunctionReturned = merge(functionReturned).map(enclose),
         Assignments = merge(globalAssignments ++ localAssignments).map(enclose),
         VarReads = merge(globalReads ++ localReads).map(enclose),
         userCbPrefix = prefix)
 
       observations
+    }
+  }
+
+  object Generator extends TranslationPhase[TesslaCore.Specification, Observations] {
+    override def translate(spec: TesslaCore.Specification) = {
+      new Generator(spec).translate()
     }
   }
 }

@@ -1,4 +1,0 @@
-@ThreadId
-in tid: Events[Int]
-
-out tid

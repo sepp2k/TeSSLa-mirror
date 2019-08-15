@@ -250,6 +250,4 @@ object Errors {
   case class AnnotationDefInModule(loc: Location) extends TesslaError {
     override def message = "Annotation definitions are not allowed inside of modules"
   }
-
-  case class BadAnnotation(message: String, loc: Location) extends TesslaError
 }
