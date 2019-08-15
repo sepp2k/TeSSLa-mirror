@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 1.1.0 (upcoming)
+
+### New Limitations
+
+* Auto-lifted functions now have an implementation-/stdlib-defined maximum number of arguments, which is currently 4 in the interpreter. Specifically the number of allowed arguments corresponds to the number of sliftN and sliftN_curried macros in the standard library.
+
+### API Changes
+
+* TesslaCore.SLift no longer exists. Auto-lifted functions will now be lifted using the sliftN and sliftN_curried macros in the standard library
+** sliftN will be called with arbitrary functions. To get back the simple sequence of operator applications of previous versions, an additional phase will be provided (in progress) that breaks everything down to calls of only `first` and `slift2` with simple functions of the form `(a, b) => built-in-op(a,b)`.
+
 ## Version 1.0.3 (upcoming)
 
 ### Additions and Fixes

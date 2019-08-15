@@ -37,8 +37,6 @@ object RecursiveDepthChecker {
           Some(0)
         } else {
           streams(s.id) match {
-            case l: TesslaCore.SignalLift =>
-              l.args.map(visitChild).max
             case l: TesslaCore.Lift =>
               l.args.map(visitChild).max
             case t: TesslaCore.Time =>

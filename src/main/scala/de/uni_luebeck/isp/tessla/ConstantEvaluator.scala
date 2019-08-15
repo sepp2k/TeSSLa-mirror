@@ -2,7 +2,6 @@ package de.uni_luebeck.isp.tessla
 
 import scala.collection.mutable
 import de.uni_luebeck.isp.tessla.Errors._
-import de.uni_luebeck.isp.tessla.TesslaCore.CurriedPrimitiveOperator
 import de.uni_luebeck.isp.tessla.util._
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, TesslaCore.Specification] {
@@ -297,11 +296,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
                 StreamEntry(id, translatedType)
               case op =>
                 if (typ.isStreamType) {
-                  if (be.typ.isLiftableFunctionType) {
-                    translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.SignalLift(CurriedPrimitiveOperator(op), (0 until args.size).map(streamArg), call.loc), translatedType, annotations)
-                  } else {
-                    translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.CustomBuiltInCall(op, (0 until args.size).map(arg), call.loc), translatedType, annotations)
-                  }
+                  translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.CustomBuiltInCall(op, (0 until args.size).map(arg), call.loc), translatedType, annotations)
                   StreamEntry(id, translatedType)
                 } else {
                   be.builtIn.referenceImplementation match {

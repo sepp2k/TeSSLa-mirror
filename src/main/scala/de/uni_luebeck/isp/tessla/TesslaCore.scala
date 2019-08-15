@@ -98,24 +98,6 @@ object TesslaCore extends HasUniqueIdentifiers {
     }
   }
 
-  final case class SignalLift(op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
-    override def toString = {
-      args.mkString(s"slift($op)(", ", ", ")")
-    }
-  }
-
-  final case class CurriedPrimitiveOperator(name: String, args: Map[Int, ValueOrError] = Map()) {
-    override def toString: String = if (args.isEmpty) {
-      name
-    } else {
-      val a = (0 until args.keys.max + 1).map{
-        case i if args.contains(i) => args(i).toString
-        case _ => "_"
-      }.mkString(", ")
-      s"$name($a)"
-    }
-  }
-
   final case class CustomBuiltInCall(name: String, args: Seq[Arg], loc: Location) extends Expression {
     override def toString = {
       if (args.isEmpty) name

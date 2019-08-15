@@ -25,7 +25,6 @@ class CycleDetection(spec: TesslaCore.Specification) extends TranslationPhase.Tr
         case l: TesslaCore.Last => resolveStream(l.clock) // ignore the value stream because it goes to another time
         case d: TesslaCore.Delay => resolveStream(d.resets) // ignore the delays stream which is delayed
         case t: TesslaCore.Time => resolveStream(t.stream)
-        case l: TesslaCore.SignalLift => l.args.flatMap(resolveStream)
         case l: TesslaCore.Lift => l.args.flatMap(resolveStream)
         case c: TesslaCore.CustomBuiltInCall => c.streamArgs.flatMap(resolveStream)
       }

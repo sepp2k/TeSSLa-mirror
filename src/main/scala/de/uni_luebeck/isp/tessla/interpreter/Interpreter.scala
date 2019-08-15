@@ -33,40 +33,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case _: TesslaCore.Nil => nil
   }
 
-  def merge(stream1: Stream, stream2: Stream): Stream = {
-    lift(Seq(stream1, stream2)) {
-      case Seq(Some(value1), _) => Some(value1)
-      case Seq(None, value2Opt) => value2Opt
-    }
-  }
-
-  def slift(streams: Seq[Stream])(op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream = {
-    val ticks = lift(streams) { _ =>
-      Some(TesslaCore.TesslaObject(Map(), Location.builtIn))
-    }
-    val recentValueStreams = streams.map { stream =>
-      merge(stream, last(stream, ticks))
-    }
-    lift(recentValueStreams) { valueOptions =>
-      if (valueOptions.exists(_.isEmpty)) {
-        None
-      } else {
-        op(valueOptions.flatten)
-      }
-    }
-  }
-
   private def eval(sd: TesslaCore.StreamDescription): Stream = sd.expression match {
-    case TesslaCore.SignalLift(op, argStreams, loc) =>
-      if (argStreams.isEmpty) {
-        throw Errors.InternalError("Lift without arguments should be impossible", loc)
-      }
-      slift(argStreams.map(evalStream)) { arguments =>
-        val args = arguments.zip(argStreams).map {
-          case (arg, stream) => arg.mapValue(_.withLoc(stream.loc))
-        }
-        Some(Evaluator.evalPrimitiveOperator(op, args, sd.typ.elementType, sd.loc))
-      }
     case TesslaCore.Lift(f, argStreams, loc) =>
       if (argStreams.isEmpty) {
         throw Errors.InternalError("Lift without arguments should be impossible", loc)

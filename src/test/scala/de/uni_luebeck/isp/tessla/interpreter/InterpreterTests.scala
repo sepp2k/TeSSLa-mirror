@@ -13,8 +13,6 @@ import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.analyses.Observations
 import org.antlr.v4.runtime.CharStream
 import spray.json.JsonParser
-
-import scala.collection.mutable
 import scala.io.Source
 
 class InterpreterTests extends FunSuite {
@@ -42,7 +40,7 @@ class InterpreterTests extends FunSuite {
 
     def jsErrorToString(jsError: JsError): String = {
       jsError.errors.map {
-        case (jspath, errors) => errors.map {
+        case (_, errors) => errors.map {
           case JsonValidationError(messages, _) => messages.mkString("\n")
         }.mkString("\n")
       }.mkString("\n")
@@ -147,8 +145,7 @@ class InterpreterTests extends FunSuite {
           timeUnitString = testCase.timeUnit,
           includeResolver = IncludeResolvers.fromResource(getClass, root),
           stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-          stdlibPath = "Predef.tessla",
-          currySignalLift = true
+          stdlibPath = "Predef.tessla"
         )
         val src = testStream(testCase.spec)
         testCase.expectedObservations.foreach { observationFile =>

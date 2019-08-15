@@ -64,8 +64,6 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
       case OutStreamDescription(_, ref, _) => usageRef(ref)
     }
     def usageExp(exp: Expression): Unit = exp match {
-      case TesslaCore.SignalLift(_, argStreams, _)  =>
-        argStreams.foreach(usageRef)
       case TesslaCore.Lift(_, argStreams, _) =>
         argStreams.foreach(usageRef)
       case TesslaCore.Default(values, _, _) =>

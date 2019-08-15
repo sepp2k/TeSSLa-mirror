@@ -31,8 +31,6 @@ object DepthChecker {
         if (memoized.contains(s.id)) return memoized(s.id)
 
         val childDepth = streams(s.id) match {
-          case l: TesslaCore.SignalLift =>
-            l.args.map(visitChild).max
           case l: TesslaCore.Lift =>
             l.args.map(visitChild).max
           case t: TesslaCore.Time =>

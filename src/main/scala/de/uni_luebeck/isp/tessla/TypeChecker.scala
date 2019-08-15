@@ -2,18 +2,12 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors._
 import util.mapValues
-
-import scala.annotation.tailrec
 import scala.collection.mutable
 
 class TypeChecker(spec: FlatTessla.Specification)
   extends TypedTessla.IdentifierFactory with TranslationPhase.Translator[TypedTessla.TypedSpecification] {
   private val typeMap = mutable.Map[TypedTessla.Identifier, TypedTessla.Type]()
   type Env = Map[FlatTessla.Identifier, TypedTessla.Identifier]
-
-  // For each macro of a liftable type, we'll create a lifted version of that macro. This map will map the ID of
-  // the unlifted version to that of the lifted version
-  private val liftedMacros = mutable.Map[TypedTessla.Identifier, TypedTessla.Identifier]()
 
   override def translateSpec(): TypedTessla.TypedSpecification = {
     val (defs, env) = translateDefsWithParents(spec.globalDefs)
@@ -223,7 +217,15 @@ class TypeChecker(spec: FlatTessla.Specification)
   }
 
   def findPredef(name: String, env: Env) = {
-    spec.lookupID("Predef", name).map(env).getOrElse(throw InternalError(s"Standard library must define Predef.$name"))
+    tryFindPredef(name, env).getOrElse(throw InternalError(s"Standard library must define Predef.$name"))
+  }
+
+  def findPredef(name: String, env: Env, loc: Location) = {
+    tryFindPredef(name, env).getOrElse(throw UndefinedVariable(Tessla.Identifier(s"Predef.$name", loc)))
+  }
+
+  def tryFindPredef(name: String, env: Env) = {
+    spec.lookupID("Predef", name).map(env)
   }
 
   def liftConstant(constant: TypedTessla.Identifier, defs: TypedTessla.Definitions, env: Env, loc: Location) = {
@@ -360,10 +362,11 @@ class TypeChecker(spec: FlatTessla.Specification)
             }
             var macroID = env(call.macroID)
             var possiblyLiftedType = t
+            var lastArgs: Seq[TypedTessla.Argument] = Seq()
             if (t.isLiftable && call.args.exists(arg => typeMap(env(arg.id)).isStreamType)) {
               possiblyLiftedType = liftFunctionType(t)
-              macroID = liftedMacros.getOrElse(macroID,
-                throw InternalError(s"Failed to look up lifted ID ${call.macroID}", call.macroLoc))
+              lastArgs = Seq(TypedTessla.PositionalArgument(macroID, call.macroLoc))
+              macroID = findPredef(s"slift${call.args.length}", env, call.macroLoc)
             }
             val typeSubstitutions = mutable.Map(t.typeParameters.zip(typeArgs): _*)
             val typeParams = t.typeParameters.toSet
@@ -381,7 +384,13 @@ class TypeChecker(spec: FlatTessla.Specification)
                     (actual, expected) match {
                       case (a: TypedTessla.FunctionType, e: TypedTessla.FunctionType)
                         if a.isLiftable && isSubtypeOrEqual(parent = e, child = liftFunctionType(a)) =>
-                        liftedMacros(id)
+                        val sliftId = findPredef(s"slift${a.parameterTypes.length}_curried", env, arg.loc)
+                        val typeArgs = a.parameterTypes :+ a.returnType
+                        val sliftArgs = Seq(TypedTessla.PositionalArgument(id, arg.loc))
+                        val sliftCall = TypedTessla.MacroCall(sliftId, arg.loc, typeArgs, sliftArgs, arg.loc)
+                        val liftedId = makeIdentifier()
+                        defs.addVariable(TypedTessla.VariableEntry(liftedId, sliftCall, e, Seq(), arg.loc))
+                        liftedId
                       case _ =>
                         error(TypeMismatch(expected, actual, arg.loc))
                         id
@@ -393,7 +402,7 @@ class TypeChecker(spec: FlatTessla.Specification)
                   case named: FlatTessla.NamedArgument =>
                     TypedTessla.NamedArgument(named.name, TypedTessla.IdLoc(possiblyLifted, named.idLoc.loc), named.loc)
                 }
-            }
+            } ++ lastArgs
             val leftOverTypeParameters = typeParams.diff(typeSubstitutions.keySet)
             if (leftOverTypeParameters.nonEmpty) {
               throw TypeArgumentsNotInferred(name, call.macroLoc)
@@ -425,11 +434,6 @@ class TypeChecker(spec: FlatTessla.Specification)
         TypedTessla.MemberAccess(TypedTessla.IdLoc(receiver, acc.receiver.loc), acc.member, acc.memberLoc, acc.loc) -> t
 
       case b: FlatTessla.BuiltInOperator =>
-        // Register each builtin as its own lifted version, so things just work when looking up the lifted version
-        // of a built-in.
-        id.foreach { id =>
-          liftedMacros(id) = id
-        }
         val t = declaredType.getOrElse(throw MissingTypeAnnotationBuiltIn(b.name, b.loc))
         val typeParameters = t match {
           case ft: TypedTessla.FunctionType => ft.typeParameters
@@ -462,63 +466,10 @@ class TypeChecker(spec: FlatTessla.Specification)
           val t = translateType(p.parameterType, innerEnv)
           TypedTessla.Parameter(p.param, t, innerEnv(p.id))
         }
-        val parameterIDs = mac.parameters.map(_.id).toSet
         if (mac.isLiftable) {
           if (!checkLiftability(macroType)) {
             error(UnliftableMacroType(mac.headerLoc))
           }
-          val liftedType = liftFunctionType(macroType)
-          val liftedDefs = new FlatTessla.Definitions(mac.body.parent)
-          mac.body.types.values.foreach { entry =>
-            liftedDefs.addType(entry)
-          }
-          mac.body.variables.values.foreach { entry =>
-            if (parameterIDs.contains(entry.id) || entry.id == mac.result.id) {
-              liftedDefs.addVariable(entry.copy(typeInfo = entry.typeInfo.map(t => FlatTessla.BuiltInType("Events", Seq(t)))))
-            } else {
-              liftedDefs.addVariable(entry)
-            }
-          }
-          val (innerDefs, innerEnv) = translateDefs(liftedDefs, Some(defs), env ++ tvarEnv)
-          val result = TypedTessla.IdLoc(innerEnv(mac.result.id), mac.result.loc)
-          val returnType = typeMap(result.id)
-          val parameters = mac.parameters.map { p =>
-            val t = translateType(p.parameterType, innerEnv)
-            TypedTessla.Parameter(p.param, t, innerEnv(p.id))
-          }
-          // Add a lifted projection operator so that there is a new event whenever any of the parameters get a new
-          // event (as per the lift semantics)
-          val firstID = findPredef(s"first", env)
-
-          @tailrec
-          def firstTree(args: Seq[(TypedTessla.IdLoc, TypedTessla.Type)]): TypedTessla.IdLoc = {
-            val firsts = args.grouped(2).map {
-              case Seq((arg1, type1), (arg2, type2)) =>
-                val firstArgs = Seq(
-                  TypedTessla.PositionalArgument(arg1.id, arg1.loc),
-                  TypedTessla.PositionalArgument(arg2.id, arg2.loc)
-                )
-                val firstCall = TypedTessla.MacroCall(firstID, Location.builtIn, Seq(type1, type2), firstArgs, result.loc)
-                val firstCallId = makeIdentifier()
-                val firstCallEntry = TypedTessla.VariableEntry(firstCallId, firstCall, liftedType.returnType, Seq(), mac.loc)
-                innerDefs.addVariable(firstCallEntry)
-                (TypedTessla.IdLoc(firstCallId, result.loc), type1)
-
-              case Seq(arg) =>
-                arg
-            }.toSeq
-            firsts match {
-              case Seq((first, _)) => first
-              case _ => firstTree(firsts)
-            }
-          }
-
-          val firstCall = firstTree((result, macroType.returnType) +: parameters.map(p => (p.idLoc, p.parameterType)))
-          val lifted = TypedTessla.Macro(tvarIDs, parameters, innerDefs, returnType, mac.headerLoc, firstCall, mac.loc, mac.isLiftable)
-          val liftedId = makeIdentifier(id.get.nameOpt)
-          val liftedEntry = TypedTessla.VariableEntry(liftedId, lifted, liftedType, Seq(), mac.loc)
-          defs.addVariable(liftedEntry)
-          liftedMacros(id.get) = liftedId
         }
         TypedTessla.Macro(tvarIDs, parameters, innerDefs, returnType, mac.headerLoc, result, mac.loc, mac.isLiftable) -> macroType
     }
