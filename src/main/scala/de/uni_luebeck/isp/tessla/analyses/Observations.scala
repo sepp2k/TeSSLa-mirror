@@ -102,12 +102,11 @@ object Observations {
     }
 
     protected def encloseInstrumentationCode(code: String): String = {
-      val lines = code.split("\n").sorted
-      val numEvents = lines.length + threadIdInStreams.length
-      s"uint8_t* events = trace_create_events($numEvents);\n" +
-        lines.map(_ + "\n").mkString("") +
-        threadIdInStreams.map{ in => s"""trace_push_thread_id(events, "${in.name}");\n"""}.mkString("") +
-        "trace_write(events);"
+      val lines = code.split("\n") ++
+        threadIdInStreams.map{ in => s"""trace_push_thread_id(events, "${in.name}");"""}
+      s"uint8_t* events = trace_create_events(${lines.length});\n" +
+        lines.sorted.mkString("\n") +
+        "\ntrace_write(events);"
     }
 
     private def merge(functions: Seq[Function]): Seq[Function] =

@@ -38,11 +38,11 @@
     "code": "trace_init();"
   }, {
     "FunctionName": "add",
-    "code": "uint8_t* events = trace_create_events(5);\ntrace_push_int(events, \"calledX\", (int64_t) arg0);\ntrace_push_int(events, \"calledY\", (int64_t) arg1);\ntrace_push_unit(events, \"called\");\ntrace_push_thread_id(events, \"thread\");\ntrace_push_thread_id(events, \"threadToo\");\ntrace_write(events);"
+    "code": "uint8_t* events = trace_create_events(5);\ntrace_push_int(events, \"calledX\", (int64_t) arg0);\ntrace_push_int(events, \"calledY\", (int64_t) arg1);\ntrace_push_thread_id(events, \"thread\");\ntrace_push_thread_id(events, \"threadToo\");\ntrace_push_unit(events, \"called\");\ntrace_write(events);"
   }],
   "FunctionCalls": [{
     "FunctionName": "sub",
-    "code": "uint8_t* events = trace_create_events(5);\ntrace_push_int(events, \"callX\", (int64_t) arg0);\ntrace_push_int(events, \"callY\", (int64_t) arg1);\ntrace_push_unit(events, \"call\");\ntrace_push_thread_id(events, \"thread\");\ntrace_push_thread_id(events, \"threadToo\");\ntrace_write(events);"
+    "code": "uint8_t* events = trace_create_events(5);\ntrace_push_int(events, \"callX\", (int64_t) arg0);\ntrace_push_int(events, \"callY\", (int64_t) arg1);\ntrace_push_thread_id(events, \"thread\");\ntrace_push_thread_id(events, \"threadToo\");\ntrace_push_unit(events, \"call\");\ntrace_write(events);"
   }],
   "FunctionReturned": [{
     "FunctionName": "add",
