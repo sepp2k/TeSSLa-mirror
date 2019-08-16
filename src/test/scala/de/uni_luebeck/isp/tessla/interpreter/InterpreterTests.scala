@@ -3,13 +3,12 @@ package de.uni_luebeck.isp.tessla.interpreter
 import java.nio.charset.StandardCharsets
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers, TranslationPhase, analyses}
+import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
-import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.analyses.Observations
 import org.antlr.v4.runtime.CharStream
 import spray.json.JsonParser
@@ -22,7 +21,6 @@ class InterpreterTests extends FunSuite {
     case class TestCase(spec: String, input: Option[String], expectedOutput: Option[String],
                         expectedErrors: Option[String], expectedWarnings: Option[String],
                         expectedObservationErrors: Option[String],
-                        observationsPthread: Option[Boolean],
                         expectedRuntimeErrors: Option[String], expectedObservations: Option[String],
                         abortAt: Option[Int], timeUnit: Option[String])
 
@@ -150,12 +148,12 @@ class InterpreterTests extends FunSuite {
         val src = testStream(testCase.spec)
         testCase.expectedObservations.foreach { observationFile =>
           val expectedObservation = JsonParser(Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$observationFile")).mkString).convertTo[Observations]
-          handleResult(Compiler.compile(src, options).andThen(new Observations.Generator(testCase.observationsPthread.getOrElse(false))), testCase.expectedErrors, testCase.expectedWarnings) { actualObservation =>
+          handleResult(Compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedErrors, testCase.expectedWarnings) { actualObservation =>
             assertEquals(actualObservation, expectedObservation, "Observation")
           }
         }
         testCase.expectedObservationErrors.foreach { _ =>
-          handleResult(Compiler.compile(src, options).andThen(new Observations.Generator(testCase.observationsPthread.getOrElse(false))), testCase.expectedObservationErrors, testCase.expectedWarnings)(_ => ())
+          handleResult(Compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedObservationErrors, testCase.expectedWarnings)(_ => ())
         }
         testCase.input match {
           case Some(input) =>

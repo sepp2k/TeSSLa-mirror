@@ -1,18 +1,21 @@
 {
   "Assignments": [],
   "FunctionCalled": [{
-    "FunctionName": "sub",
-    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: sub\\n\", timestamp);\nfflush(trace_outfile);"
-  }, {
     "FunctionName": "main",
-    "code": "trace_setup();"
+    "code": "trace_init();"
   }, {
     "FunctionName": "add",
-    "code": "uint64_t timestamp = trace_get_normalized_timestamp();\nfprintf(trace_outfile, \"%lu: add\\n\", timestamp);\nfflush(trace_outfile);"
+    "code": "uint8_t* events = trace_create_events(1);\ntrace_push_unit(events, \"add\");\ntrace_write(events);"
+  }, {
+    "FunctionName": "check",
+    "code": "uint8_t* events = trace_create_events(1);\ntrace_push_bool(events, \"sub\", (bool) arg0);\ntrace_write(events);"
   }],
   "FunctionCalls": [],
   "FunctionReturned": [],
-  "FunctionReturns": [],
+  "FunctionReturns": [{
+    "FunctionName": "main",
+    "code": "trace_close();"
+  }],
   "VarReads": [],
   "userCbPrefix": "#include \"instrumentation.h\"\n"
 }

@@ -42,9 +42,6 @@
     "expectedObservations": {
       "type": "string"
     },
-    "observationsPthread": {
-      "type": "boolean"
-    },
     "expectedObservationErrors": {
       "type": "string"
     }
