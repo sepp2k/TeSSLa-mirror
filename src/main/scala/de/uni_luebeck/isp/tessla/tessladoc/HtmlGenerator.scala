@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.tessladoc
 import com.github.rjeschke.txtmark
 
 object HtmlGenerator {
-  def generateHTML(doc: TesslaDoc): String = {
+  def generateHTML(docs: TesslaDoc.Docs): String = {
     s"""<!DOCTYPE html>
        |<html>
        |  <head>
@@ -22,14 +22,10 @@ object HtmlGenerator {
        |      .name {
        |        font-weight: bold;
        |      }
-       |
-       |      header {
-       |        font-size: 110%;
-       |      }
        |    </style>
        |  </head>
        |  <body>
-       |    ${itemToHtml(doc)}
+       |    ${docs.items.map(itemToHtml).mkString}
        |  </body>
        |</html>
        |""".stripMargin
@@ -53,12 +49,10 @@ object HtmlGenerator {
   }
 
   def itemToHtml(doc: TesslaDoc): String = doc match {
-    case module: TesslaDoc.ModuleDoc =>
-      module.items.map(itemToHtml).mkString
     case typ: TesslaDoc.TypeDoc =>
       val typeParams = typeParamsToHtml(typ.typeParameters)
       s"""    <div class="doc-entry type" id="doc-typ-${typ.name}">
-         |      <header><span class="type-name name">${typ.name}</span>$typeParams</header>
+         |      <h3><span class="type-name name">${typ.name}</span>$typeParams</h3>
          |      ${txtmark.Processor.process(typ.doc)}
          |    </div>
          |""".stripMargin
@@ -66,7 +60,7 @@ object HtmlGenerator {
       val typeParams = typeParamsToHtml(definition.typeParameters)
       val params = parametersToHtml(definition.parameters)
       s"""    <div class="doc-entry def" id="doc-def-${definition.name}">
-         |      <header><span class="def-name name">${definition.name}</span>$typeParams$params</header>
+         |      <h3><span class="def-name name">${definition.name}</span>$typeParams$params</h3>
          |      ${txtmark.Processor.process(definition.doc)}
          |    </div>
          |""".stripMargin

@@ -41,6 +41,9 @@
     },
     "expectedObservations": {
       "type": "string"
+    },
+    "expectedObservationErrors": {
+      "type": "string"
     }
   },
   "required": [
@@ -55,6 +58,9 @@
     },
     {
       "required": ["expectedErrors"]
+    },
+    {
+      "required": ["expectedObservationErrors"]
     },
     {
       "required": ["expectedObservations"]

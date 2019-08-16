@@ -40,4 +40,10 @@ in localWrite: Events[Int]
 @LocalRead("*foo", "bar")
 in localRead: Events[Int]
 
+@ThreadId
+in thread: Events[Int]
+
+@ThreadId
+in threadToo: Events[Int]
+
 out *

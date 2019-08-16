@@ -1,6 +1,8 @@
-module Option {
-  def map[T, U](opt: Option[T], f: (T) => U): Option[U] =
+#module Option {
+  # TODO: Remove the Option_ prefix once modules are properly supported
+
+  def Option_map[T, U](opt: Option[T], f: (T) => U): Option[U] =
     if isNone(opt)
     then None[U]
     else Some(f(getSome(opt)))
-}
+#}

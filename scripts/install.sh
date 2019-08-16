@@ -14,11 +14,11 @@ jarCount=$(ls tessla*.jar | wc -l)
 
 set -e # cancel script if anything fails
 
-mkdir -p /usr/local/opt/tessla
-cp tessla*.jar /usr/local/opt/tessla/tessla.jar
+mkdir -p /usr/local/share/
+cp tessla*.jar /usr/local/share/tessla.jar
 
-printf '#!/bin/bash\njava -Xss16m -jar /usr/local/opt/tessla/tessla.jar "$@"\n' > /usr/local/bin/tessla
+printf '#!/bin/bash\njava -Xss16m -jar /usr/local/share/tessla.jar "$@"\n' > /usr/local/bin/tessla
 chmod +x /usr/local/bin/tessla
 
-printf '#!/bin/bash\njava -Xss16m -cp /usr/local/opt/tessla/tessla.jar de.uni_luebeck.isp.tessla.tessladoc.Main "$@"\n' > /usr/local/bin/tessladoc
+printf '#!/bin/bash\njava -Xss16m -cp /usr/local/share/tessla.jar de.uni_luebeck.isp.tessla.tessladoc.Main "$@"\n' > /usr/local/bin/tessladoc
 chmod +x /usr/local/bin/tessladoc

@@ -1,11 +1,10 @@
 package de.uni_luebeck.isp.tessla.analyses
 
-import de.uni_luebeck.isp.tessla.{Location, Tessla, TesslaCore, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaCore, TranslationPhase}
 import Observations._
-import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError}
+import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError, TesslaErrorWithTimestamp}
 import de.uni_luebeck.isp.tessla.CPatternParser.{ArrayContext, DerefContext, MemberContext, PatternContext, RefContext, VariableContext}
 import de.uni_luebeck.isp.tessla.TesslaCore.InStreamDescription
-import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser}
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
@@ -98,15 +97,33 @@ object Observations {
       }
     }
 
-    private def mergeFunctions(functions: Seq[Function]): Seq[Function] =
+    val threadIdInStreams = spec.inStreams.filter{ in =>
+      in.annotations.exists(_.name == "ThreadId")
+    }
+
+    protected def encloseInstrumentationCode(code: String): String = {
+      val numEvents = code.split("\n").length + threadIdInStreams.length
+      s"uint8_t* events = trace_create_events($numEvents);\n" +
+        code + "\n" +
+        threadIdInStreams.map{ in => s"""trace_push_thread_id(events, "${in.name}");\n"""}.mkString("") +
+        "trace_write(events);"
+    }
+
+    private def merge(functions: Seq[Function]): Seq[Function] =
       functions.groupBy(_.FunctionName).values.map{ functions =>
         functions.reduce((a,b) => a.copy(code = a.code + "\n" + b.code))
       }.toSeq
 
-    private def mergePatterns(patterns: Seq[Pattern]): Seq[Pattern] =
+    private def merge(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
       patterns.groupBy(_.copy(code = None)).values.map { patterns =>
         patterns.reduce((a,b) => a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr))))
       }.toSeq
+
+    private def enclose(function: Function): Function =
+      function.copy(code = encloseInstrumentationCode(function.code))
+
+    private def enclose(pattern: Pattern): Pattern =
+      pattern.copy(code = pattern.code.map(encloseInstrumentationCode))
 
     private def createFunctionObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Function] =
       spec.inStreams.flatMap { in =>
@@ -131,17 +148,40 @@ object Observations {
         }
       }
 
-    protected def printUnitEvent(in: InStreamDescription) =
-      s"""fprintf(trace_outfile, "%lu: ${in.name}\\n", trace_get_normalized_timestamp());\nfflush(trace_outfile);"""
+    protected def printUnitEvent(name: String): String =
+      s"""trace_push_unit(events, "$name");"""
 
-    protected def printIntEventVariable(in: InStreamDescription) =
-      s"""fprintf(trace_outfile, "%lu: ${in.name} = %lu\\n", trace_get_normalized_timestamp(), (uint64_t) value);\nfflush(trace_outfile);"""
+    protected def printIntEvent(name: String, value: String): String =
+      s"""trace_push_int(events, "$name", (int64_t) $value);"""
 
-    protected def printIntEventArgument(in: InStreamDescription, index: Int) =
-      s"""fprintf(trace_outfile, "%lu: ${in.name} = %lu\\n", trace_get_normalized_timestamp(), (uint64_t) arg$index);\nfflush(trace_outfile);"""
+    protected def printFloatEvent(name: String, value: String): String =
+      s"""trace_push_float(events, "$name", (double) $value);"""
 
-    protected val setups = Seq(Function("main", code = """trace_setup();"""))
-    protected val teardowns = Seq(Function("main", code = """trace_teardown();"""))
+    protected def printBoolEvent(name: String, value: String): String =
+      s"""trace_push_bool(events, "$name", (bool) $value);"""
+
+    protected def printEvent(in: InStreamDescription, value: String): String = in.typ.elementType match {
+      case TesslaCore.BuiltInType("Int", Seq()) => printIntEvent(in.name, value)
+      case TesslaCore.BuiltInType("Float", Seq()) => printFloatEvent(in.name, value)
+      case TesslaCore.BuiltInType("Bool", Seq()) => printBoolEvent(in.name, value)
+      case typ =>
+        error(Errors.WrongType("Events[Int] or Events[Float]", in.typ, in.loc))
+        ""
+    }
+
+    protected def printUnitEvent(in: InStreamDescription): String = in.typ.elementType match {
+      case TesslaCore.ObjectType(memberTypes) if memberTypes.isEmpty => printUnitEvent(in.name)
+      case typ =>
+        error(Errors.WrongType("Events[Unit]", in.typ, in.loc))
+        ""
+    }
+
+    protected def printEventValue(in: InStreamDescription): String = printEvent(in, "value")
+
+    protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
+
+    protected val setup = Function("main", code = """trace_init();""")
+    protected val teardown = Function("main", code = """trace_close();""")
     protected val prefix = "#include \"instrumentation.h\"\n"
 
     override protected def translateSpec() = {
@@ -149,39 +189,39 @@ object Observations {
         (_, in) => printUnitEvent(in))
 
       val functionCallArgs = createFunctionObservations("InstFunctionCallArg",
-        (annotation, in) => printIntEventArgument(in, argumentAsInt(annotation, "index")))
+        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
 
       val functionCalled = createFunctionObservations("InstFunctionCalled",
         (_, in) => printUnitEvent(in))
 
       val functionCalledArgs = createFunctionObservations("InstFunctionCalledArg",
-        (annotation, in) => printIntEventArgument(in, argumentAsInt(annotation, "index")))
+        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
 
       val functionReturns = createFunctionObservations("InstFunctionReturn",
-        (_, in) => printUnitEvent(in))
+        (_, in) => printEventValue(in))
 
       val functionReturned = createFunctionObservations("InstFunctionReturned",
-        (_, in) => printUnitEvent(in))
+        (_, in) => printEventValue(in))
 
       val globalAssignments = createPatternObservations("GlobalWrite",
-        (annotation, in) => printIntEventVariable(in))
+        (annotation, in) => printEventValue(in))
 
       val localAssignments = createPatternObservations("LocalWrite",
-        (annotation, in) => printIntEventVariable(in))
+        (annotation, in) => printEventValue(in))
 
       val globalReads = createPatternObservations("GlobalRead",
-        (annotation, in) => printIntEventVariable(in))
+        (annotation, in) => printEventValue(in))
 
       val localReads = createPatternObservations("LocalRead",
-        (annotation, in) => printIntEventVariable(in))
+        (annotation, in) => printEventValue(in))
 
       val observations = Observations(
-        FunctionCalls = mergeFunctions(functionCalls ++ functionCallArgs),
-        FunctionCalled = mergeFunctions((setups ++ functionCalled) ++ functionCalledArgs),
-        FunctionReturns = mergeFunctions(teardowns ++ functionReturns),
-        FunctionReturned = mergeFunctions(functionReturned),
-        Assignments = mergePatterns(globalAssignments ++ localAssignments),
-        VarReads = mergePatterns(globalReads ++ localReads),
+        FunctionCalls = merge(functionCalls ++ functionCallArgs).map(enclose),
+        FunctionCalled = merge(merge(functionCalled ++ functionCalledArgs).map(enclose) :+ setup),
+        FunctionReturns = merge(merge(functionReturns).map(enclose) :+ teardown),
+        FunctionReturned = merge(functionReturned).map(enclose),
+        Assignments = merge(globalAssignments ++ localAssignments).map(enclose),
+        VarReads = merge(globalReads ++ localReads).map(enclose),
         userCbPrefix = prefix)
 
       observations

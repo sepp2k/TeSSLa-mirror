@@ -2,42 +2,42 @@
 in call: Events[Unit]
 
 @InstFunctionCallArg("sub", 0)
-in callX: Events[Int]
+in callX: Events[Float]
 
 @InstFunctionCallArg("sub", 1)
-in callY: Events[Int]
+in callY: Events[Float]
 
 @InstFunctionCalled("add")
 in called: Events[Unit]
 
 @InstFunctionCalledArg("add", 0)
-in calledX: Events[Int]
+in calledX: Events[Float]
 
 @InstFunctionCalledArg("add", 1)
-in calledY: Events[Int]
+in calledY: Events[Float]
 
 @InstFunctionReturn("sub")
-in ret: Events[Int]
+in ret: Events[Float]
 
 @InstFunctionReturned("add")
-in returned: Events[Int]
+in returned: Events[Float]
 
 @GlobalWrite("arr[]")
-in globalWrite: Events[Int]
+in globalWrite: Events[Float]
 
 @GlobalRead("arr[]")
-in globalRead: Events[Int]
+in globalRead: Events[Float]
 
 @GlobalWrite("*&thing[][].foo")
-in thingWrite: Events[Int]
+in thingWrite: Events[Float]
 
 @GlobalRead("*&thing[][].foo")
-in thingRead: Events[Int]
+in thingRead: Events[Float]
 
 @LocalWrite("*foo", "bar")
-in localWrite: Events[Int]
+in localWrite: Events[Float]
 
 @LocalRead("*foo", "bar")
-in localRead: Events[Int]
+in localRead: Events[Float]
 
 out *
