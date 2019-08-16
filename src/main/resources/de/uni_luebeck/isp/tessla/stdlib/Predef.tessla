@@ -48,6 +48,19 @@ module Predef {
       else Some(f(getSome(v1), getSome(v2), getSome(v3), getSome(v4))))
   }
 
+  def slift5[T1, T2, T3, T4, T5, U](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], s5: Events[T5], f: (T1, T2, T3, T4, T5) => U): Events[U] = {
+    def ss1 = merge(s1, last(s1, mergeUnit4(s2, s3, s4, s5)))
+    def ss2 = merge(s2, last(s2, mergeUnit4(s1, s3, s4, s5)))
+    def ss3 = merge(s3, last(s3, mergeUnit4(s1, s2, s4, s5)))
+    def ss4 = merge(s4, last(s4, mergeUnit4(s1, s2, s3, s5)))
+    def ss5 = merge(s5, last(s5, mergeUnit4(s1, s2, s3, s4)))
+    lift5(ss1, ss2, ss3, ss4, ss5, (v1: Option[T1], v2: Option[T2], v3: Option[T3], v4: Option[T4], v5: Option[T5]) =>
+      if isNone(v1) || isNone(v2) || isNone(v3) || isNone(v4) || isNone(v5)
+      then None[U]
+      else Some(f(getSome(v1), getSome(v2), getSome(v3), getSome(v4), getSome(v5))))
+  }
+
+
   def slift1_curried[T, U](f: (T) => U) =
     (s1: Events[T]) => slift1(s1, f)
 
@@ -59,6 +72,9 @@ module Predef {
 
   def slift4_curried[T1, T2, T3, T4, U](f: (T1, T2, T3, T4) => U) =
     (s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4]) => slift4(s1, s2, s3, s4, f)
+
+  def slift5_curried[T1, T2, T3, T4, T5, U](f: (T1, T2, T3, T4, T5) => U) =
+    (s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], s5: Events[T5]) => slift5(s1, s2, s3, s4, s5, f)
 }
 
 #module Predef {
@@ -241,17 +257,27 @@ module Predef {
       })
   }
 
-  def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] =
-    Predef.slift1(stream, f)
+  def lift5[T1, T2, T3, T4, T5, U](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3], stream4: Events[T4], stream5: Events[T5],
+                                f: (Option[T1], Option[T2], Option[T3], Option[T4], Option[T5]) => Option[U]): Events[U] = {
+    def stream1and2 = lift(stream1, stream2, (x: Option[T1], y: Option[T2]) => Some((x, y)))
+    lift4(stream1and2, stream3, stream4, stream5, (v1and2opt: Option[(Option[T1], Option[T2])], v3: Option[T3], v4: Option[T4], v5: Option[T5]) =>
+      if isNone(v1and2opt)
+      then f(None[T1], None[T2], v3, v4, v5)
+      else {
+        def v1and2 = getSome(v1and2opt)
+        f(v1and2._1, v1and2._2, v3, v4, v5)
+      })
+  }
 
-  def slift[T,U,V](a: Events[T], b: Events[U], f: (T,U) => V): Events[V] =
-    Predef.slift2(a, b, f)
+  def slift1 = Predef.slift1
 
-  def slift3[T1, T2, T3, T4](a: Events[T1], b: Events[T2], c: Events[T3], f: (T1, T2, T3) => T4): Events[T4] =
-    Predef.slift3(a, b, c, f)
+  def slift = Predef.slift2
 
-  def slift4[T1, T2, T3, T4, T5](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], f: (T1, T2, T3, T4) => T5): Events[T5] =
-    Predef.slift4(s1, s2, s3, s4, f)
+  def slift3 = Predef.slift3
+
+  def slift4 = Predef.slift4
+
+  def slift5 = Predef.slift5
 
   ## Return the previous event of `a`
   def prev[A](a: Events[A]) = last(a,a)
@@ -441,6 +467,11 @@ module Predef {
   ## Merges streams of different types, resulting in a stream that contains a unit
   ## event whenever any of the input streams produces an event.
   def mergeUnit3[T, U, V](a: Events[T], b: Events[U], c: Events[V]) = merge3(const((), a), const((), b), const((), c))
+
+  ## Merges streams of different types, resulting in a stream that contains a unit
+  ## event whenever any of the input streams produces an event.
+  def mergeUnit4[T, U, V, W](a: Events[T], b: Events[U], c: Events[V], d: Events[W]) =
+    merge4(const((), a), const((), b), const((), c), const((), d))
 
   ## Merges the given event streams. Prioritizing the event streams
   ## from the left to the right in case of simultaneous events.

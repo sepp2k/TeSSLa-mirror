@@ -8,7 +8,7 @@
 
 ### New Limitations
 
-* Auto-lifted functions now have an implementation-/stdlib-defined maximum number of arguments, which is currently 4 in the interpreter. Specifically the number of allowed arguments corresponds to the number of sliftN and sliftN_curried macros in the standard library.
+* Auto-lifted functions now have an implementation-/stdlib-defined maximum number of arguments, which is currently 5 in the interpreter. Specifically the number of allowed arguments corresponds to the number of sliftN and sliftN_curried macros in the standard library.
 
 ### API Changes
 
