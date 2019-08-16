@@ -2,6 +2,10 @@
 
 ## Version 1.1.0 (upcoming)
 
+### Additions and Fixes
+
+* Assigning a liftable function to a variable and using that as a lifted function now works instead of producing an internal error
+
 ### New Limitations
 
 * Auto-lifted functions now have an implementation-/stdlib-defined maximum number of arguments, which is currently 4 in the interpreter. Specifically the number of allowed arguments corresponds to the number of sliftN and sliftN_curried macros in the standard library.
