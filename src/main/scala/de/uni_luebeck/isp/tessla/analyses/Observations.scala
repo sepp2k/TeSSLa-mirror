@@ -102,9 +102,10 @@ object Observations {
     }
 
     protected def encloseInstrumentationCode(code: String): String = {
-      val numEvents = code.split("\n").length + threadIdInStreams.length
+      val lines = code.split("\n").sorted
+      val numEvents = lines.length + threadIdInStreams.length
       s"uint8_t* events = trace_create_events($numEvents);\n" +
-        code + "\n" +
+        lines.map(_ + "\n").mkString("") +
         threadIdInStreams.map{ in => s"""trace_push_thread_id(events, "${in.name}");\n"""}.mkString("") +
         "trace_write(events);"
     }
