@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
 class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     extends TranslationPhase.Translator[Tessla.Specification] with TesslaParser.CanParseConstantString {
   override def translateSpec() = {
-    val statements = spec.flatMap(res => res.tree.statements.asScala.map(translateStatement(_, res.tokens)))
+    val statements = spec.flatMap(res => res.tree.entries.asScala.map(_.statement).map(translateStatement(_, res.tokens)))
     checkForDuplicates(statements.flatMap(Tessla.getId))
     checkForDuplicates(statements.flatMap(getTypeDefID))
     Tessla.Specification(statements)
@@ -164,7 +164,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
 
     override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext) = {
-      val contents = module.contents.asScala.map(visit)
+      val contents = module.contents.asScala.map(_.statement).map(visit)
       Tessla.Module(mkID(module.name), contents, Location.fromNode(module))
     }
   }

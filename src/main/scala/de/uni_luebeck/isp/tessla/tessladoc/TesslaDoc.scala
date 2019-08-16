@@ -84,7 +84,7 @@ object TesslaDoc {
 
   class Extractor(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[Docs] {
     override protected def translateSpec() = {
-      Docs(spec.flatMap(_.tree.statements.asScala.flatMap(translateStatement)))
+      Docs(spec.flatMap(_.tree.entries.asScala.map(_.statement).flatMap(translateStatement)))
     }
 
     def translateStatement(definition: TesslaSyntax.StatementContext): Seq[TesslaDoc] = {

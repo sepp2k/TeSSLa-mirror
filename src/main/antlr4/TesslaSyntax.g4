@@ -4,28 +4,30 @@ options {
     tokenVocab = 'TesslaLexer';
 }
 
-spec: NL* includes+=include* statements+=statement* EOF;
+spec: NL* includes+=include* entries+=entry* EOF;
 
 eos: NL+ | ';' | EOF;
 
 include: 'include' file=stringLit eos;
 
+entry: statement eos;
+
 statement
     : def #Definition
-    | 'def' '@' ID ( '(' parameters+=param (',' parameters+=param)* ')' )? eos #AnnotationDefinition
-    | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* typeBody eos #TypeDefinition
-    | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=statement* NL* '}' NL* #ModuleDefinition
+    | 'def' '@' ID ( '(' parameters+=param (',' parameters+=param)* ')' )? #AnnotationDefinition
+    | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* typeBody #TypeDefinition
+    | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=entry* NL* '}' #ModuleDefinition
     | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement
-    | annotations+=annotation* 'in' NL* ID NL* ':' NL* type eos #In
-    | 'out' NL* expression ('as' NL* ID)? eos #Out
-    | 'print' NL* expression eos #Print
-    | 'out' NL* '*' eos #OutAll
+    | annotations+=annotation* 'in' NL* ID NL* ':' NL* type #In
+    | 'out' NL* expression ('as' NL* ID)? #Out
+    | 'print' NL* expression #Print
+    | 'out' NL* '*' #OutAll
     ;
 
-def: header=definitionHeader (':='|'=') NL* body eos;
+def: header=definitionHeader (':='|'=') NL* body;
 
 body
-    : expression ('where' '{' NL* defs+=def+ '}')? #ExpressionBody
+    : expression ('where' '{' NL* (defs+=def eos)+ '}')? #ExpressionBody
     | '__builtin__' '(' name=ID (',' expression)? ')' #BuiltInBody
     ;
 
@@ -73,7 +75,7 @@ expression
     | (DECINT | HEXINT) timeUnit=ID? #IntLiteral
     | FLOAT #FloatLiteral
     | '(' NL* (elems+=expression (',' NL* elems+=expression)*)? lastComma=','? NL* ')' #TupleExpression
-    | '{' NL* definitions+=def+ RETURN? expression NL* '}' #Block
+    | '{' NL* (definitions+=def eos)+ RETURN? expression NL* '}' #Block
     | ('${' | '{') NL* (members+=memberDefinition (',' NL* members+=memberDefinition)* ','? NL*)? '}' #ObjectLiteral
     | function=expression (
         ('[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']')? '(' NL* arguments+=arg (',' NL* arguments+=arg)* NL* ')'
