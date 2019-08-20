@@ -53,23 +53,19 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   sealed abstract class StreamRef extends Arg {
     def loc: Location
-    def withLoc(loc: Location): StreamRef
     def typ: StreamType
   }
 
   final case class Stream(id: Identifier, typ: StreamType, loc: Location) extends StreamRef {
     override def toString = id.toString
-    def withLoc(loc: Location): Stream = copy(loc = loc)
   }
 
   final case class InputStream(name: String, typ: StreamType, loc: Location) extends StreamRef {
     override def toString = s"input($name)"
-    def withLoc(loc: Location): InputStream = copy(loc = loc)
   }
 
   final case class Nil(typ: StreamType, loc: Location) extends StreamRef {
     override def toString = "nil"
-    def withLoc(loc: Location): Nil = copy(loc = loc)
   }
 
   final case class Default(stream: StreamRef, default: ValueOrError, loc: Location) extends Expression {
@@ -153,6 +149,8 @@ object TesslaCore extends HasUniqueIdentifiers {
   sealed trait ValueOrError extends Arg with ValueArg {
     def forceValue: Value
 
+    def withLoc(loc: Location): ValueOrError
+
     def mapValue(f: Value => ValueOrError): ValueOrError
 
     def typ: ValueType
@@ -163,13 +161,15 @@ object TesslaCore extends HasUniqueIdentifiers {
 
     override def mapValue(f: Value => ValueOrError) = this
 
+    override def withLoc(loc: Location) = this
+
     override def typ = NeverType
   }
 
   sealed abstract class Value extends ValueOrError {
     def loc: Location
 
-    def withLoc(loc: Location): Value
+    override def withLoc(loc: Location): Value
 
     override def forceValue = this
 

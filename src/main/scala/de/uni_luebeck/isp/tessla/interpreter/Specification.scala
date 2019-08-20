@@ -326,8 +326,8 @@ class Specification() {
             }
           }
 
-          self.addListener(listener(false))
-          when.addListener(listener(true))
+          self.addListener(listener(flip = false))
+          when.addListener(listener(flip = true))
         }
       }
     }

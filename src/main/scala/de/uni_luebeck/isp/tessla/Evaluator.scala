@@ -149,7 +149,7 @@ object Evaluator {
         case "getSome" =>
           getOption(arguments(0)).value match {
             case None => throw CannotGetValueOfNone(loc)
-            case Some(value) => value
+            case Some(value) => value.withLoc(loc)
           }
         case "Map_empty" =>
           TesslaCore.TesslaMap(Map(), resultType, loc)
@@ -290,7 +290,7 @@ object Evaluator {
         lazy val innerEnv: Env =  env ++ argEnv ++ c.function.body.map {
           case (id, e) => id -> Lazy(evalExpression(e, innerEnv))
         }
-        evalArg(c.function.result, innerEnv)
+        evalArg(c.function.result, innerEnv).withLoc(loc)
       case _ =>
         throw InternalError("Application of non-function should have been caught by the type checker")
     }
@@ -311,9 +311,9 @@ object Evaluator {
                      env: Env, loc: Location): TesslaCore.ValueOrError = {
     evalArg(cond, env).mapValue {cond =>
       if (getBool(cond)) {
-        evalArg(thenCase.get, env)
+        evalArg(thenCase.get, env).withLoc(loc)
       } else {
-        evalArg(elseCase.get, env)
+        evalArg(elseCase.get, env).withLoc(loc)
       }
     }
   }
@@ -328,7 +328,7 @@ object Evaluator {
     case ma: TesslaCore.MemberAccess =>
       evalArg(ma.obj, env).mapValue {
         case obj: TesslaCore.TesslaObject =>
-          obj.value(ma.member)
+          obj.value(ma.member).withLoc(ma.loc)
         case other =>
           throw InternalError(s"Member access on non-object ($other) should have been caught by type checker", ma.loc)
       }

@@ -248,23 +248,19 @@ object Tessla {
 
   sealed abstract class Type extends Location.HasLoc {
     def loc: Location
-    def withLoc(loc: Location): Type
   }
 
   case class SimpleType(id: Identifier) extends Type {
     def loc = id.loc
     override def toString = id.name
-    def withLoc(loc: Location): SimpleType = SimpleType(id.copy(loc = loc))
   }
 
   case class TypeApplication(id: Identifier, args: Seq[Type], loc: Location) extends Type {
     override def toString = s"$id[${args.mkString(", ")}]"
-    def withLoc(loc: Location): TypeApplication = copy(loc = loc)
   }
 
   case class FunctionType(parameterTypes: Seq[Type], returnType: Type, loc: Location) extends Type {
     override def toString = s"(${parameterTypes.mkString(", ")}) => $returnType]"
-    def withLoc(loc: Location): FunctionType = copy(loc = loc)
   }
 
   case class ObjectType(memberTypes: Map[Identifier, Type], isOpen: Boolean, loc: Location) extends Type {
@@ -275,7 +271,6 @@ object Tessla {
       }
       members.mkString("{", ", ", "}")
     }
-    def withLoc(loc: Location): ObjectType = copy(loc = loc)
   }
 
   val unaryOperators = Map(
