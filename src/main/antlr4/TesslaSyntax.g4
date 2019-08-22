@@ -27,7 +27,7 @@ statement
 def: header=definitionHeader (':='|'=') NL* body;
 
 body
-    : expression ('where' '{' NL* (defs+=def eos)+ '}')? #ExpressionBody
+    : expression ('where' '{' NL* (defs+=def eos)* '}')? #ExpressionBody
     | '__builtin__' '(' name=ID (',' expression)? ')' #BuiltInBody
     ;
 
