@@ -46,7 +46,7 @@ object Errors {
   }
 
   case class WrongType(expected: String, found: TesslaCore.Type, loc: Location) extends TesslaError {
-    override def message = s"Type mismatch: Expected $expected, found $found"
+    override def message = s"Type mismatch: Expected $expected, but found $found"
   }
 
   case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
