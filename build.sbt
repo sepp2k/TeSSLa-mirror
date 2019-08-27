@@ -1,7 +1,5 @@
 val nexus = "https://sourcecode.isp.uni-luebeck.de/nexus/"
-val privateSnapshots = "ISP Private Snapshots" at nexus + "content/repositories/private_snapshots"
 val snapshots = "ISP Snapshots" at nexus + "content/repositories/snapshots"
-val privateReleases = "ISP Private Releases" at nexus + "content/repositories/private_releases"
 val releases = "ISP Releases" at nexus + "content/repositories/releases"
 val playResolver = "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
 val validatorResolver = "emueller-bintray" at "http://dl.bintray.com/emueller/maven"
@@ -22,7 +20,6 @@ scalaVersion := "2.12.7"
 
 resolvers ++= Seq(
   releases, snapshots,
-  privateSnapshots, privateReleases,
   playResolver, validatorResolver,
   efficiosSnapshots, efficiosReleases
 )

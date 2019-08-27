@@ -5,13 +5,13 @@ import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TesslaCore.CurriedPrimitiveOperator
 import de.uni_luebeck.isp.tessla.util._
 
-class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, TesslaCore.Specification] {
+class ConstantEvaluator(baseTimeUnit: Option[TimeUnit], evaluator: Evaluator) extends TranslationPhase[TypedTessla.TypedSpecification, TesslaCore.Specification] {
   override def translate(spec: TypedTessla.TypedSpecification) = {
-    new ConstantEvaluatorWorker(spec, baseTimeUnit).translate()
+    new ConstantEvaluatorWorker(spec, baseTimeUnit, evaluator).translate()
   }
 }
 
-class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit])
+class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit], evaluator: Evaluator)
   extends TesslaCore.IdentifierFactory with TranslationPhase.Translator[TesslaCore.Specification] {
   type Env = Map[TypedTessla.Identifier, EnvEntry]
   type TypeEnv = Map[TypedTessla.Identifier, TesslaCore.ValueType]
@@ -308,7 +308,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
                     case None =>
                       val resultType = translateValueType(typ, typeEnv)
                       val argList = (0 until args.size).map(i => getValue(argAt(i)))
-                      val value = Evaluator.evalPrimitiveOperator(op, argList, resultType, call.loc)
+                      val value = evaluator.evalPrimitiveOperator(op, argList, resultType, call.loc)
                       ValueEntry(value)
                     case Some(refImpl) =>
                       val me = translateVar(env, refImpl, call.macroLoc, stack) match {

@@ -1,3 +1,3 @@
 module Tessla {
-  def version: String = "1.0.4-development"
+  def version: String = "1.0.5-custombuiltins-SNAPSHOT"
 }

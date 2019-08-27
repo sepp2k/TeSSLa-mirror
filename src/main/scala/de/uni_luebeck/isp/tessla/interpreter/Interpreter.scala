@@ -6,7 +6,7 @@ import de.uni_luebeck.isp.tessla._
 
 import scala.collection.mutable
 
-class Interpreter(val spec: TesslaCore.Specification) extends Specification {
+class Interpreter(val spec: TesslaCore.Specification, val evaluator: Evaluator) extends Specification {
   val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.inStreams.map {inStream =>
     inStream.name -> (new Input, inStream.typ.elementType)
   }.toMap
@@ -65,7 +65,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
         val args = arguments.zip(argStreams).map {
           case (arg, stream) => arg.mapValue(_.withLoc(stream.loc))
         }
-        Some(Evaluator.evalPrimitiveOperator(op, args, sd.typ.elementType, sd.loc))
+        Some(evaluator.evalPrimitiveOperator(op, args, sd.typ.elementType, sd.loc))
       }
     case TesslaCore.Lift(f, argStreams, loc) =>
       if (argStreams.isEmpty) {
@@ -77,7 +77,7 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
           case (None, stream) => TesslaCore.TesslaOption(None, sd.typ.elementType, stream.loc)
         }
         val closure = TesslaCore.Closure(f, Map(), loc)
-        Evaluator.evalApplication(closure, args, sd.typ.elementType, loc) match {
+        evaluator.evalApplication(closure, args, sd.typ.elementType, loc) match {
           case to: TesslaCore.TesslaOption => to.value
           case err: TesslaCore.Error => Some(err)
           case other =>
@@ -107,8 +107,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
-  def run(spec: TesslaCore.Specification, input: Trace, stopOn: Option[String]): Trace = {
-    val interpreter = new Interpreter(spec)
+  def run(spec: TesslaCore.Specification, input: Trace, stopOn: Option[String], evaluator: Evaluator): Trace = {
+    val interpreter = new Interpreter(spec, evaluator)
     new Iterator[Trace.Event] {
       private var nextEvents = new mutable.Queue[Trace.Event]
       private var stopped = false

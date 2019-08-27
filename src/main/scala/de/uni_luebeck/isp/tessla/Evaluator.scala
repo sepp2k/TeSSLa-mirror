@@ -3,11 +3,13 @@ package de.uni_luebeck.isp.tessla
 import java.util.Locale
 
 import de.uni_luebeck.isp.tessla.Errors._
+import de.uni_luebeck.isp.tessla.Evaluator.{Env, evalArg, evalIfThenElse, evalToString, getBool, getCtf, getFloat, getFormatArg, getInt, getList, getMap, getOption, getSet, getString}
 import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 import util.mapValues
 
 object Evaluator {
+
   def getInt(voe: TesslaCore.ValueOrError): BigInt = voe.forceValue match {
     case intLit: TesslaCore.IntValue => intLit.value
     case v => throw InternalError(s"Type error should've been caught by type checker: Expected: Int, got: $v", v.loc)
@@ -60,10 +62,87 @@ object Evaluator {
     }
   }
 
+  def getFormatArg(arg: TesslaCore.ValueOrError): AnyRef = arg.forceValue match {
+    case i: TesslaCore.IntValue => i.value.bigInteger
+    case p: TesslaCore.PrimitiveValue => p.value.asInstanceOf[AnyRef]
+    case other => other
+  }
+
+  // The laziness here (and by extension in TesslaCore.Closure) is necessary, so that the
+  // recursive definition of the inner environment when evaluating a closure application
+  // does not chase its own tail into an infinite recursion. This laziness can't be contained
+  // locally as this will resolve the laziness too soon and still run into the same problem -
+  // at least in the case of nested functions.
+  type Env = Map[TesslaCore.Identifier, Lazy[TesslaCore.ValueOrError]]
+
+  def evalArg(arg: TesslaCore.ValueArg, env: Env): TesslaCore.ValueOrError = arg match {
+    case value: TesslaCore.ValueOrError =>
+      value
+    case obj: TesslaCore.ObjectCreation =>
+      TesslaCore.TesslaObject(mapValues(obj.members)(evalArg(_, env)), obj.loc)
+    case ref: TesslaCore.ValueExpressionRef =>
+      env(ref.id).get
+  }
+
+  def evalIfThenElse(cond: TesslaCore.ValueArg,
+    thenCase: Lazy[TesslaCore.ValueArg],
+    elseCase: Lazy[TesslaCore.ValueArg],
+    env: Env, loc: Location
+  ): TesslaCore.ValueOrError = {
+    evalArg(cond, env).mapValue { cond =>
+      if (getBool(cond)) {
+        evalArg(thenCase.get, env)
+      } else {
+        evalArg(elseCase.get, env)
+      }
+    }
+  }
+}
+
+class Evaluator(customBuiltIns: Map[String, Seq[TesslaCore.ValueOrError] => TesslaCore.ValueOrError]) {
+
+  def evalExpression(desc: TesslaCore.ValueExpressionDescription, env: Env): TesslaCore.ValueOrError = desc.exp match {
+    case f: TesslaCore.Function =>
+      TesslaCore.Closure(f, env, f.loc)
+    case ite: TesslaCore.IfThenElse =>
+      evalIfThenElse(ite.cond, ite.thenCase, ite.elseCase, env, ite.loc)
+    case a: TesslaCore.Application =>
+      evalApplication(a.f.get, a.args.map(arg => evalArg(arg, env)), desc.typ, a.loc, env)
+    case ma: TesslaCore.MemberAccess =>
+      evalArg(ma.obj, env).mapValue {
+        case obj: TesslaCore.TesslaObject =>
+          obj.value(ma.member)
+        case other =>
+          throw InternalError(s"Member access on non-object ($other) should have been caught by type checker", ma.loc)
+      }
+  }
+
+  def evalApplication(f: TesslaCore.ValueArg,
+    args: Seq[TesslaCore.ValueOrError],
+    resultType: TesslaCore.ValueType,
+    loc: Location,
+    env: Env = Map()
+  ): TesslaCore.ValueOrError = {
+    evalArg(f, env) match {
+      case b: TesslaCore.BuiltInOperator =>
+        evalPrimitiveOperator(b.value, args, resultType, loc)
+      case c: TesslaCore.Closure =>
+        val env = c.capturedEnvironment
+        val argEnv = c.function.parameters.zip(args.map(arg => Lazy(arg))).toMap
+        lazy val innerEnv: Env = env ++ argEnv ++ c.function.body.map {
+          case (id, e) => id -> Lazy(evalExpression(e, innerEnv))
+        }
+        evalArg(c.function.result, innerEnv)
+      case _ =>
+        throw InternalError("Application of non-function should have been caught by the type checker")
+    }
+  }
+
   def evalPrimitiveOperator(op: TesslaCore.CurriedPrimitiveOperator,
-                            arguments: Seq[TesslaCore.ValueOrError],
-                            resultType: TesslaCore.ValueType,
-                            loc: Location): TesslaCore.ValueOrError =
+    arguments: Seq[TesslaCore.ValueOrError],
+    resultType: TesslaCore.ValueType,
+    loc: Location
+  ): TesslaCore.ValueOrError =
     if (op.args.isEmpty) {
       evalPrimitiveOperator(op.name, arguments, resultType, loc)
     } else {
@@ -79,9 +158,10 @@ object Evaluator {
     }
 
   def evalPrimitiveOperator(name: String,
-                            arguments: Seq[TesslaCore.ValueOrError],
-                            resultType: TesslaCore.ValueType,
-                            loc: Location): TesslaCore.ValueOrError = {
+    arguments: Seq[TesslaCore.ValueOrError],
+    resultType: TesslaCore.ValueType,
+    loc: Location
+  ): TesslaCore.ValueOrError = {
     def binIntOp(op: (BigInt, BigInt) => BigInt) = {
       TesslaCore.IntValue(op(getInt(arguments(0)), getInt(arguments(1))), loc)
     }
@@ -273,82 +353,15 @@ object Evaluator {
           val key = getString(arguments(1))
           TesslaCore.StringValue(Ctf.getString(composite, key), loc)
         case other =>
-          throw InternalError(s"Unknown built-in in constant folder: $other", loc)
+          customBuiltIns.get(other) match {
+            case Some(f) => f(arguments)
+            case None => throw InternalError(s"Unknown built-in in constant folder: $other", loc)
+          }
       }
     } catch {
       case e: TesslaError =>
         TesslaCore.Error(e)
     }
   }
-
-  def getFormatArg(arg: TesslaCore.ValueOrError): AnyRef = arg.forceValue match {
-    case i: TesslaCore.IntValue => i.value.bigInteger
-    case p: TesslaCore.PrimitiveValue => p.value.asInstanceOf[AnyRef]
-    case other => other
-  }
-
-  // The laziness here (and by extension in TesslaCore.Closure) is necessary, so that the
-  // recursive definition of the inner environment when evaluating a closure application
-  // does not chase its own tail into an infinite recursion. This laziness can't be contained
-  // locally as this will resolve the laziness too soon and still run into the same problem -
-  // at least in the case of nested functions.
-  type Env = Map[TesslaCore.Identifier, Lazy[TesslaCore.ValueOrError]]
-
-  def evalApplication(f: TesslaCore.ValueArg,
-                      args: Seq[TesslaCore.ValueOrError],
-                      resultType: TesslaCore.ValueType,
-                      loc: Location,
-                      env: Env = Map()): TesslaCore.ValueOrError = {
-    evalArg(f, env) match {
-      case b: TesslaCore.BuiltInOperator =>
-        evalPrimitiveOperator(b.value, args, resultType, loc)
-      case c: TesslaCore.Closure =>
-        val env = c.capturedEnvironment
-        val argEnv = c.function.parameters.zip(args.map(arg => Lazy(arg))).toMap
-        lazy val innerEnv: Env =  env ++ argEnv ++ c.function.body.map {
-          case (id, e) => id -> Lazy(evalExpression(e, innerEnv))
-        }
-        evalArg(c.function.result, innerEnv)
-      case _ =>
-        throw InternalError("Application of non-function should have been caught by the type checker")
-    }
-  }
-
-  def evalArg(arg: TesslaCore.ValueArg, env: Env): TesslaCore.ValueOrError = arg match {
-    case value: TesslaCore.ValueOrError =>
-      value
-    case obj: TesslaCore.ObjectCreation =>
-      TesslaCore.TesslaObject(mapValues(obj.members)(evalArg(_, env)), obj.loc)
-    case ref: TesslaCore.ValueExpressionRef =>
-      env(ref.id).get
-  }
-
-  def evalIfThenElse(cond: TesslaCore.ValueArg,
-                     thenCase: Lazy[TesslaCore.ValueArg],
-                     elseCase: Lazy[TesslaCore.ValueArg],
-                     env: Env, loc: Location): TesslaCore.ValueOrError = {
-    evalArg(cond, env).mapValue {cond =>
-      if (getBool(cond)) {
-        evalArg(thenCase.get, env)
-      } else {
-        evalArg(elseCase.get, env)
-      }
-    }
-  }
-
-  def evalExpression(desc: TesslaCore.ValueExpressionDescription, env: Env): TesslaCore.ValueOrError = desc.exp match {
-    case f: TesslaCore.Function =>
-      TesslaCore.Closure(f, env, f.loc)
-    case ite: TesslaCore.IfThenElse =>
-      evalIfThenElse(ite.cond, ite.thenCase, ite.elseCase, env, ite.loc)
-    case a: TesslaCore.Application =>
-      evalApplication(a.f.get, a.args.map(arg => evalArg(arg, env)), desc.typ, a.loc, env)
-    case ma: TesslaCore.MemberAccess =>
-      evalArg(ma.obj, env).mapValue {
-        case obj: TesslaCore.TesslaObject =>
-          obj.value(ma.member)
-        case other =>
-          throw InternalError(s"Member access on non-object ($other) should have been caught by type checker", ma.loc)
-      }
-  }
 }
+

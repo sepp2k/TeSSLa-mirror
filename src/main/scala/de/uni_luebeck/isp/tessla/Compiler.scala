@@ -1,8 +1,10 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Compiler.Options
 import org.antlr.v4.runtime.CharStream
 
 object Compiler {
+
   case class Options(
     timeUnitString: Option[String],
     includeResolver: String => Option[CharStream],
@@ -13,15 +15,19 @@ object Compiler {
     lazy val timeUnit = timeUnitString.map(TimeUnit.fromString(_, Location.option("timeunit")))
   }
 
+}
+
+class Compiler(evaluator: Evaluator) {
+
   def instantiatePipeline(options: Options): TranslationPhase[CharStream, TesslaCore.Specification] = {
     new TesslaParser.WithIncludes(options.includeResolver)
       .andThen(new StdlibIncluder(options.stdlibIncludeResolver, options.stdlibPath))
       .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
-      .andThen(new ConstantEvaluator(options.timeUnit))
+      .andThen(new ConstantEvaluator(options.timeUnit, evaluator))
       .andThen(CycleDetection)
-      .andThen(new EnableIf[TesslaCore.Specification](options.currySignalLift, CurrySignalLift))
+      .andThen(new EnableIf[TesslaCore.Specification](options.currySignalLift, new CurrySignalLift(evaluator)))
       //.andThen(RemoveUnusedDefinitions)
   }
 

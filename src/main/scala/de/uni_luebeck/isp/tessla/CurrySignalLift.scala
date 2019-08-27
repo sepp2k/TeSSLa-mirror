@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.Translator[TesslaCore.Specification] {
+class CurrySignalLiftWorker(spec: TesslaCore.Specification, evaluator: Evaluator) extends TranslationPhase.Translator[TesslaCore.Specification] {
   override def translateSpec(): TesslaCore.Specification = {
     val streams = spec.streams.map { stream => stream.id -> stream }.toMap
 
@@ -15,7 +15,7 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
               None
             } else {
               val vs = values.map(_.get)
-              Some(Evaluator.evalPrimitiveOperator(op, vs, streams(s.id).typ.elementType, loc))
+              Some(evaluator.evalPrimitiveOperator(op, vs, streams(s.id).typ.elementType, loc))
             }
           case _ => None
         }
@@ -33,7 +33,7 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
           }
           val newOp = TesslaCore.CurriedPrimitiveOperator(op.name, newCurry)
           if (newArgs.isEmpty) {
-            val value = Evaluator.evalPrimitiveOperator(newOp, Seq(), sd.typ.elementType, loc)
+            val value = evaluator.evalPrimitiveOperator(newOp, Seq(), sd.typ.elementType, loc)
             TesslaCore.Default(TesslaCore.Nil(sd.typ, loc), value, loc)
           } else {
             TesslaCore.SignalLift(newOp, newArgs, loc)
@@ -47,8 +47,8 @@ class CurrySignalLift(spec: TesslaCore.Specification) extends TranslationPhase.T
   }
 }
 
-object CurrySignalLift extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
+class CurrySignalLift(evaluator: Evaluator) extends TranslationPhase[TesslaCore.Specification, TesslaCore.Specification] {
   override def translate(spec: TesslaCore.Specification) = {
-    new CurrySignalLift(spec).translate()
+    new CurrySignalLiftWorker(spec, evaluator).translate()
   }
 }

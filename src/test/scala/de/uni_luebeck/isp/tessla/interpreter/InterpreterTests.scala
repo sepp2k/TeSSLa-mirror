@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import java.nio.charset.StandardCharsets
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{Compiler, Evaluator, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import org.scalatest.FunSuite
 import play.api.libs.json._
@@ -149,20 +149,22 @@ class InterpreterTests extends FunSuite {
           currySignalLift = true
         )
         val src = testStream(testCase.spec)
+        val evaluator = new Evaluator(Map())
+        val compiler = new Compiler(evaluator)
         testCase.expectedObservations.foreach { observationFile =>
           val expectedObservation = JsonParser(Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$observationFile")).mkString).convertTo[Observations]
-          handleResult(Compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedErrors, testCase.expectedWarnings) { actualObservation =>
+          handleResult(compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedErrors, testCase.expectedWarnings) { actualObservation =>
             assertEquals(actualObservation, expectedObservation, "Observation")
           }
         }
         testCase.expectedObservationErrors.foreach { _ =>
-          handleResult(Compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedObservationErrors, testCase.expectedWarnings)(_ => ())
+          handleResult(compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedObservationErrors, testCase.expectedWarnings)(_ => ())
         }
         testCase.input match {
           case Some(input) =>
             try {
-              val trace = Trace.fromSource(testSource(input), s"$path/$input", testCase.abortAt.map(BigInt(_)))
-              val result = Compiler.compile(src, options).map(spec => Interpreter.run(spec, trace, None))
+              val trace = new Trace(evaluator).fromSource(testSource(input), s"$path/$input", testCase.abortAt.map(BigInt(_)))
+              val result = compiler.compile(src, options).map(spec => Interpreter.run(spec, trace, None, evaluator))
 
               handleResult(result, testCase.expectedErrors, testCase.expectedWarnings) { output =>
                 val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
@@ -182,7 +184,7 @@ class InterpreterTests extends FunSuite {
                 }
             }
           case None =>
-            handleResult(Compiler.compile(src, options), testCase.expectedErrors, testCase.expectedWarnings)(_ => ())
+            handleResult(compiler.compile(src, options), testCase.expectedErrors, testCase.expectedWarnings)(_ => ())
         }
       }
   }
