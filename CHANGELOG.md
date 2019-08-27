@@ -1,6 +1,12 @@
 # Changelog
 
-## Version 1.0.4 (upcoming)
+## Version 1.0.5 (upcoming)
+
+### Additions and Fixes
+
+* ...
+
+## Version 1.0.4
 
 ### Additions and Fixes
 
