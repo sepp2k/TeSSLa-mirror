@@ -139,6 +139,10 @@ object Errors {
     override def message = "Division by zero"
   }
 
+  case class FloatConversionError(value: Double, loc: Location) extends TesslaError {
+    override def message = s"The floating point value $value cannot be converted to an integer"
+  }
+
   case class ParserError(m: String, loc: Location) extends TesslaError {
     override def message = s"Invalid syntax: $m"
   }
