@@ -102,11 +102,11 @@ object Observations {
     }
 
     protected def encloseInstrumentationCode(code: String): String = {
-      val numEvents = code.split("\n").length + threadIdInStreams.length
-      s"uint8_t* events = trace_create_events($numEvents);\n" +
-        code + "\n" +
-        threadIdInStreams.map{ in => s"""trace_push_thread_id(events, "${in.name}");\n"""}.mkString("") +
-        "trace_write(events);"
+      val lines = code.split("\n") ++
+        threadIdInStreams.map{ in => s"""trace_push_thread_id(events, "${in.name}");"""}
+      s"uint8_t* events = trace_create_events(${lines.length});\n" +
+        lines.sorted.mkString("\n") +
+        "\ntrace_write(events);"
     }
 
     private def merge(functions: Seq[Function]): Seq[Function] =
@@ -119,11 +119,15 @@ object Observations {
         patterns.reduce((a,b) => a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr))))
       }.toSeq
 
-    private def enclose(function: Function): Function =
-      function.copy(code = encloseInstrumentationCode(function.code))
+    private def enclose(functions: Seq[Function]): Seq[Function] =
+      merge(functions).map{ function =>
+        function.copy(code = encloseInstrumentationCode(function.code))
+      }
 
-    private def enclose(pattern: Pattern): Pattern =
-      pattern.copy(code = pattern.code.map(encloseInstrumentationCode))
+    private def enclose(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
+      merge(patterns).map { pattern =>
+        pattern.copy(code = pattern.code.map(encloseInstrumentationCode))
+      }
 
     private def createFunctionObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Function] =
       spec.inStreams.flatMap { in =>
@@ -148,30 +152,22 @@ object Observations {
         }
       }
 
-    protected def printUnitEvent(name: String): String =
-      s"""trace_push_unit(events, "$name");"""
-
-    protected def printIntEvent(name: String, value: String): String =
-      s"""trace_push_int(events, "$name", (int64_t) $value);"""
-
-    protected def printFloatEvent(name: String, value: String): String =
-      s"""trace_push_float(events, "$name", (double) $value);"""
-
-    protected def printBoolEvent(name: String, value: String): String =
-      s"""trace_push_bool(events, "$name", (bool) $value);"""
-
     protected def printEvent(in: InStreamDescription, value: String): String = in.typ.elementType match {
-      case TesslaCore.BuiltInType("Int", Seq()) => printIntEvent(in.name, value)
-      case TesslaCore.BuiltInType("Float", Seq()) => printFloatEvent(in.name, value)
-      case TesslaCore.BuiltInType("Bool", Seq()) => printBoolEvent(in.name, value)
-      case typ =>
-        error(Errors.WrongType("Events[Int] or Events[Float]", in.typ, in.loc))
+      case TesslaCore.BuiltInType("Int", Seq()) =>
+        s"""trace_push_int(events, "${in.name}", (int64_t) $value);"""
+      case TesslaCore.BuiltInType("Float", Seq()) =>
+        s"""trace_push_float(events, "${in.name}", (double) $value);"""
+      case TesslaCore.BuiltInType("Bool", Seq()) =>
+        s"""trace_push_bool(events, "${in.name}", (bool) $value);"""
+      case _ =>
+        error(Errors.WrongType("Events[Int], Events[Float] or Events[Bool]", in.typ, in.loc))
         ""
     }
 
     protected def printUnitEvent(in: InStreamDescription): String = in.typ.elementType match {
-      case TesslaCore.ObjectType(memberTypes) if memberTypes.isEmpty => printUnitEvent(in.name)
-      case typ =>
+      case TesslaCore.ObjectType(memberTypes) if memberTypes.isEmpty =>
+        s"""trace_push_unit(events, "${in.name}");"""
+      case _ =>
         error(Errors.WrongType("Events[Unit]", in.typ, in.loc))
         ""
     }
@@ -180,8 +176,8 @@ object Observations {
 
     protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
 
-    protected val setup = Function("main", code = """trace_init();""")
-    protected val teardown = Function("main", code = """trace_close();""")
+    protected val setups = Seq(Function("main", code = """trace_init();"""))
+    protected val teardowns = Seq(Function("main", code = """trace_close();"""))
     protected val prefix = "#include \"instrumentation.h\"\n"
 
     override protected def translateSpec() = {
@@ -216,12 +212,12 @@ object Observations {
         (annotation, in) => printEventValue(in))
 
       val observations = Observations(
-        FunctionCalls = merge(functionCalls ++ functionCallArgs).map(enclose),
-        FunctionCalled = merge(merge(functionCalled ++ functionCalledArgs).map(enclose) :+ setup),
-        FunctionReturns = merge(merge(functionReturns).map(enclose) :+ teardown),
-        FunctionReturned = merge(functionReturned).map(enclose),
-        Assignments = merge(globalAssignments ++ localAssignments).map(enclose),
-        VarReads = merge(globalReads ++ localReads).map(enclose),
+        FunctionCalls = enclose(functionCalls ++ functionCallArgs),
+        FunctionCalled = merge(enclose(functionCalled ++ functionCalledArgs) ++ setups),
+        FunctionReturns = merge(enclose(functionReturns) ++ teardowns),
+        FunctionReturned = enclose(functionReturned),
+        Assignments = enclose(globalAssignments ++ localAssignments),
+        VarReads = enclose(globalReads ++ localReads),
         userCbPrefix = prefix)
 
       observations

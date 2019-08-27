@@ -15,7 +15,7 @@ object Evaluator {
 
   def getFloat(voe: TesslaCore.ValueOrError): Double = voe.forceValue match {
     case floatLit: TesslaCore.FloatValue => floatLit.value
-    case v => throw InternalError(s"Type error should've been caught by type checker: Expected: Int, got: $v", v.loc)
+    case v => throw InternalError(s"Type error should've been caught by type checker: Expected: Float, got: $v", v.loc)
   }
 
   def getBool(voe: TesslaCore.ValueOrError): Boolean = voe.forceValue match {
@@ -157,7 +157,13 @@ object Evaluator {
         case "intToFloat" =>
           TesslaCore.FloatValue(getInt(arguments(0)).toDouble, loc)
         case "floatToInt" =>
-          TesslaCore.IntValue(BigDecimal(getFloat(arguments(0))).toBigInt, loc)
+          val value = getFloat(arguments(0))
+          try {
+            TesslaCore.IntValue(BigDecimal(value).toBigInt, loc)
+          } catch {
+            case _: NumberFormatException =>
+              TesslaCore.Error(FloatConversionError(value, loc))
+          }
         case "None" =>
           TesslaCore.TesslaOption(None, resultType, loc)
         case "Some" =>

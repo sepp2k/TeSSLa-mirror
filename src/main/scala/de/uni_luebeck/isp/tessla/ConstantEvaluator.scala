@@ -443,10 +443,8 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
 
   def getArg(result: TranslationResult, loc: Location): TesslaCore.Arg = result match {
     case _: StreamEntry | _: NilEntry | _: InputStreamEntry => getStream(result, loc)
-    case _: ValueEntry | _: MacroEntry => getValue(result)
-    case other => throw InternalError(s"Wrong type of environment entry: Expected stream or value entry, found: $other")
+    case other => getValue(other)
   }
-
 
   def getStreamType(result: TranslationResult): TesslaCore.StreamType = result match {
     case s: StreamEntry => s.typ
