@@ -4,6 +4,8 @@
 
 ### Additions and Fixes
 
+* Instrumentation code lines are now sorted to create a more stable output.
+* Fix an error which prevented calling builtins on unit values.
 * Converting NaN or infinity to `Int` now produces a proper TeSSLa error instead of aborting with an exception
 
 ## Version 1.0.3
