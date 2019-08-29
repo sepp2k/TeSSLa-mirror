@@ -385,13 +385,13 @@ module Predef {
     filterConst((), !condition && prev(condition))
 
   ## Produce the current or last value on `stream` for every `trigger`
-  def on[A,B](trigger: Events[A], stream: Events[B]) =
-    lift(stream, last(stream, trigger), (current: Option[B], previous: Option[B]) =>
-      if isNone(current)
-      then previous
-      else current)
-     # Alternatively:
-     # filter(first(stream, trigger), time(trigger) >= time(stream))
+  def on[A,B](trigger: Events[A], stream: Events[B]) = {
+    def mergedStream = merge(stream, last(stream, trigger))
+    lift(trigger, mergedStream, (trig: Option[A], str: Option[B]) =>
+      if isNone(trig) then None[B] else str)
+    # Alternatively:
+    # filter(first(stream, trigger), time(trigger) >= time(stream))
+  }
 
   ## Compute the average value of all events on `x`. For every input
   ## event on `x` an output event is produced whose value is the average
