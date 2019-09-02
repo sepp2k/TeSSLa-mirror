@@ -1,8 +1,14 @@
 # Changelog
 
-## Version 1.0.5 (upcoming)
+## Version 1.0.6 (upcoming)
 
-## Breaking Changes
+### Additions and Fixes
+
+* ...
+
+## Version 1.0.5
+
+### Breaking Changes
 
 * Rename `eventCount` to `resetCount` in the standard library.
 
