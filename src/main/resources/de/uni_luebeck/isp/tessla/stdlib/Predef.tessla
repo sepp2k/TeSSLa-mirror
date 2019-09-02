@@ -282,7 +282,7 @@ module Predef {
   ## Count the number of events on `x`. Provides for
   ## every input event an output event whose value is
   ## the number of events seen so far.
-  ## See `eventCount` for a counting macro with an
+  ## See `resetCount` for a counting macro with an
   ## external reset.
   def count[T](x: Events[T]) = fold(x, 0, (x: Int, _: T) => x+1)
 
@@ -340,7 +340,7 @@ module Predef {
 
   ## Count the number of events on `events`. Reset the output to 0
   ## on every event on `reset`.
-  def eventCount[A,B](events: Events[A], reset: Events[B]) = count where {
+  def resetCount[A,B](events: Events[A], reset: Events[B]) = count where {
     def count: Events[Int] = default(
       # `reset` contains the latest event
       if default(time(reset) > time(events), false)
@@ -364,13 +364,13 @@ module Predef {
         filter(e, last(time(burstStarts), e) < on(e, time(since)) ||
           time(e) - last(time(burstStarts), e) >= burstLength + waitingPeriod),
         e)
-    eventCount(e, reset = burstStarts) <= burstAmount &&
+    resetCount(e, reset = burstStarts) <= burstAmount &&
       default(time(e) < time(burstStarts) + burstLength, true)
   }
 
   ## Check if no event happened on `on` after last event on `since`.
   def noEvent[A,B](on: Events[A], since: Events[B]) =
-    eventCount(on, reset = since) == 0
+    resetCount(on, reset = since) == 0
 
   ## Produce an event with the given value every time that the condition is met
   def filterConst[T](value: T, condition: Events[Bool]): Events[T] =

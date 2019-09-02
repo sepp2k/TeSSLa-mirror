@@ -2,6 +2,10 @@
 
 ## Version 1.0.5 (upcoming)
 
+## Breaking Changes
+
+* Rename `eventCount` to `resetCount` in the standard library.
+
 ### Additions and Fixes
 
 * Fix definition of `on` in the standard library
