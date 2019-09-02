@@ -197,6 +197,14 @@ object Evaluator {
         case "Map_size" =>
           val map = getMap(arguments(0))
           TesslaCore.IntValue(map.value.size, loc)
+        case "Map_keys" =>
+          val map = getMap(arguments(0))
+          TesslaCore.TesslaList(map.value.keys.toIndexedSeq, resultType, loc)
+        case "Map_fold" =>
+          val map = getMap(arguments(0)).value
+          val z = arguments(1)
+          val f = arguments(2)
+          map.foldLeft(z){case (acc, (key, value)) => evalApplication(f, Seq(acc, key, value), resultType, loc)}
         case "Set_empty" =>
           TesslaCore.TesslaSet(Set(), resultType, loc)
         case "Set_add" =>

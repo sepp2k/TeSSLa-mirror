@@ -1,0 +1,5 @@
+{
+  "input": "map_fold.input",
+  "expectedOutput": "map_fold.output",
+  "spec": "map_fold.tessla"
+}
