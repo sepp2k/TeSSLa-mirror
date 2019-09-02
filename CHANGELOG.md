@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 1.0.5
+
+### Breaking Changes
+
+* Rename `eventCount` to `resetCount` in the standard library.
+
+### Additions and Fixes
+
+* Fix definition of `on` in the standard library
+* Add `Map_keys` and `Map_fold` to the standard library.
+
 ## Version 1.0.4
 
 ### Additions and Fixes

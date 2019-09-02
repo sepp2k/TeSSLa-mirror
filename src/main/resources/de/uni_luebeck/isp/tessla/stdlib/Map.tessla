@@ -19,6 +19,12 @@
   def Map_size[K, V](map: Map[K, V]): Int = __builtin__(Map_size)
 
   @liftable
+  def Map_keys[K, V](map: Map[K, V]): List[K] = __builtin__(Map_keys)
+
+  @liftable
+  def Map_fold[K, V, R](map: Map[K, V], start: R, f: (R, K, V) => R): R = __builtin__(Map_fold)
+
+  @liftable
   def Map_getOrElse[K,V](map: Map[K, V], key: K, default: V): V =
     if Map_contains(map, key)
     then Map_get(map, key)

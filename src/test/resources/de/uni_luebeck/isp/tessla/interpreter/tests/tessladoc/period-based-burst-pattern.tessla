@@ -1,7 +1,7 @@
 in x: Events[Unit]
 def p := period(5)
 out p
-def c := eventCount(x, p)
+def c := resetCount(x, p)
 out c
 def e := c > 2
 out e
