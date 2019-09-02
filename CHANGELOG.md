@@ -4,7 +4,7 @@
 
 ### Additions and Fixes
 
-* ...
+* Fix definition of `on` in the standard library
 
 ## Version 1.0.4
 
