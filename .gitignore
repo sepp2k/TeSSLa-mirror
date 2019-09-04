@@ -1,0 +1,11 @@
+.cache
+.classpath
+.project
+.settings/
+target/
+.history
+.idea
+*~
+main.aux
+*.synctex.gz
+*.log
