@@ -4,7 +4,7 @@
 
 ### Additions and Fixes
 
-* ...
+* Remove setup and teardown callbacks from generated instrumentation configuration
 
 ## Version 1.0.5
 

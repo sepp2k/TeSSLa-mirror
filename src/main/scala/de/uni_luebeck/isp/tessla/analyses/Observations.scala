@@ -176,8 +176,8 @@ object Observations {
 
     protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
 
-    protected val setups = Seq(Function("main", code = """trace_init();"""))
-    protected val teardowns = Seq(Function("main", code = """trace_close();"""))
+    protected val setups = Seq()
+    protected val teardowns = Seq()
     protected val prefix = "#include \"instrumentation.h\"\n"
 
     override protected def translateSpec() = {
