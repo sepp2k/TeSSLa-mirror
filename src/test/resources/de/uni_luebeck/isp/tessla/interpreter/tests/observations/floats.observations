@@ -34,9 +34,6 @@
     "code": "uint8_t* events = trace_create_events(1);\ntrace_push_float(events, \"globalWrite\", (double) value);\ntrace_write(events);"
   }],
   "FunctionCalled": [{
-    "FunctionName": "main",
-    "code": "trace_init();"
-  }, {
     "FunctionName": "add",
     "code": "uint8_t* events = trace_create_events(3);\ntrace_push_float(events, \"calledX\", (double) arg0);\ntrace_push_float(events, \"calledY\", (double) arg1);\ntrace_push_unit(events, \"called\");\ntrace_write(events);"
   }],
@@ -51,9 +48,6 @@
   "FunctionReturns": [{
     "FunctionName": "sub",
     "code": "uint8_t* events = trace_create_events(1);\ntrace_push_float(events, \"ret\", (double) value);\ntrace_write(events);"
-  }, {
-    "FunctionName": "main",
-    "code": "trace_close();"
   }],
   "VarReads": [{
     "DeRef": {

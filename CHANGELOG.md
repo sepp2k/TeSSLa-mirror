@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 1.0.6
+
+### Additions and Fixes
+
+* Remove setup and teardown callbacks from generated instrumentation configuration
+
 ## Version 1.0.5
 
 ### Breaking Changes
