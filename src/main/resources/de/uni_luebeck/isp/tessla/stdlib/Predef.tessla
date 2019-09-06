@@ -358,7 +358,21 @@ module Predef {
   ## during `burstLength` time. After `burstLength` during `waitingPeriod`
   ## time no event allowed. After `waitingPeriod` we wait for the next event
   ## on `e`.
-  def bursts[A,B](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int, since: Events[B]) = {
+  def bursts[A](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int) := {
+    def burstStarts: Events[A] :=
+      defaultFrom(
+        filter(e, time(e) - last(time(burstStarts), e) >= burstLength + waitingPeriod),
+        e)
+    resetCount(e, reset = burstStarts) <= burstAmount &&
+      default(time(e) < time(burstStarts) + burstLength, true)
+  }
+
+  ## Check if events on `e` follow the burst pattern since the last event on `since`:
+  ## After first event on `e` only `burstAmount` many events allowed
+  ## during `burstLength` time. After `burstLength` during `waitingPeriod`
+  ## time no event allowed. After `waitingPeriod` we wait for the next event
+  ## on `e`.
+  def burstsSince[A,B](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int, since: Events[B]) = {
     def burstStarts: Events[A] =
       defaultFrom(
         filter(e, last(time(burstStarts), e) < on(e, time(since)) ||

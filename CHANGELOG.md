@@ -2,6 +2,11 @@
 
 ## Version 1.0.7 (upcoming)
 
+### Breaking Changes
+
+* Renamed `bursts(e, burstLength, waitingPeriod, burstAmount, since)` to `burstsSince` and added
+`bursts(e, burstLength, waitingPeriod, burstAmount)`.
+
 ### Additions and Fixes
 
 * ...
