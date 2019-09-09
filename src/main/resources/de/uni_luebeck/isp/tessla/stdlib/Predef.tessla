@@ -155,6 +155,9 @@ module Predef {
   @liftable
   def getSome[T](opt: Option[T]): T = __builtin__(getSome)
 
+  @liftable
+  def getSomeOrElse[T](opt: Option[T], value: T): T = if isSome(opt) then getSome(opt) else value
+
   # Built-in stream functions
   def nil[T]: Events[T] = __builtin__(nil)
   def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)

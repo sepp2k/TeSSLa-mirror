@@ -226,6 +226,10 @@ object Evaluator {
           val set1 = getSet(arguments(0))
           val set2 = getSet(arguments(1))
           TesslaCore.TesslaSet(set1.value & set2.value, resultType, loc)
+        case "Set_minus" =>
+          val set1 = getSet(arguments(0))
+          val set2 = getSet(arguments(1))
+          TesslaCore.TesslaSet(set1.value -- set2.value, resultType, loc)
         case "Set_fold" =>
           val set = getSet(arguments(0)).value
           val z = arguments(1)

@@ -5,4 +5,18 @@
     if isNone(opt)
     then None[U]
     else Some(f(getSome(opt)))
+
+  def Option_flatMap[T, U](opt: Option[T], f: (T) => Option[U]): Option[U] =
+    if isNone(opt)
+    then None[U]
+    else f(getSome(opt))
+
+  def Option_map2[T,U,V](opt1: Option[T], opt2: Option[U], f: (T, U) => V) =
+    Option_flatMap(opt1, (v1: T) => Option_map(opt2, (v2: U) => f(v1, v2)))
+
+  @liftable
+  def Option_toSet[T](option: Option[T]): Set[T] = {
+    def set = Set_empty[T]
+    if isSome(option) then Set_add(set, getSome(option)) else set
+  }
 #}

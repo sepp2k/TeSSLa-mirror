@@ -10,7 +10,7 @@
 
 ### Additions and Fixes
 
-* ...
+* Add `Set_minus`, `Set_init`, `Set_collectWithRemove`, `getSomeOrElse`, `Option_flatMap`, `Option_map2`, and `Option_toSet`.
 
 ## Version 1.0.6
 
