@@ -387,16 +387,19 @@ module Predef {
     resetCount(on, reset = since) == 0
 
   ## Produce an event with the given value every time that the condition is met
-  def filterConst[T](value: T, condition: Events[Bool]): Events[T] =
+  def constIf[T](value: T, condition: Events[Bool]): Events[T] =
     filter(const(value, condition), condition)
+
+  ## Produces a unit event every time the condition is fulfilled
+  def unitIf(cond: Events[Bool]): Events[Unit] = constIf((), cond)
 
   ## Detect rising edge on `condition`.
   def rising(condition: Events[Bool]) =
-    filterConst((), condition && !prev(condition))
+    unitIf(condition && !prev(condition))
 
   ## Detect falling edge on `condition`
   def falling(condition: Events[Bool]) =
-    filterConst((), !condition && prev(condition))
+    unitIf(!condition && prev(condition))
 
   ## Produce the current or last value on `stream` for every `trigger`
   def on[A,B](trigger: Events[A], stream: Events[B]) = {
