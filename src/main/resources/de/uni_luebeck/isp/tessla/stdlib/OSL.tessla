@@ -7,11 +7,18 @@
   def @InstFunctionCalled(name: String)
   def @InstFunctionCalledArg(name: String, index: Int)
 
-  # Add event generation to every return inside of the function
+  # Add event generation to every return inside of the function. Generates unit events.
   def @InstFunctionReturn(name: String)
 
-  # Add event generation to every call of the function after the function returned
+  # Add event generation to every return inside of the function. Generates events carrying the returned value as data.
+  def @InstFunctionReturnValue(name: String)
+
+  # Add event generation to every call of the function after the function returned. Generates unit events.
   def @InstFunctionReturned(name: String)
+
+  # Add event generation to every call of the function after the function returned. Generates events carrying the
+  # returned value as data.
+  def @InstFunctionReturnedValue(name: String)
 
   # Instrument every reading access of a global variable with the given name.
   # Can handle more complex patterns, e.g. *&bar[][].foo

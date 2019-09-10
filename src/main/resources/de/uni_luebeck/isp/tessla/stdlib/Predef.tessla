@@ -155,6 +155,9 @@ module Predef {
   @liftable
   def getSome[T](opt: Option[T]): T = __builtin__(getSome)
 
+  @liftable
+  def getSomeOrElse[T](opt: Option[T], value: T): T = if isSome(opt) then getSome(opt) else value
+
   # Built-in stream functions
   def nil[T]: Events[T] = __builtin__(nil)
   def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)
@@ -358,7 +361,21 @@ module Predef {
   ## during `burstLength` time. After `burstLength` during `waitingPeriod`
   ## time no event allowed. After `waitingPeriod` we wait for the next event
   ## on `e`.
-  def bursts[A,B](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int, since: Events[B]) = {
+  def bursts[A](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int) := {
+    def burstStarts: Events[A] :=
+      defaultFrom(
+        filter(e, time(e) - last(time(burstStarts), e) >= burstLength + waitingPeriod),
+        e)
+    resetCount(e, reset = burstStarts) <= burstAmount &&
+      default(time(e) < time(burstStarts) + burstLength, true)
+  }
+
+  ## Check if events on `e` follow the burst pattern since the last event on `since`:
+  ## After first event on `e` only `burstAmount` many events allowed
+  ## during `burstLength` time. After `burstLength` during `waitingPeriod`
+  ## time no event allowed. After `waitingPeriod` we wait for the next event
+  ## on `e`.
+  def burstsSince[A,B](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int, since: Events[B]) = {
     def burstStarts: Events[A] =
       defaultFrom(
         filter(e, last(time(burstStarts), e) < on(e, time(since)) ||
@@ -373,16 +390,19 @@ module Predef {
     resetCount(on, reset = since) == 0
 
   ## Produce an event with the given value every time that the condition is met
-  def filterConst[T](value: T, condition: Events[Bool]): Events[T] =
+  def constIf[T](value: T, condition: Events[Bool]): Events[T] =
     filter(const(value, condition), condition)
+
+  ## Produces a unit event every time the condition is fulfilled
+  def unitIf(cond: Events[Bool]): Events[Unit] = constIf((), cond)
 
   ## Detect rising edge on `condition`.
   def rising(condition: Events[Bool]) =
-    filterConst((), condition && !prev(condition))
+    unitIf(condition && !prev(condition))
 
   ## Detect falling edge on `condition`
   def falling(condition: Events[Bool]) =
-    filterConst((), !condition && prev(condition))
+    unitIf(!condition && prev(condition))
 
   ## Produce the current or last value on `stream` for every `trigger`
   def on[A,B](trigger: Events[A], stream: Events[B]) = {

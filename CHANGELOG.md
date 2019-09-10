@@ -1,5 +1,18 @@
 # Changelog
 
+## Version 1.0.7
+
+### Breaking Changes
+
+* Renamed `bursts(e, burstLength, waitingPeriod, burstAmount, since)` to `burstsSince` and added
+`bursts(e, burstLength, waitingPeriod, burstAmount)`.
+* Renamed `filterConst` to `constIf` and added `unitIf`.
+* `@InstFunctionReturn` and `@InstFunctionReturned` generate unit events without data. The new `@InstFunctionReturnValue` and `@InstFunctionReturnedValue` generate events carrying the returned values.  
+
+### Additions and Fixes
+
+* Add `Set_minus`, `Set_init`, `Set_collectWithRemove`, `getSomeOrElse`, `Option_flatMap`, `Option_map2`, and `Option_toSet`.
+
 ## Version 1.0.6
 
 ### Additions and Fixes

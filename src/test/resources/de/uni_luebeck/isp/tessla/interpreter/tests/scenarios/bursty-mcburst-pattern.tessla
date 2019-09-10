@@ -1,5 +1,5 @@
 def trigger(condition: Events[Bool]) :=
-    filterConst((), condition && !last(condition, condition))
+    constIf((), condition && !last(condition, condition))
 
 def countSince[T](e: Events[T], condition: Events[Bool]) :=
     resetCount(e, trigger(condition))

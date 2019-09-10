@@ -43,11 +43,11 @@
   }],
   "FunctionReturned": [{
     "FunctionName": "add",
-    "code": "uint8_t* events = trace_create_events(3);\ntrace_push_int(events, \"returned\", (int64_t) value);\ntrace_push_thread_id(events, \"thread\");\ntrace_push_thread_id(events, \"threadToo\");\ntrace_write(events);"
+    "code": "uint8_t* events = trace_create_events(3);\ntrace_push_thread_id(events, \"thread\");\ntrace_push_thread_id(events, \"threadToo\");\ntrace_push_unit(events, \"returned\");\ntrace_write(events);"
   }],
   "FunctionReturns": [{
     "FunctionName": "sub",
-    "code": "uint8_t* events = trace_create_events(3);\ntrace_push_int(events, \"ret\", (int64_t) value);\ntrace_push_thread_id(events, \"thread\");\ntrace_push_thread_id(events, \"threadToo\");\ntrace_write(events);"
+    "code": "uint8_t* events = trace_create_events(3);\ntrace_push_thread_id(events, \"thread\");\ntrace_push_thread_id(events, \"threadToo\");\ntrace_push_unit(events, \"ret\");\ntrace_write(events);"
   }],
   "VarReads": [{
     "DeRef": {

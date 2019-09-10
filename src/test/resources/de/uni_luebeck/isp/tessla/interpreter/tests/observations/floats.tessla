@@ -16,10 +16,10 @@ in calledX: Events[Float]
 @InstFunctionCalledArg("add", 1)
 in calledY: Events[Float]
 
-@InstFunctionReturn("sub")
+@InstFunctionReturnValue("sub")
 in ret: Events[Float]
 
-@InstFunctionReturned("add")
+@InstFunctionReturnedValue("add")
 in returned: Events[Float]
 
 @GlobalWrite("arr[]")
