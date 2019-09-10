@@ -7,6 +7,7 @@
 * Renamed `bursts(e, burstLength, waitingPeriod, burstAmount, since)` to `burstsSince` and added
 `bursts(e, burstLength, waitingPeriod, burstAmount)`.
 * Renamed `filterConst` to `constIf` and added `unitIf`.
+* `@InstFunctionReturn` and `@InstFunctionReturned` generate unit events without data. The new `@InstFunctionReturnValue` and `@InstFunctionReturnedValue` generate events carrying the returned values.  
 
 ### Additions and Fixes
 

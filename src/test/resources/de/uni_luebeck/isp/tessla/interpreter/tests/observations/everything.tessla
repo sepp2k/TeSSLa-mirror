@@ -17,10 +17,16 @@ in calledX: Events[Int]
 in calledY: Events[Int]
 
 @InstFunctionReturn("sub")
-in ret: Events[Int]
+in ret: Events[Unit]
+
+@InstFunctionReturnValue("sub")
+in retValue: Events[Int]
 
 @InstFunctionReturned("add")
-in returned: Events[Int]
+in returned: Events[Unit]
+
+@InstFunctionReturnedValue("add")
+in returnedValue: Events[Int]
 
 @GlobalWrite("arr[]")
 in globalWrite: Events[Int]

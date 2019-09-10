@@ -194,9 +194,11 @@ object Observations {
         (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
 
       val functionReturns = createFunctionObservations("InstFunctionReturn",
+        (_, in) => printUnitEvent(in)) ++ createFunctionObservations("InstFunctionReturnValue",
         (_, in) => printEventValue(in))
 
       val functionReturned = createFunctionObservations("InstFunctionReturned",
+        (_, in) => printUnitEvent(in)) ++ createFunctionObservations("InstFunctionReturnedValue",
         (_, in) => printEventValue(in))
 
       val globalAssignments = createPatternObservations("GlobalWrite",
