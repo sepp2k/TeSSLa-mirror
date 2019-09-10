@@ -19,7 +19,7 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq(
   "com.github.sepp2k" %% "sexyopt" % "0.1.1",
-  "de.uni_luebeck.isp" %% "tessla" % "1.0.4-SNAPSHOT",
+  "de.uni_luebeck.isp" %% "tessla" % "1.0.4",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
 )
 
