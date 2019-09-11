@@ -1,0 +1,4 @@
+{
+  "expectedErrors": "cycle-detection-in-delay.errors",
+  "spec": "cycle-detection-in-delay.tessla"
+}

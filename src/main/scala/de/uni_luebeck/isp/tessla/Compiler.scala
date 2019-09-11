@@ -20,7 +20,6 @@ object Compiler {
       .andThen(Flattener)
       .andThen(TypeChecker)
       .andThen(new ConstantEvaluator(options.timeUnit))
-      .andThen(CycleDetection)
       .andThen(new EnableIf[TesslaCore.Specification](options.currySignalLift, CurrySignalLift))
       .andThen(RemoveUnusedDefinitions)
   }

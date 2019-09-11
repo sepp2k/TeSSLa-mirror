@@ -250,19 +250,19 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
             var posArgIdx = 0
             // This is lazy, so the arguments don't get evaluated until they're used below, allowing us to
             // initialize entries where appropriate before the evaluation takes place
-            lazy val args = call.args.map {
+            val args = call.args.map {
               case arg: TypedTessla.PositionalArgument =>
                 val param = be.parameters(posArgIdx)
                 posArgIdx += 1
-                param.id -> translateVar(env, arg.id, arg.loc, stack)
+                param.id -> Lazy(translateVar(env, arg.id, arg.loc, stack))
               case arg: TypedTessla.NamedArgument =>
                 be.parameters.find(_.name == arg.name) match {
-                  case Some(param) => param.id -> translateVar(env, arg.id, arg.loc, stack)
+                  case Some(param) => param.id -> Lazy(translateVar(env, arg.id, arg.loc, stack))
                   case None => throw UndefinedNamedArg(arg.name, arg.idLoc.loc)
                 }
             }.toMap
 
-            def argAt(i: Int) = args(be.parameters(i).id)
+            def argAt(i: Int) = args(be.parameters(i).id).get
 
             def streamArg(i: Int) = getStream(argAt(i), call.args(i).loc)
 
@@ -281,11 +281,13 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
                 translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.DefaultFrom(streamArg(0), streamArg(1), call.loc), translatedType, annotations)
                 StreamEntry(id, translatedType)
               case "last" =>
-                deferredQueue += (() => translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Last(streamArg(0), streamArg(1), call.loc), translatedType, annotations))
+                val strictArg = streamArg(1)
+                deferredQueue += (() => translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Last(streamArg(0), strictArg, call.loc), translatedType, annotations))
                 StreamEntry(id, translatedType)
               case "delay" =>
                 val id = makeIdentifier(nameOpt)
-                deferredQueue += (() => translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Delay(streamArg(0), streamArg(1), call.loc), translatedType, annotations))
+                val strictArg = streamArg(1)
+                deferredQueue += (() => translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Delay(streamArg(0), strictArg, call.loc), translatedType, annotations))
                 StreamEntry(id, translatedType)
               case "time" =>
                 translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Time(streamArg(0), call.loc), translatedType, annotations)
