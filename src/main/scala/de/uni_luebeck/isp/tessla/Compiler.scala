@@ -22,7 +22,7 @@ object Compiler {
       .andThen(new ConstantEvaluator(options.timeUnit))
       .andThen(CycleDetection)
       .andThen(new EnableIf[TesslaCore.Specification](options.currySignalLift, CurrySignalLift))
-      //.andThen(RemoveUnusedDefinitions)
+      .andThen(RemoveUnusedDefinitions)
   }
 
   def compile(src: CharStream, options: Options): TranslationPhase.Result[TesslaCore.Specification] = {
