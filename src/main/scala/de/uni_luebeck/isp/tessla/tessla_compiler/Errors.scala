@@ -13,6 +13,9 @@ object Errors {
 
   case class NotYetImplementedError(loc: Location) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
     override def message = s"The translation of the given command is not supported, yet"
+
+  case class DSLError(m: String, loc: Location = Location.unknown) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
+    override def message = s"The creation of the abstract imperative code failed [DSLError]: $m"
   }
 
 }
