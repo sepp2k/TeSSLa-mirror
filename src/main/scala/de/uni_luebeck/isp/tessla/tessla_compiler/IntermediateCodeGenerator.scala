@@ -10,35 +10,35 @@ import de.uni_luebeck.isp.tessla.TesslaCore.{Arg, CurriedPrimitiveOperator, Func
   */
 object IntermediateCodeGenerator {
 
-  def produceDefaultStepCode(stream: StreamRef, default: ValueOrError, loc: Location, currSrc: SourceListing): SourceListing = {
+    throw new Errors.NotYetImplementedError(loc)
+  def produceDefaultStepCode(outStream: Stream, stream: StreamRef, default: ValueOrError, loc: Location, currSrc: SourceListing): SourceListing = {
+  }
+
+  def produceDefaultFromStepCode(outStream: Stream, stream: StreamRef, defaultStream: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
     throw new Errors.NotYetImplementedError(loc)
   }
 
-  def produceDefaultFromStepCode(stream: StreamRef, defaultStream: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceTimeStepCode(outStream: Stream, stream: StreamRef, loc: Location, currSrc: SourceListing) : SourceListing = {
     throw new Errors.NotYetImplementedError(loc)
   }
 
-  def produceTimeStepCode(stream: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceLastStepCode(outStream: Stream, values: StreamRef, clock: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
     throw new Errors.NotYetImplementedError(loc)
   }
 
-  def produceLastStepCode(values: StreamRef, clock: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceDelayStepCode(outStream: Stream, delay: StreamRef, reset: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
     throw new Errors.NotYetImplementedError(loc)
   }
 
-  def produceDelayStepCode(delay: StreamRef, reset: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceLiftStepCode(outStream: Stream, f: Function, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
     throw new Errors.NotYetImplementedError(loc)
   }
 
-  def produceLiftStepCode(f: Function, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceSignalLiftStepCode(outStream: Stream, op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
     throw new Errors.NotYetImplementedError(loc)
   }
 
-  def produceSignalLiftStepCode(op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
-    throw new Errors.NotYetImplementedError(loc)
-  }
-
-  def produceCustomBuiltInCallStepCode(name: String, args: Seq[Arg], loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceCustomBuiltInCallStepCode(outStream: Stream, name: String, args: Seq[Arg], loc: Location, currSrc: SourceListing): SourceListing = {
     throw new Errors.NotYetImplementedError(loc)
   }
 

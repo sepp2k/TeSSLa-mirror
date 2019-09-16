@@ -21,27 +21,28 @@ object TesslaCoreToIntermediate extends
     var currSource = SourceListing(Seq())
     var warnings = Seq()
 
-    streams.foreach{
-      case TesslaCore.StreamDescription(id, expr, typ, annotations) =>
-        currSource = expr match {
-          case TesslaCore.Default(stream, default, loc) =>
-            IntermediateCodeGenerator.produceDefaultStepCode(stream, default, loc, currSource)
-          case TesslaCore.DefaultFrom(stream, defStream, loc) =>
-            IntermediateCodeGenerator.produceDefaultFromStepCode(stream, defStream, loc, currSource)
-          case TesslaCore.Time(stream, loc) =>
-            IntermediateCodeGenerator.produceTimeStepCode(stream, loc, currSource)
-          case TesslaCore.Last(values, clock, loc) =>
-            IntermediateCodeGenerator.produceLastStepCode(values, clock, loc, currSource)
-          case TesslaCore.Delay(delay, reset, loc) =>
-            IntermediateCodeGenerator.produceDelayStepCode(delay, reset, loc, currSource)
-          case TesslaCore.Lift(func, args, loc) =>
-            IntermediateCodeGenerator.produceLiftStepCode(func, args, loc, currSource)
-          case TesslaCore.SignalLift(op, args, loc) =>
-            IntermediateCodeGenerator.produceSignalLiftStepCode(op, args, loc, currSource)
-          case TesslaCore.CustomBuiltInCall(name, args, loc) =>
-            IntermediateCodeGenerator.produceCustomBuiltInCallStepCode(name, args, loc, currSource)
-          case _ => throw new Errors.CommandNotSupportedError(expr.toString)
-        }
+    streams.foreach { outStream: TesslaCore.StreamDescription => {
+      val outStreamRef = TesslaCore.Stream(outStream.id, outStream.typ, outStream.loc)
+      outStream.expression match {
+        case TesslaCore.Default(stream, default, loc) =>
+          IntermediateCodeGenerator.produceDefaultStepCode(outStreamRef, stream, default, loc, currSource)
+        case TesslaCore.DefaultFrom(stream, defStream, loc) =>
+          IntermediateCodeGenerator.produceDefaultFromStepCode(outStreamRef, stream, defStream, loc, currSource)
+        case TesslaCore.Time(stream, loc) =>
+          IntermediateCodeGenerator.produceTimeStepCode(outStreamRef, stream, loc, currSource)
+        case TesslaCore.Last(values, clock, loc) =>
+          IntermediateCodeGenerator.produceLastStepCode(outStreamRef, values, clock, loc, currSource)
+        case TesslaCore.Delay(delay, reset, loc) =>
+          IntermediateCodeGenerator.produceDelayStepCode(outStreamRef, delay, reset, loc, currSource)
+        case TesslaCore.Lift(func, args, loc) =>
+          IntermediateCodeGenerator.produceLiftStepCode(outStreamRef, func, args, loc, currSource)
+        case TesslaCore.SignalLift(op, args, loc) =>
+          IntermediateCodeGenerator.produceSignalLiftStepCode(outStreamRef, op, args, loc, currSource)
+        case TesslaCore.CustomBuiltInCall(name, args, loc) =>
+          IntermediateCodeGenerator.produceCustomBuiltInCallStepCode(outStreamRef, name, args, loc, currSource)
+        case _ => throw new Errors.CommandNotSupportedError(outStream.expression.toString)
+      }
+    }
     }
 
 
