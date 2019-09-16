@@ -109,6 +109,33 @@ object IntermediateCodeGenerator {
   }
 
   def produceTimeStepCode(outStream: Stream, stream: StreamRef, loc: Location, currSrc: SourceListing) : SourceListing = {
+
+    val (s, t) =
+    stream match {
+      case Stream(id, t, _) => (id.uid, t)
+      case InputStream(n, t, _) => (n, t)
+      case Nil(t,_) => (s"nil_$t", t)
+    }
+    val o = outStream.id.uid
+    val ot = outStream.typ.elementType
+
+    val newStmt = (currSrc.stepSource
+
+    Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+    If(Set(Set(s"${s}_changed")))
+      Assignment(s"${o}_lastValue", s"${o}_value", LongValue(0), ot)
+      Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      Assignment(s"${o}_lastTs", s"${o}_ts", LongValue(0), LongType)
+      Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+      Assignment(s"${o}_value", s"${s}_ts", LongValue(0), LongType)
+      Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType)
+      Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+    EndIf
+
+      )
+    SourceListing(newStmt)
   }
 
   def produceLastStepCode(outStream: Stream, values: StreamRef, clock: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
