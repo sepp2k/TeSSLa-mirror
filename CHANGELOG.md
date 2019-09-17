@@ -2,7 +2,9 @@
 
 ## Version 1.0.8 (upcoming)
 
-...
+### Additions and Fixes
+
+* Add `sample` to standard library.
 
 ## Version 1.0.7
 

@@ -470,6 +470,14 @@ module Predef {
     const((), s)
   }
 
+  ## Filter out events to ensure a maximal event rate. Forwards the first event on `e` and
+  ## afterwards every event which is at least `rate` time units later then the last
+  ## forwarded event.
+  def sample[A](e: Events[A], rate: Int): Events[A] = result where {
+   def result: Events[A] =
+     merge(filter(e, time(e) - last(time(result), e) >= rate), firstEvent(e))
+  }
+
   # Additional types. Their functionality can be found in their respective modules, but the types are defined here,
   # so one can write, say, `List[Int]` instead of `List.List[Int]`.
   type List[T] = __builtin__(List)
