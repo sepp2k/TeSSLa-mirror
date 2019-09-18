@@ -26,6 +26,10 @@ object IntermediateCode {
     override def toString = "Long"
   }
 
+  final case object FloatType extends ImpLanType {
+    override def toString = "Float"
+  }
+
   final case object BoolType extends ImpLanType {
     override def toString = "Bool"
   }
@@ -52,6 +56,14 @@ object IntermediateCode {
 
   final case class ImmutableMapType(keyType: ImpLanType, valType: ImpLanType) extends ImpLanType {
     override def toString = s"ImmutMap<$keyType, $valType>"
+  }
+
+  final case class MutableListType(valType: ImpLanType) extends ImpLanType {
+    override def toString = s"MutList<$valType>"
+  }
+
+  final case class ImmutableListType(valType: ImpLanType) extends ImpLanType {
+    override def toString = s"ImmutList<$valType>"
   }
 
   final case class FunctionType(argsTypes: Seq[ImpLanType], retType: ImpLanType) extends ImpLanType {
