@@ -22,7 +22,14 @@ object IntermediateCodeGenerator {
 
   implicit def typeConversion(t : ValueType) : ImpLanType = {
     t match {
-
+      case TesslaCore.BuiltInType("Bool", Seq()) => BoolType
+      case TesslaCore.BuiltInType("Int", Seq()) => LongType
+      case TesslaCore.BuiltInType("Float", Seq()) => FloatType
+      case TesslaCore.BuiltInType("String", Seq()) => StringType
+      case TesslaCore.BuiltInType("Set", Seq(t)) => ImmutableSetType(t)
+      case TesslaCore.BuiltInType("Map", Seq(t1, t2)) => ImmutableMapType(t1, t2)
+      case TesslaCore.BuiltInType("List", Seq(t)) => ImmutableListType(t)
+      case t: TesslaCore.BuiltInType => throw new Errors.NotYetImplementedError("BuiltInType $t cannot be translated into imperative code yet")
       case TesslaCore.FunctionType => throw new Errors.CommandNotSupportedError("Function type without further type knowledge cannot be translated into imperative code")
       case TesslaCore.ObjectType(memberTypes) => throw new Errors.NotYetImplementedError("Object types cannot be translated into imperative code yet")
     }
