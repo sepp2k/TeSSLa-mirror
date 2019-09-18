@@ -23,6 +23,7 @@ object TesslaCoreToIntermediate extends
 
     streams.foreach { outStream: TesslaCore.StreamDescription => {
       val outStreamRef = TesslaCore.Stream(outStream.id, outStream.typ, outStream.loc)
+      currSource =
       outStream.expression match {
         case TesslaCore.Default(stream, default, loc) =>
           IntermediateCodeGenerator.produceDefaultStepCode(outStreamRef, stream, default, loc, currSource)
