@@ -128,7 +128,7 @@ object IntermediateCodeGenerator {
 
     val newStmt = (currSrc.stepSource
 
-    Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+    Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
     If(Set(Set(s"${s}_changed")))
       Assignment(s"${o}_lastValue", s"${o}_value", LongValue(0), ot)
       Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
