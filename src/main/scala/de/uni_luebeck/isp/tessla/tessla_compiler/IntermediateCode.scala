@@ -110,12 +110,12 @@ object IntermediateCode {
 
   final case class If(guard: Set[Set[ImpLanExpr]], stmts: Seq[ImpLanStmt], elseStmts: Seq[ImpLanStmt])
     extends ImpLanStmt {
-    override def toString = s"If $guard :\n ${stmts.mkString}\nElse :\n ${elseStmts.mkString}\nEndIf"
+    override def toString = s"If $guard :\n${stmts.mkString}\nElse :\n${elseStmts.mkString}\nEndIf"
   }
 
   final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: ImpLanVal, typ: ImpLanType)
     extends ImpLanStmt {
-    override def toString = s"$lhs = ${rexpr.toString} (default: ${defVal.toString}\n"
+    override def toString = s"$lhs = ${rexpr.toString} (default: ${defVal.toString})\n"
   }
 
   final case class FinalAssignment(lhs: Variable, defVal: ImpLanVal, typ: ImpLanType) extends ImpLanStmt {
