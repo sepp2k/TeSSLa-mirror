@@ -54,7 +54,10 @@ object Main extends SexyOpt {
         )
         val core = unwrapResult(Compiler.compile(specSource, compilerOptions))
         val intermediateCode = unwrapResult(TesslaCoreToIntermediate.translate(core))
-        println(intermediateCode)
+
+        println("===")
+        println(intermediateCode.stepSource.mkString("\n"))
+        println("===")
 
     } catch {
       case ex: TesslaError =>
