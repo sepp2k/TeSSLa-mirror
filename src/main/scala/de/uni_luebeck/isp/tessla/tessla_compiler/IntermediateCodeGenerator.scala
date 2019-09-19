@@ -24,7 +24,7 @@ object IntermediateCodeGenerator {
     t match {
       case TesslaCore.BuiltInType("Bool", Seq()) => BoolType
       case TesslaCore.BuiltInType("Int", Seq()) => LongType
-      case TesslaCore.BuiltInType("Float", Seq()) => FloatType
+      case TesslaCore.BuiltInType("Float", Seq()) => DoubleType
       case TesslaCore.BuiltInType("String", Seq()) => StringType
       case TesslaCore.BuiltInType("Set", Seq(t)) => ImmutableSetType(t)
       case TesslaCore.BuiltInType("Map", Seq(t1, t2)) => ImmutableMapType(t1, t2)

@@ -26,8 +26,8 @@ object IntermediateCode {
     override def toString = "Long"
   }
 
-  final case object FloatType extends ImpLanType {
-    override def toString = "Float"
+  final case object DoubleType extends ImpLanType {
+    override def toString = "Double"
   }
 
   final case object BoolType extends ImpLanType {
@@ -75,6 +75,9 @@ object IntermediateCode {
     override def toString = value.toString
   }
 
+  final case class DoubleValue(value: Double) extends ImpLanVal {
+    override def toString = value.toString + "d"
+  }
   final case class BoolValue(value: Boolean) extends ImpLanVal {
     override def toString = value.toString
   }
