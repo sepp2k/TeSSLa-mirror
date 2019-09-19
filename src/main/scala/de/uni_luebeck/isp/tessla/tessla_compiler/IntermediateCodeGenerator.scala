@@ -90,7 +90,7 @@ object IntermediateCodeGenerator {
       case Out => throw new Errors.DSLError("Else without previous If")
     }
 
-    def EndIf : IntermediateCodeDSL = {
+    def EndIf() : IntermediateCodeDSL = {
       val stmt = ifState(0) match {
         case InIf | InElse =>  IntermediateCode.If(condStack(0), ifStack(0), elseStack(0))
         case Out => throw new Errors.DSLError("EndIf without previous If")
@@ -139,7 +139,7 @@ object IntermediateCodeGenerator {
       Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
       Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType)
       Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
-    EndIf
+    EndIf()
 
       )
     SourceListing(newStmt)
