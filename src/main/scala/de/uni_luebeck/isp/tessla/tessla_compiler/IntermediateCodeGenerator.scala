@@ -155,7 +155,7 @@ object IntermediateCodeGenerator {
       Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
       Assignment(s"${o}_lastTs", s"${o}_ts", LongValue(0), LongType)
       Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
-      Assignment(s"${o}_value", s"${s}_ts", LongValue(0), LongType)
+      Assignment(s"${o}_value", s"${s}_ts", LongValue(0), ot)
       Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
       Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
       Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType)
