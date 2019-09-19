@@ -2,12 +2,11 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import scala.language.implicitConversions
 import scala.language.postfixOps
-
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{StringValue, _}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeGenerator.IntermediateCodeDSL
 import de.uni_luebeck.isp.tessla._
 import de.uni_luebeck.isp.tessla.Tessla.{BuiltInType, ObjectType}
-import de.uni_luebeck.isp.tessla.TesslaCore.{BoolValue => _, _}
+import de.uni_luebeck.isp.tessla.TesslaCore.{BoolValue => _, StringValue => _, _}
 
 
 /**
@@ -20,7 +19,29 @@ object IntermediateCodeGenerator {
   final case object InElse extends IfState
   final case object Out extends IfState
 
-  implicit def typeConversion(t : ValueType) : ImpLanType = {
+  implicit def typeConversion(v : ValueOrError) : ImpLanVal = {
+    v match {
+      case TesslaCore.BoolValue(b, _) => BoolValue(b)
+      case TesslaCore.IntValue(i, _) => LongValue(i.longValue())
+      case TesslaCore.FloatValue(f, _) => DoubleValue(f)
+      case TesslaCore.StringValue(s, _) => StringValue(s)
+      case TesslaCore.TesslaMap(m, TesslaCore.BuiltInType("Map", Seq(t1, t2)), loc) =>
+        if (m.size == 0)
+          EmptyImmutableMap(t1, t2)
+        else
+          throw new Errors.NotYetImplementedError(s"Translation of non empty maps into imperative code is not implemented yet", loc)
+      case TesslaCore.TesslaSet(s, TesslaCore.BuiltInType("Set", Seq(t)), loc) =>
+        if (s.size == 0)
+          EmptyImmutableSet(t)
+        else
+          throw new Errors.NotYetImplementedError(s"Translation of non empty sets into imperative code is not implemented yet", loc)
+      case TesslaCore.TesslaList(IndexedSeq(), TesslaCore.BuiltInType("List", Seq(t)), _) => EmptyImmutableList(t)
+      case Error(error) => throw error
+      case other => throw new Errors.NotYetImplementedError(s"Type translation of type $other into imperative code not implemented yet")
+    }
+  }
+
+  implicit def valueConversion(t : ValueType) : ImpLanType = {
     t match {
       case TesslaCore.BuiltInType("Bool", Seq()) => BoolType
       case TesslaCore.BuiltInType("Int", Seq()) => LongType
