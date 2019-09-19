@@ -78,6 +78,7 @@ object IntermediateCode {
   final case class DoubleValue(value: Double) extends ImpLanVal {
     override def toString = value.toString + "d"
   }
+
   final case class BoolValue(value: Boolean) extends ImpLanVal {
     override def toString = value.toString
   }
@@ -105,6 +106,15 @@ object IntermediateCode {
   final case class EmptyImmutableMap(keyType: ImpLanType, valType: ImpLanType) extends ImpLanVal {
     override def toString = s"ImmutMap<$keyType, $valType>{}"
   }
+
+  final case class EmptyMutableList(valType: ImpLanType) extends ImpLanVal {
+    override def toString = s"MutList<$valType>{}"
+  }
+
+  final case class EmptyImmutableList(valType: ImpLanType) extends ImpLanVal {
+    override def toString = s"ImmutList<$valType>{}"
+  }
+
 
   final case class DoNothingFunction(argsTypes: Seq[ImpLanType], retType: ImpLanType) extends ImpLanVal {
     override def toString = s"${argsTypes.mkString(" x ")} -> $retType{}"
