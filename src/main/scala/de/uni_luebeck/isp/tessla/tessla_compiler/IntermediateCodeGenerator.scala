@@ -143,13 +143,14 @@ object IntermediateCodeGenerator {
 
   }
 
+  def streamNameAndType(s : StreamRef) : (String, ImpLanType) = s match {
+    case Stream(id, t, _) => (id.uid.toString(), t.elementType)
+    case InputStream(n, t, _) => (n, t.elementType)
+    case Nil(t,_) => (s"nil_$t", t.elementType)
+  }
+
   def produceDefaultStepCode(outStream: Stream, stream: StreamRef, default: ValueOrError, loc: Location, currSrc: SourceListing): SourceListing = {
-    val (s, t) =
-      stream match {
-        case Stream(id, t, _) => (id.uid, t)
-        case InputStream(n, t, _) => (n, t)
-        case Nil(t,_) => (s"nil_$t", t)
-      }
+    val (s, _) = streamNameAndType(stream)
     val o = outStream.id.uid
     val ot = outStream.typ.elementType
 
@@ -180,12 +181,7 @@ object IntermediateCodeGenerator {
 
   def produceTimeStepCode(outStream: Stream, stream: StreamRef, loc: Location, currSrc: SourceListing) : SourceListing = {
 
-    val (s, t) =
-    stream match {
-      case Stream(id, t, _) => (id.uid, t)
-      case InputStream(n, t, _) => (n, t)
-      case Nil(t,_) => (s"nil_$t", t)
-    }
+    val (s, _) = streamNameAndType(stream)
     val o = outStream.id.uid
     val ot = outStream.typ.elementType
 
