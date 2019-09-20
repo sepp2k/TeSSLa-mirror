@@ -56,6 +56,21 @@ object IntermediateCodeGenerator {
     }
   }
 
+  def defaultValueForType(t : ValueType) : ImpLanVal = {
+    t match {
+      case TesslaCore.BuiltInType("Bool", Seq()) => BoolValue(false)
+      case TesslaCore.BuiltInType("Int", Seq()) => LongValue(0)
+      case TesslaCore.BuiltInType("Float", Seq()) => DoubleValue(0)
+      case TesslaCore.BuiltInType("String", Seq()) => StringValue("")
+      case TesslaCore.BuiltInType("Set", Seq(t)) => EmptyImmutableSet(t)
+      case TesslaCore.BuiltInType("Map", Seq(t1, t2)) => EmptyImmutableMap(t1, t2)
+      case TesslaCore.BuiltInType("List", Seq(t)) => EmptyImmutableList(t)
+      case t: TesslaCore.BuiltInType => throw new Errors.NotYetImplementedError("BuiltInType $t cannot be translated into imperative code yet")
+      case TesslaCore.FunctionType => throw new Errors.CommandNotSupportedError("Function type without further type knowledge cannot be translated into imperative code")
+      case TesslaCore.ObjectType(memberTypes) => throw new Errors.NotYetImplementedError("Object types cannot be translated into imperative code yet")
+    }
+  }
+
   implicit def stringToVariable(str: String) : Variable = {
     Variable(str)
   }
