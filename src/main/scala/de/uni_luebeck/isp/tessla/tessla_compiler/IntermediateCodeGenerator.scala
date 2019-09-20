@@ -205,7 +205,32 @@ object IntermediateCodeGenerator {
   }
 
   def produceLastStepCode(outStream: Stream, values: StreamRef, clock: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
-    throw new Errors.NotYetImplementedError("", loc)
+    val (v, _) = streamNameAndType(values)
+    val (c, _) = streamNameAndType(clock)
+    val o = outStream.id.uid
+    val ot = outStream.typ.elementType
+
+    val newStmt = (currSrc.stepSource
+
+      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      If(Set(Set(s"${c}_changed", s"${v}_init")))
+        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot)
+        Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+        Assignment(s"${o}_lastTs", s"${o}_ts", LongValue(0), LongType)
+        Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+        Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+        Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+        Assignment(s"${o}_error", s"${v}_error", LongValue(0), LongType)
+        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+        If(Set(Set(Equal(s"${v}_ts", "currTs"))))
+          Assignment(s"${o}_value", s"${v}_lastValue", defaultValueForType(ot), ot)
+        Else()
+          Assignment(s"${o}_value", s"${v}_value", defaultValueForType(ot), ot)
+        EndIf()
+      EndIf()
+
+      )
+    SourceListing(newStmt)
   }
 
   def produceDelayStepCode(outStream: Stream, delay: StreamRef, reset: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
