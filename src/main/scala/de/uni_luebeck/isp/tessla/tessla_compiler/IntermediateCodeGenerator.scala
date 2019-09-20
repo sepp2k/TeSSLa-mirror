@@ -120,7 +120,7 @@ object IntermediateCodeGenerator {
                               Seq(cond) ++ condStack)
     }
 
-    def Else : IntermediateCodeDSL = ifState(0) match {
+    def Else() : IntermediateCodeDSL = ifState(0) match {
       case InIf => new IntermediateCodeDSL(stmts, ifState.updated(0, InElse), ifStack, elseStack, condStack)
       case InElse => throw new Errors.DSLError("Two subseqeuent Else blocks")
       case Out => throw new Errors.DSLError("Else without previous If")
