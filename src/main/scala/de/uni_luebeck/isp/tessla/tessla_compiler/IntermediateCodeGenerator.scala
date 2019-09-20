@@ -38,11 +38,13 @@ object IntermediateCodeGenerator {
       case TesslaCore.TesslaList(IndexedSeq(), TesslaCore.BuiltInType("List", Seq(t)), _) => EmptyImmutableList(t)
       case Error(error) => throw error
       case other => throw new Errors.NotYetImplementedError(s"Type translation of type $other into imperative code not implemented yet")
+      //FIXME: Unit value ?!
     }
   }
 
   implicit def valueConversion(t : ValueType) : ImpLanType = {
     t match {
+      case TesslaCore.BuiltInType("Unit", Seq()) => BoolType
       case TesslaCore.BuiltInType("Bool", Seq()) => BoolType
       case TesslaCore.BuiltInType("Int", Seq()) => LongType
       case TesslaCore.BuiltInType("Float", Seq()) => DoubleType
@@ -58,6 +60,7 @@ object IntermediateCodeGenerator {
 
   def defaultValueForType(t : ValueType) : ImpLanVal = {
     t match {
+      case TesslaCore.BuiltInType("Unit", Seq()) => BoolValue(true)
       case TesslaCore.BuiltInType("Bool", Seq()) => BoolValue(false)
       case TesslaCore.BuiltInType("Int", Seq()) => LongValue(0)
       case TesslaCore.BuiltInType("Float", Seq()) => DoubleValue(0)
