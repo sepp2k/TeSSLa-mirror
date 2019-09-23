@@ -422,16 +422,31 @@ class TypeChecker(spec: FlatTessla.Specification)
 
       case acc: FlatTessla.MemberAccess =>
         val receiver = env(acc.receiver.id)
-        val t = typeMap(receiver) match {
+        typeMap(receiver) match {
           case ot: TypedTessla.ObjectType =>
-            ot.memberTypes.getOrElse(acc.member, throw MemberNotDefined(ot, acc.member, acc.memberLoc))
+            val t = ot.memberTypes.getOrElse(acc.member, throw MemberNotDefined(ot, acc.member, acc.memberLoc))
+            val ma = TypedTessla.MemberAccess(TypedTessla.IdLoc(receiver, acc.receiver.loc), acc.member, acc.memberLoc, acc.loc)
+            ma -> t
           case b @ TypedTessla.BuiltInType(_, Seq(ot: TypedTessla.ObjectType)) if b.isStreamType =>
             val memberType = ot.memberTypes.getOrElse(acc.member, throw MemberNotDefined(ot, acc.member, acc.memberLoc))
-            streamType(memberType)
+            val slift1Id = findPredef(s"slift1", env, acc.loc)
+            val macroId = makeIdentifier()
+            val param = TypedTessla.Parameter(Tessla.Parameter(Tessla.Identifier("obj", acc.receiver.loc), None), ot, makeIdentifier())
+            val macroDefs = new TypedTessla.Definitions(Some(defs))
+            macroDefs.addVariable(TypedTessla.VariableEntry(param.id, param, ot, Seq(), acc.receiver.loc))
+            val resultId = makeIdentifier()
+            val resultExp = TypedTessla.MemberAccess(param.idLoc, acc.member, acc.memberLoc, acc.loc)
+            macroDefs.addVariable(TypedTessla.VariableEntry(resultId, resultExp, memberType, Seq(), acc.loc))
+            val mac = TypedTessla.Macro(Seq(), Seq(param), macroDefs, memberType, acc.loc,
+              TypedTessla.IdLoc(resultId, acc.loc), acc.loc, isLiftable = false)
+            defs.addVariable(TypedTessla.VariableEntry(macroId, mac, memberType, Seq(), acc.loc))
+            val arg = TypedTessla.PositionalArgument(receiver, acc.receiver.loc)
+            val macroArg = TypedTessla.PositionalArgument(macroId, acc.loc)
+            val liftedMacroCall = TypedTessla.MacroCall(slift1Id, acc.loc, Seq(), Seq(arg, macroArg), acc.loc)
+            liftedMacroCall -> streamType(memberType)
           case other =>
             throw TypeMismatch("object", other, acc.receiver.loc)
         }
-        TypedTessla.MemberAccess(TypedTessla.IdLoc(receiver, acc.receiver.loc), acc.member, acc.memberLoc, acc.loc) -> t
 
       case b: FlatTessla.BuiltInOperator =>
         val t = declaredType.getOrElse(throw MissingTypeAnnotationBuiltIn(b.name, b.loc))

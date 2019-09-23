@@ -14,6 +14,6 @@ def aa: Events[(Int, Int)] := slift1(a, fun (a: Int) => (a, a))
 def bb: Events[(Int, Int)] := slift1(b, fun (b: Int) => (b, b))
 
 out sumPair(t)
-out slift(aa, bb, fun (aa: (Int, Int), bb: (Int, Int)) => aa._1 + bb._2)
+out aa._1 + bb._2
 out t
 out o
