@@ -311,18 +311,21 @@ module Predef {
   ## the initial value `init` the function `f` is called for every event
   ## on `stream` with the last result and the current event’s value as arguments.
   ## So for the input stream `x`
-  ## ```
+  ##
+  ## ~~~
   ## 2: x = 2
   ## 4: x = 6
   ## 5: x = 1
-  ## ```
+  ## ~~~
+  ##
   ## the call `def y = fold(f, x, 0)` produces the following stream `y`:
-  ## ```
+  ##
+  ## ~~~
   ## 0: y = 0
   ## 2: y = f(0,2)
   ## 4: y = f(f(0,2),6)
   ## 5: y = f(f(f(0,2),6),1)
-  ## ```
+  ## ~~~
   def fold[T,R](stream: Events[T], init: R, f: (R,T) => R) = result where {
     def result: Events[R] =
       default(
@@ -339,17 +342,20 @@ module Predef {
   ## the first event on `stream` as initial value, the function `f` is called for every later event
   ## on `stream` with the last result and the current event’s value as arguments.
   ## So for the input stream `x`
-  ## ```
+  ##
+  ## ~~~
   ## 2: x = 2
   ## 4: x = 6
   ## 5: x = 1
-  ## ```
+  ## ~~~
+  ##
   ## the call `def y = reduce(f, x)` produces the following stream `y`:
-  ## ```
+  ##
+  ## ~~~
   ## 2: y = 2
   ## 4: y = f(2,6)
   ## 5: y = f(f(2,6),1)
-  ## ```
+  ## ~~~
   def reduce[T](stream: Events[T], f: (Events[T],Events[T]) => Events[T]) = result where {
     def result: Events[T] = defaultFrom(f(last(result, stream), stream), stream)
   }
