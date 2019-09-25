@@ -4,6 +4,8 @@ import scala.collection.mutable
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.util._
 
+import scala.util.Try
+
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, TesslaCore.Specification] {
   override def translate(spec: TypedTessla.TypedSpecification) = {
     new ConstantEvaluatorWorker(spec, baseTimeUnit).translate()
@@ -423,7 +425,11 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
     case param: FunctionParameterEntry =>
       TesslaCore.ValueExpressionRef(param.id)
     case oe: ObjectEntry =>
-      val members = mapValues(oe.members)(value => getValueArg(value))
+      val members = oe.members.flatMap {
+        case (name, entry) =>
+          // Filter out the object entries that aren't valid ValueArgs
+          Try(name -> getValueArg(entry)).toOption
+      }
       TesslaCore.ObjectCreation(members, oe.loc)
     case _ =>
       throw InternalError(s"Expected value-level entry, but found $entry")
