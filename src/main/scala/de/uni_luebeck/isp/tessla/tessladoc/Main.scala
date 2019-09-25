@@ -17,18 +17,33 @@ object Main extends SexyOpt {
   val stdLib = flag("stdlib", 's', "Include documentation for definitions from the standard library")
   val includes = flag("includes", 'i', "Include documentation from included files")
   val globalsOnly = flag("globals-only", 'g', "Do not show information for local definitions")
-  val html = flag("html", "Generate documentation as HTML")
+  val format = option("format", "Output format. Available formats html, markdown, json. Default: json")
+  val markdown = flag("markdown", "Generate documentation as Markdown")
   val outFile = option("outfile", 'o', "Write the generated docs to the given file instead of stdout")
 
   def main(args: Array[String]): Unit = {
     parse(args)
+
+    val outputFormat = format.getOrElse("json").toLowerCase
+    if (!List("json", "markdown", "html").contains(outputFormat)) {
+      System.err.println("Invalid output format " + outputFormat)
+      sys.exit(2)
+    }
+
     val streams = files.map(CharStreams.fromFileName)
     val includeResolver = optionIf(includes)(IncludeResolvers.fromFile _)
     val output = TesslaDoc.extract(streams, includeResolver, includeStdlib = stdLib) match {
       case Success(tesslaDocs, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         val relevantDocs = if(globalsOnly) tesslaDocs.globalsOnly else tesslaDocs
-        if (html) HtmlGenerator.generateHTML(relevantDocs) else relevantDocs.toString
+
+        if (outputFormat == "html") {
+          HtmlGenerator.generateHTML(relevantDocs)
+        } else if (outputFormat == "markdown") {
+          new MarkdownGenerator(relevantDocs).generateMarkdown
+        } else {
+          relevantDocs.toString
+        }
       case Failure(errors, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         errors.foreach(e => System.err.println(s"Error: $e"))

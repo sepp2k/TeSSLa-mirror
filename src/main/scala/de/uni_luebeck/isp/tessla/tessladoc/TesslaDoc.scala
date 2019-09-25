@@ -160,7 +160,7 @@ object TesslaDoc {
   }
 
   def forStdlib: Result[Docs] = {
-    IncludeResolvers.fromStdlibResource("Predef.tessla").map { predef =>
+    IncludeResolvers.fromStdlibResource("stdlib.tessla").map { predef =>
       extract(Seq(predef), Some(IncludeResolvers.fromStdlibResource), includeStdlib = false)
     }.getOrElse {
       Failure(Seq(InternalError("Could not find standard library")), Seq())
