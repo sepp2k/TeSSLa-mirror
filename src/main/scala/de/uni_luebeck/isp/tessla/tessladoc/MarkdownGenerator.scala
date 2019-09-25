@@ -32,7 +32,7 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
   }
 
   def parameterToMarkdown(param: TesslaDoc.Param): String = {
-    s"""${htmlEscape(param.name)}: ${typeToMarkdown(param.typ)}"""
+    s"""${htmlEscape(param.name)}: ${typeToMarkdown(param.typ.toString)}"""
   }
 
   def annotationToMarkdown(annotation: String) = {
