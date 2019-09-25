@@ -16,7 +16,8 @@ module Predef {
   type String = __builtin__(String)
   type Unit = ()
 
-  # Annotations
+  ## Functions annotated with this annotation can be used on streams which will be equivalent to wrapping their call
+  ## with `slift`.
   def @liftable
 
   # Primitive constants and operators
