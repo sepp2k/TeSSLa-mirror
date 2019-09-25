@@ -1,12 +1,3 @@
-include "Option"
-include "List"
-include "Set"
-include "Map"
-include "String"
-include "CTF"
-include "Tessla"
-include "OSL"
-
 module Predef {
   def nil[T]: Events[T] = __builtin__(nil)
   def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)
