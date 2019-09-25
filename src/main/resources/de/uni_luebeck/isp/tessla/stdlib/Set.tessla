@@ -1,30 +1,29 @@
-#module Set {
-  # TODO: Remove the Set_ prefix once liftable functions work inside modules
-  def Set_empty[T]: Set[T] = __builtin__(Set_empty)
+module Set {
+  def empty[T]: Set[T] = __builtin__(Set_empty)
 
   @liftable
-  def Set_add[T](set: Set[T], item: T): Set[T] = __builtin__(Set_add)
+  def add[T](set: Set[T], item: T): Set[T] = __builtin__(Set_add)
 
   @liftable
-  def Set_contains[T](set: Set[T], item: T): Bool = __builtin__(Set_contains)
+  def contains[T](set: Set[T], item: T): Bool = __builtin__(Set_contains)
 
   @liftable
-  def Set_remove[T](set: Set[T], item: T): Set[T] = __builtin__(Set_remove)
+  def remove[T](set: Set[T], item: T): Set[T] = __builtin__(Set_remove)
 
   @liftable
-  def Set_size[T](set: Set[T]): Int = __builtin__(Set_size)
+  def size[T](set: Set[T]): Int = __builtin__(Set_size)
 
   @liftable
-  def Set_union[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_union)
+  def union[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_union)
 
   @liftable
-  def Set_intersection[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_intersection)
+  def intersection[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_intersection)
 
   @liftable
-  def Set_fold[T, U](list: Set[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
+  def fold[T, U](list: Set[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
 
-  def Set_collect[T](value: Events[T]) = {
-    def set: Events[Set[T]] = default(Set_add(last(set, value), value), Set_empty[T])
+  def collect[T](value: Events[T]) = {
+    def set: Events[Set[T]] = default(add(last(set, value), value), empty[T])
     set
   }
-#}
+}

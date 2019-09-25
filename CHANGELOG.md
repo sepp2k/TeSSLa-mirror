@@ -5,6 +5,9 @@
 ### Additions and Fixes
 
 * Assigning a liftable function to a variable and using that as a lifted function now works instead of producing an internal error
+* It is now possible to write `s.x` where `s` is a stream of objects and `x` is a member of the given object type.
+* Calling a `@liftable` function to a stream will now call `slift` to lift the function to streams.
+* Modules can be defined using the syntax `module ModuleName { defs }` where `defs` is a sequence of definitions. This will define an object named `ModuleName` that contains the given definitions as members.
 
 ### New Limitations
 
@@ -13,7 +16,7 @@
 ### API Changes
 
 * TesslaCore.SLift no longer exists. Auto-lifted functions will now be lifted using the sliftN and sliftN_curried macros in the standard library
-** sliftN will be called with arbitrary functions. To get back the simple sequence of operator applications of previous versions, an additional phase will be provided (in progress) that breaks everything down to calls of only `first` and `slift2` with simple functions of the form `(a, b) => built-in-op(a,b)`.
+** sliftN will be called with arbitrary functions. To get back the simple sequence of operator applications of previous versions, an additional phase is needed (coming in future versions) that breaks everything down to calls of only `first` and `slift2` with simple functions of the form `(a, b) => built-in-op(a,b)`.
 
 ## Version 1.0.3
 

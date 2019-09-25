@@ -424,9 +424,10 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
               case oneArg: TesslaParser.SingleArgFormat =>
                 val formatString = Tessla.Literal(Tessla.StringLiteral(format), formatLoc)
                 parts += Tessla.MacroCall(
-                  // TODO: Once liftable functions can be accessed through modules
-                  // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("String", loc)), oneArg.formatFunction, exp.loc)
-                  Tessla.Variable(Tessla.Identifier(s"String_${oneArg.formatFunction}", exp.loc)),
+                  Tessla.MemberAccess(
+                    Tessla.Variable(Tessla.Identifier("String", exp.loc)),
+                    Tessla.Identifier(oneArg.formatFunction, exp.loc),
+                    exp.loc),
                   Seq(), Seq(Tessla.PositionalArgument(formatString), Tessla.PositionalArgument(exp)), exp.loc
                 )
             }
@@ -441,9 +442,10 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       } else {
         parts.reduceLeft { (acc, exp) =>
           Tessla.MacroCall(
-            // TODO: Once liftable functions can be accessed through modules
-            // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("String", loc)), "concat", exp.loc)
-            Tessla.Variable(Tessla.Identifier("String_concat", exp.loc)),
+            Tessla.MemberAccess(
+              Tessla.Variable(Tessla.Identifier("String", exp.loc)),
+              Tessla.Identifier("concat", exp.loc),
+              exp.loc),
             Seq(),
             Seq(Tessla.PositionalArgument(acc), Tessla.PositionalArgument(exp)),
             exp.loc

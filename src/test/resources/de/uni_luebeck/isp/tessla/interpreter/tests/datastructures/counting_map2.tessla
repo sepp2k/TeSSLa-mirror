@@ -5,14 +5,14 @@ in x: Events[Int]
 -- In previous versions this nesting caused an error value-related bug to surface.
 -- So this is the regression test for that bug.
 @liftable
-def inc_count(counts: Map[Int, Int], key: Int) :=
-    if Map_contains(counts, key)
-    then Map_add(counts, key, Map_get(counts, key) + 1)
-    else Map_add(counts, key, 1)
+def inc_count(counts: Map[Int, Int], key: Int) =
+    if Map.contains(counts, key)
+    then Map.add(counts, key, Map.get(counts, key) + 1)
+    else Map.add(counts, key, 1)
 
-def counts: Events[Map[Int, Int]] := default(inc_count(last(counts, x), x), Map_empty[Int, Int])
+def counts: Events[Map[Int, Int]] = default(inc_count(last(counts, x), x), Map.empty[Int, Int])
 
-def size := Map_size(counts)
+def size = Map.size(counts)
 
 out x
 out counts
