@@ -238,6 +238,16 @@ object Evaluator {
             case _: IndexOutOfBoundsException =>
               throw IndexOutOfRange(index, list.value, loc)
           }
+        case "List_set" =>
+          val list = getList(arguments(0))
+          val index = getInt(arguments(1)).toInt
+          val value = arguments(2)
+          try {
+            TesslaCore.TesslaList(list.value.updated(index, value.forceValue), list.typ, loc)
+          } catch {
+            case _: IndexOutOfBoundsException =>
+              throw IndexOutOfRange(index, list.value, loc)
+          }
         case "String_concat" =>
           val s1 = getString(arguments(0))
           val s2 = getString(arguments(1))

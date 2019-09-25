@@ -23,6 +23,9 @@ module List {
   def get[T](list: List[T], index: Int): T = __builtin__(List_get)
 
   @liftable
+  def set[T](list: List[T], index: Int, value: T): List[T] = __builtin__(List_set)
+
+  @liftable
   def head[T](list: List[T]): T = get(list, 0)
 
   @liftable
