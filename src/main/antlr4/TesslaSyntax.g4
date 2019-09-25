@@ -12,7 +12,7 @@ include: 'include' file=stringLit eos;
 
 statement
     : def #Definition
-    | 'def' '@' ID ( '(' parameters+=param (',' parameters+=param)* ')' )? eos #AnnotationDefinition
+    | tessladoc+=DOCLINE* NL* 'def' '@' ID ( '(' parameters+=param (',' parameters+=param)* ')' )? eos #AnnotationDefinition
     | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* typeBody eos #TypeDefinition
     | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=statement* NL* '}' NL* #ModuleDefinition
     | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement

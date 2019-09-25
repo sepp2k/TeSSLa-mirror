@@ -28,6 +28,25 @@ object TesslaDoc {
     def globalsOnly = Docs(items.filter(_.isGlobal))
   }
 
+  case class AnnotationDoc(name: String,
+                           parameters: Seq[Param],
+                           doc: String,
+                           loc: Location) extends TesslaDoc {
+
+    override def toJSON = {
+      val str =
+        s"""{
+           |  "kind": "def",
+           |  "location": ${loc.toJSON},
+           |  "name": "$name",
+           |  "parameters": ${parameters.mkString("[", ", ", "]")},
+           |""".stripMargin
+      str + s"""  "doc": "${jsonEscape(doc)}"\n}"""
+    }
+
+    override def isGlobal = true
+  }
+
   case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, loc: Location) extends TesslaDoc {
     override def toJSON = {
       s"""{
@@ -99,7 +118,7 @@ object TesslaDoc {
       override def visitDef(definition: TesslaSyntax.DefContext) = {
         val header = definition.header
         val doc = DefDoc(
-          annotations = header.annotations.asScala.map(_.getText),
+          annotations = header.annotations.asScala.map(_.ID().getText),
           name = header.name.getText,
           typeParameters = header.typeParameters.asScala.map(_.getText),
           parameters = header.parameters.asScala.map(p => Param(p.ID.getText, p.parameterType.getText)),
@@ -117,6 +136,15 @@ object TesslaDoc {
           case _ =>
             Seq(doc)
         }
+      }
+
+      override def visitAnnotationDefinition(annotationDef: TesslaSyntax.AnnotationDefinitionContext) = {
+        Seq(AnnotationDoc(
+          name = annotationDef.ID().getText,
+          parameters = annotationDef.parameters.asScala.map(p => Param(p.ID.getText, p.parameterType.getText)),
+          doc = getDoc(annotationDef.tessladoc.asScala),
+          loc = Location.fromNode(annotationDef)
+        ))
       }
 
       override def visitTypeDefinition(typeDef: TesslaSyntax.TypeDefinitionContext) = {

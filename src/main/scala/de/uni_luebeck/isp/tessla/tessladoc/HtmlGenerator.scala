@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessladoc
 
 import com.github.rjeschke.txtmark
+import de.uni_luebeck.isp.tessla.Tessla.Annotation
 
 object HtmlGenerator {
   def generateHTML(docs: TesslaDoc.Docs): String = {
@@ -62,6 +63,13 @@ object HtmlGenerator {
       s"""    <div class="doc-entry def" id="doc-def-${definition.name}">
          |      <h3><span class="def-name name">${definition.name}</span>$typeParams$params</h3>
          |      ${txtmark.Processor.process(definition.doc)}
+         |    </div>
+         |""".stripMargin
+    case annotation: TesslaDoc.AnnotationDoc =>
+      val params = parametersToHtml(annotation.parameters)
+      s"""    <div class="doc-entry annotation" id="doc-def-${annotation.name}">
+         |      <h3><span class="def-name name">@${annotation.name}</span>$params</h3>
+         |      ${txtmark.Processor.process(annotation.doc)}
          |    </div>
          |""".stripMargin
   }

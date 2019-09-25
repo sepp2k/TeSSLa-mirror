@@ -1,7 +1,5 @@
 package de.uni_luebeck.isp.tessla.tessladoc
 
-import com.github.rjeschke.txtmark
-
 class MarkdownGenerator(docs: TesslaDoc.Docs) {
   def generateMarkdown: String =
     docs.items.map(itemToMarkdown).mkString("\n\n\n")
@@ -37,6 +35,22 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
     s"""${htmlEscape(param.name)}: ${typeToMarkdown(param.typ)}"""
   }
 
+  def annotationToMarkdown(annotation: String) = {
+    val hasDoc = docs.items.exists {
+      case ad: TesslaDoc.AnnotationDoc => ad.name == annotation
+      case _ => false
+    }
+    if (hasDoc) {
+      s"""<a href="#${toAnchor(annotation)}">@${htmlEscape(annotation)}</a>"""
+    } else {
+      "@" + htmlEscape(annotation)
+    }
+  }
+
+  def annotationsToMarkdown(annotations: Seq[String]) = {
+    annotations.map(annotationToMarkdown).map(_ + "<br>\n").mkString
+  }
+
   def markdownEscape(s: String) = s.replaceAll("_", "\\\\_").replaceAll("\\*", "\\\\*")
 
   def htmlEscape(s: String) = {
@@ -59,9 +73,19 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
          |
          |${typ.doc}
          |""".stripMargin
+    case annotation: TesslaDoc.AnnotationDoc =>
+      val params = parametersToMarkdown(annotation.parameters)
+      s"""## <a id="${toAnchor(annotation.name)}">ANCHOR</a>Annotation @${markdownEscape(annotation.name)}
+         |{: .mt-5.anchor}
+         |
+         |<code>@${htmlEscape(annotation.name)}$params</code>
+         |
+         |${annotation.doc}
+         |""".stripMargin
     case definition: TesslaDoc.DefDoc =>
       val typeParams = typeParamsToMarkdown(definition.typeParameters)
       val params = parametersToMarkdown(definition.parameters)
+      val annotations = annotationsToMarkdown(definition.annotations)
       val returnType = definition.returnType match {
         case Some(typ) => ": " + typeToMarkdown(typ.toString)
         case None => ""
@@ -69,7 +93,7 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
       s"""##  ${markdownEscape(definition.name)}
          |{: .mt-5}
          |
-         |<code>${htmlEscape(definition.name)}${htmlEscape(typeParams)}$params${returnType}</code>
+         |<code>$annotations${htmlEscape(definition.name)}${htmlEscape(typeParams)}$params${returnType}</code>
          |
          |${definition.doc}
          |""".stripMargin
