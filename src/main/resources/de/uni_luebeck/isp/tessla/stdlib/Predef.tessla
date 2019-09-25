@@ -278,6 +278,27 @@ module Predef {
   ## the number of events seen so far.
   ## See `resetCount` for a counting macro with an
   ## external reset.
+  ##
+  ## ~~~ruby
+  ## in x: Events[Unit]
+  ## def y = count(x)
+  ## out y
+  ## ~~~
+  ##
+  ## ~~~trace
+  ## stream x: unit events
+  ## stream y: signal
+  ## ---
+  ## 0: y = 0
+  ## 2: y = 1
+  ## 2: x = ()
+  ## 6: y = 2
+  ## 6: x = ()
+  ## 7: y = 3
+  ## 7: x = ()
+  ## 9: y = 4
+  ## 9: x = ()
+  ## ~~~
   def count[T](x: Events[T]) = fold(x, 0, (x: Int, _: T) => x+1)
 
   ## Sum up the values of all events on `x`. Provides
