@@ -11,16 +11,25 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
 
   def toAnchor(str: String) = str.replaceAll("[^a-zA-Z]", "").toLowerCase
 
-  def typeToMarkdown(typ: String): String = {
-    val hasDoc = docs.items.exists {
-      case td: TesslaDoc.TypeDoc => td.name == typ
-      case _ => false
-    }
-    if (hasDoc) {
-      s"""<a href="#${toAnchor(typ)}">${htmlEscape(typ)}</a>"""
-    } else {
-      htmlEscape(typ)
-    }
+  def typeToMarkdown(typ: TesslaDoc.Type): String = typ match {
+    case t: TesslaDoc.SimpleType =>
+      val hasDoc = docs.items.exists {
+        case td: TesslaDoc.TypeDoc => td.name == t.name
+        case _ => false
+      }
+      if (hasDoc) {
+        s"""<a href="#${toAnchor(t.name)}">${htmlEscape(t.name)}</a>"""
+      } else {
+        htmlEscape(t.name)
+      }
+    case t: TesslaDoc.TypeApplication =>
+      s"${typeToMarkdown(t.constructor)}${t.arguments.map(typeToMarkdown).mkString("[", ", ", ")")}"
+    case t: TesslaDoc.FunctionType =>
+      s"(${t.parameters.map(typeToMarkdown).mkString("(", ", ", ")")} => ${typeToMarkdown(t.result)}"
+    case t: TesslaDoc.ObjectType =>
+      t.members.map{case (name, typ) => s"$name: ${typeToMarkdown(typ)}"}.mkString("{", ", ", "}")
+    case t: TesslaDoc.TupleType =>
+      t.members.map(typeToMarkdown).mkString("(", ", ", ")")
   }
 
   def typeParamsToMarkdown(typeParams: Seq[String]) = {
@@ -32,7 +41,7 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
   }
 
   def parameterToMarkdown(param: TesslaDoc.Param): String = {
-    s"""${htmlEscape(param.name)}: ${typeToMarkdown(param.typ.toString)}"""
+    s"""${htmlEscape(param.name)}: ${typeToMarkdown(param.typ)}"""
   }
 
   def annotationToMarkdown(annotation: String) = {
@@ -87,7 +96,7 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
       val params = parametersToMarkdown(definition.parameters)
       val annotations = annotationsToMarkdown(definition.annotations)
       val returnType = definition.returnType match {
-        case Some(typ) => ": " + typeToMarkdown(typ.toString)
+        case Some(typ) => ": " + typeToMarkdown(typ)
         case None => ""
       }
       s"""##  ${markdownEscape(definition.name)}

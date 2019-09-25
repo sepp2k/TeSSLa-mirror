@@ -73,8 +73,8 @@ object TesslaDoc {
     override def toString = name
   }
 
-  case class TypeApplication(name: String, arguments: Seq[Type]) extends Type {
-    override def toString = s"$name${arguments.mkString("[", ", ", "]")}"
+  case class TypeApplication(constructor: Type, arguments: Seq[Type]) extends Type {
+    override def toString = s"$constructor${arguments.mkString("[", ", ", "]")}"
   }
 
   case class FunctionType(parameters: Seq[Type], result: Type) extends Type {
@@ -138,7 +138,7 @@ object TesslaDoc {
         SimpleType(simpleType.name.getText)
 
       override def visitTypeApplication(typeApplication: TesslaSyntax.TypeApplicationContext) =
-        TypeApplication(name = typeApplication.name.getText,
+        TypeApplication(constructor = SimpleType(typeApplication.name.getText),
           arguments = typeApplication.typeArguments.asScala.map(visit))
 
       override def visitFunctionType(functionType: TesslaSyntax.FunctionTypeContext) =
