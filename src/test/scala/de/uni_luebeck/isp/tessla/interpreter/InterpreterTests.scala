@@ -73,10 +73,8 @@ class InterpreterTests extends FunSuite {
   }
 
   def assertEqualSets[T: Ordering](actual: Set[T], expected: Set[T], name: String, stringify: T => String = (x: T) => x.toString): Unit = {
-    val onlyExpected = (expected -- actual).map(x => (x, "-"))
-    val onlyActual = (actual -- expected).map(x => (x, "+"))
-    val diff = (onlyExpected ++ onlyActual).toSeq.sorted.map { case (entry, prefix) => s"$prefix ${stringify(entry)}" }.mkString("\n")
-    assert(actual == expected, s"Actual $name did not equal expected $name. Diff:\n$diff\n")
+    def sort(s: Set[T]) = s.toIndexedSeq.sorted.map(stringify).mkString("\n")
+    assert(actual == expected, s"${sort(actual)} did not equal ${sort(expected)}")
   }
 
   def splitOutput(line: String): (BigInt, String) = {
@@ -143,7 +141,7 @@ class InterpreterTests extends FunSuite {
           timeUnitString = testCase.timeUnit,
           includeResolver = IncludeResolvers.fromResource(getClass, root),
           stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-          stdlibPath = "Predef.tessla"
+          stdlibPath = "stdlib.tessla"
         )
         val src = testStream(testCase.spec)
         testCase.expectedObservations.foreach { observationFile =>

@@ -19,7 +19,6 @@ object Compiler {
       .andThen(Flattener)
       .andThen(TypeChecker)
       .andThen(new ConstantEvaluator(options.timeUnit))
-      .andThen(CycleDetection)
       .andThen(RemoveUnusedDefinitions)
   }
 

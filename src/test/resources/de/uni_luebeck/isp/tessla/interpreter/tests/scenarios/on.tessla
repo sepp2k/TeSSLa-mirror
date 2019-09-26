@@ -1,9 +1,0 @@
-def myOn[T,U](trigger: Events[U], stream: Events[T]) = {
-  def z = merge(stream, last(stream, trigger))
-  lift(trigger, z, (t: Option[U], a: Option[T]) => if isNone(t) then None[T] else a)
-}
-
-in x: Events[Unit]
-in y: Events[Int]
-
-out myOn(x,y) as z

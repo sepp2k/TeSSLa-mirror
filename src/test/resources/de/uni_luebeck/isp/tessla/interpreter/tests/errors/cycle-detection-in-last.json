@@ -1,0 +1,4 @@
+{
+  "expectedErrors": "cycle-detection-in-last.errors",
+  "spec": "cycle-detection-in-last.tessla"
+}

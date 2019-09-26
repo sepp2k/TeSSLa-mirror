@@ -8,6 +8,7 @@
 * It is now possible to write `s.x` where `s` is a stream of objects and `x` is a member of the given object type.
 * Calling a `@liftable` function to a stream will now call `slift` to lift the function to streams.
 * Modules can be defined using the syntax `module ModuleName { defs }` where `defs` is a sequence of definitions. This will define an object named `ModuleName` that contains the given definitions as members.
+* Add `sample` to standard library.
 
 ### New Limitations
 
@@ -17,6 +18,44 @@
 
 * TesslaCore.SLift no longer exists. Auto-lifted functions will now be lifted using the sliftN and sliftN_curried macros in the standard library
 ** sliftN will be called with arbitrary functions. To get back the simple sequence of operator applications of previous versions, an additional phase is needed (coming in future versions) that breaks everything down to calls of only `first` and `slift2` with simple functions of the form `(a, b) => built-in-op(a,b)`.
+
+## Version 1.0.7
+
+### Breaking Changes
+
+* Renamed `bursts(e, burstLength, waitingPeriod, burstAmount, since)` to `burstsSince` and added
+`bursts(e, burstLength, waitingPeriod, burstAmount)`.
+* Renamed `filterConst` to `constIf` and added `unitIf`.
+* `@InstFunctionReturn` and `@InstFunctionReturned` generate unit events without data. The new `@InstFunctionReturnValue` and `@InstFunctionReturnedValue` generate events carrying the returned values.  
+
+### Additions and Fixes
+
+* Add `Set_minus`, `Set_init`, `Set_collectWithRemove`, `getSomeOrElse`, `Option_flatMap`, `Option_map2`, and `Option_toSet`.
+
+## Version 1.0.6
+
+### Additions and Fixes
+
+* Remove setup and teardown callbacks from generated instrumentation configuration
+
+## Version 1.0.5
+
+### Breaking Changes
+
+* Rename `eventCount` to `resetCount` in the standard library.
+
+### Additions and Fixes
+
+* Fix definition of `on` in the standard library
+* Add `Map_keys` and `Map_fold` to the standard library.
+
+## Version 1.0.4
+
+### Additions and Fixes
+
+* Instrumentation code lines are now sorted to create a more stable output.
+* Fix an error which prevented calling builtins on unit values.
+* Converting NaN or infinity to `Int` now produces a proper TeSSLa error instead of aborting with an exception
 
 ## Version 1.0.3
 

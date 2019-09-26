@@ -1,17 +1,5 @@
-def resetCount[T](values: Events[T], reset: Events[Unit]) := {
-    def rc: Events[Int] :=
-        default(
-            if default(time(reset) > time(values), false)
-            then 0
-            else if default(time(reset) == time(values), false)
-            then 1
-            else last(rc, values) + 1,
-            0)
-    rc
-}
-
 def trigger(condition: Events[Bool]) :=
-    filterConst((), condition && !last(condition, condition))
+    constIf((), condition && !last(condition, condition))
 
 def countSince[T](e: Events[T], condition: Events[Bool]) :=
     resetCount(e, trigger(condition))

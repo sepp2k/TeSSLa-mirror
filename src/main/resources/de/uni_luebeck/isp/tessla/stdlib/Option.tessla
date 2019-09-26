@@ -3,4 +3,20 @@ module Option {
     if isNone(opt)
     then None[U]
     else Some(f(getSome(opt)))
+
+  def flatMap[T, U](opt: Option[T], f: (T) => Option[U]): Option[U] =
+    if isNone(opt)
+    then None[U]
+    else f(getSome(opt))
+
+  def map2[T,U,V](opt1: Option[T], opt2: Option[U], f: (T, U) => V) =
+    flatMap(opt1, (v1: T) => map(opt2, (v2: U) => f(v1, v2)))
+
+  @liftable
+  def toSet[T](option: Option[T]): Set[T] = __private__Option_toSet(option)
+}
+
+def __private__Option_toSet[T](option: Option[T]): Set[T] = {
+  def set = Set.empty[T]
+  if isSome(option) then Set.add(set, getSome(option)) else set
 }

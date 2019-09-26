@@ -1,9 +1,6 @@
 {
   "Assignments": [],
   "FunctionCalled": [{
-    "FunctionName": "main",
-    "code": "trace_init();"
-  }, {
     "FunctionName": "add",
     "code": "uint8_t* events = trace_create_events(1);\ntrace_push_unit(events, \"add\");\ntrace_write(events);"
   }, {
@@ -12,10 +9,7 @@
   }],
   "FunctionCalls": [],
   "FunctionReturned": [],
-  "FunctionReturns": [{
-    "FunctionName": "main",
-    "code": "trace_close();"
-  }],
+  "FunctionReturns": [],
   "VarReads": [],
   "userCbPrefix": "#include \"instrumentation.h\"\n"
 }

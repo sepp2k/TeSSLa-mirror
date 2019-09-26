@@ -34,9 +34,6 @@
     "code": "uint8_t* events = trace_create_events(1);\ntrace_push_int(events, \"globalWrite\", (int64_t) value);\ntrace_write(events);"
   }],
   "FunctionCalled": [{
-    "FunctionName": "main",
-    "code": "trace_init();"
-  }, {
     "FunctionName": "add",
     "code": "uint8_t* events = trace_create_events(3);\ntrace_push_int(events, \"calledX\", (int64_t) arg0);\ntrace_push_int(events, \"calledY\", (int64_t) arg1);\ntrace_push_unit(events, \"called\");\ntrace_write(events);"
   }],
@@ -46,14 +43,11 @@
   }],
   "FunctionReturned": [{
     "FunctionName": "add",
-    "code": "uint8_t* events = trace_create_events(1);\ntrace_push_int(events, \"returned\", (int64_t) value);\ntrace_write(events);"
+    "code": "uint8_t* events = trace_create_events(2);\ntrace_push_int(events, \"returnedValue\", (int64_t) value);\ntrace_push_unit(events, \"returned\");\ntrace_write(events);"
   }],
   "FunctionReturns": [{
     "FunctionName": "sub",
-    "code": "uint8_t* events = trace_create_events(1);\ntrace_push_int(events, \"ret\", (int64_t) value);\ntrace_write(events);"
-  }, {
-    "FunctionName": "main",
-    "code": "trace_close();"
+    "code": "uint8_t* events = trace_create_events(2);\ntrace_push_int(events, \"retValue\", (int64_t) value);\ntrace_push_unit(events, \"ret\");\ntrace_write(events);"
   }],
   "VarReads": [{
     "DeRef": {

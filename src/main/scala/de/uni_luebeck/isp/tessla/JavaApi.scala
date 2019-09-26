@@ -132,7 +132,7 @@ object JavaApi {
       timeUnitString = Option(timeUnit),
       includeResolver = IncludeResolvers.empty,
       stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-      stdlibPath = "Predef.tessla"
+      stdlibPath = "stdlib.tessla"
     )
     Compiler.compile(specSource, compilerOptions) match {
       case Success(spec, warnings) =>

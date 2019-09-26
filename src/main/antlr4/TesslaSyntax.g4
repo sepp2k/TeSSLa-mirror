@@ -14,9 +14,9 @@ entry: statement eos;
 
 statement
     : def #Definition
-    | 'def' '@' ID ( '(' parameters+=param (',' parameters+=param)* ')' )? #AnnotationDefinition
+    | tessladoc+=DOCLINE* NL* 'def' '@' ID ( '(' parameters+=param (',' parameters+=param)* ')' )? #AnnotationDefinition
     | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* typeBody #TypeDefinition
-    | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=entry* NL* '}' #ModuleDefinition
+    | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=entry* '}' #ModuleDefinition
     | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement
     | annotations+=annotation* 'in' NL* ID NL* ':' NL* type #In
     | 'out' NL* expression ('as' NL* ID)? #Out

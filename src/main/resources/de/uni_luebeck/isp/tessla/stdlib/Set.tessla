@@ -2,6 +2,9 @@ module Set {
   def empty[T]: Set[T] = __builtin__(Set_empty)
 
   @liftable
+  def init[T](value: T): Set[T] = add(empty[T], value)
+
+  @liftable
   def add[T](set: Set[T], item: T): Set[T] = __builtin__(Set_add)
 
   @liftable
@@ -20,10 +23,21 @@ module Set {
   def intersection[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_intersection)
 
   @liftable
+  def minus[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_minus)
+
+  @liftable
   def fold[T, U](set: Set[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
 
   def collect[T](value: Events[T]) = {
     def set: Events[Set[T]] = default(add(last(set, value), value), empty[T])
+    set
+  }
+
+  def collectWithRemove[T](value: Events[T], removeValue: Events[T]) = {
+    def old = last(set, merge(value, removeValue))
+    def operation: Events[Set[T]] = lift3(old, value, removeValue, (o: Option[Set[T]], v: Option[T], r: Option[T]) =>
+      Some(minus(union(getSome(o), Option.toSet(v)), Option.toSet(r))))
+    def set = default(operation, empty[T])
     set
   }
 }

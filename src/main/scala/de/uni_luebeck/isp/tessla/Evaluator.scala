@@ -15,7 +15,7 @@ object Evaluator {
 
   def getFloat(voe: TesslaCore.ValueOrError): Double = voe.forceValue match {
     case floatLit: TesslaCore.FloatValue => floatLit.value
-    case v => throw InternalError(s"Type error should've been caught by type checker: Expected: Int, got: $v", v.loc)
+    case v => throw InternalError(s"Type error should've been caught by type checker: Expected: Float, got: $v", v.loc)
   }
 
   def getBool(voe: TesslaCore.ValueOrError): Boolean = voe.forceValue match {
@@ -139,7 +139,13 @@ object Evaluator {
         case "intToFloat" =>
           TesslaCore.FloatValue(getInt(arguments(0)).toDouble, loc)
         case "floatToInt" =>
-          TesslaCore.IntValue(BigDecimal(getFloat(arguments(0))).toBigInt, loc)
+          val value = getFloat(arguments(0))
+          try {
+            TesslaCore.IntValue(BigDecimal(value).toBigInt, loc)
+          } catch {
+            case _: NumberFormatException =>
+              TesslaCore.Error(FloatConversionError(value, loc))
+          }
         case "None" =>
           TesslaCore.TesslaOption(None, resultType, loc)
         case "Some" =>
@@ -173,6 +179,14 @@ object Evaluator {
         case "Map_size" =>
           val map = getMap(arguments(0))
           TesslaCore.IntValue(map.value.size, loc)
+        case "Map_keys" =>
+          val map = getMap(arguments(0))
+          TesslaCore.TesslaList(map.value.keys.toIndexedSeq, resultType, loc)
+        case "Map_fold" =>
+          val map = getMap(arguments(0)).value
+          val z = arguments(1)
+          val f = arguments(2)
+          map.foldLeft(z){case (acc, (key, value)) => evalApplication(f, Seq(acc, key, value), resultType, loc)}
         case "Set_empty" =>
           TesslaCore.TesslaSet(Set(), resultType, loc)
         case "Set_add" =>
@@ -194,6 +208,10 @@ object Evaluator {
           val set1 = getSet(arguments(0))
           val set2 = getSet(arguments(1))
           TesslaCore.TesslaSet(set1.value & set2.value, resultType, loc)
+        case "Set_minus" =>
+          val set1 = getSet(arguments(0))
+          val set2 = getSet(arguments(1))
+          TesslaCore.TesslaSet(set1.value -- set2.value, resultType, loc)
         case "Set_fold" =>
           val set = getSet(arguments(0)).value
           val z = arguments(1)

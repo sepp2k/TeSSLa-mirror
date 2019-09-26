@@ -1,2 +1,2 @@
-/observations/wrongType.tessla(4,1 - 5,26): Type mismatch: Expected Events[Unit], found Events[Int]
-/observations/wrongType.tessla(1,1 - 2,22): Type mismatch: Expected Events[Int] or Events[Float], found Events[()]
+/observations/wrongType.tessla(4,1 - 5,26): Type mismatch: Expected Events[Unit], but found Events[Int]
+/observations/wrongType.tessla(1,1 - 2,22): Type mismatch: Expected Events[Int], Events[Float] or Events[Bool], but found Events[()]
