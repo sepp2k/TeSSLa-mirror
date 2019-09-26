@@ -2,7 +2,9 @@ package de.uni_luebeck.isp.tessla.tessladoc
 
 class MarkdownGenerator(docs: TesslaDoc.Docs) {
   def generateMarkdown: String =
-    docs.items.map(itemToMarkdown).mkString("\n\n\n")
+    itemsToMarkdown(docs.items)
+
+  def itemsToMarkdown(items: Seq[TesslaDoc]) = items.map(itemToMarkdown).mkString("\n\n\n")
 
   def seqToString(seq: Seq[String], opening: String, closing: String) = {
     if (seq.isEmpty) ""
@@ -105,6 +107,16 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
          |<code>$annotations${htmlEscape(definition.name)}${htmlEscape(typeParams)}$params${returnType}</code>
          |
          |${definition.doc}
+         |""".stripMargin
+    case module: TesslaDoc.ModuleDoc =>
+      s"""## Module ${markdownEscape(module.name)}
+         |{: .mt-5}
+         |
+         |${module.doc}
+         |
+         |<div class="module" id="module-${module.name}">
+         |${itemsToMarkdown(module.members)}
+         |</div>
          |""".stripMargin
   }
 }

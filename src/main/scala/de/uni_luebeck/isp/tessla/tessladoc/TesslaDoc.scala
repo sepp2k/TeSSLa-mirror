@@ -124,6 +124,19 @@ object TesslaDoc {
     override def isGlobal = scope == Global
   }
 
+  case class ModuleDoc(name: String, doc: String, members: Seq[TesslaDoc], loc: Location) extends TesslaDoc {
+    override def toJSON =
+      s"""{
+         |  "kind": "module",
+         |  "location": ${loc.toJSON},
+         |  "name": "$name",
+         |  "doc": "${jsonEscape(doc)}",
+         |  "members": ${members.mkString("[\n", ",\n", "\n]")}
+         |}""".stripMargin
+
+    override def isGlobal = true
+  }
+
   class Extractor(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[Docs] {
     override protected def translateSpec() = {
       Docs(spec.flatMap(_.tree.entries.asScala.map(_.statement).flatMap(translateStatement)))
@@ -207,6 +220,11 @@ object TesslaDoc {
       override def visitBlock(block: TesslaSyntax.BlockContext) = {
         val visitor = new StatementVisitor(Local(Location.fromNode(block)))
         visitor(block.expression) ++ block.definitions.asScala.flatMap(visitor)
+      }
+
+      override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext) = {
+        val members = module.contents.asScala.map(_.statement).flatMap(this)
+        Seq(ModuleDoc(module.name.getText, getDoc(module.tessladoc.asScala), members, Location.fromNode(module)))
       }
     }
 
