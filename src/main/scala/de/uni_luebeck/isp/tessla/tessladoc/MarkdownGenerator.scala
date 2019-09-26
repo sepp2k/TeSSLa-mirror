@@ -23,7 +23,7 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
         htmlEscape(t.name)
       }
     case t: TesslaDoc.TypeApplication =>
-      s"${typeToMarkdown(t.constructor)}${t.arguments.map(typeToMarkdown).mkString("[", ", ", ")")}"
+      s"${typeToMarkdown(t.constructor)}${t.arguments.map(typeToMarkdown).mkString("[", ", ", "]")}"
     case t: TesslaDoc.FunctionType =>
       s"(${t.parameters.map(typeToMarkdown).mkString("(", ", ", ")")} => ${typeToMarkdown(t.result)}"
     case t: TesslaDoc.ObjectType =>
