@@ -37,7 +37,7 @@ object TesslaDoc {
     override def toJSON = {
       val str =
         s"""{
-           |  "kind": "def",
+           |  "kind": "annotationDef",
            |  "location": ${loc.toJSON},
            |  "name": "$name",
            |  "parameters": ${parameters.mkString("[", ", ", "]")},
