@@ -17,7 +17,8 @@
 ### API Changes
 
 * TesslaCore.SLift no longer exists. Auto-lifted functions will now be lifted using the sliftN and sliftN_curried macros in the standard library
-** sliftN will be called with arbitrary functions. To get back the simple sequence of operator applications of previous versions, an additional phase is needed (coming in future versions) that breaks everything down to calls of only `first` and `slift2` with simple functions of the form `(a, b) => built-in-op(a,b)`.
+** sliftN will be called with arbitrary functions.
+* For the moment the simplification that removed `default(nil, x)` on lifted functions and instead inserted `x` directly into the lifted function (Malte's "currying" phase) has been removed. It will be re-added in a future version.
 
 ## Version 1.0.7
 
