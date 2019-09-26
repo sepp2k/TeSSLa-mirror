@@ -16,7 +16,5 @@ module Option {
   def toSet[T](option: Option[T]): Set[T] = __private__Option_toSet(option)
 }
 
-def __private__Option_toSet[T](option: Option[T]): Set[T] = {
-  def set = Set.empty[T]
-  if isSome(option) then Set.add(set, getSome(option)) else set
-}
+def __private__Option_toSet[T](option: Option[T]): Set[T] =
+  if isSome(option) then Set.singleton( getSome(option)) else Set.empty[T]
