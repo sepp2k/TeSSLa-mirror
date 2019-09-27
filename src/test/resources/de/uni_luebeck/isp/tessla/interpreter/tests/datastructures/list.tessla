@@ -1,6 +1,6 @@
 in list: Events[List[Int]]
 
-def my_sum(list: List[Int]) = List.fold(list, 0, fun(a: Int, b: Int) => a + b)
+def my_sum(list: List[Int]) = List.fold(list, 0, (a: Int, b: Int) => a + b)
 
 out slift1(list, my_sum) as s
 out List.size(list) as size

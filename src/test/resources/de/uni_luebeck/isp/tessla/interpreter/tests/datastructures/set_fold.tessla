@@ -4,7 +4,7 @@ def op(acc: Int, value: (Int, Int)) = {
 }
 
 def ss = const(Set.add(Set.add(Set.empty[(Int, Int)], (2,1)), (4,7)), ())
-def os = lift(s, nil[Unit], fun(x: Option[Set[(Int,Int)]], y: Option[Unit]) =>
+def os = lift(s, nil[Unit], (x: Option[Set[(Int,Int)]], y: Option[Unit]) =>
   Some(Set.fold(getSome(x), 0, op)))
 out os
 

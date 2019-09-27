@@ -285,13 +285,10 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
 
     override def visitLambda(lambda: TesslaSyntax.LambdaContext) = {
-      val startHeaderLoc = Location.fromToken(Option(lambda.funKW).getOrElse(lambda.openingParen))
+      val startHeaderLoc = Location.fromToken(lambda.openingParen)
       val endHeaderLoc = Location.fromToken(lambda.closingParen)
       val headerLoc = startHeaderLoc.merge(endHeaderLoc)
       val body = translateExpression(lambda.expression)
-      if (lambda.funKW != null) {
-        warn(Location.fromToken(lambda.funKW), "The keyword 'fun' is deprecated")
-      }
       val params = lambda.params.asScala.map(translateParameter)
       checkForDuplicates(params.map(_.id))
       Tessla.Lambda(params, headerLoc, body, Location.fromNode(lambda))

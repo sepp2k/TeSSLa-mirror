@@ -20,7 +20,6 @@ STATIC: 'static';
 IF: 'if';
 THEN: 'then';
 ELSE: 'else';
-FUN: 'fun';
 RETURN: 'return';
 LBRACKET: '[';
 RBRACKET: ']';

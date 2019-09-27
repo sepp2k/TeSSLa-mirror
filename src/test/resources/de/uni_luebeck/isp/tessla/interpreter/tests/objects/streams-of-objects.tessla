@@ -1,17 +1,17 @@
 in a: Events[Int]
 in b: Events[Int]
 
-def t: Events[(Int, Int)] := slift(a, b, fun (x: Int, y: Int) => (x, y))
+def t: Events[(Int, Int)] := slift(a, b, (x: Int, y: Int) => (x, y))
 
-def o: Events[${x: Int, y: Int, z: Int}] := default(
-    slift(a, b, fun (x: Int, y: Int) => ${x, y, z = x+y}),
-    ${x = 0, y = 0, z = 0})
+def o: Events[{x: Int, y: Int, z: Int}] := default(
+    slift(a, b, (x: Int, y: Int) => {x, y, z = x+y}),
+    {x = 0, y = 0, z = 0})
 
 @liftable
 def sumPair(t: (Int, Int)) := t._1 + t._2
 
-def aa: Events[(Int, Int)] := slift1(a, fun (a: Int) => (a, a))
-def bb: Events[(Int, Int)] := slift1(b, fun (b: Int) => (b, b))
+def aa: Events[(Int, Int)] := slift1(a, (a: Int) => (a, a))
+def bb: Events[(Int, Int)] := slift1(b, (b: Int) => (b, b))
 
 out sumPair(t)
 out aa._1 + bb._2

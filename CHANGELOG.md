@@ -2,6 +2,10 @@
 
 ## Version 1.1.0 (upcoming)
 
+### Breaking Changes
+
+* The keyword `fun`, which has been deprecated since version 0.7.0, no longer exists. If you have code that still uses it, just remove the keyword and the code should work again.
+
 ### Additions and Fixes
 
 * Assigning a liftable function to a variable and using that as a lifted function now works instead of producing an internal error

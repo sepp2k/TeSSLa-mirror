@@ -13,6 +13,3 @@ def myEventCount[T](e: Events[T]) := {
 
 def o1: ${} = ${}
 def o2: {} = {}
-
-def f1 = fun (x: Int) => x
-def f2 = (x: Int) => x
