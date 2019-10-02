@@ -244,9 +244,9 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
 
         callee match {
           case be: BuiltInEntry =>
-            val innterTypeEnv: TypeEnv = be.builtIn.typeParameters.zip(call.typeArgs.map(translateValueType(_, typeEnv))).toMap
+            val innerTypeEnv: TypeEnv = be.builtIn.typeParameters.zip(call.typeArgs.map(translateValueType(_, typeEnv))).toMap
             // Lazy because we don't want translateStreamType to be called when not dealing wiht streams
-            lazy val translatedType = translateStreamType(typ, typeEnv ++ innterTypeEnv)
+            lazy val translatedType = translateStreamType(typ, typeEnv ++ innerTypeEnv)
             var posArgIdx = 0
             // This is lazy, so the arguments don't get evaluated until they're used below, allowing us to
             // initialize entries where appropriate before the evaluation takes place
@@ -467,6 +467,8 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
             case Some(f) => f
             case None => throw InternalError("Using non-value macro as value - should have been caught by type checker")
           }
+        case be: BuiltInEntry =>
+          TesslaCore.BuiltInOperator(be.name, Location.builtIn)
         case other => throw InternalError(s"Wrong type of environment entry: Expected ValueEntry, found: $other")
       }
     } catch {
