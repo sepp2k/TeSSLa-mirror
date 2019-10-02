@@ -184,7 +184,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
             translateVar(env, ite.elseCase.id, ite.elseCase.loc, stack)
           }
         } catch {
-          case e: TesslaError =>
+          case e: TesslaError if !e.isInstanceOf[InternalError] =>
             ValueEntry(TesslaCore.Error(e))
         }
       case obj: TypedTessla.ObjectLiteral =>
@@ -470,7 +470,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
         case other => throw InternalError(s"Wrong type of environment entry: Expected ValueEntry, found: $other")
       }
     } catch {
-      case e: TesslaError =>
+      case e: TesslaError if !e.isInstanceOf[InternalError] =>
         TesslaCore.Error(e)
     }
   }

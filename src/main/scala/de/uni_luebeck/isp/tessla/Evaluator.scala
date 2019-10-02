@@ -368,7 +368,7 @@ class Evaluator(customBuiltIns: Map[String, Seq[TesslaCore.ValueOrError] => Tess
           }
       }
     } catch {
-      case e: TesslaError =>
+      case e: TesslaError if !e.isInstanceOf[InternalError] =>
         TesslaCore.Error(e)
     }
   }
