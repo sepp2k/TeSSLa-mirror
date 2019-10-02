@@ -1,7 +1,8 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{Location, Tessla, TesslaCore}
+import de.uni_luebeck.isp.tessla.{Evaluator, Location, Tessla, TesslaCore}
 import de.uni_luebeck.isp.tessla.Errors.InternalError
+import de.uni_luebeck.isp.tessla.interpreter.Trace.TimeStamp
 import org.eclipse.tracecompass.ctf.core.CTFException
 import org.eclipse.tracecompass.ctf.core.trace.{CTFTrace, CTFTraceReader}
 
@@ -30,6 +31,10 @@ object Trace {
     override def toString = time.toString
   }
 
+}
+
+class Trace(evaluator: Evaluator){
+
   def fromCtfFile(ctfFileName: String, abortAt: Option[BigInt]): Interpreter.Trace = {
     val reader = new CTFTraceReader(new CTFTrace(ctfFileName))
 
@@ -57,7 +62,7 @@ object Trace {
 
   def fromLineIterator(lineIterator: Iterator[String], fileName: String, abortAt: Option[Specification.Time] = None) = {
     val rawTrace = new TraceParser(lineIterator, fileName).parseTrace()
-    new FlatEventIterator(rawTrace, abortAt)
+    new FlatEventIterator(rawTrace, abortAt, evaluator)
   }
 
   def fromSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {
@@ -72,7 +77,7 @@ object Trace {
 
   def fromCsvLineIterator(lineIterator: Iterator[String], fileName: String, abortAt: Option[Specification.Time] = None) = {
     val rawTrace = new CsvTraceParser(lineIterator, fileName).parseTrace()
-    new FlatEventIterator(rawTrace, abortAt)
+    new FlatEventIterator(rawTrace, abortAt, evaluator)
   }
 
   def fromCsvSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {

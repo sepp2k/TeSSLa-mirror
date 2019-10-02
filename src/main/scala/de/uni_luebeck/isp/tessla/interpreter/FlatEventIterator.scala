@@ -10,7 +10,7 @@ import org.antlr.v4.runtime.tree.RuleNode
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 
-class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
+class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option[BigInt], evaluator: Evaluator) extends Iterator[Trace.Event] {
   val queue: mutable.PriorityQueue[EventRange] =
     new mutable.PriorityQueue[EventRange]()(Ordering.by((ev: EventRange) => ev.from).reverse)
   var nextEvents = new mutable.Queue[Trace.Event]
@@ -136,7 +136,7 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         val operatorName = Tessla.unaryOperators(exp.op.getText)
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
-        Evaluator.evalApplication(getOperator(operatorName, opLoc), Seq(visit(exp.expression)), TesslaCore.NeverType, loc).forceValue
+        evaluator.evalApplication(getOperator(operatorName, opLoc), Seq(visit(exp.expression)), TesslaCore.NeverType, loc).forceValue
       }
 
       override def visitInfixExpression(exp: InfixExpressionContext) = {
@@ -144,7 +144,7 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         val args = Seq(visit(exp.lhs), visit(exp.rhs))
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
-        Evaluator.evalApplication(getOperator(operatorName, opLoc), args, TesslaCore.NeverType, loc).forceValue
+        evaluator.evalApplication(getOperator(operatorName, opLoc), args, TesslaCore.NeverType, loc).forceValue
       }
 
       override def visitITE(ite: ITEContext) = {

@@ -255,6 +255,8 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def typ = BuiltInType("CTF_Object", Seq())
   }
 
+  abstract class ExternalValue extends PrimitiveValue
+
   case class BuiltInOperator(name: String, loc: Location) extends PrimitiveValue {
     override def value = name
 
