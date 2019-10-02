@@ -123,7 +123,7 @@ class Evaluator(customBuiltIns: Map[String, Seq[TesslaCore.ValueOrError] => Tess
     loc: Location,
     env: Env = Map()
   ): TesslaCore.ValueOrError = {
-    evalArg(f, env) match {
+    evalArg(f, env).forceValue match {
       case b: TesslaCore.BuiltInOperator =>
         evalPrimitiveOperator(b.value, args, resultType, loc)
       case c: TesslaCore.Closure =>
