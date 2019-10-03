@@ -74,8 +74,7 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
   def itemToMarkdown(doc: TesslaDoc): String = doc match {
     case typ: TesslaDoc.TypeDoc =>
       val typeParams = typeParamsToMarkdown(typ.typeParameters)
-      s"""## <a id="${toAnchor(typ.name)}">ANCHOR</a>Type ${markdownEscape(typ.name)}
-         |{: .mt-5.anchor}
+      s"""<h2 class="mt-5 anchor"><a id="${toAnchor(typ.name)}">ANCHOR</a>Type ${htmlEscape(typ.name)}</h2>
          |
          |`${typ.name}$typeParams`
          |
@@ -84,8 +83,7 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
          |""".stripMargin
     case annotation: TesslaDoc.AnnotationDoc =>
       val params = parametersToMarkdown(annotation.parameters)
-      s"""## <a id="${toAnchor(annotation.name)}">ANCHOR</a>Annotation @${markdownEscape(annotation.name)}
-         |{: .mt-5.anchor}
+      s"""<h2 class="mt-5 anchor"><a id="${toAnchor(annotation.name)}">ANCHOR</a>Annotation @${htmlEscape(annotation.name)}</h2>
          |
          |<code>@${htmlEscape(annotation.name)}$params</code>
          |
@@ -99,8 +97,7 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
         case Some(typ) => ": " + typeToMarkdown(typ)
         case None => ""
       }
-      s"""##  ${markdownEscape(definition.name)}
-         |{: .mt-5}
+      s"""<h2 class="mt-5 anchor"><a id="${toAnchor(definition.name)}">ANCHOR</a>${htmlEscape(definition.name)}</h2>
          |
          |<code>$annotations${htmlEscape(definition.name)}${htmlEscape(typeParams)}$params${returnType}</code>
          |
