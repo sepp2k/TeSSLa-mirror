@@ -277,7 +277,7 @@ module Predef {
   @liftable
   def intToFloat(x: Int): Float = __builtin__(intToFloat)
 
-  ## Converts the given float to an integer without 
+  ## Converts the given float to an integer without
   @liftable
   def floatToInt(x: Float): Int = __builtin__(floatToInt)
 
@@ -356,7 +356,7 @@ module Predef {
   ## 5: a = 23
   ## 5: d = 23
   ## ~~~
-  ## 
+  ##
   def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)
 
   ## Similar to [`default`](#default), this operation returns a stream which contains
@@ -372,7 +372,7 @@ module Predef {
   ## def d = defaultFrom(v, x)
   ## out d
   ## ~~~
-  ## 
+  ##
   ## **Trace example:**
   ##
   ## ~~~trace
@@ -416,7 +416,7 @@ module Predef {
   ## called with all arguments being `None`.
   ##
   ## **Usage example:**
-  ## 
+  ##
   ## ~~~ruby
   ## in a: Events[Int]
   ## in b: Events[Int]
@@ -425,7 +425,7 @@ module Predef {
   ## def c = lift(a,b,f)
   ## out c
   ## ~~~
-  ## 
+  ##
   ## **Trace example:**
   ##
   ## ~~~trace
@@ -447,13 +447,159 @@ module Predef {
   ## ~~~
   def lift[T, U, V](stream1: Events[T], stream2: Events[U], f: (Option[T], Option[U]) => Option[V]): Events[V] = __builtin__(lift)
 
+  ## Lifts a unary function `f` which is defined on values to a function on a stream and applies it to the
+  ## given stream. The function `f` is called for every event on the streams. Because there is no
+  ## other stream, the argument of `f` will never be `None`. (`f` is never
+  ## called with all arguments being `None`.)
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in a: Events[Int]
+  ## def f(a: Option[Int]) =
+  ##   if getSome(a) > 5 then a else None[Int]
+  ## def b = lift1(a,f)
+  ## out b
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## ---
+  ## 1: b = 7
+  ## 1: a = 7
+  ## 2: a = 5
+  ## 4: a = 3
+  ## 5: b = 9
+  ## 5: a = 9
+  ## ~~~
+  def lift1[T, U](stream: Events[T], f: (Option[T]) => Option[U]): Events[U] =
+    lift(stream, nil[Unit], (x: Option[T], dontCare: Option[Unit]) => f(x))
+
+  ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
+  ## given streams. The function `f` is called for every event on any of the streams. If there is a
+  ## simultaneous event on the other stream, then the values of both events are passed to `f`. Otherwise
+  ## the other argument is `None` if there is no simultaneous event on the other stream. `f` is never
+  ## called with all arguments being `None`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## in c: Events[Int]
+  ## def f(a: Option[Int], b: Option[Int], c: Option[Int]) =
+  ##   if isSome(a) && getSome(a) > 5 then a
+  ##   else if isSome(b) then b else c
+  ## def d = lift3(a,b,c,f)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## stream c: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 1: d = 7
+  ## 1: a = 7
+  ## 2: a = 5
+  ## 3: b = 6
+  ## 3: d = 6
+  ## 4: b = 2
+  ## 4: d = 2
+  ## 4: a = 3
+  ## 5: c = 1
+  ## 5: d = 1
+  ## 6: b = 4
+  ## 6: c = 3
+  ## 6: d = 9
+  ## 6: a = 9
+  ## ~~~
+  def lift3[T1, T2, T3, T4](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3],
+                            f: (Option[T1], Option[T2], Option[T3]) => Option[T4]): Events[T4] = {
+    def stream2and3 = lift(stream2, stream3, (x: Option[T2], y: Option[T3]) => Some((x, y)))
+    lift(stream1, stream2and3, (v1: Option[T1], v2and3opt: Option[(Option[T2], Option[T3])]) =>
+      if isNone(v2and3opt)
+      then f(v1, None[T2], None[T3])
+      else {
+        def v2and3 = getSome(v2and3opt)
+        f(v1, v2and3._1, v2and3._2)
+      })
+  }
+
+  ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
+  ## given streams. The function `f` is called for every event on any of the streams. If there is a
+  ## simultaneous event on the other stream, then the values of both events are passed to `f`. Otherwise
+  ## the other argument is `None` if there is no simultaneous event on the other stream. `f` is never
+  ## called with all arguments being `None`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## in c: Events[Int]
+  ## in d: Events[Int]
+  ## def f(a: Option[Int], b: Option[Int], c: Option[Int], d: Option[Int]) =
+  ##   if isSome(a) && getSome(a) > 5 then a
+  ##   else if isSome(b) then b
+  ##   else if isSome(c) then c
+  ##   else d
+  ## def e = lift4(a,b,c,d,f)
+  ## out e
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## stream c: bubbles
+  ## stream d: bubbles
+  ## stream e: bubbles
+  ## ---
+  ## 1: a = 7
+  ## 1: e = 7
+  ## 2: a = 5
+  ## 3: b = 6
+  ## 3: e = 6
+  ## 4: b = 2
+  ## 4: a = 3
+  ## 4: e = 2
+  ## 5: e = 1
+  ## 5: c = 1
+  ## 6: d = 2
+  ## 6: e = 2
+  ## 7: b = 4
+  ## 7: a = 9
+  ## 7: d = 2
+  ## 7: e = 9
+  ## 7: c = 3
+  ## ~~~
+  def lift4[T1, T2, T3, T4, T5](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3], stream4: Events[T4],
+                                f: (Option[T1], Option[T2], Option[T3], Option[T4]) => Option[T5]): Events[T5] = {
+    def stream1and2 = lift(stream1, stream2, (x: Option[T1], y: Option[T2]) => Some((x, y)))
+    lift3(stream1and2, stream3, stream4, (v1and2opt: Option[(Option[T1], Option[T2])], v3: Option[T3], v4: Option[T4]) =>
+      if isNone(v1and2opt)
+      then f(None[T1], None[T2], v3, v4)
+      else {
+        def v1and2 = getSome(v1and2opt)
+        f(v1and2._1, v1and2._2, v3, v4)
+      })
+  }
+
   ## The last operator takes two streams and returns the previous
   ## value of the first stream at the timestamps of the second.
   ## Note that while TeSSLa is defined on event streams, last realizes some essential
   ## aspects of the signal semantics: With this operator one can query the last known
   ## value of an event stream at a specific time and hence interpret the events on this
   ## stream as points where a piece-wise constant signal changes its value.
-  ## 
+  ##
   ## **Usage example:**
   ##
   ## ~~~ruby
@@ -551,37 +697,96 @@ module Predef {
 
   # More stream functions
 
+  ## Maps the event's values of a `stream` to given constant `value`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def y = const(42, x)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## ---
+  ## 1: y = 42
+  ## 1: x = 17
+  ## 6: y = 42
+  ## 6: x = 1
+  ## 8: y = 42
+  ## 8: x = 42
+  ## 12: y = 42
+  ## 12: x = 23
+  ## ~~~
   def const[T, U](value: T, stream: Events[U]): Events[T] = slift1(stream, (_: U) => value)
 
+  ## Returns a variant of `stream1` which has every original events of `stream1` and additional events with
+  ## the last value of `stream1` for every event of `stream2`. `first` is defined as the signal lift of the
+  ## function _f(a,b) = a_.
+  ##
+  ## Note, the difference between `first(stream1, stream2)` and `merge(stream1, last(stream1, stream2))`. Since `first` is
+  ## defined via signal lift, it does not produce events before both input streams have been defined.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## in y: Events[Int]
+  ## def z = first(x, y)
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: signal
+  ## stream y: signal
+  ## stream z: signal
+  ## ---
+  ## 1: x = 17
+  ## 2: y = 23
+  ## 2: z = 17
+  ## 3: z = 1
+  ## 3: x = 1
+  ## 4: y = 3
+  ## 4: z = 1
+  ## 6: y = 34
+  ## 6: z = 42
+  ## 6: x = 42
+  ## 8: y = 12
+  ## 8: z = 42
+  ## ~~~
   def first[T, U](stream1: Events[T], stream2: Events[U]): Events[T] = slift(stream1, stream2, (x: T, _: U) => x)
 
-  def lift1[T, U](stream: Events[T], f: (Option[T]) => Option[U]): Events[U] =
-    lift(stream, nil[Unit], (x: Option[T], dontCare: Option[Unit]) => f(x))
-
-  def lift3[T1, T2, T3, T4](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3],
-                            f: (Option[T1], Option[T2], Option[T3]) => Option[T4]): Events[T4] = {
-    def stream2and3 = lift(stream2, stream3, (x: Option[T2], y: Option[T3]) => Some((x, y)))
-    lift(stream1, stream2and3, (v1: Option[T1], v2and3opt: Option[(Option[T2], Option[T3])]) =>
-      if isNone(v2and3opt)
-      then f(v1, None[T2], None[T3])
-      else {
-        def v2and3 = getSome(v2and3opt)
-        f(v1, v2and3._1, v2and3._2)
-      })
-  }
-
-  def lift4[T1, T2, T3, T4, T5](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3], stream4: Events[T4],
-                                f: (Option[T1], Option[T2], Option[T3], Option[T4]) => Option[T5]): Events[T5] = {
-    def stream1and2 = lift(stream1, stream2, (x: Option[T1], y: Option[T2]) => Some((x, y)))
-    lift3(stream1and2, stream3, stream4, (v1and2opt: Option[(Option[T1], Option[T2])], v3: Option[T3], v4: Option[T4]) =>
-      if isNone(v1and2opt)
-      then f(None[T1], None[T2], v3, v4)
-      else {
-        def v1and2 = getSome(v1and2opt)
-        f(v1and2._1, v1and2._2, v3, v4)
-      })
-  }
-
+  ## The unary signal lift is very similar to `lift1`. Since the lifted function is unary, there is no other
+  ## stream with which events are being synchronized. The only difference is that `slift1` takes a total
+  ## function which cannot remove events.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in a: Events[Int]
+  ## def b = slift1(a, (x: Int) => x + 1)
+  ## out b
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: signal
+  ## stream b: signal
+  ## ---
+  ## 1: b = 3
+  ## 1: a = 2
+  ## 3: b = 6
+  ## 3: a = 5
+  ## 7: b = 4
+  ## 7: a = 3
+  ## ~~~
   def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] =
     lift1(stream, (x: Option[T]) => Some(f(getSome(x))))
 
@@ -672,7 +877,7 @@ module Predef {
   ## external reset.
   ##
   ## **Usage example:**
-  ## 
+  ##
   ## ~~~ruby
   ## in x: Events[Unit]
   ## def y = count(x)
