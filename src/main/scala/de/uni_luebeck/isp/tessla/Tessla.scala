@@ -134,6 +134,10 @@ object Tessla {
     override def toString(inner: Boolean) = id.name
   }
 
+  case class RootMemberAccess(member: Identifier, loc: Location) extends Expression {
+    override def toString(inner: Boolean) = s"__root__.$member"
+  }
+
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
   case class MacroCall(mac: Expression, typeArgs: Seq[Type], args: Seq[Argument[Expression]], loc: Location) extends Expression {

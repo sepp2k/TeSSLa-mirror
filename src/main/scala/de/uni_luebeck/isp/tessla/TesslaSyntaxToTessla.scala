@@ -297,9 +297,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     def translateOperator(operator: Token, operatorMap: Map[String, String]) = {
       val loc = Location.fromToken(operator)
       val functionName = Tessla.Identifier(operatorMap(operator.getText), loc)
-      // TODO: Once the operators are properly located in Predef
-      // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("Predef", loc)), functionName, loc)
-      Tessla.Variable(functionName)
+      Tessla.RootMemberAccess(functionName, loc)
     }
 
     override def visitUnaryExpression(exp: TesslaSyntax.UnaryExpressionContext) = {
@@ -335,6 +333,10 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
           loc
         )
       }
+    }
+
+    override def visitRootMemberAccess(root: TesslaSyntax.RootMemberAccessContext) = {
+      Tessla.RootMemberAccess(mkID(root.fieldName), Location.fromNode(root))
     }
 
     override def visitMemberAccess(ma: TesslaSyntax.MemberAccessContext) = {
@@ -399,9 +401,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
           }
           if (part.FORMAT == null) {
             parts += Tessla.MacroCall(
-              // TODO: Once the operators are properly located in Predef
-              // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("Predef", loc)), "toString", exp.loc)
-              Tessla.Variable(Tessla.Identifier("toString", exp.loc)),
+              Tessla.RootMemberAccess(Tessla.Identifier("toString", exp.loc), exp.loc),
               Seq(), Seq(Tessla.PositionalArgument(exp)), exp.loc
             )
           } else {
@@ -412,9 +412,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
                 error(invalid.err)
               case noArgs: TesslaParser.NoArgFormat =>
                 parts += Tessla.MacroCall(
-                  // TODO: Once the operators are properly located in Predef
-                  // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("Predef", loc)), "toString", exp.loc)
-                  Tessla.Variable(Tessla.Identifier("toString", exp.loc)),
+                  Tessla.RootMemberAccess(Tessla.Identifier("toString", exp.loc), exp.loc),
                   Seq(), Seq(Tessla.PositionalArgument(exp)), exp.loc
                 )
                 curStr ++= noArgs.processedString
@@ -422,7 +420,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
                 val formatString = Tessla.Literal(Tessla.StringLiteral(format), formatLoc)
                 parts += Tessla.MacroCall(
                   Tessla.MemberAccess(
-                    Tessla.Variable(Tessla.Identifier("String", exp.loc)),
+                    Tessla.RootMemberAccess(Tessla.Identifier("String", exp.loc), exp.loc),
                     Tessla.Identifier(oneArg.formatFunction, exp.loc),
                     exp.loc),
                   Seq(), Seq(Tessla.PositionalArgument(formatString), Tessla.PositionalArgument(exp)), exp.loc
@@ -440,7 +438,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         parts.reduceLeft { (acc, exp) =>
           Tessla.MacroCall(
             Tessla.MemberAccess(
-              Tessla.Variable(Tessla.Identifier("String", exp.loc)),
+              Tessla.RootMemberAccess(Tessla.Identifier("String", exp.loc), exp.loc),
               Tessla.Identifier("concat", exp.loc),
               exp.loc),
             Seq(),

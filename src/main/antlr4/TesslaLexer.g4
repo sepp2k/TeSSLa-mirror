@@ -12,6 +12,7 @@ MODULE: 'module';
 IMPORT: 'import';
 IMEXPORT: 'imexport';
 BUILTIN: '__builtin__';
+ROOT: '__root__';
 IN: 'in';
 OUT: 'out';
 PRINT: 'print';

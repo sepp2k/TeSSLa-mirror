@@ -216,16 +216,12 @@ class TypeChecker(spec: FlatTessla.Specification)
     }
   }
 
-  def findPredef(name: String, env: Env) = {
-    tryFindPredef(name, env).getOrElse(throw InternalError(s"Standard library must define Predef.$name"))
+  def findPredef(name: String, env: Env): TypedTessla.Identifier = {
+    env(spec.globalNames.getOrElse(name, throw InternalError(s"Standard library must define $name")))
   }
 
-  def findPredef(name: String, env: Env, loc: Location) = {
-    tryFindPredef(name, env).getOrElse(throw UndefinedVariable(Tessla.Identifier(s"Predef.$name", loc)))
-  }
-
-  def tryFindPredef(name: String, env: Env) = {
-    spec.lookupID("Predef", name).map(env)
+  def findPredef(name: String, env: Env, loc: Location): TypedTessla.Identifier = {
+    env(spec.globalNames.getOrElse(name, throw UndefinedVariable(Tessla.Identifier(s"__root__.$name", loc))))
   }
 
   def liftConstant(constant: TypedTessla.Identifier, defs: TypedTessla.Definitions, env: Env, loc: Location) = {

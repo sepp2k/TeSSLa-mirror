@@ -13,20 +13,6 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     }
 
     def outAll = outAllLocation.isDefined
-
-    def lookupID(qname: String*): Option[Identifier] = lookupID(globalNames, qname)
-
-    private def lookupID(names: Map[String, Identifier], qname: Seq[String]): Option[Identifier] = qname match {
-      case Seq() => throw InternalError("Called lookup ID with empty list")
-      case Seq(name) => names.get(name)
-      case Seq(name, rest @ _*) => names.get(name).flatMap { id =>
-        globalDefs.resolveVariable(id).flatMap {
-          case VariableEntry(_, mod: ObjectLiteral, _, _, _) =>
-            lookupID(mapValues(mod.members)(_.id), rest)
-          case _ => None
-        }
-      }
-    }
   }
 
   type TypeAnnotation

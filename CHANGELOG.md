@@ -12,6 +12,7 @@
 * It is now possible to write `s.x` where `s` is a stream of objects and `x` is a member of the given object type.
 * Calling a `@liftable` function to a stream will now call `slift` to lift the function to streams.
 * Modules can be defined using the syntax `module ModuleName { defs }` where `defs` is a sequence of definitions. This will define an object named `ModuleName` that contains the given definitions as members.
+* The keyword `__root__` can be used to access the top-level namespace from within modules or inner scopes.
 * Add `sample` to standard library.
 
 ### New Limitations

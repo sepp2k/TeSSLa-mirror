@@ -1,9 +1,9 @@
-/errors/infinite/mutual-infinite-recursion-with-operators-streams.tessla(2,23 - 2,28): Infinite recursion detected
-    called from Predef.tessla(281,10 - 281,17)
-    called from Predef.tessla(13,14 - 13,34)
-    called from Predef.tessla(15,10 - 15,12)
-    called from /errors/infinite/mutual-infinite-recursion-with-operators-streams.tessla(1,23 - 1,28)
-    called from Predef.tessla(281,10 - 281,17)
-    called from Predef.tessla(13,14 - 13,34)
-    called from Predef.tessla(15,10 - 15,12)
+/errors/infinite/mutual-infinite-recursion-with-operators-streams.tessla(1,23 - 1,28): Infinite recursion detected
+    called from Predef.tessla(263,8 - 263,15)
+    called from Predef.tessla(201,12 - 201,32)
+    called from Predef.tessla(203,8 - 203,10)
     called from /errors/infinite/mutual-infinite-recursion-with-operators-streams.tessla(2,23 - 2,28)
+    called from Predef.tessla(263,8 - 263,15)
+    called from Predef.tessla(201,12 - 201,32)
+    called from Predef.tessla(203,8 - 203,10)
+    called from /errors/infinite/mutual-infinite-recursion-with-operators-streams.tessla(1,23 - 1,28)

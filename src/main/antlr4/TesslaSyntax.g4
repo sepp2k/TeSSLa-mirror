@@ -81,6 +81,7 @@ expression
         ('[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']')? '(' NL* arguments+=arg (',' NL* arguments+=arg)* NL* ')'
       | ('[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']')
       )  #FunctionCall
+    | '__root__' '.' NL* fieldName=ID #RootMemberAccess
     | obj=expression '.' NL* fieldName=ID #MemberAccess
     | op=('!' | '~' | '-' | '-.') NL* expression #UnaryExpression
     | lhs=expression op=('*' | '/' | '%' | '*.' | '/.') NL* rhs=expression #InfixExpression
