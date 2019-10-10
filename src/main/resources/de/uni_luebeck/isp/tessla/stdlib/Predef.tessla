@@ -18,74 +18,76 @@ def true: Bool = __builtin__(true)
 ## A Boolean value representing that a given proposition is false
 def false: Bool = __builtin__(false)
 
-@liftable
-def __not__(arg: Bool): Bool = __builtin__(__not__)
-@liftable
-def __ite__[T](cond: Bool, thenCase: T, elseCase: T): T = __builtin__(__ite__)
-@liftable
-def __and__(lhs: Bool, rhs: Bool): Bool = __builtin__(__and__)
-@liftable
-def __or__(lhs: Bool, rhs: Bool): Bool = __builtin__(__or__)
+module Operators {
+  @liftable
+  def not(arg: Bool): Bool = __builtin__(not)
+  @liftable
+  def ite[T](cond: Bool, thenCase: T, elseCase: T): T = __builtin__(ite)
+  @liftable
+  def and(lhs: Bool, rhs: Bool): Bool = __builtin__(and)
+  @liftable
+  def or(lhs: Bool, rhs: Bool): Bool = __builtin__(or)
 
-@liftable
-def __eq__[T](lhs: T, rhs: T): Bool = __builtin__(__eq__)
-@liftable
-def __neq__[T](lhs: T, rhs: T): Bool = __builtin__(__neq__)
+  @liftable
+  def eq[T](lhs: T, rhs: T): Bool = __builtin__(eq)
+  @liftable
+  def neq[T](lhs: T, rhs: T): Bool = __builtin__(neq)
 
-@liftable
-def __gt__(lhs: Int, rhs: Int): Bool = __builtin__(__gt__)
-@liftable
-def __lt__(lhs: Int, rhs: Int): Bool = __builtin__(__lt__)
-@liftable
-def __geq__(lhs: Int, rhs: Int): Bool = __builtin__(__geq__)
-@liftable
-def __leq__(lhs: Int, rhs: Int): Bool = __builtin__(__leq__)
+  @liftable
+  def gt(lhs: Int, rhs: Int): Bool = __builtin__(gt)
+  @liftable
+  def lt(lhs: Int, rhs: Int): Bool = __builtin__(lt)
+  @liftable
+  def geq(lhs: Int, rhs: Int): Bool = __builtin__(geq)
+  @liftable
+  def leq(lhs: Int, rhs: Int): Bool = __builtin__(leq)
 
-@liftable
-def __fgt__(lhs: Float, rhs: Float): Bool = __builtin__(__fgt__)
-@liftable
-def __flt__(lhs: Float, rhs: Float): Bool = __builtin__(__flt__)
-@liftable
-def __fgeq__(lhs: Float, rhs: Float): Bool = __builtin__(__fgeq__)
-@liftable
-def __fleq__(lhs: Float, rhs: Float): Bool = __builtin__(__fleq__)
+  @liftable
+  def fgt(lhs: Float, rhs: Float): Bool = __builtin__(fgt)
+  @liftable
+  def flt(lhs: Float, rhs: Float): Bool = __builtin__(flt)
+  @liftable
+  def fgeq(lhs: Float, rhs: Float): Bool = __builtin__(fgeq)
+  @liftable
+  def fleq(lhs: Float, rhs: Float): Bool = __builtin__(fleq)
 
-@liftable
-def __add__(lhs: Int, rhs: Int): Int = __builtin__(__add__)
-@liftable
-def __sub__(lhs: Int, rhs: Int): Int = __builtin__(__sub__)
-@liftable
-def __mul__(lhs: Int, rhs: Int): Int = __builtin__(__mul__)
-@liftable
-def __div__(lhs: Int, rhs: Int): Int = __builtin__(__div__)
-@liftable
-def __mod__(lhs: Int, rhs: Int): Int = __builtin__(__mod__)
-@liftable
-def __negate__(arg: Int): Int = __builtin__(__negate__)
+  @liftable
+  def add(lhs: Int, rhs: Int): Int = __builtin__(add)
+  @liftable
+  def sub(lhs: Int, rhs: Int): Int = __builtin__(sub)
+  @liftable
+  def mul(lhs: Int, rhs: Int): Int = __builtin__(mul)
+  @liftable
+  def div(lhs: Int, rhs: Int): Int = __builtin__(div)
+  @liftable
+  def mod(lhs: Int, rhs: Int): Int = __builtin__(mod)
+  @liftable
+  def negate(arg: Int): Int = __builtin__(negate)
 
-@liftable
-def __bitand__(lhs: Int, rhs: Int): Int = __builtin__(__bitand__)
-@liftable
-def __bitor__(lhs: Int, rhs: Int): Int = __builtin__(__bitor__)
-@liftable
-def __bitxor__(lhs: Int, rhs: Int): Int = __builtin__(__bitxor__)
-@liftable
-def __bitflip__(arg: Int): Int = __builtin__(__bitflip__)
-@liftable
-def __leftshift__(lhs: Int, rhs: Int): Int = __builtin__(__leftshift__)
-@liftable
-def __rightshift__(lhs: Int, rhs: Int): Int = __builtin__(__rightshift__)
+  @liftable
+  def bitand(lhs: Int, rhs: Int): Int = __builtin__(bitand)
+  @liftable
+  def bitor(lhs: Int, rhs: Int): Int = __builtin__(bitor)
+  @liftable
+  def bitxor(lhs: Int, rhs: Int): Int = __builtin__(bitxor)
+  @liftable
+  def bitflip(arg: Int): Int = __builtin__(bitflip)
+  @liftable
+  def leftshift(lhs: Int, rhs: Int): Int = __builtin__(leftshift)
+  @liftable
+  def rightshift(lhs: Int, rhs: Int): Int = __builtin__(rightshift)
 
-@liftable
-def __fadd__(lhs: Float, rhs: Float): Float = __builtin__(__fadd__)
-@liftable
-def __fsub__(lhs: Float, rhs: Float): Float = __builtin__(__fsub__)
-@liftable
-def __fmul__(lhs: Float, rhs: Float): Float = __builtin__(__fmul__)
-@liftable
-def __fdiv__(lhs: Float, rhs: Float): Float = __builtin__(__fdiv__)
-@liftable
-def __fnegate__(arg: Float): Float = __builtin__(__fnegate__)
+  @liftable
+  def fadd(lhs: Float, rhs: Float): Float = __builtin__(fadd)
+  @liftable
+  def fsub(lhs: Float, rhs: Float): Float = __builtin__(fsub)
+  @liftable
+  def fmul(lhs: Float, rhs: Float): Float = __builtin__(fmul)
+  @liftable
+  def fdiv(lhs: Float, rhs: Float): Float = __builtin__(fdiv)
+  @liftable
+  def fnegate(arg: Float): Float = __builtin__(fnegate)
+}
 
 # Functions for primitive types
 @liftable
@@ -337,7 +339,7 @@ def count[T](x: Events[T]) = fold(x, 0, (x: Int, _: T) => x+1)
 ## Sum up the values of all events on `x`. Provides
 ## for every input event an output event whose value
 ## is the sum of the values of all events seen so far.
-def sum(x: Events[Int]) = fold(x, 0, __add__)
+def sum(x: Events[Int]) = fold(x, 0, Operators.add)
 
 ## Fold a function on values over all events on `stream`. Starting with
 ## the initial value `init` the function `f` is called for every event

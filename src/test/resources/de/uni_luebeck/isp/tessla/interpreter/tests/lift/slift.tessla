@@ -1,4 +1,4 @@
 in x: Events[Int]
 in y: Events[Int]
 
-out slift(x, y, __add__) as z
+out slift(x, y, Operators.add) as z

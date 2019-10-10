@@ -5,6 +5,7 @@
 ### Breaking Changes
 
 * The keyword `fun`, which has been deprecated since version 0.7.0, no longer exists. If you have code that still uses it, just remove the keyword and the code should work again.
+* Operator functions have been moved into the `Operators` module and the underscores have been removed from their names. So if you want to use, for example, the `+` operator as a function, you now write `Operators.add` instead of `__add__`.
 
 ### Additions and Fixes
 

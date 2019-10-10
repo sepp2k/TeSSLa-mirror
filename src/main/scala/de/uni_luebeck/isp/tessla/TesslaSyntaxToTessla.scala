@@ -297,7 +297,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     def translateOperator(operator: Token, operatorMap: Map[String, String]) = {
       val loc = Location.fromToken(operator)
       val functionName = Tessla.Identifier(operatorMap(operator.getText), loc)
-      Tessla.RootMemberAccess(functionName, loc)
+      Tessla.MemberAccess(Tessla.RootMemberAccess(Tessla.Identifier("Operators", loc), loc), functionName, loc)
     }
 
     override def visitUnaryExpression(exp: TesslaSyntax.UnaryExpressionContext) = {
@@ -327,7 +327,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
       } else {
         Tessla.MacroCall(
-          translateOperator(ite.ifToken, Map("if" -> "__ite__")),
+          translateOperator(ite.ifToken, Map("if" -> "ite")),
           Seq(),
           Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
           loc
