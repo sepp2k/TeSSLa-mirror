@@ -129,19 +129,36 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
 
     override def visitOut(out: TesslaSyntax.OutContext) = {
-      val loc = Option(out.ID).map(Location.fromToken).getOrElse(Location.fromNode(out.expression))
-      val id = Option(out.ID).map(mkID).getOrElse {
-        Tessla.Identifier(tokens.getText(out.expression), Location.fromNode(out.expression))
+      for (annotation <- out.annotations.asScala) {
+        if (annotation.ID.getText != "raw") {
+          error(WrongAnnotationOnOut(mkID(annotation.ID)))
+        }
       }
-      Tessla.Out(translateExpression(out.expression), id, loc)
-    }
-
-    override def visitOutAll(outAll: TesslaSyntax.OutAllContext) = {
-      Tessla.OutAll(Location.fromNode(outAll))
+      val rawAnnotation = out.annotations.asScala.find(_.ID.getText == "raw")
+      if (out.star == null) {
+        val loc = Option(out.ID).map(Location.fromToken).getOrElse(Location.fromNode(out.expression))
+        if (rawAnnotation.isDefined) {
+          if (out.ID != null) {
+            error(AsOnRawOut(Location.fromToken(out.ID)))
+          }
+          Tessla.Print(translateExpression(out.expression), loc)
+        } else {
+          val id = Option(out.ID).map(mkID).getOrElse {
+            Tessla.Identifier(tokens.getText(out.expression), Location.fromNode(out.expression))
+          }
+          Tessla.Out(translateExpression(out.expression), id, loc)
+        }
+      } else {
+        rawAnnotation.foreach { annotation =>
+          error(RawOutAll(Location.fromNode(annotation)))
+        }
+        Tessla.OutAll(Location.fromNode(out))
+      }
     }
 
     override def visitPrint(print: TesslaSyntax.PrintContext) = {
       val loc = Location.fromNode(print.expression)
+      warn(Location.fromToken(print.PRINT), "The keyword 'print' is deprecated - use '@raw out' instead")
       Tessla.Print(translateExpression(print.expression), loc)
     }
 

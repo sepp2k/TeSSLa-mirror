@@ -199,6 +199,20 @@ object Errors {
     override def loc = id.loc
   }
 
+  case class WrongAnnotationOnOut(annotationID: Tessla.Identifier) extends TesslaError {
+    override def message = s"The annotation $annotationID can not be used on out statements"
+
+    override def loc = annotationID.loc
+  }
+
+  case class RawOutAll(loc: Location) extends TesslaError {
+    override def message = s"The @raw annotation can not be used with 'out *'"
+  }
+
+  case class AsOnRawOut(loc: Location) extends TesslaError {
+    override def message = s"@raw out statements can not have an 'as' clause"
+  }
+
   case class MacroAnnotationOnNonMacro(annotationId: Tessla.Identifier, defName: String) extends TesslaError {
     override def message = s"The annotation $annotationId can only be applied to macro definitions, which $defName is not"
 

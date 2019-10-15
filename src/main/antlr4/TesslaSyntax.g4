@@ -19,9 +19,8 @@ statement
     | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=entry* '}' #ModuleDefinition
     | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement
     | annotations+=annotation* 'in' NL* ID NL* ':' NL* type #In
-    | 'out' NL* expression ('as' NL* ID)? #Out
+    | annotations+=annotation* 'out' NL* (expression ('as' NL* ID)? | star='*') #Out
     | 'print' NL* expression #Print
-    | 'out' NL* '*' #OutAll
     ;
 
 def: header=definitionHeader (':='|'=') NL* body;

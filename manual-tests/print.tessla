@@ -5,4 +5,5 @@ def double(💩: String) = "$💩$💩"
 
 def exponential💩: Events[String] = default(last(double(exponential💩), tick), "💩")
 
-print exponential💩
+@raw
+out exponential💩
