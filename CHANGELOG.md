@@ -14,6 +14,8 @@
 * Calling a `@liftable` function to a stream will now call `slift` to lift the function to streams.
 * Modules can be defined using the syntax `module ModuleName { defs }` where `defs` is a sequence of definitions. This will define an object named `ModuleName` that contains the given definitions as members.
 * The keyword `__root__` can be used to access the top-level namespace from within modules or inner scopes.
+* The `@raw` annotation has been introduced as a replacement for `print` to make `out` statements produce unformatted output
+* The `print` keyword is now deprecated
 * Add `sample` to standard library.
 
 ### New Limitations
