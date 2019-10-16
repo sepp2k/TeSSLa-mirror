@@ -10,7 +10,9 @@ object IntermediateCode {
     * Container class for the translated abstract imperative code
     * @param stepSource Imperative statements executed when a new timestamp arrives
     */
-  case class SourceListing(stepSource: Seq[ImpLanStmt]) {
+
+  case class SourceListing(stepSource: Seq[ImpLanStmt],
+                           tsGenSource: Seq[ImpLanStmt]) {
 
   }
 
