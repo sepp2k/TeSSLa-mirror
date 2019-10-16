@@ -20,7 +20,7 @@ object IntermediateCode {
 
   sealed trait ImpLanStmt
 
-  sealed trait ImpLanExpr
+  sealed trait ImpLanExpr extends ImpLanStmt
 
   sealed trait ImpLanVal extends ImpLanExpr
 
@@ -76,7 +76,6 @@ object IntermediateCode {
     override def toString = s"${argsTypes.mkString(" x ")} -> $retType"
   }
 
-
   final case class LongValue(value: Long) extends ImpLanVal {
     override def toString = value.toString
   }
@@ -129,7 +128,6 @@ object IntermediateCode {
     override def toString = s"ImmutList<$valType>{}"
   }
 
-
   final case class DoNothingFunction(argsTypes: Seq[ImpLanType], retType: ImpLanType) extends ImpLanVal {
     override def toString = s"${argsTypes.mkString(" x ")} -> $retType{}"
   }
@@ -148,10 +146,13 @@ object IntermediateCode {
     override def toString = s"$lhs = ${defVal.toString} (final)\n"
   }
 
-  final case class FunctionCall(name: String, params: Seq[ImpLanExpr]) extends ImpLanStmt {
-    override def toString = s"$name( ${params.mkString(", ")} )\n"
+  final case class ReturnStatement(expr: ImpLanExpr) extends ImpLanStmt {
+    override def toString = s"return ${expr}\n"
   }
 
+  final case class FunctionCall(name: String, params: Seq[ImpLanExpr]) extends ImpLanExpr {
+    override def toString = s"$name( ${params.mkString(", ")} )\n"
+  }
 
   final case class Addition(op1: ImpLanExpr, op2: ImpLanExpr) extends ImpLanExpr {
     override def toString = s"$op1 + $op2"
