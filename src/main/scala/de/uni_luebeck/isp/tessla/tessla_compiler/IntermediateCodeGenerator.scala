@@ -135,7 +135,34 @@ object IntermediateCodeGenerator {
   }
 
   def produceLiftStepCode(outStream: Stream, f: Function, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
-    throw new Errors.NotYetImplementedError("", loc)
+    val fname = FunctionGenerator.generateFunctionCode(f)
+    val o = outStream.id.uid
+    val ot = outStream.typ.elementType
+    val params = args.map{sr => TernaryExpression(Set(Set(Equal(s"${streamNameAndType(sr)._1}_ts", "currTs"))),
+                                                  FunctionCall("Some", Seq(s"${streamNameAndType(sr)._1}_value")),
+                                                  None)
+                         }
+    val guard : Set[_ >: Set[ImpLanExpr]] = args.map{sr => Set(Variable(streamNameAndType(sr)._1))}.toSet
+
+    val newStmt = (currSrc.stepSource
+
+      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      If(guard)
+        Assignment(s"${o}_fval", FunctionCall(fname, params), defaultValueForType(ot), ot)
+        If(Set(Set(FunctionCall("isSome", Seq(s"${o}_fval")))))
+          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot)
+          Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+          Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+          Assignment(s"${o}_value", FunctionCall("getSome", Seq(s"${o}_fval")), defaultValueForType(ot), ot)
+          Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+          Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+          // Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType) //TODO: Error Generation
+          Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+        EndIf()
+      EndIf()
+
+      )
+    SourceListing(newStmt, currSrc.tsGenSource, FunctionGenerator.functionImpl.toMap)
   }
 
   def produceSignalLiftStepCode(outStream: Stream, op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
