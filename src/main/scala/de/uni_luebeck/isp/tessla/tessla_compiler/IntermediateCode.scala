@@ -44,6 +44,10 @@ object IntermediateCode {
     override def toString = "String"
   }
 
+  final case class OptionType(valType: ImpLanType) extends ImpLanType {
+    override def toString = s"Option<$valType>"
+  }
+
   final case class MutableSetType(valType: ImpLanType) extends ImpLanType {
     override def toString = s"MutSet<$valType>"
   }
@@ -93,6 +97,14 @@ object IntermediateCode {
     override def toString = value.toString
   }
 
+  final case object None extends ImpLanVal {
+    override def toString = "None"
+  }
+
+  final case class Some(content: ImpLanVal) extends ImpLanVal {
+    override def toString = s"Some($content)"
+  }
+
   final case class EmptyMutableSet(valType: ImpLanType) extends ImpLanVal {
     override def toString = s"MutSet<$valType>{}"
   }
@@ -122,8 +134,7 @@ object IntermediateCode {
     override def toString = s"${argsTypes.mkString(" x ")} -> $retType{}"
   }
 
-
-  final case class If(guard: Set[Set[ImpLanExpr]], stmts: Seq[ImpLanStmt], elseStmts: Seq[ImpLanStmt])
+  final case class If(guard: Set[_ >: Set[ImpLanExpr]], stmts: Seq[ImpLanStmt], elseStmts: Seq[ImpLanStmt])
     extends ImpLanStmt {
     override def toString = s"If $guard :\n${stmts.mkString}\nElse :\n${elseStmts.mkString}\nEndIf"
   }
@@ -150,7 +161,7 @@ object IntermediateCode {
     override def toString = s"$op1 - $op2"
   }
 
-  final case class TernaryExpression(guard: Set[Set[ImpLanExpr]], e1: ImpLanExpr, e2: ImpLanExpr) extends ImpLanExpr {
+  final case class TernaryExpression(guard: Set[_ >: Set[ImpLanExpr]], e1: ImpLanExpr, e2: ImpLanExpr) extends ImpLanExpr {
     override def toString = s"$guard ? $e1 : $e2"
   }
 
