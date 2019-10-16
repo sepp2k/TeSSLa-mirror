@@ -41,7 +41,7 @@ object IntermediateCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt)
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.functions)
   }
 
   def produceDefaultFromStepCode(outStream: Stream, stream: StreamRef, defaultStream: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -69,7 +69,7 @@ object IntermediateCodeGenerator {
     EndIf()
 
       )
-    SourceListing(newStmt)
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.functions)
   }
 
   def produceLastStepCode(outStream: Stream, values: StreamRef, clock: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -99,7 +99,7 @@ object IntermediateCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt)
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.functions)
   }
 
   def produceDelayStepCode(outStream: Stream, delay: StreamRef, reset: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
