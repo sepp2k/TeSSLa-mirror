@@ -236,7 +236,35 @@ object IntermediateCodeGenerator {
   }
 
   def produceDelayStepCode(outStream: Stream, delay: StreamRef, reset: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
-    throw new Errors.NotYetImplementedError("", loc)
+    val (d, _) = streamNameAndType(delay)
+    val (r, _) = streamNameAndType(reset)
+    val o = outStream.id.uid
+    val ot = outStream.typ.elementType
+
+    val newStmt = (currSrc.stepSource
+
+      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      If(Set(Set(Equal(s"${o}_nextTs", "currTs"))))
+        FinalAssignment(s"${o}_lastValue", defaultValueForType(ot), ot)
+        Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+        Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+        FinalAssignment(s"${o}_value", defaultValueForType(ot), ot)
+        Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+        Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      EndIf()
+
+      )
+
+    val newTsGen = (currSrc.tsGenSource
+
+      If(Set(Set(s"${o}_changed", s"${d}_changed"), Set(s"${r}_changed", s"${d}_changed")))
+        Assignment(s"${o}_nextTs", Addition("currTs", s"${d}_value"), LongValue(-1), LongType)
+      EndIf()
+
+      )
+
+    SourceListing(newStmt, newTsGen, currSrc.functions)
   }
 
   def produceLiftStepCode(outStream: Stream, f: Function, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
