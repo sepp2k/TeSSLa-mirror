@@ -19,4 +19,8 @@ object Errors {
     override def message = s"The creation of the abstract imperative code failed [DSLError]: $m"
   }
 
+  case class CoreASTError(baseError : de.uni_luebeck.isp.tessla.Errors.TesslaError, loc: Location = Location.unknown) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
+    override def message = s"The TeSSLa Core AST contains an error.\nDetails: ${baseError.message}"
+  }
+
 }
