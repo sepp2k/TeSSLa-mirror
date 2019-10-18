@@ -69,7 +69,7 @@ class InterpreterTests extends FunSuite {
   }
 
   def assertEquals[T](actual: T, expected: T, name: String): Unit = {
-    assert(actual == expected)
+    assert(actual == expected, s"$actual did not equal $expected")
   }
 
   def assertEqualSets[T: Ordering](actual: Set[T], expected: Set[T], name: String, stringify: T => String = (x: T) => x.toString): Unit = {
