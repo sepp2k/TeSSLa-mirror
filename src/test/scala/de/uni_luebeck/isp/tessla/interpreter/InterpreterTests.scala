@@ -32,7 +32,7 @@ class InterpreterTests extends FunSuite {
     Returns the test if successful, throws an Exception otherwise.*/
     def validate(testjson: JsValue): JsResult[JsValue] = {
       val fileName = "TestCaseSchema.json"
-      val schema = Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root/$fileName"))).get
+      val schema = Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root$fileName"))).get
       SchemaValidator().validate(schema, testjson)
     }
 
@@ -45,7 +45,7 @@ class InterpreterTests extends FunSuite {
     }
   }
 
-  val root = "tests"
+  val root = "tests/"
   val testCases: Stream[(String, String)] = getFilesRecursively().filter {
     case (path, file) => file.endsWith(".json") && !(file.endsWith("Schema.json") && path.isEmpty)
   }.map {
@@ -57,9 +57,9 @@ class InterpreterTests extends FunSuite {
   def getFilesRecursively(path: String = ""): Stream[(String, String)] = {
     def isDir(filename: String) = !filename.contains(".")
 
-    Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path"))
+    Source.fromInputStream(getClass.getResourceAsStream(s"$root$path"))
       .getLines.flatMap { file =>
-      if (isDir(file)) getFilesRecursively(s"$path/$file")
+      if (isDir(file)) getFilesRecursively(s"$path$file/")
       else Stream((path, file))
     }.toStream
   }
@@ -89,7 +89,7 @@ class InterpreterTests extends FunSuite {
   def unsplitOutput(pair: (BigInt, String)): String = s"${pair._1}:${pair._2}"
 
   def parseJson[T: Reads](path: String, validate: JsValue => JsResult[_] = x => JsSuccess(x)): T = {
-    val json = Json.parse(getClass.getResourceAsStream(s"$root/$path"))
+    val json = Json.parse(getClass.getResourceAsStream(s"$root$path"))
     validate(json).flatMap(_ => Json.fromJson[T](json)) match {
       case JsSuccess(value, _) => value
       case e: JsError => sys.error(s"Error in Json parsing: ${JSON.jsErrorToString(e)}")
@@ -104,10 +104,10 @@ class InterpreterTests extends FunSuite {
   testCases.foreach {
     case (path, name) =>
       def testStream(file: String): CharStream = {
-        IncludeResolvers.fromResource(getClass, root)(s"$path/$file").get
+        IncludeResolvers.fromResource(getClass, root)(s"$path$file").get
       }
       def testSource(file: String): Source = {
-        Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$file"))(StandardCharsets.UTF_8)
+        Source.fromInputStream(getClass.getResourceAsStream(s"$root$path$file"))(StandardCharsets.UTF_8)
       }
 
       def handleResult[T](result: TranslationPhase.Result[T], expectedErrors: Option[String], expectedWarnings: Option[String])(onSuccess: T => Unit): Unit = {
@@ -135,8 +135,8 @@ class InterpreterTests extends FunSuite {
         }
       }
 
-      val testCase = parseTestCase(s"$path/$name")
-      test(s"$path/$name (Interpreter)") {
+      val testCase = parseTestCase(s"$path$name")
+      test(s"$path$name (Interpreter)") {
         val options = Compiler.Options(
           timeUnitString = testCase.timeUnit,
           includeResolver = IncludeResolvers.fromResource(getClass, root),
@@ -147,7 +147,7 @@ class InterpreterTests extends FunSuite {
         val evaluator = new Evaluator(Map())
         val compiler = new Compiler(evaluator)
         testCase.expectedObservations.foreach { observationFile =>
-          val expectedObservation = JsonParser(Source.fromInputStream(getClass.getResourceAsStream(s"$root/$path/$observationFile")).mkString).convertTo[Observations]
+          val expectedObservation = JsonParser(Source.fromInputStream(getClass.getResourceAsStream(s"$root$path$observationFile")).mkString).convertTo[Observations]
           handleResult(compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedErrors, testCase.expectedWarnings) { actualObservation =>
             assertEquals(actualObservation, expectedObservation, "Observation")
           }
@@ -158,7 +158,7 @@ class InterpreterTests extends FunSuite {
         testCase.input match {
           case Some(input) =>
             try {
-              val trace = new Trace(evaluator).fromSource(testSource(input), s"$path/$input", testCase.abortAt.map(BigInt(_)))
+              val trace = new Trace(evaluator).fromSource(testSource(input), s"$path$input", testCase.abortAt.map(BigInt(_)))
               val result = compiler.compile(src, options).map(spec => Interpreter.run(spec, trace, None, evaluator))
 
               handleResult(result, testCase.expectedErrors, testCase.expectedWarnings) { output =>

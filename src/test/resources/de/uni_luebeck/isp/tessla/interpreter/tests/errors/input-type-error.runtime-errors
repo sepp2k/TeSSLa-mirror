@@ -1,1 +1,1 @@
-/errors/input-type-error.input(3,11 - 3,48): Unexpected value of type String ("Haha! I'm a string, not an integer!"), expected type Int, in input stream 'ints'
+errors/input-type-error.input(3,11 - 3,48): Unexpected value of type String ("Haha! I'm a string, not an integer!"), expected type Int, in input stream 'ints'

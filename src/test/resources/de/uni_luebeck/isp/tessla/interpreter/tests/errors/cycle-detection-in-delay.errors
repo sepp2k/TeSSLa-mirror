@@ -1,2 +1,2 @@
-/errors/cycle-detection-in-delay.tessla(1,23 - 1,34): Infinite recursion detected
-    called from /errors/cycle-detection-in-delay.tessla(1,32 - 1,33)
+errors/cycle-detection-in-delay.tessla(1,23 - 1,34): Infinite recursion detected
+    called from errors/cycle-detection-in-delay.tessla(1,32 - 1,33)
