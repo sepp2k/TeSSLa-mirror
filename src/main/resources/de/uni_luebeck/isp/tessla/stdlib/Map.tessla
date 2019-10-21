@@ -67,3 +67,7 @@ module Map {
     map
   }
 }
+
+# Define the type outside of the module
+# so one can write `Map[Int]` instead of `Map.Map[Int]`.
+type Map[K, V] = __builtin__(Map)

@@ -41,3 +41,7 @@ module Set {
     set
   }
 }
+
+# Define the type outside of the module
+# so one can write `Set[Int]` instead of `Set.Set[Int]`.
+type Set[T] = __builtin__(Set)
