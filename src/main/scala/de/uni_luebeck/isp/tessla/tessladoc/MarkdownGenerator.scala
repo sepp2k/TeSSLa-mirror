@@ -76,7 +76,7 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
   def itemToMarkdown(doc: TesslaDoc): String = doc match {
     case typ: TesslaDoc.TypeDoc =>
       val typeParams = typeParamsToMarkdown(typ.typeParameters)
-      s"""<h2 class="mt-5 anchor"><a id="${toAnchor(typ.name)}">ANCHOR</a>Type ${htmlEscape(typ.name)}</h2>
+      s"""<h3 class="mt-5 anchor"><a id="${toAnchor(typ.name)}">ANCHOR</a>Type ${htmlEscape(typ.name)}</h3>
          |
          |`${typ.name}$typeParams`
          |
@@ -85,7 +85,7 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
          |""".stripMargin
     case annotation: TesslaDoc.AnnotationDoc =>
       val params = parametersToMarkdown(annotation.parameters)
-      s"""<h2 class="mt-5 anchor"><a id="${toAnchor(annotation.name)}">ANCHOR</a>Annotation @${htmlEscape(annotation.name)}</h2>
+      s"""<h3 class="mt-5 anchor"><a id="${toAnchor(annotation.name)}">ANCHOR</a>Annotation @${htmlEscape(annotation.name)}</h3>
          |
          |<code>@${htmlEscape(annotation.name)}$params</code>
          |
@@ -99,21 +99,18 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
         case Some(typ) => ": " + typeToMarkdown(typ)
         case None => ""
       }
-      s"""<h2 class="mt-5 anchor"><a id="${toAnchor(definition.name)}">ANCHOR</a>${htmlEscape(definition.name)}</h2>
+      s"""<h3 class="mt-5 anchor"><a id="${toAnchor(definition.name)}">ANCHOR</a>${htmlEscape(definition.name)}</h3>
          |
          |<code>$annotations${htmlEscape(definition.name)}${htmlEscape(typeParams)}$params${returnType}</code>
          |
          |${definition.doc}
          |""".stripMargin
     case module: TesslaDoc.ModuleDoc =>
-      s"""## Module ${markdownEscape(module.name)}
-         |{: .mt-5}
+      s"""<h2 class="mt-5 anchor"><a id="${toAnchor(module.name)}">ANCHOR</a>Module ${htmlEscape(module.name)}</h2>
          |
          |${module.doc}
          |
-         |<div class="module" id="module-${module.name}">
          |${itemsToMarkdown(module.members)}
-         |</div>
          |""".stripMargin
   }
 }
