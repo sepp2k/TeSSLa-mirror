@@ -122,7 +122,7 @@ class InterpreterTests extends FunSuite {
               case Some(expectedErrorsFile) =>
                 // Only split on new lines if the next line is not indented because otherwise it's a continuation
                 // and still part of the same error message (e.g. a stack trace)
-                val expectedErrors = testSource(expectedErrorsFile).mkString.split("\n(?! )").toSet
+                val expectedErrors = testSource(expectedErrorsFile).getLines.mkString("\n").split("\n(?! )").toSet
                 assertEqualSets(errors.map(_.toString).toSet, expectedErrors, "errors")
             }
         }
@@ -173,7 +173,7 @@ class InterpreterTests extends FunSuite {
               case ex: TesslaError =>
                 testCase.expectedRuntimeErrors match {
                   case Some(errors) =>
-                    assertEquals(ex.toString, testSource(errors).mkString, "runtime error")
+                    assertEquals(ex.toString, testSource(errors).getLines.mkString("\n"), "runtime error")
                   case None =>
                     fail(s"Expected: success, Actual: Runtime error:\n${ex.message}")
                 }
