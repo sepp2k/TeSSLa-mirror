@@ -18,7 +18,7 @@ object TesslaCoreToIntermediate extends
     val inStreams = spec.inStreams
     val outStreams = spec.outStreams
 
-    var currSource = SourceListing(Seq(), Seq(), Map())
+    var currSource = SourceListing(Seq(), Seq())
     var warnings = Seq()
 
     streams.foreach { outStream: TesslaCore.StreamDescription => {

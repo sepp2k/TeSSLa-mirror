@@ -12,8 +12,7 @@ object IntermediateCode {
     */
 
   case class SourceListing(stepSource: Seq[ImpLanStmt],
-                           tsGenSource: Seq[ImpLanStmt],
-                           functions: Map[Int, (Seq[String], Seq[ImpLanType], ImpLanType, Seq[ImpLanStmt])]) {
+                           tsGenSource: Seq[ImpLanStmt]) {
 
   }
 

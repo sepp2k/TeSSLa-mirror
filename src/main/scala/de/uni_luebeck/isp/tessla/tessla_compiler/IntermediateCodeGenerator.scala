@@ -5,7 +5,7 @@ import scala.language.postfixOps
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeDSL._
 import de.uni_luebeck.isp.tessla._
-import de.uni_luebeck.isp.tessla.TesslaCore.{BoolValue => _, StringValue => _, _}
+import de.uni_luebeck.isp.tessla.TesslaCore.{FunctionType, BoolValue => _, StringValue => _, _}
 
 
 /**
@@ -41,7 +41,7 @@ object IntermediateCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.functions)
+    SourceListing(newStmt, currSrc.tsGenSource)
   }
 
   def produceDefaultFromStepCode(outStream: Stream, stream: StreamRef, defaultStream: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -69,7 +69,7 @@ object IntermediateCodeGenerator {
     EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.functions)
+    SourceListing(newStmt, currSrc.tsGenSource)
   }
 
   def produceLastStepCode(outStream: Stream, values: StreamRef, clock: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -99,7 +99,7 @@ object IntermediateCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.functions)
+    SourceListing(newStmt, currSrc.tsGenSource)
   }
 
   def produceDelayStepCode(outStream: Stream, delay: StreamRef, reset: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -131,11 +131,10 @@ object IntermediateCodeGenerator {
 
       )
 
-    SourceListing(newStmt, newTsGen, currSrc.functions)
+    SourceListing(newStmt, newTsGen)
   }
 
   def produceLiftStepCode(outStream: Stream, f: Function, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
-    val fname = FunctionGenerator.generateFunctionCode(f)
     val o = outStream.id.uid
     val ot = outStream.typ.elementType
     val params = args.map{sr => TernaryExpression(Set(Set(Equal(s"${streamNameAndType(sr)._1}_ts", "currTs"))),
@@ -148,7 +147,8 @@ object IntermediateCodeGenerator {
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
       If(guard)
-        Assignment(s"${o}_fval", FunctionCall(fname, params), defaultValueForType(ot), ot)
+        Assignment(s"${o}_f", FunctionGenerator.generateLambda(f, s"${o}_f"), defaultValueForType(FunctionType), FunctionType)
+        Assignment(s"${o}_fval", FunctionVarApplication(s"${o}_f", params), defaultValueForType(ot), ot)
         If(Set(Set(FunctionCall("isSome", Seq(s"${o}_fval")))))
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot)
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
@@ -162,7 +162,7 @@ object IntermediateCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource, FunctionGenerator.functionImpl.toMap)
+    SourceListing(newStmt, currSrc.tsGenSource)
   }
 
   def produceSignalLiftStepCode(outStream: Stream, op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
