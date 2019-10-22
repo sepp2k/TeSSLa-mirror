@@ -4,9 +4,6 @@ import java.io.InputStreamReader;
 
 public class Main {
 
-    private static long currTs = 0;
-    private static long lastProcessedTs = -1;
-
     private static void outputVar(String output, String trueName, long errorCode, long ts) {
         String outputWithError = (errorCode != 0) ? "FATAL: " + trueName + " evaluation encountered an Error: " : "";
         switch((int)errorCode) {
@@ -28,6 +25,7 @@ public class Main {
 
     public static void main(String[] args) {
 
+        long lastProcessedTs = 0;
 //VARDEF
 
         try {
@@ -68,14 +66,13 @@ public class Main {
 
 //TRIGGER
 
-                        if (currTs == lastProcessedTs) break;
+                        if (currTs == newInputTs) break;
 
 //STEP
 
                         lastProcessedTs = currTs;
+                        currTs = newInputTs;
                     }
-
-                    currTs = newInputTs;
                     if (inputEndReached) break;
                 } else if (newInputTs < currTs) {
                     System.err.println(currTs + ": FATAL: decreasing timestamp received");

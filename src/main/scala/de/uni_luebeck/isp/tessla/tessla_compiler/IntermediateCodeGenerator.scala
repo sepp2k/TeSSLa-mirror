@@ -126,7 +126,10 @@ object IntermediateCodeGenerator {
     val newTsGen = (currSrc.tsGenSource
 
       If(Seq(Seq(s"${o}_changed", s"${d}_changed"), Seq(s"${r}_changed", s"${d}_changed")))
-        Assignment(s"${o}_nextTs", Addition("currTs", s"${d}_value"), LongValue(-1), LongType)
+        Assignment(s"${o}_nextTs", Addition("lastProcessedTs", s"${d}_value"), LongValue(-1), LongType)
+      EndIf()
+      If(Seq(Seq(Greater(s"${o}_nextTs", "lastProcessedTs"), Greater("currTs", s"${o}_nextTs"), Greater("newInputTs", s"${o}_nextTs"))))
+        Assignment("currTs", s"${o}_nextTs", LongValue(0), LongType)
       EndIf()
 
       )
