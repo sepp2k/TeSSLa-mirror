@@ -28,4 +28,9 @@ object Errors {
     override def loc = Location.unknown
   }
 
+  case class CLIError(m: String) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
+    override def message = s"The compiler received unvalid commandline arguments.\nDetails: $m"
+    override def loc = Location.unknown
+  }
+
 }
