@@ -9,7 +9,7 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
   * This class is the de.uni_luebeck.isp.tessla.TranslationPhase for the translation from TeSSLa Core to
   * abstract imperative code
   */
-object TesslaCoreToIntermediate extends
+class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
         TranslationPhase[TesslaCore.Specification, SourceListing] {
 
   override def translate(spec: TesslaCore.Specification): Result[SourceListing] = {
@@ -18,7 +18,7 @@ object TesslaCoreToIntermediate extends
     val inStreams = spec.inStreams
     val outStreams = spec.outStreams
 
-    var currSource = SourceListing(Seq(), Seq())
+    var currSource = SourceListing(Seq(), Seq(), Seq())
     var warnings = Seq()
 
     streams.foreach { outStream: TesslaCore.StreamDescription => {
@@ -48,6 +48,15 @@ object TesslaCoreToIntermediate extends
 
     outStreams.foreach {o =>
       currSource = IntermediateCodeGenerator.produceOutputCode(o, currSource)
+    }
+
+    inStreams.foreach {i =>
+      if (consoleInterface) {
+        currSource = IntermediateCodeGenerator.produceInputFromConsoleCode(i, currSource)
+      } else {
+        throw new Errors.NotYetImplementedError("Translation without value consumption from stdin is not implemented yet")
+      }
+      currSource = IntermediateCodeGenerator.produceInputUnchangeCode(i, currSource)
     }
 
     Success(currSource, warnings)

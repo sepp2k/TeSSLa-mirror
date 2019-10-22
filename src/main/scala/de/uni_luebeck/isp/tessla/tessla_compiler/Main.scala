@@ -51,8 +51,8 @@ object Main extends SexyOpt {
           stdlibPath = "Predef.tessla",
           currySignalLift = true
         )
-        val backend : backends.BackendInterface = target.value match {
-          case "java" => new backends.JavaBackend
+        val (backend, stdinRead) : (backends.BackendInterface, Boolean) = target.value match {
+          case "java" => (new backends.JavaBackend, true)
           case "javascript" => throw new Errors.NotYetImplementedError("Javascript translation not implemented yet")
           case "rust" => throw new Errors.NotYetImplementedError("Rust translation not implemented yet")
           case "rust-bare" => throw new Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
@@ -60,7 +60,7 @@ object Main extends SexyOpt {
         }
 
         val core = unwrapResult(Compiler.compile(specSource, compilerOptions))
-        val intermediateCode = unwrapResult(TesslaCoreToIntermediate.translate(core))
+        val intermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(core))
         val source = unwrapResult(backend.translate(intermediateCode))
 
         println(source)

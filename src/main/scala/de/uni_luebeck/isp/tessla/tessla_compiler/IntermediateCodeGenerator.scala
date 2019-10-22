@@ -47,7 +47,7 @@ object IntermediateCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource)
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing)
   }
 
   def produceDefaultFromStepCode(outStream: Stream, stream: StreamRef, defaultStream: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -75,7 +75,7 @@ object IntermediateCodeGenerator {
     EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource)
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing)
   }
 
   def produceLastStepCode(outStream: Stream, values: StreamRef, clock: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -105,7 +105,7 @@ object IntermediateCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource)
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing)
   }
 
   def produceDelayStepCode(outStream: Stream, delay: StreamRef, reset: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -140,7 +140,7 @@ object IntermediateCodeGenerator {
 
       )
 
-    SourceListing(newStmt, newTsGen)
+    SourceListing(newStmt, newTsGen, currSrc.inputProcessing)
   }
 
   def produceLiftStepCode(outStream: Stream, f: Function, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
@@ -171,7 +171,7 @@ object IntermediateCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource)
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing)
   }
 
   def produceSignalLiftStepCode(outStream: Stream, op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
@@ -192,14 +192,38 @@ object IntermediateCodeGenerator {
       EndIf()
     )
 
-    SourceListing(newStmt, currSrc.tsGenSource)
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing)
   }
 
-  /*
-  def resetInputStreamCode(inStream: TesslaCore.InStreamDescription, currSrc: SourceListing) : SourceListing = {
+  def produceInputUnchangeCode(inStream: TesslaCore.InStreamDescription, currSrc: SourceListing) = {
+    val s = inStream.name
 
+    val newStmt = (
+      currSrc.stepSource
+        Assignment(s"${s}_changed", BoolValue(false), BoolValue(false), BoolType)
+      )
+
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing)
   }
-  */
 
+  def produceInputFromConsoleCode(inStream: TesslaCore.InStreamDescription, currSrc: SourceListing) = {
+    val s = s"var_${inStream.name}"
+    val st = inStream.typ.elementType
+
+    val newInputProcessing = (currSrc.inputProcessing
+      If(Seq(Seq(Equal("inputStream", StringValue(inStream.name)))))
+        Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForType(st), st)
+        Assignment(s"${s}_lastInit", s"${s}_init", BoolValue(false), BoolType)
+        FinalAssignment(s"${s}_lastError", LongValue(0), LongType)
+        Assignment(s"${s}_value", FunctionCall("__[TC]inputParse__", Seq("value")), defaultValueForType(st), st)
+        Assignment(s"${s}_init", BoolValue(true), BoolValue(false), BoolType)
+        Assignment(s"${s}_ts", "currTs", LongValue(0), LongType)
+        FinalAssignment(s"${s}_error", LongValue(0), LongType)
+        Assignment(s"${s}_changed", BoolValue(true), BoolValue(false), BoolType)
+      EndIf()
+    )
+
+    SourceListing(currSrc.stepSource, currSrc.tsGenSource, newInputProcessing)
+  }
 
 }
