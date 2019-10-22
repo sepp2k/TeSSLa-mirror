@@ -30,8 +30,6 @@ public class Main {
 
         try {
             long newInputTs = 0;
-            String inputStream = "";
-            String value = "";
 
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 

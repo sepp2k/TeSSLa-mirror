@@ -1,24 +1,28 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
 import de.uni_luebeck.isp.tessla.TranslationPhase
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, FinalAssignment, If, ImpLanStmt, ImpLanType, ImpLanVal, SourceListing}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, FinalAssignment, If, ImpLanStmt, ImpLanType, ImpLanVal, SourceListing, StringType, StringValue}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
 
 abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase[SourceListing, String] {
 
+  var variables : Map[String, (ImpLanType, ImpLanVal)] = Map()
+
   def translate(listing: SourceListing) : Result[String] = {
     var warnings = Seq()
-    val variables = getVariableMap(listing)
+    variables = getVariableMap(listing) ++ Map("inputStream" -> (StringType, StringValue("")),
+                                               "value" -> (StringType, StringValue("")))
 
     val source =  scala.io.Source.fromResource(sourceTemplate).mkString
-    val rewrittenSource = source.replaceAllLiterally("//VARDEF", generateVariableDeclarations(variables).mkString("\n"))
+    val rewrittenSource = source.replaceAllLiterally("//VARDEF", generateVariableDeclarations().mkString("\n"))
         .replaceAllLiterally("//TRIGGER", generateCode(listing.tsGenSource))
         .replaceAllLiterally("//STEP", generateCode(listing.stepSource))
+        .replaceAllLiterally("//INPUTPROCESSING", generateCode(listing.inputProcessing))
     Success(rewrittenSource, warnings)
   }
 
-  def generateVariableDeclarations(vars: Map[String, (ImpLanType, ImpLanVal)]) : Seq[String]
+  def generateVariableDeclarations() : Seq[String]
 
   def generateCode(stmts: Seq[ImpLanStmt]) : String
 
@@ -31,7 +35,8 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
       case _ => Seq()
     }
 
-    val varDefs = listing.tsGenSource.union(listing.stepSource).flatMap(extractAssignments).distinct
+    val varDefs = listing.tsGenSource.union(listing.stepSource).union(listing.inputProcessing).
+                  flatMap(extractAssignments).distinct
     val duplicates = varDefs.groupBy{case (n, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
 
     if (duplicates.size != 0) {
