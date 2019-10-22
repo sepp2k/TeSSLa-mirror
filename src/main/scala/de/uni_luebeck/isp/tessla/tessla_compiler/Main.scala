@@ -11,17 +11,16 @@ import org.antlr.v4.runtime.CharStreams
  * options
  */
 object Main extends SexyOpt {
-  override val programName = ""
+  override val programName = "tessla-compiler"
   override val version = Some("0.0.1")
   override val programDescription = "Generate Java/Rust code from a TeSSLa specification"
 
   val tesslaFile = posArg("tessla-file", "The file containing the Tessla specification")
+  val target = option("target", 't', "Target language: java (default), javascript, rust or rust-bare", "java")
   val debug = flag("debug", "Print stack traces for runtime errors")
   val noDiagnostics = flag("no-diagnostics", "Don't print error messages and warnings")
   val noOptimization = flag("no-optimization", "Produce non-optimized output code")
-  val bareCode = flag("bare-code", "Generates Code where no stdin/stdout is used. May not " +
-                                   "be used without --rust argument.")
-  val translateToRust = flag("rust", "Compile to Rust instead of Java")
+
   def diagnostics = !noDiagnostics.value
 
   def main(args: Array[String]): Unit = {
@@ -52,16 +51,22 @@ object Main extends SexyOpt {
           stdlibPath = "Predef.tessla",
           currySignalLift = true
         )
+        val backend : backends.BackendInterface = target.value match {
+          case "java" => new backends.JavaBackend
+          case "javascript" => throw new Errors.NotYetImplementedError("Javascript translation not implemented yet")
+          case "rust" => throw new Errors.NotYetImplementedError("Rust translation not implemented yet")
+          case "rust-bare" => throw new Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
+          case _=> throw new Errors.CLIError(s"Unvalid option for target: ${target.value}")
+        }
+
         val core = unwrapResult(Compiler.compile(specSource, compilerOptions))
         val intermediateCode = unwrapResult(TesslaCoreToIntermediate.translate(core))
+        val source = unwrapResult(backend.translate(intermediateCode))
 
-        println("===")
-        println(intermediateCode.stepSource.mkString("\n"))
-        println("===")
-
+        println(source)
     } catch {
       case ex: TesslaError =>
-        System.err.println(s"Runtime error: $ex")
+        System.err.println(s"Compilation error: $ex")
         if (debug) ex.printStackTrace()
     }
   }
