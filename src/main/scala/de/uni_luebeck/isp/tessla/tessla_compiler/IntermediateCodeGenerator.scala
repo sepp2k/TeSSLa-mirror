@@ -14,14 +14,14 @@ import de.uni_luebeck.isp.tessla.TesslaCore.{FunctionType, BoolValue => _, Strin
 object IntermediateCodeGenerator {
 
   def streamNameAndType(s : StreamRef) : (String, ImpLanType) = s match {
-    case Stream(id, t, _) => (id.uid.toString(), t.elementType)
-    case InputStream(n, t, _) => (n, t.elementType)
-    case Nil(t,_) => (s"nil_$t", t.elementType)
+    case Stream(id, t, _) => ("var_" + id.uid.toString(), t.elementType)
+    case InputStream(n, t, _) => ("var_" + n, t.elementType)
+    case Nil(t,_) => (s"var_nil_$t", t.elementType)
   }
 
   def produceDefaultStepCode(outStream: Stream, stream: StreamRef, default: ValueOrError, loc: Location, currSrc: SourceListing): SourceListing = {
     val (s, _) = streamNameAndType(stream)
-    val o = outStream.id.uid
+    val o = s"var_${outStream.id.uid}"
     val ot = outStream.typ.elementType
 
     val newStmt = (currSrc.stepSource
@@ -51,7 +51,7 @@ object IntermediateCodeGenerator {
   def produceTimeStepCode(outStream: Stream, stream: StreamRef, loc: Location, currSrc: SourceListing) : SourceListing = {
 
     val (s, _) = streamNameAndType(stream)
-    val o = outStream.id.uid
+    val o = s"var_${outStream.id.uid}"
     val ot = outStream.typ.elementType
 
     val newStmt = (currSrc.stepSource
@@ -75,7 +75,7 @@ object IntermediateCodeGenerator {
   def produceLastStepCode(outStream: Stream, values: StreamRef, clock: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
     val (v, _) = streamNameAndType(values)
     val (c, _) = streamNameAndType(clock)
-    val o = outStream.id.uid
+    val o = s"var_${outStream.id.uid}"
     val ot = outStream.typ.elementType
 
     val newStmt = (currSrc.stepSource
@@ -105,7 +105,7 @@ object IntermediateCodeGenerator {
   def produceDelayStepCode(outStream: Stream, delay: StreamRef, reset: StreamRef, loc: Location, currSrc: SourceListing): SourceListing = {
     val (d, _) = streamNameAndType(delay)
     val (r, _) = streamNameAndType(reset)
-    val o = outStream.id.uid
+    val o = s"var_${outStream.id.uid}"
     val ot = outStream.typ.elementType
 
     val newStmt = (currSrc.stepSource
@@ -135,7 +135,7 @@ object IntermediateCodeGenerator {
   }
 
   def produceLiftStepCode(outStream: Stream, f: Function, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
-    val o = outStream.id.uid
+    val o = s"var_${outStream.id.uid}"
     val ot = outStream.typ.elementType
     val params = args.map{sr => TernaryExpression(Seq(Seq(Equal(s"${streamNameAndType(sr)._1}_ts", "currTs"))),
                                                   FunctionCall("Some", Seq(s"${streamNameAndType(sr)._1}_value")),
