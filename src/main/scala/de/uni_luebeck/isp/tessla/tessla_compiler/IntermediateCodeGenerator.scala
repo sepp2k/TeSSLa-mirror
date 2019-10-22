@@ -19,6 +19,12 @@ object IntermediateCodeGenerator {
     case Nil(t,_) => (s"var_nil_$t", t.elementType)
   }
 
+  def outputStreamName(s : StreamRef) : String = s match {
+    case Stream(id, t, _) => id.nameOpt.getOrElse(id.uid.toString())
+    case InputStream(n, t, _) => n
+    case Nil(t,_) => "nil"
+  }
+
   def produceDefaultStepCode(outStream: Stream, stream: StreamRef, default: ValueOrError, loc: Location, currSrc: SourceListing): SourceListing = {
     val (s, _) = streamNameAndType(stream)
     val o = s"var_${outStream.id.uid}"
@@ -175,5 +181,25 @@ object IntermediateCodeGenerator {
   def produceCustomBuiltInCallStepCode(outStream: Stream, name: String, args: Seq[Arg], loc: Location, currSrc: SourceListing): SourceListing = {
     throw new Errors.NotYetImplementedError("", loc)
   }
+
+  def produceOutputCode(outStream: TesslaCore.OutStreamDescription, currSrc: SourceListing) : SourceListing = {
+    val (s, _) = streamNameAndType(outStream.stream)
+    val name = outStream.nameOpt.getOrElse(outputStreamName(outStream.stream))
+
+    val newStmt = (currSrc.stepSource
+      If(Seq(Seq(s"${s}_changed")))
+        FunctionCall("__[TC]output__", Seq(s"${s}_value", StringValue(name), s"${s}_error"))
+      EndIf()
+    )
+
+    SourceListing(newStmt, currSrc.tsGenSource)
+  }
+
+  /*
+  def resetInputStreamCode(inStream: TesslaCore.InStreamDescription, currSrc: SourceListing) : SourceListing = {
+
+  }
+  */
+
 
 }

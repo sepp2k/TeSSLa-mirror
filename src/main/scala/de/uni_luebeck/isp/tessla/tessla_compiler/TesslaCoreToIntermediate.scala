@@ -46,6 +46,9 @@ object TesslaCoreToIntermediate extends
     }
     }
 
+    outStreams.foreach {o =>
+      currSource = IntermediateCodeGenerator.produceOutputCode(o, currSource)
+    }
 
     Success(currSource, warnings)
   }
