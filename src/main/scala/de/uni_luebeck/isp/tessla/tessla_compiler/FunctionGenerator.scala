@@ -5,8 +5,6 @@ import de.uni_luebeck.isp.tessla.TesslaCore.{FunctionType, _}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeDSL._
 
-import scala.collection.mutable
-
 object FunctionGenerator {
 
   def generateLambda(f: Function, callName: String, stack: Map[Any, String] = Map()) : LambdaExpression = {
@@ -24,7 +22,7 @@ object FunctionGenerator {
          case Application(f, args, loc)  => getValueArgFunc(s"intVar_${id.uid}", f.get, args.map(translateValueArg), ved.typ, loc)
          case _ => {
            val exp = e match {
-             case IfThenElse(cond, thenCase, elseCase, loc) => TernaryExpression(Set(Set(translateValueArg(cond))), translateValueArg(thenCase.get), translateValueArg(elseCase.get))
+             case IfThenElse(cond, thenCase, elseCase, loc) => TernaryExpression(Seq(Seq(translateValueArg(cond))), translateValueArg(thenCase.get), translateValueArg(elseCase.get))
              case f: Function => if (callNames.contains(f)) {
                generateLambda(f, s"intVar_${id.uid}", callNames)
              } else {
@@ -77,7 +75,7 @@ object FunctionGenerator {
     def getBuiltinOperator(name: String, args: Seq[ImpLanExpr]) : ImpLanExpr = {
       name match {
         case "__not__" => Negation(args(0))
-        case "__ite__" => TernaryExpression(Set(Set(args(0))), args(1), args(2))
+        case "__ite__" => TernaryExpression(Seq(Seq(args(0))), args(1), args(2))
         case "__eq__" => Equal(args(0), args(1))
         case "__neq__" => NotEqual(args(0), args(1))
         case "__leq__" | "__fleq__" => GreaterEqual(args(1), args(0))

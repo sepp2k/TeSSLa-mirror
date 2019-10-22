@@ -26,10 +26,10 @@ object IntermediateCodeGenerator {
 
     val newStmt = (currSrc.stepSource
 
-      If(Set(Set(NotEqual("currTs", LongValue(0)))))
+      If(Seq(Seq(NotEqual("currTs", LongValue(0)))))
         Assignment(s"${o}_changed", BoolValue(false), BoolValue(true), BoolType)
       EndIf()
-      If(Set(Set(s"${s}_changed")))
+      If(Seq(Seq(s"${s}_changed")))
         Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot)
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
@@ -57,7 +57,7 @@ object IntermediateCodeGenerator {
     val newStmt = (currSrc.stepSource
 
     Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
-    If(Set(Set(s"${s}_changed")))
+    If(Seq(Seq(s"${s}_changed")))
       Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot)
       Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
       Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
@@ -81,13 +81,13 @@ object IntermediateCodeGenerator {
     val newStmt = (currSrc.stepSource
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
-      If(Set(Set(s"${c}_changed", s"${v}_init")))
+      If(Seq(Seq(s"${c}_changed", s"${v}_init")))
         Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot)
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
         Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
-        If(Set(Set(Equal(s"${v}_ts", "currTs"))))
+        If(Seq(Seq(Equal(s"${v}_ts", "currTs"))))
           Assignment(s"${o}_value", s"${v}_lastValue", defaultValueForType(ot), ot)
           Assignment(s"${o}_error", s"${v}_lastError", LongValue(0), LongType)
           Assignment(s"${o}_init", s"${v}_lastInit", LongValue(0), LongType)
@@ -111,7 +111,7 @@ object IntermediateCodeGenerator {
     val newStmt = (currSrc.stepSource
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
-      If(Set(Set(Equal(s"${o}_nextTs", "currTs"))))
+      If(Seq(Seq(Equal(s"${o}_nextTs", "currTs"))))
         FinalAssignment(s"${o}_lastValue", defaultValueForType(ot), ot)
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
@@ -125,7 +125,7 @@ object IntermediateCodeGenerator {
 
     val newTsGen = (currSrc.tsGenSource
 
-      If(Set(Set(s"${o}_changed", s"${d}_changed"), Set(s"${r}_changed", s"${d}_changed")))
+      If(Seq(Seq(s"${o}_changed", s"${d}_changed"), Seq(s"${r}_changed", s"${d}_changed")))
         Assignment(s"${o}_nextTs", Addition("currTs", s"${d}_value"), LongValue(-1), LongType)
       EndIf()
 
@@ -137,11 +137,11 @@ object IntermediateCodeGenerator {
   def produceLiftStepCode(outStream: Stream, f: Function, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
     val o = outStream.id.uid
     val ot = outStream.typ.elementType
-    val params = args.map{sr => TernaryExpression(Set(Set(Equal(s"${streamNameAndType(sr)._1}_ts", "currTs"))),
+    val params = args.map{sr => TernaryExpression(Seq(Seq(Equal(s"${streamNameAndType(sr)._1}_ts", "currTs"))),
                                                   FunctionCall("Some", Seq(s"${streamNameAndType(sr)._1}_value")),
                                                   None)
                          }
-    val guard : Set[_ >: Set[ImpLanExpr]] = args.map{sr => Set(Variable(streamNameAndType(sr)._1))}.toSet
+    val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(streamNameAndType(sr)._1))}
 
     val newStmt = (currSrc.stepSource
 
@@ -149,7 +149,7 @@ object IntermediateCodeGenerator {
       If(guard)
         Assignment(s"${o}_f", FunctionGenerator.generateLambda(f, s"${o}_f"), defaultValueForType(FunctionType), FunctionType)
         Assignment(s"${o}_fval", FunctionVarApplication(s"${o}_f", params), defaultValueForType(ot), ot)
-        If(Set(Set(FunctionCall("isSome", Seq(s"${o}_fval")))))
+        If(Seq(Seq(FunctionCall("isSome", Seq(s"${o}_fval")))))
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot)
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
           Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)

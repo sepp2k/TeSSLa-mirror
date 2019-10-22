@@ -96,7 +96,7 @@ final case object Out extends IfState
 
 class IntermediateCodeDSL(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq(Out),
                           ifStack: Seq[Seq[ImpLanStmt]] = Seq(), elseStack: Seq[Seq[ImpLanStmt]] = Seq(),
-                          condStack: Seq[Set[_ >: Set[ImpLanExpr]]] = Seq()) {
+                          condStack: Seq[Seq[Seq[ImpLanExpr]]] = Seq()) {
 
     def generateStatements: Seq[ImpLanStmt] = {
       if (ifState(0) != Out) {
@@ -125,7 +125,7 @@ class IntermediateCodeDSL(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq(O
       new IntermediateCodeDSL(newStmts, ifState, newIfStack, newElseStack, condStack)
     }
 
-    def If(cond : Set[_ >: Set[ImpLanExpr]]) : IntermediateCodeDSL = {
+    def If(cond : Seq[Seq[ImpLanExpr]]) : IntermediateCodeDSL = {
       new IntermediateCodeDSL(stmts, Seq(InIf) ++ ifState, Seq(Seq()) ++ ifStack, Seq(Seq()) ++ elseStack,
         Seq(cond) ++ condStack)
     }

@@ -128,7 +128,7 @@ object IntermediateCode {
     override def toString = s"ImmutList<$valType>{}"
   }
 
-  final case class If(guard: Set[_ >: Set[ImpLanExpr]], stmts: Seq[ImpLanStmt], elseStmts: Seq[ImpLanStmt])
+  final case class If(guard: Seq[Seq[ImpLanExpr]], stmts: Seq[ImpLanStmt], elseStmts: Seq[ImpLanStmt])
     extends ImpLanStmt {
     override def toString = s"If $guard :\n${stmts.mkString("\n")}\nElse :\n${elseStmts.mkString("\n")}\nEndIf"
   }
@@ -162,7 +162,7 @@ object IntermediateCode {
     override def toString = s"$op1 - $op2"
   }
 
-  final case class TernaryExpression(guard: Set[_ >: Set[ImpLanExpr]], e1: ImpLanExpr, e2: ImpLanExpr) extends ImpLanExpr {
+  final case class TernaryExpression(guard: Seq[Seq[ImpLanExpr]], e1: ImpLanExpr, e2: ImpLanExpr) extends ImpLanExpr {
     override def toString = s"$guard ? $e1 : $e2"
   }
 
