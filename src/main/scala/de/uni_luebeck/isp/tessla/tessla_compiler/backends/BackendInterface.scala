@@ -1,0 +1,43 @@
+package de.uni_luebeck.isp.tessla.tessla_compiler.backends
+
+import de.uni_luebeck.isp.tessla.TranslationPhase
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, FinalAssignment, If, ImpLanStmt, ImpLanType, ImpLanVal, SourceListing}
+import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
+import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
+
+abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase[SourceListing, String] {
+
+  def translate(listing: SourceListing) : Result[String] = {
+    var warnings = Seq()
+    val variables = getVariableMap(listing)
+
+    val source =  scala.io.Source.fromResource(sourceTemplate).mkString
+    val rewrittenSource = source.replaceAllLiterally("//VARDEF", generateVariableDeclarations(variables).mkString("\n"))
+        .replaceAllLiterally("//TRIGGER", generateCode(listing.tsGenSource))
+        .replaceAllLiterally("//STEP", generateCode(listing.stepSource))
+    Success(rewrittenSource, warnings)
+  }
+
+  def generateVariableDeclarations(vars: Map[String, (ImpLanType, ImpLanVal)]) : Seq[String]
+
+  def generateCode(stmts: Seq[ImpLanStmt]) : String
+
+  def getVariableMap(listing: SourceListing) : Map[String, (ImpLanType, ImpLanVal)] = {
+
+    def extractAssignments(stmt: ImpLanStmt) : Seq[(String, ImpLanType, ImpLanVal)] = stmt match {
+      case Assignment(lhs, _, defVal, typ) => Seq((lhs.name, typ, defVal))
+      case FinalAssignment(lhs, defVal, typ) => Seq((lhs.name, typ, defVal))
+      case If(_, stmts, elseStmts) => stmts.union(elseStmts).flatMap(extractAssignments)
+      case _ => Seq()
+    }
+
+    val varDefs = listing.tsGenSource.union(listing.stepSource).flatMap(extractAssignments).distinct
+    val duplicates = varDefs.groupBy{case (n, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
+
+    if (duplicates.size != 0) {
+      throw new Errors.TranslationError(s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}")
+    }
+
+    varDefs.map{case (name, typ, default) => (name, (typ, default))}.toMap
+  }
+}
