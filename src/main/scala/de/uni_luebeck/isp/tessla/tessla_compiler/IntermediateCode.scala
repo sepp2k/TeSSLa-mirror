@@ -132,27 +132,27 @@ object IntermediateCode {
   final case class DoNothingFunction(argsTypes: Seq[ImpLanType], retType: ImpLanType) extends ImpLanVal {
     override def toString = s"${argsTypes.mkString(" x ")} -> $retType{}"
   }
-
   final case class If(guard: Set[_ >: Set[ImpLanExpr]], stmts: Seq[ImpLanStmt], elseStmts: Seq[ImpLanStmt])
     extends ImpLanStmt {
-    override def toString = s"If $guard :\n${stmts.mkString}\nElse :\n${elseStmts.mkString}\nEndIf"
+    override def toString = s"If $guard :\n${stmts.mkString("\n")}\nElse :\n${elseStmts.mkString("\n")}\nEndIf"
   }
 
   final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: ImpLanVal, typ: ImpLanType)
     extends ImpLanStmt {
-    override def toString = s"$lhs = ${rexpr.toString} (default: ${defVal.toString})\n"
+    override def toString = s"$lhs = ${rexpr} (default: ${defVal})"
   }
 
   final case class FinalAssignment(lhs: Variable, defVal: ImpLanVal, typ: ImpLanType) extends ImpLanStmt {
-    override def toString = s"$lhs = ${defVal.toString} (final)\n"
+    override def toString = s"$lhs = ${defVal} (final)"
   }
 
   final case class ReturnStatement(expr: ImpLanExpr) extends ImpLanStmt {
-    override def toString = s"return ${expr}\n"
+    override def toString = s"return ${expr}"
   }
 
   final case class FunctionCall(name: String, params: Seq[ImpLanExpr]) extends ImpLanExpr {
-    override def toString = s"$name( ${params.mkString(", ")} )\n"
+    override def toString = s"$name( ${params.mkString(", ")} )"
+  }
   }
 
   final case class Addition(op1: ImpLanExpr, op2: ImpLanExpr) extends ImpLanExpr {
