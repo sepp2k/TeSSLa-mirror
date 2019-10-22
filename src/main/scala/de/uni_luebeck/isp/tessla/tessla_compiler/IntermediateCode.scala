@@ -129,9 +129,6 @@ object IntermediateCode {
     override def toString = s"ImmutList<$valType>{}"
   }
 
-  final case class DoNothingFunction(argsTypes: Seq[ImpLanType], retType: ImpLanType) extends ImpLanVal {
-    override def toString = s"${argsTypes.mkString(" x ")} -> $retType{}"
-  }
   final case class If(guard: Set[_ >: Set[ImpLanExpr]], stmts: Seq[ImpLanStmt], elseStmts: Seq[ImpLanStmt])
     extends ImpLanStmt {
     override def toString = s"If $guard :\n${stmts.mkString("\n")}\nElse :\n${elseStmts.mkString("\n")}\nEndIf"
@@ -153,6 +150,9 @@ object IntermediateCode {
   final case class FunctionCall(name: String, params: Seq[ImpLanExpr]) extends ImpLanExpr {
     override def toString = s"$name( ${params.mkString(", ")} )"
   }
+
+  final case class FunctionVarApplication(variable: Variable, params: Seq[ImpLanExpr]) extends ImpLanExpr {
+    override def toString = s"$variable( ${params.mkString(", ")} )"
   }
 
   final case class Addition(op1: ImpLanExpr, op2: ImpLanExpr) extends ImpLanExpr {
@@ -190,5 +190,10 @@ object IntermediateCode {
   final case class Variable(name: String) extends ImpLanExpr {
     override def toString = name
   }
+
+  final case class LambdaExpression(argNames: Seq[String], argsTypes: Seq[ImpLanType], retType: ImpLanType, body: Seq[ImpLanStmt]) extends ImpLanExpr {
+    override def toString = s"${argsTypes.zip(argNames).mkString(" x ")} -> $retType {\n${body.mkString("\n")}\n}"
+  }
+
 
 }

@@ -151,4 +151,9 @@ class IntermediateCodeDSL(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq(O
       new IntermediateCodeDSL(newStmts, ifState, newIfStack, newElseStack, condStack)
     }
 
+   def FunctionVarApplication(name: String, params: Seq[ImpLanExpr]) : IntermediateCodeDSL = {
+    val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FunctionVarApplication(Variable(name), params))
+    new IntermediateCodeDSL(newStmts, ifState, newIfStack, newElseStack, condStack)
+   }
+
   }
