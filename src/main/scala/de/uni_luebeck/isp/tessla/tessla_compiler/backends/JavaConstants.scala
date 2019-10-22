@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{ImpLanType, ImpLanVal}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{FunctionCall, ImpLanExpr, ImpLanType, ImpLanVal}
 
 object JavaConstants {
 
@@ -51,6 +51,45 @@ object JavaConstants {
       case IntermediateCode.EmptyImmutableMap(keyType, valType) => s"new scala.collection.immutable.HashMap<${objectTypeTranslation(keyType)}, ${objectTypeTranslation(valType)}>()"
       case IntermediateCode.EmptyMutableList(valType) => s"new scala.collection.mutable.ArrayBuffer<${objectTypeTranslation(valType)}>()"
       case IntermediateCode.EmptyImmutableList(valType) => s"new scala.collection.immutable.ArrayBuffer<${objectTypeTranslation(valType)}>()"
+    }
+  }
+
+  def builtinFunctionCallTranslation(name: String, args: Seq[String], vars: Map[String, (ImpLanType, ImpLanVal)], resType: Option[ImpLanType]) : String = {
+    name match {
+      case "__[TC]output__" => {
+        s"outputVar(${getParseExpressionToString(vars(args(0))._1, args(0))}, ${args(1)}, ${args(2)}, currTs)" //FIXME: Here it is supposed that args(0) is always just a var name, no clean solution!
+      }
+      case "__[TC]inputParse__" => {
+        if (resType.isDefined) {
+          getStringParseExpression(resType.get, args(0))
+        } else {
+          throw new Errors.TranslationError("__[TC]inputParse__ cannot be translated with insufficient type information")
+        }
+      }
+      //TODO: Add other builtin functions
+      case _ => throw new Errors.CommandNotSupportedError(s"Unsupported built-in function for Java backend: $name")
+    }
+  }
+
+  def getStringParseExpression(to: ImpLanType, exp: String) : String = {
+    to match {
+      case IntermediateCode.LongType => s"Long.parseLong($exp)"
+      case IntermediateCode.DoubleType => s"Double.parseDouble($exp)"
+      case IntermediateCode.BoolType => s"Boolean.parseBoolean($exp)"
+      case IntermediateCode.UnitType => "true"
+      case IntermediateCode.StringType => s"$exp"
+      case t => throw new Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Java translation")
+    }
+  }
+
+  def getParseExpressionToString(from: ImpLanType, exp: String) : String = {
+    from match {
+      case IntermediateCode.LongType |
+           IntermediateCode.DoubleType |
+           IntermediateCode.BoolType => s"String.valueOf($exp)"
+      case IntermediateCode.UnitType => "true"
+      case IntermediateCode.StringType => s"$exp"
+      case t => s"$exp.toString()"
     }
   }
 
