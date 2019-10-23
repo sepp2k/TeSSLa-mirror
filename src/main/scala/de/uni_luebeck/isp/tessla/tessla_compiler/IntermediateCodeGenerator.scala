@@ -120,7 +120,7 @@ object IntermediateCodeGenerator {
       If(Seq(Seq(Equal(s"${o}_nextTs", "currTs"))))
         FinalAssignment(s"${o}_lastValue", defaultValueForType(ot), ot)
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
-        Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+        FinalAssignment(s"${o}_lastError", LongValue(0), LongType)
         FinalAssignment(s"${o}_value", defaultValueForType(ot), ot)
         Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
@@ -132,7 +132,12 @@ object IntermediateCodeGenerator {
     val newTsGen = (currSrc.tsGenSource
 
       If(Seq(Seq(s"${o}_changed", s"${d}_changed"), Seq(s"${r}_changed", s"${d}_changed")))
-        Assignment(s"${o}_nextTs", Addition("lastProcessedTs", s"${d}_value"), LongValue(-1), LongType)
+        If(Seq(Seq(NotEqual(s"${o}_error", LongValue(0))), Seq(NotEqual(s"${d}_error", LongValue(0))), Seq(NotEqual(s"${r}_error", LongValue(0)))))
+          Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType)
+          Assignment(s"${o}_error", BitwiseOr(BitwiseOr(s"${o}_error", s"${d}_error"), s"${r}_error"), LongValue(-1), LongType)
+        Else()
+          Assignment(s"${o}_nextTs", Addition("lastProcessedTs", s"${d}_value"), LongValue(-1), LongType)
+        EndIf()
       EndIf()
       If(Seq(Seq(Greater(s"${o}_nextTs", "lastProcessedTs"), Greater("currTs", s"${o}_nextTs"), Greater("newInputTs", s"${o}_nextTs"))))
         Assignment("currTs", s"${o}_nextTs", LongValue(0), LongType)
