@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
 import de.uni_luebeck.isp.tessla.TranslationPhase
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, FinalAssignment, If, ImpLanStmt, ImpLanType, ImpLanVal, SourceListing, StringType, StringValue}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, FinalAssignment, If, ImpLanStmt, ImpLanType, ImpLanVal, LongType, LongValue, SourceListing, StringType, StringValue}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
 
@@ -16,7 +16,8 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
   def translate(listing: SourceListing) : Result[String] = {
     var warnings = Seq()
     variables = getVariableMap(listing) ++ Map("inputStream" -> (StringType, StringValue("")),
-                                               "value" -> (StringType, StringValue("")))
+                                               "value" -> (StringType, StringValue("")),
+                                               "currTs" -> (LongType, LongValue(0)))
 
     val source =  scala.io.Source.fromResource(sourceTemplate).mkString
     val rewrittenSource = source.replaceAllLiterally("//VARDEF", generateVariableDeclarations().mkString("\n"))
