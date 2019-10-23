@@ -219,7 +219,7 @@ object IntermediateCodeGenerator {
   }
 
   def produceCustomBuiltInCallStepCode(outStream: Stream, name: String, args: Seq[Arg], loc: Location, currSrc: SourceListing): SourceListing = {
-    throw new Errors.NotYetImplementedError("", loc)
+    throw new Errors.CommandNotSupportedError(s"CustomBuiltInCalls are not supported: $name", loc)
   }
 
   def produceOutputCode(outStream: TesslaCore.OutStreamDescription, currSrc: SourceListing) : SourceListing = {
