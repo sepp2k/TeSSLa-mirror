@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode, IntermediateCodeTypeInference}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, BoolType, FinalAssignment, ImpLanExpr, ImpLanStmt, ImpLanType, ImpLanVal}
 
 class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_compiler/JavaSkeleton.java") {
@@ -12,12 +12,12 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
   }
 
   def foldGuard(guard: Seq[Seq[ImpLanExpr]]) : String = {
-    guard.map{c => ("(" + c.map(translateExpression(Some(BoolType))).mkString(" && ") + ")")}.mkString(" || ")
+    guard.map{c => ("(" + c.map(translateExpression).mkString(" && ") + ")")}.mkString(" || ")
   }
 
   def generateCode(stmts: Seq[ImpLanStmt]) : String = {
     stmts.map{
-      case expr: IntermediateCode.ImpLanExpr => s"${translateExpression(None)(expr)};"
+      case expr: IntermediateCode.ImpLanExpr => s"${translateExpression(expr)};"
       case IntermediateCode.If(guard, stmts, elseStmts) => {
         val guardFormatted = foldGuard(guard)
         val ifPart = generateCode(stmts)
@@ -26,36 +26,36 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
 
         s"if ($guardFormatted) {\n$ifPart\n}$optElse"
       }
-      case Assignment(lhs, rexpr, _, typ) => s"$lhs = ${translateExpression(Some(typ))(rexpr)};"
+      case Assignment(lhs, rexpr, _, typ) => s"$lhs = ${translateExpression(rexpr)};"
       case FinalAssignment(_, _, _) => ""
-      case IntermediateCode.ReturnStatement(expr) => s"return ${translateExpression(None)(expr)};"
+      case IntermediateCode.ReturnStatement(expr) => s"return ${translateExpression(expr)};"
     }.filter(_ != "").mkString("\n")
   }
 
-  def translateExpression(resType: Option[ImpLanType])(e: ImpLanExpr) : String = e match {
+  def translateExpression(e: ImpLanExpr) : String = e match {
       case lanVal: ImpLanVal => JavaConstants.valueTranslation(lanVal)
-      case IntermediateCode.FunctionCall(name, params) => {
+      case IntermediateCode.FunctionCall(name, params, typeHint) => {
         if (name.startsWith("__")) {
-          JavaConstants.builtinFunctionCallTranslation(name, params.map(translateExpression(None)), variables, resType)
+          JavaConstants.builtinFunctionCallTranslation(name, params.map(translateExpression), typeHint)
         } else {
-          s"$name(${params.map(translateExpression(None)).mkString(", ")})"
+          s"$name(${params.map(translateExpression).mkString(", ")})"
         }
       }
-      case IntermediateCode.FunctionVarApplication(variable, params) => s"$variable.apply(${params.map(translateExpression(None)).mkString(", ")})"
-      case IntermediateCode.Addition(op1, op2) => s"${translateExpression(None)(op1)} + ${translateExpression(None)(op2)}"
-      case IntermediateCode.Subtraction(op1, op2) => s"${translateExpression(None)(op1)} - ${translateExpression(None)(op2)}"
-      case IntermediateCode.TernaryExpression(guard, e1, e2) => s"${foldGuard(guard)} ? ${translateExpression(None)(e1)} : ${translateExpression(None)(e2)}"
+      case IntermediateCode.FunctionVarApplication(variable, params) => s"$variable.apply(${params.map(translateExpression).mkString(", ")})"
+      case IntermediateCode.Addition(op1, op2) => s"${translateExpression(op1)} + ${translateExpression(op2)}"
+      case IntermediateCode.Subtraction(op1, op2) => s"${translateExpression(op1)} - ${translateExpression(op2)}"
+      case IntermediateCode.TernaryExpression(guard, e1, e2) => s"${foldGuard(guard)} ? ${translateExpression(e1)} : ${translateExpression(e2)}"
       case IntermediateCode.Equal(a, b) => {
-        if (isObjectType(IntermediateCode.typeInference(a, variables.mapValues{case (typ, _) => typ}))) {
-          s"${translateExpression(None)(a)}.equals(${translateExpression(None)(b)})"
+        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.mapValues{case (typ, _) => typ}))) {
+          s"${translateExpression(a)}.equals(${translateExpression(b)})"
         } else {
-          s"${translateExpression(None)(a)} == ${translateExpression(None)(b)}"
+          s"${translateExpression(a)} == ${translateExpression(b)}"
         }
       }
-      case IntermediateCode.NotEqual(a, b) => s"${translateExpression(None)(a)} != ${translateExpression(None)(b)}"
-      case IntermediateCode.Greater(a, b) => s"${translateExpression(None)(a)} > ${translateExpression(None)(b)}"
-      case IntermediateCode.GreaterEqual(a, b) => s"${translateExpression(None)(a)} >= ${translateExpression(None)(b)}"
-      case IntermediateCode.Negation(a) => s"!${translateExpression(None)(a)}}"
+      case IntermediateCode.NotEqual(a, b) => s"${translateExpression(a)} != ${translateExpression(b)}"
+      case IntermediateCode.Greater(a, b) => s"${translateExpression(a)} > ${translateExpression(b)}"
+      case IntermediateCode.GreaterEqual(a, b) => s"${translateExpression(a)} >= ${translateExpression(b)}"
+      case IntermediateCode.Negation(a) => s"!${translateExpression(a)}}"
       case IntermediateCode.Variable(name) => name
       case IntermediateCode.LambdaExpression(argNames, argsTypes, _, body) => {
         val args = argsTypes.zip(argNames).map{case (t,n) => s"${JavaConstants.typeTranslation(t)} $n"}.mkString(", ")
