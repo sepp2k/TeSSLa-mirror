@@ -73,7 +73,7 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
       }
   }
 
-  def isObjectType(t: ImpLanType) = {
+  def isObjectType(t: ImpLanType) : Boolean = {
     t match {
       case IntermediateCode.LongType |
            IntermediateCode.DoubleType |
