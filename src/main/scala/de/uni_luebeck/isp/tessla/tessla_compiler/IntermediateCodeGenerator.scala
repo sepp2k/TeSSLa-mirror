@@ -146,9 +146,11 @@ object IntermediateCodeGenerator {
   def produceLiftStepCode(outStream: Stream, f: Function, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
     val o = s"var_${outStream.id.uid}"
     val ot = outStream.typ.elementType
-    val params = args.map{sr => TernaryExpression(Seq(Seq(Equal(s"${streamNameAndType(sr)._1}_ts", "currTs"))),
-                                                  FunctionCall("Some", Seq(s"${streamNameAndType(sr)._1}_value")),
+    val params = args.map{sr => { val (sName, sType) = streamNameAndType(sr)
+                                  TernaryExpression(Seq(Seq(Equal(s"${sName}_ts", "currTs"))),
+                                                  FunctionCall("Some", Seq(s"${sName}_value"), IntermediateCode.FunctionType(Seq(sType), OptionType(sType))),
                                                   None)
+                                }
                          }
     val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(streamNameAndType(sr)._1))}
 
@@ -158,11 +160,11 @@ object IntermediateCodeGenerator {
       If(guard)
         Assignment(s"${o}_f", FunctionGenerator.generateLambda(f, s"${o}_f"), defaultValueForType(FunctionType), FunctionType)
         Assignment(s"${o}_fval", FunctionVarApplication(s"${o}_f", params), defaultValueForType(ot), ot)
-        If(Seq(Seq(FunctionCall("isSome", Seq(s"${o}_fval")))))
+        If(Seq(Seq(FunctionCall("isSome", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType)))))
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot)
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
           Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
-          Assignment(s"${o}_value", FunctionCall("getSome", Seq(s"${o}_fval")), defaultValueForType(ot), ot)
+          Assignment(s"${o}_value", FunctionCall("getSome", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForType(ot), ot)
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
           // Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType) //TODO: Error Generation
@@ -183,12 +185,13 @@ object IntermediateCodeGenerator {
   }
 
   def produceOutputCode(outStream: TesslaCore.OutStreamDescription, currSrc: SourceListing) : SourceListing = {
-    val (s, _) = streamNameAndType(outStream.stream)
+    val (s, t) = streamNameAndType(outStream.stream)
     val name = outStream.nameOpt.getOrElse(outputStreamName(outStream.stream))
 
     val newStmt = (currSrc.stepSource
       If(Seq(Seq(s"${s}_changed")))
-        FunctionCall("__[TC]output__", Seq(s"${s}_value", StringValue(name), s"${s}_error"))
+        FunctionCall("__[TC]output__", Seq(s"${s}_value", StringValue(name), s"${s}_error"),
+                      IntermediateCode.FunctionType(Seq(t, StringType, LongType), UnitType))
       EndIf()
     )
 
@@ -215,7 +218,9 @@ object IntermediateCodeGenerator {
         Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForType(st), st)
         Assignment(s"${s}_lastInit", s"${s}_init", BoolValue(false), BoolType)
         FinalAssignment(s"${s}_lastError", LongValue(0), LongType)
-        Assignment(s"${s}_value", FunctionCall("__[TC]inputParse__", Seq("value")), defaultValueForType(st), st)
+        Assignment(s"${s}_value", FunctionCall("__[TC]inputParse__", Seq("value"),
+                   IntermediateCode.FunctionType(Seq(StringType), st)
+                   ), defaultValueForType(st), st)
         Assignment(s"${s}_init", BoolValue(true), BoolValue(false), BoolType)
         Assignment(s"${s}_ts", "currTs", LongValue(0), LongType)
         FinalAssignment(s"${s}_error", LongValue(0), LongType)

@@ -146,8 +146,8 @@ class IntermediateCodeDSL(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq(O
       new IntermediateCodeDSL(newStmts, ifState.drop(1), newIfStack, newElseStack, condStack.drop(1))
     }
 
-    def FunctionCall(name: String, params: Seq[ImpLanExpr]) : IntermediateCodeDSL = {
-      val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FunctionCall(name, params))
+    def FunctionCall(name: String, params: Seq[ImpLanExpr], typeHint: FunctionType) : IntermediateCodeDSL = {
+      val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FunctionCall(name, params, typeHint))
       new IntermediateCodeDSL(newStmts, ifState, newIfStack, newElseStack, condStack)
     }
 
