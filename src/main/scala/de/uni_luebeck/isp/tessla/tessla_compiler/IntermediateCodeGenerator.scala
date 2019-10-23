@@ -152,7 +152,7 @@ object IntermediateCodeGenerator {
                                                   None)
                                 }
                          }
-    val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(streamNameAndType(sr)._1))}
+    val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndType(sr)._1}_changed"))}
 
     val newStmt = (currSrc.stepSource
 
