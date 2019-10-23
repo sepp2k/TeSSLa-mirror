@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
 import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode}
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{FunctionCall, ImpLanExpr, ImpLanType, ImpLanVal}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{FunctionCall, FunctionType, ImpLanExpr, ImpLanType, ImpLanVal}
 
 object JavaConstants {
 
@@ -54,19 +54,40 @@ object JavaConstants {
     }
   }
 
-  def builtinFunctionCallTranslation(name: String, args: Seq[String], vars: Map[String, (ImpLanType, ImpLanVal)], resType: Option[ImpLanType]) : String = {
+  def builtinFunctionCallTranslation(name: String, args: Seq[String], typeHint: FunctionType) : String = {
     name match {
-      case "__[TC]output__" => {
-        s"outputVar(${getParseExpressionToString(vars(args(0))._1, args(0))}, ${args(1)}, ${args(2)}, currTs)" //FIXME: Here it is supposed that args(0) is always just a var name, no clean solution!
-      }
-      case "__[TC]inputParse__" => {
-        if (resType.isDefined) {
-          getStringParseExpression(resType.get, args(0))
-        } else {
-          throw new Errors.TranslationError("__[TC]inputParse__ cannot be translated with insufficient type information")
-        }
-      }
-      //TODO: Add other builtin functions
+      case "__[TC]output__" => s"outputVar(${getParseExpressionToString(typeHint.argsTypes(0), args(0))}, ${args(1)}, ${args(2)}, currTs)"
+      case "__[TC]inputParse__" => getStringParseExpression(typeHint.retType, args(0))
+      case "__not__" => s"!${args(0)}"
+      case "__negate__" |
+           "__fnegate__"  => s"-${args(0)}"
+      case "__bitflip__" => s"~${args(0)}"
+      case "__and__" => s"${args(0)} && ${args(1)}"
+      case "__or__" => s"${args(0)} || ${args(1)}"
+      case "__eq__" => s"${args(0)} == ${args(1)}"
+      case "__neq__" => s"${args(0)} != ${args(1)}"
+      case "__gt__" |
+           "__fgt__" => s"${args(0)} > ${args(1)}"
+      case "__lt__" |
+           "__flt__" => s"${args(0)} < ${args(1)}"
+      case "__geq__" |
+           "__fgeq__" => s"${args(0)} >= ${args(1)}"
+      case "__leq__" |
+           "__fleq__"=> s"${args(0)} <= ${args(1)}"
+      case "__add__" |
+           "__fadd__" => s"${args(0)} + ${args(1)}"
+      case "__sub__" |
+           "__fsub__" => s"${args(0)} - ${args(1)}"
+      case "__mul__" |
+           "__fmul__" => s"${args(0)} * ${args(1)}"
+      case "__div__" |
+           "__fdiv__" => s"${args(0)} / ${args(1)}"
+      case "__mod__" => s"${args(0)} % ${args(1)}"
+      case "__bitand__" => s"${args(0)} & ${args(1)}"
+      case "__bitor__" => s"${args(0)} | ${args(1)}"
+      case "__bitxor__" => s"${args(0)} ^ ${args(1)}"
+      case "__leftshift__" => s"${args(0)} << ${args(1)}"
+      case "__rightshift__" => s"${args(0)} >> ${args(1)}"
       case _ => throw new Errors.CommandNotSupportedError(s"Unsupported built-in function for Java backend: $name")
     }
   }

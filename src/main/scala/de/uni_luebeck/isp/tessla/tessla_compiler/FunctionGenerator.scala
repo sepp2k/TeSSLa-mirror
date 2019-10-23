@@ -71,20 +71,8 @@ object FunctionGenerator {
       }
     }
 
-    //TODO: Is this really necessary? can't the function names just be passed into the FunctionCall nodes
     def getBuiltinOperator(name: String, args: Seq[ImpLanExpr]) : ImpLanExpr = {
-      name match {
-        case "__not__" => Negation(args(0))
-        case "__ite__" => TernaryExpression(Seq(Seq(args(0))), args(1), args(2))
-        case "__eq__" => Equal(args(0), args(1))
-        case "__neq__" => NotEqual(args(0), args(1))
-        case "__leq__" | "__fleq__" => GreaterEqual(args(1), args(0))
-        case "__geq__" | "__fgeq__" => GreaterEqual(args(0), args(1))
-        case "__lt__" | "__flt__" => Greater(args(1), args(0))
-        case "__gt__" | "__fgt__" => Greater(args(0), args(1))
-        case "__add__" | "__fadd__" => Addition(args(0), args(1))
-        case _ => FunctionCall(name, args)
-      }
+      FunctionCall(name, args, Helpers.getBuiltinFunctionTypes(name))
     }
 
     def determineEvalOrder(vds: Map[Identifier, ValueExpressionDescription], end: ValueArg) : Seq[(Identifier, ValueExpressionDescription)] = {
