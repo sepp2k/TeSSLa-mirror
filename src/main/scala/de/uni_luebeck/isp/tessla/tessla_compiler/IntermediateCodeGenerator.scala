@@ -177,7 +177,45 @@ object IntermediateCodeGenerator {
   }
 
   def produceSignalLiftStepCode(outStream: Stream, op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location, currSrc: SourceListing): SourceListing = {
-    throw new Errors.NotYetImplementedError("", loc)
+    val o = s"var_${outStream.id.uid}"
+    val ot = outStream.typ.elementType
+
+    val guard1 : Seq[Seq[ImpLanExpr]] = Seq(args.map{sr => Variable(s"${streamNameAndType(sr)._1}_init")})
+    val guard2 : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndType(sr)._1}_changed"))}
+
+    val fargs : Seq[(ImpLanExpr, ImpLanType)] = {
+      if (op.args.isEmpty) {
+        args.map(streamNameAndType)
+      } else {
+        var pos = 0
+        (0 until op.args.keys.max + args.size).flatMap{
+          case i if op.args.contains(i) => scala.Some(streamNameAndType(args(i)))
+          case _ if pos >= args.size => scala.None
+          case _ => {
+                      pos += 1
+                      scala.Some(streamNameAndType(args(pos - 1)))
+                    }
+        }
+      }
+    }.map{case (n, t) => (Variable(s"${n}_value"), t)}
+
+    val newStmt = (currSrc.stepSource
+
+      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      If(guard1)
+        If(guard2)
+          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot)
+          Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+          Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+          Assignment(s"${o}_value", ErrorGenerator.generateErrorPreventingCallSLift(op.name, fargs, ot), defaultValueForType(ot), ot)
+          Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+          Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+          Assignment(s"${o}_error", ErrorGenerator.generateErrorCodeExpressionSLift(op.name, fargs), LongValue(0), LongType)
+          Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+        EndIf()
+      EndIf()
+      )
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing)
   }
 
   def produceCustomBuiltInCallStepCode(outStream: Stream, name: String, args: Seq[Arg], loc: Location, currSrc: SourceListing): SourceListing = {
