@@ -17,7 +17,7 @@ object IntermediateCodeDSL {
       case TesslaCore.IntValue(i, _) => LongValue(i.longValue())
       case TesslaCore.FloatValue(f, _) => DoubleValue(f)
       case TesslaCore.StringValue(s, _) => StringValue(s)
-      case TesslaCore.TesslaOption(scala.None, _, _) => None
+      case TesslaCore.TesslaOption(scala.None, t, _) => None(t)
       case TesslaCore.TesslaOption(v, _, _) => Some(v.get)
       case TesslaCore.TesslaMap(m, TesslaCore.BuiltInType("Map", Seq(t1, t2)), loc) =>
         if (m.size == 0)
@@ -64,7 +64,7 @@ object IntermediateCodeDSL {
       case TesslaCore.BuiltInType("Int", Seq()) => LongValue(0)
       case TesslaCore.BuiltInType("Float", Seq()) => DoubleValue(0)
       case TesslaCore.BuiltInType("String", Seq()) => StringValue("")
-      case TesslaCore.BuiltInType("Option", Seq(_)) => None
+      case TesslaCore.BuiltInType("Option", Seq(t)) => None(t)
       case TesslaCore.BuiltInType("Set", Seq(t)) => EmptyImmutableSet(t)
       case TesslaCore.BuiltInType("Map", Seq(t1, t2)) => EmptyImmutableMap(t1, t2)
       case TesslaCore.BuiltInType("List", Seq(t)) => EmptyImmutableList(t)

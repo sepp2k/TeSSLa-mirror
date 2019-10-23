@@ -14,9 +14,7 @@ object IntermediateCodeTypeInference {
             case IntermediateCode.BoolValue(_) => BoolType
             case IntermediateCode.UnitValue => UnitType
             case IntermediateCode.StringValue(_) => StringType
-            case IntermediateCode.None => {
-              throw new Errors.NotYetImplementedError("Type inference of None-Option is not implemented yet")
-            }
+            case IntermediateCode.None(typeHint) => typeHint
             case IntermediateCode.Some(content) => OptionType(typeInference(content, varTypes))
             case IntermediateCode.EmptyMutableSet(valType) => MutableSetType(valType)
             case IntermediateCode.EmptyImmutableSet(valType) => ImmutableSetType(valType)

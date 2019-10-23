@@ -46,7 +46,7 @@ object JavaConstants {
       case IntermediateCode.BoolValue(value) => value.toString()
       case IntermediateCode.UnitValue => "true"
       case IntermediateCode.StringValue(value) => s""""${value.replaceAllLiterally("\"", "\\\"")}"""" //TODO: Find better solution, re-escaping all special chars
-      case IntermediateCode.None => "java.util.Optional.empty()"
+      case IntermediateCode.None(_) => "java.util.Optional.empty()"
       case IntermediateCode.Some(content) => s"java.util.Optional.of(${valueTranslation(content)})"
       case IntermediateCode.EmptyMutableSet(valType) => s"new scala.collection.mutable.HashSet<${objectTypeTranslation(valType)}>()"
       case IntermediateCode.EmptyImmutableSet(valType) => s"new scala.collection.immutable.HashSet<${objectTypeTranslation(valType)}>()"

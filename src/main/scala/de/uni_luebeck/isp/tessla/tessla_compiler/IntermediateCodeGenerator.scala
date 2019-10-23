@@ -154,7 +154,7 @@ object IntermediateCodeGenerator {
     val params = args.map{sr => { val (sName, sType) = streamNameAndType(sr)
                                   TernaryExpression(Seq(Seq(Equal(s"${sName}_ts", "currTs"))),
                                                   FunctionCall("Some", Seq(s"${sName}_value"), IntermediateCode.FunctionType(Seq(sType), OptionType(sType))),
-                                                  None)
+                                                  None(sType))
                                 }
                          }
     val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndType(sr)._1}_changed"))}

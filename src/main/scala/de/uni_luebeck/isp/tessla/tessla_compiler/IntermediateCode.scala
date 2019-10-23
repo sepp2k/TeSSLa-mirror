@@ -97,8 +97,8 @@ object IntermediateCode {
     override def toString = value.toString
   }
 
-  final case object None extends ImpLanVal {
-    override def toString = "None"
+  final case class None(typeHint: ImpLanType) extends ImpLanVal {
+    override def toString = s"None[[type: $typeHint]]"
   }
 
   final case class Some(content: ImpLanVal) extends ImpLanVal {
