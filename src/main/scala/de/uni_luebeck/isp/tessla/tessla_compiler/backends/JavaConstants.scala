@@ -111,7 +111,7 @@ object JavaConstants {
       case IntermediateCode.LongType |
            IntermediateCode.DoubleType |
            IntermediateCode.BoolType => s"String.valueOf($exp)"
-      case IntermediateCode.UnitType => "true"
+      case IntermediateCode.UnitType => "\"()\""
       case IntermediateCode.StringType => s"$exp"
       case t => s"$exp.toString()"
     }

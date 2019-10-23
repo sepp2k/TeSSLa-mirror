@@ -38,7 +38,7 @@ object IntermediateCodeDSL {
 
   implicit def typeConversion(t: ValueType): ImpLanType = {
     t match {
-      case TesslaCore.BuiltInType("Unit", Seq()) => BoolType
+      case TesslaCore.BuiltInType("Unit", Seq()) => UnitType //TODO: Does this exist at all
       case TesslaCore.BuiltInType("Bool", Seq()) => BoolType
       case TesslaCore.BuiltInType("Int", Seq()) => LongType
       case TesslaCore.BuiltInType("Float", Seq()) => DoubleType
@@ -50,7 +50,7 @@ object IntermediateCodeDSL {
       case t: TesslaCore.BuiltInType => throw new Errors.NotYetImplementedError(s"BuiltInType $t cannot be translated into imperative code yet")
       case TesslaCore.FunctionType => throw new Errors.CommandNotSupportedError("Function type without further type knowledge cannot be translated into imperative code")
       case TesslaCore.ObjectType(memberTypes) => if (memberTypes.isEmpty) {
-        BoolType
+        UnitType
       } else {
         throw new Errors.NotYetImplementedError("Object types cannot be translated into imperative code yet")
       }
@@ -59,7 +59,7 @@ object IntermediateCodeDSL {
 
   def defaultValueForType(t: ValueType): ImpLanVal = {
     t match {
-      case TesslaCore.BuiltInType("Unit", Seq()) => BoolValue(true)
+      case TesslaCore.BuiltInType("Unit", Seq()) => UnitValue //TODO: Does this exist at all
       case TesslaCore.BuiltInType("Bool", Seq()) => BoolValue(false)
       case TesslaCore.BuiltInType("Int", Seq()) => LongValue(0)
       case TesslaCore.BuiltInType("Float", Seq()) => DoubleValue(0)
@@ -71,7 +71,7 @@ object IntermediateCodeDSL {
       case t: TesslaCore.BuiltInType => throw new Errors.NotYetImplementedError(s"BuiltInType $t cannot be translated into imperative code yet")
       case TesslaCore.FunctionType => throw new Errors.CommandNotSupportedError("Function type without further type knowledge cannot be translated into imperative code")
       case TesslaCore.ObjectType(memberTypes) => if (memberTypes.isEmpty) {
-        BoolValue(true)
+        UnitValue
       } else {
         throw new Errors.NotYetImplementedError("Object types cannot be translated into imperative code yet")
       }
