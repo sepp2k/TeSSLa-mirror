@@ -8,12 +8,12 @@ public class Main {
         String outputWithError = (errorCode != 0) ? "FATAL: " + trueName + " evaluation encountered an Error: " : "";
         switch((int)errorCode) {
             case 0:
-                outputWithError = output;
+                outputWithError = trueName + " = " + output;
                 break;
-            case 4:
+            case 1:
                 outputWithError += "Division by zero";
                 break;
-            case 8:
+            case 2:
                 outputWithError += "Map access to non existing key";
                 break;
             default:
