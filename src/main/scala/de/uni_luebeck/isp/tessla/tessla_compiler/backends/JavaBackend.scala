@@ -56,7 +56,13 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
           s"${translateExpression(a)} == ${translateExpression(b)}"
         }
       }
-      case IntermediateCode.NotEqual(a, b) => s"${translateExpression(a)} != ${translateExpression(b)}"
+      case IntermediateCode.NotEqual(a, b) => {
+        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.mapValues{case (typ, _) => typ}))) {
+          s"!${translateExpression(a)}.equals(${translateExpression(b)})"
+        } else {
+          s"${translateExpression(a)} != ${translateExpression(b)}"
+        }
+      }
       case IntermediateCode.Greater(a, b) => s"${translateExpression(a)} > ${translateExpression(b)}"
       case IntermediateCode.GreaterEqual(a, b) => s"${translateExpression(a)} >= ${translateExpression(b)}"
       case IntermediateCode.Negation(a) => s"!${translateExpression(a)}}"
