@@ -43,7 +43,7 @@ object IntermediateCodeGenerator {
         Assignment(s"${o}_init", BoolValue(true), BoolValue(true), BoolType)
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
         Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType)
-        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+        Assignment(s"${o}_changed", BoolValue(true), BoolValue(true), BoolType)
       EndIf()
 
       )
