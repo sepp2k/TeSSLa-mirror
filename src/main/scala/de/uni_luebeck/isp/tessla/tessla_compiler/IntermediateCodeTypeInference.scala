@@ -62,8 +62,41 @@ object IntermediateCodeTypeInference {
                 case _ => throw new Errors.TypeError(s"$op1 and $op2 have invalid types for subtraction")
                 }
             }
-            case TernaryExpression(_, e1, e2) => typeInferenceWithEqualityCheck(e1, e2, varTypes)
-            case Equal(_, _) | NotEqual(_, _) | Greater(_, _) | GreaterEqual(_, _) | Negation(_) => BoolType
+            case TernaryExpression(cnf, e1, e2) => {
+              val allSound = cnf.flatten.foldLeft[Boolean](true){case (res, e) => res && typeInference(e, varTypes) == BoolType}
+              if (allSound) {
+                typeInferenceWithEqualityCheck(e1, e2, varTypes)
+              } else {
+                throw new Errors.TypeError(s"Not all DNF members have bool type, but are used inside a ternary Expression: $cnf")
+              }
+            }
+            case Equal(e1, e2) => {
+              typeInferenceWithEqualityCheck(e1, e2, varTypes); BoolType
+            }
+            case NotEqual(e1, e2) => {
+              typeInferenceWithEqualityCheck(e1, e2, varTypes); BoolType
+            }
+            case Greater(e1, e2) => {
+              val t = typeInferenceWithEqualityCheck(e1, e2, varTypes);
+              if (t == LongType || t == DoubleType) {
+                BoolType
+              } else {
+                throw new Errors.TypeError(s"$e1, $e2 have invalid types for Greater operation")
+              }
+            }
+            case GreaterEqual(e1, e2) => {
+              val t = typeInferenceWithEqualityCheck(e1, e2, varTypes);
+              if (t == LongType || t == DoubleType) {
+                BoolType
+              } else {
+                throw new Errors.TypeError(s"$e1, $e2 have invalid types for GreaterEqual operation")
+              }
+            }
+            case Negation(e) => if (typeInference(e, varTypes) == BoolType) {
+              BoolType
+            } else {
+              throw new Errors.TypeError(s"$e has no bool type, but is used inside a negation")
+            }
             case Variable(name)  => varTypes(name)
             case LambdaExpression(_, argsTypes, retType, _) => FunctionType(argsTypes, retType)
           }
