@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 import de.uni_luebeck.isp.tessla.Location
 
 /**
-  * Contains errors complementing those in de.uni_luebeck.isp.tessla.Errors by special compilation errors
+  * Class containing errors complementing those in de.uni_luebeck.isp.tessla.Errors by special compilation errors
   */
 object Errors {
 

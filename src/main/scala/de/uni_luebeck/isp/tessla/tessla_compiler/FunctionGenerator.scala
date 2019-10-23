@@ -5,6 +5,9 @@ import de.uni_luebeck.isp.tessla.TesslaCore.{FunctionType, _}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeDSL._
 
+/**
+  * Class for the translation of TeSSLaCore-Functions to ImpLan Lambda expressions
+  */
 object FunctionGenerator {
 
   def generateLambda(f: Function, callName: String, stack: Map[Any, String] = Map()) : LambdaExpression = {

@@ -3,6 +3,9 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode, IntermediateCodeTypeInference}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, BoolType, FinalAssignment, ImpLanExpr, ImpLanStmt, ImpLanType, ImpLanVal}
 
+/**
+  * BackendInterface implementation for the translation to Java code
+  */
 class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_compiler/JavaSkeleton.java") {
 
   def generateVariableDeclarations() : Seq[String] = {

@@ -5,6 +5,10 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, F
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
 
+/**
+  * Abstract base class for the translation from IntermediateCode to real source code
+  * @param sourceTemplate Resource path of the template code, where generated code is inserted
+  */
 abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase[SourceListing, String] {
 
   var variables : Map[String, (ImpLanType, ImpLanVal)] = Map()

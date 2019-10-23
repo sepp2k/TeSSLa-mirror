@@ -3,6 +3,9 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{FunctionCall, FunctionType, ImpLanExpr, ImpLanType, ImpLanVal}
 
+/**
+  * Class containing Java-specific constants for the translation
+  */
 object JavaConstants {
 
   def typeTranslation(t: ImpLanType) : String = {

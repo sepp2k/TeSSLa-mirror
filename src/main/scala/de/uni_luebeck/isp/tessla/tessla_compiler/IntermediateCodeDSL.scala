@@ -6,6 +6,9 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{StringValue, 
 import de.uni_luebeck.isp.tessla._
 import de.uni_luebeck.isp.tessla.TesslaCore.{BoolValue => _, StringValue => _, _}
 
+/**
+  * Class containing a DSL for easy creation of ImpLanStmt-Blocks
+  */
 object IntermediateCodeDSL {
 
   implicit def valueConversion(v: ValueOrError): ImpLanVal = {

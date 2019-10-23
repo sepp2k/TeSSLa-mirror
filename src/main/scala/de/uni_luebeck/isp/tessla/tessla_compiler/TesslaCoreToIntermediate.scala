@@ -6,7 +6,7 @@ import de.uni_luebeck.isp.tessla.{TesslaCore, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 
 /**
-  * This class is the de.uni_luebeck.isp.tessla.TranslationPhase for the translation from TeSSLa Core to
+  * Class implementing de.uni_luebeck.isp.tessla.TranslationPhase for the translation from TeSSLa Core to
   * abstract imperative code
   */
 class TesslaCoreToIntermediate(consoleInterface : Boolean) extends

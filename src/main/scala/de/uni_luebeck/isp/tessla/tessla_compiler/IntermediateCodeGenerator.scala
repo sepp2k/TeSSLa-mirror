@@ -9,7 +9,7 @@ import de.uni_luebeck.isp.tessla.TesslaCore.{FunctionType, BoolValue => _, Strin
 
 
 /**
-  * This class contains functions for the translation of single TeSSLa expressions to imperative code
+  * Class containing functions for the translation of single TeSSLa expressions to imperative code
   */
 object IntermediateCodeGenerator {
 

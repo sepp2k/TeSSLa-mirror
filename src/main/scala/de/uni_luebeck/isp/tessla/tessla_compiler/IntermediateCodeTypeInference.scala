@@ -2,6 +2,9 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 
+/**
+  * Class containing code for determining the type of ImpLan-Expressions
+  */
 object IntermediateCodeTypeInference {
 
   def typeInference(impLanExpr: ImpLanExpr, varTypes: Map[String, ImpLanType]): ImpLanType = {

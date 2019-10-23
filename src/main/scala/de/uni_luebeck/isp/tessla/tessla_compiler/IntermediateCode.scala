@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
 /**
-  * This class contains subclasses for the representation of abstract imperative code which can afterwards be
+  * Class containing subclasses for the representation of abstract imperative code which can afterwards be
   * transduced into Java/Rust/... code
   */
 object IntermediateCode {

@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, DoubleType, FunctionType, LongType}
 
 /**
-  * Contains code useful at several locations in the project
+  * Class containing code useful at several locations in the project
   */
 object Helpers {
 
