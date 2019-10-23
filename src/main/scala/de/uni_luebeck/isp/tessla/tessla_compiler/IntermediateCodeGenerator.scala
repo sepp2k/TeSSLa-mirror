@@ -194,7 +194,8 @@ object IntermediateCodeGenerator {
       } else {
         var pos = 0
         (0 until op.args.keys.max + args.size).flatMap{
-          case i if op.args.contains(i) => scala.Some(streamNameAndType(args(i)))
+          case i if op.args.contains(i) => scala.Some((IntermediateCodeDSL.valueConversion(op.args(i)),
+            IntermediateCodeTypeInference.typeInference(op.args(i), Map())))
           case _ if pos >= args.size => scala.None
           case _ => {
                       pos += 1
