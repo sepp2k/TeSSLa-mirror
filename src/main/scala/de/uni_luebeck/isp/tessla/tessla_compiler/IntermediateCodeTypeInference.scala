@@ -44,18 +44,24 @@ object IntermediateCodeTypeInference {
                   case _ => throw new Errors.TypeError(s"Non-Lambda variable is used in application: $variable")
                 }
             }
+            case BitwiseOr(op1, op2) => {
+              typeInferenceWithEqualityCheck(op1, op2, varTypes) match {
+                case LongType => LongType
+                case _ => throw new Errors.TypeError(s"$op1 and $op2 have invalid types for bitwise or")
+                }
+            }
             case Addition(op1, op2) => {
               typeInferenceWithEqualityCheck(op1, op2, varTypes) match {
                 case LongType => LongType
-                  case DoubleType => DoubleType
-                  case _ => throw new Errors.TypeError(s"$op1 and $op2 have invalid types for addition")
-                }
+                case DoubleType => DoubleType
+                case _ => throw new Errors.TypeError(s"$op1 and $op2 have invalid types for addition")
+              }
             }
             case Subtraction(op1, op2) => {
               typeInferenceWithEqualityCheck(op1, op2, varTypes) match {
                 case LongType => LongType
-                  case DoubleType => DoubleType
-                  case _ => throw new Errors.TypeError(s"$op1 and $op2 have invalid types for subtraction")
+                case DoubleType => DoubleType
+                case _ => throw new Errors.TypeError(s"$op1 and $op2 have invalid types for subtraction")
                 }
             }
             case TernaryExpression(_, e1, e2) => typeInferenceWithEqualityCheck(e1, e2, varTypes)

@@ -163,6 +163,10 @@ object IntermediateCode {
     override def toString = s"$op1 - $op2"
   }
 
+  final case class BitwiseOr(op1: ImpLanExpr, op2: ImpLanExpr) extends ImpLanExpr {
+    override def toString = s"$op1 | $op2"
+  }
+
   final case class TernaryExpression(guard: Seq[Seq[ImpLanExpr]], e1: ImpLanExpr, e2: ImpLanExpr) extends ImpLanExpr {
     override def toString = s"$guard ? $e1 : $e2"
   }

@@ -46,6 +46,7 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
       }
       case IntermediateCode.FunctionVarApplication(variable, params) => s"$variable.apply(${params.map(translateExpression).mkString(", ")})"
       case IntermediateCode.Addition(op1, op2) => s"${translateExpression(op1)} + ${translateExpression(op2)}"
+      case IntermediateCode.BitwiseOr(op1, op2) => s"${translateExpression(op1)} | ${translateExpression(op2)}"
       case IntermediateCode.Subtraction(op1, op2) => s"${translateExpression(op1)} - ${translateExpression(op2)}"
       case IntermediateCode.TernaryExpression(guard, e1, e2) => s"${foldGuard(guard)} ? ${translateExpression(e1)} : ${translateExpression(e2)}"
       case IntermediateCode.Equal(a, b) => {
