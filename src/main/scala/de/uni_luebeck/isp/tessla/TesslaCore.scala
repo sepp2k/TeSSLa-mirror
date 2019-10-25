@@ -265,7 +265,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def typ = FunctionType
   }
 
-  case class Closure(function: Function, var capturedEnvironment: Map[Identifier, Lazy[ValueOrError]], loc: Location) extends Value {
+  case class Closure(function: Function, capturedEnvironment: Map[Identifier, Lazy[ValueOrError]], loc: Location) extends Value {
     override def withLoc(loc: Location): Closure = copy(loc = loc)
 
     override def toString = {
