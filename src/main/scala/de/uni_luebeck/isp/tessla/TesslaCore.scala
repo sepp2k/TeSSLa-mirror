@@ -68,30 +68,12 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def toString = "nil"
   }
 
-  final case class Default(stream: StreamRef, default: ValueOrError, loc: Location) extends Expression {
-    override def toString = s"default($stream, $default)"
-  }
-
-  final case class DefaultFrom(valueStream: StreamRef, defaultStream: StreamRef, loc: Location) extends Expression {
-    override def toString = s"defaultFrom($valueStream, $defaultStream)"
-  }
-
-  final case class Time(stream: StreamRef, loc: Location) extends Expression {
-    override def toString = s"time($stream)"
-  }
-
   final case class Last(values: StreamRef, clock: StreamRef, loc: Location) extends Expression {
     override def toString = s"last($values, $clock)"
   }
 
   final case class Delay(delays: StreamRef, resets: StreamRef, loc: Location) extends Expression {
     override def toString = s"delay($delays, $resets)"
-  }
-
-  final case class Lift(f: Function, args: Seq[StreamRef], loc: Location) extends Expression {
-    override def toString = {
-      args.mkString(s"lift($f)(", ", ", ")")
-    }
   }
 
   final case class CustomBuiltInCall(name: String, args: Seq[Arg], loc: Location) extends Expression {

@@ -142,63 +142,6 @@ class Specification() {
       }
     }
 
-  def delayedLast(delays: => Stream, values: => Stream): Stream =
-    new Triggered {
-      private var oldValue: Option[TesslaCore.ValueOrError] = None
-      private var newValue: Option[TesslaCore.ValueOrError] = None
-      private var newDelay: Option[Time] = None
-      private var targetTime: Option[Time] = None
-      private var counter = 0
-
-      def update(): Unit = {
-        if (counter == 2) {
-          counter = 0
-          oldValue = newValue
-          newDelay match {
-            case Some(delay) =>
-              val t = getTime + delay
-              targetTime = Some(t)
-              updateTrigger(this, t)
-            case None =>
-          }
-        } else {
-          counter += 1
-        }
-      }
-
-      override def init(): Unit = {
-        delays.addListener(delay => {
-          newDelay = delay.map(_.forceValue).map {
-            case TesslaCore.IntValue(value, loc) =>
-              if (value > 0) {
-                value
-              } else {
-                throw NonPositiveDelayError(value, loc)
-              }
-            case _ =>
-              throw InternalError("Uncaught type error: delayedLast called with non-int delay")
-          }: Option[Time]
-          update()
-        })
-        values.addListener {
-          case Some(value) =>
-            newValue = Some(value)
-            update()
-          case None => update()
-        }
-      }
-
-      override def step() = {
-        targetTime match {
-          case Some(target) if target == getTime =>
-            targetTime = None
-            propagate(oldValue)
-          case _ => propagate(None)
-        }
-        update()
-      }
-    }
-
   def delay(delays: => Stream, resets: => Stream): Stream =
     new Triggered {
       private var newDelay: Option[Time] = None
@@ -259,6 +202,31 @@ class Specification() {
         propagate(None)
       }
     }
+
+  def merge(streams: Seq[Stream]): Stream = {
+    def firstSome(values: Seq[Option[TesslaCore.ValueOrError]]): Option[TesslaCore.ValueOrError] = values match {
+      case Some(value1) +: _ => Some(value1)
+      case _ +: tail => firstSome(tail)
+      case Nil => None
+    }
+    lift(streams)(firstSome)
+  }
+
+  def slift(streams: Seq[Stream])(op: Seq[TesslaCore.ValueOrError] => TesslaCore.ValueOrError): Stream = {
+    val ticks = lift(streams) { _ =>
+      Some(TesslaCore.TesslaObject(Map(), Location.builtIn))
+    }
+    val recentValueStreams = streams.map { stream =>
+      merge(Seq(stream, last(stream, ticks)))
+    }
+    lift(recentValueStreams) { valueOptions =>
+      if (valueOptions.exists(_.isEmpty)) {
+        None
+      } else {
+        Some(op(valueOptions.flatten))
+      }
+    }
+  }
 
   sealed class Stream {
     self =>

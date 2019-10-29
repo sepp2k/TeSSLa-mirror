@@ -274,12 +274,6 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
               case "nil" =>
                 val typ = TesslaCore.StreamType(translateValueType(call.typeArgs.head, typeEnv))
                 NilEntry(TesslaCore.Nil(typ, call.loc), typ)
-              case "default" =>
-                translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Default(streamArg(0), getValue(argAt(1)), call.loc), translatedType, annotations)
-                StreamEntry(id, translatedType)
-              case "defaultFrom" =>
-                translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.DefaultFrom(streamArg(0), streamArg(1), call.loc), translatedType, annotations)
-                StreamEntry(id, translatedType)
               case "last" =>
                 val strictArg = streamArg(1)
                 deferredQueue += (() => translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Last(streamArg(0), strictArg, call.loc), translatedType, annotations))
@@ -288,14 +282,6 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
                 val id = makeIdentifier(nameOpt)
                 val strictArg = streamArg(1)
                 deferredQueue += (() => translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Delay(streamArg(0), strictArg, call.loc), translatedType, annotations))
-                StreamEntry(id, translatedType)
-              case "time" =>
-                translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Time(streamArg(0), call.loc), translatedType, annotations)
-                StreamEntry(id, translatedType)
-              case "lift" =>
-                val f = getFunctionForLift(env, call.args(2).id, translateStreamType(typ, typeEnv).elementType, call.args(2).loc, stack)
-                val liftArgs = Seq(getStream(argAt(0), call.args(0).loc), getStream(argAt(1), call.args(1).loc))
-                translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Lift(f, liftArgs, call.loc), translatedType, annotations)
                 StreamEntry(id, translatedType)
               case op =>
                 if (typ.isStreamType) {

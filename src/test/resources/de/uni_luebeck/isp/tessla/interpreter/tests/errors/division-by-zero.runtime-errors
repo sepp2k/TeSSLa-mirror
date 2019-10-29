@@ -1,1 +1,1 @@
-Predef.tessla(687,29 - 687,39): Division by zero (t = 2)
+errors/division-by-zero.input(3,8 - 3,9): Division by zero (t = 2)
