@@ -10,6 +10,7 @@ import scala.collection.JavaConverters._
 
 sealed abstract class TesslaDoc extends TesslaDoc.DocElement {
   def isGlobal: Boolean
+  def doc: String
 }
 
 object TesslaDoc {
@@ -143,7 +144,8 @@ object TesslaDoc {
     }
 
     def translateStatement(definition: TesslaSyntax.StatementContext): Seq[TesslaDoc] = {
-      new StatementVisitor(Global)(definition)
+      val docs = new StatementVisitor(Global)(definition)
+      docs.filter(doc => doc.doc != "nodoc")
     }
 
     object TypeVisitor extends TesslaSyntaxBaseVisitor[Type] {
@@ -231,7 +233,7 @@ object TesslaDoc {
     def getDoc(lines: Seq[Token]): String = {
       // Filter out the empty lines and only keep the ones with tessladoc comments
       val docLines = lines.filter(_.getType == TesslaLexer.DOCLINE)
-      docLines.map(_.getText.replaceAll("^--- ?|^## ?", "")).mkString
+      docLines.map(_.getText.replaceAll("^--- ?|^## ?", "")).mkString.trim
     }
   }
 
