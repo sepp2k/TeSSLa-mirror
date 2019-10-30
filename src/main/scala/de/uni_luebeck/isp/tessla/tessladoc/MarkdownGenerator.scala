@@ -2,9 +2,15 @@ package de.uni_luebeck.isp.tessla.tessladoc
 
 class MarkdownGenerator(docs: TesslaDoc.Docs) {
   def generateMarkdown: String =
-    itemsToMarkdown(docs.items)
+    itemsToToc(docs.items) + "\n\n\n" +
+    itemsToMarkdown(Seq())(docs.items)
 
-  def itemsToMarkdown(items: Seq[TesslaDoc]) = items.map(itemToMarkdown).mkString("\n\n\n")
+  def itemsToToc(items: Seq[TesslaDoc]) = items.collect{
+    case module: TesslaDoc.ModuleDoc =>
+      s" * [${markdownEscape(module.name)}](#${toAnchor(module.name)})"
+  }.mkString("\n")
+
+  def itemsToMarkdown(scope: Seq[String])(items: Seq[TesslaDoc]) = items.map(itemToMarkdown(scope)).mkString("\n\n\n")
 
   def seqToString(seq: Seq[String], opening: String, closing: String) = {
     if (seq.isEmpty) ""
