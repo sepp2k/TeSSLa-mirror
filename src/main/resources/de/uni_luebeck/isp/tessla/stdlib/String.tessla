@@ -1,3 +1,4 @@
+## Strings
 module String {
   @liftable
   def concat(str1: String, str2: String): String = __builtin__(String_concat)

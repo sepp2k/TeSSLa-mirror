@@ -1,3 +1,4 @@
+## Common Trace Format
 module CTF {
   type Object = __builtin__(CTF_Object)
 

@@ -1,3 +1,4 @@
+## Optional values
 module Option {
   def map[T, U](opt: Option[T], f: (T) => U): Option[U] =
     if isNone(opt)
@@ -16,5 +17,36 @@ module Option {
   def toSet[T](option: Option[T]): Set[T] = __private__Option_toSet(option)
 }
 
+## nodoc
 def __private__Option_toSet[T](option: Option[T]): Set[T] =
   if isSome(option) then Set.singleton( getSome(option)) else Set.empty[T]
+
+# Note that the core of the option functionality is defined below outside of the module because options are fundamental
+# enough (lift etc. make use of options) that having the functions in __root__ makes sense.
+# Further functionality (such as map etc.) is defined in the Option module.
+
+## Represents optional values. Instances of `Option` are either an instance of [`Some`](#some) or [`None`](#none)
+type Option[T] = __builtin__(Option)
+
+## Represents non-existent values of type `T`
+def None[T]: Option[T] = __builtin__(None)
+
+## Represents existing values of type `T`
+@liftable
+def Some[T](value: T): Option[T] = __builtin__(Some)
+
+## Returns [`true`](#true) if the given option is a [`None`](#none) or [`false`](#false) if it is a [`Some`](#some)
+@liftable
+def isNone[T](opt: Option[T]): Bool = __builtin__(isNone)
+
+## Returns [`true`](#true) if the given option is a [`Some`](#some) or [`false`](#false) if it is a [`None`](#none)
+@liftable
+def isSome[T](opt: Option[T]): Bool = !isNone(opt)
+
+## Get the value contained in a [`Some`](#some). If the given option is a [`None`](#none), a run-time error will occur
+@liftable
+def getSome[T](opt: Option[T]): T = __builtin__(getSome)
+
+## Get the value contained in a [`Some`](#some). If the given option is a [`None`](#none), the default value `value` will be returned
+@liftable
+def getSomeOrElse[T](opt: Option[T], value: T): T = if isSome(opt) then getSome(opt) else value
