@@ -73,44 +73,47 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
     s.flatMap(c => substitutions.getOrElse(c, c.toString))
   }
 
-  def itemToMarkdown(doc: TesslaDoc): String = doc match {
-    case typ: TesslaDoc.TypeDoc =>
-      val typeParams = typeParamsToMarkdown(typ.typeParameters)
-      s"""<h3 class="mt-5 anchor"><a id="${toAnchor(typ.name)}">ANCHOR</a>Type ${htmlEscape(typ.name)}</h3>
-         |
-         |`${typ.name}$typeParams`
-         |
-         |
-         |${typ.doc}
-         |""".stripMargin
-    case annotation: TesslaDoc.AnnotationDoc =>
-      val params = parametersToMarkdown(annotation.parameters)
-      s"""<h3 class="mt-5 anchor"><a id="${toAnchor(annotation.name)}">ANCHOR</a>Annotation @${htmlEscape(annotation.name)}</h3>
-         |
-         |<code>@${htmlEscape(annotation.name)}$params</code>
-         |
-         |${annotation.doc}
-         |""".stripMargin
-    case definition: TesslaDoc.DefDoc =>
-      val typeParams = typeParamsToMarkdown(definition.typeParameters)
-      val params = parametersToMarkdown(definition.parameters)
-      val annotations = annotationsToMarkdown(definition.annotations)
-      val returnType = definition.returnType match {
-        case Some(typ) => ": " + typeToMarkdown(typ)
-        case None => ""
-      }
-      s"""<h3 class="mt-5 anchor"><a id="${toAnchor(definition.name)}">ANCHOR</a>${htmlEscape(definition.name)}</h3>
-         |
-         |<code>$annotations${htmlEscape(definition.name)}${htmlEscape(typeParams)}$params${returnType}</code>
-         |
-         |${definition.doc}
-         |""".stripMargin
-    case module: TesslaDoc.ModuleDoc =>
-      s"""<h2 class="mt-5 anchor"><a id="${toAnchor(module.name)}">ANCHOR</a>Module ${htmlEscape(module.name)}</h2>
-         |
-         |${module.doc}
-         |
-         |${itemsToMarkdown(module.members)}
-         |""".stripMargin
+  def itemToMarkdown(scope: Seq[String])(doc: TesslaDoc): String = {
+    val prefix = scope.map(_ + ".").mkString
+    doc match {
+      case typ: TesslaDoc.TypeDoc =>
+        val typeParams = typeParamsToMarkdown(typ.typeParameters)
+        s"""<h3 class="mt-5 anchor"><a id="${toAnchor(prefix + typ.name)}">ANCHOR</a>Type ${htmlEscape(prefix + typ.name)}</h3>
+           |
+           |`${typ.name}$typeParams`
+           |
+           |
+           |${typ.doc}
+           |""".stripMargin
+      case annotation: TesslaDoc.AnnotationDoc =>
+        val params = parametersToMarkdown(annotation.parameters)
+        s"""<h3 class="mt-5 anchor"><a id="${toAnchor(prefix + annotation.name)}">ANCHOR</a>Annotation @${htmlEscape(prefix + annotation.name)}</h3>
+           |
+           |<code>@${htmlEscape(annotation.name)}$params</code>
+           |
+           |${annotation.doc}
+           |""".stripMargin
+      case definition: TesslaDoc.DefDoc =>
+        val typeParams = typeParamsToMarkdown(definition.typeParameters)
+        val params = parametersToMarkdown(definition.parameters)
+        val annotations = annotationsToMarkdown(definition.annotations)
+        val returnType = definition.returnType match {
+          case Some(typ) => ": " + typeToMarkdown(typ)
+          case None => ""
+        }
+        s"""<h3 class="mt-5 anchor"><a id="${toAnchor(prefix + definition.name)}">ANCHOR</a>${htmlEscape(prefix + definition.name)}</h3>
+           |
+           |<code>$annotations${htmlEscape(definition.name)}${htmlEscape(typeParams)}$params${returnType}</code>
+           |
+           |${definition.doc}
+           |""".stripMargin
+      case module: TesslaDoc.ModuleDoc =>
+        s"""<h2 class="mt-5 anchor"><a id="${toAnchor(prefix + module.name)}">ANCHOR</a>${htmlEscape(prefix + module.name)}</h2>
+           |
+           |${module.doc}
+           |
+           |${itemsToMarkdown(scope :+ module.name)(module.members)}
+           |""".stripMargin
+    }
   }
 }
