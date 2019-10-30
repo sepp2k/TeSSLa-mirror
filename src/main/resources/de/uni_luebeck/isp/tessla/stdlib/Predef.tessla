@@ -760,6 +760,18 @@ def slift3[T1, T2, T3, T4](a: Events[T1], b: Events[T2], c: Events[T3], f: (T1, 
 ## ~~~
 def slift4[T1, T2, T3, T4, T5](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], f: (T1, T2, T3, T4) => T5): Events[T5] = __builtin__(slift)
 
+## Takes a function `f` on values and lifts it to a function on streams
+## using signal semantics. The function is then applied to the given streams.
+## `f` is evaluated for every event on any of the given streams. If a stream
+## contains no simultaneous event with the same timestamp then `f` is
+## called with the last known value of that stream. `f` is not called
+## before every stream had at least one event.
+##
+## Note, that in comparison to [`lift5`](#lift5) `f` takes no [`Option`](#option)
+## type. `slift5` cannot filter events. The generated event pattern is independent
+## of the lifted function `f`.
+##
+## See [`slift4`](#slift4) for a usage example.
 def slift5[T1, T2, T3, T4, T5, U](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], s5: Events[T5], f: (T1, T2, T3, T4, T5) => U): Events[U] = __builtin__(slift)
 
 def slift1_curried[T, U](f: (T) => U) =
