@@ -27,13 +27,15 @@ class Flattener(spec: Tessla.Specification)
       annotationDef.id.name -> annotationDef
   }.toMap
 
+  val globalDefs = new FlatTessla.Definitions(None)
+  val globalVariableIdMap = createIdMap(spec.statements.flatMap(getName))
+  val globalTypeIdMap = createIdMap(spec.statements.collect {
+    case typeDef: Tessla.TypeDefinition => typeDef.id.name
+  })
+  val globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
+
+
   override def translateSpec() = {
-    val globalDefs = new FlatTessla.Definitions(None)
-    val globalVariableIdMap = createIdMap(spec.statements.flatMap(getName))
-    val globalTypeIdMap = createIdMap(spec.statements.collect {
-      case typeDef: Tessla.TypeDefinition => typeDef.id.name
-    })
-    val globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
     val emptySpec = FlatTessla.Specification(globalDefs, Seq(), outAllLocation = None, globalVariableIdMap)
     // Process type definitions before anything else, so that types can be used before they're defined
     spec.statements.foreach {
@@ -368,6 +370,9 @@ class Flattener(spec: Tessla.Specification)
           id.name -> FlatTessla.IdLoc(innerEnv.variables(id.name), exp.loc)
       }
       FlatTessla.ObjectLiteral(members, objectLit.loc)
+
+    case rootMemberAccess: Tessla.RootMemberAccess =>
+      getExp(rootMemberAccess.member, globalEnv)
 
     case memberAccess: Tessla.MemberAccess =>
       val receiverId = expToId(translateExpression(memberAccess.receiver, defs, env), defs)

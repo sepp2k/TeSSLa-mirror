@@ -174,6 +174,8 @@ object Observations {
 
     protected def printEventValue(in: InStreamDescription): String = printEvent(in, "value")
 
+    protected def printEventIndex(in: InStreamDescription): String = printEvent(in, "index")
+
     protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
 
     protected val setups = Seq()
@@ -202,16 +204,20 @@ object Observations {
         (_, in) => printEventValue(in))
 
       val globalAssignments = createPatternObservations("GlobalWrite",
-        (annotation, in) => printEventValue(in))
+        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalWriteIndex",
+        (annotation, in) => printEventIndex(in))
 
       val localAssignments = createPatternObservations("LocalWrite",
-        (annotation, in) => printEventValue(in))
+        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalWriteIndex",
+        (annotation, in) => printEventIndex(in))
 
       val globalReads = createPatternObservations("GlobalRead",
-        (annotation, in) => printEventValue(in))
+        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalReadIndex",
+        (annotation, in) => printEventIndex(in))
 
       val localReads = createPatternObservations("LocalRead",
-        (annotation, in) => printEventValue(in))
+        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalReadIndex",
+        (annotation, in) => printEventIndex(in))
 
       val observations = Observations(
         FunctionCalls = enclose(functionCalls ++ functionCallArgs),

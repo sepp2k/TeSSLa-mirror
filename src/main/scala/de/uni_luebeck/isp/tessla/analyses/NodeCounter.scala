@@ -26,16 +26,6 @@ object NodeCounter {
         visited += s.id
 
         val childDepth = streams(s.id) match {
-          case l: TesslaCore.SignalLift =>
-            l.args.map(visitChild).sum
-          case l: TesslaCore.Lift =>
-            l.args.map(visitChild).sum
-          case t: TesslaCore.Time =>
-            visitChild(t.stream)
-          case d: TesslaCore.Default =>
-            visitChild(d.stream)
-          case d: TesslaCore.DefaultFrom =>
-            visitChild(d.valueStream) + visitChild(d.defaultStream)
           case l: TesslaCore.Last =>
             visitChild(l.clock) + visitChild(l.values)
           case d: TesslaCore.Delay =>

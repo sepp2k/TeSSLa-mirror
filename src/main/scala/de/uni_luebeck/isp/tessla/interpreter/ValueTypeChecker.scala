@@ -75,6 +75,8 @@ object ValueTypeChecker {
       }
     case _: TesslaCore.Closure | _: TesslaCore.BuiltInOperator =>
       throw InternalError("Functions should not currently be able to appear in input streams")
+    case _: TesslaCore.ExternalValue =>
+      throw InternalError("Values of externally defined types should not currently be able to appear in input streams")
     case _: TesslaCore.Ctf =>
       if (!isType(elementType, "CTF")) {
         throw InputTypeMismatch(value, "CTF", name, elementType, value.loc)

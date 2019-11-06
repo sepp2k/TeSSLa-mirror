@@ -1,1 +1,1 @@
-/errors/negative-step-error.input(1,1 - 1,15): Non-positive step in time stamp range: -2
+errors/negative-step-error.input(1,1 - 1,15): Non-positive step in time stamp range: -2

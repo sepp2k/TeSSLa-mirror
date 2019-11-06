@@ -1,6 +1,8 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Errors.InternalError
 import de.uni_luebeck.isp.tessla.TesslaCore._
+
 import scala.collection.mutable.{Set => MutableSet}
 
 class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
@@ -64,23 +66,12 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
       case OutStreamDescription(_, ref, _) => usageRef(ref)
     }
     def usageExp(exp: Expression): Unit = exp match {
-      case TesslaCore.SignalLift(_, argStreams, _)  =>
-        argStreams.foreach(usageRef)
-      case TesslaCore.Lift(_, argStreams, _) =>
-        argStreams.foreach(usageRef)
-      case TesslaCore.Default(values, _, _) =>
-        usageRef(values)
-      case TesslaCore.DefaultFrom(values, defaults, _) =>
-        usageRef(values)
-        usageRef(defaults)
       case TesslaCore.Last(values, clock, _) =>
         usageRef(values)
         usageRef(clock)
       case TesslaCore.Delay(delays, resets, _) =>
         usageRef(delays)
         usageRef(resets)
-      case TesslaCore.Time(values, _) =>
-        usageRef(values)
       case c: TesslaCore.CustomBuiltInCall =>
         c.streamArgs.foreach(usageRef)
     }
@@ -89,8 +80,13 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
     val updatedStreams = spec.streams.collect {
       case sd if used(sd.id.uid) =>
         val newExpression = sd.expression match {
-          case Lift(f, args, loc) =>
-            Lift(removeUnusedFunction(f), args, loc)
+          case call: CustomBuiltInCall if call.name == "lift" =>
+            val closure = call.args.last match {
+              case c: TesslaCore.Closure =>
+                c.copy(function = removeUnusedFunction(c.function))
+              case arg => throw InternalError(s"Expected closure argument, but got ${arg}", call.loc)
+            }
+            call.copy(args = call.args.init :+ closure)
           case _ => sd.expression
         }
         sd.copy(expression = newExpression)

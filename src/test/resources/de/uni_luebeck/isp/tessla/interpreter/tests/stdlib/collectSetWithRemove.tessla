@@ -1,14 +1,14 @@
 def Set_collectWithRemoveAlternative[T](value: Events[T], removeValue: Events[T]) := set where {
   def trigger := merge(value, removeValue)
   def old := last(set, trigger)
-  def added: Events[Set[T]] = merge(filter(Set_add(old, value), time(trigger) == time(value)), old)
-  def removed = merge(filter(Set_remove(added, removeValue), time(trigger) == time(removeValue)), added)
-  def set := default(removed, Set_empty[T])
+  def added: Events[Set[T]] = merge(filter(Set.add(old, value), time(trigger) == time(value)), old)
+  def removed = merge(filter(Set.remove(added, removeValue), time(trigger) == time(removeValue)), added)
+  def set := default(removed, Set.empty[T])
 }
 
 in add: Events[Int]
 in remove: Events[Int]
 def a = Set_collectWithRemoveAlternative(add, remove)
-def b = Set_collectWithRemove(add, remove)
+def b = Set.collectWithRemove(add, remove)
 out a
 out b

@@ -1,1 +1,1 @@
-/errors/error-propagation.tessla(4,12 - 4,13): Division by zero (t = 2)
+errors/error-propagation.input(3,8 - 3,9): Division by zero (t = 2)

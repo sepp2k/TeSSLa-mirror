@@ -1,13 +1,12 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
-
-import scala.collection.JavaConverters._
 import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.{DecreasingTimeStampsError, SameTimeStampError, TesslaError, TesslaErrorWithTimestamp}
+import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import de.uni_luebeck.isp.tessla.interpreter._
-import org.antlr.v4.runtime.CharStreams
+import org.antlr.v4.runtime.{CharStream, CharStreams}
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 object JavaApi {
@@ -132,12 +131,15 @@ object JavaApi {
       timeUnitString = Option(timeUnit),
       includeResolver = IncludeResolvers.empty,
       stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-      stdlibPath = "Predef.tessla",
-      currySignalLift = true
+      stdlibPath = "stdlib.tessla"
     )
-    Compiler.compile(specSource, compilerOptions) match {
+    compile(specSource, compilerOptions, new Evaluator(Map()))
+  }
+
+  def compile(specSource: CharStream, compilerOptions: Compiler.Options, evaluator: Evaluator): CompilationResult = {
+    new Compiler(evaluator).compile(specSource, compilerOptions) match {
       case Success(spec, warnings) =>
-        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(new Interpreter(spec)))
+        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(new Interpreter(spec, evaluator)))
       case Failure(errors, warnings) =>
         CompilationResult(Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava), null)
     }

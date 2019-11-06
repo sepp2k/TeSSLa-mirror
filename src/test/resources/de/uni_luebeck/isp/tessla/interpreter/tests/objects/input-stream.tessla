@@ -1,5 +1,5 @@
-type Coord := ${x: Int, y: Int}
+type Coord = {x: Int, y: Int}
 
 in o: Events[Coord]
 
-out slift1(o, fun (o: Coord) => o.x + o.y) as sum
+out slift1(o, (o: Coord) => o.x + o.y) as sum

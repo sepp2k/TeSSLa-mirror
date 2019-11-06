@@ -76,16 +76,18 @@ object Main extends SexyOpt {
     }
 
     parse(args)
+
+    val evaluator = new Evaluator(Map())
+    val compiler = new Compiler(evaluator)
     try {
       val specSource = CharStreams.fromFileName(tesslaFile)
       val compilerOptions = Compiler.Options(
         timeUnitString = timeUnit,
         includeResolver = IncludeResolvers.fromFile,
         stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-        stdlibPath = "Predef.tessla",
-        currySignalLift = true
+        stdlibPath = "stdlib.tessla"
       )
-      val core = unwrapResult(Compiler.compile(specSource, compilerOptions))
+      val core = unwrapResult(compiler.compile(specSource, compilerOptions))
 
       if (observations) {
         println(unwrapResult(Observations.Generator.translate(core)))
@@ -122,26 +124,28 @@ object Main extends SexyOpt {
 
       val abortAtValue = abortAt.map(BigInt(_))
 
+      val traceInstance = new Trace(evaluator)
+
       if (ctfTrace) {
         if (!traceFile.isDefined) {
           System.err.println("No CTF trace input given")
           sys.exit(17)
         }
-        val trace = Trace.fromCtfFile(traceFile.get, abortAtValue)
-        val output = Interpreter.run(core, trace, stopOn)
+        val trace = traceInstance.fromCtfFile(traceFile.get, abortAtValue)
+        val output = Interpreter.run(core, trace, stopOn, evaluator)
         output.foreach(println)
       } else {
         val trace = if (csvTrace) {
-          traceFile.map(Trace.fromCsvFile(_, abortAtValue))
-            .getOrElse(Trace.fromCsvSource(Source.stdin, "<stdin>", abortAtValue))
+          traceFile.map(traceInstance.fromCsvFile(_, abortAtValue))
+            .getOrElse(traceInstance.fromCsvSource(Source.stdin, "<stdin>", abortAtValue))
         } else {
-          traceFile.map(Trace.fromFile(_, abortAtValue))
-            .getOrElse(Trace.fromSource(Source.stdin, "<stdin>", abortAtValue))
+          traceFile.map(traceInstance.fromFile(_, abortAtValue))
+            .getOrElse(traceInstance.fromSource(Source.stdin, "<stdin>", abortAtValue))
         }
         if (flattenInput) {
           trace.foreach(println)
         } else {
-          val output = Interpreter.run(core, trace, stopOn)
+          val output = Interpreter.run(core, trace, stopOn, evaluator)
           output.foreach(println)
         }
       }

@@ -1,10 +1,10 @@
-#module CTF {
-  # TODO: Remove the CTF_ prefix once liftable functions work inside modules
-  type CTF_Object = __builtin__(CTF_Object)
+## Common Trace Format
+module CTF {
+  type Object = __builtin__(CTF_Object)
 
   @liftable
-  def CTF_getInt(ctfObject: CTF_Object, member: String): Int = __builtin__(CTF_getInt)
+  def getInt(ctfObject: Object, member: String): Int = __builtin__(CTF_getInt)
 
   @liftable
-  def CTF_getString(ctfObject: CTF_Object, member: String): Int = __builtin__(CTF_getString)
-#}
+  def getString(ctfObject: Object, member: String): String = __builtin__(CTF_getString)
+}

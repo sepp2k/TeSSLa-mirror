@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
 class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     extends TranslationPhase.Translator[Tessla.Specification] with TesslaParser.CanParseConstantString {
   override def translateSpec() = {
-    val statements = spec.flatMap(res => res.tree.statements.asScala.map(translateStatement(_, res.tokens)))
+    val statements = spec.flatMap(res => res.tree.entries.asScala.map(_.statement).map(translateStatement(_, res.tokens)))
     checkForDuplicates(statements.flatMap(Tessla.getId))
     checkForDuplicates(statements.flatMap(getTypeDefID))
     Tessla.Specification(statements)
@@ -129,19 +129,36 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
 
     override def visitOut(out: TesslaSyntax.OutContext) = {
-      val loc = Option(out.ID).map(Location.fromToken).getOrElse(Location.fromNode(out.expression))
-      val id = Option(out.ID).map(mkID).getOrElse {
-        Tessla.Identifier(tokens.getText(out.expression), Location.fromNode(out.expression))
+      for (annotation <- out.annotations.asScala) {
+        if (annotation.ID.getText != "raw") {
+          error(WrongAnnotationOnOut(mkID(annotation.ID)))
+        }
       }
-      Tessla.Out(translateExpression(out.expression), id, loc)
-    }
-
-    override def visitOutAll(outAll: TesslaSyntax.OutAllContext) = {
-      Tessla.OutAll(Location.fromNode(outAll))
+      val rawAnnotation = out.annotations.asScala.find(_.ID.getText == "raw")
+      if (out.star == null) {
+        val loc = Option(out.ID).map(Location.fromToken).getOrElse(Location.fromNode(out.expression))
+        if (rawAnnotation.isDefined) {
+          if (out.ID != null) {
+            error(AsOnRawOut(Location.fromToken(out.ID)))
+          }
+          Tessla.Print(translateExpression(out.expression), loc)
+        } else {
+          val id = Option(out.ID).map(mkID).getOrElse {
+            Tessla.Identifier(tokens.getText(out.expression), Location.fromNode(out.expression))
+          }
+          Tessla.Out(translateExpression(out.expression), id, loc)
+        }
+      } else {
+        rawAnnotation.foreach { annotation =>
+          error(RawOutAll(Location.fromNode(annotation)))
+        }
+        Tessla.OutAll(Location.fromNode(out))
+      }
     }
 
     override def visitPrint(print: TesslaSyntax.PrintContext) = {
       val loc = Location.fromNode(print.expression)
+      warn(Location.fromToken(print.PRINT), "The keyword 'print' is deprecated - use '@raw out' instead")
       Tessla.Print(translateExpression(print.expression), loc)
     }
 
@@ -164,7 +181,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
 
     override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext) = {
-      val contents = module.contents.asScala.map(visit)
+      val contents = module.contents.asScala.map(_.statement).map(visit)
       Tessla.Module(mkID(module.name), contents, Location.fromNode(module))
     }
   }
@@ -285,13 +302,10 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
 
     override def visitLambda(lambda: TesslaSyntax.LambdaContext) = {
-      val startHeaderLoc = Location.fromToken(Option(lambda.funKW).getOrElse(lambda.openingParen))
+      val startHeaderLoc = Location.fromToken(lambda.openingParen)
       val endHeaderLoc = Location.fromToken(lambda.closingParen)
       val headerLoc = startHeaderLoc.merge(endHeaderLoc)
       val body = translateExpression(lambda.expression)
-      if (lambda.funKW != null) {
-        warn(Location.fromToken(lambda.funKW), "The keyword 'fun' is deprecated")
-      }
       val params = lambda.params.asScala.map(translateParameter)
       checkForDuplicates(params.map(_.id))
       Tessla.Lambda(params, headerLoc, body, Location.fromNode(lambda))
@@ -300,9 +314,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     def translateOperator(operator: Token, operatorMap: Map[String, String]) = {
       val loc = Location.fromToken(operator)
       val functionName = Tessla.Identifier(operatorMap(operator.getText), loc)
-      // TODO: Once the operators are properly located in Predef
-      // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("Predef", loc)), functionName, loc)
-      Tessla.Variable(functionName)
+      Tessla.MemberAccess(Tessla.RootMemberAccess(Tessla.Identifier("Operators", loc), loc), functionName, loc)
     }
 
     override def visitUnaryExpression(exp: TesslaSyntax.UnaryExpressionContext) = {
@@ -332,12 +344,16 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
       } else {
         Tessla.MacroCall(
-          translateOperator(ite.ifToken, Map("if" -> "__ite__")),
+          translateOperator(ite.ifToken, Map("if" -> "ite")),
           Seq(),
           Seq(Tessla.PositionalArgument(cond), Tessla.PositionalArgument(thenCase), Tessla.PositionalArgument(elseCase)),
           loc
         )
       }
+    }
+
+    override def visitRootMemberAccess(root: TesslaSyntax.RootMemberAccessContext) = {
+      Tessla.RootMemberAccess(mkID(root.fieldName), Location.fromNode(root))
     }
 
     override def visitMemberAccess(ma: TesslaSyntax.MemberAccessContext) = {
@@ -402,9 +418,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
           }
           if (part.FORMAT == null) {
             parts += Tessla.MacroCall(
-              // TODO: Once the operators are properly located in Predef
-              // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("Predef", loc)), "toString", exp.loc)
-              Tessla.Variable(Tessla.Identifier("toString", exp.loc)),
+              Tessla.RootMemberAccess(Tessla.Identifier("toString", exp.loc), exp.loc),
               Seq(), Seq(Tessla.PositionalArgument(exp)), exp.loc
             )
           } else {
@@ -415,18 +429,17 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
                 error(invalid.err)
               case noArgs: TesslaParser.NoArgFormat =>
                 parts += Tessla.MacroCall(
-                  // TODO: Once the operators are properly located in Predef
-                  // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("Predef", loc)), "toString", exp.loc)
-                  Tessla.Variable(Tessla.Identifier("toString", exp.loc)),
+                  Tessla.RootMemberAccess(Tessla.Identifier("toString", exp.loc), exp.loc),
                   Seq(), Seq(Tessla.PositionalArgument(exp)), exp.loc
                 )
                 curStr ++= noArgs.processedString
               case oneArg: TesslaParser.SingleArgFormat =>
                 val formatString = Tessla.Literal(Tessla.StringLiteral(format), formatLoc)
                 parts += Tessla.MacroCall(
-                  // TODO: Once liftable functions can be accessed through modules
-                  // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("String", loc)), oneArg.formatFunction, exp.loc)
-                  Tessla.Variable(Tessla.Identifier(s"String_${oneArg.formatFunction}", exp.loc)),
+                  Tessla.MemberAccess(
+                    Tessla.RootMemberAccess(Tessla.Identifier("String", exp.loc), exp.loc),
+                    Tessla.Identifier(oneArg.formatFunction, exp.loc),
+                    exp.loc),
                   Seq(), Seq(Tessla.PositionalArgument(formatString), Tessla.PositionalArgument(exp)), exp.loc
                 )
             }
@@ -441,9 +454,10 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       } else {
         parts.reduceLeft { (acc, exp) =>
           Tessla.MacroCall(
-            // TODO: Once liftable functions can be accessed through modules
-            // Tessla.MemberAccess(Tessla.Variable(Tessla.Identifier("String", loc)), "concat", exp.loc)
-            Tessla.Variable(Tessla.Identifier("String_concat", exp.loc)),
+            Tessla.MemberAccess(
+              Tessla.RootMemberAccess(Tessla.Identifier("String", exp.loc), exp.loc),
+              Tessla.Identifier("concat", exp.loc),
+              exp.loc),
             Seq(),
             Seq(Tessla.PositionalArgument(acc), Tessla.PositionalArgument(exp)),
             exp.loc

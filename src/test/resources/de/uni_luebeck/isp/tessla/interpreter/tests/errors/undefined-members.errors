@@ -1,1 +1,1 @@
-/errors/undefined-members.tessla(2,7 - 2,8): Object of type {x: Int, y: Int} does not have a member named z
+errors/undefined-members.tessla(2,7 - 2,8): Object of type {x: Int, y: Int} does not have a member named z

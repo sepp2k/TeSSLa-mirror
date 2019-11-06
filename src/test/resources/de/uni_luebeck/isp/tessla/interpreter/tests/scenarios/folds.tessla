@@ -1,4 +1,4 @@
 in x: Events[Int]
 
-out fold(x, 0, __add__) as sum
+out fold(x, 0, Operators.add) as sum
 out fold(x, 0, (a: Int, _: Int) => a+1) as eventCount

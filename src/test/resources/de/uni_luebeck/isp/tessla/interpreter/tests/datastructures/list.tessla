@@ -1,21 +1,18 @@
 in list: Events[List[Int]]
 
-def my_sum(list: List[Int]) := List_fold(list, 0, fun(a: Int, b: Int) => a + b)
+def my_sum(list: List[Int]) = List.fold(list, 0, (a: Int, b: Int) => a + b)
 
 out slift1(list, my_sum) as s
-out List_size(list) as size
+out List.size(list) as size
 
-@liftable
-def List_isEmpty[T](list: List[T]) := List_size(list) == 0
+def l1 =
+  if List.isEmpty(list) then list
+  else List.append(List.init(list), List.last(list))
 
-def l1 :=
-  if List_isEmpty(list) then list
-  else List_append(List_init(list), List_last(list))
-
-def l2 :=
-  if List_isEmpty(list) then list
-  else List_prepend(List_head(list), List_tail(list))
+def l2 =
+  if List.isEmpty(list) then list
+  else List.prepend(List.head(list), List.tail(list))
 
 out l1
 out l2
-out filter(List_get(list, 1), List_size(list) > 1) as x
+out filter(List.get(list, 1), List.size(list) > 1) as x

@@ -1,71 +1,74 @@
-#module Map {
-  # TODO: Remove the Map_ prefix once liftable functions can properly be called through modules
-
-  def Map_empty[K, V]: Map[K, V] = __builtin__(Map_empty)
-
-  @liftable
-  def Map_add[K, V](map: Map[K, V], key: K, value: V): Map[K, V] = __builtin__(Map_add)
+## Maps
+module Map {
+  def empty[K, V]: Map[K, V] = __builtin__(Map_empty)
 
   @liftable
-  def Map_contains[K, V](map: Map[K, V], key: K): Bool = __builtin__(Map_contains)
+  def add[K, V](map: Map[K, V], key: K, value: V): Map[K, V] = __builtin__(Map_add)
 
   @liftable
-  def Map_get[K, V](map: Map[K, V], key: K): V = __builtin__(Map_get)
+  def contains[K, V](map: Map[K, V], key: K): Bool = __builtin__(Map_contains)
 
   @liftable
-  def Map_remove[K, V](map: Map[K, V], key: K): Map[K, V] = __builtin__(Map_remove)
+  def get[K, V](map: Map[K, V], key: K): V = __builtin__(Map_get)
 
   @liftable
-  def Map_size[K, V](map: Map[K, V]): Int = __builtin__(Map_size)
+  def remove[K, V](map: Map[K, V], key: K): Map[K, V] = __builtin__(Map_remove)
 
   @liftable
-  def Map_keys[K, V](map: Map[K, V]): List[K] = __builtin__(Map_keys)
+  def size[K, V](map: Map[K, V]): Int = __builtin__(Map_size)
 
   @liftable
-  def Map_fold[K, V, R](map: Map[K, V], start: R, f: (R, K, V) => R): R = __builtin__(Map_fold)
+  def keys[K, V](map: Map[K, V]): List[K] = __builtin__(Map_keys)
 
   @liftable
-  def Map_getOrElse[K,V](map: Map[K, V], key: K, default: V): V =
-    if Map_contains(map, key)
-    then Map_get(map, key)
+  def fold[K, V, R](map: Map[K, V], start: R, f: (R, K, V) => R): R = __builtin__(Map_fold)
+
+  @liftable
+  def getOrElse[K,V](map: Map[K, V], key: K, default: V): V =
+    if contains(map, key)
+    then get(map, key)
     else default
 
   @liftable
-  def Map_inc[K](counts: Map[K, Int], key: K): Map[K, Int] =
-    Map_add(counts, key, Map_getOrElse(counts, key, 0) + 1)
+  def inc[K](counts: Map[K, Int], key: K): Map[K, Int] =
+    add(counts, key, getOrElse(counts, key, 0) + 1)
 
-  def Map_collectCount[T](events: Events[T]): Events[Map[T, Int]] =
-    Predef.fold(events, Map_empty[T,Int], Map_inc)
+  def collectCount[T](events: Events[T]): Events[Map[T, Int]] =
+    __root__.fold(events, empty[T,Int], inc)
 
-  def Map_collectMax[K](key: Events[K], value: Events[Int]): Events[Map[K, Int]] = {
+  def collectMax[K](key: Events[K], value: Events[Int]): Events[Map[K, Int]] = {
     def oldMap = last(map, value)
-    def maxValue: Events[Int] = max(Map_getOrElse(oldMap, on(value, key), value), value)
-    def map: Events[Map[K, Int]] = default(Map_add(oldMap, on(value, key), maxValue), Map_empty[K, Int])
+    def maxValue: Events[Int] = max(getOrElse(oldMap, on(value, key), value), value)
+    def map: Events[Map[K, Int]] = default(add(oldMap, on(value, key), maxValue), empty[K, Int])
     map
   }
 
-  def Map_collectMin[A](key: Events[A], value: Events[Int]) = {
+  def collectMin[A](key: Events[A], value: Events[Int]) = {
     def oldMap = last(map, value)
-    def minValue: Events[Int] = min(Map_getOrElse(oldMap, on(value, key), value), value)
-    def map: Events[Map[A,Int]] = default(Map_add(oldMap, on(value, key), minValue), Map_empty[A, Int])
+    def minValue: Events[Int] = min(getOrElse(oldMap, on(value, key), value), value)
+    def map: Events[Map[A,Int]] = default(add(oldMap, on(value, key), minValue), empty[A, Int])
     map
   }
 
   ## Map every new key to a unique integer ID
-  def Map_counting[A](x: Events[A]) = {
+  def counting[A](x: Events[A]) = {
     def counter: Events[Int] =
       default(
-        if !Map_contains(last(map, x), x)
+        if !contains(last(map, x), x)
         then last(counter, x) + 1
         else last(counter, x),
         0)
 
     def map: Events[Map[A, Int]] =
       default(
-        if !Map_contains(last(map, x), x)
-        then Map_add(last(map, x), x, counter)
+        if !contains(last(map, x), x)
+        then add(last(map, x), x, counter)
         else last(map, x),
-        Map_empty[A, Int])
+        empty[A, Int])
     map
   }
-#}
+}
+
+# Define the type outside of the module
+# so one can write `Map[Int]` instead of `Map.Map[Int]`.
+type Map[K, V] = __builtin__(Map)

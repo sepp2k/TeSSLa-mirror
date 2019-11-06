@@ -134,6 +134,10 @@ object Tessla {
     override def toString(inner: Boolean) = id.name
   }
 
+  case class RootMemberAccess(member: Identifier, loc: Location) extends Expression {
+    override def toString(inner: Boolean) = s"__root__.$member"
+  }
+
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
   case class MacroCall(mac: Expression, typeArgs: Seq[Type], args: Seq[Argument[Expression]], loc: Location) extends Expression {
@@ -248,23 +252,19 @@ object Tessla {
 
   sealed abstract class Type extends Location.HasLoc {
     def loc: Location
-    def withLoc(loc: Location): Type
   }
 
   case class SimpleType(id: Identifier) extends Type {
     def loc = id.loc
     override def toString = id.name
-    def withLoc(loc: Location): SimpleType = SimpleType(id.copy(loc = loc))
   }
 
   case class TypeApplication(id: Identifier, args: Seq[Type], loc: Location) extends Type {
     override def toString = s"$id[${args.mkString(", ")}]"
-    def withLoc(loc: Location): TypeApplication = copy(loc = loc)
   }
 
   case class FunctionType(parameterTypes: Seq[Type], returnType: Type, loc: Location) extends Type {
     override def toString = s"(${parameterTypes.mkString(", ")}) => $returnType]"
-    def withLoc(loc: Location): FunctionType = copy(loc = loc)
   }
 
   case class ObjectType(memberTypes: Map[Identifier, Type], isOpen: Boolean, loc: Location) extends Type {
@@ -275,42 +275,41 @@ object Tessla {
       }
       members.mkString("{", ", ", "}")
     }
-    def withLoc(loc: Location): ObjectType = copy(loc = loc)
   }
 
   val unaryOperators = Map(
-    "!" -> "__not__",
-    "-" -> "__negate__",
-    "-." -> "__fnegate__",
-    "~" -> "__bitflip__"
+    "!" -> "not",
+    "-" -> "negate",
+    "-." -> "fnegate",
+    "~" -> "bitflip"
   )
 
   val binaryOperators = Map(
-    "&&" -> "__and__",
-    "||" -> "__or__",
-    "==" -> "__eq__",
-    "!=" -> "__neq__",
-    ">" -> "__gt__",
-    "<" -> "__lt__",
-    ">=" -> "__geq__",
-    "<=" -> "__leq__",
-    ">." -> "__fgt__",
-    "<." -> "__flt__",
-    ">=." -> "__fgeq__",
-    "<=." -> "__fleq__",
-    "+" -> "__add__",
-    "-" -> "__sub__",
-    "*" -> "__mul__",
-    "/" -> "__div__",
-    "%" -> "__mod__",
-    "&" -> "__bitand__",
-    "|" -> "__bitor__",
-    "^" -> "__bitxor__",
-    "<<" -> "__leftshift__",
-    ">>" -> "__rightshift__",
-    "+." -> "__fadd__",
-    "-." -> "__fsub__",
-    "*." -> "__fmul__",
-    "/." -> "__fdiv__"
+    "&&" -> "and",
+    "||" -> "or",
+    "==" -> "eq",
+    "!=" -> "neq",
+    ">" -> "gt",
+    "<" -> "lt",
+    ">=" -> "geq",
+    "<=" -> "leq",
+    ">." -> "fgt",
+    "<." -> "flt",
+    ">=." -> "fgeq",
+    "<=." -> "fleq",
+    "+" -> "add",
+    "-" -> "sub",
+    "*" -> "mul",
+    "/" -> "div",
+    "%" -> "mod",
+    "&" -> "bitand",
+    "|" -> "bitor",
+    "^" -> "bitxor",
+    "<<" -> "leftshift",
+    ">>" -> "rightshift",
+    "+." -> "fadd",
+    "-." -> "fsub",
+    "*." -> "fmul",
+    "/." -> "fdiv"
   )
 }

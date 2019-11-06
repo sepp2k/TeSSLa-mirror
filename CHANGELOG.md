@@ -1,5 +1,41 @@
 # Changelog
 
+## Version 1.1.0
+
+### Breaking Changes
+
+* The keyword `fun`, which has been deprecated since version 0.7.0, no longer exists. If you have code that still uses it, just remove the keyword and the code should work again.
+* Operator functions have been moved into the `Operators` module and the underscores have been removed from their names. So if you want to use, for example, the `+` operator as a function, you now write `Operators.add` instead of `__add__`.
+
+### Additions and Fixes
+
+* Assigning a liftable function to a variable and using that as a lifted function now works instead of producing an internal error
+* It is now possible to write `s.x` where `s` is a stream of objects and `x` is a member of the given object type.
+* Calling a `@liftable` function to a stream will now call `slift` to lift the function to streams.
+* Modules can be defined using the syntax `module ModuleName { defs }` where `defs` is a sequence of definitions. This will define an object named `ModuleName` that contains the given definitions as members.
+* The keyword `__root__` can be used to access the top-level namespace from within modules or inner scopes.
+* The `@raw` annotation has been introduced as a replacement for `print` to make `out` statements produce unformatted output
+* The `print` keyword is now deprecated.
+* Add `sample` to standard library.
+* Add MITL and LTL modules to standard library.
+* Predef was split up into several files and pseudo modules.
+* Documentation for the modules `Types`, `Operators`, `PrimitiveFunctions`, `Option` and `StreamFunctions` of the standard library was added.
+* All variants of `liftN`, `sliftN` and `mergeN` are defined as builtins in the standard library and implemented natively in the interpreter. This creates a speed up of more than factor 10 on some specification.
+* If the tessladoc comment consists solely of the word `nodoc` then the definition is excluded from the generated documentation.
+
+
+### New Limitations
+
+* Auto-lifted functions now have an implementation-/stdlib-defined maximum number of arguments, which is currently 5 in the interpreter. Specifically the number of allowed arguments corresponds to the number of sliftN and sliftN_curried macros in the standard library.
+
+### API Changes
+
+* `TesslaCore.SLift` no longer exists. Auto-lifted functions will now be lifted using the sliftN and sliftN_curried macros in the standard library
+** sliftN will be called with arbitrary functions.
+* The optimization that removed `default(nil, x)` on lifted functions and instead inserted `x` directly into the lifted function has been removed.
+* `TesslaCore.Lift`, `TesslaCore.Default`, `TesslaCore.DefaultFrom` and `TesslaCore.Time` no longer exist. They are represented as `TesslaCore.CustomBuiltInCall` now.
+
+
 ## Version 1.0.7
 
 ### Breaking Changes

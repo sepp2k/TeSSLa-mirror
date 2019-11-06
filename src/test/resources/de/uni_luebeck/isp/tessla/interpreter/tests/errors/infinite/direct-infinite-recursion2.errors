@@ -1,2 +1,2 @@
-/errors/infinite/direct-infinite-recursion2.tessla(1,15 - 1,16): Infinite recursion detected
-    called from /errors/infinite/direct-infinite-recursion2.tessla(1,15 - 1,16)
+errors/infinite/direct-infinite-recursion2.tessla(1,15 - 1,16): Infinite recursion detected
+    called from errors/infinite/direct-infinite-recursion2.tessla(1,15 - 1,16)

@@ -95,12 +95,6 @@ object Errors {
     override def message = s"Undefined variable ${id.name}"
   }
 
-  case class UndefinedFunction(id: Tessla.Identifier, arity: Int) extends TesslaError {
-    override def loc = id.loc
-
-    override def message = s"Undefined macro or operator ${id.name}/$arity"
-  }
-
   case class UndefinedNamedArg(name: String, loc: Location) extends TesslaError {
     override def message = s"Undefined keyword argument $name"
   }
@@ -203,6 +197,20 @@ object Errors {
     override def message = s"Undefined annotation $id"
 
     override def loc = id.loc
+  }
+
+  case class WrongAnnotationOnOut(annotationID: Tessla.Identifier) extends TesslaError {
+    override def message = s"The annotation $annotationID can not be used on out statements"
+
+    override def loc = annotationID.loc
+  }
+
+  case class RawOutAll(loc: Location) extends TesslaError {
+    override def message = s"The @raw annotation can not be used with 'out *'"
+  }
+
+  case class AsOnRawOut(loc: Location) extends TesslaError {
+    override def message = s"@raw out statements can not have an 'as' clause"
   }
 
   case class MacroAnnotationOnNonMacro(annotationId: Tessla.Identifier, defName: String) extends TesslaError {

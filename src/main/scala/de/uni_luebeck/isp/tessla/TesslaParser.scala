@@ -66,8 +66,10 @@ object TesslaParser {
         error(AbsoluteIncludePath(loc))
         None
       } else {
-        val path = Paths.get(includer).resolveSibling(includePath).toString
-        resolveInclude(path).orElse(resolveInclude(s"$path.tessla"))
+        val path = Paths.get(includer).resolveSibling(includePath)
+        val pathString = Option(path.getRoot).map(_.toString.replace("\\", "/")).getOrElse("") +
+          path.iterator().asScala.mkString("/")
+        resolveInclude(pathString).orElse(resolveInclude(s"$pathString.tessla"))
       }
     }
   }

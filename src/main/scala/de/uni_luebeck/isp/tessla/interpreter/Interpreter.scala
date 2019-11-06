@@ -6,7 +6,7 @@ import de.uni_luebeck.isp.tessla._
 
 import scala.collection.mutable
 
-class Interpreter(val spec: TesslaCore.Specification) extends Specification {
+class Interpreter(val spec: TesslaCore.Specification, val evaluator: Evaluator) extends Specification {
   val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.inStreams.map {inStream =>
     inStream.name -> (new Input, inStream.typ.elementType)
   }.toMap
@@ -25,6 +25,16 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     }
   }
 
+  private def toStreamRef(arg: TesslaCore.Arg): TesslaCore.StreamRef = arg match {
+    case stream: TesslaCore.StreamRef => stream
+    case _ => throw InternalError(s"Expected stream argument but got value argument. This should have been caught by the type checker.")
+  }
+
+  private def toValue(arg: TesslaCore.Arg): TesslaCore.ValueOrError = arg match {
+    case value: TesslaCore.ValueOrError => value
+    case _ => throw InternalError(s"Expected value argument but got stream argument. This should have been caught by the type checker.")
+  }
+
   private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
     case s: TesslaCore.Stream =>
       defs.getOrElse(s.id, throw InternalError(s"Couldn't find stream named ${s.id}", s.loc)).get
@@ -33,69 +43,57 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
     case _: TesslaCore.Nil => nil
   }
 
-  def merge(stream1: Stream, stream2: Stream): Stream = {
-    lift(Seq(stream1, stream2)) {
-      case Seq(Some(value1), _) => Some(value1)
-      case Seq(None, value2Opt) => value2Opt
-    }
-  }
-
-  def slift(streams: Seq[Stream])(op: Seq[TesslaCore.ValueOrError] => Option[TesslaCore.ValueOrError]): Stream = {
-    val ticks = lift(streams) { _ =>
-      Some(TesslaCore.TesslaObject(Map(), Location.builtIn))
-    }
-    val recentValueStreams = streams.map { stream =>
-      merge(stream, last(stream, ticks))
-    }
-    lift(recentValueStreams) { valueOptions =>
-      if (valueOptions.exists(_.isEmpty)) {
-        None
-      } else {
-        op(valueOptions.flatten)
-      }
-    }
-  }
-
   private def eval(sd: TesslaCore.StreamDescription): Stream = sd.expression match {
-    case TesslaCore.SignalLift(op, argStreams, loc) =>
-      if (argStreams.isEmpty) {
-        throw Errors.InternalError("Lift without arguments should be impossible", loc)
-      }
-      slift(argStreams.map(evalStream)) { arguments =>
-        val args = arguments.zip(argStreams).map {
-          case (arg, stream) => arg.mapValue(_.withLoc(stream.loc))
-        }
-        Some(Evaluator.evalPrimitiveOperator(op, args, sd.typ.elementType, sd.loc))
-      }
-    case TesslaCore.Lift(f, argStreams, loc) =>
-      if (argStreams.isEmpty) {
-        throw Errors.InternalError("Lift without arguments should be impossible", loc)
-      }
-      lift(argStreams.map(evalStream)) { arguments =>
-        val args = arguments.zip(argStreams).map {
-          case (Some(arg), stream) => TesslaCore.TesslaOption(Some(arg), stream.typ.elementType, stream.loc)
-          case (None, stream) => TesslaCore.TesslaOption(None, sd.typ.elementType, stream.loc)
-        }
-        val closure = TesslaCore.Closure(f, Map(), loc)
-        Evaluator.evalApplication(closure, args, sd.typ.elementType, loc) match {
-          case to: TesslaCore.TesslaOption => to.value
-          case err: TesslaCore.Error => Some(err)
-          case other =>
-            throw InternalError(s"Used lift on non-option function (return value: $other) - should have been caught by type checker")
-        }
-      }
-    case TesslaCore.Default(values, defaultValue, _) =>
-      evalStream(values).default(defaultValue)
-    case TesslaCore.DefaultFrom(values, defaults, _) =>
-      evalStream(values).default(evalStream(defaults))
     case TesslaCore.Last(values, clock, _) =>
       last(evalStream(values), evalStream(clock))
     case TesslaCore.Delay(delays, resets, _) =>
       delay(evalStream(delays), evalStream(resets))
-    case TesslaCore.Time(values, loc) =>
-      evalStream(values).time(loc)
     case customCall: TesslaCore.CustomBuiltInCall =>
-      throw InternalError(s"The interpreter does not support any custom built-ins (${customCall.name})")
+      customCall.name match {
+        case "slift" =>
+          val argStreams = customCall.args.init.map(toStreamRef)
+          val f = toValue(customCall.args.last)
+          if (argStreams.isEmpty) {
+            throw Errors.InternalError("slift without arguments should be impossible", customCall.loc)
+          }
+          slift(argStreams.map(evalStream)) { arguments =>
+            evaluator.evalApplication(f, arguments, sd.typ.elementType, customCall.loc)
+          }
+        case "lift" =>
+          val argStreams = customCall.args.init.map(toStreamRef)
+          val f = toValue(customCall.args.last)
+          if (argStreams.isEmpty) {
+            throw Errors.InternalError("lift without arguments should be impossible", customCall.loc)
+          }
+          lift(argStreams.map(evalStream)) { arguments =>
+            val args = arguments.zip(argStreams).map {
+              case (Some(arg), stream) =>
+                TesslaCore.TesslaOption(Some(arg), stream.typ.elementType, stream.loc)
+              case (None, stream) => TesslaCore.TesslaOption(None, sd.typ.elementType, stream.loc)
+            }
+            evaluator.evalApplication(f, args, sd.typ.elementType, customCall.loc) match {
+              case to: TesslaCore.TesslaOption => to.value
+              case err: TesslaCore.Error => Some(err)
+              case other =>
+                throw InternalError(s"Used lift on non-option function (return value: $other) - should have been caught by type checker")
+            }
+          }
+        case "merge" =>
+          val streams = customCall.args.map(toStreamRef).map(evalStream)
+          merge(streams)
+        case "default" =>
+          val stream = toStreamRef(customCall.args.head)
+          val defaultValue = toValue(customCall.args(1))
+          evalStream(stream).default(defaultValue)
+        case "defaultFrom" =>
+          val stream = toStreamRef(customCall.args.head)
+          val defaultStream = toStreamRef(customCall.args(1))
+          evalStream(stream).default(evalStream(defaultStream))
+        case "time" =>
+          val stream = toStreamRef(customCall.args.head)
+          evalStream(stream).time(customCall.loc)
+        case name => throw InternalError(s"The interpreter does not support $name")
+      }
   }
 
   def getInt(value: TesslaCore.Value): BigInt = value match {
@@ -107,8 +105,8 @@ class Interpreter(val spec: TesslaCore.Specification) extends Specification {
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
-  def run(spec: TesslaCore.Specification, input: Trace, stopOn: Option[String]): Trace = {
-    val interpreter = new Interpreter(spec)
+  def run(spec: TesslaCore.Specification, input: Trace, stopOn: Option[String], evaluator: Evaluator): Trace = {
+    val interpreter = new Interpreter(spec, evaluator)
     new Iterator[Trace.Event] {
       private var nextEvents = new mutable.Queue[Trace.Event]
       private var stopped = false

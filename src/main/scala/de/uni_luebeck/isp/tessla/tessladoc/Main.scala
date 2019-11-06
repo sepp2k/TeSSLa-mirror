@@ -17,7 +17,7 @@ object Main extends SexyOpt {
   val stdLib = flag("stdlib", 's', "Include documentation for definitions from the standard library")
   val includes = flag("includes", 'i', "Include documentation from included files")
   val globalsOnly = flag("globals-only", 'g', "Do not show information for local definitions")
-  val html = flag("html", "Generate documentation as HTML")
+  val markdown = flag("markdown", 'm', "Generate documentation as markdown")
   val outFile = option("outfile", 'o', "Write the generated docs to the given file instead of stdout")
 
   def main(args: Array[String]): Unit = {
@@ -28,7 +28,12 @@ object Main extends SexyOpt {
       case Success(tesslaDocs, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         val relevantDocs = if(globalsOnly) tesslaDocs.globalsOnly else tesslaDocs
-        if (html) HtmlGenerator.generateHTML(relevantDocs) else relevantDocs.toString
+        if (markdown) {
+          val generator = new MarkdownGenerator(relevantDocs)
+          generator.generateMarkdown
+        } else {
+          relevantDocs.toString
+        }
       case Failure(errors, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         errors.foreach(e => System.err.println(s"Error: $e"))

@@ -53,35 +53,19 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   sealed abstract class StreamRef extends Arg {
     def loc: Location
-    def withLoc(loc: Location): StreamRef
     def typ: StreamType
   }
 
   final case class Stream(id: Identifier, typ: StreamType, loc: Location) extends StreamRef {
     override def toString = id.toString
-    def withLoc(loc: Location): Stream = copy(loc = loc)
   }
 
   final case class InputStream(name: String, typ: StreamType, loc: Location) extends StreamRef {
     override def toString = s"input($name)"
-    def withLoc(loc: Location): InputStream = copy(loc = loc)
   }
 
   final case class Nil(typ: StreamType, loc: Location) extends StreamRef {
     override def toString = "nil"
-    def withLoc(loc: Location): Nil = copy(loc = loc)
-  }
-
-  final case class Default(stream: StreamRef, default: ValueOrError, loc: Location) extends Expression {
-    override def toString = s"default($stream, $default)"
-  }
-
-  final case class DefaultFrom(valueStream: StreamRef, defaultStream: StreamRef, loc: Location) extends Expression {
-    override def toString = s"defaultFrom($valueStream, $defaultStream)"
-  }
-
-  final case class Time(stream: StreamRef, loc: Location) extends Expression {
-    override def toString = s"time($stream)"
   }
 
   final case class Last(values: StreamRef, clock: StreamRef, loc: Location) extends Expression {
@@ -90,30 +74,6 @@ object TesslaCore extends HasUniqueIdentifiers {
 
   final case class Delay(delays: StreamRef, resets: StreamRef, loc: Location) extends Expression {
     override def toString = s"delay($delays, $resets)"
-  }
-
-  final case class Lift(f: Function, args: Seq[StreamRef], loc: Location) extends Expression {
-    override def toString = {
-      args.mkString(s"lift($f)(", ", ", ")")
-    }
-  }
-
-  final case class SignalLift(op: CurriedPrimitiveOperator, args: Seq[StreamRef], loc: Location) extends Expression {
-    override def toString = {
-      args.mkString(s"slift($op)(", ", ", ")")
-    }
-  }
-
-  final case class CurriedPrimitiveOperator(name: String, args: Map[Int, ValueOrError] = Map()) {
-    override def toString: String = if (args.isEmpty) {
-      name
-    } else {
-      val a = (0 until args.keys.max + 1).map{
-        case i if args.contains(i) => args(i).toString
-        case _ => "_"
-      }.mkString(", ")
-      s"$name($a)"
-    }
   }
 
   final case class CustomBuiltInCall(name: String, args: Seq[Arg], loc: Location) extends Expression {
@@ -171,6 +131,8 @@ object TesslaCore extends HasUniqueIdentifiers {
   sealed trait ValueOrError extends Arg with ValueArg {
     def forceValue: Value
 
+    def withLoc(loc: Location): ValueOrError
+
     def mapValue(f: Value => ValueOrError): ValueOrError
 
     def typ: ValueType
@@ -181,13 +143,15 @@ object TesslaCore extends HasUniqueIdentifiers {
 
     override def mapValue(f: Value => ValueOrError) = this
 
+    override def withLoc(loc: Location) = this
+
     override def typ = NeverType
   }
 
   sealed abstract class Value extends ValueOrError {
     def loc: Location
 
-    def withLoc(loc: Location): Value
+    override def withLoc(loc: Location): Value
 
     override def forceValue = this
 
@@ -273,6 +237,8 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def typ = BuiltInType("CTF_Object", Seq())
   }
 
+  abstract class ExternalValue extends PrimitiveValue
+
   case class BuiltInOperator(name: String, loc: Location) extends PrimitiveValue {
     override def value = name
 
@@ -281,7 +247,7 @@ object TesslaCore extends HasUniqueIdentifiers {
     override def typ = FunctionType
   }
 
-  case class Closure(function: Function, var capturedEnvironment: Map[Identifier, Lazy[ValueOrError]], loc: Location) extends Value {
+  case class Closure(function: Function, capturedEnvironment: Map[Identifier, Lazy[ValueOrError]], loc: Location) extends Value {
     override def withLoc(loc: Location): Closure = copy(loc = loc)
 
     override def toString = {
