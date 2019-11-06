@@ -15,8 +15,14 @@
 * Modules can be defined using the syntax `module ModuleName { defs }` where `defs` is a sequence of definitions. This will define an object named `ModuleName` that contains the given definitions as members.
 * The keyword `__root__` can be used to access the top-level namespace from within modules or inner scopes.
 * The `@raw` annotation has been introduced as a replacement for `print` to make `out` statements produce unformatted output
-* The `print` keyword is now deprecated
+* The `print` keyword is now deprecated.
 * Add `sample` to standard library.
+* Add MITL and LTL modules to standard library.
+* Predef was split up into several files and pseudo modules.
+* Documentation for the modules `Types`, `Operators`, `PrimitiveFunctions`, `Option` and `StreamFunctions` of the standard library was added.
+* All variants of `liftN`, `sliftN` and `mergeN` are defined as builtins in the standard library and implemented natively in the interpreter. This creates a speed up of more than factor 10 on some specification.
+* If the tessladoc comment consists solely of the word `nodoc` then the definition is excluded from the generated documentation.
+
 
 ### New Limitations
 
@@ -24,9 +30,11 @@
 
 ### API Changes
 
-* TesslaCore.SLift no longer exists. Auto-lifted functions will now be lifted using the sliftN and sliftN_curried macros in the standard library
+* `TesslaCore.SLift` no longer exists. Auto-lifted functions will now be lifted using the sliftN and sliftN_curried macros in the standard library
 ** sliftN will be called with arbitrary functions.
-* For the moment the simplification that removed `default(nil, x)` on lifted functions and instead inserted `x` directly into the lifted function (Malte's "currying" phase) has been removed. It will be re-added in a future version.
+* The optimization that removed `default(nil, x)` on lifted functions and instead inserted `x` directly into the lifted function has been removed.
+* `TesslaCore.Lift`, `TesslaCore.Default`, `TesslaCore.DefaultFrom` and `TesslaCore.Time` no longer exist. They are represented as `TesslaCore.CustomBuiltInCall` now.
+
 
 ## Version 1.0.7
 
