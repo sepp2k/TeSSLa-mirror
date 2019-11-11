@@ -212,8 +212,8 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
         // would be caught by the type checker
         lazy val callee = translateVar(env, call.macroID, call.macroLoc, stack)
 
-        // TODO make less ugly
-        if (inFunction && (call.args.exists{ arg => env(arg.id).result.get(stack).isInstanceOf[ExpressionEntry] } || callee.isInstanceOf[ExpressionEntry])) {
+        // TODO make less ugly !!!
+        if ((inFunction || (callee.isInstanceOf[BuiltInEntry] && callee.asInstanceOf[BuiltInEntry].builtIn.name != "last" && callee.asInstanceOf[BuiltInEntry].builtIn.name != "delay")) && (call.args.exists { arg => translateVar(env, arg.id, arg.loc, stack).isInstanceOf[ExpressionEntry] } || callee.isInstanceOf[ExpressionEntry])) {
           val args = call.args.map(arg => getValueArg(translateVar(env, arg.id, arg.loc, stack)))
           val id = makeIdentifier(nameOpt)
           lazy val function = callee match {
