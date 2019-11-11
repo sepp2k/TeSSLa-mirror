@@ -14,10 +14,13 @@ class LazyWithStack[A, StackFrame](a: List[StackFrame] => A) {
       case None =>
         computing = true
         computationStack = Some(stack)
-        val r = a(stack)
-        result = Some(r)
-        computing = false
-        r
+        try {
+          val r = a(stack)
+          result = Some(r)
+          r
+        } finally {
+          computing = false
+        }
     }
   }
 
