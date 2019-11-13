@@ -289,12 +289,12 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
               def arg(i: Int) = getArg(argAt(i), call.args(i).loc)
 
 
-              val id = makeIdentifier(nameOpt)
               be.name match {
                 case "nil" =>
                   val typ = TesslaCore.StreamType(translateValueType(call.typeArgs.head, typeEnv))
                   NilEntry(TesslaCore.Nil(typ, call.loc), typ)
                 case "last" =>
+                  val id = makeIdentifier(nameOpt)
                   val strictArg = streamArg(1)
                   deferredQueue += (() => translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.Last(streamArg(0), strictArg, call.loc), translatedType, annotations))
                   StreamEntry(id, translatedType)
@@ -305,6 +305,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
                   StreamEntry(id, translatedType)
                 case op =>
                   if (typ.isStreamType) {
+                    val id = makeIdentifier(nameOpt)
                     translatedStreams(id) = TesslaCore.StreamDescription(id, TesslaCore.CustomBuiltInCall(op, (0 until args.size).map(arg), call.loc), translatedType, annotations)
                     StreamEntry(id, translatedType)
                   } else {
