@@ -80,13 +80,14 @@ class RemoveUnusedDefinitions(spec: TesslaCore.Specification)
     val updatedStreams = spec.streams.collect {
       case sd if used(sd.id.uid) =>
         val newExpression = sd.expression match {
-          case call: CustomBuiltInCall if call.name == "lift" =>
-            val closure = call.args.last match {
-              case c: TesslaCore.Closure =>
-                c.copy(function = removeUnusedFunction(c.function))
-              case arg => throw InternalError(s"Expected closure argument, but got ${arg}", call.loc)
-            }
-            call.copy(args = call.args.init :+ closure)
+          // TODO handle slift, merge, ... or better: do this more generic
+//          case call: CustomBuiltInCall if call.name == "lift" =>
+//            val closure = call.args.last match {
+//              case c: TesslaCore.Closure =>
+//                c.copy(function = removeUnusedFunction(c.function))
+//              case arg => throw InternalError(s"Expected closure argument, but got ${arg}", call.loc)
+//            }
+//            call.copy(args = call.args.init :+ closure)
           case _ => sd.expression
         }
         sd.copy(expression = newExpression)

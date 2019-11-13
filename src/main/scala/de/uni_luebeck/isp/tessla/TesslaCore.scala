@@ -6,17 +6,21 @@ import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 object TesslaCore extends HasUniqueIdentifiers {
   final case class Specification(streams: Seq[StreamDescription],
+                                 definitions: Seq[DefinitionDescription],
                                  inStreams: Seq[InStreamDescription],
                                  outStreams: Seq[OutStreamDescription],
                                  identifierCount: Long) {
     override def toString = {
       inStreams.map { is => s"$is\n" }.mkString +
+        definitions.map { d => s"$d\n" }.mkString +
         streams.map { s => s"$s\n" }.mkString +
         outStreams.map { os => s"$os\n" }.mkString
     }
   }
 
   type Annotation = TypedTessla.Annotation
+
+  case class DefinitionDescription(id: Identifier, expression: ValueExpression, typ: ValueType)
 
   case class StreamDescription(id: Identifier, expression: Expression, typ: StreamType, annotations: Seq[Annotation]) {
     override def toString = {
@@ -50,6 +54,8 @@ object TesslaCore extends HasUniqueIdentifiers {
   }
 
   sealed abstract class Arg
+
+  final case class ValueRef(id: Identifier, typ: ValueType, loc: Location) extends Arg
 
   sealed abstract class StreamRef extends Arg {
     def loc: Location

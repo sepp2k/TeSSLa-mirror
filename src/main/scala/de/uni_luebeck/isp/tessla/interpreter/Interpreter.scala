@@ -11,6 +11,10 @@ class Interpreter(val spec: TesslaCore.Specification, val evaluator: Evaluator) 
     inStream.name -> (new Input, inStream.typ.elementType)
   }.toMap
 
+  lazy val definitions: Map[TesslaCore.Identifier, Lazy[TesslaCore.Closure]] = spec.definitions.map { definition =>
+    definition.id -> Lazy(TesslaCore.Closure(definition.expression.asInstanceOf[TesslaCore.Function], definitions, definition.expression.loc))
+  }.toMap
+
   type Env = Map[TesslaCore.Identifier, TesslaCore.ValueOrError]
 
   lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map { stream =>
@@ -32,6 +36,7 @@ class Interpreter(val spec: TesslaCore.Specification, val evaluator: Evaluator) 
 
   private def toValue(arg: TesslaCore.Arg): TesslaCore.ValueOrError = arg match {
     case value: TesslaCore.ValueOrError => value
+    case ref: TesslaCore.ValueRef => definitions(ref.id).get
     case _ => throw InternalError(s"Expected value argument but got stream argument. This should have been caught by the type checker.")
   }
 
