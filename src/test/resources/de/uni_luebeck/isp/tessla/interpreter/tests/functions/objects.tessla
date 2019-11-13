@@ -1,0 +1,11 @@
+def f(x: Int) =
+  (y: Int) => {
+    def foo(x: Events[Int]) = last(x,x)
+    def oo = {klumpf: y+1}
+    def klumpf(x: Int) = x + 1
+    klumpf(x) + oo.klumpf
+  }
+
+in x: Events[Int]
+def y := slift1(x, f(5))
+out y
