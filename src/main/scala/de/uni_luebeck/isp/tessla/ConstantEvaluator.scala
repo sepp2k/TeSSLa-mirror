@@ -200,8 +200,8 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
             ValueEntry(obj.value(acc.member))
           case ValueEntry(er: TesslaCore.Error) =>
             ValueEntry(er)
-          case other if inFunction =>
-            val arg = getValueArg(other)
+          case e: ExpressionEntry =>
+            val arg = getValueArg(e)
             val ma = TesslaCore.MemberAccess(arg, acc.member, acc.loc)
             ValueExpressionEntry(ma, makeIdentifier(nameOpt), translateValueType(typ, typeEnv))
           case other =>
