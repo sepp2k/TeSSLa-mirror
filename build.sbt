@@ -39,8 +39,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "com.typesafe.play" %% "play-json" % "2.6.6",
   "com.eclipsesource" %% "play-json-schema-validator" % "0.9.4" % "test",
-  "io.spray" %% "spray-json" % "1.3.5",
-  "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT"
+  "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT",
+  "de.uni_luebeck.isp" %% "clang-instrumentation" % "0.0.24-SNAPSHOT"
 )
 
 mainClass in (Compile, run) := Some("de.uni_luebeck.isp.tessla.Main")
@@ -52,6 +52,7 @@ scalacOptions += "-deprecation"
 scalacOptions ++= Seq("-Ypatmat-exhaust-depth", "off")
 
 cancelable in Global := true
+fork in run := true
 
 enablePlugins(BuildInfoPlugin)
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion)

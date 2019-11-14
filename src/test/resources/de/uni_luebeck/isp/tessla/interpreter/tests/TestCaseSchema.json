@@ -38,12 +38,6 @@
         "h",
         "d"
       ]
-    },
-    "expectedObservations": {
-      "type": "string"
-    },
-    "expectedObservationErrors": {
-      "type": "string"
     }
   },
   "required": [

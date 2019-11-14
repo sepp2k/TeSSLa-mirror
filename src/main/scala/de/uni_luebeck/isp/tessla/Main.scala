@@ -41,7 +41,7 @@ object Main extends SexyOpt {
 
   val timeUnit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
 
-  val observations = flag("observations", "Generate observation specification file from the corresponding annotations")
+  val instrument = option("instrument", "Instrument given C file based on the instrumentation annotations")
 
   val abortAt = option("abort-at", "Stop the interpreter after a given amount of events.")
 
@@ -89,9 +89,8 @@ object Main extends SexyOpt {
       )
       val core = unwrapResult(compiler.compile(specSource, compilerOptions))
 
-      if (observations) {
-        println(unwrapResult(Observations.Generator.translate(core)))
-        return
+      instrument.foreach{cFileName =>
+        unwrapResult(new Observations.Instrumenter(cFileName).translate(core))
       }
 
       if (listInStreams) {

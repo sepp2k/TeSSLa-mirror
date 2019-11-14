@@ -1,53 +1,20 @@
 package de.uni_luebeck.isp.tessla.analyses
 
+import java.nio.file.{Path, Paths}
+
 import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaCore, TranslationPhase}
-import Observations._
-import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError, TesslaErrorWithTimestamp}
+import de.uni_luebeck.isp.clang_instrumentation.CPPBridge
+import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError}
 import de.uni_luebeck.isp.tessla.CPatternParser.{ArrayContext, DerefContext, MemberContext, PatternContext, RefContext, VariableContext}
 import de.uni_luebeck.isp.tessla.TesslaCore.InStreamDescription
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
-import spray.json.DefaultJsonProtocol._
-import spray.json._
-
-case class Observations(FunctionCalls: Seq[Function] = Seq(),
-                        FunctionCalled: Seq[Function] = Seq(),
-                        FunctionReturns: Seq[Function] = Seq(),
-                        FunctionReturned: Seq[Function] = Seq(),
-                        Assignments: Seq[Pattern] = Seq(),
-                        VarReads: Seq[Pattern] = Seq(),
-                        userCbPrefix: String) {
-  override def equals(obj: Any) = obj match {
-    case other: Observations =>
-      FunctionCalls.sortBy(_.hashCode) == other.FunctionCalls.sortBy(_.hashCode) &&
-      FunctionCalled.sortBy(_.hashCode) == other.FunctionCalled.sortBy(_.hashCode) &&
-      FunctionReturns.sortBy(_.hashCode) == other.FunctionReturns.sortBy(_.hashCode) &&
-      FunctionReturned.sortBy(_.hashCode) == other.FunctionReturned.sortBy(_.hashCode) &&
-      Assignments.sortBy(_.hashCode) == other.Assignments.sortBy(_.hashCode) &&
-      VarReads.sortBy(_.hashCode) == other.VarReads.sortBy(_.hashCode) &&
-      userCbPrefix == other.userCbPrefix
-    case _ => false
-  }
-
-  override def hashCode() =
-    (FunctionCalls.sortBy(_.hashCode), FunctionCalled.sortBy(_.hashCode), FunctionReturns.sortBy(_.hashCode),
-      FunctionReturned.sortBy(_.hashCode), Assignments.sortBy(_.hashCode), VarReads.sortBy(_.hashCode), userCbPrefix).hashCode
-
-  override def toString = this.toJson.prettyPrint
-}
 
 object Observations {
-  case class Function(FunctionName: String, code: String)
   case class Pattern(Variable: Option[Variable] = None, ArrayAccess: Option[Pattern] = None, StructUnionAccess: Option[StructUnionAccess] = None, Ref: Option[Pattern] = None, DeRef: Option[Pattern] = None, code: Option[String] = None)
   case class Variable(VarName: String, Function: Option[String] = None)
   case class StructUnionAccess(Base: Pattern, Field: String)
 
-  implicit val functionFormat = jsonFormat2(Function)
-  implicit val variableFormat = jsonFormat2(Variable)
-  implicit val structUnionAccessFormat: JsonFormat[StructUnionAccess] = lazyFormat(jsonFormat2(StructUnionAccess))
-  implicit val patternFormat: JsonFormat[Pattern] = lazyFormat(jsonFormat6(Pattern))
-  implicit val observationsFormat: JsonFormat[Observations] = jsonFormat7(Observations.apply)
-
-  class Generator(spec: TesslaCore.Specification) extends TranslationPhase.Translator[Observations] {
+  class InstrumenterWorker(spec: TesslaCore.Specification, cFileName: String) extends TranslationPhase.Translator[Unit] {
     def parsePattern(str: String, loc: Location, function: Option[String] = None): Pattern = {
       val src = CharStreams.fromString(str, loc.path)
       val lexer = new CPatternLexer(src)
@@ -109,49 +76,49 @@ object Observations {
         "\ntrace_write(events);"
     }
 
-    private def merge(functions: Seq[Function]): Seq[Function] =
-      functions.groupBy(_.FunctionName).values.map{ functions =>
-        functions.reduce((a,b) => a.copy(code = a.code + "\n" + b.code))
-      }.toSeq
-
-    private def merge(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
-      patterns.groupBy(_.copy(code = None)).values.map { patterns =>
-        patterns.reduce((a,b) => a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr))))
-      }.toSeq
-
-    private def enclose(functions: Seq[Function]): Seq[Function] =
-      merge(functions).map{ function =>
-        function.copy(code = encloseInstrumentationCode(function.code))
-      }
-
-    private def enclose(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
-      merge(patterns).map { pattern =>
-        pattern.copy(code = pattern.code.map(encloseInstrumentationCode))
-      }
-
-    private def createFunctionObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Function] =
+//    private def merge(functions: Seq[Function]): Seq[Function] =
+//      functions.groupBy(_.FunctionName).values.map{ functions =>
+//        functions.reduce((a,b) => a.copy(code = a.code + "\n" + b.code))
+//      }.toSeq
+//
+//    private def merge(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
+//      patterns.groupBy(_.copy(code = None)).values.map { patterns =>
+//        patterns.reduce((a,b) => a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr))))
+//      }.toSeq
+//
+//    private def enclose(functions: Seq[Function]): Seq[Function] =
+//      merge(functions).map{ function =>
+//        function.copy(code = encloseInstrumentationCode(function.code))
+//      }
+//
+//    private def enclose(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
+//      merge(patterns).map { pattern =>
+//        pattern.copy(code = pattern.code.map(encloseInstrumentationCode))
+//      }
+//
+    private def createFunctionObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Map[String, String] =
       spec.inStreams.flatMap { in =>
         in.annotations.filter(_.name == annotationName).map { annotation =>
           val name = argumentAsString(annotation, "name")
           val code = createCode(annotation, in)
-          Function(FunctionName = name, code = code)
+          (name, code)
         }
-      }
-
-    private def createPatternObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Pattern] =
-      spec.inStreams.flatMap { in =>
-        in.annotations.filter(_.name == annotationName).map { annotation =>
-          val function = if (annotation.arguments.contains("function")) {
-            Some(argumentAsString(annotation, "function"))
-          } else {
-            None
-          }
-          val lvalue = argumentAsString(annotation, "lvalue")
-          val pattern = parsePattern(lvalue, annotation.arguments("lvalue").loc, function)
-          pattern.copy(code = Some(createCode(annotation, in)))
-        }
-      }
-
+      }.toMap
+//
+//    private def createPatternObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Pattern] =
+//      spec.inStreams.flatMap { in =>
+//        in.annotations.filter(_.name == annotationName).map { annotation =>
+//          val function = if (annotation.arguments.contains("function")) {
+//            Some(argumentAsString(annotation, "function"))
+//          } else {
+//            None
+//          }
+//          val lvalue = argumentAsString(annotation, "lvalue")
+//          val pattern = parsePattern(lvalue, annotation.arguments("lvalue").loc, function)
+//          pattern.copy(code = Some(createCode(annotation, in)))
+//        }
+//      }
+//
     protected def printEvent(in: InStreamDescription, value: String): String = in.typ.elementType match {
       case TesslaCore.BuiltInType("Int", Seq()) =>
         s"""trace_push_int(events, "${in.name}", (int64_t) $value);"""
@@ -178,63 +145,115 @@ object Observations {
 
     protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
 
-    protected val setups = Seq()
-    protected val teardowns = Seq()
     protected val prefix = "#include \"instrumentation.h\"\n"
 
-    override protected def translateSpec() = {
-      val functionCalls = createFunctionObservations("InstFunctionCall",
-        (_, in) => printUnitEvent(in))
-
-      val functionCallArgs = createFunctionObservations("InstFunctionCallArg",
-        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
-
+    override protected def translateSpec(): Unit = {
+//      val functionCalls = createFunctionObservations("InstFunctionCall",
+//        (_, in) => printUnitEvent(in))
+//
+//      val functionCallArgs = createFunctionObservations("InstFunctionCallArg",
+//        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
+//
       val functionCalled = createFunctionObservations("InstFunctionCalled",
         (_, in) => printUnitEvent(in))
+//
+//      val functionCalledArgs = createFunctionObservations("InstFunctionCalledArg",
+//        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
+//
+//      val functionReturns = createFunctionObservations("InstFunctionReturn",
+//        (_, in) => printUnitEvent(in)) ++ createFunctionObservations("InstFunctionReturnValue",
+//        (_, in) => printEventValue(in))
+//
+//      val functionReturned = createFunctionObservations("InstFunctionReturned",
+//        (_, in) => printUnitEvent(in)) ++ createFunctionObservations("InstFunctionReturnedValue",
+//        (_, in) => printEventValue(in))
+//
+//      val globalAssignments = createPatternObservations("GlobalWrite",
+//        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalWriteIndex",
+//        (annotation, in) => printEventIndex(in))
+//
+//      val localAssignments = createPatternObservations("LocalWrite",
+//        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalWriteIndex",
+//        (annotation, in) => printEventIndex(in))
+//
+//      val globalReads = createPatternObservations("GlobalRead",
+//        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalReadIndex",
+//        (annotation, in) => printEventIndex(in))
+//
+//      val localReads = createPatternObservations("LocalRead",
+//        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalReadIndex",
+//        (annotation, in) => printEventIndex(in))
+//
+//      val observations = Observations(
+//        FunctionCalls = enclose(functionCalls ++ functionCallArgs),
+//        FunctionCalled = merge(enclose(functionCalled ++ functionCalledArgs) ++ setups),
+//        FunctionReturns = merge(enclose(functionReturns) ++ teardowns),
+//        FunctionReturned = enclose(functionReturned),
+//        Assignments = enclose(globalAssignments ++ localAssignments),
+//        VarReads = enclose(globalReads ++ localReads),
+//        userCbPrefix = prefix)
 
-      val functionCalledArgs = createFunctionObservations("InstFunctionCalledArg",
-        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
+      println(cFileName)
 
-      val functionReturns = createFunctionObservations("InstFunctionReturn",
-        (_, in) => printUnitEvent(in)) ++ createFunctionObservations("InstFunctionReturnValue",
-        (_, in) => printEventValue(in))
+      val callbacks = functionCalled.map { case (name, code) =>
+        name + "_call" -> code
+      }
 
-      val functionReturned = createFunctionObservations("InstFunctionReturned",
-        (_, in) => printUnitEvent(in)) ++ createFunctionObservations("InstFunctionReturnedValue",
-        (_, in) => printEventValue(in))
+      val libraryInterface = new CPPBridge.LibraryInterface {
+        override def checkInstrumentationRequiredFuncReturn(f: CPPBridge.FullFunctionDesc) : String = {
+          ""
+        }
 
-      val globalAssignments = createPatternObservations("GlobalWrite",
-        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalWriteIndex",
-        (annotation, in) => printEventIndex(in))
+        override def checkInstrumentationRequiredFuncReturned(f: CPPBridge.FunctionDesc) : String = {
+          ""
+        }
 
-      val localAssignments = createPatternObservations("LocalWrite",
-        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalWriteIndex",
-        (annotation, in) => printEventIndex(in))
+        override def checkInstrumentationRequiredFuncCall(f: CPPBridge.FunctionDesc) : String = {
+          ""
+        }
 
-      val globalReads = createPatternObservations("GlobalRead",
-        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalReadIndex",
-        (annotation, in) => printEventIndex(in))
+        override def checkInstrumentationRequiredFuncCalled(f: CPPBridge.FullFunctionDesc) : String = {
+          println("-------")
+          println(f.name())
+          println(f.retType())
+          for (i <- 0 until f.parNum()) {
+            print(f.parName(i) + ": ")
+            println(f.parType(i))
+          }
 
-      val localReads = createPatternObservations("LocalRead",
-        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalReadIndex",
-        (annotation, in) => printEventIndex(in))
+          if (functionCalled.contains(f.name)) {
+            f.name + "_call"
+          } else {
+            ""
+          }
+        }
 
-      val observations = Observations(
-        FunctionCalls = enclose(functionCalls ++ functionCallArgs),
-        FunctionCalled = merge(enclose(functionCalled ++ functionCalledArgs) ++ setups),
-        FunctionReturns = merge(enclose(functionReturns) ++ teardowns),
-        FunctionReturned = enclose(functionReturned),
-        Assignments = enclose(globalAssignments ++ localAssignments),
-        VarReads = enclose(globalReads ++ localReads),
-        userCbPrefix = prefix)
+        override def checkInstrumentationRequiredWrite(pattern : String) : String = {
+          println(pattern)
+          ""
+        }
 
-      observations
+        override def checkInstrumentationRequiredRead(pattern : String) : String = {
+          ""
+        }
+
+        override def getUserCbPrefix: String = {
+          prefix
+        }
+
+        override def getCallbackCode(cbName : String) : String = {
+          callbacks.getOrElse(cbName, "")
+        }
+      }
+
+      val cFile = Paths.get(cFileName).toAbsolutePath
+      libraryInterface.runClang(cFile.getParent.toString, cFile.getFileName.toString)
     }
   }
 
-  object Generator extends TranslationPhase[TesslaCore.Specification, Observations] {
+  class Instrumenter(cFileName: String) extends TranslationPhase[TesslaCore.Specification, Unit] {
     override def translate(spec: TesslaCore.Specification) = {
-      new Generator(spec).translate()
+      new InstrumenterWorker(spec, cFileName).translate()
     }
   }
 }
