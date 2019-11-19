@@ -6,8 +6,6 @@ import org.antlr.v4.runtime.{ParserRuleContext, Token}
 
 sealed abstract class Location {
   def merge(other: Location): Location
-  def stackTrace: Seq[Location] = Seq()
-  def withStackTrace(stackStrace: Seq[Location]) = LocationWithStackTrace(this, stackStrace)
   def range: Option[SourceRange]
   def path: String
   def toJSON: String
@@ -28,16 +26,6 @@ object Location {
     }
 
     def toJSON = s"""{"fromLine": $fromLine, "fromColumn": $fromColumn, "toLine": $toLine, "toColumn": $toColumn}"""
-  }
-
-  case class LocationWithStackTrace(loc: Location, override val stackTrace: Seq[Location]) extends Location {
-    def merge(other: Location) = {
-      require(stackTrace == other.stackTrace)
-      LocationWithStackTrace(loc.merge(other.asInstanceOf[LocationWithStackTrace].loc), stackTrace)
-    }
-    def path = loc.path
-    def range = loc.range
-    def toJSON = loc.toJSON
   }
 
   private case class SourceLoc(sourceRange: SourceRange, path: String) extends Location {
