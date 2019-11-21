@@ -5,6 +5,8 @@ import de.uni_luebeck.isp.tessla.Errors.UndefinedTimeUnit
 import de.uni_luebeck.isp.tessla.Tessla.{FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
 import de.uni_luebeck.isp.tessla.TypedTessla.{BuiltInOperator, InputStream, Literal, Macro, MacroCall, MemberAccess, ObjectLiteral, Parameter, StaticIfThenElse, Variable, VariableEntry}
 
+import scala.collection.mutable
+
 class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit]) extends TranslationPhase.Translator[TypedTessla.TypedSpecification] {
 
   val staticiteExtern = Typed.ExternExpression(List(Identifier("A")), List(
@@ -13,8 +15,13 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
     (Identifier("e"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
   ), Typed.TypeParam(Identifier("A")), "staticite")
 
+  val ins = mutable.Map[Identifier, (Typed.Type, List[Nothing])]()
+
   override protected def translateSpec() = {
+    val outs = spec.outStreams.map(x => (toIdenifier(x.id), x.nameOpt, Nil)).toList
     val defs: Map[Identifier, Typed.ExpressionArg] = translateEnv(spec.globalDefs)
+
+    Typed.Specification(ins.toMap, defs, outs)
     //println("####")
     //println(defs.map(x => x._1 + " = " + x._2).mkString("\n"))
     //println("####")
@@ -28,7 +35,9 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
 
   def translateEnv(env: TypedTessla.Definitions): Map[Identifier, Typed.ExpressionArg] = env.variables.toMap.map { case (id, definition) =>
     (toIdenifier(id), definition.expression match {
-      case InputStream(name, streamType, typeLoc, loc) => Typed.ExpressionRef(Identifier(name), toType(streamType, typeLoc), loc)
+      case InputStream(name, streamType, typeLoc, loc) =>
+        ins += (Identifier(name) -> (toType(streamType), Nil))
+          Typed.ExpressionRef(Identifier(name), toType(streamType, typeLoc), loc)
       case Parameter(param, parameterType, id) => Typed.ExpressionRef(toIdenifier(id), toType(parameterType))
       case Macro(typeParameters, parameters, body, returnType, headerLoc, result, loc, _) =>
         Typed.FunctionExpression(
