@@ -9,6 +9,7 @@ import de.uni_luebeck.isp.tessla.CPatternParser.{ArrayContext, DerefContext, Mem
 import de.uni_luebeck.isp.tessla.TesslaCore.InStreamDescription
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
 
+
 object Observations {
   case class Pattern(Variable: Option[Variable] = None, ArrayAccess: Option[Pattern] = None, StructUnionAccess: Option[StructUnionAccess] = None, Ref: Option[Pattern] = None, DeRef: Option[Pattern] = None, code: Option[String] = None)
   case class Variable(VarName: String, Function: Option[String] = None)
@@ -200,26 +201,24 @@ object Observations {
       }
 
       val libraryInterface = new CPPBridge.LibraryInterface {
-        override def checkInstrumentationRequiredFuncReturn(f: CPPBridge.FullFunctionDesc) : String = {
+        override def checkInstrumentationRequiredFuncReturn(f: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
           ""
         }
 
-        override def checkInstrumentationRequiredFuncReturned(f: CPPBridge.FunctionDesc) : String = {
+        override def checkInstrumentationRequiredFuncReturned(f: CPPBridge.FunctionDesc, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
           ""
         }
 
-        override def checkInstrumentationRequiredFuncCall(f: CPPBridge.FunctionDesc) : String = {
+        override def checkInstrumentationRequiredFuncCall(f: CPPBridge.FunctionDesc, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
           ""
         }
 
-        override def checkInstrumentationRequiredFuncCalled(f: CPPBridge.FullFunctionDesc) : String = {
+        override def checkInstrumentationRequiredFuncCalled(f: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
+          println("###########")
+          println(filename)
+          println(line + ", " + col)
           println("-------")
-          println(f.name())
-          println(f.retType())
-          for (i <- 0 until f.parNum()) {
-            print(f.parName(i) + ": ")
-            println(f.parType(i))
-          }
+          println(f)
 
           if (functionCalled.contains(f.name)) {
             f.name + "_call"
@@ -228,12 +227,16 @@ object Observations {
           }
         }
 
-        override def checkInstrumentationRequiredWrite(pattern : String) : String = {
+        override def checkInstrumentationRequiredWrite(pattern: String, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
+          println("///////////////////")
           println(pattern)
+          println(containingFunc)
+          println(filename)
+          println(line + ", " + col)
           ""
         }
 
-        override def checkInstrumentationRequiredRead(pattern : String) : String = {
+        override def checkInstrumentationRequiredRead(pattern: String, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
           ""
         }
 
