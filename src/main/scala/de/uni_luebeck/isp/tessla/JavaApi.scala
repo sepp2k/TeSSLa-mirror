@@ -22,9 +22,9 @@ object JavaApi {
   case class Result(warnings: java.util.List[Diagnostic], errors: java.util.List[Diagnostic])
 
   abstract class EngineListener {
-    def event(stream: String, time: Specification.Time, value: TesslaCore.Value)
+    def event(stream: String, time: Specification.Time, value: Any)
 
-    def printEvent(time: Specification.Time, value: TesslaCore.Value)
+    def printEvent(time: Specification.Time, value: Any)
   }
 
   case class CompilationResult(result: Result, engine: Engine)
@@ -37,13 +37,13 @@ object JavaApi {
         case (Some(name), stream, _) =>
           stream.addListener {
             case Some(value) =>
-              listener.event(name, spec.getTime, value.forceValue)
+              listener.event(name, spec.getTime, value)
             case None =>
           }
         case (None, stream, _) =>
           stream.addListener {
             case Some(value) =>
-              listener.printEvent(spec.getTime, value.forceValue)
+              listener.printEvent(spec.getTime, value)
             case None =>
           }
       }

@@ -12,7 +12,7 @@ object Trace {
   type Identifier = Tessla.Identifier
   val Identifier = Tessla.Identifier
 
-  case class Event(loc: Location, timeStamp: TimeStamp, streamOpt: Option[Identifier], value: TesslaCore.Value) {
+  case class Event(loc: Location, timeStamp: TimeStamp, streamOpt: Option[Identifier], value: Any) {
     override def toString: String = streamOpt match {
       case Some(stream) => s"$timeStamp: ${stream.name} = $value"
       case None => value match {

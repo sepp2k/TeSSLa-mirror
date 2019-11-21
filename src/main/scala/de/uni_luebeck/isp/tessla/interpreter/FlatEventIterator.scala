@@ -10,19 +10,22 @@ import org.antlr.v4.runtime.tree.RuleNode
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 
+// TODO: organise usage of RuntimeEvaluator
 class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option[BigInt], evaluator: Evaluator) extends Iterator[Trace.Event] {
+
   val queue: mutable.PriorityQueue[EventRange] =
     new mutable.PriorityQueue[EventRange]()(Ordering.by((ev: EventRange) => ev.from).reverse)
   var nextEvents = new mutable.Queue[Trace.Event]
   var eventCounter = 0
 
   case class EventRange(from: BigInt, to: Option[BigInt], step: BigInt, t: Trace.Identifier, rangeLoc: Location,
-                        streamName: Trace.Identifier, exp: Option[ExpressionContext], loc: Location) {
-    def evalValue: TesslaCore.Value = {
-      exp.map(ExpressionVisitor.visit).getOrElse(TesslaCore.TesslaObject(Map(), loc))
+    streamName: Trace.Identifier, exp: Option[ExpressionContext], loc: Location
+  ) {
+    def evalValue: Any = {
+      exp.map(ExpressionVisitor.visit).getOrElse(RuntimeEvaluator.Record(Map()))
     }
 
-    object ExpressionVisitor extends InputTraceParserBaseVisitor[TesslaCore.Value] {
+    object ExpressionVisitor extends InputTraceParserBaseVisitor[Any] {
       override def visitVariable(variable: VariableContext) = {
         val varName = variable.ID.getText
         val loc = Location.fromNode(variable)
@@ -31,39 +34,39 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
 
       def lookupVar(varName: String, loc: Location) = {
         if (varName == t.name) {
-          TesslaCore.IntValue(from, loc)
+          from
         } else {
           throw UndefinedVariable(Tessla.Identifier(varName, loc))
         }
       }
 
-      override def visitTrue(ctx: TrueContext) = TesslaCore.BoolValue(true, Location.fromNode(ctx))
+      override def visitTrue(ctx: TrueContext) = true
 
-      override def visitFalse(ctx: FalseContext) = TesslaCore.BoolValue(false, Location.fromNode(ctx))
+      override def visitFalse(ctx: FalseContext) = false
 
       override def visitIntLiteral(intLit: IntLiteralContext) = {
         if (intLit.DECINT != null) {
-          TesslaCore.IntValue(BigInt(intLit.DECINT.getText), Location.fromNode(intLit))
+          BigInt(intLit.DECINT.getText)
         } else {
           require(intLit.HEXINT != null)
           require(intLit.HEXINT.getText.startsWith("0x"))
-          TesslaCore.IntValue(BigInt(intLit.HEXINT.getText.substring(2), 16), Location.fromNode(intLit))
+          BigInt(intLit.HEXINT.getText.substring(2), 16)
         }
       }
 
       override def visitFloatLiteral(floatLit: FloatLiteralContext) = {
-        TesslaCore.FloatValue(floatLit.FLOAT.getText.toDouble, Location.fromNode(floatLit))
+        floatLit.FLOAT.getText.toDouble
       }
 
       def parseEscapeSequence(sequence: String, loc: Location): String = {
-        TesslaParser.parseEscapeSequence(sequence).getOrElse{
+        TesslaParser.parseEscapeSequence(sequence).getOrElse {
           throw InvalidEscapeSequence(sequence, loc)
         }
       }
 
       override def visitStringLiteral(str: StringLiteralContext) = {
         val result = new StringBuilder
-        str.stringContents.forEach {part =>
+        str.stringContents.forEach { part =>
           if (part.TEXT != null) {
             result ++= part.TEXT.getText
           } else if (part.ESCAPE_SEQUENCE != null) {
@@ -76,10 +79,10 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
               } else {
                 visit(part.expression())
               }
-            result ++= Evaluator.evalToString(value)
+            result ++= value.toString
           }
         }
-        TesslaCore.StringValue(result.toString, Location.fromNode(str))
+        result.toString
       }
 
       override def visitNone(none: NoneContext) = {
@@ -87,26 +90,24 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         // We'll use Never here
         // TODO: Think about creating a separate class family for runtime values (as opposed to values that are part
         //       of the TesslaCore AST) that don't have type information attached
-        TesslaCore.TesslaOption(None, TesslaCore.NeverType, Location.fromNode(none))
+        None
       }
 
       override def visitSome(some: SomeContext) = {
-        TesslaCore.TesslaOption(Some(visit(some.expression)), TesslaCore.NeverType, Location.fromNode(some))
+        Some(visit(some.expression))
       }
 
       override def visitListExpression(list: ListExpressionContext) = {
         val elements = list.elems.asScala.map(visit)
-        TesslaCore.TesslaList(elements.toIndexedSeq, TesslaCore.NeverType, Location.fromNode(list))
+        elements.toList // TODO: consider IndexedSeq instead?
       }
 
       override def visitSetExpression(set: SetExpressionContext) = {
-        val elements = set.elems.asScala.map(visit).toSet
-        TesslaCore.TesslaSet(elements, TesslaCore.NeverType, Location.fromNode(set))
+        set.elems.asScala.map(visit).toSet
       }
 
       override def visitMapExpression(map: MapExpressionContext) = {
-        val elements = map.elems.asScala.map(kv => visit(kv.key) -> visit(kv.value)).toMap
-        TesslaCore.TesslaMap(elements, TesslaCore.NeverType, Location.fromNode(map))
+        map.elems.asScala.map(kv => visit(kv.key) -> visit(kv.value)).toMap
       }
 
       override def visitTupleExpression(tup: TupleExpressionContext) = {
@@ -115,9 +116,9 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         } else {
           val values = tup.elems.asScala.map(visit)
           val members = values.zipWithIndex.map {
-            case (value, index) => s"_${index+1}" -> value
+            case (value, index) => s"_${index + 1}" -> value
           }.toMap
-          TesslaCore.TesslaObject(members, Location.fromNode(tup))
+          RuntimeEvaluator.Record(members)
         }
       }
 
@@ -125,38 +126,38 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         val members = obj.members.asScala.map { memberDef =>
           memberDef.ID.getText -> visit(memberDef.expression)
         }.toMap
-        TesslaCore.TesslaObject(members, Location.fromNode(obj))
+        RuntimeEvaluator.Record(members)
       }
 
       def getOperator(name: String, loc: Location): TesslaCore.BuiltInOperator = {
         TesslaCore.BuiltInOperator(name, loc)
       }
 
+      // TODO: reactivate this using RuntimeEvaluator
       override def visitUnaryExpression(exp: UnaryExpressionContext) = {
         val operatorName = Tessla.unaryOperators(exp.op.getText)
-        val loc = Location.fromNode(exp)
-        val opLoc = Location.fromToken(exp.op)
-        evaluator.evalApplication(getOperator(operatorName, opLoc), Seq(visit(exp.expression)), TesslaCore.NeverType, loc).forceValue
+        val args = List(Lazy(visit(exp.expression())))
+        RuntimeEvaluator.commonExterns(operatorName)(args)
       }
 
       override def visitInfixExpression(exp: InfixExpressionContext) = {
         val operatorName = Tessla.binaryOperators(exp.op.getText)
-        val args = Seq(visit(exp.lhs), visit(exp.rhs))
+        val args = List(Lazy(visit(exp.lhs)), Lazy(visit(exp.rhs)))
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
-        evaluator.evalApplication(getOperator(operatorName, opLoc), args, TesslaCore.NeverType, loc).forceValue
+        RuntimeEvaluator.commonExterns(operatorName)(args)
       }
 
       override def visitITE(ite: ITEContext) = {
         val loc = Location.fromNode(ite)
-        Evaluator.evalIfThenElse(visit(ite.condition), Lazy(visit(ite.thenCase)), Lazy(visit(ite.elseCase)),
-          Map(), loc).forceValue
+        RuntimeEvaluator.commonExterns("ite")(List(Lazy(visit(ite.condition)), Lazy(visit(ite.thenCase)), Lazy(visit(ite.elseCase))))
       }
 
-      override final def visitChildren(node: RuleNode): TesslaCore.Value = {
+      override final def visitChildren(node: RuleNode): Any = {
         throw InternalError("Undefined visitor method", Location.fromNode(node.asInstanceOf[ParserRuleContext]))
       }
     }
+
   }
 
   object EventRange {
@@ -173,7 +174,7 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
           val lower =
             if (crc.lowerOp.getText == "<") BigInt(crc.lowerBound.getText) + 1
             else BigInt(crc.lowerBound.getText)
-          val upper = Option(crc.upperBound).map {bound =>
+          val upper = Option(crc.upperBound).map { bound =>
             if (crc.upperOp.getText == "<") BigInt(bound.getText) - 1
             else BigInt(bound.getText)
           }

@@ -18,17 +18,17 @@ object Compiler {
 
 class Compiler(evaluator: Evaluator) {
 
-  def instantiatePipeline(options: Options): TranslationPhase[CharStream, TesslaCore.Specification] = {
+  def instantiatePipeline(options: Options): TranslationPhase[CharStream, TesslaAST.Core.Specification] = {
     new TesslaParser.WithIncludes(options.includeResolver)
       .andThen(new StdlibIncluder(options.stdlibIncludeResolver, options.stdlibPath))
       .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
       .andThen(new ConstantEvaluator(options.timeUnit, evaluator))
-      .andThen(RemoveUnusedDefinitions)
+      //.andThen(RemoveUnusedDefinitions)
   }
 
-  def compile(src: CharStream, options: Options): TranslationPhase.Result[TesslaCore.Specification] = {
+  def compile(src: CharStream, options: Options): TranslationPhase.Result[TesslaAST.Core.Specification] = {
     instantiatePipeline(options).translate(src)
   }
 

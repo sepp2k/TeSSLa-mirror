@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.analyses
 
-import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaCore, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaAST, TesslaCore, TranslationPhase}
 import Observations._
 import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError, TesslaErrorWithTimestamp}
 import de.uni_luebeck.isp.tessla.CPatternParser.{ArrayContext, DerefContext, MemberContext, PatternContext, RefContext, VariableContext}
@@ -10,21 +10,22 @@ import spray.json.DefaultJsonProtocol._
 import spray.json._
 
 case class Observations(FunctionCalls: Seq[Function] = Seq(),
-                        FunctionCalled: Seq[Function] = Seq(),
-                        FunctionReturns: Seq[Function] = Seq(),
-                        FunctionReturned: Seq[Function] = Seq(),
-                        Assignments: Seq[Pattern] = Seq(),
-                        VarReads: Seq[Pattern] = Seq(),
-                        userCbPrefix: String) {
+  FunctionCalled: Seq[Function] = Seq(),
+  FunctionReturns: Seq[Function] = Seq(),
+  FunctionReturned: Seq[Function] = Seq(),
+  Assignments: Seq[Pattern] = Seq(),
+  VarReads: Seq[Pattern] = Seq(),
+  userCbPrefix: String
+) {
   override def equals(obj: Any) = obj match {
     case other: Observations =>
       FunctionCalls.sortBy(_.hashCode) == other.FunctionCalls.sortBy(_.hashCode) &&
-      FunctionCalled.sortBy(_.hashCode) == other.FunctionCalled.sortBy(_.hashCode) &&
-      FunctionReturns.sortBy(_.hashCode) == other.FunctionReturns.sortBy(_.hashCode) &&
-      FunctionReturned.sortBy(_.hashCode) == other.FunctionReturned.sortBy(_.hashCode) &&
-      Assignments.sortBy(_.hashCode) == other.Assignments.sortBy(_.hashCode) &&
-      VarReads.sortBy(_.hashCode) == other.VarReads.sortBy(_.hashCode) &&
-      userCbPrefix == other.userCbPrefix
+        FunctionCalled.sortBy(_.hashCode) == other.FunctionCalled.sortBy(_.hashCode) &&
+        FunctionReturns.sortBy(_.hashCode) == other.FunctionReturns.sortBy(_.hashCode) &&
+        FunctionReturned.sortBy(_.hashCode) == other.FunctionReturned.sortBy(_.hashCode) &&
+        Assignments.sortBy(_.hashCode) == other.Assignments.sortBy(_.hashCode) &&
+        VarReads.sortBy(_.hashCode) == other.VarReads.sortBy(_.hashCode) &&
+        userCbPrefix == other.userCbPrefix
     case _ => false
   }
 
@@ -36,9 +37,13 @@ case class Observations(FunctionCalls: Seq[Function] = Seq(),
 }
 
 object Observations {
+
   case class Function(FunctionName: String, code: String)
+
   case class Pattern(Variable: Option[Variable] = None, ArrayAccess: Option[Pattern] = None, StructUnionAccess: Option[StructUnionAccess] = None, Ref: Option[Pattern] = None, DeRef: Option[Pattern] = None, code: Option[String] = None)
+
   case class Variable(VarName: String, Function: Option[String] = None)
+
   case class StructUnionAccess(Base: Pattern, Field: String)
 
   implicit val functionFormat = jsonFormat2(Function)
@@ -47,7 +52,7 @@ object Observations {
   implicit val patternFormat: JsonFormat[Pattern] = lazyFormat(jsonFormat6(Pattern))
   implicit val observationsFormat: JsonFormat[Observations] = jsonFormat7(Observations.apply)
 
-  class Generator(spec: TesslaCore.Specification) extends TranslationPhase.Translator[Observations] {
+  class Generator(spec: TesslaAST.Core.Specification) extends TranslationPhase.Translator[Observations] {
     def parsePattern(str: String, loc: Location, function: Option[String] = None): Pattern = {
       val src = CharStreams.fromString(str, loc.path)
       val lexer = new CPatternLexer(src)
@@ -97,30 +102,32 @@ object Observations {
       }
     }
 
-    val threadIdInStreams = spec.inStreams.filter{ in =>
-      in.annotations.exists(_.name == "ThreadId")
-    }
+    val threadIdInStreams: List[TesslaAST.Identifier] = Nil
+    // TODO: reactiate
+    //    val threadIdInStreams = spec.inStreams.filter{ in =>
+    //      in.annotations.exists(_.name == "ThreadId")
+    //    }
 
     protected def encloseInstrumentationCode(code: String): String = {
       val lines = code.split("\n") ++
-        threadIdInStreams.map{ in => s"""trace_push_thread_id(events, "${in.name}");"""}
+        threadIdInStreams.map { in => s"""trace_push_thread_id(events, "${in.id}");""" }
       s"uint8_t* events = trace_create_events(${lines.length});\n" +
         lines.sorted.mkString("\n") +
         "\ntrace_write(events);"
     }
 
     private def merge(functions: Seq[Function]): Seq[Function] =
-      functions.groupBy(_.FunctionName).values.map{ functions =>
-        functions.reduce((a,b) => a.copy(code = a.code + "\n" + b.code))
+      functions.groupBy(_.FunctionName).values.map { functions =>
+        functions.reduce((a, b) => a.copy(code = a.code + "\n" + b.code))
       }.toSeq
 
     private def merge(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
       patterns.groupBy(_.copy(code = None)).values.map { patterns =>
-        patterns.reduce((a,b) => a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr))))
+        patterns.reduce((a, b) => a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr))))
       }.toSeq
 
     private def enclose(functions: Seq[Function]): Seq[Function] =
-      merge(functions).map{ function =>
+      merge(functions).map { function =>
         function.copy(code = encloseInstrumentationCode(function.code))
       }
 
@@ -129,28 +136,28 @@ object Observations {
         pattern.copy(code = pattern.code.map(encloseInstrumentationCode))
       }
 
-    private def createFunctionObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Function] =
-      spec.inStreams.flatMap { in =>
-        in.annotations.filter(_.name == annotationName).map { annotation =>
-          val name = argumentAsString(annotation, "name")
-          val code = createCode(annotation, in)
-          Function(FunctionName = name, code = code)
-        }
-      }
+    private def createFunctionObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Function] = Nil // TODO: reactivate
+    //      spec.inStreams.flatMap { in =>
+    //        in.annotations.filter(_.name == annotationName).map { annotation =>
+    //          val name = argumentAsString(annotation, "name")
+    //          val code = createCode(annotation, in)
+    //          Function(FunctionName = name, code = code)
+    //        }
+    //      }
 
-    private def createPatternObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Pattern] =
-      spec.inStreams.flatMap { in =>
-        in.annotations.filter(_.name == annotationName).map { annotation =>
-          val function = if (annotation.arguments.contains("function")) {
-            Some(argumentAsString(annotation, "function"))
-          } else {
-            None
-          }
-          val lvalue = argumentAsString(annotation, "lvalue")
-          val pattern = parsePattern(lvalue, annotation.arguments("lvalue").loc, function)
-          pattern.copy(code = Some(createCode(annotation, in)))
-        }
-      }
+    private def createPatternObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Pattern] = Nil // TODO: reactivate
+    //      spec.inStreams.flatMap { in =>
+    //        in.annotations.filter(_.name == annotationName).map { annotation =>
+    //          val function = if (annotation.arguments.contains("function")) {
+    //            Some(argumentAsString(annotation, "function"))
+    //          } else {
+    //            None
+    //          }
+    //          val lvalue = argumentAsString(annotation, "lvalue")
+    //          val pattern = parsePattern(lvalue, annotation.arguments("lvalue").loc, function)
+    //          pattern.copy(code = Some(createCode(annotation, in)))
+    //        }
+    //      }
 
     protected def printEvent(in: InStreamDescription, value: String): String = in.typ.elementType match {
       case TesslaCore.BuiltInType("Int", Seq()) =>
@@ -232,9 +239,10 @@ object Observations {
     }
   }
 
-  object Generator extends TranslationPhase[TesslaCore.Specification, Observations] {
-    override def translate(spec: TesslaCore.Specification) = {
+  object Generator extends TranslationPhase[TesslaAST.Core.Specification, Observations] {
+    override def translate(spec: TesslaAST.Core.Specification) = {
       new Generator(spec).translate()
     }
   }
+
 }

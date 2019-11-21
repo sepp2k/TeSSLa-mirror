@@ -90,28 +90,28 @@ object Main extends SexyOpt {
       val core = unwrapResult(compiler.compile(specSource, compilerOptions))
 
       if (observations) {
-        println(unwrapResult(Observations.Generator.translate(core)))
+        // FIXME: port to new tessla core: println(unwrapResult(Observations.Generator.translate(core)))
         return
       }
 
       if (listInStreams) {
-        core.inStreams.foreach { is => println(is.name) }
+        core.in.foreach { is => println(is._1.id) }
       }
 
       if (listOutStreams) {
-        core.outStreams.foreach { os => println(os.nameOpt.getOrElse(s"print ${os.stream}")) }
+        core.out.foreach { os => println(os._1.id) }
       }
 
       if (computationDepth) {
-        println(DepthChecker.nestingDepth(core))
+        // FIXME: port to new tessla core: println(DepthChecker.nestingDepth(core))
       }
 
       if (recursionDepth) {
-        println(RecursiveDepthChecker.nestingDepth(core))
+        // FIXME: port to new tessla core: println(RecursiveDepthChecker.nestingDepth(core))
       }
 
       if (nodeCount) {
-        println(NodeCounter.nodeCount(core))
+        // FIXME: port to new tessla core: println(NodeCounter.nodeCount(core))
       }
 
       if (printCore) {

@@ -5,112 +5,51 @@ import de.uni_luebeck.isp.tessla.util.Lazy
 import de.uni_luebeck.isp.tessla._
 
 import scala.collection.mutable
+import TesslaAST.Core
 
-class Interpreter(val spec: TesslaCore.Specification, val evaluator: Evaluator) extends Specification {
-  val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.inStreams.map {inStream =>
-    inStream.name -> (new Input, inStream.typ.elementType)
-  }.toMap
-
-  lazy val definitions: Map[TesslaCore.Identifier, Lazy[TesslaCore.Closure]] = spec.definitions.map { definition =>
-    definition.id -> Lazy(TesslaCore.Closure(definition.expression.asInstanceOf[TesslaCore.Function], definitions, definition.expression.loc))
-  }.toMap
-
-  type Env = Map[TesslaCore.Identifier, TesslaCore.ValueOrError]
-
-  lazy val defs: Map[TesslaCore.Identifier, Lazy[Stream]] = spec.streams.map { stream =>
-    stream.id -> Lazy(eval(stream))
-  }.toMap
-
-  lazy val outStreams: Seq[(Option[String], Stream, TesslaCore.Type)] = spec.outStreams.map { os =>
-    os.stream match {
-      case streamRef: TesslaCore.Stream => (os.nameOpt, defs(streamRef.id).get, os.typ)
-      case streamRef: TesslaCore.InputStream => (os.nameOpt, inStreams(streamRef.name)._1, os.typ)
-      case _: TesslaCore.Nil => (os.nameOpt, nil, os.typ)
-    }
+class Interpreter(val spec: Core.Specification, val evaluator: Evaluator) extends Specification(RuntimeEvaluator.Record(Map())) {
+  val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.in.map { inStream =>
+    inStream._1.id -> (new Input, null)
   }
 
-  private def toStreamRef(arg: TesslaCore.Arg): TesslaCore.StreamRef = arg match {
-    case stream: TesslaCore.StreamRef => stream
-    case _ => throw InternalError(s"Expected stream argument but got value argument. This should have been caught by the type checker.")
-  }
-
-  private def toValue(arg: TesslaCore.Arg): TesslaCore.ValueOrError = arg match {
-    case value: TesslaCore.ValueOrError => value
-    case ref: TesslaCore.ValueRef => definitions(ref.id).get
-    case _ => throw InternalError(s"Expected value argument but got stream argument. This should have been caught by the type checker.")
-  }
-
-  private def evalStream(arg: TesslaCore.StreamRef): Stream = arg match {
-    case s: TesslaCore.Stream =>
-      defs.getOrElse(s.id, throw InternalError(s"Couldn't find stream named ${s.id}", s.loc)).get
-    case i: TesslaCore.InputStream =>
-      inStreams.getOrElse(i.name, throw InternalError(s"Couldn't find input stream named ${i.name}", i.loc))._1
-    case _: TesslaCore.Nil => nil
-  }
-
-  private def eval(sd: TesslaCore.StreamDescription): Stream = sd.expression match {
-    case TesslaCore.Last(values, clock, _) =>
-      last(evalStream(values), evalStream(clock))
-    case TesslaCore.Delay(delays, resets, _) =>
-      delay(evalStream(delays), evalStream(resets))
-    case customCall: TesslaCore.CustomBuiltInCall =>
-      customCall.name match {
-        case "slift" =>
-          val argStreams = customCall.args.init.map(toStreamRef)
-          val f = toValue(customCall.args.last)
-          if (argStreams.isEmpty) {
-            throw Errors.InternalError("slift without arguments should be impossible", customCall.loc)
-          }
-          slift(argStreams.map(evalStream)) { arguments =>
-            evaluator.evalApplication(f, arguments, sd.typ.elementType, customCall.loc)
-          }
-        case "lift" =>
-          val argStreams = customCall.args.init.map(toStreamRef)
-          val f = toValue(customCall.args.last)
-          if (argStreams.isEmpty) {
-            throw Errors.InternalError("lift without arguments should be impossible", customCall.loc)
-          }
-          lift(argStreams.map(evalStream)) { arguments =>
-            val args = arguments.zip(argStreams).map {
-              case (Some(arg), stream) =>
-                TesslaCore.TesslaOption(Some(arg), stream.typ.elementType, stream.loc)
-              case (None, stream) => TesslaCore.TesslaOption(None, sd.typ.elementType, stream.loc)
-            }
-            evaluator.evalApplication(f, args, sd.typ.elementType, customCall.loc) match {
-              case to: TesslaCore.TesslaOption => to.value
-              case err: TesslaCore.Error => Some(err)
-              case other =>
-                throw InternalError(s"Used lift on non-option function (return value: $other) - should have been caught by type checker")
-            }
-          }
-        case "merge" =>
-          val streams = customCall.args.map(toStreamRef).map(evalStream)
-          merge(streams)
-        case "default" =>
-          val stream = toStreamRef(customCall.args.head)
-          val defaultValue = toValue(customCall.args(1))
-          evalStream(stream).default(defaultValue)
-        case "defaultFrom" =>
-          val stream = toStreamRef(customCall.args.head)
-          val defaultStream = toStreamRef(customCall.args(1))
-          evalStream(stream).default(evalStream(defaultStream))
-        case "time" =>
-          val stream = toStreamRef(customCall.args.head)
-          evalStream(stream).time(customCall.loc)
-        case name => throw InternalError(s"The interpreter does not support $name")
+  val streamExterns: Map[String, List[Lazy[Any]] => Any] = Map(
+    "last" -> ((arguments: List[Lazy[Any]]) => last(arguments(0).get.asInstanceOf[Stream], arguments(1).get.asInstanceOf[Stream])),
+    "delay" -> ((arguments: List[Lazy[Any]]) => delay(arguments(0).get.asInstanceOf[Stream], arguments(1).get.asInstanceOf[Stream])),
+    "slift" -> ((arguments: List[Lazy[Any]]) => {
+      val op = arguments.last.get.asInstanceOf[List[Lazy[Any]] => Any]
+      slift(arguments.init.map(_.get.asInstanceOf[Stream])) { args =>
+        op(args.map(Lazy(_)))
       }
+    }),
+    "lift" -> ((arguments: List[Lazy[Any]]) => {
+      val op = arguments.last.get.asInstanceOf[List[Lazy[Any]] => Any]
+      lift(arguments.init.map(_.get.asInstanceOf[Stream])) { args =>
+        op(args.map(a => Lazy(a))).asInstanceOf[Option[Any]]
+      }
+    }),
+    "merge" -> ((arguments: List[Lazy[Any]]) => merge(arguments.map(_.get.asInstanceOf[Stream]))),
+    "default" -> ((arguments: List[Lazy[Any]]) =>
+      arguments(0).get.asInstanceOf[Stream].default(arguments(1).get)),
+    "defaultFrom" -> ((arguments: List[Lazy[Any]]) => arguments(0).get.asInstanceOf[Stream].default(arguments(1).get.asInstanceOf[Stream])),
+    "time" -> ((arguments: List[Lazy[Any]]) => arguments(0).get.asInstanceOf[Stream].time()),
+    "nil" -> ((_: List[Lazy[Any]]) => nil),
+  )
+
+
+  val runtimeEvaluator: RuntimeEvaluator = new RuntimeEvaluator(RuntimeEvaluator.commonExterns ++ streamExterns)
+
+  lazy val definitions: RuntimeEvaluator.Env = inStreams.mapValues(x => Lazy(x._1)) ++ spec.definitions.map(d => (d._1.id, Lazy(runtimeEvaluator.evalExpression(d._2, definitions))))
+
+  lazy val outStreams: Seq[(Option[String], Stream, TesslaCore.Type)] = spec.out.map { os =>
+    (os._2, definitions(os._1.id).get.asInstanceOf[Stream], null)
   }
 
-  def getInt(value: TesslaCore.Value): BigInt = value match {
-    case TesslaCore.IntValue(i, _) => i
-    case _ => throw InternalError(s"Int expected, but $value found", value.loc)
-  }
 }
 
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
-  def run(spec: TesslaCore.Specification, input: Trace, stopOn: Option[String], evaluator: Evaluator): Trace = {
+  def run(spec: Core.Specification, input: Trace, stopOn: Option[String], evaluator: Evaluator): Trace = {
     val interpreter = new Interpreter(spec, evaluator)
     new Iterator[Trace.Event] {
       private var nextEvents = new mutable.Queue[Trace.Event]
@@ -125,7 +64,7 @@ object Interpreter {
                 if (stopOn.isDefined && stopOn == nameOpt) stopped = true
                 val timeStamp = Trace.TimeStamp(Location.unknown, interpreter.getTime)
                 val idOpt = nameOpt.map(Trace.Identifier(_, Location.unknown))
-                nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value.forceValue)
+                nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value) // TODO: handle somewhere if value contains RuntimExecption
               }
             case None =>
           }
@@ -148,7 +87,8 @@ object Interpreter {
           }
           interpreter.inStreams.get(event.stream.name) match {
             case Some((inStream, elementType)) =>
-              ValueTypeChecker.check(event.value, elementType, event.stream.name)
+              // TODO: reenable line below to check type of input values
+              //ValueTypeChecker.check(event.value, elementType, event.stream.name)
               if (seen.contains(event.stream.name)) {
                 throw SameTimeStampError(eventTime, event.stream.name, event.timeStamp.loc)
               }

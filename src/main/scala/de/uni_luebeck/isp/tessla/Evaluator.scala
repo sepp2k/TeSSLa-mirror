@@ -4,11 +4,21 @@ import java.util.Locale
 
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.Evaluator._
+import de.uni_luebeck.isp.tessla.TesslaAST.Identifier
 import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 import util.mapValues
+import TesslaAST.Core
 
 object Evaluator {
+
+  sealed trait RuntimeValue
+
+  case class RuntimeExternValue(value: Any) extends RuntimeValue
+
+  case class RuntimeClosure(function: Core.FunctionExpression, env: Map[Identifier, Lazy[RuntimeValue]]) extends RuntimeValue
+
+  case class Record(entries: Map[String, Any])
 
   def getInt(voe: TesslaCore.ValueOrError): BigInt = voe.forceValue match {
     case intLit: TesslaCore.IntValue => intLit.value
@@ -265,7 +275,7 @@ class Evaluator(customBuiltIns: Map[String, Seq[TesslaCore.ValueOrError] => Tess
           val map = getMap(arguments(0)).value
           val z = arguments(1)
           val f = arguments(2)
-          map.foldLeft(z){case (acc, (key, value)) => evalApplication(f, Seq(acc, key, value), resultType, loc)}
+          map.foldLeft(z) { case (acc, (key, value)) => evalApplication(f, Seq(acc, key, value), resultType, loc) }
         case "Set_empty" =>
           TesslaCore.TesslaSet(Set(), resultType, loc)
         case "Set_add" =>
