@@ -7,7 +7,7 @@ import de.uni_luebeck.isp.tessla._
 import scala.collection.mutable
 import TesslaAST.Core
 
-class Interpreter(val spec: Core.Specification, val evaluator: Evaluator) extends Specification(RuntimeEvaluator.Record(Map())) {
+class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEvaluator.Record(Map())) {
   val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.in.map { inStream =>
     inStream._1.id -> (new Input, null)
   }
@@ -49,8 +49,8 @@ class Interpreter(val spec: Core.Specification, val evaluator: Evaluator) extend
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
-  def run(spec: Core.Specification, input: Trace, stopOn: Option[String], evaluator: Evaluator): Trace = {
-    val interpreter = new Interpreter(spec, evaluator)
+  def run(spec: Core.Specification, input: Trace, stopOn: Option[String]): Trace = {
+    val interpreter = new Interpreter(spec)
     new Iterator[Trace.Event] {
       private var nextEvents = new mutable.Queue[Trace.Event]
       private var stopped = false

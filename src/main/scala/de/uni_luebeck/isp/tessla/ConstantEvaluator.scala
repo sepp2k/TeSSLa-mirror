@@ -501,6 +501,8 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
     new Identifier(nameOpt.getOrElse("") + "$" + counter)
   }
 
+  val trueExtern = Core.ExternExpression(Nil, Nil, null, "true")
+  val falseExtern = Core.ExternExpression(Nil, Nil, null, "false")
   val noneExtern = Core.ExternExpression(Nil, Nil, null, "None")
   val someExtern = Core.ExternExpression(Nil, List((Identifier("a"), TesslaAST.StrictEvaluation, null)), null, "Some")
   val setEmptyExtern = Core.ExternExpression(Nil, Nil, null, "Set_empty")
@@ -522,7 +524,7 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
 
   def reify(value: Any): Core.Expression = value match {
     case TesslaCore.IntValue(value, _) => Core.IntLiteralExpression(value, Location.unknown)
-    case TesslaCore.BoolValue(value, _) => Core.BoolLiteralExpression(value, Location.unknown)
+    case TesslaCore.BoolValue(value, _) => Core.ApplicationExpression(if (value) trueExtern else falseExtern, Nil)
     case TesslaCore.FloatValue(value, _) => Core.FloatLiteralExpression(value, Location.unknown)
     case TesslaCore.StringValue(value, _) => Core.StringLiteralExpression(value, Location.unknown)
     case TesslaCore.BuiltInOperator(name, _) => Core.ExternExpression(Nil, Nil, null, name, Location.unknown)

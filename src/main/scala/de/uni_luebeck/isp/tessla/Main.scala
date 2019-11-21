@@ -124,7 +124,7 @@ object Main extends SexyOpt {
 
       val abortAtValue = abortAt.map(BigInt(_))
 
-      val traceInstance = new Trace(evaluator)
+      val traceInstance = new Trace()
 
       if (ctfTrace) {
         if (!traceFile.isDefined) {
@@ -132,7 +132,7 @@ object Main extends SexyOpt {
           sys.exit(17)
         }
         val trace = traceInstance.fromCtfFile(traceFile.get, abortAtValue)
-        val output = Interpreter.run(core, trace, stopOn, evaluator)
+        val output = Interpreter.run(core, trace, stopOn)
         output.foreach(println)
       } else {
         val trace = if (csvTrace) {
@@ -145,7 +145,7 @@ object Main extends SexyOpt {
         if (flattenInput) {
           trace.foreach(println)
         } else {
-          val output = Interpreter.run(core, trace, stopOn, evaluator)
+          val output = Interpreter.run(core, trace, stopOn)
           output.foreach(println)
         }
       }

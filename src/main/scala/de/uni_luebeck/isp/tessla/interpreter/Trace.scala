@@ -33,7 +33,7 @@ object Trace {
 
 }
 
-class Trace(evaluator: Evaluator){
+class Trace(){
 
   def fromCtfFile(ctfFileName: String, abortAt: Option[BigInt]): Interpreter.Trace = {
     val reader = new CTFTraceReader(new CTFTrace(ctfFileName))
@@ -62,7 +62,7 @@ class Trace(evaluator: Evaluator){
 
   def fromLineIterator(lineIterator: Iterator[String], fileName: String, abortAt: Option[Specification.Time] = None) = {
     val rawTrace = new TraceParser(lineIterator, fileName).parseTrace()
-    new FlatEventIterator(rawTrace, abortAt, evaluator)
+    new FlatEventIterator(rawTrace, abortAt)
   }
 
   def fromSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {
@@ -77,7 +77,7 @@ class Trace(evaluator: Evaluator){
 
   def fromCsvLineIterator(lineIterator: Iterator[String], fileName: String, abortAt: Option[Specification.Time] = None) = {
     val rawTrace = new CsvTraceParser(lineIterator, fileName).parseTrace()
-    new FlatEventIterator(rawTrace, abortAt, evaluator)
+    new FlatEventIterator(rawTrace, abortAt)
   }
 
   def fromCsvSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {

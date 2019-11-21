@@ -24,6 +24,7 @@ class Compiler(evaluator: Evaluator) {
       .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
+      .andThen(new TypedTessla2TesslaASTCore(options.timeUnit))
       .andThen(new ConstantEvaluator(options.timeUnit, evaluator))
       //.andThen(RemoveUnusedDefinitions)
   }

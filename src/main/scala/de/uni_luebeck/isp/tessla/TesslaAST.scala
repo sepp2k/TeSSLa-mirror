@@ -45,6 +45,12 @@ object TesslaAST {
     override type Evaluation = CompiletimeEvaluation
   }
 
+  object Typed extends TesslaAST[Id] {
+    override type DefinitionExpression = ExpressionArg
+
+    override type Evaluation = CompiletimeEvaluation
+  }
+
   object Core extends TesslaAST[Id] {
     override type DefinitionExpression = Expression
 
@@ -150,12 +156,6 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     }
   }
 
-  case class BoolLiteralExpression(value: Boolean, location: Location = Location.unknown) extends Expression {
-    override def tpe = Applicative[TypeAnnotation].pure(BoolType)
-
-    override def toString = value.toString
-  }
-
   case class StringLiteralExpression(value: String, location: Location = Location.unknown) extends Expression {
     override def tpe = Applicative[TypeAnnotation].pure(StringType)
 
@@ -199,30 +199,10 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     override def resolve(args: Map[Identifier, Type]) = args.getOrElse(name, this)
   }
 
-  case object IntType extends Type {
-    override def resolve(args: Map[Identifier, Type]) = this
-
-    override def location = Location.unknown
-  }
-
-  case object FloatType extends Type {
-    override def resolve(args: Map[Identifier, Type]) = this
-
-    override def location = Location.unknown
-  }
-
-  case object BoolType extends Type {
-    override def resolve(args: Map[Identifier, Type]) = this
-
-    override def location = Location.unknown
-  }
-
-  case object StringType extends Type {
-    override def resolve(args: Map[Identifier, Type]) = this
-
-    override def location = Location.unknown
-  }
-
+  val FloatType = InstatiatedType("Float", Nil, Location.builtIn)
+  val IntType = InstatiatedType("Float", Nil, Location.builtIn)
+  val StringType = InstatiatedType("Float", Nil, Location.builtIn)
+  val BoolType = InstatiatedType("Bool", Nil, Location.builtIn) // TODO: consider removing as no corresponding literal
 
   ////// Non AST Stuff, kept for inspiration
 

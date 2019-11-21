@@ -11,7 +11,7 @@ import scala.collection.mutable
 import scala.collection.JavaConverters._
 
 // TODO: organise usage of RuntimeEvaluator
-class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option[BigInt], evaluator: Evaluator) extends Iterator[Trace.Event] {
+class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
 
   val queue: mutable.PriorityQueue[EventRange] =
     new mutable.PriorityQueue[EventRange]()(Ordering.by((ev: EventRange) => ev.from).reverse)

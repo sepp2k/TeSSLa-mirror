@@ -41,6 +41,8 @@ object RuntimeEvaluator {
   def unaryFloatOp(f: Double => Any) = strict(l => f(l(0).asInstanceOf[Double]))
 
   val commonExterns: Map[String, List[Lazy[Any]] => Any] = Map(
+    "true" -> ((arguments: List[Lazy[Any]]) => true),
+    "false" -> ((arguments: List[Lazy[Any]]) => false),
     "add" -> binIntOp(_ + _),
     "sub" -> binIntOp(_ - _),
     "mul" -> binIntOp(_ * _),
@@ -170,7 +172,6 @@ class RuntimeEvaluator(externs: Map[String, List[Lazy[Any]] => Any]) {
     case Core.StringLiteralExpression(value, _) => value
     case Core.IntLiteralExpression(value, _) => value
     case Core.FloatLiteralExpression(value, _) => value
-    case Core.BoolLiteralExpression(value, _) => value
   }
 
 }
