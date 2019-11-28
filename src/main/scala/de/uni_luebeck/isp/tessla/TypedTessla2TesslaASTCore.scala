@@ -7,7 +7,7 @@ import de.uni_luebeck.isp.tessla.TypedTessla.{BuiltInOperator, InputStream, Lite
 
 import scala.collection.mutable
 
-class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit]) extends TranslationPhase.Translator[TypedTessla.TypedSpecification] {
+class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit]) extends TranslationPhase.Translator[Typed.Specification] {
 
   val staticiteExtern = Typed.ExternExpression(List(Identifier("A")), List(
     (Identifier("c"), TesslaAST.StrictEvaluation, Typed.BoolType),
@@ -22,10 +22,6 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
     val defs: Map[Identifier, Typed.ExpressionArg] = translateEnv(spec.globalDefs)
 
     Typed.Specification(ins.toMap, defs, outs)
-    //println("####")
-    //println(defs.map(x => x._1 + " = " + x._2).mkString("\n"))
-    //println("####")
-    spec
   }
 
   def lookupType(id: TypedTessla.Identifier, env: TypedTessla.Definitions): Typed.Type = env.variables.get(id) match {
@@ -86,7 +82,7 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
     })
   }
 
-  def toType(tpe: TypedTessla.Type, location: Location = Location.unknown): Typed.Type = tpe match {
+  def toType(tpe: TypedTessla.Type, location: Location = Location.unknown):  Typed.Type = tpe match {
     case TypedTessla.BuiltInType(name, typeArgs) => Typed.InstatiatedType(name, typeArgs.map(toType(_)).toList)
     case TypedTessla.FunctionType(typeParameters, parameterTypes, returnType, _) =>
       Typed.FunctionType(typeParameters.map(toIdenifier).toList,
@@ -103,7 +99,7 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
   def toIdenifier(identifier: TypedTessla.Identifier) = Identifier(identifier.nameOpt.getOrElse("") + "$" + identifier.uid)
 }
 
-class TypedTessla2TesslaASTCore(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, TypedTessla.TypedSpecification] {
+class TypedTessla2TesslaASTCore(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {
   override def translate(spec: TypedTessla.TypedSpecification) = {
     new TypedTessla2TesslaASTCoreWorker(spec, baseTimeUnit).translate()
   }

@@ -52,7 +52,7 @@ object TesslaAST {
   }
 
   object Core extends TesslaAST[Id] {
-    override type DefinitionExpression = Expression
+    override type DefinitionExpression = ExpressionArg
 
     override type Evaluation = RuntimeEvaluation
   }
@@ -203,6 +203,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   val IntType = InstatiatedType("Float", Nil, Location.builtIn)
   val StringType = InstatiatedType("Float", Nil, Location.builtIn)
   val BoolType = InstatiatedType("Bool", Nil, Location.builtIn) // TODO: consider removing as no corresponding literal
+
 
   ////// Non AST Stuff, kept for inspiration
 
