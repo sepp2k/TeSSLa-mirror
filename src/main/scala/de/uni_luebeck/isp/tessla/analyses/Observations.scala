@@ -227,7 +227,7 @@ object Observations {
           }
         }
 
-        override def checkInstrumentationRequiredWrite(pattern: String, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
+        override def checkInstrumentationRequiredWrite(pattern: String, typ: String, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
           println("///////////////////")
           println(pattern)
           println(containingFunc)
@@ -236,7 +236,7 @@ object Observations {
           ""
         }
 
-        override def checkInstrumentationRequiredRead(pattern: String, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
+        override def checkInstrumentationRequiredRead(pattern: String, typ: String, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
           ""
         }
 
@@ -247,9 +247,15 @@ object Observations {
         override def getCallbackCode(cbName : String) : String = {
           callbacks.getOrElse(cbName, "")
         }
+
+        override def reportDiagnostic(typ: String, message: String, file: String, line: Int, col: Int): Unit = {
+          System.err.println(s"""$typ: $message in $file:$line:$col""")
+        }
+
       }
 
       val cFile = Paths.get(cFileName).toAbsolutePath
+      libraryInterface.addIncludePath("/usr/lib/gcc/x86_64-linux-gnu/7/include/")
       libraryInterface.runClang(cFile.getParent.toString, cFile.getFileName.toString)
     }
   }
