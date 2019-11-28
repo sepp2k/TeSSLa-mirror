@@ -33,13 +33,29 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
   type Lazy[+A] = LazyWithStack[_ <: A, Stack]
 
-  def Lazy[A](f: Stack => A): Lazy[A] = LazyWithStack[A, Stack](f)
+  def Lazy[A](f: Stack => A): Lazy[A] = LazyWithStack[A, Stack] { (stack, rec) =>
+    if (stack.size > 1000) {
+      throw WithStackTrace(Errors.StackOverflow(stack.head), stack.tail)
+    } else if (rec) {
+      throw WithStackTrace(InfiniteRecursion(stack.head), stack.tail)
+    } else {
+      try {
+        f(stack)
+      } catch {
+        case err: InternalError =>
+          throw WithStackTrace(err, stack)
+        case _: StackOverflowError =>
+          throw WithStackTrace(Errors.StackOverflow(stack.head), stack.tail)
+      }
+    }
+    f(stack)
+  }
 
   case class TranslationResult(value: Lazy[Option[Any]], expression: Lazy[Core.ExpressionArg])
 
-  def mkResult(value: Option[Any], expression: Core.ExpressionArg) = TranslationResult(LazyWithStack(_ => value), LazyWithStack(_ => expression))
+  def mkResult(value: Option[Any], expression: Core.ExpressionArg) = TranslationResult(Lazy(_ => value), Lazy(_ => expression))
 
-  def mkExpressionResult(expression: Lazy[Core.ExpressionArg]) = TranslationResult(LazyWithStack(_ => None), expression)
+  def mkExpressionResult(expression: Lazy[Core.ExpressionArg]) = TranslationResult(Lazy(_ => None), expression)
 
   type Reifier = (String, Any, Core.Type) => (List[Core.ExpressionArg] => Core.Expression, List[Any])
 
@@ -99,24 +115,6 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     val namePos = id.id.indexOf("$")
     if (namePos > 0) Some(id.id.substring(0, namePos)) else None
   }
-
-  // TODO: move to LazyWithStack
-  //  val entry = env(id)
-  //  if (stack.size > 1000) {
-  //    throw WithStackTrace(Errors.StackOverflow(location), stack)
-  //  } else if (entry.isComputing) {
-  //    throw WithStackTrace(InfiniteRecursion(location), stack)
-  //  } else {
-  //    try {
-  //      entry.get(location :: stack)
-  //    } catch {
-  //      case err: InternalError =>
-  //        throw WithStackTrace(err, location :: stack)
-  //      case _: StackOverflowError =>
-  //        throw WithStackTrace(Errors.StackOverflow(location), stack)
-  //    }
-  //  }
-
 
   def translateExpressionArg(expr: Typed.ExpressionArg, env: Env, typeEnv: TypeEnv, nameOpt: Option[String],
     translatedExpressions: TranslatedExpressions
