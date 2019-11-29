@@ -33,9 +33,13 @@ object TesslaAST {
 
   sealed trait RuntimeEvaluation extends CompiletimeEvaluation
 
-  case object LazyEvaluation extends RuntimeEvaluation
+  case object LazyEvaluation extends RuntimeEvaluation {
+    override def toString = "lazy"
+  }
 
-  case object StrictEvaluation extends RuntimeEvaluation
+  case object StrictEvaluation extends RuntimeEvaluation {
+    override def toString = "strict"
+  }
 
   case object ExpandEvaluation extends CompiletimeEvaluation
 
@@ -74,7 +78,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
         case Some(name) => s"out $name = ${x._1}"
         case None => "out" + x._1
       }).mkString("\n")
-      val d = definitions.map(x => s"def ${x._1} = ${x._2}").mkString("\n")
+      val d = definitions.map(x => s"def ${x._1}: ${x._2.tpe} = ${x._2}").mkString("\n")
       s"$i\n\n$o\n\n$d"
     }
   }
@@ -99,7 +103,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     }
 
     override def toString = {
-      val b = indent(body.map(x => s"def ${x._1} = ${x._2}").mkString("", "\n", "\n") + result)
+      val b = indent(body.map(x => s"def ${x._1}: ${x._2.tpe} = ${x._2}").mkString("", "\n", "\n") + result)
       s"(${params.map(_._1).mkString(", ")}) => {\n$b\n}"
     }
   }
@@ -125,7 +129,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       }
     }
 
-    override def toString = s"($applicable)(${args.mkString(", ")})"
+    override def toString = s"$applicable(${args.mkString(", ")})"
   }
 
   case class TypeApplicationExpression(applicable: ExpressionArg, typeArgs: List[Type],
@@ -138,6 +142,8 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
         FunctionType(List(), ft.paramTypes.map(x => (x._1, x._2.resolve(map))), ft.resultType.resolve(map))
       }
     }
+
+    override def toString = s"$applicable[${typeArgs.mkString(", ")}]"
   }
 
   case class RecordConstructorExpression(entries: Map[Identifier, ExpressionArg],
@@ -183,10 +189,14 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       val tmp = args -- typeParams
       FunctionType(typeParams, paramTypes.map(x => (x._1, x._2.resolve(tmp))), resultType.resolve(tmp))
     }
+
+    override def toString = s"[${typeParams.mkString(", ")}](${paramTypes.map(x => x._1 + " " + x._2).mkString(", ")}) => $resultType"
   }
 
   case class InstatiatedType(name: String, typeArgs: List[Type], location: Location = Location.unknown) extends Type {
     override def resolve(args: Map[Identifier, Type]) = InstatiatedType(name, typeArgs.map(_.resolve(args)))
+
+    override def toString = name + (if (typeArgs.nonEmpty) "(" + typeArgs.mkString(", ") + ")" else "")
   }
 
   case class RecordType(entries: Map[Identifier, Type], location: Location = Location.unknown) extends Type {
@@ -197,11 +207,13 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
   case class TypeParam(name: Identifier, location: Location = Location.unknown) extends Type {
     override def resolve(args: Map[Identifier, Type]) = args.getOrElse(name, this)
+
+    override def toString = name.id
   }
 
   val FloatType = InstatiatedType("Float", Nil, Location.builtIn)
-  val IntType = InstatiatedType("Float", Nil, Location.builtIn)
-  val StringType = InstatiatedType("Float", Nil, Location.builtIn)
+  val IntType = InstatiatedType("Int", Nil, Location.builtIn)
+  val StringType = InstatiatedType("String", Nil, Location.builtIn)
   val BoolType = InstatiatedType("Bool", Nil, Location.builtIn) // TODO: consider removing as no corresponding literal
 
 
