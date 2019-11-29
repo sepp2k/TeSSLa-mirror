@@ -38,7 +38,7 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
 
   val runtimeEvaluator: RuntimeEvaluator = new RuntimeEvaluator(RuntimeEvaluator.commonExterns ++ streamExterns)
 
-  lazy val definitions: RuntimeEvaluator.Env = inStreams.mapValues(x => Lazy(x._1)) ++ spec.definitions.map(d => (d._1.id, Lazy(runtimeEvaluator.evalExpressionArg(d._2, definitions))))
+  lazy val definitions: RuntimeEvaluator.Env = inStreams.mapValues(x => Lazy(x._1)) ++ spec.definitions.map(d => (d._1.id, runtimeEvaluator.evalExpressionArg(d._2, definitions)))
 
   lazy val outStreams: Seq[(Option[String], Stream, TesslaCore.Type)] = spec.out.map { os =>
     (os._2, definitions(os._1.id).get.asInstanceOf[Stream], null)

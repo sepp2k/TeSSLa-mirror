@@ -19,7 +19,6 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
   class TranslatedExpressions {
     val expressions = mutable.Map[Identifier, Core.ExpressionArg]()
-    val identifiers = mutable.Map[Identifier, Identifier]()
     val deferredQueue = mutable.Queue[() => Unit]()
 
     def complete(): Unit = {
@@ -48,14 +47,25 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
           throw WithStackTrace(Errors.StackOverflow(stack.head), stack.tail)
       }
     }
-    f(stack)
   }
 
-  case class TranslationResult(value: Lazy[Option[Any]], expression: Lazy[Core.ExpressionArg])
+  case class TranslationResult(value: Lazy[Option[Any]], expression: Lazy[Core.ExpressionArg], strictId: Lazy[Identifier], lazyId: Lazy[Identifier])
 
-  def mkResult(value: Option[Any], expression: Core.ExpressionArg) = TranslationResult(Lazy(_ => value), Lazy(_ => expression))
+  def mkLiteralResult(value: Option[Any], expression: Core.ExpressionArg, nameOpt: Option[String], translatedExpressions: TranslatedExpressions) =
+    mkResult(Lazy(_ => value), Lazy(_ => expression), nameOpt, translatedExpressions)
 
-  def mkExpressionResult(expression: Lazy[Core.ExpressionArg]) = TranslationResult(Lazy(_ => None), expression)
+  def mkResult(value: Lazy[Option[Any]], expression: Lazy[Core.ExpressionArg], nameOpt: Option[String], translatedExpressions: TranslatedExpressions) = {
+    lazy val id = makeIdentifier(nameOpt)
+    TranslationResult(value, expression, Lazy { stack =>
+      translatedExpressions.expressions += id -> expression.get(stack)
+      id
+    }, Lazy { stack =>
+      translatedExpressions.deferredQueue += (() => {
+        translatedExpressions.expressions += id -> expression.get(stack)
+      })
+      id
+    })
+  }
 
   type Reifier = (String, Any, Core.Type) => (List[Core.ExpressionArg] => Core.Expression, List[Any])
 
@@ -65,11 +75,18 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     ???
   }
 
+  case class ExternResult(value: Lazy[Option[Any]], expression: Lazy[Core.ExpressionArg])
+
+  def mkExpressionResult(expression: Lazy[Core.ExpressionArg]) =
+    ExternResult(Lazy { _ => None }, expression)
 
   type TypeApplicable = List[Core.Type] => Applicable
   type Applicable = List[TranslationResult] => TranslationResult
 
-  val externs = Map[String, TypeApplicable]()
+  type TypeExtern = List[Core.Type] => Extern
+  type Extern = List[TranslationResult] => ExternResult
+
+  val externs = Map[String, TypeExtern]()
 
   val lastExtern = Core.ExternExpression(
     List(Identifier("A"), Identifier("B")),
@@ -80,9 +97,11 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     "last"
   )
 
-  val streamExterns: Map[String, TypeApplicable] = Map(
+  val streamExterns: Map[String, TypeExtern] = Map(
     "last" -> (typeArguments => (arguments => {
-      mkExpressionResult(Lazy { stack => Core.ApplicationExpression(Core.TypeApplicationExpression(lastExtern, typeArguments), arguments.map(_.expression.get(stack))) })
+      mkExpressionResult(Lazy { stack =>
+        Core.ApplicationExpression(Core.TypeApplicationExpression(lastExtern, typeArguments), arguments.map(_.expression.get(stack)))
+      })
     }))
   )
 
@@ -90,25 +109,20 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     val translatedExpressions = new TranslatedExpressions
 
     val inputs: Env = spec.in.map { i =>
-      i._1 -> mkResult(None, Core.ExpressionRef(i._1, translateType(i._2._1)))
+      i._1 -> mkLiteralResult(None, Core.ExpressionRef(i._1, translateType(i._2._1)), extractNameOpt(i._1), translatedExpressions)
     }
 
     lazy val env: Env = inputs ++ spec.definitions.map { entry =>
       (entry._1, translateExpressionArg(entry._2, env, Map(), extractNameOpt(entry._1), translatedExpressions))
     }
 
+    val outputs = spec.out.map { x =>
+      (env(x._1).strictId.get(List(x._1.location)), x._2, Nil)
+    }
+
     translatedExpressions.complete()
 
-    val outputs = spec.out.map(x => (translatedExpressions.identifiers(x._1), x._2, Nil))
-
     Core.Specification(spec.in.mapValues(x => (translateType(x._1), Nil)), translatedExpressions.expressions.toMap, outputs)
-  }
-
-  def createEnvForDefs(defs: Map[Identifier, Typed.ExpressionArg], parent: Env, typeEnv: TypeEnv, translatedFunctions: TranslatedExpressions): Env = {
-    lazy val entries: Env = parent ++ defs.map { entry =>
-      (entry._1, translateExpressionArg(entry._2, entries, typeEnv, extractNameOpt(entry._1), translatedFunctions))
-    }
-    entries
   }
 
   def extractNameOpt(id: Identifier) = {
@@ -116,34 +130,32 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     if (namePos > 0) Some(id.id.substring(0, namePos)) else None
   }
 
-  def translateExpressionArg(expr: Typed.ExpressionArg, env: Env, typeEnv: TypeEnv, nameOpt: Option[String],
+  def translateExpressionArg(expr: Typed.ExpressionArg, env: => Env, typeEnv: TypeEnv, nameOpt: Option[String],
     translatedExpressions: TranslatedExpressions
   ): TranslationResult = expr match {
-    case Typed.ExpressionRef(id, tpe, location) =>
-      val newId = makeIdentifier(extractNameOpt(id), id.location)
-      translatedExpressions.identifiers += id -> newId
-      val result = env(id)
-      TranslationResult(result.value, Lazy { stack =>
-        translatedExpressions.expressions += newId -> result.expression.get(location :: stack)
-        Core.ExpressionRef(newId, translateType(tpe).resolve(typeEnv), location)
-      })
+    case Typed.ExpressionRef(id, tpe, _) =>
+      lazy val result = env(id)
+      TranslationResult(Lazy { stack => result.value.get(stack) }, Lazy { stack =>
+        Core.ExpressionRef(result.strictId.get(stack), translateType(tpe).resolve(typeEnv))
+      }, Lazy { stack => result.strictId.get(stack) }, Lazy { stack => result.lazyId.get(stack) })
     case Typed.IntLiteralExpression(value, location) =>
-      mkResult(Some(value), Core.IntLiteralExpression(value, location))
+      mkLiteralResult(Some(value), Core.IntLiteralExpression(value, location), nameOpt, translatedExpressions)
     case Typed.FloatLiteralExpression(value, location) =>
-      mkResult(Some(value), Core.FloatLiteralExpression(value, location))
+      mkLiteralResult(Some(value), Core.FloatLiteralExpression(value, location), nameOpt, translatedExpressions)
     case Typed.StringLiteralExpression(value, location) =>
-      mkResult(Some(value), Core.StringLiteralExpression(value, location))
+      mkLiteralResult(Some(value), Core.StringLiteralExpression(value, location), nameOpt, translatedExpressions)
     case Typed.ExternExpression(typeParams, params, resultType, name, location) =>
       val expression = Core.ExternExpression(typeParams, params.map(x => (x._1, translateEvaluation(x._2), translateType(x._3).resolve(typeEnv))), translateType(resultType).resolve(typeEnv), name, location)
       val value: Lazy[Option[TypeApplicable]] = Lazy { stack =>
         Some(typeArgs => (args =>
           try {
-            externs(name)(typeArgs)(args)
+            val result = externs(name)(typeArgs)(args)
+            mkResult(result.value, result.expression, nameOpt, translatedExpressions)
           } catch {
-            case e: RuntimeException => mkResult(Some(e), Core.ApplicationExpression(expression, args.map(_.expression.get(stack)))) // TODO smarter error handling?
+            case e: RuntimeException => mkLiteralResult(Some(e), Core.ApplicationExpression(expression, args.map(_.expression.get(stack))), nameOpt, translatedExpressions) // TODO smarter error handling?
           }))
       }
-      TranslationResult(value, Lazy { stack => expression })
+      mkResult(value, Lazy { stack => expression }, nameOpt, translatedExpressions)
     case Typed.FunctionExpression(typeParams, params, body, result, location) =>
       val expression = Lazy { stack =>
         val id = makeIdentifier(nameOpt)
@@ -156,7 +168,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
           val translatedParams = params.map { param =>
             val paramId = makeIdentifier(extractNameOpt(param._1))
             val tpe = translateType(param._3).resolve(innerTypeEnv)
-            param._1 -> (paramId, translateEvaluation(param._2), tpe, mkResult(None, Core.ExpressionRef(paramId, tpe)))
+            param._1 -> (paramId, translateEvaluation(param._2), tpe, mkLiteralResult(None, Core.ExpressionRef(paramId, tpe), nameOpt, translatedExpressions))
           }
 
           lazy val innerEnv: Env = env ++ translatedParams.map(x => (x._1, x._2._4)) ++ translatedBody
@@ -180,59 +192,49 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
         val innerTypeEnv = typeEnv ++ typeParams.zip(typeArgs).map(x => (x._1, x._2))
         translateExpressionArg(result, innerEnv, innerTypeEnv, nameOpt, translatedExpressions)
       })))
-      TranslationResult(value, expression)
+      TranslationResult(value, expression, expression.map(_.id), expression.map(_.id))
     case Typed.RecordConstructorExpression(entries, location) =>
       val translatedEntries = entries.mapValues(translateExpressionArg(_, env, typeEnv, nameOpt, translatedExpressions))
       val value = RuntimeEvaluator.Record(translatedEntries.map(x => (x._1.id, x._2)))
       val expression = Lazy(stack => Core.RecordConstructorExpression(translatedEntries.map(x => (x._1, x._2.expression.get(location :: stack)))))
-      TranslationResult(Lazy(_ => Some(value)), expression)
+      mkResult(Lazy(_ => Some(value)), expression, nameOpt, translatedExpressions)
     case Typed.RecordAccesorExpression(name, entries, location) =>
-      val translatedEntries = translateExpressionArg(entries, env, typeEnv, nameOpt, translatedExpressions)
+      lazy val translatedEntries = translateExpressionArg(entries, env, typeEnv, nameOpt, translatedExpressions)
       val value = Lazy { stack =>
         translatedEntries.value.get(location :: stack).map(_.asInstanceOf[RuntimeEvaluator.Record].entries(name.id).asInstanceOf[TranslationResult])
       }
       val expression = Lazy { stack =>
         value.get(stack).map(_.expression.get(location :: stack)).getOrElse(Core.RecordAccesorExpression(name, translatedEntries.expression.get(location :: stack), location))
       }
-      TranslationResult(value.map(_.map(_.value)), expression)
+      mkResult(value.map(_.map(_.value)), expression, nameOpt, translatedExpressions)
     case Typed.ApplicationExpression(applicable, args, location) =>
-      val translatedApplicable = translateExpressionArg(applicable, env, typeEnv, nameOpt, translatedExpressions)
+      lazy val translatedApplicable = translateExpressionArg(applicable, env, typeEnv, nameOpt, translatedExpressions)
       val Typed.FunctionType(_, paramTypes, _, _) = applicable.tpe
       if (paramTypes.size != args.size) {
         throw InternalError(s"Wrong number of arguments.", location)
       }
-      val translatedArgs = args.map(translateExpressionArg(_, env, typeEnv, nameOpt, translatedExpressions)).zip(paramTypes)
+      lazy val translatedArgs = args.map(translateExpressionArg(_, env, typeEnv, nameOpt, translatedExpressions)).zip(paramTypes)
 
       val value = Lazy { stack =>
         // TODO: handle strict arguments differently here?
         translatedApplicable.value.get(location :: stack).map(x => x.asInstanceOf[Applicable](translatedArgs.map(_._1)))
       }
-      val id = makeIdentifier(nameOpt)
-      translatedExpressions.deferredQueue += (() => {
-        translatedExpressions.expressions += id ->
-          value.get(Nil).map(_.expression.get(List(location))).getOrElse(Core.ApplicationExpression(
-            translatedApplicable.expression.get(List(location)),
-            translatedArgs.map(_._1.expression.get(List(location)))))
-
-      })
-      TranslationResult(value.map(_.map(_.value)), Lazy { stack =>
-        translatedArgs.foreach { arg =>
-          if (arg._2._1 != TesslaAST.LazyEvaluation) {
-            arg._1.expression.get(location :: stack)
-          }
-        }
-        Core.ExpressionRef(id, translateType(expr.tpe).resolve(typeEnv))
-      })
+      val expression = Lazy { stack =>
+        value.get(Nil).map(_.expression.get(location :: stack)).getOrElse(Core.ApplicationExpression(
+          translatedApplicable.expression.get(location :: stack),
+          translatedArgs.map(_._1.expression.get(location :: stack)))) // TODO: take lazy/stict id here appropriately
+      }
+      mkResult(value, expression, nameOpt, translatedExpressions)
     case Typed.TypeApplicationExpression(applicable, typeArgs, location) =>
       val Typed.FunctionType(typeParams, _, _, _) = applicable.tpe
-      val translatedApplicable = translateExpressionArg(applicable, env, typeEnv, nameOpt, translatedExpressions)
+      lazy val translatedApplicable = translateExpressionArg(applicable, env, typeEnv, nameOpt, translatedExpressions)
       val value: Lazy[Option[Applicable]] = Lazy { stack =>
         translatedApplicable.value.get(location :: stack).map(x => x.asInstanceOf[TypeApplicable](typeArgs.map(translateType(_).resolve(typeEnv))))
       }
       val expression = Lazy { stack =>
         Core.TypeApplicationExpression(translatedApplicable.expression.get(location :: stack), typeArgs.map(translateType(_).resolve(typeEnv)))
       }
-      TranslationResult(value, expression)
+      mkResult(value, expression, nameOpt, translatedExpressions)
   }
 
   def translateEvaluation(evaluation: Typed.Evaluation): Core.Evaluation = evaluation match {
@@ -249,6 +251,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
       Core.RecordType(entries.mapValues(translateType), location)
     case Typed.TypeParam(name, location) =>
       Core.TypeParam(name, location)
+    case null => Core.TypeParam(Identifier("NULL")) // FIXME: remove this once the typed AST has all types
   }
 
   private var counter = 0

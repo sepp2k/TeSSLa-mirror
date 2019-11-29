@@ -130,8 +130,10 @@ object RuntimeEvaluator {
 // TODO: Replace argument lists by tuples?
 class RuntimeEvaluator(externs: Map[String, List[Lazy[Any]] => Any]) {
 
-  def evalExpressionArg(arg: Core.ExpressionArg, env: Env): Lazy[Any] = arg match {
-    case Core.ExpressionRef(id, _, _) => env(id.id)
+  def evalExpressionArg(arg: Core.ExpressionArg, env: => Env): Lazy[Any] = arg match {
+    case Core.ExpressionRef(id, _, _) => Lazy {
+      env(id.id).get
+    }
     case e: Core.Expression => Lazy(evalExpression(e, env))
   }
 
@@ -141,7 +143,7 @@ class RuntimeEvaluator(externs: Map[String, List[Lazy[Any]] => Any]) {
         if (params.size != args.size) {
           throw InternalError(s"Called with wrong number of arguments.", location)
         }
-        lazy val newEnv: Env = env ++ params.map(_._1.id).zip(args) ++ body.map(e => (e._1.id, Lazy(evalExpressionArg(e._2, newEnv))))
+        lazy val newEnv: Env = env ++ params.map(_._1.id).zip(args) ++ body.map(e => (e._1.id, evalExpressionArg(e._2, newEnv)))
         evalExpressionArg(result, newEnv).get
       }
     case e: Core.ExternExpression =>
