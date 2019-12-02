@@ -49,6 +49,10 @@ object Errors {
     override def message = s"Type mismatch: Expected $expected, but found $found"
   }
 
+  case class InstArgDoesNotExist(functionName: String, argumentIndex: Int, loc: Location) extends TesslaError {
+    override def message = s"The function $functionName does have an $argumentIndex-th argument."
+  }
+
   case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
     override def message = s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
   }

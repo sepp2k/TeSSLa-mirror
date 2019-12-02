@@ -77,34 +77,53 @@ object Observations {
         "\ntrace_write(events);"
     }
 
-//    private def merge(functions: Seq[Function]): Seq[Function] =
-//      functions.groupBy(_.FunctionName).values.map{ functions =>
-//        functions.reduce((a,b) => a.copy(code = a.code + "\n" + b.code))
-//      }.toSeq
-//
-//    private def merge(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
-//      patterns.groupBy(_.copy(code = None)).values.map { patterns =>
-//        patterns.reduce((a,b) => a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr))))
-//      }.toSeq
-//
-//    private def enclose(functions: Seq[Function]): Seq[Function] =
-//      merge(functions).map{ function =>
-//        function.copy(code = encloseInstrumentationCode(function.code))
-//      }
-//
-//    private def enclose(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
-//      merge(patterns).map { pattern =>
-//        pattern.copy(code = pattern.code.map(encloseInstrumentationCode))
-//      }
-//
-    private def createFunctionObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Map[String, String] =
+    private def mergeObservations(observations: Seq[(String, String)]*) =
+      observations.flatten.groupBy(_._1).map{
+        case (name, seq) =>
+          val code = seq.map(_._2).mkString("\n")
+          name -> encloseInstrumentationCode(code)
+      }
+
+    private def merge[A](maps: Map[String, Seq[A]]*): Map[String, Seq[A]] = maps.flatten.groupBy(_._1).map {
+      case (key, seq) => key -> seq.flatMap(_._2)
+    }
+
+    private def createFunctionObservations(annotationName: String): Map[String, String] =
+      mergeObservations(
+        createFunctionObservations(annotationName, (_, in) => printEventValue(in)),
+        createFunctionObservations(annotationName + "Arg",
+          (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index"))))
+
+    private def createFunctionObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[(String, String)] =
       spec.inStreams.flatMap { in =>
         in.annotations.filter(_.name == annotationName).map { annotation =>
           val name = argumentAsString(annotation, "name")
           val code = createCode(annotation, in)
           (name, code)
         }
-      }.toMap
+      }
+
+    private def assertUnit(annotationName: String): Unit =
+      spec.inStreams.foreach { in =>
+        in.annotations.filter(_.name == annotationName).foreach { annotation =>
+          in.typ.elementType match {
+            case TesslaCore.ObjectType(memberTypes) if memberTypes.isEmpty => // good
+            case _ => error(Errors.WrongType("Events[Unit]", in.typ, in.loc))
+          }
+        }}
+
+    private def createFunctionTypeAssertions(annotationName: String) =
+      spec.inStreams.flatMap { in =>
+        in.annotations.filter(_.name == annotationName).map { annotation =>
+          val name = argumentAsString(annotation, "name")
+          val argIndex = if (annotation.arguments.contains("index")) {
+            argumentAsInt(annotation, "index")
+          } else {
+            -1
+          }
+          name -> (argIndex -> in)
+        }
+      }.groupBy(_._1).mapValues(_.map(_._2))
 //
 //    private def createPatternObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Pattern] =
 //      spec.inStreams.flatMap { in =>
@@ -127,48 +146,65 @@ object Observations {
         s"""trace_push_float(events, "${in.name}", (double) $value);"""
       case TesslaCore.BuiltInType("Bool", Seq()) =>
         s"""trace_push_bool(events, "${in.name}", (bool) $value);"""
-      case _ =>
-        error(Errors.WrongType("Events[Int], Events[Float] or Events[Bool]", in.typ, in.loc))
-        ""
-    }
-
-    protected def printUnitEvent(in: InStreamDescription): String = in.typ.elementType match {
       case TesslaCore.ObjectType(memberTypes) if memberTypes.isEmpty =>
         s"""trace_push_unit(events, "${in.name}");"""
-      case _ =>
-        error(Errors.WrongType("Events[Unit]", in.typ, in.loc))
-        ""
+      case _ => ""
     }
 
     protected def printEventValue(in: InStreamDescription): String = printEvent(in, "value")
 
-    protected def printEventIndex(in: InStreamDescription): String = printEvent(in, "index")
-
     protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
 
-    protected val prefix = "#include \"instrumentation.h\"\n"
+    protected val prefix = "#include \"logging.h\"\n"
+
+    protected def assertSameType(cType: String, stream: TesslaCore.InStreamDescription): Unit = {
+      val types = Map(
+        "Int" -> List("int", "byte", "short", "long", "long long", "char", "int64_t", "int32_t", "int16_t", "int8_t", "uint64_t", "uint32_t", "uint16_t", "uint8_t"),
+        "Bool" -> List("bool", "_Bool"),
+        "Float" -> List("float", "double"),
+        "()" -> List("void")
+      )
+      stream.typ.elementType match {
+        case TesslaCore.ObjectType(memberTypes) if memberTypes.isEmpty =>
+          if (cType != "void") {
+            warn(stream.loc, s"Stream ${stream.name} was declared as ${stream.typ}, but mapped to $cType.")
+          }
+        case TesslaCore.BuiltInType(name, _) if types.contains(name) =>
+          if (!(types(name).contains(cType) || cType.endsWith("*") && name == "Int")) {
+            warn(stream.loc, s"Stream ${stream.name} was declared as ${stream.typ}, but mapped to $cType.")
+          }
+        case _ =>
+          val expectedType = if (cType.endsWith("*")) {
+            "Events[Int]"
+          } else {
+            types.collect{
+              case (streamType, cTypes) if cTypes.contains(cType) => streamType
+            } match {
+              case head :: _ => s"Events[$head]"
+              case Nil => "Events[Int], Events[Float] or Events[Bool]"
+            }
+          }
+          error(Errors.WrongType(expectedType, stream.typ, stream.loc))
+      }
+    }
 
     override protected def translateSpec(): Unit = {
-//      val functionCalls = createFunctionObservations("InstFunctionCall",
-//        (_, in) => printUnitEvent(in))
-//
-//      val functionCallArgs = createFunctionObservations("InstFunctionCallArg",
-//        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
-//
-      val functionCalled = createFunctionObservations("InstFunctionCalled",
-        (_, in) => printUnitEvent(in))
-//
-//      val functionCalledArgs = createFunctionObservations("InstFunctionCalledArg",
-//        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
-//
-//      val functionReturns = createFunctionObservations("InstFunctionReturn",
-//        (_, in) => printUnitEvent(in)) ++ createFunctionObservations("InstFunctionReturnValue",
-//        (_, in) => printEventValue(in))
-//
-//      val functionReturned = createFunctionObservations("InstFunctionReturned",
-//        (_, in) => printUnitEvent(in)) ++ createFunctionObservations("InstFunctionReturnedValue",
-//        (_, in) => printEventValue(in))
-//
+      val functionCall = createFunctionObservations("InstFunctionCall")
+      assertUnit("InstFunctionCall")
+      val functionCallTypeAssertions = createFunctionTypeAssertions("InstFunctionCallArg")
+
+      val functionCalled = createFunctionObservations("InstFunctionCalled")
+      assertUnit("InstFunctionCalled")
+      val functionCalledTypeAssertions = createFunctionTypeAssertions("InstFunctionCalledArg")
+
+      val functionReturn = createFunctionObservations("InstFunctionReturn")
+      val functionReturnTypeAssertions = merge(createFunctionTypeAssertions("InstFunctionReturn"),
+        createFunctionTypeAssertions("InstFunctionReturnArg"))
+
+      val functionReturned = createFunctionObservations("InstFunctionReturned")
+      val functionReturnedTypeAssertions = merge(createFunctionTypeAssertions("InstFunctionReturned"),
+        createFunctionTypeAssertions("InstFunctionReturnedArg"))
+
 //      val globalAssignments = createPatternObservations("GlobalWrite",
 //        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalWriteIndex",
 //        (annotation, in) => printEventIndex(in))
@@ -184,55 +220,68 @@ object Observations {
 //      val localReads = createPatternObservations("LocalRead",
 //        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalReadIndex",
 //        (annotation, in) => printEventIndex(in))
-//
-//      val observations = Observations(
-//        FunctionCalls = enclose(functionCalls ++ functionCallArgs),
-//        FunctionCalled = merge(enclose(functionCalled ++ functionCalledArgs) ++ setups),
-//        FunctionReturns = merge(enclose(functionReturns) ++ teardowns),
-//        FunctionReturned = enclose(functionReturned),
-//        Assignments = enclose(globalAssignments ++ localAssignments),
-//        VarReads = enclose(globalReads ++ localReads),
-//        userCbPrefix = prefix)
 
-      println(cFileName)
-
-      val callbacks = functionCalled.map { case (name, code) =>
+      val callbacks = functionCall.map { case (name, code) =>
         name + "_call" -> code
+      } ++ functionCalled.map { case (name, code) =>
+        name + "_called" -> code
+      } ++ functionReturn.map { case (name, code) =>
+        name + "_return" -> code
+      } ++ functionReturned.map { case (name, code) =>
+        name + "_returned" -> code
       }
 
       val libraryInterface = new CPPBridge.LibraryInterface {
+        def assertTypes(f: CPPBridge.FunctionDesc, assertions: Map[String, Seq[(Int, InStreamDescription)]]): Unit = {
+          assertions.get(f.name).foreach{ seq => seq.foreach {
+            case (argIndex, inStream) =>
+              if (argIndex >= f.parNum()) {
+                error(Errors.InstArgDoesNotExist(f.name, argIndex, inStream.loc))
+              } else if (argIndex < 0) {
+                assertSameType(f.retType(), inStream)
+              } else {
+                assertSameType(f.parType(argIndex), inStream)
+              }
+          }}
+        }
+
         override def checkInstrumentationRequiredFuncReturn(f: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
-          ""
+          assertTypes(f, functionReturnTypeAssertions)
+          if (functionReturn.contains(f.name)) {
+            f.name + "_return"
+          } else {
+            ""
+          }
         }
 
         override def checkInstrumentationRequiredFuncReturned(f: CPPBridge.FunctionDesc, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
-          ""
+          assertTypes(f, functionReturnedTypeAssertions)
+          if (functionReturned.contains(f.name)) {
+            f.name + "_returned"
+          } else {
+            ""
+          }
         }
 
         override def checkInstrumentationRequiredFuncCall(f: CPPBridge.FunctionDesc, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
-          ""
-        }
-
-        override def checkInstrumentationRequiredFuncCalled(f: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
-          println("###########")
-          println(filename)
-          println(line + ", " + col)
-          println("-------")
-          println(f)
-
-          if (functionCalled.contains(f.name)) {
+          assertTypes(f, functionCallTypeAssertions)
+          if (functionCall.contains(f.name)) {
             f.name + "_call"
           } else {
             ""
           }
         }
 
+        override def checkInstrumentationRequiredFuncCalled(f: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
+          assertTypes(f, functionCalledTypeAssertions)
+          if (functionCalled.contains(f.name)) {
+            f.name + "_called"
+          } else {
+            ""
+          }
+        }
+
         override def checkInstrumentationRequiredWrite(pattern: String, typ: String, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
-          println("///////////////////")
-          println(pattern)
-          println(containingFunc)
-          println(filename)
-          println(line + ", " + col)
           ""
         }
 
@@ -240,9 +289,7 @@ object Observations {
           ""
         }
 
-        override def getUserCbPrefix: String = {
-          prefix
-        }
+        override def getUserCbPrefix: String = prefix
 
         override def getCallbackCode(cbName : String) : String = {
           callbacks.getOrElse(cbName, "")
