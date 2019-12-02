@@ -49,7 +49,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
   }
 
   case class TranslationResult(value: StackLazy[Option[Any]],
-    expression: StackLazy[Either[StackLazy[Core.Expression], (StackLazy[Core.ExpressionRef], StackLazy[Core.ExpressionRef])]]
+    expression: StackLazy[Either[StackLazy[Core.Expression], (StackLazy[Core.ExpressionArg], StackLazy[Core.ExpressionArg])]]
   )
 
   def getExpressionArgStrict(result: TranslationResult, stack: Stack): Core.ExpressionArg =
@@ -59,7 +59,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     }
 
   def mkLiteralResult(value: Option[Any], expression: Core.Expression) =
-    TranslationResult(StackLazy(_ => value), StackLazy(_ => Left(StackLazy(_ => expression))))
+    TranslationResult(StackLazy(_ => value), StackLazy(_ => Right((StackLazy(_ => expression),StackLazy(_ => expression)))))
 
 
   type Reifier = (String, Any, Core.Type) => (List[Core.ExpressionArg] => Core.Expression, List[Any])
@@ -121,7 +121,19 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     }
 
     val outputs = spec.out.map { x =>
-      (env(x._1).expression.get(List(x._1.location)).right.get._1.get(List(x._1.location)).id, x._2, Nil)
+      (env(x._1).expression.get(List(x._1.location)) match {
+        case Left(expression) =>
+          val id = makeIdentifier(extractNameOpt(x._1))
+          translatedExpressions.expressions += id -> expression.get(List(x._1.location))
+          id
+        case Right(ref) => ref._1.get(List(x._1.location)) match {
+          case Core.ExpressionRef(id, _, _) => id
+          case expression =>
+            val id = makeIdentifier(extractNameOpt(x._1))
+            translatedExpressions.expressions += id -> expression
+            id
+        }
+      }, x._2, Nil)
     }
 
     translatedExpressions.complete()
@@ -179,7 +191,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
           }
         }))
       }
-      TranslationResult(value, StackLazy(_ => Left(StackLazy(_ => expression))))
+      TranslationResult(value, StackLazy(_ => Right(StackLazy(_ => expression), StackLazy(_ => expression))))
     case Typed.FunctionExpression(typeParams, params, body, result, location) =>
       val ref = StackLazy { stack =>
         val id = makeIdentifier(nameOpt)
