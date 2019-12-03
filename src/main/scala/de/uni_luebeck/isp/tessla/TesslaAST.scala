@@ -124,7 +124,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     override def tpe = {
       applicable.tpe.map { r =>
         val ft = r.asInstanceOf[FunctionType] // TODO: Make typesafe?
-        if (ft.typeParams.nonEmpty) throw new IllegalArgumentException("Unresolved type parameters")
+        //if (ft.typeParams.nonEmpty) throw new IllegalArgumentException("Unresolved type parameters")
         ft.resultType
       }
     }
@@ -201,6 +201,17 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
   case class RecordType(entries: Map[Identifier, Type], location: Location = Location.unknown) extends Type {
     override def resolve(args: Map[Identifier, Type]) = RecordType(entries.mapValues(_.resolve(args)))
+
+    override def toString = {
+      val isTuple = entries.keys.forall(_.id.matches("_\\d+"))
+      if (isTuple) {
+        val sorted = entries.toList.map(x => (x._1.id.substring(1).toInt, x._2)).sortBy(_._1).map(_._2)
+        s"(${sorted.mkString(", ")})"
+      } else {
+        val sorted = entries.toList.sortBy(_._1.id).map(x => x._1 + " = " + x._2)
+        s"{${sorted.mkString(", ")}}"
+      }
+    }
   }
 
   val UnitType = RecordType(Map(), Location.unknown)
