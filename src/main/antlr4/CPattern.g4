@@ -3,11 +3,13 @@ grammar CPattern;
 start: pattern EOF;
 
 pattern
-  : ID #Variable
-  | pattern '[' ']' #Array
-  | pattern '.' ID #Member
-  | '*' pattern #Deref
-  | '&' pattern #Ref
+  : (functionName=ID '::')? name=ID #Variable
+  | pattern '[' ']' #ArrayAccess
+  | pattern '.' ID #StructUnionAccess
+  | pattern '->' ID #StructUnionAccessArrow
+  | '*' pattern #Dereference
+  | '&' pattern #Reference
+  | '(' pattern ')' #Parentheses
   ;
 
 ID: [a-zA-Z_][a-zA-Z0-9_]*;

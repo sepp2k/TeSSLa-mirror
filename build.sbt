@@ -40,7 +40,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-json" % "2.6.6",
   "com.eclipsesource" %% "play-json-schema-validator" % "0.9.4" % "test",
   "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT",
-  "de.uni_luebeck.isp" %% "clang-instrumentation" % "0.0.26"
+  "de.uni_luebeck.isp" %% "clang-instrumentation" % "0.0.27"
 )
 
 mainClass in (Compile, run) := Some("de.uni_luebeck.isp.tessla.Main")

@@ -1,22 +1,42 @@
 package de.uni_luebeck.isp.tessla.analyses
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Paths}
 
 import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaCore, TranslationPhase}
 import de.uni_luebeck.isp.clang_instrumentation.CPPBridge
 import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError}
-import de.uni_luebeck.isp.tessla.CPatternParser.{ArrayContext, DerefContext, MemberContext, PatternContext, RefContext, VariableContext}
+import de.uni_luebeck.isp.tessla.CPatternParser.{ArrayAccessContext, DereferenceContext, ParenthesesContext, PatternContext, ReferenceContext, StructUnionAccessArrowContext, StructUnionAccessContext, VariableContext}
 import de.uni_luebeck.isp.tessla.TesslaCore.InStreamDescription
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
 
 
 object Observations {
-  case class Pattern(Variable: Option[Variable] = None, ArrayAccess: Option[Pattern] = None, StructUnionAccess: Option[StructUnionAccess] = None, Ref: Option[Pattern] = None, DeRef: Option[Pattern] = None, code: Option[String] = None)
-  case class Variable(VarName: String, Function: Option[String] = None)
-  case class StructUnionAccess(Base: Pattern, Field: String)
+  sealed abstract class Pattern
+  final case class Variable(functionName: Option[String], name: String) extends Pattern {
+    override def toString: String = functionName match {
+      case Some(value) => s"$value::$name"
+      case None => name
+    }
+  }
+  final case class StructUnionAccess(base: Pattern, fieldName: String, isArrow: Boolean = false) extends Pattern {
+    override def toString: String = if (isArrow) {
+      s"$base->$fieldName"
+    } else {
+      s"$base.$fieldName"
+    }
+  }
+  final case class ArrayAccess(base: Pattern) extends Pattern {
+    override def toString: String = s"$base[]"
+  }
+  final case class Reference(base: Pattern) extends Pattern {
+    override def toString: String = s"&($base)"
+  }
+  final case class Dereference(base: Pattern) extends Pattern {
+    override def toString: String = s"*($base)"
+  }
 
   class InstrumenterWorker(spec: TesslaCore.Specification, cFileName: String) extends TranslationPhase.Translator[Unit] {
-    def parsePattern(str: String, loc: Location, function: Option[String] = None): Pattern = {
+    def parsePattern(str: String, loc: Location): Pattern = {
       val src = CharStreams.fromString(str, loc.path)
       val lexer = new CPatternLexer(src)
       lexer.setLine(loc.range.map(_.fromLine).getOrElse(0))
@@ -37,11 +57,13 @@ object Observations {
       }
 
       def translatePattern(context: PatternContext): Pattern = context match {
-        case ctx: ArrayContext => Pattern(ArrayAccess = Some(translatePattern(ctx.pattern())))
-        case ctx: RefContext => Pattern(Ref = Some(translatePattern(ctx.pattern())))
-        case ctx: VariableContext => Pattern(Variable = Some(Variable(VarName = ctx.ID().getSymbol.getText, Function = function)))
-        case ctx: MemberContext => Pattern(StructUnionAccess = Some(StructUnionAccess(Base = translatePattern(ctx.pattern()), Field = ctx.ID().getSymbol.getText)))
-        case ctx: DerefContext => Pattern(DeRef = Some(translatePattern(ctx.pattern())))
+        case ctx: ArrayAccessContext => ArrayAccess(translatePattern(ctx.pattern()))
+        case ctx: ReferenceContext => Reference(translatePattern(ctx.pattern()))
+        case ctx: VariableContext => Variable(Option(ctx.functionName).map(_.getText), ctx.name.getText)
+        case ctx: StructUnionAccessContext => StructUnionAccess(translatePattern(ctx.pattern()), ctx.ID().getSymbol.getText)
+        case ctx: StructUnionAccessArrowContext => StructUnionAccess(translatePattern(ctx.pattern()), ctx.ID().getSymbol.getText, isArrow = true)
+        case ctx: DereferenceContext => Dereference(translatePattern(ctx.pattern()))
+        case ctx: ParenthesesContext => translatePattern(ctx.pattern())
       }
 
       translatePattern(pattern)
@@ -124,21 +146,22 @@ object Observations {
           name -> (argIndex -> in)
         }
       }.groupBy(_._1).mapValues(_.map(_._2))
-//
-//    private def createPatternObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Pattern] =
-//      spec.inStreams.flatMap { in =>
-//        in.annotations.filter(_.name == annotationName).map { annotation =>
-//          val function = if (annotation.arguments.contains("function")) {
-//            Some(argumentAsString(annotation, "function"))
-//          } else {
-//            None
-//          }
-//          val lvalue = argumentAsString(annotation, "lvalue")
-//          val pattern = parsePattern(lvalue, annotation.arguments("lvalue").loc, function)
-//          pattern.copy(code = Some(createCode(annotation, in)))
-//        }
-//      }
-//
+
+    private def createPatternObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String) =
+      spec.inStreams.flatMap { in =>
+        in.annotations.filter(_.name == annotationName).map { annotation =>
+          val function = if (annotation.arguments.contains("function")) {
+            Some(argumentAsString(annotation, "function"))
+          } else {
+            None
+          }
+          val lvalue = argumentAsString(annotation, "lvalue")
+          val pattern = parsePattern(lvalue, annotation.arguments("lvalue").loc)
+          val code = createCode(annotation, in)
+          (pattern, function, code)
+        }
+      }
+
     protected def printEvent(in: InStreamDescription, value: String): String = in.typ.elementType match {
       case TesslaCore.BuiltInType("Int", Seq()) =>
         s"""trace_push_int(events, "${in.name}", (int64_t) $value);"""
@@ -154,6 +177,8 @@ object Observations {
     protected def printEventValue(in: InStreamDescription): String = printEvent(in, "value")
 
     protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
+
+    protected def printEventIndex(in: InStreamDescription, index: Int): String = printEvent(in, s"index$index")
 
     protected val prefix = "#include \"logging.h\"\n"
 
@@ -205,21 +230,27 @@ object Observations {
       val functionReturnedTypeAssertions = merge(createFunctionTypeAssertions("InstFunctionReturned"),
         createFunctionTypeAssertions("InstFunctionReturnedArg"))
 
-//      val globalAssignments = createPatternObservations("GlobalWrite",
-//        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalWriteIndex",
-//        (annotation, in) => printEventIndex(in))
-//
-//      val localAssignments = createPatternObservations("LocalWrite",
-//        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalWriteIndex",
-//        (annotation, in) => printEventIndex(in))
-//
-//      val globalReads = createPatternObservations("GlobalRead",
-//        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalReadIndex",
-//        (annotation, in) => printEventIndex(in))
-//
-//      val localReads = createPatternObservations("LocalRead",
-//        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalReadIndex",
-//        (annotation, in) => printEventIndex(in))
+      // TODO merge pattern observations for same pattern into one observation entry and call encloseInstrumentationCode
+
+      val writes = createPatternObservations("InstWrite",
+          (annotation, in) => printEventValue(in)) ++
+        createPatternObservations("InstWriteIndex",
+          (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index")))
+
+      val writesInFunction = createPatternObservations("InstWriteInFunction",
+          (annotation, in) => printEventValue(in)) ++
+        createPatternObservations("InstWriteInFunctionIndex",
+          (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index")))
+
+      val reads = createPatternObservations("InstRead",
+          (annotation, in) => printEventValue(in)) ++
+        createPatternObservations("InstReadIndex",
+          (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index")))
+
+      val readsInFunction = createPatternObservations("InstReadInFunction",
+          (annotation, in) => printEventValue(in)) ++
+        createPatternObservations("InstReadInFunctionIndex",
+          (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index")))
 
       val callbacks = functionCall.map { case (name, code) =>
         name + "_call" -> code
@@ -282,10 +313,12 @@ object Observations {
         }
 
         override def checkInstrumentationRequiredWrite(pattern: String, typ: String, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
+          // TODO assert types and create callbacks for writes and writesInFunction
           ""
         }
 
         override def checkInstrumentationRequiredRead(pattern: String, typ: String, containingFunc: CPPBridge.FullFunctionDesc, filename: String, line: Int, col: Int) : String = {
+          // TODO assert types and create callbacks for reads and readsInFunction
           ""
         }
 

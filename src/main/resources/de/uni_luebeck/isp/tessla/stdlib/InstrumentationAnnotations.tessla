@@ -29,39 +29,39 @@ def @InstFunctionReturnedArg(name: String, index: Int)
 
 ## Instrument every reading access of a global variable with the given name.
 ## Can handle more complex patterns, e.g. `*&bar[][].foo`
-def @GlobalRead(lvalue: String)
+def @InstRead(lvalue: String)
 
 ## Instrument every reading access of a global variable with the given name.
 ## Can handle more complex patterns, e.g. `*&bar[][].foo`
 ## Get the index as event's value.
-def @GlobalReadIndex(lvalue: String)
+def @InstReadIndex(lvalue: String, index: Int)
 
 ## Instrument every reading access of a local variable with the given name inside the given function.
 ## Can handle more complex patterns, e.g. `*&bar[][].foo`
-def @LocalRead(lvalue: String, function: String)
+def @InstReadInFunction(lvalue: String, function: String)
 
 ## Instrument every reading access of a local variable with the given name inside the given function.
 ## Can handle more complex patterns, e.g. `*&bar[][].foo`
 ## Get the index as event's value.
-def @LocalReadIndex(lvalue: String, function: String)
+def @InstReadInFunctionIndex(lvalue: String, index: Int, function: String)
 
 ## Instrument every writing access of a global variable with the given name.
 ## Can handle more complex patterns, e.g. `*&bar[][].foo`
-def @GlobalWrite(lvalue: String)
+def @InstWrite(lvalue: String)
 
 ## Instrument every writing access of a global variable with the given name.
 ## Can handle more complex patterns, e.g. `*&bar[][].foo`
 ## Get the index as event's value.
-def @GlobalWriteIndex(lvalue: String)
+def @InstWriteIndex(lvalue: String, index: Int)
 
 ## Instrument every writing access of a local variable with the given name inside the given function.
 ## Can handle more complex patterns, e.g. `*&bar[][].foo`
-def @LocalWrite(lvalue: String, function: String)
+def @InstWriteInFunction(lvalue: String, function: String)
 
 ## Instrument every writing access of a local variable with the given name inside the given function.
 ## Can handle more complex patterns, e.g. `*&bar[][].foo`
 ## Get the index as event's value.
-def @LocalWriteIndex(lvalue: String, function: String)
+def @InstWriteInFunctionIndex(lvalue: String, index: Int, function: String)
 
 ## Writes the current thread ID to the annotated stream every time any other instrumentation produces any event
 def @ThreadId
