@@ -1,6 +1,8 @@
 # Changelog
 
-## Version 1.0.7 (upcoming)
+## Version 1.0.8 (upcoming)
+
+## Version 1.0.7
 
 ### Breaking Changes
 
