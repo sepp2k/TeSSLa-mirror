@@ -2,16 +2,17 @@ package de.uni_luebeck.isp.tessla
 
 import scala.collection.mutable
 import de.uni_luebeck.isp.tessla.Errors._
+import de.uni_luebeck.isp.tessla.Tessla.TimeLiteral
 import de.uni_luebeck.isp.tessla.TesslaCore.CurriedPrimitiveOperator
 import de.uni_luebeck.isp.tessla.util._
 
-class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, TesslaCore.Specification] {
+class ConstantEvaluator(baseTime: Option[TimeLiteral]) extends TranslationPhase[TypedTessla.TypedSpecification, TesslaCore.Specification] {
   override def translate(spec: TypedTessla.TypedSpecification) = {
-    new ConstantEvaluatorWorker(spec, baseTimeUnit).translate()
+    new ConstantEvaluatorWorker(spec, baseTime).translate()
   }
 }
 
-class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit])
+class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTime: Option[TimeLiteral])
   extends TesslaCore.IdentifierFactory with TranslationPhase.Translator[TesslaCore.Specification] {
   type Env = Map[TypedTessla.Identifier, EnvEntry]
   type TypeEnv = Map[TypedTessla.Identifier, TesslaCore.ValueType]
@@ -101,14 +102,21 @@ class ConstantEvaluatorWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit
   def translateLiteral(literal: Tessla.LiteralValue, loc: Location): TesslaCore.Value = literal match {
     case Tessla.IntLiteral(x) =>
       TesslaCore.IntValue(x, loc)
-    case Tessla.TimeLiteral(x, tu) =>
-      baseTimeUnit match {
+    case timeLit: Tessla.TimeLiteral =>
+      baseTime match {
         case Some(base) =>
-          val conversionFactor = tu.convertTo(base).getOrElse(throw Errors.TimeUnitConversionError(tu, base))
-          TesslaCore.IntValue(conversionFactor * x, loc)
+          val unitConversionFactor = timeLit.unit.convertTo(base.unit).getOrElse{
+            error(Errors.TimeUnitConversionError(timeLit.unit, base.unit))
+            BigInt(1)
+          }
+          val value = unitConversionFactor * timeLit.value / base.value
+          if (timeLit.value > 0 && value == 0) {
+            error(Errors.TimeConversionError(timeLit, base))
+          }
+          TesslaCore.IntValue(value, loc)
         case None =>
-          error(UndefinedTimeUnit(tu.loc))
-          TesslaCore.IntValue(x, loc)
+          error(UndefinedBaseTime(timeLit.unit.loc))
+          TesslaCore.IntValue(timeLit.value, loc)
       }
     case Tessla.FloatLiteral(f) =>
       TesslaCore.FloatValue(f, loc)

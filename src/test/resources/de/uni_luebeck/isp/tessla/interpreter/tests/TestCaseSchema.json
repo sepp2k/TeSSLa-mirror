@@ -24,20 +24,8 @@
       "type": "integer",
       "minimum": 0
     },
-    "timeUnit": {
-      "type": "string",
-      "enum": [
-        "fs",
-        "ps",
-        "ns",
-        "µs",
-        "us",
-        "ms",
-        "s",
-        "min",
-        "h",
-        "d"
-      ]
+    "baseTime": {
+      "type": "string"
     },
     "expectedObservations": {
       "type": "string"

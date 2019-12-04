@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Errors.{ParserError, UnknownTimeUnit}
+
 object Tessla {
   case class Specification(statements: Seq[Statement]) {
     override def toString = statements.mkString("\n")
@@ -207,6 +209,16 @@ object Tessla {
 
   case class TimeLiteral(value: BigInt, unit: TimeUnit) extends LiteralValue {
     override def toString = s"$value $unit"
+  }
+
+  object TimeLiteral {
+    def fromString(str: String, loc: Location): TimeLiteral = {
+      val re = raw"""([0-9]+)\s*([_\p{L}][_\p{L}\p{Digit}]*)""".r
+      str match {
+        case re(int, unit) => TimeLiteral(int.toInt, TimeUnit.fromString(unit, loc))
+        case _ => throw ParserError(s"Unable to parse time literal $str", loc)
+      }
+    }
   }
 
   case class FloatLiteral(value: Double) extends LiteralValue

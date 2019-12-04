@@ -2,5 +2,5 @@
   "spec": "timeunits2.tessla",
   "input": "timeunits2.input",
   "expectedOutput": "timeunits2.output",
-  "timeUnit": "fs"
+  "baseTime": "1 fs"
 }

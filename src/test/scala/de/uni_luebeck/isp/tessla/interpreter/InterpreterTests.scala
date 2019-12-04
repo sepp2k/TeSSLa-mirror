@@ -24,7 +24,7 @@ class InterpreterTests extends FunSuite {
                         expectedErrors: Option[String], expectedWarnings: Option[String],
                         expectedObservationErrors: Option[String],
                         expectedRuntimeErrors: Option[String], expectedObservations: Option[String],
-                        abortAt: Option[Int], timeUnit: Option[String])
+                        abortAt: Option[Int], baseTime: Option[String])
 
     implicit val timeUnitReads: Reads[Option[String]] = (__ \ "timeunit").readNullable[String](verifying(List("ns", "us", "ms", "s", "min", "h", "d").contains))
     implicit val interpreterTestReads: Reads[TestCase] = Json.reads[TestCase]
@@ -140,7 +140,7 @@ class InterpreterTests extends FunSuite {
       val testCase = parseTestCase(s"$path/$name")
       test(s"$path/$name (Interpreter)") {
         val options = Compiler.Options(
-          timeUnitString = testCase.timeUnit,
+          baseTimeString = testCase.baseTime,
           includeResolver = IncludeResolvers.fromResource(getClass, root),
           stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
           stdlibPath = "Predef.tessla",

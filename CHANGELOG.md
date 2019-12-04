@@ -2,6 +2,10 @@
 
 ## Version 1.0.8 (upcoming)
 
+### Breaking Changes
+
+* The command line option `--timeunit` was replaced with the new option `--basetime` which takes a time literal instead of a time unit. The APIs were updated accordingly.
+
 ## Version 1.0.7
 
 ### Breaking Changes

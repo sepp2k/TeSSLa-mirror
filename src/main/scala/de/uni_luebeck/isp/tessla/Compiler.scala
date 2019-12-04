@@ -1,16 +1,18 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Tessla.TimeLiteral
 import org.antlr.v4.runtime.CharStream
 
 object Compiler {
   case class Options(
-    timeUnitString: Option[String],
+    baseTimeString: Option[String],
     includeResolver: String => Option[CharStream],
     stdlibIncludeResolver: String => Option[CharStream],
     stdlibPath: String,
     currySignalLift: Boolean
   ) {
-    lazy val timeUnit = timeUnitString.map(TimeUnit.fromString(_, Location.option("timeunit")))
+    TimeLiteral
+    lazy val baseTime = baseTimeString.map(TimeLiteral.fromString(_, Location.option("basetime")))
   }
 
   def instantiatePipeline(options: Options): TranslationPhase[CharStream, TesslaCore.Specification] = {
@@ -19,7 +21,7 @@ object Compiler {
       .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
-      .andThen(new ConstantEvaluator(options.timeUnit))
+      .andThen(new ConstantEvaluator(options.baseTime))
       .andThen(CycleDetection)
       .andThen(new EnableIf[TesslaCore.Specification](options.currySignalLift, CurrySignalLift))
       //.andThen(RemoveUnusedDefinitions)

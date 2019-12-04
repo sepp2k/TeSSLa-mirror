@@ -2,6 +2,6 @@
   "spec": "timeunits.tessla",
   "input": "timeunits.input",
   "expectedOutput": "timeunits.output",
-  "timeUnit": "ms"
+  "baseTime": "1 ms"
 }
             

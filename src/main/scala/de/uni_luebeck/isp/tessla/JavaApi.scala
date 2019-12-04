@@ -126,10 +126,10 @@ object JavaApi {
   def compile(tessla: String, fileName: String): CompilationResult =
     compile(tessla, fileName, null)
 
-  def compile(tessla: String, fileName: String, timeUnit: String): CompilationResult = {
+  def compile(tessla: String, fileName: String, baseTime: String): CompilationResult = {
     val specSource = CharStreams.fromString(tessla, fileName)
     val compilerOptions = Compiler.Options(
-      timeUnitString = Option(timeUnit),
+      baseTimeString = Option(baseTime),
       includeResolver = IncludeResolvers.empty,
       stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
       stdlibPath = "Predef.tessla",
