@@ -1,41 +1,73 @@
 package de.uni_luebeck.isp.tessla.util
 
-class LazyWithStack[A, Stack](a: (Stack, Boolean) => A) {
-  override def toString = s"Lazy($a)"
+import cats._
+import cats.implicits._
 
-  private var computing = false
-  private var computationStack: Option[Stack] = None
+class LazyWithStack[Stack] {
 
-  private var result: Option[A] = None
+  object StackLazy {
+    def apply[A](a: Stack => A) = new StackLazyImpl(a)
 
-  def get(stack: Stack): A = {
-    result match {
-      case Some(r) => r
-      case None =>
-        val rec = computing
-        computing = true
-        computationStack = Some(stack)
-        try {
-          val r = a(stack, rec)
-          result = Some(r)
-          r
-        } finally {
-          computing = false
+    implicit def monadInstance: Monad[StackLazyImpl] = new Monad[StackLazyImpl] {
+      override def pure[A](x: A) = StackLazy(_ => x)
+
+      override def map[A, B](fa: StackLazyImpl[A])(f: A => B) = StackLazy {stack =>
+        f(fa.get(stack))
+      }
+
+      override def flatMap[A, B](fa: StackLazyImpl[A])(f: A => StackLazyImpl[B]) =
+        StackLazy[B](stack =>
+          f(fa.get(stack)).get(stack)
+        )
+
+      override def tailRecM[A, B](a: A)(f: A => StackLazyImpl[Either[A, B]]) =
+        flatMap(f(a)) {
+          case Right(b) => pure(b)
+          case Left(nextA) => tailRecM(nextA)(f)
         }
     }
+
   }
 
-  def flatMap[B](f: A => LazyWithStack[B, Stack]): LazyWithStack[B, Stack] = LazyWithStack((stack, _) => f(get(stack)).get(stack))
+  type StackLazy[+A] = StackLazyImpl[_ <: A]
 
-  def map[B](f: A => B): LazyWithStack[B, Stack] = LazyWithStack((stack, _) => f(get(stack)))
+  class StackLazyImpl[A](a: Stack => A) {
+    override def toString = s"Lazy($a)"
 
-  def getComputationStack = computationStack
+    private var computing = false
+    private var computationStack: Option[Stack] = None
 
-  def isComputing = computing
+    private var result: Option[A] = None
+
+    def get(stack: Stack): A = {
+      result match {
+        case Some(r) => r
+        case None =>
+          val rec = computing
+          computing = true
+          computationStack = Some(stack)
+          try {
+            val r = call(stack, rec)(a)
+            result = Some(r)
+            r
+          } finally {
+            computing = false
+          }
+      }
+    }
+
+    def getComputationStack = computationStack
+
+    def isComputing = computing
+
+    def toLazy(stack: Stack) = Lazy(get(stack))
+  }
+
+  def call[A](stack: Stack, rec: Boolean)(a: Stack => A) = a(stack)
+
 }
 
 object LazyWithStack {
-  def apply[A, Stack](a: (Stack, Boolean) => A): LazyWithStack[A, Stack] =
-    new LazyWithStack(a)
+  def apply[Stack]: LazyWithStack[Stack] = new LazyWithStack
 }
 

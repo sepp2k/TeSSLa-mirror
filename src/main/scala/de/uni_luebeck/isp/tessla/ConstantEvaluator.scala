@@ -2,8 +2,10 @@ package de.uni_luebeck.isp.tessla
 
 import scala.collection.mutable
 import de.uni_luebeck.isp.tessla.Errors._
-import de.uni_luebeck.isp.tessla.util.LazyWithStack
+import de.uni_luebeck.isp.tessla.util.{Lazy, LazyWithStack}
 import TesslaAST.{Core, Identifier, Typed}
+import cats._
+import cats.implicits._
 
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit], evaluator: Evaluator) extends TranslationPhase[Typed.Specification, Core.Specification] {
   override def translate(spec: Typed.Specification) = {
@@ -14,9 +16,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit], evaluator: Evaluator) ex
 class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[TimeUnit])
   extends TranslationPhase.Translator[Core.Specification] {
 
-  println()
-  println(spec)
-  println()
+  //println(spec)
 
   type Env = Map[Identifier, TranslationResult]
   type TypeEnv = Map[Identifier, Core.Type]
@@ -34,24 +34,28 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
   type Stack = List[Location]
 
-  type StackLazy[+A] = LazyWithStack[_ <: A, Stack]
-
-  def StackLazy[A](f: Stack => A): StackLazy[A] = LazyWithStack[A, Stack] { (stack, rec) =>
-    if (stack.size > 1000) {
-      throw WithStackTrace(Errors.StackOverflow(stack.head), stack.tail)
-    } else if (rec) {
-      throw WithStackTrace(InfiniteRecursion(stack.head), stack.tail)
-    } else {
-      try {
-        f(stack)
-      } catch {
-        case err: InternalError =>
-          throw WithStackTrace(err, stack)
-        case _: StackOverflowError =>
-          throw WithStackTrace(Errors.StackOverflow(stack.head), stack.tail)
+  val lazyWithStack = new LazyWithStack[Stack] {
+    override def call[A](stack: Stack, rec: Boolean)(a: Stack => A) = {
+      if (stack.size > 1000) {
+        throw WithStackTrace(Errors.StackOverflow(stack.head), stack.tail)
+      } else if (rec) {
+        throw WithStackTrace(InfiniteRecursion(stack.head), stack.tail)
+      } else {
+        try {
+          a(stack)
+        } catch {
+          case err: InternalError =>
+            throw WithStackTrace(err, stack)
+          case _: StackOverflowError =>
+            throw WithStackTrace(Errors.StackOverflow(stack.head), stack.tail)
+        }
       }
     }
+
   }
+
+  import lazyWithStack.StackLazy
+  import lazyWithStack.StackLazy.monadInstance
 
   case class TranslationResult(value: StackLazy[Option[Any]],
     expression: StackLazy[Either[StackLazy[Core.Expression], (StackLazy[Core.ExpressionArg], StackLazy[Core.ExpressionArg])]]
@@ -97,7 +101,18 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
   val noExtern: TypeExtern = _ => _ => mkExpressionResult(StackLazy { _ => None })
 
-  val externs: Map[String, TypeExtern] = List("last", "slift", "default", "lift", "nil", "time", "false", "true").map(_ -> noExtern).toMap
+  val streamExterns: Map[String, TypeExtern] = List("last", "slift", "default", "lift", "nil", "time", "false", "true",
+    "delay", "defaultFrom", "merge", "String_format").map(_ -> noExtern).toMap
+
+  def valueExtern(f: List[Lazy[Any]] => Any): TypeExtern = _ => args => ExternResult(StackLazy { stack =>
+    val valueArgs: Option[List[Lazy[Any]]] = args.map(_.value.get(stack).map(Lazy(_))).sequence
+    valueArgs.map(f)
+  }, StackLazy(_ => None))
+
+  val valueExterns: Map[String, TypeExtern] =
+    RuntimeEvaluator.commonExterns.mapValues(valueExtern)
+
+  val externs = streamExterns ++ valueExterns
 
   override def translateSpec(): Core.Specification = {
     val translatedExpressions = new TranslatedExpressions
@@ -255,7 +270,9 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
         value.get(stack).map(_.expression.get(location :: stack)).getOrElse(
           Left(StackLazy(stack => Core.RecordAccesorExpression(name, getExpressionArgStrict(translatedEntries, location :: stack), location))))
       }
-      TranslationResult(value.map(_.map(_.value)), expression)
+      TranslationResult(StackLazy { stack =>
+        value.get(stack).flatMap(_.value.get(stack)) // TODO: use sequence to make more elegant
+      }, expression)
     case Typed.ApplicationExpression(applicable, args, location) =>
       lazy val translatedApplicable = translateExpressionArg(applicable, env, typeEnv, nameOpt, translatedExpressions)
       val Typed.FunctionType(_, paramTypes, _, _) = applicable.tpe
@@ -279,7 +296,8 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
       //val Typed.FunctionType(typeParams, _, _, _) = applicable.tpe // TODO: check that number of typeArgs conforms to number of typeParams once types are correct
       lazy val translatedApplicable = translateExpressionArg(applicable, env, typeEnv, nameOpt, translatedExpressions)
       val value: StackLazy[Option[Applicable]] = StackLazy { stack =>
-        translatedApplicable.value.get(location :: stack).map(x => x.asInstanceOf[TypeApplicable](typeArgs.map(translateType(_).resolve(typeEnv))))
+        translatedApplicable.value.get(location :: stack).map(
+          _.asInstanceOf[TypeApplicable](typeArgs.map(translateType(_).resolve(typeEnv))))
       }
       val expression = StackLazy { stack =>
         Core.TypeApplicationExpression(getExpressionArgStrict(translatedApplicable, location :: stack), typeArgs.map(translateType(_).resolve(typeEnv)))

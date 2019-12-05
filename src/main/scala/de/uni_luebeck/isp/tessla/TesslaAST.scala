@@ -160,6 +160,8 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     override def tpe = target.tpe.map { t =>
       t.asInstanceOf[RecordType].entries(name)
     }
+
+    override def toString = target + "." + name
   }
 
   case class StringLiteralExpression(value: String, location: Location = Location.unknown) extends Expression {
@@ -196,7 +198,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   case class InstatiatedType(name: String, typeArgs: List[Type], location: Location = Location.unknown) extends Type {
     override def resolve(args: Map[Identifier, Type]) = InstatiatedType(name, typeArgs.map(_.resolve(args)))
 
-    override def toString = name + (if (typeArgs.nonEmpty) "(" + typeArgs.mkString(", ") + ")" else "")
+    override def toString = name + (if (typeArgs.nonEmpty) "[" + typeArgs.mkString(", ") + "]" else "")
   }
 
   case class RecordType(entries: Map[Identifier, Type], location: Location = Location.unknown) extends Type {
