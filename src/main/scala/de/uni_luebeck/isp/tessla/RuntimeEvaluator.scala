@@ -25,7 +25,8 @@ object RuntimeEvaluator {
     }
   }
 
-  def strict(f: List[Any] => Any) = (list: List[Lazy[Any]]) => f(list.map(_.get))
+  def strict(f: List[Any] => Any) = (list: List[Lazy[Any]]) =>
+    f(list.map(_.get))
 
   def binIntOp(f: (BigInt, BigInt) => Any) = strict(l =>
     f(l(0).asInstanceOf[BigInt], l(1).asInstanceOf[BigInt]))

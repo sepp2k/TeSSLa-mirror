@@ -39,12 +39,14 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
       case Macro(typeParameters, parameters, body, returnType, headerLoc, result, loc, _) =>
         Typed.FunctionExpression(
           typeParameters.map(toIdenifier(_, Location.unknown)).toList,
-          parameters.map(x => (TesslaAST.Identifier(x.param.id.name, x.loc), TesslaAST.LazyEvaluation, toType(x.parameterType))).toList, // TODO: determine lazyness
+          parameters.map(x => (TesslaAST.Identifier(x.param.id.name, x.loc), if (x.parameterType.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation,
+            toType(x.parameterType))).toList, // TODO: determine lazyness
           translateEnv(body),
           Typed.ExpressionRef(toIdenifier(result.id, result.loc), lookupType(result.id, body)),
           loc
         )
-      case Variable(id, loc) => Typed.ExpressionRef(toIdenifier(id, loc), lookupType(id, env), loc) // TODO: determine type
+      case Variable(id, loc) =>
+        Typed.ExpressionRef(toIdenifier(id, loc), lookupType(id, env), loc) // TODO: determine type
       case MacroCall(macroID, macroLoc, typeArgs, args, loc) =>
         Typed.ApplicationExpression(
           Typed.TypeApplicationExpression(
@@ -63,7 +65,9 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
           case _ => result
         }
       case StaticIfThenElse(condition, thenCase, elseCase, loc) =>
-        Typed.ApplicationExpression(staticiteExtern, List(
+        Typed.ApplicationExpression(Typed.TypeApplicationExpression(staticiteExtern, List(
+          lookupType(thenCase.id, env)
+        )), List(
           Typed.ExpressionRef(toIdenifier(condition.id, loc), lookupType(condition.id, env), loc),
           Typed.ExpressionRef(toIdenifier(thenCase.id, loc), lookupType(thenCase.id, env), loc),
           Typed.ExpressionRef(toIdenifier(elseCase.id, loc), lookupType(elseCase.id, env), loc)
@@ -92,7 +96,7 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
     case TypedTessla.BuiltInType(name, typeArgs) => Typed.InstatiatedType(name, typeArgs.map(toType(_)).toList)
     case TypedTessla.FunctionType(typeParameters, parameterTypes, returnType, _) =>
       Typed.FunctionType(typeParameters.map(toIdenifier(_, Location.unknown)).toList,
-        parameterTypes.map(x => (TesslaAST.LazyEvaluation, toType(x))).toList,
+        parameterTypes.map(x => (if (x.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation, toType(x))).toList,
         toType(returnType))
     case TypedTessla.ObjectType(memberTypes, isOpen) =>
       if (isOpen) {

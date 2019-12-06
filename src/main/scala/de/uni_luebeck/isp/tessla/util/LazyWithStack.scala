@@ -6,21 +6,21 @@ import cats.implicits._
 class LazyWithStack[Stack] {
 
   object StackLazy {
-    def apply[A](a: Stack => A) = new StackLazyImpl(a)
+    def apply[A](a: Stack => A) = new StackLazy(a)
 
-    implicit def monadInstance: Monad[StackLazyImpl] = new Monad[StackLazyImpl] {
+    implicit def monadInstance: Monad[StackLazy] = new Monad[StackLazy] {
       override def pure[A](x: A) = StackLazy(_ => x)
 
-      override def map[A, B](fa: StackLazyImpl[A])(f: A => B) = StackLazy {stack =>
+      override def map[A, B](fa: StackLazy[A])(f: A => B) = StackLazy {stack =>
         f(fa.get(stack))
       }
 
-      override def flatMap[A, B](fa: StackLazyImpl[A])(f: A => StackLazyImpl[B]) =
+      override def flatMap[A, B](fa: StackLazy[A])(f: A => StackLazy[B]) =
         StackLazy[B](stack =>
           f(fa.get(stack)).get(stack)
         )
 
-      override def tailRecM[A, B](a: A)(f: A => StackLazyImpl[Either[A, B]]) =
+      override def tailRecM[A, B](a: A)(f: A => StackLazy[Either[A, B]]) =
         flatMap(f(a)) {
           case Right(b) => pure(b)
           case Left(nextA) => tailRecM(nextA)(f)
@@ -29,30 +29,34 @@ class LazyWithStack[Stack] {
 
   }
 
-  type StackLazy[+A] = StackLazyImpl[_ <: A]
-
-  class StackLazyImpl[A](a: Stack => A) {
+  class StackLazy[+A](a: Stack => A) {
     override def toString = s"Lazy($a)"
 
     private var computing = false
     private var computationStack: Option[Stack] = None
 
-    private var result: Option[A] = None
+    private val result: Helper[_ <: A] = new Helper(a)
 
-    def get(stack: Stack): A = {
-      result match {
-        case Some(r) => r
-        case None =>
-          val rec = computing
-          computing = true
-          computationStack = Some(stack)
-          try {
-            val r = call(stack, rec)(a)
-            result = Some(r)
-            r
-          } finally {
-            computing = false
-          }
+    def get(stack: Stack): A = result.get(stack)
+
+    private class Helper[B](b: Stack => B) {
+      private var result: Option[B] = None
+
+      def get(stack: Stack): B = {
+        result match {
+          case Some(r) => r
+          case None =>
+            val rec = computing
+            computing = true
+            computationStack = Some(stack)
+            try {
+              val r = call(stack, rec)(b)
+              result = Some(r)
+              r
+            } finally {
+              computing = false
+            }
+        }
       }
     }
 

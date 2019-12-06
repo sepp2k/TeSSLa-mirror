@@ -4,5 +4,5 @@
 0: f(List.empty[Int]) = <List()>
 0: f(List.prepend(13, List.empty[Int])) = <List(13)>
 0: f(None[Unit]) = <None>
-0: f(Set.add(Set.empty[String], "hallo")) = <Set("hallo")>
+0: f(Set.add(Set.empty[String], "hallo")) = <Set(hallo)>
 0: f(Some(23)) = <Some(23)>

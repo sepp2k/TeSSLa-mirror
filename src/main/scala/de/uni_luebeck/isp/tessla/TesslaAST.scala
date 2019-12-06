@@ -90,7 +90,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   sealed trait Expression extends ExpressionArg
 
   case class ExpressionRef(id: Identifier, tpe: TypeAnnotation[Type], location: Location = Location.unknown) extends ExpressionArg {
-    override def toString = id.toString
+    override def toString = id.toString  + ": " + tpe
   }
 
   def indent(s: String) = s.lines.map(s => "  " + s).mkString("\n")
