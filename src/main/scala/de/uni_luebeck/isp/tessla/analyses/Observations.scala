@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.analyses
 
-import java.nio.file.{Paths}
+import java.nio.file.Paths
 
 import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaCore, TranslationPhase}
 import de.uni_luebeck.isp.clang_instrumentation.CPPBridge
@@ -8,6 +8,8 @@ import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError}
 import de.uni_luebeck.isp.tessla.CPatternParser.{ArrayAccessContext, DereferenceContext, ParenthesesContext, PatternContext, ReferenceContext, StructUnionAccessArrowContext, StructUnionAccessContext, VariableContext}
 import de.uni_luebeck.isp.tessla.TesslaCore.InStreamDescription
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
+
+import scala.collection.mutable
 
 
 object Observations {
@@ -158,7 +160,7 @@ object Observations {
           val lvalue = argumentAsString(annotation, "lvalue")
           val pattern = parsePattern(lvalue, annotation.arguments("lvalue").loc)
           val code = createCode(annotation, in)
-          (pattern, function, code)
+          (pattern, function, code, in)
         }
       }
 
@@ -182,7 +184,14 @@ object Observations {
 
     protected val prefix = "#include \"logging.h\"\n"
 
+    val alreadyTypeAssertedStreams = mutable.Set.empty[TesslaCore.InStreamDescription]
+
     protected def assertSameType(cType: String, stream: TesslaCore.InStreamDescription): Unit = {
+      if (alreadyTypeAssertedStreams(stream)) {
+        return
+      }
+      alreadyTypeAssertedStreams.add(stream)
+
       val types = Map(
         "Int" -> List("int", "byte", "short", "long", "long long", "char", "int64_t", "int32_t", "int16_t", "int8_t", "uint64_t", "uint32_t", "uint16_t", "uint8_t"),
         "Bool" -> List("bool", "_Bool"),
