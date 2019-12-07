@@ -16,7 +16,7 @@ val versionPattern = "def\\s+version(?:\\s*:\\s*String)?\\s*=\\s*\"([^\"]+)\"".r
 
 version := versionPattern.findFirstMatchIn(IO.read(versionFile)).get.group(1)
 
-scalaVersion := "2.12.7"
+scalaVersion := "2.13.1"
 
 resolvers ++= Seq(
   releases, snapshots,
@@ -36,8 +36,8 @@ credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-rep
 libraryDependencies ++= Seq(
   "com.github.sepp2k" %% "sexyopt" % "0.1.1",
   "com.github.rjeschke" % "txtmark" % "0.13",
-  "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-  "com.typesafe.play" %% "play-json" % "2.6.6",
+  "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+  "com.typesafe.play" %% "play-json" % "2.8.0",
   "com.eclipsesource" %% "play-json-schema-validator" % "0.9.4" % "test",
   "io.spray" %% "spray-json" % "1.3.5",
   "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT",

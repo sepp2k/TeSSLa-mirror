@@ -56,7 +56,7 @@ object TesslaAST {
   }
 
   object Core extends TesslaAST[Id] {
-    override type DefinitionExpression = ExpressionArg
+    override type DefinitionExpression = Expression
 
     override type Evaluation = RuntimeEvaluation
   }

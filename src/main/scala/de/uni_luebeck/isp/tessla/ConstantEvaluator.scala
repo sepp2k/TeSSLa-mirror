@@ -22,7 +22,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
   type TypeEnv = Map[Identifier, Core.Type]
 
   class TranslatedExpressions {
-    val expressions = mutable.Map[Identifier, Core.ExpressionArg]()
+    val expressions = mutable.Map[Identifier, Core.Expression]()
     val deferredQueue = mutable.Queue[() => Unit]()
 
     def complete(): Unit = {
@@ -112,9 +112,9 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
   val valueExterns: Map[String, TypeExtern] =
     RuntimeEvaluator.commonExterns.mapValues(valueExtern)
 
-  val staticIteExtern: TypeExtern = typeArgs => args => {
+  val staticIteExtern: TypeExtern = _ => args => {
     val value = StackLazy { stack =>
-      args(0).value.get(stack).map(value => {
+      args.head.value.get(stack).map(value => {
         if (value.asInstanceOf[Boolean])
           args(1)
         else
@@ -166,7 +166,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
           id
         case Right(ref) => ref._1.get(List(x._1.location)) match {
           case Core.ExpressionRef(id, _, _) => id
-          case expression =>
+          case expression: Core.Expression =>
             val id = makeIdentifier(extractNameOpt(x._1))
             translatedExpressions.expressions += id -> expression
             id
