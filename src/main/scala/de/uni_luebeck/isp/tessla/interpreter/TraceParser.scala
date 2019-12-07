@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.{Location, InputTraceLexer, InputTraceParser}
 import de.uni_luebeck.isp.tessla.Errors._
 import org.antlr.v4.runtime._
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 case class ParserEventRange(streamName: Token,
                             expression: InputTraceParser.ExpressionContext,
@@ -90,7 +90,7 @@ class CsvTraceParser(input: Iterator[String], fileName: String) {
       case Some(lineContext) =>
         lineContext.commaExpression().asScala.zipWithIndex.filter{ case (ctx, _) => ctx.expression() != null}.map{ case (ctx, index) =>
           ParserEventRange(streamNames(index), ctx.expression(), lineContext.timeRange(), Location.fromNode(ctx.expression()))
-        }.toIterator
+        }.iterator
       case None => Iterator()
     }
   }

@@ -16,7 +16,7 @@ class ConstantEvaluator(baseTimeUnit: Option[TimeUnit], evaluator: Evaluator) ex
 class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[TimeUnit])
   extends TranslationPhase.Translator[Core.Specification] {
 
-  println(spec)
+  //println(spec)
 
   type Env = Map[Identifier, TranslationResult]
   type TypeEnv = Map[Identifier, Core.Type]

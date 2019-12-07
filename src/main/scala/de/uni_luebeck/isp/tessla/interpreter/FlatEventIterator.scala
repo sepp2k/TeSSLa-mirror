@@ -8,7 +8,7 @@ import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.RuleNode
 
 import scala.collection.mutable
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 // TODO: organise usage of RuntimeEvaluator
 class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {

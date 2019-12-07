@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors._
 import org.antlr.v4.runtime._
 import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.ArrayBuffer
 
 class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])

@@ -6,7 +6,7 @@ import de.uni_luebeck.isp.tessla._
 import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.{CharStream, ParserRuleContext, Token}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 sealed abstract class TesslaDoc extends TesslaDoc.DocElement {
   def isGlobal: Boolean

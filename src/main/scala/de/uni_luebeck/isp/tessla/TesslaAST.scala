@@ -93,7 +93,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     override def toString = id.toString  + ": " + tpe
   }
 
-  def indent(s: String) = s.lines.map(s => "  " + s).mkString("\n")
+  def indent(s: String) = s.linesIterator.map(s => "  " + s).mkString("\n")
 
   case class FunctionExpression(typeParams: List[Identifier], params: List[(Identifier, Evaluation, TypeAnnotation[Type])], body: Map[Identifier, DefinitionExpression],
     result: ExpressionArg, location: Location = Location.unknown
@@ -161,7 +161,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       t.asInstanceOf[RecordType].entries(name)
     }
 
-    override def toString = target + "." + name
+    override def toString = "" + target + "." + name
   }
 
   case class StringLiteralExpression(value: String, location: Location = Location.unknown) extends Expression {
@@ -192,7 +192,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       FunctionType(typeParams, paramTypes.map(x => (x._1, x._2.resolve(tmp))), resultType.resolve(tmp))
     }
 
-    override def toString = s"[${typeParams.mkString(", ")}](${paramTypes.map(x => x._1 + " " + x._2).mkString(", ")}) => $resultType"
+    override def toString = s"[${typeParams.mkString(", ")}](${paramTypes.map(x => "" + x._1 + " " + x._2).mkString(", ")}) => $resultType"
   }
 
   case class InstatiatedType(name: String, typeArgs: List[Type], location: Location = Location.unknown) extends Type {
@@ -210,7 +210,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
         val sorted = entries.toList.map(x => (x._1.id.substring(1).toInt, x._2)).sortBy(_._1).map(_._2)
         s"(${sorted.mkString(", ")})"
       } else {
-        val sorted = entries.toList.sortBy(_._1.id).map(x => x._1 + " = " + x._2)
+        val sorted = entries.toList.sortBy(_._1.id).map(x => "" + x._1 + " = " + x._2)
         s"{${sorted.mkString(", ")}}"
       }
     }

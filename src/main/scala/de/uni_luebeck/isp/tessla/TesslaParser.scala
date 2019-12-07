@@ -7,7 +7,7 @@ import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import org.antlr.v4.runtime._
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable
 
 object TesslaParser {

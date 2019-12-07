@@ -6,7 +6,7 @@ import com.eclipsesource.schema.drafts.Version4._
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.{Compiler, Evaluator, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
@@ -15,7 +15,7 @@ import org.antlr.v4.runtime.CharStream
 import spray.json.JsonParser
 import scala.io.Source
 
-class InterpreterTests extends FunSuite {
+class InterpreterTests extends AnyFunSuite {
 
   object JSON {
 
@@ -47,7 +47,7 @@ class InterpreterTests extends FunSuite {
   }
 
   val root = "tests/"
-  val testCases: Stream[(String, String)] = getFilesRecursively().filter {
+  val testCases: LazyList[(String, String)] = getFilesRecursively().filter {
     case (path, file) => file.endsWith(".json") && !(file.endsWith("Schema.json") && path.isEmpty)
   }.map {
     case (path, file) => (path, stripExtension(file))
@@ -55,14 +55,14 @@ class InterpreterTests extends FunSuite {
 
   def stripExtension(fileName: String): String = fileName.replaceFirst("""\.[^.]+$""", "")
 
-  def getFilesRecursively(path: String = ""): Stream[(String, String)] = {
+  def getFilesRecursively(path: String = ""): LazyList[(String, String)] = {
     def isDir(filename: String) = !filename.contains(".")
 
     Source.fromInputStream(getClass.getResourceAsStream(s"$root$path"))
       .getLines.flatMap { file =>
       if (isDir(file)) getFilesRecursively(s"$path$file/")
-      else Stream((path, file))
-    }.toStream
+      else LazyList((path, file))
+    }.to(LazyList)
   }
 
   def assert(condition: Boolean, message: String): Unit = {

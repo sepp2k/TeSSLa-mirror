@@ -6,7 +6,7 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.{CharStream, CharStreams}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable
 
 object JavaApi {
