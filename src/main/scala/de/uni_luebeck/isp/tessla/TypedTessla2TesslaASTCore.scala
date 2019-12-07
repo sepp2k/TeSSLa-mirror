@@ -57,12 +57,12 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
           loc
         )
       case BuiltInOperator(name, typeParameters, parameters, referenceImplementation, loc) => // TODO: suport reference implementation
-        val result = Typed.ExternExpression(typeParameters.map(toIdenifier(_, Location.unknown)).toList,
-          parameters.map(x => (toIdenifier(x.id, x.loc), TesslaAST.LazyEvaluation, toType(x.parameterType))).toList,
-          Typed.TypeParam(TesslaAST.Identifier("NULL")), name, loc)
         name match {
-          case "true" | "false" => Typed.ApplicationExpression(Typed.TypeApplicationExpression(result, Nil), Nil)
-          case _ => result
+          case "true" | "false" => Typed.ApplicationExpression(Typed.TypeApplicationExpression(
+            Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), name, loc), Nil), Nil)
+          case _ => Typed.ExternExpression(typeParameters.map(toIdenifier(_, Location.unknown)).toList,
+            parameters.map(x => (toIdenifier(x.id, x.loc), TesslaAST.LazyEvaluation, toType(x.parameterType))).toList,
+            toType(definition.typeInfo.asInstanceOf[TypedTessla.FunctionType].returnType), name, loc)
         }
       case StaticIfThenElse(condition, thenCase, elseCase, loc) =>
         Typed.ApplicationExpression(Typed.TypeApplicationExpression(staticiteExtern, List(
@@ -71,7 +71,7 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
           Typed.ExpressionRef(toIdenifier(condition.id, loc), lookupType(condition.id, env), loc),
           Typed.ExpressionRef(toIdenifier(thenCase.id, loc), lookupType(thenCase.id, env), loc),
           Typed.ExpressionRef(toIdenifier(elseCase.id, loc), lookupType(elseCase.id, env), loc)
-        ), loc) // TODO: Instantiate type parameter correctly
+        ), loc)
       case ObjectLiteral(members, loc) => Typed.RecordConstructorExpression(
         members.map(x => (Identifier(x._1), Typed.ExpressionRef(toIdenifier(x._2.id, x._2.loc), lookupType(x._2.id, env)))), loc)
       case MemberAccess(receiver, member, memberLoc, loc) =>

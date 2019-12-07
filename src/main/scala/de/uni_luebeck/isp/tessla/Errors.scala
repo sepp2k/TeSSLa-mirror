@@ -45,7 +45,7 @@ object Errors {
     }
   }
 
-  case class WrongType(expected: String, found: TesslaCore.Type, loc: Location) extends TesslaError {
+  case class WrongType(expected: String, found: TesslaAST.Core.Type, loc: Location) extends TesslaError {
     override def message = s"Type mismatch: Expected $expected, but found $found"
   }
 
@@ -161,7 +161,7 @@ object Errors {
     override def message: String = s"Non-positive delay $value"
   }
 
-  case class InputTypeMismatch(value: TesslaCore.Value, valueType: String, streamName: String, streamType: TesslaCore.Type, loc: Location) extends TesslaError {
+  case class InputTypeMismatch(value: Any, valueType: String, streamName: String, streamType: TesslaAST.Core.Type, loc: Location) extends TesslaError {
     override def message: String = s"Unexpected value of type $valueType ($value), expected type $streamType, in input stream '$streamName'"
   }
 
@@ -169,7 +169,7 @@ object Errors {
     override def message: String = s"Non-positive step in time stamp range: $value"
   }
 
-  case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
+  case class KeyNotFound(key: Any, map: Map[_, _], loc: Location) extends TesslaError {
     override def message: String = s"Key $key was not found in $map"
   }
 

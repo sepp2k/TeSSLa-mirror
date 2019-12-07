@@ -50,21 +50,21 @@ object JavaApi {
     }
 
     def provide(stream: String, value: Int): Boolean =
-      provide(stream, TesslaCore.IntValue(BigInt(value), Location.unknown))
+      provide(stream, BigInt(value))
 
     def provide(stream: String, value: BigInt): Boolean =
-      provide(stream, TesslaCore.IntValue(value, Location.unknown))
+      provide(stream, value)
 
     def provide(stream: String, value: Boolean): Boolean =
-      provide(stream, TesslaCore.BoolValue(value, Location.unknown))
+      provide(stream, value)
 
     def provide(stream: String, value: String): Boolean =
-      provide(stream, TesslaCore.StringValue(value, Location.unknown))
+      provide(stream, value)
 
     def provide(stream: String): Boolean =
-      provide(stream, TesslaCore.TesslaObject(Map(), Location.unknown))
+      provide(stream, RuntimeEvaluator.Record(Map()))
 
-    def provide(stream: String, value: TesslaCore.Value): Boolean =  {
+    def provide(stream: String, value: Any): Boolean =  {
       if (seen.contains(stream)) {
         throw SameTimeStampError(spec.getTime, stream, Location.unknown)
       }
@@ -72,7 +72,7 @@ object JavaApi {
 
       spec.inStreams.get(stream) match {
         case Some((inStream, elementType)) =>
-          ValueTypeChecker.check(value, elementType, stream)
+          // FIXME: renable input checks: ValueTypeChecker.check(value, elementType, stream)
           inStream.provide(value)
           true
         case None =>
@@ -133,11 +133,11 @@ object JavaApi {
       stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
       stdlibPath = "stdlib.tessla"
     )
-    compile(specSource, compilerOptions, new Evaluator(Map()))
+    compile(specSource, compilerOptions)
   }
 
-  def compile(specSource: CharStream, compilerOptions: Compiler.Options, evaluator: Evaluator): CompilationResult = {
-    new Compiler(evaluator).compile(specSource, compilerOptions) match {
+  def compile(specSource: CharStream, compilerOptions: Compiler.Options): CompilationResult = {
+    new Compiler().compile(specSource, compilerOptions) match {
       case Success(spec, warnings) =>
         CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(new Interpreter(spec)))
       case Failure(errors, warnings) =>

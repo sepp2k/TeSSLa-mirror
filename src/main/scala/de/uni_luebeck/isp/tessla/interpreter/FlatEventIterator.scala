@@ -129,8 +129,8 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         RuntimeEvaluator.Record(members)
       }
 
-      def getOperator(name: String, loc: Location): TesslaCore.BuiltInOperator = {
-        TesslaCore.BuiltInOperator(name, loc)
+      def getOperator(name: String, loc: Location): TesslaCoreLegacy.BuiltInOperator = {
+        TesslaCoreLegacy.BuiltInOperator(name, loc)
       }
 
       // TODO: reactivate this using RuntimeEvaluator

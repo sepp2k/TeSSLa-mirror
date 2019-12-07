@@ -8,8 +8,8 @@ import scala.collection.mutable
 import TesslaAST.Core
 
 class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEvaluator.Record(Map())) {
-  val inStreams: Map[String, (Input, TesslaCore.ValueType)] = spec.in.map { inStream =>
-    inStream._1.id -> (new Input, null)
+  val inStreams: Map[String, (Input, Core.Type)] = spec.in.map { inStream =>
+    inStream._1.id -> (new Input, inStream._2._1)
   }
 
   val streamExterns: Map[String, List[Lazy[Any]] => Any] = Map(
@@ -40,8 +40,9 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
 
   lazy val definitions: RuntimeEvaluator.Env = inStreams.view.mapValues(x => Lazy(x._1)).toMap ++ spec.definitions.map(d => (d._1.id, runtimeEvaluator.evalExpressionArg(d._2, definitions)))
 
-  lazy val outStreams: Seq[(Option[String], Stream, TesslaCore.Type)] = spec.out.map { os =>
-    (os._2, definitions(os._1.id).get.asInstanceOf[Stream], null)
+  lazy val outStreams: Seq[(Option[String], Stream, Core.Type)] = spec.out.map { os =>
+    val definition = definitions(os._1.id).get
+    (os._2, definition.asInstanceOf[Stream], null) // TODO find type of output stream
   }
 
 }

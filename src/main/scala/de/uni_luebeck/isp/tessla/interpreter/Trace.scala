@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{Evaluator, Location, Tessla, TesslaCore}
+import de.uni_luebeck.isp.tessla.{Location, Tessla}
 import de.uni_luebeck.isp.tessla.Errors.InternalError
 import de.uni_luebeck.isp.tessla.interpreter.Trace.TimeStamp
 import org.eclipse.tracecompass.ctf.core.CTFException
@@ -15,11 +15,8 @@ object Trace {
   case class Event(loc: Location, timeStamp: TimeStamp, streamOpt: Option[Identifier], value: Any) {
     override def toString: String = streamOpt match {
       case Some(stream) => s"$timeStamp: ${stream.name} = $value"
-      case None => value match {
-        case str: TesslaCore.StringValue => str.value
-        case _ => value.toString
+      case None => value.toString
       }
-    }
 
     def stream = streamOpt match {
       case Some(stream) => stream
@@ -53,7 +50,7 @@ class Trace(){
         }
         val ts = TimeStamp(Location.unknown, BigInt(event.getTimestamp))
         val stream = Trace.Identifier(event.getDeclaration.getName, Location.unknown)
-        val value = TesslaCore.Ctf(event.getFields, Location.unknown)
+        val value = event.getFields
         eventCounter += 1
         Trace.Event(Location.unknown, ts, Some(stream), value)
       }

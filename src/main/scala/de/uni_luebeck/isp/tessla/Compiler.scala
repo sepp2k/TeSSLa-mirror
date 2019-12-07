@@ -16,7 +16,7 @@ object Compiler {
 
 }
 
-class Compiler(evaluator: Evaluator) {
+class Compiler {
 
   def instantiatePipeline(options: Options): TranslationPhase[CharStream, TesslaAST.Core.Specification] = {
     new TesslaParser.WithIncludes(options.includeResolver)
@@ -25,7 +25,7 @@ class Compiler(evaluator: Evaluator) {
       .andThen(Flattener)
       .andThen(TypeChecker)
       .andThen(new TypedTessla2TesslaASTCore(options.timeUnit))
-      .andThen(new ConstantEvaluator(options.timeUnit, evaluator))
+      .andThen(new ConstantEvaluator(options.timeUnit))
       //.andThen(RemoveUnusedDefinitions)
   }
 

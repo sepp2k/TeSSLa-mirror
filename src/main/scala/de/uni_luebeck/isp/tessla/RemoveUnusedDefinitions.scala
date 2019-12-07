@@ -1,4 +1,4 @@
-package de.uni_luebeck.isp.tessla
+/*package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors.InternalError
 import de.uni_luebeck.isp.tessla.TesslaCore._
@@ -109,3 +109,4 @@ object RemoveUnusedDefinitions extends TranslationPhase[TesslaCore.Specification
     new RemoveUnusedDefinitions(spec).translate()
   }
 }
+*/

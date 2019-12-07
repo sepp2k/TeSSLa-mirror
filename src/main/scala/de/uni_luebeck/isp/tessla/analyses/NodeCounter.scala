@@ -1,4 +1,4 @@
-package de.uni_luebeck.isp.tessla.analyses
+/*package de.uni_luebeck.isp.tessla.analyses
 
 import de.uni_luebeck.isp.tessla.TesslaCore
 
@@ -38,3 +38,4 @@ object NodeCounter {
   }
 
 }
+*/

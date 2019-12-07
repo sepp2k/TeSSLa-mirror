@@ -7,7 +7,7 @@ import TesslaAST.{Core, Identifier, Typed}
 import cats._
 import cats.implicits._
 
-class ConstantEvaluator(baseTimeUnit: Option[TimeUnit], evaluator: Evaluator) extends TranslationPhase[Typed.Specification, Core.Specification] {
+class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[Typed.Specification, Core.Specification] {
   override def translate(spec: Typed.Specification) = {
     new ConstantEvaluatorWorker(spec, baseTimeUnit).translate()
   }

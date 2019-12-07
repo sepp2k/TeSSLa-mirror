@@ -1,4 +1,4 @@
-package de.uni_luebeck.isp.tessla.analyses
+/*package de.uni_luebeck.isp.tessla.analyses
 
 import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaAST, TesslaCore, TranslationPhase}
 import Observations._
@@ -246,3 +246,4 @@ object Observations {
   }
 
 }
+*/

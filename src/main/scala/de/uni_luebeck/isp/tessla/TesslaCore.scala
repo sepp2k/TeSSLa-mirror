@@ -4,7 +4,7 @@ import de.uni_luebeck.isp.tessla.Errors.{RuntimeError, TesslaError}
 import de.uni_luebeck.isp.tessla.util._
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
-object TesslaCore extends HasUniqueIdentifiers {
+object TesslaCoreOld extends HasUniqueIdentifiers {
   final case class Specification(streams: Seq[StreamDescription],
                                  definitions: Seq[DefinitionDescription],
                                  inStreams: Seq[InStreamDescription],

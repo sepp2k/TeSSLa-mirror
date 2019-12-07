@@ -4,7 +4,6 @@ import java.io.IOException
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
-import de.uni_luebeck.isp.tessla.analyses._
 import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
@@ -77,8 +76,7 @@ object Main extends SexyOpt {
 
     parse(args)
 
-    val evaluator = new Evaluator(Map())
-    val compiler = new Compiler(evaluator)
+    val compiler = new Compiler
     try {
       val specSource = CharStreams.fromFileName(tesslaFile)
       val compilerOptions = Compiler.Options(

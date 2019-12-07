@@ -1,4 +1,4 @@
-package de.uni_luebeck.isp.tessla.interpreter
+/*package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors.{InputTypeMismatch, InternalError}
 import de.uni_luebeck.isp.tessla.TesslaCore
@@ -83,3 +83,4 @@ object ValueTypeChecker {
       }
   }
 }
+*/
