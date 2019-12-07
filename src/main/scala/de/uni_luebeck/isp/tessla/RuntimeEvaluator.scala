@@ -83,7 +83,7 @@ object RuntimeEvaluator {
     "tan" -> unaryFloatOp(Math.tan),
     "atan" -> unaryFloatOp(Math.atan),
     "intToFloat" -> unaryIntOp(_.toDouble),
-    "floatToInt" -> unaryFloatOp(x => BigDecimal(x).toBigInt()),
+    "floatToInt" -> unaryFloatOp(x => BigDecimal(x).toBigInt),
     "None" -> ((arguments: List[Any]) => None),
     "Some" -> strict(arguments => Some(arguments(0))),
     "isNone" -> strict(arguments => arguments(0).asInstanceOf[Option[Any]].isEmpty),

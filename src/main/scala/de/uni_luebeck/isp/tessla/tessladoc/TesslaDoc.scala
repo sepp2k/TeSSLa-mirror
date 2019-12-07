@@ -154,14 +154,14 @@ object TesslaDoc {
 
       override def visitTypeApplication(typeApplication: TesslaSyntax.TypeApplicationContext) =
         TypeApplication(constructor = SimpleType(typeApplication.name.getText),
-          arguments = typeApplication.typeArguments.asScala.map(visit))
+          arguments = typeApplication.typeArguments.asScala.map(visit).toSeq)
 
       override def visitFunctionType(functionType: TesslaSyntax.FunctionTypeContext) =
-        FunctionType(parameters = functionType.parameterTypes.asScala.map(visit),
+        FunctionType(parameters = functionType.parameterTypes.asScala.map(visit).toSeq,
           result = visit(functionType.resultType))
 
       override def visitTupleType(tupleType: TesslaSyntax.TupleTypeContext) =
-        TupleType(members = tupleType.elementTypes.asScala.map(visit))
+        TupleType(members = tupleType.elementTypes.asScala.map(visit).toSeq)
 
       override def visitObjectType(objectType: TesslaSyntax.ObjectTypeContext) =
         ObjectType(members = objectType.memberSigs.asScala.map{ memberSig =>
@@ -181,13 +181,13 @@ object TesslaDoc {
       override def visitDef(definition: TesslaSyntax.DefContext) = {
         val header = definition.header
         val doc = DefDoc(
-          annotations = header.annotations.asScala.map(_.ID().getText),
+          annotations = header.annotations.asScala.map(_.ID().getText).toSeq,
           name = header.name.getText,
-          typeParameters = header.typeParameters.asScala.map(_.getText),
-          parameters = header.parameters.asScala.map(p => Param(p.ID.getText, TypeVisitor.visit(p.parameterType))),
+          typeParameters = header.typeParameters.asScala.map(_.getText).toSeq,
+          parameters = header.parameters.asScala.map(p => Param(p.ID.getText, TypeVisitor.visit(p.parameterType))).toSeq,
           returnType = Option(header.resultType).map(TypeVisitor.visit),
           scope = scope,
-          doc = getDoc(header.tessladoc.asScala),
+          doc = getDoc(header.tessladoc.asScala.toSeq),
           loc = Location.fromNode(definition)
         )
         val body = definition.body
@@ -204,8 +204,8 @@ object TesslaDoc {
       override def visitAnnotationDefinition(annotationDef: TesslaSyntax.AnnotationDefinitionContext) = {
         Seq(AnnotationDoc(
           name = annotationDef.ID().getText,
-          parameters = annotationDef.parameters.asScala.map(p => Param(p.ID.getText, TypeVisitor.visit(p.parameterType))),
-          doc = getDoc(annotationDef.tessladoc.asScala),
+          parameters = annotationDef.parameters.asScala.map(p => Param(p.ID.getText, TypeVisitor.visit(p.parameterType))).toSeq,
+          doc = getDoc(annotationDef.tessladoc.asScala.toSeq),
           loc = Location.fromNode(annotationDef)
         ))
       }
@@ -213,8 +213,8 @@ object TesslaDoc {
       override def visitTypeDefinition(typeDef: TesslaSyntax.TypeDefinitionContext) = {
         Seq(TypeDoc(
           name = typeDef.name.getText,
-          typeParameters = typeDef.typeParameters.asScala.map(_.getText),
-          doc = getDoc(typeDef.tessladoc.asScala),
+          typeParameters = typeDef.typeParameters.asScala.map(_.getText).toSeq,
+          doc = getDoc(typeDef.tessladoc.asScala.toSeq),
           loc = Location.fromNode(typeDef)
         ))
       }
@@ -226,7 +226,7 @@ object TesslaDoc {
 
       override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext) = {
         val members = module.contents.asScala.map(_.statement).flatMap(this)
-        Seq(ModuleDoc(module.name.getText, getDoc(module.tessladoc.asScala), members, Location.fromNode(module)))
+        Seq(ModuleDoc(module.name.getText, getDoc(module.tessladoc.asScala.toSeq), members.toSeq, Location.fromNode(module)))
       }
     }
 

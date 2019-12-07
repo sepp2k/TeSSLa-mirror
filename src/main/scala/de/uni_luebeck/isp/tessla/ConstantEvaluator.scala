@@ -110,7 +110,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
   }, StackLazy(_ => None))
 
   val valueExterns: Map[String, TypeExtern] =
-    RuntimeEvaluator.commonExterns.mapValues(valueExtern)
+    RuntimeEvaluator.commonExterns.view.mapValues(valueExtern).toMap
 
   val staticIteExtern: TypeExtern = _ => args => {
     val value = StackLazy { stack =>
@@ -176,7 +176,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
     translatedExpressions.complete()
 
-    Core.Specification(spec.in.mapValues(x => (translateType(x._1), Nil)), translatedExpressions.expressions.toMap, outputs)
+    Core.Specification(spec.in.view.mapValues(x => (translateType(x._1), Nil)).toMap, translatedExpressions.expressions.toMap, outputs)
   }
 
   def extractNameOpt(id: Identifier) = {
@@ -273,7 +273,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
       }))
       TranslationResult(value, StackLazy(_ => Right((ref, ref))))
     case Typed.RecordConstructorExpression(entries, location) =>
-      val translatedEntries = entries.mapValues(translateExpressionArg(_, env, typeEnv, nameOpt))
+      val translatedEntries = entries.view.mapValues(translateExpressionArg(_, env, typeEnv, nameOpt)).toMap
       val value = RuntimeEvaluator.Record(translatedEntries.map(x => (x._1.id, x._2)))
       val expression = StackLazy(stack => Core.RecordConstructorExpression(translatedEntries.map(x => (x._1, getExpressionArgStrict(x._2, location :: stack)))))
       TranslationResult(StackLazy(_ => Some(value)), StackLazy(_ => Left(expression)))
@@ -355,7 +355,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     case Typed.InstatiatedType(name, typeArgs, location) =>
       Core.InstatiatedType(name, typeArgs.map(translateType), location)
     case Typed.RecordType(entries, location) =>
-      Core.RecordType(entries.mapValues(translateType), location)
+      Core.RecordType(entries.view.mapValues(translateType).toMap, location)
     case Typed.TypeParam(name, location) =>
       Core.TypeParam(name, location)
     case null => Core.TypeParam(Identifier("NULL")) // FIXME: remove this once the typed AST has all types

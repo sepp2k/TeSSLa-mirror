@@ -26,7 +26,7 @@ object TesslaParser {
     })
 
     val tree = parser.spec()
-    (ParseResult(src.getSourceName, tokens, tree), errors)
+    (ParseResult(src.getSourceName, tokens, tree), errors.toSeq)
   }
 
   object SingleFile extends TranslationPhase[CharStream, ParseResult] {

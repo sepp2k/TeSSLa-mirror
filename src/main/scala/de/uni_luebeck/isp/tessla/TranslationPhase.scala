@@ -30,11 +30,12 @@ object TranslationPhase {
     def translate(): Result[U] = {
       try {
         val result = translateSpec()
-        if (errors.isEmpty) Success(result, warnings)
-        else Failure(errors, warnings)
+        if (errors.isEmpty) Success(result, warnings.toSeq)
+        else Failure(errors.toSeq, warnings.toSeq)
       } catch {
         case ex: TesslaError =>
-          Failure(errors += ex, warnings)
+          errors += ex
+          Failure(errors.toSeq, warnings.toSeq)
       }
     }
 
@@ -45,7 +46,7 @@ object TranslationPhase {
       warnings += diagnostic
     }
 
-    protected def error(error: TesslaError) {
+    protected def error(error: TesslaError): Unit = {
       errors += error
     }
 

@@ -15,7 +15,7 @@ trait HasUniqueIdentifiers {
     }
   }
 
-  abstract class IdentifierFactory(private var counter: Long = 0l) {
+  abstract class IdentifierFactory(private var counter: Long = 0L) {
     protected def identifierCounter = counter
 
     protected def makeIdentifier(nameOpt: Option[String]): Identifier = {

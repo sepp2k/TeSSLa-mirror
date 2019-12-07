@@ -22,9 +22,9 @@ object JavaApi {
   case class Result(warnings: java.util.List[Diagnostic], errors: java.util.List[Diagnostic])
 
   abstract class EngineListener {
-    def event(stream: String, time: Specification.Time, value: Any)
+    def event(stream: String, time: Specification.Time, value: Any): Unit
 
-    def printEvent(time: Specification.Time, value: Any)
+    def printEvent(time: Specification.Time, value: Any): Unit
   }
 
   case class CompilationResult(result: Result, engine: Engine)
@@ -32,7 +32,7 @@ object JavaApi {
   case class Engine(spec: Interpreter) {
     private val seen = mutable.Set.empty[String]
 
-    def addListener(listener: EngineListener) {
+    def addListener(listener: EngineListener): Unit = {
       spec.outStreams.foreach {
         case (Some(name), stream, _) =>
           stream.addListener {

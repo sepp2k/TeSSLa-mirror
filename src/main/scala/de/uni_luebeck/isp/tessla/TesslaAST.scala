@@ -149,7 +149,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   case class RecordConstructorExpression(entries: Map[Identifier, ExpressionArg],
     location: Location = Location.unknown
   ) extends Expression {
-    override def tpe = entries.mapValues(_.tpe).unorderedSequence.map { m =>
+    override def tpe = entries.view.mapValues(_.tpe).toMap.unorderedSequence.map { m =>
       RecordType(m)
     }
   }
@@ -202,7 +202,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   }
 
   case class RecordType(entries: Map[Identifier, Type], location: Location = Location.unknown) extends Type {
-    override def resolve(args: Map[Identifier, Type]) = RecordType(entries.mapValues(_.resolve(args)))
+    override def resolve(args: Map[Identifier, Type]) = RecordType(entries.view.mapValues(_.resolve(args)).toMap)
 
     override def toString = {
       val isTuple = entries.keys.forall(_.id.matches("_\\d+"))

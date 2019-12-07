@@ -2,6 +2,7 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import java.nio.charset.StandardCharsets
 
+import com.eclipsesource.schema.drafts.Version4._
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.{Compiler, Evaluator, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
