@@ -1,1 +1,2 @@
 def x: Events[Int] := x
+out x

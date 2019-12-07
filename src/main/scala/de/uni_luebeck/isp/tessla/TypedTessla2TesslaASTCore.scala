@@ -60,8 +60,36 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
         name match {
           case "true" | "false" => Typed.ApplicationExpression(Typed.TypeApplicationExpression(
             Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), name, loc), Nil), Nil)
+          case "last" => Typed.ExternExpression(
+            List(Identifier("A"), Identifier("B")),
+            List(
+              (Identifier("a"), TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A"))))),
+              (Identifier("b"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("B")))))
+            ),
+            Typed.TypeParam(Identifier("A")),
+            "last"
+          )
+          case "delay" => Typed.ExternExpression(
+            List(Identifier("A")),
+            List(
+              (Identifier("a"), TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.IntType))),
+              (Identifier("b"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A")))))
+            ),
+            Typed.UnitType,
+            "delay"
+          )
+          case "ite" => Typed.ExternExpression(
+            List(Identifier("A")),
+            List(
+              (Identifier("a"), TesslaAST.StrictEvaluation, Typed.BoolType),
+              (Identifier("b"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
+              (Identifier("c"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
+            ),
+            Typed.UnitType,
+            "ite"
+          )
           case _ => Typed.ExternExpression(typeParameters.map(toIdenifier(_, Location.unknown)).toList,
-            parameters.map(x => (toIdenifier(x.id, x.loc), TesslaAST.LazyEvaluation, toType(x.parameterType))).toList,
+            parameters.map(x => (toIdenifier(x.id, x.loc), TesslaAST.StrictEvaluation, toType(x.parameterType))).toList,
             toType(definition.typeInfo.asInstanceOf[TypedTessla.FunctionType].returnType), name, loc)
         }
       case StaticIfThenElse(condition, thenCase, elseCase, loc) =>

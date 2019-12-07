@@ -25,8 +25,14 @@ object RuntimeEvaluator {
     }
   }
 
+  case class RuntimeError(msg: String) // TODO: support location information etc
+
+  def propagate(args: List[Any])(f: List[Any] => Any) = args.find(_.isInstanceOf[RuntimeError]).getOrElse(f(args))
+
+  def propagateSingle(arg: Any)(f: Any => Any) = if (arg.isInstanceOf[RuntimeError]) arg else f(arg)
+
   def strict(f: List[Any] => Any) = (list: List[Lazy[Any]]) =>
-    f(list.map(_.get))
+    propagate(list.map(_.get))(f)
 
   def binIntOp(f: (BigInt, BigInt) => Any) = strict(l =>
     f(l(0).asInstanceOf[BigInt], l(1).asInstanceOf[BigInt]))
@@ -47,8 +53,8 @@ object RuntimeEvaluator {
     "add" -> binIntOp(_ + _),
     "sub" -> binIntOp(_ - _),
     "mul" -> binIntOp(_ * _),
-    "div" -> binIntOp(_ / _),
-    "mod" -> binIntOp(_ % _),
+    "div" -> binIntOp((a, b) => if (b == 0) RuntimeError("Devision by zero") else a / b),
+    "mod" -> binIntOp((a, b) => if (b == 0) RuntimeError("Devision by zero") else a % b),
     "fadd" -> binFloatOp(_ + _),
     "fsub" -> binFloatOp(_ - _),
     "fmul" -> binFloatOp(_ * _),
@@ -71,11 +77,22 @@ object RuntimeEvaluator {
     "fleq" -> binFloatOp(_ <= _),
     "fgt" -> binFloatOp(_ > _),
     "fgeq" -> binFloatOp(_ >= _),
-    "and" -> ((arguments: List[Lazy[Any]]) => arguments(0).get.asInstanceOf[Boolean] && arguments(1).get.asInstanceOf[Boolean]),
+    "and" -> ((arguments: List[Lazy[Any]]) => propagateSingle(arguments(0).get) { a =>
+      if (a.asInstanceOf[Boolean]) arguments(1).get else false
+    }),
+    "or" -> ((arguments: List[Lazy[Any]]) => propagateSingle(arguments(0).get) { a =>
+      if (a.asInstanceOf[Boolean]) true else arguments(1).get
+    }),
     "or" -> ((arguments: List[Lazy[Any]]) => arguments(0).get.asInstanceOf[Boolean] || arguments(1).get.asInstanceOf[Boolean]),
     "not" -> strict { arguments => !arguments(0).asInstanceOf[Boolean] },
-    "ite" -> ((arguments: List[Lazy[Any]]) => if (arguments(0).get.asInstanceOf[Boolean]) arguments(1).get else arguments(2).get), // TODO: should possibly be strict, but them functions have to use static ite
-    "staticite" -> ((arguments: List[Lazy[Any]]) => if (arguments(0).get.asInstanceOf[Boolean]) arguments(1).get else arguments(2).get),
+    "ite" -> ((arguments: List[Lazy[Any]]) =>
+      propagateSingle(arguments(0).get) { cond =>
+        if (cond.asInstanceOf[Boolean]) arguments(1).get else arguments(2).get
+      }),
+    "staticite" -> ((arguments: List[Lazy[Any]]) =>
+      propagateSingle(arguments(0).get) { cond =>
+        if (cond.asInstanceOf[Boolean]) arguments(1).get else arguments(2).get
+      }),
     "pow" -> binFloatOp(math.pow),
     "log" -> binFloatOp((x, base) => math.log(x) / math.log(base)),
     "sin" -> unaryFloatOp(Math.sin),
@@ -83,22 +100,26 @@ object RuntimeEvaluator {
     "tan" -> unaryFloatOp(Math.tan),
     "atan" -> unaryFloatOp(Math.atan),
     "intToFloat" -> unaryIntOp(_.toDouble),
-    "floatToInt" -> unaryFloatOp(x => BigDecimal(x).toBigInt),
-    "None" -> ((arguments: List[Any]) => None),
+    "floatToInt" -> unaryFloatOp(x => try {
+      BigDecimal(x).toBigInt
+    } catch {
+      case e: NumberFormatException => RuntimeError(e.getMessage)
+    }),
+    "None" -> ((_: List[Any]) => None),
     "Some" -> strict(arguments => Some(arguments(0))),
     "isNone" -> strict(arguments => arguments(0).asInstanceOf[Option[Any]].isEmpty),
     "getSome" -> strict(arguments =>
-      arguments(0).asInstanceOf[Option[Any]].get),
-    "Map_empty" -> ((arguments: List[Any]) => Map()),
+      arguments(0).asInstanceOf[Option[Any]].getOrElse(RuntimeError("Cannot get value of None."))),
+    "Map_empty" -> ((_: List[Any]) => Map()),
     "Map_add" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]] + (arguments(1) -> arguments(2))),
-    "Map_get" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]](arguments(1))),
+    "Map_get" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]].getOrElse(arguments(1), RuntimeError("No such element."))),
     "Map_contains" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]].contains(arguments(1))),
     "Map_remove" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]] - arguments(1)),
     "Map_size" -> strict(arguments => BigInt(arguments(0).asInstanceOf[Map[Any, Any]].size)),
     "Map_keys" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]].keys.toList),
     "Map_fold" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]].foldLeft(arguments(1))(
       (x, y) => arguments(2).asInstanceOf[(List[Any] => Any)](List(Lazy(x), Lazy(y._1), Lazy(y._2))))),
-    "Set_empty" -> ((arguments: List[Any]) => Set()),
+    "Set_empty" -> ((_: List[Any]) => Set()),
     "Set_add" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]] + arguments(1)),
     "Set_contains" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]].contains(arguments(1))),
     "Set_remove" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]] - arguments(1)),
@@ -108,22 +129,45 @@ object RuntimeEvaluator {
     "Set_minus" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]] -- arguments(1).asInstanceOf[Set[Any]]),
     "Set_fold" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]].fold(arguments(1))(
       (x, y) => arguments(2).asInstanceOf[(List[Any] => Any)](List(Lazy(x), Lazy(y))))),
-    "List_empty" -> ((arguments: List[Any]) => Nil),
+    "List_empty" -> ((_: List[Any]) => Nil),
     "List_size" -> strict(arguments => BigInt(arguments(0).asInstanceOf[List[Any]].size)),
     "List_append" -> strict(arguments => arguments(0).asInstanceOf[List[Any]] :+ arguments(1)),
     "List_prepend" -> strict(arguments => arguments(0) +: arguments(1).asInstanceOf[List[Any]]),
-    "List_tail" -> strict(arguments => arguments(0).asInstanceOf[List[Any]].tail),
-    "List_init" -> strict(arguments => arguments(0).asInstanceOf[List[Any]].init),
+    "List_tail" -> strict(arguments => {
+      val list = arguments(0).asInstanceOf[List[Any]]
+      if (list.isEmpty) RuntimeError("Tail unsupported for empty list.") else list.tail
+    }),
+    "List_init" -> strict(arguments => {
+      val list = arguments(0).asInstanceOf[List[Any]]
+      if (list.isEmpty) RuntimeError("Init unsupported for empty list.") else list.init
+
+    }),
     "List_fold" -> strict(arguments => arguments(0).asInstanceOf[List[Any]].fold(arguments(1))(
       (x, y) => arguments(2).asInstanceOf[(List[Any] => Any)](List(Lazy(x), Lazy(y))))),
-    "List_get" -> strict(arguments => arguments(0).asInstanceOf[List[Any]](arguments(1).asInstanceOf[BigInt].toInt)),
-    "List_set" -> strict(arguments => arguments(0).asInstanceOf[List[Any]].updated(arguments(1).asInstanceOf[BigInt].toInt, arguments(2))),
+    "List_get" -> strict(arguments => try {
+      arguments(0).asInstanceOf[List[Any]](arguments(1).asInstanceOf[BigInt].toInt)
+    } catch {
+      case e: IndexOutOfBoundsException => RuntimeError("Index out of bounds.")
+    }),
+    "List_set" -> strict(arguments => try {
+      arguments(0).asInstanceOf[List[Any]].updated(arguments(1).asInstanceOf[BigInt].toInt, arguments(2))
+    } catch {
+      case e: IndexOutOfBoundsException => RuntimeError("Index out of bounds.")
+    }),
     "String_concat" -> strict(arguments => arguments(0).asInstanceOf[String] + arguments(1).asInstanceOf[String]),
     "toString" -> strict(arguments => arguments(0).toString),
     "String_format" -> strict(arguments =>
       arguments(0).asInstanceOf[String].formatLocal(Locale.ROOT, arguments(1))),
-    "CTF_getInt" -> strict(arguments => Ctf.getInt(arguments(0).asInstanceOf[ICompositeDefinition], arguments(1).asInstanceOf[String])),
-    "CTF_getString" -> strict(arguments => Ctf.getString(arguments(0).asInstanceOf[ICompositeDefinition], arguments(1).asInstanceOf[String]))
+    "CTF_getInt" -> strict(arguments => try {
+      Ctf.getInt(arguments(0).asInstanceOf[ICompositeDefinition], arguments(1).asInstanceOf[String])
+    } catch {
+      case e: ClassCastException => RuntimeError(e.getMessage)
+    }),
+    "CTF_getString" -> strict(arguments => try {
+      Ctf.getString(arguments(0).asInstanceOf[ICompositeDefinition], arguments(1).asInstanceOf[String])
+    } catch {
+      case e: ClassCastException => RuntimeError(e.getMessage)
+    })
   )
 }
 
@@ -165,13 +209,13 @@ class RuntimeEvaluator(externs: Map[String, List[Lazy[Any]] => Any]) {
         }
         case (v, (TesslaAST.LazyEvaluation, _)) => v
       }
-      f.asInstanceOf[List[Lazy[Any]] => Any](newArgs)
+      propagateSingle(f)(_.asInstanceOf[List[Lazy[Any]] => Any](newArgs))
     case Core.TypeApplicationExpression(applicable, _, _) =>
       evalExpressionArg(applicable, env).get
     case Core.RecordConstructorExpression(entries, _) =>
       Record(entries.map(e => (e._1.id, evalExpressionArg(e._2, env).get))) // TODO: entries are now strictly evaluated, should they be lazy?
     case Core.RecordAccesorExpression(name, target, _) =>
-      evalExpressionArg(target, env).get.asInstanceOf[Record].entries(name.id)
+      propagateSingle(evalExpressionArg(target, env).get)(_.asInstanceOf[Record].entries(name.id))
     case Core.StringLiteralExpression(value, _) => value
     case Core.IntLiteralExpression(value, _) => value
     case Core.FloatLiteralExpression(value, _) => value

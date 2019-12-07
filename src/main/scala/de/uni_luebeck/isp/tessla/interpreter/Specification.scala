@@ -224,7 +224,7 @@ class Specification(unitValue: Any) {
       if (valueOptions.exists(_.isEmpty)) {
         None
       } else {
-        Some(propagateExceptions(op(valueOptions.flatten)))
+        Some(op(valueOptions.flatten))
       }
     }
   }
@@ -257,7 +257,7 @@ class Specification(unitValue: Any) {
       new Stream {
         override protected def init(): Unit = {
           self.addListener {
-            value => propagate(value.map { _ => propagateExceptions(getTime) })
+            value => propagate(value.map(_ => getTime))
           }
         }
       }
@@ -331,10 +331,4 @@ class Specification(unitValue: Any) {
       case None =>
     }
 
-  def propagateExceptions(a: => Any) = try {
-    a
-  } catch {
-    case e: RuntimeException =>
-      e
-  }
 }

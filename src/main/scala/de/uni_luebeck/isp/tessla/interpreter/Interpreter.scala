@@ -65,7 +65,10 @@ object Interpreter {
                 if (stopOn.isDefined && stopOn == nameOpt) stopped = true
                 val timeStamp = Trace.TimeStamp(Location.unknown, interpreter.getTime)
                 val idOpt = nameOpt.map(Trace.Identifier(_, Location.unknown))
-                nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value) // TODO: handle somewhere if value contains RuntimExecption
+                value match {
+                  case RuntimeEvaluator.RuntimeError(msg) => throw new RuntimeException(msg)
+                  case _ => nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value) // TODO: handle somewhere if value contains RuntimExecption
+                }
               }
             case None =>
           }
