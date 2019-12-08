@@ -110,7 +110,7 @@ object ValueExterns {
     "isNone" -> strict(arguments => propagateSingle(arguments(0))(_.asInstanceOf[Option[Any]].isEmpty.pure[A])),
     "getSome" -> strict(arguments => propagateSingle(arguments(0))(_.asInstanceOf[Option[Any]].getOrElse(RuntimeError("Tried get on None.")).pure[A])),
     "Map_empty" -> ((_: ArraySeq[A[Any]]) => Map().pure[A]),
-    "Map_add" -> strict(propagate(_) {arguments =>
+    "Map_add" -> strict(propagate(_) { arguments =>
       (arguments(0).asInstanceOf[Map[Any, Any]] + (arguments(1) -> arguments(2))).pure[A]
     }),
     "Map_get" -> strict(propagate(_) { arguments =>
@@ -168,10 +168,10 @@ object ValueExterns {
     "List_size" -> strict(propagate(_) { arguments =>
       BigInt(arguments(0).asInstanceOf[List[Any]].size).pure[A]
     }),
-    "List_append" -> strict(propagate(_) {arguments =>
+    "List_append" -> strict(propagate(_) { arguments =>
       (arguments(0).asInstanceOf[List[Any]] :+ arguments(1)).pure[A]
     }),
-    "List_prepend" -> strict(propagate(_) {arguments =>
+    "List_prepend" -> strict(propagate(_) { arguments =>
       (arguments(0) +: arguments(1).asInstanceOf[List[Any]]).pure[A]
     }),
     "List_tail" -> strict(propagate(_) { arguments =>
@@ -197,16 +197,16 @@ object ValueExterns {
       }
     }),
     "List_set" -> strict(propagate(_) { arguments =>
-        try {
-          arguments(0).asInstanceOf[List[Any]].updated(arguments(1).asInstanceOf[BigInt].toInt, arguments(2)).pure[A]
-        } catch {
-          case e: IndexOutOfBoundsException => RuntimeError("Index out of bounds.").pure[A]
-        }
-      }),
+      try {
+        arguments(0).asInstanceOf[List[Any]].updated(arguments(1).asInstanceOf[BigInt].toInt, arguments(2)).pure[A]
+      } catch {
+        case e: IndexOutOfBoundsException => RuntimeError("Index out of bounds.").pure[A]
+      }
+    }),
     "String_concat" -> strict(propagate(_) {
       arguments => (arguments(0).asInstanceOf[String] + arguments(1).asInstanceOf[String]).pure[A]
     }),
-    "toString" -> strict(propagate(_)(_(0).toString.pure[A])),
+    "toString" -> strict(propagate(_)(_ (0).toString.pure[A])),
     "String_format" -> strict(propagate(_) { arguments =>
       arguments(0).asInstanceOf[String].formatLocal(Locale.ROOT, arguments(1)).pure[A] // TODO: error handling?
     }),
@@ -223,6 +223,9 @@ object ValueExterns {
       } catch {
         case e: ClassCastException => RuntimeError(e.getMessage).pure[A]
       }
+    }),
+    "error" -> strict(propagate(_) { arguments =>
+      RuntimeEvaluator.RuntimeError(arguments(0).asInstanceOf[String]).pure[A]
     })
   )
 

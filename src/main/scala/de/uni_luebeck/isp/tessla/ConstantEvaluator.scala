@@ -135,10 +135,10 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
   val valueExterns: Map[String, TypeExtern] = ValueExterns.commonExterns[TranslationResult].view.mapValues(valueExtern).toMap
 
-  val staticIteExtern: TypeExtern = _ => args => {
+  val staticIteExtern: TypeExtern = typeArgs => args => {
     val value = StackLazy { stack =>
       args.head.value.get(stack).map {
-        case _: RuntimeEvaluator.RuntimeError => args.head
+        case e: RuntimeEvaluator.RuntimeError => mkErrorResult(e, typeArgs(0))
         case value => if (value.asInstanceOf[Boolean]) args(1) else args(2)
       }
     }
