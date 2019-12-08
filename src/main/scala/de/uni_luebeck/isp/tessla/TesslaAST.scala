@@ -4,6 +4,8 @@ import scala.collection.mutable
 import cats._
 import cats.implicits._
 
+import scala.collection.immutable.ArraySeq
+
 object TesslaAST {
 
   trait Locatable {
@@ -116,7 +118,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     override def toString = s"extern_$name"
   }
 
-  case class ApplicationExpression(applicable: ExpressionArg, args: List[ExpressionArg],
+  case class ApplicationExpression(applicable: ExpressionArg, args: ArraySeq[ExpressionArg],
     location: Location = Location.unknown
   ) extends Expression {
     override def tpe = {

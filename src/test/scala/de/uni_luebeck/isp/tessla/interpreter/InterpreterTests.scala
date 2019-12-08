@@ -159,7 +159,7 @@ class InterpreterTests extends AnyFunSuite {
           case Some(input) =>
             try {
               val trace = new Trace().fromSource(testSource(input), s"$path$input", testCase.abortAt.map(BigInt(_)))
-              val result = compiler.compile(src, options).map(spec => Interpreter.run(spec, trace, None))
+              val result = compiler.compile(src, options).map(spec => Interpreter.run(spec._2, trace, None))
 
               handleResult(result, testCase.expectedErrors, testCase.expectedWarnings) { output =>
                 val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet

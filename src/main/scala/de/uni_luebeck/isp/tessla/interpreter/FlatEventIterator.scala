@@ -7,6 +7,7 @@ import de.uni_luebeck.isp.tessla.util.Lazy
 import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.RuleNode
 
+import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
@@ -133,24 +134,26 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         TesslaCoreLegacy.BuiltInOperator(name, loc)
       }
 
+      val externs = RuntimeEvaluator.commonExterns(identity)
+
       // TODO: reactivate this using RuntimeEvaluator
       override def visitUnaryExpression(exp: UnaryExpressionContext) = {
         val operatorName = Tessla.unaryOperators(exp.op.getText)
-        val args = List(Lazy(visit(exp.expression())))
-        RuntimeEvaluator.commonExterns(operatorName)(args)
+        val args = ArraySeq(Lazy(visit(exp.expression())))
+        externs(operatorName)(args)
       }
 
       override def visitInfixExpression(exp: InfixExpressionContext) = {
         val operatorName = Tessla.binaryOperators(exp.op.getText)
-        val args = List(Lazy(visit(exp.lhs)), Lazy(visit(exp.rhs)))
+        val args = ArraySeq(Lazy(visit(exp.lhs)), Lazy(visit(exp.rhs)))
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
-        RuntimeEvaluator.commonExterns(operatorName)(args)
+        externs(operatorName)(args)
       }
 
       override def visitITE(ite: ITEContext) = {
         val loc = Location.fromNode(ite)
-        RuntimeEvaluator.commonExterns("ite")(List(Lazy(visit(ite.condition)), Lazy(visit(ite.thenCase)), Lazy(visit(ite.elseCase))))
+        externs("ite")(ArraySeq(Lazy(visit(ite.condition)), Lazy(visit(ite.thenCase)), Lazy(visit(ite.elseCase))))
       }
 
       override final def visitChildren(node: RuleNode): Any = {

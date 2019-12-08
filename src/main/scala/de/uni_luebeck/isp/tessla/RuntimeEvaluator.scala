@@ -8,6 +8,8 @@ import de.uni_luebeck.isp.tessla.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.util.Lazy
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
+import scala.collection.immutable.ArraySeq
+
 object RuntimeEvaluator {
 
   type Env = Map[String, Lazy[Any]]
@@ -27,11 +29,11 @@ object RuntimeEvaluator {
 
   case class RuntimeError(msg: String) // TODO: support location information etc
 
-  def propagate(args: List[Any])(f: List[Any] => Any) = args.find(_.isInstanceOf[RuntimeError]).getOrElse(f(args))
+  def propagate(args: ArraySeq[Any])(f: ArraySeq[Any] => Any) = args.find(_.isInstanceOf[RuntimeError]).getOrElse(f(args))
 
   def propagateSingle(arg: Any)(f: Any => Any) = if (arg.isInstanceOf[RuntimeError]) arg else f(arg)
 
-  def strict(f: List[Any] => Any) = (list: List[Lazy[Any]]) =>
+  def strict(f: ArraySeq[Any] => Any) = (list: ArraySeq[Lazy[Any]]) =>
     propagate(list.map(_.get))(f)
 
   def binIntOp(f: (BigInt, BigInt) => Any) = strict(l =>
@@ -47,9 +49,9 @@ object RuntimeEvaluator {
 
   def unaryFloatOp(f: Double => Any) = strict(l => f(l(0).asInstanceOf[Double]))
 
-  val commonExterns: Map[String, List[Lazy[Any]] => Any] = Map(
-    "true" -> ((arguments: List[Lazy[Any]]) => true),
-    "false" -> ((arguments: List[Lazy[Any]]) => false),
+  def commonExterns(call: (ArraySeq[Any] => Any) => ArraySeq[Lazy[Any]] => Any): Map[String, ArraySeq[Lazy[Any]] => Any] = Map(
+    "true" -> ((_: ArraySeq[Lazy[Any]]) => true),
+    "false" -> ((_: ArraySeq[Lazy[Any]]) => false),
     "add" -> binIntOp(_ + _),
     "sub" -> binIntOp(_ - _),
     "mul" -> binIntOp(_ * _),
@@ -77,19 +79,19 @@ object RuntimeEvaluator {
     "fleq" -> binFloatOp(_ <= _),
     "fgt" -> binFloatOp(_ > _),
     "fgeq" -> binFloatOp(_ >= _),
-    "and" -> ((arguments: List[Lazy[Any]]) => propagateSingle(arguments(0).get) { a =>
+    "and" -> ((arguments: ArraySeq[Lazy[Any]]) => propagateSingle(arguments(0).get) { a =>
       if (a.asInstanceOf[Boolean]) arguments(1).get else false
     }),
-    "or" -> ((arguments: List[Lazy[Any]]) => propagateSingle(arguments(0).get) { a =>
+    "or" -> ((arguments: ArraySeq[Lazy[Any]]) => propagateSingle(arguments(0).get) { a =>
       if (a.asInstanceOf[Boolean]) true else arguments(1).get
     }),
-    "or" -> ((arguments: List[Lazy[Any]]) => arguments(0).get.asInstanceOf[Boolean] || arguments(1).get.asInstanceOf[Boolean]),
+    "or" -> ((arguments: ArraySeq[Lazy[Any]]) => arguments(0).get.asInstanceOf[Boolean] || arguments(1).get.asInstanceOf[Boolean]),
     "not" -> strict { arguments => !arguments(0).asInstanceOf[Boolean] },
-    "ite" -> ((arguments: List[Lazy[Any]]) =>
+    "ite" -> ((arguments: ArraySeq[Lazy[Any]]) =>
       propagateSingle(arguments(0).get) { cond =>
         if (cond.asInstanceOf[Boolean]) arguments(1).get else arguments(2).get
       }),
-    "staticite" -> ((arguments: List[Lazy[Any]]) =>
+    "staticite" -> ((arguments: ArraySeq[Lazy[Any]]) =>
       propagateSingle(arguments(0).get) { cond =>
         if (cond.asInstanceOf[Boolean]) arguments(1).get else arguments(2).get
       }),
@@ -105,12 +107,12 @@ object RuntimeEvaluator {
     } catch {
       case e: NumberFormatException => RuntimeError(e.getMessage)
     }),
-    "None" -> ((_: List[Any]) => None),
+    "None" -> ((_: ArraySeq[Any]) => None),
     "Some" -> strict(arguments => Some(arguments(0))),
     "isNone" -> strict(arguments => arguments(0).asInstanceOf[Option[Any]].isEmpty),
     "getSome" -> strict(arguments =>
       arguments(0).asInstanceOf[Option[Any]].getOrElse(RuntimeError("Cannot get value of None."))),
-    "Map_empty" -> ((_: List[Any]) => Map()),
+    "Map_empty" -> ((_: ArraySeq[Any]) => Map()),
     "Map_add" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]] + (arguments(1) -> arguments(2))),
     "Map_get" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]].getOrElse(arguments(1), RuntimeError("No such element."))),
     "Map_contains" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]].contains(arguments(1))),
@@ -118,8 +120,8 @@ object RuntimeEvaluator {
     "Map_size" -> strict(arguments => BigInt(arguments(0).asInstanceOf[Map[Any, Any]].size)),
     "Map_keys" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]].keys.toList),
     "Map_fold" -> strict(arguments => arguments(0).asInstanceOf[Map[Any, Any]].foldLeft(arguments(1))(
-      (x, y) => arguments(2).asInstanceOf[(List[Any] => Any)](List(Lazy(x), Lazy(y._1), Lazy(y._2))))),
-    "Set_empty" -> ((_: List[Any]) => Set()),
+      (x, y) => call(arguments(2).asInstanceOf[(ArraySeq[Any] => Any)])(ArraySeq(Lazy(x), Lazy(y._1), Lazy(y._2))))),
+    "Set_empty" -> ((_: ArraySeq[Any]) => Set()),
     "Set_add" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]] + arguments(1)),
     "Set_contains" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]].contains(arguments(1))),
     "Set_remove" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]] - arguments(1)),
@@ -128,8 +130,8 @@ object RuntimeEvaluator {
     "Set_intersection" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]] & arguments(1).asInstanceOf[Set[Any]]),
     "Set_minus" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]] -- arguments(1).asInstanceOf[Set[Any]]),
     "Set_fold" -> strict(arguments => arguments(0).asInstanceOf[Set[Any]].fold(arguments(1))(
-      (x, y) => arguments(2).asInstanceOf[(List[Any] => Any)](List(Lazy(x), Lazy(y))))),
-    "List_empty" -> ((_: List[Any]) => Nil),
+      (x, y) => call(arguments(2).asInstanceOf[(ArraySeq[Any] => Any)])(ArraySeq(Lazy(x), Lazy(y))))),
+    "List_empty" -> ((_: ArraySeq[Any]) => Nil),
     "List_size" -> strict(arguments => BigInt(arguments(0).asInstanceOf[List[Any]].size)),
     "List_append" -> strict(arguments => arguments(0).asInstanceOf[List[Any]] :+ arguments(1)),
     "List_prepend" -> strict(arguments => arguments(0) +: arguments(1).asInstanceOf[List[Any]]),
@@ -143,7 +145,7 @@ object RuntimeEvaluator {
 
     }),
     "List_fold" -> strict(arguments => arguments(0).asInstanceOf[List[Any]].fold(arguments(1))(
-      (x, y) => arguments(2).asInstanceOf[(List[Any] => Any)](List(Lazy(x), Lazy(y))))),
+      (x, y) => call(arguments(2).asInstanceOf[(ArraySeq[Any] => Any)])(ArraySeq(Lazy(x), Lazy(y))))),
     "List_get" -> strict(arguments => try {
       arguments(0).asInstanceOf[List[Any]](arguments(1).asInstanceOf[BigInt].toInt)
     } catch {
@@ -173,7 +175,7 @@ object RuntimeEvaluator {
 
 // TODO: All arguments are currently wrapped in Lazy, even if they are strictly evaluated
 // TODO: Replace argument lists by tuples?
-class RuntimeEvaluator(externs: Map[String, List[Lazy[Any]] => Any]) {
+class RuntimeEvaluator(externs: Map[String, ArraySeq[Lazy[Any]] => Any]) {
 
   def evalExpressionArg(arg: Core.ExpressionArg, env: => Env): Lazy[Any] = arg match {
     case Core.ExpressionRef(id, _, _) => Lazy {
@@ -184,7 +186,7 @@ class RuntimeEvaluator(externs: Map[String, List[Lazy[Any]] => Any]) {
 
   def evalExpression(exp: Core.Expression, env: Env): Any = exp match {
     case Core.FunctionExpression(_, params, body, result, location) =>
-      (args: Seq[Lazy[Any]]) => {
+      (args: ArraySeq[Lazy[Any]]) => {
         if (params.size != args.size) {
           throw InternalError(s"Called with wrong number of arguments.", location)
         }
@@ -209,7 +211,7 @@ class RuntimeEvaluator(externs: Map[String, List[Lazy[Any]] => Any]) {
         }
         case (v, (TesslaAST.LazyEvaluation, _)) => v
       }
-      propagateSingle(f)(_.asInstanceOf[List[Lazy[Any]] => Any](newArgs))
+      propagateSingle(f)(_.asInstanceOf[ArraySeq[Lazy[Any]] => Any](newArgs))
     case Core.TypeApplicationExpression(applicable, _, _) =>
       evalExpressionArg(applicable, env).get
     case Core.RecordConstructorExpression(entries, _) =>

@@ -7,36 +7,38 @@ import de.uni_luebeck.isp.tessla._
 import scala.collection.mutable
 import TesslaAST.Core
 
+import scala.collection.immutable.ArraySeq
+
 class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEvaluator.Record(Map())) {
   val inStreams: Map[String, (Input, Core.Type)] = spec.in.map { inStream =>
     inStream._1.id -> (new Input, inStream._2._1)
   }
 
-  val streamExterns: Map[String, List[Lazy[Any]] => Any] = Map(
-    "last" -> ((arguments: List[Lazy[Any]]) => last(arguments(0).get.asInstanceOf[Stream], arguments(1).get.asInstanceOf[Stream])),
-    "delay" -> ((arguments: List[Lazy[Any]]) => delay(arguments(0).get.asInstanceOf[Stream], arguments(1).get.asInstanceOf[Stream])),
-    "slift" -> ((arguments: List[Lazy[Any]]) => {
-      val op = arguments.last.get.asInstanceOf[List[Lazy[Any]] => Any]
+  val streamExterns: Map[String, ArraySeq[Lazy[Any]] => Any] = Map(
+    "last" -> ((arguments: ArraySeq[Lazy[Any]]) => last(arguments(0).get.asInstanceOf[Stream], arguments(1).get.asInstanceOf[Stream])),
+    "delay" -> ((arguments: ArraySeq[Lazy[Any]]) => delay(arguments(0).get.asInstanceOf[Stream], arguments(1).get.asInstanceOf[Stream])),
+    "slift" -> ((arguments: ArraySeq[Lazy[Any]]) => {
+      val op = arguments.last.get.asInstanceOf[ArraySeq[Lazy[Any]] => Any]
       slift(arguments.init.map(_.get.asInstanceOf[Stream])) { args =>
         op(args.map(Lazy(_)))
       }
     }),
-    "lift" -> ((arguments: List[Lazy[Any]]) => {
-      val op = arguments.last.get.asInstanceOf[List[Lazy[Any]] => Any]
+    "lift" -> ((arguments: ArraySeq[Lazy[Any]]) => {
+      val op = arguments.last.get.asInstanceOf[ArraySeq[Lazy[Any]] => Any]
       lift(arguments.init.map(_.get.asInstanceOf[Stream])) { args =>
         op(args.map(a => Lazy(a))).asInstanceOf[Option[Any]]
       }
     }),
-    "merge" -> ((arguments: List[Lazy[Any]]) => merge(arguments.map(_.get.asInstanceOf[Stream]))),
-    "default" -> ((arguments: List[Lazy[Any]]) =>
+    "merge" -> ((arguments: ArraySeq[Lazy[Any]]) => merge(arguments.map(_.get.asInstanceOf[Stream]))),
+    "default" -> ((arguments: ArraySeq[Lazy[Any]]) =>
       arguments(0).get.asInstanceOf[Stream].default(arguments(1).get)),
-    "defaultFrom" -> ((arguments: List[Lazy[Any]]) => arguments(0).get.asInstanceOf[Stream].default(arguments(1).get.asInstanceOf[Stream])),
-    "time" -> ((arguments: List[Lazy[Any]]) => arguments(0).get.asInstanceOf[Stream].time()),
-    "nil" -> ((_: List[Lazy[Any]]) => nil),
+    "defaultFrom" -> ((arguments: ArraySeq[Lazy[Any]]) => arguments(0).get.asInstanceOf[Stream].default(arguments(1).get.asInstanceOf[Stream])),
+    "time" -> ((arguments: ArraySeq[Lazy[Any]]) => arguments(0).get.asInstanceOf[Stream].time()),
+    "nil" -> ((_: ArraySeq[Lazy[Any]]) => nil),
   )
 
 
-  val runtimeEvaluator: RuntimeEvaluator = new RuntimeEvaluator(RuntimeEvaluator.commonExterns ++ streamExterns)
+  val runtimeEvaluator: RuntimeEvaluator = new RuntimeEvaluator(RuntimeEvaluator.commonExterns(identity) ++ streamExterns)
 
   lazy val definitions: RuntimeEvaluator.Env = inStreams.view.mapValues(x => Lazy(x._1)).toMap ++ spec.definitions.map(d => (d._1.id, runtimeEvaluator.evalExpressionArg(d._2, definitions)))
 

@@ -5,6 +5,7 @@ import de.uni_luebeck.isp.tessla.Errors.UndefinedTimeUnit
 import de.uni_luebeck.isp.tessla.Tessla.{FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
 import de.uni_luebeck.isp.tessla.TypedTessla.{BuiltInOperator, InputStream, Literal, Macro, MacroCall, MemberAccess, ObjectLiteral, Parameter, StaticIfThenElse, Variable, VariableEntry}
 
+import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 
 class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit]) extends TranslationPhase.Translator[Typed.Specification] {
@@ -53,13 +54,13 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
             Typed.ExpressionRef(toIdenifier(macroID, macroLoc), lookupType(macroID, env)), // TODO: determine type
             typeArgs.map(x => toType(x)).toList
           ),
-          args.map(x => Typed.ExpressionRef(toIdenifier(x.id, x.loc), lookupType(x.id, env))).toList,
+          args.map(x => Typed.ExpressionRef(toIdenifier(x.id, x.loc), lookupType(x.id, env))).to(ArraySeq),
           loc
         )
       case BuiltInOperator(name, typeParameters, parameters, referenceImplementation, loc) => // TODO: suport reference implementation
         name match {
           case "true" | "false" => Typed.ApplicationExpression(Typed.TypeApplicationExpression(
-            Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), name, loc), Nil), Nil)
+            Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), name, loc), Nil), ArraySeq())
           case "last" => Typed.ExternExpression(
             List(Identifier("A"), Identifier("B")),
             List(
@@ -95,7 +96,7 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
       case StaticIfThenElse(condition, thenCase, elseCase, loc) =>
         Typed.ApplicationExpression(Typed.TypeApplicationExpression(staticiteExtern, List(
           lookupType(thenCase.id, env)
-        )), List(
+        )), ArraySeq(
           Typed.ExpressionRef(toIdenifier(condition.id, loc), lookupType(condition.id, env), loc),
           Typed.ExpressionRef(toIdenifier(thenCase.id, loc), lookupType(thenCase.id, env), loc),
           Typed.ExpressionRef(toIdenifier(elseCase.id, loc), lookupType(elseCase.id, env), loc)

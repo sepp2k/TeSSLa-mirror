@@ -2,9 +2,8 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.Errors._
 
-import scala.collection.immutable.SortedMap
+import scala.collection.immutable.{ArraySeq, SortedMap}
 import de.uni_luebeck.isp.tessla.Location
-import de.uni_luebeck.isp.tessla.util.Lazy
 
 import scala.annotation.tailrec
 
@@ -89,7 +88,7 @@ class Specification(unitValue: Any) {
     }
   }
 
-  def lift(streams: Seq[Stream])(op: List[Option[Any]] => Option[Any]): Stream =
+  def lift(streams: ArraySeq[Stream])(op: ArraySeq[Option[Any]] => Option[Any]): Stream =
     new Stream {
       private var inputs: Array[Option[Any]] = streams.map(_ => None).toArray
       private var counter = 0
@@ -102,7 +101,7 @@ class Specification(unitValue: Any) {
             if (counter == streams.length) {
               val newOutput =
                 if (inputs.exists(_.isDefined))
-                  op(inputs.toList) // TODO: handle exception here properly
+                  op(inputs.to(ArraySeq))
                 else
                   None
               counter = 0
@@ -203,22 +202,22 @@ class Specification(unitValue: Any) {
       }
     }
 
-  def merge(streams: Seq[Stream]): Stream = {
+  def merge(streams: ArraySeq[Stream]): Stream = {
     @tailrec
-    def firstSome(values: Seq[Option[Any]]): Option[Any] = values match {
+    def firstSome(values: ArraySeq[Option[Any]]): Option[Any] = values match {
       case Some(value1) +: _ => Some(value1)
       case _ +: tail => firstSome(tail)
-      case Nil => None
+      case ArraySeq() => None
     }
     lift(streams)(firstSome)
   }
 
-  def slift(streams: Seq[Stream])(op: List[Any] => Any): Stream = {
+  def slift(streams: ArraySeq[Stream])(op: ArraySeq[Any] => Any): Stream = {
     val ticks = lift(streams) { _ =>
       Some(())
     }
     val recentValueStreams = streams.map { stream =>
-      merge(Seq(stream, last(stream, ticks)))
+      merge(ArraySeq(stream, last(stream, ticks)))
     }
     lift(recentValueStreams) { valueOptions =>
       if (valueOptions.exists(_.isEmpty)) {
