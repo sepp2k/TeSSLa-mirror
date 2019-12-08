@@ -134,13 +134,13 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         TesslaCoreLegacy.BuiltInOperator(name, loc)
       }
 
-      val externs = RuntimeEvaluator.commonExterns(identity)
+      val externs = ValueExterns.runtimeCommonenExterns
 
       // TODO: reactivate this using RuntimeEvaluator
       override def visitUnaryExpression(exp: UnaryExpressionContext) = {
         val operatorName = Tessla.unaryOperators(exp.op.getText)
         val args = ArraySeq(Lazy(visit(exp.expression())))
-        externs(operatorName)(args)
+        externs(operatorName)(args).get
       }
 
       override def visitInfixExpression(exp: InfixExpressionContext) = {
@@ -148,12 +148,12 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         val args = ArraySeq(Lazy(visit(exp.lhs)), Lazy(visit(exp.rhs)))
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
-        externs(operatorName)(args)
+        externs(operatorName)(args).get
       }
 
       override def visitITE(ite: ITEContext) = {
         val loc = Location.fromNode(ite)
-        externs("ite")(ArraySeq(Lazy(visit(ite.condition)), Lazy(visit(ite.thenCase)), Lazy(visit(ite.elseCase))))
+        externs("ite")(ArraySeq(Lazy(visit(ite.condition)), Lazy(visit(ite.thenCase)), Lazy(visit(ite.elseCase)))).get
       }
 
       override final def visitChildren(node: RuleNode): Any = {
