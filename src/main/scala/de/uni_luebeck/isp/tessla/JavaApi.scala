@@ -139,7 +139,7 @@ object JavaApi {
   def compile(specSource: CharStream, compilerOptions: Compiler.Options): CompilationResult = {
     new Compiler().compile(specSource, compilerOptions) match {
       case Success(spec, warnings) =>
-        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(new Interpreter(spec)))
+        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(new Interpreter(spec._2)))
       case Failure(errors, warnings) =>
         CompilationResult(Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava), null)
     }

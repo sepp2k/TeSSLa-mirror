@@ -1,7 +1,5 @@
 package de.uni_luebeck.isp.tessla
 
-import language.higherKinds
-
 import scala.collection.mutable
 import cats._
 import cats.implicits._
@@ -124,7 +122,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     override def tpe = {
       applicable.tpe.map { r =>
         val ft = r.asInstanceOf[FunctionType] // TODO: Make typesafe?
-        //if (ft.typeParams.nonEmpty) throw new IllegalArgumentException("Unresolved type parameters")
+        if (ft.typeParams.nonEmpty) throw new IllegalArgumentException("Unresolved type parameters")
         ft.resultType
       }
     }
@@ -228,31 +226,4 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   val IntType = InstatiatedType("Int", Nil, Location.builtIn)
   val StringType = InstatiatedType("String", Nil, Location.builtIn)
   val BoolType = InstatiatedType("Bool", Nil, Location.builtIn) // TODO: consider removing as no corresponding literal
-
-
-  ////// Non AST Stuff, kept for inspiration
-
-  import de.uni_luebeck.isp.tessla.util.Lazy
-  ////// Runtime Stuff
-
-
-  ////// Compiletime Stuff
-
-  sealed trait CompiletimeValue
-
-  case class CompiletimeExternValue(value: Any) extends CompiletimeValue
-
-  case class CompiletimeExpressionValue(expression: ExpressionArg) extends CompiletimeValue
-
-  case class CompiletimeClosure(function: FunctionExpression, env: Map[Identifier, Lazy[CompiletimeValue]],
-    translatedFunction: Identifier, translatedEpressions: mutable.Map[Identifier, Expression], queue: mutable.Queue[() => Unit]
-  ) extends CompiletimeValue
-
-
-  ////// Externs
-  def evalExtern(name: String, args: List[Any]): Any = ???
-
-  def reifyExtern(value: Any): Option[Expression] = ???
-
-
 }
