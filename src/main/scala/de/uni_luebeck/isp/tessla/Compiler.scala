@@ -1,6 +1,5 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Compiler.Options
 import org.antlr.v4.runtime.CharStream
 
@@ -19,18 +18,18 @@ object Compiler {
 
 class Compiler {
 
-  def instantiatePipeline(options: Options): TranslationPhase[CharStream, (TesslaAST.Typed.Specification, TesslaAST.Core.Specification)] = {
+  def instantiatePipeline(options: Options): TranslationPhase[CharStream, (TesslaAST.Typed.Specification, TranslationPhase.Result[TesslaAST.Core.Specification])] = {
     new TesslaParser.WithIncludes(options.includeResolver)
       .andThen(new StdlibIncluder(options.stdlibIncludeResolver, options.stdlibPath))
       .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
       .andThen(new TypedTessla2TesslaASTCore(options.timeUnit))
-      .andThen(new TranslationPhase.ParallelPhase(new TranslationPhase.IdentityPhase[TesslaAST.Typed.Specification](), new ConstantEvaluator(options.timeUnit)))
+      .andThen(new TranslationPhase.BypassPhase(new ConstantEvaluator(options.timeUnit)))
     //.andThen(RemoveUnusedDefinitions)
   }
 
-  def compile(src: CharStream, options: Options): TranslationPhase.Result[(TesslaAST.Typed.Specification, TesslaAST.Core.Specification)] = {
+  def compile(src: CharStream, options: Options): TranslationPhase.Result[(TesslaAST.Typed.Specification, TranslationPhase.Result[TesslaAST.Core.Specification])] = {
     instantiatePipeline(options).translate(src)
   }
 

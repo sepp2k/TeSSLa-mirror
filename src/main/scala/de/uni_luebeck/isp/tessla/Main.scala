@@ -30,6 +30,10 @@ object Main extends SexyOpt {
 
   val printTyped = flag("print-typed", "Print the typed Tessla representation generated from the Tessla specification")
 
+  val printLocations = flag("print-locations", "Print ASTs with locations")
+
+  val printAllTypes = flag("print-all-types", "Print ASTs with all types")
+
   val debug = flag("debug", "Print stack traces for runtime errors")
 
   val stopOn = option("stop-on", "Stop when the output stream with the given name generates its first event")
@@ -88,7 +92,12 @@ object Main extends SexyOpt {
         stdlibPath = "stdlib.tessla"
       )
       val result = unwrapResult(compiler.compile(specSource, compilerOptions))
-      val core = result._2
+
+      if (printTyped) {
+        println(result._1.print(TesslaAST.PrintOptions(!printAllTypes, printAllTypes, printAllTypes, true, printLocations)))
+      }
+
+      val core = unwrapResult(result._2)
 
       if (observations) {
         // FIXME: port to new tessla core: println(unwrapResult(Observations.Generator.translate(core)))
@@ -116,11 +125,7 @@ object Main extends SexyOpt {
       }
 
       if (printCore) {
-        println(core)
-      }
-
-      if (printTyped) {
-        println(result._1)
+        println(core.print(TesslaAST.PrintOptions(!printAllTypes, printAllTypes, printAllTypes, true, printLocations)))
       }
 
       if (listInStreams || listOutStreams || computationDepth || recursionDepth || nodeCount || verifyOnly) {

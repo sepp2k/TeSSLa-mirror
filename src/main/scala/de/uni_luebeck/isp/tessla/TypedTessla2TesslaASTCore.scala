@@ -33,28 +33,28 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
   def translateEnv(env: TypedTessla.Definitions): Map[Identifier, Typed.ExpressionArg] = env.variables.toMap.map { case (id, definition) =>
     (toIdenifier(id, definition.loc), definition.expression match {
       case InputStream(name, streamType, typeLoc, loc) =>
-        ins += (Identifier(name) -> (toType(streamType), Nil))
-        Typed.ExpressionRef(Identifier(name), toType(streamType, typeLoc), loc)
+        ins += (Identifier(name, loc) -> (toType(streamType), Nil))
+        Typed.ExpressionRef(Identifier(name, loc), toType(streamType, typeLoc), loc)
       case Parameter(param, parameterType, id) =>
-        Typed.ExpressionRef(TesslaAST.Identifier(param.id.name, param.loc), toType(parameterType), param.loc)
+        Typed.ExpressionRef(TesslaAST.Identifier(param.id.name, param.id.loc), toType(parameterType), param.loc)
       case Macro(typeParameters, parameters, body, returnType, headerLoc, result, loc, _) =>
         Typed.FunctionExpression(
           typeParameters.map(toIdenifier(_, Location.unknown)).toList,
           parameters.map(x => (TesslaAST.Identifier(x.param.id.name, x.loc), if (x.parameterType.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation,
-            toType(x.parameterType))).toList, // TODO: determine lazyness
+            toType(x.parameterType))).toList,
           translateEnv(body),
-          Typed.ExpressionRef(toIdenifier(result.id, result.loc), lookupType(result.id, body)),
+          Typed.ExpressionRef(toIdenifier(result.id, Location.unknown), lookupType(result.id, body), result.loc),
           loc
         )
       case Variable(id, loc) =>
-        Typed.ExpressionRef(toIdenifier(id, loc), lookupType(id, env), loc) // TODO: determine type
+        Typed.ExpressionRef(toIdenifier(id, lookup(env, id).loc), lookupType(id, env), loc)
       case MacroCall(macroID, macroLoc, typeArgs, args, loc) =>
         Typed.ApplicationExpression(
           Typed.TypeApplicationExpression(
-            Typed.ExpressionRef(toIdenifier(macroID, macroLoc), lookupType(macroID, env)), // TODO: determine type
+            Typed.ExpressionRef(toIdenifier(macroID, macroLoc), lookupType(macroID, env)),
             typeArgs.map(x => toType(x)).toList
           ),
-          args.map(x => Typed.ExpressionRef(toIdenifier(x.id, x.loc), lookupType(x.id, env))).to(ArraySeq),
+          args.map(x => Typed.ExpressionRef(toIdenifier(x.id, lookup(env, x.id).loc), lookupType(x.id, env), x.loc)).to(ArraySeq),
           loc
         )
       case BuiltInOperator(name, typeParameters, parameters, referenceImplementation, loc) => // TODO: suport reference implementation
@@ -134,6 +134,9 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
       Typed.RecordType(memberTypes.map(x => (Identifier(x._1), toType(x._2))))
     case TypedTessla.TypeParameter(id, loc) => Typed.TypeParam(toIdenifier(id, loc), loc)
   }
+
+  def lookup(env: TypedTessla.Definitions, id: TypedTessla.Identifier): VariableEntry =
+    env.variables.getOrElse(id, lookup(env.parent.get, id))
 
   def toIdenifier(identifier: TypedTessla.Identifier, location: Location) = Identifier(identifier.nameOpt.getOrElse("") + "$" + identifier.uid, location)
 }

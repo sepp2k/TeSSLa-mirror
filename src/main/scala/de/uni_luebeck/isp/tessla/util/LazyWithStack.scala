@@ -6,12 +6,12 @@ import cats.implicits._
 class LazyWithStack[Stack] {
 
   object StackLazy {
-    def apply[A](a: Stack => A) = new StackLazy(a)
+    def apply[A](a: Stack => A): StackLazy[A] = new StackLazyImpl(a)
 
     implicit def monadInstance: Monad[StackLazy] = new Monad[StackLazy] {
       override def pure[A](x: A) = StackLazy(_ => x)
 
-      override def map[A, B](fa: StackLazy[A])(f: A => B) = StackLazy {stack =>
+      override def map[A, B](fa: StackLazy[A])(f: A => B) = StackLazy { stack =>
         f(fa.get(stack))
       }
 
@@ -29,42 +29,42 @@ class LazyWithStack[Stack] {
 
   }
 
-  class StackLazy[+A](a: Stack => A) {
+  sealed trait StackLazy[+A] {
+    self =>
+    def get(stack: Stack): A
+
+    def push(f: Stack => Stack): StackLazy[A] = new StackLazy[A] {
+      override def get(stack: Stack): A = self.get(f(stack))
+    }
+
+    def toLazy(stack: Stack) = Lazy(get(stack))
+  }
+
+  private class StackLazyImpl[A](a: Stack => A) extends StackLazy[A] {
+    self =>
     override def toString = s"Lazy($a)"
 
     private var computing = false
     private var computationStack: Option[Stack] = None
 
-    private val result: Helper[_ <: A] = new Helper(a)
+    private var result: Option[A] = None
 
-    def get(stack: Stack): A = result.get(stack)
-
-    private class Helper[B](b: Stack => B) {
-      private var result: Option[B] = None
-
-      def get(stack: Stack): B = {
-        result match {
-          case Some(r) => r
-          case None =>
-            val rec = computing
-            computing = true
-            computationStack = Some(stack)
-            try {
-              val r = call(stack, rec)(b)
-              result = Some(r)
-              r
-            } finally {
-              computing = false
-            }
-        }
+    override def get(stack: Stack): A = {
+      result match {
+        case Some(r) => r
+        case None =>
+          val rec = computing
+          computing = true
+          computationStack = Some(stack)
+          try {
+            val r = call(stack, rec)(a)
+            result = Some(r)
+            r
+          } finally {
+            computing = false
+          }
       }
     }
-
-    def getComputationStack = computationStack
-
-    def isComputing = computing
-
-    def toLazy(stack: Stack) = Lazy(get(stack))
   }
 
   def call[A](stack: Stack, rec: Boolean)(a: Stack => A) = a(stack)
