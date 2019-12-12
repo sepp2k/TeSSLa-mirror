@@ -176,11 +176,11 @@ object ValueExterns {
     }),
     "List_tail" -> strict(propagate(_) { arguments =>
       val list = arguments(0).asInstanceOf[List[Any]]
-      if (list.isEmpty) RuntimeError("Tail unsupported for empty list.").pure[A] else list.tail.pure[A]
+      (if (list.isEmpty) RuntimeError("Tail unsupported for empty list.") else list.tail).pure[A]
     }),
     "List_init" -> strict(propagate(_) { arguments =>
       val list = arguments(0).asInstanceOf[List[Any]]
-      if (list.isEmpty) RuntimeError("Init unsupported for empty list.").pure[A] else list.init.pure[A]
+      (if (list.isEmpty) RuntimeError("Init unsupported for empty list.") else list.init).pure[A]
     }),
     "List_fold" -> ((arguments: ArraySeq[A[Any]]) => arguments(0).flatMap(propagateSingle(_) { map =>
       arguments(2).flatMap(propagateSingle(_) { f =>
@@ -197,11 +197,11 @@ object ValueExterns {
       }
     }),
     "List_set" -> strict(propagate(_) { arguments =>
-      try {
-        arguments(0).asInstanceOf[List[Any]].updated(arguments(1).asInstanceOf[BigInt].toInt, arguments(2)).pure[A]
+      (try {
+        arguments(0).asInstanceOf[List[Any]].updated(arguments(1).asInstanceOf[BigInt].toInt, arguments(2))
       } catch {
-        case e: IndexOutOfBoundsException => RuntimeError("Index out of bounds.").pure[A]
-      }
+        case e: IndexOutOfBoundsException => RuntimeError("Index out of bounds.")
+      }).pure[A]
     }),
     "String_concat" -> strict(propagate(_) {
       arguments => (arguments(0).asInstanceOf[String] + arguments(1).asInstanceOf[String]).pure[A]
@@ -211,18 +211,18 @@ object ValueExterns {
       arguments(0).asInstanceOf[String].formatLocal(Locale.ROOT, arguments(1)).pure[A] // TODO: error handling?
     }),
     "CTF_getInt" -> strict(propagate(_) { arguments =>
-      try {
-        Ctf.getInt(arguments(0).asInstanceOf[ICompositeDefinition], arguments(1).asInstanceOf[String]).pure[A]
+      (try {
+        Ctf.getInt(arguments(0).asInstanceOf[ICompositeDefinition], arguments(1).asInstanceOf[String])
       } catch {
-        case e: ClassCastException => RuntimeError(e.getMessage).pure[A]
-      }
+        case e: ClassCastException => RuntimeError(e.getMessage)
+      }).pure[A]
     }),
     "CTF_getString" -> strict(propagate(_) { arguments =>
-      try {
-        Ctf.getString(arguments(0).asInstanceOf[ICompositeDefinition], arguments(1).asInstanceOf[String]).pure[A]
+      (try {
+        Ctf.getString(arguments(0).asInstanceOf[ICompositeDefinition], arguments(1).asInstanceOf[String])
       } catch {
-        case e: ClassCastException => RuntimeError(e.getMessage).pure[A]
-      }
+        case e: ClassCastException => RuntimeError(e.getMessage)
+      }).pure[A]
     }),
     "error" -> strict(propagate(_) { arguments =>
       RuntimeEvaluator.RuntimeError(arguments(0).asInstanceOf[String]).pure[A]

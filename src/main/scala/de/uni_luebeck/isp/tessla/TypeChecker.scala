@@ -406,7 +406,12 @@ class TypeChecker(spec: FlatTessla.Specification)
             val calculatedTypeArgs = t.typeParameters.map(typeSubstitutions)
             val returnType = typeSubst(possiblyLiftedType.returnType, possiblyLiftedType.returnType,
               typeParams, typeSubstitutions)
-            TypedTessla.MacroCall(macroID, call.macroLoc, calculatedTypeArgs, args, call.loc) -> returnType
+            val newTypeArgs = if (t.isLiftable && call.args.exists(arg => typeMap(env(arg.id)).isStreamType)) {
+              t.parameterTypes :+ t.returnType
+            } else {
+              calculatedTypeArgs
+            }
+            TypedTessla.MacroCall(macroID, call.macroLoc, newTypeArgs, args, call.loc) -> returnType
           case other =>
             throw TypeMismatch("function", other, call.macroLoc)
         }
@@ -438,7 +443,7 @@ class TypeChecker(spec: FlatTessla.Specification)
             defs.addVariable(TypedTessla.VariableEntry(macroId, mac, memberType, Seq(), acc.loc))
             val arg = TypedTessla.PositionalArgument(receiver, acc.receiver.loc)
             val macroArg = TypedTessla.PositionalArgument(macroId, acc.loc)
-            val liftedMacroCall = TypedTessla.MacroCall(slift1Id, acc.loc, Seq(), Seq(arg, macroArg), acc.loc)
+            val liftedMacroCall = TypedTessla.MacroCall(slift1Id, acc.loc, Seq(ot, memberType), Seq(arg, macroArg), acc.loc)
             liftedMacroCall -> streamType(memberType)
           case other =>
             throw TypeMismatch("object", other, acc.receiver.loc)

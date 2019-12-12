@@ -5,6 +5,10 @@ import cats.implicits._
 
 class LazyWithStack[Stack] {
 
+  object Lazy {
+    def apply[A](a: => A): StackLazy[A] = new StackLazyImpl(_ => a)
+  }
+
   object StackLazy {
     def apply[A](a: Stack => A): StackLazy[A] = new StackLazyImpl(a)
 
@@ -36,18 +40,15 @@ class LazyWithStack[Stack] {
     def push(f: Stack => Stack): StackLazy[A] = new StackLazy[A] {
       override def get(stack: Stack): A = self.get(f(stack))
     }
-
-    def toLazy(stack: Stack) = Lazy(get(stack))
   }
 
-  private class StackLazyImpl[A](a: Stack => A) extends StackLazy[A] {
+  private class StackLazyImpl[+A](a: Stack => A) extends StackLazy[A] {
     self =>
     override def toString = s"Lazy($a)"
 
     private var computing = false
-    private var computationStack: Option[Stack] = None
 
-    private var result: Option[A] = None
+    private[this] var result: Option[A] = None
 
     override def get(stack: Stack): A = {
       result match {
@@ -55,7 +56,6 @@ class LazyWithStack[Stack] {
         case None =>
           val rec = computing
           computing = true
-          computationStack = Some(stack)
           try {
             val r = call(stack, rec)(a)
             result = Some(r)
@@ -67,7 +67,7 @@ class LazyWithStack[Stack] {
     }
   }
 
-  def call[A](stack: Stack, rec: Boolean)(a: Stack => A) = a(stack)
+  protected def call[A](stack: Stack, rec: Boolean)(a: Stack => A) = a(stack)
 
 }
 
