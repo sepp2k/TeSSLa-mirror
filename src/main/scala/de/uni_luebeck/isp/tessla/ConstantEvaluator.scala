@@ -102,12 +102,6 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
   val streamExterns: Map[String, TypeApplicable] = List("last", "slift", "default", "lift", "nil", "time", "false", "true",
     "delay", "defaultFrom", "merge", "String_format").map(_ -> noExtern).toMap
 
-  // TODO: try to reify value
-  def valueExtern(f: ArraySeq[TranslationResult[Any]] => TranslationResult[Any]): TypeApplicable = _ => args => {
-    val result = f(args)
-    TranslationResult(result.value, Lazy(None))
-  }
-
   implicit val translationResultMonad: Monad[TranslationResult] = new Monad[TranslationResult] {
     override def flatMap[A, B](fa: TranslationResult[A])(f: A => TranslationResult[B]) = {
       val result = fa.value.map(_.map(f))
@@ -126,7 +120,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
       TranslationResult(Lazy(Some(x)), Lazy(None))
   }
 
-  val valueExterns: Map[String, TypeApplicable] = ValueExterns.commonExterns[TranslationResult].view.mapValues(valueExtern).toMap
+  val valueExterns: Map[String, TypeApplicable] = ValueExterns.commonExterns[TranslationResult].view.mapValues(f => (_: List[Core.Type]) => f).toMap
 
   val staticIteExtern: TypeApplicable = typeArgs => args => {
     val value = StackLazy { stack =>
