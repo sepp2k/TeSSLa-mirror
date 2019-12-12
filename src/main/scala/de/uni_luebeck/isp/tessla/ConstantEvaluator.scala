@@ -104,8 +104,8 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
   val noExtern: TypeApplicable = _ => _ => Translatable(_ => TranslationResult(Lazy(None), Lazy(None)))
 
-  val streamExterns: Map[String, TypeApplicable] = List("last", "slift", "default", "lift", "nil", "time", "false", "true",
-    "delay", "defaultFrom", "merge", "String_format").map(_ -> noExtern).toMap
+  val streamExterns: Map[String, TypeApplicable] = List("last", "slift", "default", "lift", "nil", "time",
+    "delay", "defaultFrom", "merge").map(_ -> noExtern).toMap
 
   implicit val translatableMonad: Monad[Translatable] = new Monad[Translatable] {
     override def flatMap[A, B](fa: Translatable[A])(f: A => Translatable[B]) = Translatable { translatedExpressions =>
@@ -127,23 +127,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
   val valueExterns: Map[String, TypeApplicable] = ValueExterns.commonExterns[Translatable].view.mapValues(f => (_: List[Core.Type]) => f).toMap
 
-  val staticIteExtern: TypeApplicable = typeArgs => args => Translatable { translatedExpressions =>
-    val value = StackLazy { stack =>
-      args.head.translate(translatedExpressions).value.get(stack).map {
-        case e: RuntimeEvaluator.RuntimeError => mkErrorResult(e, typeArgs(0))
-        case value => if (value.asInstanceOf[Boolean]) args(1).translate(translatedExpressions) else args(2).translate(translatedExpressions)
-      }
-    }
-    val expression = value.flatMap(_.traverse(_.expression)).map(_.flatten)
-    TranslationResult(value.flatMap(_.traverse(_.value).map(_.flatten)), expression)
-  }
-
-  val extraExterns = Map(
-    "staticite" -> staticIteExtern,
-    "ite" -> staticIteExtern
-  )
-  val externs = streamExterns ++ valueExterns ++ extraExterns
-
+  val externs = streamExterns ++ valueExterns
 
   override def translateSpec(): Core.Specification = {
     val translatedExpressions = new TranslatedExpressions

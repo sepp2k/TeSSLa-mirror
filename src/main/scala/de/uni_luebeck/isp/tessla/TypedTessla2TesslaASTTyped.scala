@@ -8,7 +8,7 @@ import de.uni_luebeck.isp.tessla.TypedTessla.{BuiltInOperator, InputStream, Lite
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 
-class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit]) extends TranslationPhase.Translator[Typed.Specification] {
+class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit]) extends TranslationPhase.Translator[Typed.Specification] {
 
   val staticiteExtern = Typed.ExternExpression(List(Identifier("A")), List(
     (Identifier("c"), TesslaAST.StrictEvaluation, Typed.BoolType),
@@ -89,6 +89,20 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
             Typed.UnitType,
             "ite"
           )
+          case "List_fold" => Typed.ExternExpression(
+            List(Identifier("A"), Identifier("B")),
+            List(
+              (Identifier("as"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("List", List(Typed.TypeParam(Identifier("A"))))),
+              (Identifier("b"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
+              (Identifier("f"), TesslaAST.StrictEvaluation, Typed.FunctionType(
+                Nil, List(
+                  (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
+                  (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A")))),
+                Typed.TypeParam(Identifier("B"))
+              ))
+            ),
+            Typed.UnitType,
+            "List_fold")
           case _ => Typed.ExternExpression(typeParameters.map(toIdenifier(_, Location.unknown)).toList,
             parameters.map(x => (toIdenifier(x.id, x.loc), TesslaAST.StrictEvaluation, toType(x.parameterType))).toList,
             toType(definition.typeInfo.asInstanceOf[TypedTessla.FunctionType].returnType), name, loc)
@@ -143,6 +157,6 @@ class TypedTessla2TesslaASTCoreWorker(spec: TypedTessla.TypedSpecification, base
 
 class TypedTessla2TesslaASTCore(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {
   override def translate(spec: TypedTessla.TypedSpecification) = {
-    new TypedTessla2TesslaASTCoreWorker(spec, baseTimeUnit).translate()
+    new TypedTessla2TesslaASTTypedWorker(spec, baseTimeUnit).translate()
   }
 }
