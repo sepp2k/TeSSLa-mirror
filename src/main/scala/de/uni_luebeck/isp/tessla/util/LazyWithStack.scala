@@ -3,7 +3,9 @@ package de.uni_luebeck.isp.tessla.util
 import cats._
 import cats.implicits._
 
-class LazyWithStack[Stack] {
+class LazyWithStack[Frame]() {
+
+  type Stack = List[Frame]
 
   object Lazy {
     def apply[A](a: => A): StackLazy[A] = new StackLazyImpl(_ => a)
@@ -37,8 +39,8 @@ class LazyWithStack[Stack] {
     self =>
     def get(stack: Stack): A
 
-    def push(f: Stack => Stack): StackLazy[A] = new StackLazy[A] {
-      override def get(stack: Stack): A = self.get(f(stack))
+    def push(f: Frame): StackLazy[A] = new StackLazy[A] {
+      override def get(stack: Stack): A = self.get(f :: stack)
     }
   }
 
@@ -70,8 +72,3 @@ class LazyWithStack[Stack] {
   protected def call[A](stack: Stack, rec: Boolean)(a: Stack => A) = a(stack)
 
 }
-
-object LazyWithStack {
-  def apply[Stack]: LazyWithStack[Stack] = new LazyWithStack
-}
-

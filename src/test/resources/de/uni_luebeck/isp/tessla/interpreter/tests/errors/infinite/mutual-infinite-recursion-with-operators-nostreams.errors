@@ -7,3 +7,6 @@ errors/infinite/mutual-infinite-recursion-with-operators-nostreams.tessla(1,15 -
     called from errors/infinite/mutual-infinite-recursion-with-operators-nostreams.tessla(1,15 - 1,20)
     called from errors/infinite/mutual-infinite-recursion-with-operators-nostreams.tessla(1,1 - 1,11)
     called from errors/infinite/mutual-infinite-recursion-with-operators-nostreams.tessla(3,5 - 3,6)
+    called from errors/infinite/mutual-infinite-recursion-with-operators-nostreams.tessla(3,5 - 3,6)
+    called from errors/infinite/mutual-infinite-recursion-with-operators-nostreams.tessla(3,5 - 3,6)
+    called from errors/infinite/mutual-infinite-recursion-with-operators-nostreams.tessla(3,5 - 3,6)

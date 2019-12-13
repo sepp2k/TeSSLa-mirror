@@ -32,9 +32,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     }
   }
 
-  type Stack = List[Location]
-
-  val lazyWithStack = new LazyWithStack[Stack] {
+  val lazyWithStack = new LazyWithStack[Location]() {
     override def call[A](stack: Stack, rec: Boolean)(a: Stack => A) = {
       if (stack.size > 1000) {
         throw WithStackTrace(Errors.StackOverflow(stack.head), stack.tail)
@@ -99,14 +97,6 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
       reification(subValues.map(x => reify(x._1, x._2)))
     case _ => throw InternalError(s"Could not reify value of type $tpe.")
   }
-
-  /*type Reifier = (String, Any, Core.Type) => (List[Core.ExpressionArg] => Core.Expression, List[Any])
-
-  val reifiers = Map[String, Reifier]()
-
-  def reify(value: Any, tpe: Core.Type): (Core.Expression, Boolean) = {
-    ???
-  }*/
 
   type TypeApplicable = List[Core.Type] => Applicable
   type Applicable = ArraySeq[Translatable[Any, Option]] => Translatable[Any, Some]
@@ -346,7 +336,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
           }
         }
         val expression = StackLazy { stack =>
-          value.get(Nil).map(_.expression.get(stack)).getOrElse(Some(Left(StackLazy { stack =>
+          value.get(stack).map(_.expression.get(stack)).getOrElse(Some(Left(StackLazy { stack =>
             mkApplicationExpression(getExpressionArgStrict(translatedApplicable).get(stack), paramTypes, translatedArgs,
               stack, translatedExpressions, location)
           })))
@@ -373,9 +363,9 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
   }
 
   def pushStack(result: TranslationResult[Any, Some], location: Location) =
-    TranslationResult[Any, Some](result.value.push(location :: _), result.expression.push(location :: _).map(e => Some(e.value match {
-      case Left(exp) => Left(exp.push(location :: _))
-      case Right(StrictOrLazy(exp1, exp2)) => Right(StrictOrLazy(exp1.push(location :: _), exp2.push(location :: _)))
+    TranslationResult[Any, Some](result.value.push(location), result.expression.push(location).map(e => Some(e.value match {
+      case Left(exp) => Left(exp.push(location))
+      case Right(StrictOrLazy(exp1, exp2)) => Right(StrictOrLazy(exp1.push(location), exp2.push(location)))
     })))
 
   def mkApplicationExpression(applicable: Core.ExpressionArg, paramTypes: List[(Typed.Evaluation, Typed.Type)], args: ArraySeq[TranslationResult[Any, Some]], stack: Stack, translatedExpressions: TranslatedExpressions, location: Location): Core.ApplicationExpression =
