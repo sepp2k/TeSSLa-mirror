@@ -78,8 +78,27 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     TranslationResult[Any, Some](Lazy(value), Lazy(Some(Right(StrictOrLazy(Lazy(expression), Lazy(expression))))))
 
   // TODO: reify values here
-  def reified(result: TranslationResult[Any, Option]): TranslationResult[Any, Some] =
-    TranslationResult[Any, Some](result.value, result.expression.map(_.asInstanceOf[Some[ExpressionOrRef]]))
+  def reified(result: TranslationResult[Any, Option], tpe: Core.Type): TranslationResult[Any, Some] =
+    TranslationResult[Any, Some](result.value, result.expression.flatMap {
+      case Some(e) => Lazy(Some(e))
+      case None => result.value.map { v =>
+        Some(Left(Lazy(v.map(reify(_, tpe)).getOrElse(throw InternalError("No value available for reification.")))))
+      }
+    })
+
+  type Reifier = (Any, List[Core.Type]) => (List[(Any, Core.Type)], List[Core.ExpressionArg] => Core.Expression)
+
+  val reifiers = Map[String, Reifier](
+    "Int" -> ((value, _) => (Nil, _ => Core.IntLiteralExpression(value.asInstanceOf[BigInt])))
+  )
+
+  def reify(value: Any, tpe: Core.Type): Core.Expression = tpe match {
+    case Core.InstatiatedType(name, typeArgs, _) =>
+      val reifier = reifiers.getOrElse(name, throw InternalError(s"No reifier found for $name."))
+      val (subValues, reification) = reifier(value, typeArgs)
+      reification(subValues.map(x => reify(x._1, x._2)))
+    case _ => throw InternalError(s"Could not reify value of type $tpe.")
+  }
 
   /*type Reifier = (String, Any, Core.Type) => (List[Core.ExpressionArg] => Core.Expression, List[Any])
 
@@ -225,8 +244,9 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
                 val extern = externs(name)
                 val result = extern(typeArgs)(args).translate(translatedExpressions)
                 TranslationResult[Any, Some](result.value, result.expression.map(e => Some(e.getOrElse(Left(StackLazy { stack =>
-                  mkApplicationExpression(Core.TypeApplicationExpression(expression, typeArgs),
-                    paramTypes, args.map(a => reified(a.translate(translatedExpressions))), stack, translatedExpressions, location)
+                  mkApplicationExpression(Core.TypeApplicationExpression(expression, typeArgs), paramTypes,
+                    args.zip(params).map(a => reified(a._1.translate(translatedExpressions), translateType(a._2._3))),
+                    stack, translatedExpressions, location)
                 })))))
               }
           }
@@ -269,7 +289,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
             args =>
               Translatable { translatedExpressions =>
                 val innerTypeEnv = typeEnv ++ typeParams.zip(typeArgs).map(x => (x._1, x._2))
-                lazy val innerEnv: Env = env ++ params.map(_._1).zip(args.map(a => reified(a.translate(translatedExpressions)))) ++
+                lazy val innerEnv: Env = env ++ params.map(_._1).zip(args.map(a => reified(a.translate(translatedExpressions), translateType(result.tpe)))) ++
                   body.map(e => (e._1,
                     translateExpressionArg(e._2, innerEnv, innerTypeEnv, extractNameOpt(e._1)).translate(translatedExpressions)
                   ))
