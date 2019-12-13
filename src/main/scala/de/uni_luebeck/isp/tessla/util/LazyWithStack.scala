@@ -12,7 +12,7 @@ class LazyWithStack[Stack] {
   object StackLazy {
     def apply[A](a: Stack => A): StackLazy[A] = new StackLazyImpl(a)
 
-    implicit def monadInstance: Monad[StackLazy] = new Monad[StackLazy] {
+    implicit def monadInstance: CommutativeMonad[StackLazy] = new CommutativeMonad[StackLazy] {
       override def pure[A](x: A) = StackLazy(_ => x)
 
       override def map[A, B](fa: StackLazy[A])(f: A => B) = StackLazy { stack =>
