@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import TesslaAST.{Identifier, Typed}
+import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.UndefinedTimeUnit
 import de.uni_luebeck.isp.tessla.Tessla.{FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
 import de.uni_luebeck.isp.tessla.TypedTessla.{BuiltInOperator, InputStream, Literal, Macro, MacroCall, MemberAccess, ObjectLiteral, Parameter, StaticIfThenElse, Variable, VariableEntry}
@@ -16,6 +17,54 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     (Identifier("e"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
   ), Typed.TypeParam(Identifier("A")), "staticite")
 
+  val knownExterns = Map(
+    "true" -> Typed.ApplicationExpression(Typed.TypeApplicationExpression(
+      Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), "true"), Nil), ArraySeq()),
+    "false" -> Typed.ApplicationExpression(Typed.TypeApplicationExpression(
+      Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), "false"), Nil), ArraySeq()),
+    "last" -> Typed.ExternExpression(
+      List(Identifier("A"), Identifier("B")),
+      List(
+        (Identifier("a"), TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A"))))),
+        (Identifier("b"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("B")))))
+      ),
+      Typed.TypeParam(Identifier("A")),
+      "last"
+    ),
+    "delay" -> Typed.ExternExpression(
+      List(Identifier("A")),
+      List(
+        (Identifier("a"), TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.IntType))),
+        (Identifier("b"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A")))))
+      ),
+      Typed.UnitType,
+      "delay"
+    ),
+    "ite" -> Typed.ExternExpression(
+      List(Identifier("A")),
+      List(
+        (Identifier("a"), TesslaAST.StrictEvaluation, Typed.BoolType),
+        (Identifier("b"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
+        (Identifier("c"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
+      ),
+      Typed.UnitType,
+      "ite"
+    ),
+    "List_fold" -> Typed.ExternExpression(
+      List(Identifier("A"), Identifier("B")),
+      List(
+        (Identifier("as"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("List", List(Typed.TypeParam(Identifier("A"))))),
+        (Identifier("b"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
+        (Identifier("f"), TesslaAST.StrictEvaluation, Typed.FunctionType(
+          Nil, List(
+            (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("B"))),
+            (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A")))),
+          Typed.TypeParam(Identifier("B"))
+        ))
+      ),
+      Typed.UnitType,
+      "List_fold")
+  )
   val ins = mutable.Map[Identifier, (Typed.Type, List[Nothing])]()
 
   override protected def translateSpec() = {
@@ -25,9 +74,22 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     Typed.Specification(ins.toMap, defs, outs)
   }
 
-  def lookupType(id: TypedTessla.Identifier, env: TypedTessla.Definitions): Typed.Type = env.variables.get(id) match {
+  def lookupType(id: TypedTessla.Identifier, env: TypedTessla.Definitions): Typed.Type = {
+    val value = lookup(env, id)
+    value.expression match {
+      case TypedTessla.MemberAccess(receiver, member, _, _) =>
+        lookupType(receiver.id, env).asInstanceOf[Typed.RecordType].entries(Identifier(member))
+      case TypedTessla.BuiltInOperator(name, _, _, _, _) =>
+        knownExterns.get(name).map(_.tpe).getOrElse(toType(value.typeInfo))
+      case TypedTessla.ObjectLiteral(members, _) =>
+        Typed.RecordType(members.map(x => (Identifier(x._1) -> lookupType(x._2.id, env))))
+      case _ => toType(value.typeInfo)
+    }
+  }
+
+  def lookupType2(id: TypedTessla.Identifier, env: TypedTessla.Definitions): Typed.Type = env.variables.get(id) match {
     case Some(value) => toType(value.typeInfo)
-    case None => lookupType(id, env.parent.get)
+    case None => lookupType2(id, env.parent.get)
   }
 
   def translateEnv(env: TypedTessla.Definitions): Map[Identifier, Typed.ExpressionArg] = env.variables.toMap.map { case (id, definition) =>
@@ -58,55 +120,10 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
           loc
         )
       case BuiltInOperator(name, typeParameters, parameters, referenceImplementation, loc) => // TODO: suport reference implementation
-        name match {
-          case "true" | "false" => Typed.ApplicationExpression(Typed.TypeApplicationExpression(
-            Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), name, loc), Nil), ArraySeq())
-          case "last" => Typed.ExternExpression(
-            List(Identifier("A"), Identifier("B")),
-            List(
-              (Identifier("a"), TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A"))))),
-              (Identifier("b"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("B")))))
-            ),
-            Typed.TypeParam(Identifier("A")),
-            "last"
-          )
-          case "delay" => Typed.ExternExpression(
-            List(Identifier("A")),
-            List(
-              (Identifier("a"), TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.IntType))),
-              (Identifier("b"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A")))))
-            ),
-            Typed.UnitType,
-            "delay"
-          )
-          case "ite" => Typed.ExternExpression(
-            List(Identifier("A")),
-            List(
-              (Identifier("a"), TesslaAST.StrictEvaluation, Typed.BoolType),
-              (Identifier("b"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
-              (Identifier("c"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
-            ),
-            Typed.UnitType,
-            "ite"
-          )
-          case "List_fold" => Typed.ExternExpression(
-            List(Identifier("A"), Identifier("B")),
-            List(
-              (Identifier("as"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("List", List(Typed.TypeParam(Identifier("A"))))),
-              (Identifier("b"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
-              (Identifier("f"), TesslaAST.StrictEvaluation, Typed.FunctionType(
-                Nil, List(
-                  (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
-                  (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A")))),
-                Typed.TypeParam(Identifier("B"))
-              ))
-            ),
-            Typed.UnitType,
-            "List_fold")
-          case _ => Typed.ExternExpression(typeParameters.map(toIdenifier(_, Location.unknown)).toList,
+        knownExterns.getOrElse(name,
+          Typed.ExternExpression(typeParameters.map(toIdenifier(_, Location.unknown)).toList,
             parameters.map(x => (toIdenifier(x.id, x.loc), TesslaAST.StrictEvaluation, toType(x.parameterType))).toList,
-            toType(definition.typeInfo.asInstanceOf[TypedTessla.FunctionType].returnType), name, loc)
-        }
+            toType(definition.typeInfo.asInstanceOf[TypedTessla.FunctionType].returnType), name, loc))
       case StaticIfThenElse(condition, thenCase, elseCase, loc) =>
         Typed.ApplicationExpression(Typed.TypeApplicationExpression(staticiteExtern, List(
           lookupType(thenCase.id, env)
