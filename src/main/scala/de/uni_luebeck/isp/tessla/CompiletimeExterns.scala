@@ -121,7 +121,7 @@ object CompiletimeExterns {
         (ArraySeq(), app(map_empty_extern, typeArgs))
       else
         (ArraySeq((map.tail, Core.InstatiatedType("Map", typeArgs)), (map.head._1, typeArgs.head), (map.head._2, typeArgs(1))),
-          app(set_add_extern, typeArgs))
+          app(map_add_extern, typeArgs))
     }),
     "Bool" -> ((value, _) => (ArraySeq(), if (value.asInstanceOf[Boolean]) app(true_extern, Nil) else app(false_extern, Nil)))
   )
