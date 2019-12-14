@@ -89,7 +89,14 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
       } yield for {
         v <- value.map(Right(_)).getOrElse(Left(InternalError("No value available for reification.")))
         reified <- CompiletimeExterns.reify(v, tpe).map(Right(_)).getOrElse(Left(InternalError("")))
-      } yield Left(Lazy(reified))
+      } yield if (
+        reified.isInstanceOf[Core.IntLiteralExpression] || reified.isInstanceOf[Core.FloatLiteralExpression] ||
+          reified.isInstanceOf[Core.StringLiteralExpression] || reified.isInstanceOf[Core.ExternExpression]
+      ) {
+        Right(StrictOrLazy(Lazy(reified), Lazy(reified)))
+      } else {
+        Left(Lazy(reified))
+      }
     }
 
   def tryReified(result: TranslationResult[Any, Option], tpe: Core.Type): TranslationResult[Any, Option] =
