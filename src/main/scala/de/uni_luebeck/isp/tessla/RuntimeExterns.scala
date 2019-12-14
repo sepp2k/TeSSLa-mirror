@@ -12,7 +12,7 @@ import cats._
 import cats.implicits._
 import de.uni_luebeck.isp.tessla.util.ArraySeqMonad._
 
-object ValueExterns {
+object RuntimeExterns {
 
   def propagate[A[+ _] : Monad](args: ArraySeq[Any])(f: ArraySeq[Any] => A[Any]): A[Any] =
     args.find(_.isInstanceOf[RuntimeError]).map(_.pure[A]).getOrElse(f(args))

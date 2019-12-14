@@ -75,28 +75,25 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
   def mkLiteralResult(value: Option[Any], expression: Core.Expression) =
     TranslationResult[Any, Some](Lazy(value), Lazy(Some(Right(StrictOrLazy(Lazy(expression), Lazy(expression))))))
 
-  // TODO: reify values here
   def reified(result: TranslationResult[Any, Option], tpe: Core.Type): TranslationResult[Any, Some] =
-    TranslationResult[Any, Some](result.value, result.expression.flatMap {
-      case Some(e) => Lazy(Some(e))
-      case None => result.value.map { v =>
-        Some(Left(Lazy(v.map(reify(_, tpe)).getOrElse(throw InternalError("No value available for reification.")))))
-      }
+    TranslationResult[Any, Some](result.value, getReified(result, tpe).map {
+      case Right(e) => Some(e)
+      case Left(error) => throw error
     })
 
-  type Reifier = (Any, List[Core.Type]) => (List[(Any, Core.Type)], List[Core.ExpressionArg] => Core.Expression)
+  def getReified(result: TranslationResult[Any, Option], tpe: Core.Type): StackLazy[Either[InternalError, ExpressionOrRef]] =
+    result.expression.flatMap {
+      case Some(e) => Lazy(Right(e))
+      case None => for {
+        value <- result.value
+      } yield for {
+        v <- value.map(Right(_)).getOrElse(Left(InternalError("No value available for reification.")))
+        reified <- CompiletimeExterns.reify(v, tpe).map(Right(_)).getOrElse(Left(InternalError("")))
+      } yield Left(Lazy(reified))
+    }
 
-  val reifiers = Map[String, Reifier](
-    "Int" -> ((value, _) => (Nil, _ => Core.IntLiteralExpression(value.asInstanceOf[BigInt])))
-  )
-
-  def reify(value: Any, tpe: Core.Type): Core.Expression = tpe match {
-    case Core.InstatiatedType(name, typeArgs, _) =>
-      val reifier = reifiers.getOrElse(name, throw InternalError(s"No reifier found for $name."))
-      val (subValues, reification) = reifier(value, typeArgs)
-      reification(subValues.map(x => reify(x._1, x._2)))
-    case _ => throw InternalError(s"Could not reify value of type $tpe.")
-  }
+  def tryReified(result: TranslationResult[Any, Option], tpe: Core.Type): TranslationResult[Any, Option] =
+    TranslationResult[Any, Option](result.value, getReified(result, tpe).map(_.toOption))
 
   type TypeApplicable = List[Core.Type] => Applicable
   type Applicable = ArraySeq[Translatable[Any, Option]] => Translatable[Any, Some]
@@ -124,6 +121,8 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
   val streamExterns: Map[String, TypeExtern] = List("last", "slift", "default", "lift", "nil", "time",
     "delay", "defaultFrom", "merge").map(_ -> noExtern).toMap
 
+  val doNotExpandExterns: Map[String, TypeExtern] = List("CTF_getInt", "CTF_getString").map(_ -> noExtern).toMap
+
   implicit val translatableMonad: Monad[TranslatableMonad] = new Monad[TranslatableMonad] {
     override def flatMap[A, B](fa: TranslatableMonad[A])(f: A => TranslatableMonad[B]) = Translatable { translatedExpressions =>
       val result = fa.translate(translatedExpressions).value.map(_.map(a => f(a).translate(translatedExpressions)))
@@ -142,7 +141,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
       Translatable(_ => TranslationResult[A, Option](Lazy(Some(x)), Lazy(None)))
   }
 
-  val valueExterns: Map[String, TypeExtern] = ValueExterns.commonExterns[TranslatableMonad].view.mapValues(f => (_: List[Core.Type]) => f).toMap
+  val valueExterns: Map[String, TypeExtern] = RuntimeExterns.commonExterns[TranslatableMonad].view.mapValues(f => (_: List[Core.Type]) => f).toMap
 
   val externs = streamExterns ++ valueExterns
 
@@ -232,7 +231,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
             args =>
               Translatable { translatedExpressions =>
                 val extern = externs(name)
-                val result = extern(typeArgs)(args).translate(translatedExpressions)
+                val result = tryReified(extern(typeArgs)(args).translate(translatedExpressions), translateType(resultType))
                 TranslationResult[Any, Some](result.value, result.expression.map(e => Some(e.getOrElse(Left(StackLazy { stack =>
                   mkApplicationExpression(Core.TypeApplicationExpression(expression, typeArgs), paramTypes,
                     args.zip(params).map(a => reified(a._1.translate(translatedExpressions), translateType(a._2._3))),
@@ -329,7 +328,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
             // TODO: handle strict arguments differently here?
             translatedApplicable.value.get(stack).map {
               case error: RuntimeEvaluator.RuntimeError => mkErrorResult(error, translateType(resultType).resolve(typeEnv))
-              case f: Applicable => f(translatedArgs.map(r => Translatable[Any, Some](_ => r))).translate(translatedExpressions)
+              case f => f.asInstanceOf[Applicable](translatedArgs.map(r => Translatable[Any, Some](_ => r))).translate(translatedExpressions)
             }
           } else {
             None

@@ -38,7 +38,7 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
   )
 
 
-  val runtimeEvaluator: RuntimeEvaluator = new RuntimeEvaluator(ValueExterns.runtimeCommonenExterns ++ streamExterns)
+  val runtimeEvaluator: RuntimeEvaluator = new RuntimeEvaluator(RuntimeExterns.runtimeCommonenExterns ++ streamExterns)
 
   lazy val definitions: RuntimeEvaluator.Env = inStreams.view.mapValues(x => Lazy(x._1)).toMap ++ spec.definitions.map(d => (d._1.id, runtimeEvaluator.evalExpressionArg(d._2, definitions)))
 

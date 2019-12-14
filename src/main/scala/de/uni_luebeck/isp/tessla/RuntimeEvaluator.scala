@@ -10,7 +10,7 @@ import de.uni_luebeck.isp.tessla.util.Lazy
 import scala.collection.immutable.ArraySeq
 import cats._
 import cats.implicits._
-import de.uni_luebeck.isp.tessla.ValueExterns.Extern
+import de.uni_luebeck.isp.tessla.RuntimeExterns.Extern
 
 object RuntimeEvaluator {
 

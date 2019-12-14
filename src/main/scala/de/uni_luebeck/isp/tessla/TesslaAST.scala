@@ -30,6 +30,8 @@ object TesslaAST {
     override def toString = print(PrintOptions(), mayNeedBraces = false)
   }
 
+  // TODO: Move to specific ASTs
+  // TODO: Add support for numeric ids
   object Identifier {
     def apply(id: String, location: Location = Location.unknown) = new Identifier(id, location)
 
