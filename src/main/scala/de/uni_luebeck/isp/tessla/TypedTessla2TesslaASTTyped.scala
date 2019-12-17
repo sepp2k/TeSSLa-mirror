@@ -17,7 +17,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     (Identifier("e"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
   ), Typed.TypeParam(Identifier("A")), "staticite")
 
-  // TODO: add all folds, add all steam externs with strict parameters
+  // TODO: add all folds
   val knownExterns = Map(
     "true" -> Typed.ApplicationExpression(Typed.TypeApplicationExpression(
       Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), "true"), Nil), ArraySeq()),

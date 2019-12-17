@@ -4,8 +4,6 @@ import cats._
 import cats.implicits._
 import scala.collection.immutable.ArraySeq
 
-// TODO: expression type annotations are not printed in braces
-// TODO. print specification correctly (types for ins)
 object TesslaAST {
 
   case class PrintOptions(defTypes: Boolean = true, expTypes: Boolean = false, refTypes: Boolean = false,
@@ -16,7 +14,7 @@ object TesslaAST {
     def location: Location
 
     def withLocation(s: Boolean => String, options: PrintOptions, mayNeedBraces: Boolean) =
-      withBraces(b => if (options.locations && location != Location.unknown) s"${s(true)} @ $location" else s(b), mayNeedBraces && options.locations)
+      withBraces(if (options.locations && location != Location.unknown) s"${s(true)} @ $location" else s(mayNeedBraces), mayNeedBraces && options.locations)
   }
 
   final class Identifier(val id: String, override val location: Location = Location.unknown) extends Locatable {
@@ -81,10 +79,10 @@ object TesslaAST {
     override type Evaluation = RuntimeEvaluation
 
     override def withTypeAnnotation(s: Boolean => String, tpe: Type, types: Boolean, mayNeedBraces: Boolean) =
-      withBraces(b => if (types) s"${s(true)}: $tpe" else s(b), mayNeedBraces)
+      withBraces(if (types) s"${s(true)}: $tpe" else s(mayNeedBraces), types && mayNeedBraces)
   }
 
-  def withBraces(s: Boolean => String, mayNeedBraces: Boolean) = if (mayNeedBraces) s"(${s(false)})" else s(mayNeedBraces)
+  def withBraces(s: String, addBraces: Boolean) = if (addBraces) s"(${s})" else s
 }
 
 abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
@@ -99,12 +97,15 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
   case class Specification(in: Map[Identifier, (TypeAnnotation[Type], List[DefinitionExpression])], definitions: Map[Identifier, DefinitionExpression], out: List[(Identifier, Option[String], List[DefinitionExpression])]) { // TODO: make optional output name an annotation
     def print(options: PrintOptions) = {
-      val i = in.keys.map(s => s"in $s").mkString("\n")
+      val i = in.map(s => withTypeAnnotation(_ => s"in ${s._1}", s._2._1, types = true, mayNeedBraces = false)).mkString("\n")
       val o = out.map(x => x._2 match {
         case Some(name) => s"out $name = ${x._1}"
         case None => "out" + x._1
       }).mkString("\n")
-      val d = definitions.map(x => s"def ${x._1}: ${x._2.tpe} = ${x._2.print(options, mayNeedBraces = false)}").mkString("\n")
+      val d = definitions.map { x =>
+        val tpeString = if (options.defTypes) s": ${x._2.tpe}" else ""
+        s"def ${x._1}$tpeString = ${x._2.print(options, mayNeedBraces = false)}"
+      }.mkString("\n")
       s"$i\n\n$o\n\n$d"
     }
 
@@ -124,7 +125,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
   sealed trait Expression extends ExpressionArg {
     def withTypeAndLocation(s: Boolean => String, options: PrintOptions, mayNeedBraces: Boolean) =
-      withLocation(b => withTypeAnnotation(s, tpe, options.expTypes, b && mayNeedBraces), options, mayNeedBraces)
+      withLocation(b => withTypeAnnotation(s, tpe, options.expTypes, b), options, mayNeedBraces)
   }
 
   case class ExpressionRef(id: Identifier, tpe: TypeAnnotation[Type], location: Location = Location.unknown) extends ExpressionArg {
@@ -143,17 +144,18 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       FunctionType(typeParams, m, r)
     }
 
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation(b => withBraces(_ => {
-        val bodyString = indent(body.map { x =>
-          val defType = if (options.defTypes) s": ${x._2.tpe}" else ""
-          s"def ${x._1}$defType = ${x._2.print(options, mayNeedBraces = false)}"
-        }.mkString("", "\n", "\n") + result.print(options, mayNeedBraces = false))
-        val paramsString = params.map { x =>
-          x._1.print(options, mayNeedBraces = false) + (if (options.paramTypes) " " + x._2.toString + " " + x._3 else "")
-        }.mkString(", ")
-        s"[${typeParams.mkString(", ")}]($paramsString) => {\n$bodyString\n}"
-      }, b), options, mayNeedBraces)
+    override def print(options: PrintOptions, mayNeedBraces: Boolean): String = {
+      val bodyString = indent(body.map { x =>
+        val defType = if (options.defTypes) s": ${x._2.tpe}" else ""
+        s"def ${x._1}$defType = ${x._2.print(options, mayNeedBraces = false)}"
+      }.mkString("", "\n", "\n") + result.print(options, mayNeedBraces = false))
+      val paramsString = params.map { x =>
+        x._1.print(options, mayNeedBraces = false) + (if (options.paramTypes) " " + x._2.toString + " " + x._3 else "")
+      }.mkString(", ")
+      val typeParamsString = if (typeParams.isEmpty) "" else s"[${typeParams.mkString(", ")}]"
+      withTypeAndLocation(b => withBraces(s"$typeParamsString($paramsString) => {\n$bodyString\n}", b), options, mayNeedBraces)
+    }
+
   }
 
   case class ExternExpression(typeParams: List[Identifier], params: List[(Identifier, Evaluation, TypeAnnotation[Type])],
@@ -193,10 +195,10 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       }
     }
 
-    override def toString = s"$applicable[${typeArgs.mkString(", ")}]"
-
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation(_ => s"${applicable.print(options, mayNeedBraces = false)}[${typeArgs.mkString(", ")}]", options, mayNeedBraces)
+    override def print(options: PrintOptions, mayNeedBraces: Boolean): String = {
+      val typeArgsString = if (typeArgs.isEmpty) "" else s"[${typeArgs.mkString(", ")}]"
+      withTypeAndLocation(_ => s"${applicable.print(options, mayNeedBraces = typeArgs.nonEmpty)}$typeArgsString", options, mayNeedBraces)
+    }
   }
 
   // TODO: print location of entry names
@@ -260,7 +262,10 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       FunctionType(typeParams, paramTypes.map(x => (x._1, x._2.resolve(tmp))), resultType.resolve(tmp))
     }
 
-    override def toString = s"[${typeParams.mkString(", ")}](${paramTypes.map(x => "" + x._1 + " " + x._2).mkString(", ")}) => $resultType"
+    override def toString = {
+      val typeParamsString = if (typeParams.isEmpty) "" else s"[${typeParams.mkString(", ")}]"
+      s"$typeParamsString(${paramTypes.map(x => "" + x._1 + " " + x._2).mkString(", ")}) => $resultType"
+    }
   }
 
   case class InstatiatedType(name: String, typeArgs: List[Type], location: Location = Location.unknown) extends Type {

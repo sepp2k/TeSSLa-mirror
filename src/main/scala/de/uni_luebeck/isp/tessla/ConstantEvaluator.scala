@@ -11,7 +11,7 @@ import scala.collection.immutable.ArraySeq
 
 object ConstantEvaluator {
 
-  val PREFER_REIFIED_EXPRESSIONS = true
+  val PREFER_REIFIED_EXPRESSIONS = false
 
   type Env = Map[Identifier, TranslationResult[Any, Some]]
   type TypeEnv = Map[Identifier, Core.Type]
