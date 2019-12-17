@@ -9,14 +9,7 @@ import cats.implicits._
 
 import scala.collection.immutable.ArraySeq
 
-class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[Typed.Specification, Core.Specification] {
-  override def translate(spec: Typed.Specification) = {
-    new ConstantEvaluatorWorker(spec, baseTimeUnit).translate()
-  }
-}
-
-class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[TimeUnit])
-  extends TranslationPhase.Translator[Core.Specification] {
+object ConstantEvaluator {
 
   val PREFER_REIFIED_EXPRESSIONS = true
 
@@ -84,19 +77,22 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     })
 
   def getReified(result: TranslationResult[Any, Option], tpe: Core.Type): StackLazy[Either[InternalError, ExpressionOrRef]] = {
-    lazy val reified = for {
-      value <- result.value
-    } yield for {
-      v <- value.map(Right(_)).getOrElse(Left(InternalError("No value available for reification.")))
-      reified <- CompiletimeExterns.reify(v, tpe).map(Right(_)).getOrElse(Left(InternalError("")))
-    } yield if (
-      reified.isInstanceOf[Core.IntLiteralExpression] || reified.isInstanceOf[Core.FloatLiteralExpression] ||
-        reified.isInstanceOf[Core.StringLiteralExpression] || reified.isInstanceOf[Core.ExternExpression]
-    ) {
-      Right(StrictOrLazy(Lazy(reified), Lazy(reified)))
-    } else {
-      Left(Lazy(reified))
-    }
+    lazy val reified = result.value.flatMap { value =>
+      value.map(Right(_)).getOrElse(Left(InternalError("No value available for reification."))).traverse { v =>
+        for {
+          reified <- CompiletimeExterns.reify(v, tpe)
+        } yield for {
+          r <- reified
+        } yield if (
+          r.isInstanceOf[Core.IntLiteralExpression] || r.isInstanceOf[Core.FloatLiteralExpression] ||
+            r.isInstanceOf[Core.StringLiteralExpression] || r.isInstanceOf[Core.ExternExpression]
+        ) {
+          Right(StrictOrLazy(Lazy(r), Lazy(r)))
+        } else {
+          Left(Lazy(r))
+        }
+      }
+    }.map(_.flatten)
     for {
       r <- reified
       e <- result.expression
@@ -162,7 +158,21 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
   val externs = streamExterns ++ valueExterns
 
-  override def translateSpec(): Core.Specification = {
+}
+class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[Typed.Specification, Core.Specification] {
+  override def translate(spec: Typed.Specification) = {
+    new ConstantEvaluatorWorker(spec, baseTimeUnit).translate()
+  }
+}
+
+class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[TimeUnit])
+  extends TranslationPhase.Translator[Core.Specification] {
+
+  import ConstantEvaluator._
+
+  import lazyWithStack._
+
+  override def translateSpec(): Core.Specification = try {
     val translatedExpressions = new TranslatedExpressions
 
     val inputs: Env = spec.in.map { i =>
@@ -207,6 +217,8 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     translatedExpressions.complete()
 
     Core.Specification(spec.in.view.mapValues(x => (translateType(x._1), Nil)).toMap, translatedExpressions.expressions.toMap, outputs)
+  } catch {
+    case e: ClassCastException => throw InternalError(e.toString + "\n" + e.getStackTrace.mkString("\n"))
   }
 
   def extractNameOpt(id: Identifier) = {
@@ -296,8 +308,8 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
             args =>
               Translatable { translatedExpressions =>
                 val innerTypeEnv = typeEnv ++ typeParams.zip(typeArgs).map(x => (x._1, x._2))
-                lazy val innerEnv: Env = env ++ params.map(_._1).zip(args.map(a => reified(a.translate(translatedExpressions),
-                  translateType(result.tpe).resolve(innerTypeEnv)))) ++
+                lazy val innerEnv: Env = env ++ params.zip(args).map(a => (a._1._1 -> reified(a._2.translate(translatedExpressions),
+                  translateType(a._1._3).resolve(innerTypeEnv)))) ++
                   body.map(e => (e._1,
                     translateExpressionArg(e._2, innerEnv, innerTypeEnv, extractNameOpt(e._1)).translate(translatedExpressions)
                   ))

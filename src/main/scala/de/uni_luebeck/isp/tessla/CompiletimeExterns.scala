@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.TesslaAST.{Core, Identifier, StrictEvaluation}
 
 import scala.collection.immutable.ArraySeq
+import cats._
 import cats.implicits._
 import de.uni_luebeck.isp.tessla.Errors.InternalError
 import de.uni_luebeck.isp.tessla.util.ArraySeqMonad.instance
@@ -13,14 +14,25 @@ object CompiletimeExterns {
 
   type WithError[+A] = Either[InternalError, A]
 
-  def reify(value: Any, tpe: Core.Type): WithError[Core.Expression] = tpe match {
+  import ConstantEvaluator.lazyWithStack._
+
+  def reify(value: Any, tpe: Core.Type): StackLazy[WithError[Core.Expression]] = tpe match {
     case Core.InstatiatedType(name, typeArgs, _) =>
-      for {
+      (for {
         reifier <- reifiers.get(name).map(Right(_)).getOrElse(Left(InternalError(s"No reifier for extern type $name.")))
         (subValues, reification) = reifier(value, typeArgs)
+      } yield for {
         reified <- subValues.traverse(x => reify(x._1, x._2))
-      } yield reification(reified)
-    case _ => Left(InternalError(s"Could not reify value for type $tpe."))
+      } yield for {
+        r <- reified.sequence
+      } yield reification(r)).sequence.map(_.flatten)
+    case Core.RecordType(entries, _) =>
+      val entries = value.asInstanceOf[RuntimeEvaluator.Record].entries.map { v =>
+        //reify(v._2, entries(Identifier(v._1))).map(y => (Identifier(v._1), y))
+        Identifier(v._1) -> ConstantEvaluator.getExpressionArgStrict(v._2.asInstanceOf[ConstantEvaluator.TranslationResult[Any, Some]])
+      }
+      entries.unorderedSequence.map(v => Right(Core.RecordConstructorExpression(v)))
+    case _ => Lazy(Left(InternalError(s"Could not reify value for type $tpe.")))
   }
 
   val true_extern = Core.ExternExpression(Nil, Nil, Core.BoolType, "true")

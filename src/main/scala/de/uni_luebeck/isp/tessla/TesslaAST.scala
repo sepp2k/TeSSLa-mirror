@@ -4,6 +4,8 @@ import cats._
 import cats.implicits._
 import scala.collection.immutable.ArraySeq
 
+// TODO: expression type annotations are not printed in braces
+// TODO. print specification correctly (types for ins)
 object TesslaAST {
 
   case class PrintOptions(defTypes: Boolean = true, expTypes: Boolean = false, refTypes: Boolean = false,

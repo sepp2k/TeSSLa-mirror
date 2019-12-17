@@ -17,6 +17,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     (Identifier("e"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
   ), Typed.TypeParam(Identifier("A")), "staticite")
 
+  // TODO: add all folds, add all steam externs with strict parameters
   val knownExterns = Map(
     "true" -> Typed.ApplicationExpression(Typed.TypeApplicationExpression(
       Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), "true"), Nil), ArraySeq()),
@@ -28,7 +29,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
         (Identifier("a"), TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A"))))),
         (Identifier("b"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("B")))))
       ),
-      Typed.TypeParam(Identifier("A")),
+      Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A")))),
       "last"
     ),
     "delay" -> Typed.ExternExpression(
@@ -37,7 +38,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
         (Identifier("a"), TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.IntType))),
         (Identifier("b"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A")))))
       ),
-      Typed.UnitType,
+      Typed.InstatiatedType("Events", List(Typed.UnitType)),
       "delay"
     ),
     "ite" -> Typed.ExternExpression(
@@ -47,7 +48,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
         (Identifier("b"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
         (Identifier("c"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
       ),
-      Typed.UnitType,
+      Typed.TypeParam(Identifier("A")),
       "ite"
     ),
     "List_fold" -> Typed.ExternExpression(
@@ -62,7 +63,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
           Typed.TypeParam(Identifier("B"))
         ))
       ),
-      Typed.UnitType,
+      Typed.TypeParam(Identifier("B")),
       "List_fold")
   )
   val ins = mutable.Map[Identifier, (Typed.Type, List[Nothing])]()
