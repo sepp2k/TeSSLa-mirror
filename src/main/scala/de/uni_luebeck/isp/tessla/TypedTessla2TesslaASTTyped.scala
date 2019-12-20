@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
-import TesslaAST.{Identifier, Typed}
+import TesslaAST.Typed
+import Typed.Identifier
 import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.UndefinedTimeUnit
 import de.uni_luebeck.isp.tessla.Tessla.{FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
@@ -99,11 +100,11 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
         ins += (Identifier(name, loc) -> (toType(streamType), Nil))
         Typed.ExpressionRef(Identifier(name, loc), toType(streamType, typeLoc), loc)
       case Parameter(param, parameterType, id) =>
-        Typed.ExpressionRef(TesslaAST.Identifier(param.id.name, param.id.loc), toType(parameterType), param.loc)
+        Typed.ExpressionRef(Identifier(param.id.name, param.id.loc), toType(parameterType), param.loc)
       case Macro(typeParameters, parameters, body, returnType, headerLoc, result, loc, _) =>
         Typed.FunctionExpression(
           typeParameters.map(toIdenifier(_, Location.unknown)).toList,
-          parameters.map(x => (TesslaAST.Identifier(x.param.id.name, x.loc), if (x.parameterType.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation,
+          parameters.map(x => (Identifier(x.param.id.name, x.loc), if (x.parameterType.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation,
             toType(x.parameterType))).toList,
           translateEnv(body),
           Typed.ExpressionRef(toIdenifier(result.id, Location.unknown), lookupType(result.id, body), result.loc),

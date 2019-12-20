@@ -17,27 +17,6 @@ object TesslaAST {
       withBraces(if (options.locations && location != Location.unknown) s"${s(true)} @ $location" else s(mayNeedBraces), mayNeedBraces && options.locations)
   }
 
-  final class Identifier(val id: String, override val location: Location = Location.unknown) extends Locatable {
-    override def hashCode() = id.hashCode
-
-    override def equals(o: Any) = o match {
-      case tmp: Identifier => tmp.id.equals(id)
-      case _ => false
-    }
-
-    def print(options: PrintOptions, mayNeedBraces: Boolean) = withLocation(_ => id, options, mayNeedBraces)
-
-    override def toString = print(PrintOptions(), mayNeedBraces = false)
-  }
-
-  // TODO: Move to specific ASTs
-  // TODO: Add support for numeric ids
-  object Identifier {
-    def apply(id: String, location: Location = Location.unknown) = new Identifier(id, location)
-
-    def unapply(arg: Identifier): Option[(String, Location)] = Some((arg.id, arg.location))
-  }
-
   sealed trait CompiletimeEvaluation
 
   sealed trait RuntimeEvaluation extends CompiletimeEvaluation
@@ -111,6 +90,27 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
     override def toString = print(PrintOptions())
   }
+
+  final class Identifier(val id: String, override val location: Location = Location.unknown) extends Locatable {
+    override def hashCode() = id.hashCode
+
+    override def equals(o: Any) = o match {
+      case tmp: Identifier => tmp.id.equals(id)
+      case _ => false
+    }
+
+    def print(options: PrintOptions, mayNeedBraces: Boolean) = withLocation(_ => id, options, mayNeedBraces)
+
+    override def toString = print(PrintOptions(), mayNeedBraces = false)
+  }
+
+  // TODO: Add support for numeric ids
+  object Identifier {
+    def apply(id: String, location: Location = Location.unknown) = new Identifier(id, location)
+
+    def unapply(arg: Identifier): Option[(String, Location)] = Some((arg.id, arg.location))
+  }
+
 
   sealed trait ExpressionArg extends Locatable {
     def tpe: TypeAnnotation[Type]

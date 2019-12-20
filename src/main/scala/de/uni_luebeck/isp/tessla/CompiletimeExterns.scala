@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.TesslaAST.{Core, Identifier, StrictEvaluation}
-
+import de.uni_luebeck.isp.tessla.TesslaAST.{Core, StrictEvaluation}
+import Core.Identifier
 import scala.collection.immutable.ArraySeq
 import cats._
 import cats.implicits._
