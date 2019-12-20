@@ -29,7 +29,7 @@ object CompiletimeExterns {
     case Core.RecordType(entries, _) =>
       val entries = value.asInstanceOf[RuntimeEvaluator.Record].entries.map { v =>
         //reify(v._2, entries(Identifier(v._1))).map(y => (Identifier(v._1), y))
-        Identifier(v._1) -> ConstantEvaluator.getExpressionArgStrict(v._2.asInstanceOf[ConstantEvaluator.TranslationResult[Any, Some]])
+        TesslaAST.Name(v._1) -> ConstantEvaluator.getExpressionArgStrict(v._2.asInstanceOf[ConstantEvaluator.TranslationResult[Any, Some]])
       }
       entries.unorderedSequence.map(v => Right(Core.RecordConstructorExpression(v)))
     case _ => Lazy(Left(InternalError(s"Could not reify value for type $tpe.")))
@@ -41,7 +41,7 @@ object CompiletimeExterns {
 
   val option_some_extern = Core.ExternExpression(
     List(Identifier("A")),
-    List((Identifier("a"), StrictEvaluation, Core.TypeParam(Identifier("A")))),
+    List((StrictEvaluation, Core.TypeParam(Identifier("A")))),
     Core.InstatiatedType("Option", List(Core.TypeParam(Identifier("A")))),
     "Some"
   )
@@ -56,8 +56,8 @@ object CompiletimeExterns {
   val list_prepend_extern = Core.ExternExpression(
     List(Identifier("A")),
     List(
-      (Identifier("a"), StrictEvaluation, Core.TypeParam(Identifier("A"))),
-      (Identifier("b"), StrictEvaluation, Core.InstatiatedType("List", List(Core.TypeParam(Identifier("A")))))
+      (StrictEvaluation, Core.TypeParam(Identifier("A"))),
+      (StrictEvaluation, Core.InstatiatedType("List", List(Core.TypeParam(Identifier("A")))))
     ),
     Core.InstatiatedType("List", List(Core.TypeParam(Identifier("A")))),
     "List_prepend"
@@ -73,8 +73,8 @@ object CompiletimeExterns {
   val set_add_extern = Core.ExternExpression(
     List(Identifier("A")),
     List(
-      (Identifier("a"), StrictEvaluation, Core.InstatiatedType("Set", List(Core.TypeParam(Identifier("A"))))),
-      (Identifier("b"), StrictEvaluation, Core.TypeParam(Identifier("A")))
+      (StrictEvaluation, Core.InstatiatedType("Set", List(Core.TypeParam(Identifier("A"))))),
+      (StrictEvaluation, Core.TypeParam(Identifier("A")))
     ),
     Core.InstatiatedType("Set", List(Core.TypeParam(Identifier("A")))),
     "Set_add"
@@ -90,9 +90,9 @@ object CompiletimeExterns {
   val map_add_extern = Core.ExternExpression(
     List(Identifier("A"), Identifier("B")),
     List(
-      (Identifier("a"), StrictEvaluation, Core.InstatiatedType("Map", List(Core.TypeParam(Identifier("A")), Core.TypeParam(Identifier("B"))))),
-      (Identifier("b"), StrictEvaluation, Core.TypeParam(Identifier("A"))),
-      (Identifier("c"), StrictEvaluation, Core.TypeParam(Identifier("B")))
+      (StrictEvaluation, Core.InstatiatedType("Map", List(Core.TypeParam(Identifier("A")), Core.TypeParam(Identifier("B"))))),
+      (StrictEvaluation, Core.TypeParam(Identifier("A"))),
+      (StrictEvaluation, Core.TypeParam(Identifier("B")))
     ),
     Core.InstatiatedType("Map", List(Core.TypeParam(Identifier("A")), Core.TypeParam(Identifier("B")))),
     "Map_add"

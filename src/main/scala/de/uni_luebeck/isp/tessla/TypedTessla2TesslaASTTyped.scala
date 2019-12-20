@@ -13,9 +13,9 @@ import scala.collection.mutable
 class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit]) extends TranslationPhase.Translator[Typed.Specification] {
 
   val staticiteExtern = Typed.ExternExpression(List(Identifier("A")), List(
-    (Identifier("c"), TesslaAST.StrictEvaluation, Typed.BoolType),
-    (Identifier("t"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
-    (Identifier("e"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
+    (TesslaAST.StrictEvaluation, Typed.BoolType),
+    (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
+    (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
   ), Typed.TypeParam(Identifier("A")), "staticite")
 
   // TODO: add all folds
@@ -27,8 +27,8 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     "last" -> Typed.ExternExpression(
       List(Identifier("A"), Identifier("B")),
       List(
-        (Identifier("a"), TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A"))))),
-        (Identifier("b"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("B")))))
+        (TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A"))))),
+        (TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("B")))))
       ),
       Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A")))),
       "last"
@@ -36,8 +36,8 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     "delay" -> Typed.ExternExpression(
       List(Identifier("A")),
       List(
-        (Identifier("a"), TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.IntType))),
-        (Identifier("b"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A")))))
+        (TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.IntType))),
+        (TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A")))))
       ),
       Typed.InstatiatedType("Events", List(Typed.UnitType)),
       "delay"
@@ -45,9 +45,9 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     "ite" -> Typed.ExternExpression(
       List(Identifier("A")),
       List(
-        (Identifier("a"), TesslaAST.StrictEvaluation, Typed.BoolType),
-        (Identifier("b"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
-        (Identifier("c"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
+        (TesslaAST.StrictEvaluation, Typed.BoolType),
+        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
+        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
       ),
       Typed.TypeParam(Identifier("A")),
       "ite"
@@ -55,9 +55,9 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     "List_fold" -> Typed.ExternExpression(
       List(Identifier("A"), Identifier("B")),
       List(
-        (Identifier("as"), TesslaAST.StrictEvaluation, Typed.InstatiatedType("List", List(Typed.TypeParam(Identifier("A"))))),
-        (Identifier("b"), TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
-        (Identifier("f"), TesslaAST.StrictEvaluation, Typed.FunctionType(
+        (TesslaAST.StrictEvaluation, Typed.InstatiatedType("List", List(Typed.TypeParam(Identifier("A"))))),
+        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
+        (TesslaAST.StrictEvaluation, Typed.FunctionType(
           Nil, List(
             (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("B"))),
             (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A")))),
@@ -80,11 +80,11 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     val value = lookup(env, id)
     value.expression match {
       case TypedTessla.MemberAccess(receiver, member, _, _) =>
-        lookupType(receiver.id, env).asInstanceOf[Typed.RecordType].entries(Identifier(member))
+        lookupType(receiver.id, env).asInstanceOf[Typed.RecordType].entries(TesslaAST.Name(member))
       case TypedTessla.BuiltInOperator(name, _, _, _, _) =>
         knownExterns.get(name).map(_.tpe).getOrElse(toType(value.typeInfo))
       case TypedTessla.ObjectLiteral(members, _) =>
-        Typed.RecordType(members.map(x => (Identifier(x._1) -> lookupType(x._2.id, env))))
+        Typed.RecordType(members.map(x => (TesslaAST.Name(x._1) -> lookupType(x._2.id, env))))
       case _ => toType(value.typeInfo)
     }
   }
@@ -124,7 +124,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
       case BuiltInOperator(name, typeParameters, parameters, referenceImplementation, loc) => // TODO: suport reference implementation
         knownExterns.getOrElse(name,
           Typed.ExternExpression(typeParameters.map(toIdenifier(_, Location.unknown)).toList,
-            parameters.map(x => (toIdenifier(x.id, x.loc), TesslaAST.StrictEvaluation, toType(x.parameterType))).toList,
+            parameters.map(x => (TesslaAST.StrictEvaluation, toType(x.parameterType))).toList,
             toType(definition.typeInfo.asInstanceOf[TypedTessla.FunctionType].returnType), name, loc))
       case StaticIfThenElse(condition, thenCase, elseCase, loc) =>
         Typed.ApplicationExpression(Typed.TypeApplicationExpression(staticiteExtern, List(
@@ -135,9 +135,9 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
           Typed.ExpressionRef(toIdenifier(elseCase.id, loc), lookupType(elseCase.id, env), loc)
         ), loc)
       case ObjectLiteral(members, loc) => Typed.RecordConstructorExpression(
-        members.map(x => (Identifier(x._1), Typed.ExpressionRef(toIdenifier(x._2.id, x._2.loc), lookupType(x._2.id, env)))), loc)
+        members.map(x => (TesslaAST.Name(x._1), Typed.ExpressionRef(toIdenifier(x._2.id, x._2.loc), lookupType(x._2.id, env)))), loc)
       case MemberAccess(receiver, member, memberLoc, loc) =>
-        Typed.RecordAccesorExpression(Identifier(member), Typed.ExpressionRef(toIdenifier(receiver.id, receiver.loc), lookupType(receiver.id, env)), loc)
+        Typed.RecordAccesorExpression(TesslaAST.Name(member), Typed.ExpressionRef(toIdenifier(receiver.id, receiver.loc), lookupType(receiver.id, env)), loc)
       case Literal(value, loc) => value match {
         case IntLiteral(value) => Typed.IntLiteralExpression(value, loc)
         case FloatLiteral(value) => Typed.FloatLiteralExpression(value, loc)
@@ -164,7 +164,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
       if (isOpen) {
         throw new IllegalArgumentException("Open types not supported.")
       }
-      Typed.RecordType(memberTypes.map(x => (Identifier(x._1), toType(x._2))))
+      Typed.RecordType(memberTypes.map(x => (TesslaAST.Name(x._1), toType(x._2))))
     case TypedTessla.TypeParameter(id, loc) => Typed.TypeParam(toIdenifier(id, loc), loc)
   }
 

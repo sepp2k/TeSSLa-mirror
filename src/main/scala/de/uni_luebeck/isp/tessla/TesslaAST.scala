@@ -17,6 +17,22 @@ object TesslaAST {
       withBraces(if (options.locations && location != Location.unknown) s"${s(true)} @ $location" else s(mayNeedBraces), mayNeedBraces && options.locations)
   }
 
+  final class Name(val name: String, override val location: Location = Location.unknown) extends Locatable {
+    override def hashCode() = name.hashCode
+
+    override def equals(o: Any) = o.isInstanceOf[Name] && o.asInstanceOf[Name].name == name
+
+    def print(options: PrintOptions, mayNeedBraces: Boolean) = withLocation(_ => name, options, mayNeedBraces)
+
+    override def toString = print(PrintOptions(), mayNeedBraces = false)
+  }
+
+  object Name {
+    def apply(name: String, location: Location = Location.unknown) = new Name(name, location)
+
+    def unapply(arg: Name): Option[(String, Location)] = Some((arg.name, arg.location))
+  }
+
   sealed trait CompiletimeEvaluation
 
   sealed trait RuntimeEvaluation extends CompiletimeEvaluation
@@ -158,10 +174,10 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
   }
 
-  case class ExternExpression(typeParams: List[Identifier], params: List[(Identifier, Evaluation, TypeAnnotation[Type])],
+  case class ExternExpression(typeParams: List[Identifier], params: List[(Evaluation, TypeAnnotation[Type])],
     resultType: TypeAnnotation[Type], name: String, location: Location = Location.unknown
   ) extends Expression {
-    override def tpe = Applicative[TypeAnnotation].map2(params.map(x => x._3.map(y => (x._2, y))).sequence, resultType) { (m, r) =>
+    override def tpe = Applicative[TypeAnnotation].map2(params.map(x => x._2.map(y => (x._1, y))).sequence, resultType) { (m, r) =>
       FunctionType(typeParams, m, r)
     }
 
@@ -202,7 +218,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   }
 
   // TODO: print location of entry names
-  case class RecordConstructorExpression(entries: Map[Identifier, ExpressionArg],
+  case class RecordConstructorExpression(entries: Map[Name, ExpressionArg],
     location: Location = Location.unknown
   ) extends Expression {
     override def tpe = entries.view.mapValues(_.tpe).toMap.unorderedSequence.map { m =>
@@ -218,7 +234,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   }
 
   // TODO: print location of accesor name
-  case class RecordAccesorExpression(name: Identifier, target: ExpressionArg,
+  case class RecordAccesorExpression(name: Name, target: ExpressionArg,
     location: Location = Location.unknown
   ) extends Expression {
     override def tpe = target.tpe.map { t =>
@@ -274,16 +290,16 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     override def toString = name + (if (typeArgs.nonEmpty) "[" + typeArgs.mkString(", ") + "]" else "")
   }
 
-  case class RecordType(entries: Map[Identifier, Type], location: Location = Location.unknown) extends Type {
+  case class RecordType(entries: Map[Name, Type], location: Location = Location.unknown) extends Type {
     override def resolve(args: Map[Identifier, Type]) = RecordType(entries.view.mapValues(_.resolve(args)).toMap)
 
-    override def toString = {
-      val isTuple = entries.keys.forall(_.id.matches("_\\d+"))
+    override def toString = if (entries.isEmpty) "Unit" else {
+      val isTuple = entries.keys.forall(_.name.matches("_\\d+"))
       if (isTuple) {
-        val sorted = entries.toList.map(x => (x._1.id.substring(1).toInt, x._2)).sortBy(_._1).map(_._2)
+        val sorted = entries.toList.map(x => (x._1.name.substring(1).toInt, x._2)).sortBy(_._1).map(_._2)
         s"(${sorted.mkString(", ")})"
       } else {
-        val sorted = entries.toList.sortBy(_._1.id).map(x => "" + x._1 + " = " + x._2)
+        val sorted = entries.toList.sortBy(_._1.name).map(x => "" + x._1 + " = " + x._2)
         s"{${sorted.mkString(", ")}}"
       }
     }
