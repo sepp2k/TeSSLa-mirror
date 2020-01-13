@@ -73,7 +73,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     val outs = spec.outStreams.map(x => (toIdenifier(x.id, x.loc), x.nameOpt, Nil)).toList
     val defs: Map[Identifier, Typed.ExpressionArg] = translateEnv(spec.globalDefs)
 
-    Typed.Specification(ins.toMap, defs, outs)
+    Typed.Specification(ins.toMap, defs, outs, defs.map(i => extractId(i._1)).max)
   }
 
   def lookupType(id: TypedTessla.Identifier, env: TypedTessla.Definitions): Typed.Type = {
@@ -172,6 +172,11 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     env.variables.getOrElse(id, lookup(env.parent.get, id))
 
   def toIdenifier(identifier: TypedTessla.Identifier, location: Location) = Identifier(identifier.nameOpt.getOrElse("") + "$" + identifier.uid, location)
+
+  def extractId(id: Typed.Identifier) = {
+    val namePos = id.id.indexOf("$")
+    id.id.substring(namePos + 1, id.id.length).toInt
+  }
 }
 
 class TypedTessla2TesslaASTCore(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {

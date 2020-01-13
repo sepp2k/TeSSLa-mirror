@@ -90,7 +90,11 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
   type Evaluation
 
-  case class Specification(in: Map[Identifier, (TypeAnnotation[Type], List[DefinitionExpression])], definitions: Map[Identifier, DefinitionExpression], out: List[(Identifier, Option[String], List[DefinitionExpression])]) { // TODO: make optional output name an annotation
+  case class Specification(in: Map[Identifier, (TypeAnnotation[Type], List[DefinitionExpression])],
+    definitions: Map[Identifier, DefinitionExpression],
+    out: List[(Identifier, Option[String], List[DefinitionExpression])],
+    maxIdentifier: Int
+  ) { // TODO: make optional output name an annotation
     def print(options: PrintOptions) = {
       val i = in.map(s => withTypeAnnotation(_ => s"in ${s._1}", s._2._1, types = true, mayNeedBraces = false)).mkString("\n")
       val o = out.map(x => x._2 match {

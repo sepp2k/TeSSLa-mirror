@@ -55,9 +55,9 @@ object ConstantEvaluator {
   // When lazy translation is requested, the translation of a a referenced expression will be deferred.
   type ExpressionOrRef = Either[StackLazy[Core.Expression], StrictOrLazy]
 
-  case class TranslationResult[+A, +B[+ _]](value: StackLazy[Option[A]], expression: StackLazy[B[ExpressionOrRef]])
+  case class TranslationResult[+A, +B[+_]](value: StackLazy[Option[A]], expression: StackLazy[B[ExpressionOrRef]])
 
-  case class Translatable[+A, +B[+ _]](translate: TranslatedExpressions => TranslationResult[A, B])
+  case class Translatable[+A, +B[+_]](translate: TranslatedExpressions => TranslationResult[A, B])
 
   type TranslatableMonad[+A] = Translatable[A, Option]
 
@@ -159,6 +159,7 @@ object ConstantEvaluator {
   val externs = streamExterns ++ valueExterns
 
 }
+
 class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[Typed.Specification, Core.Specification] {
   override def translate(spec: Typed.Specification) = {
     new ConstantEvaluatorWorker(spec, baseTimeUnit).translate()
@@ -182,7 +183,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
     lazy val env: Env = inputs ++ spec.definitions.map { entry =>
       val result = translateExpressionArg(entry._2, env, Map(), extractNameOpt(entry._1)).translate(translatedExpressions)
-      lazy val id = makeIdentifier(extractNameOpt(entry._1), entry._1.location)
+      lazy val id = Core.Identifier(entry._1.id, entry._1.location)
       (entry._1, pushStack(TranslationResult[Any, Some](result.value, StackLazy { stack =>
         Some(result.expression.get(stack).value match {
           case Left(expression) =>
@@ -201,13 +202,13 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     val outputs = spec.out.map { x =>
       (env(x._1).expression.get(List(x._1.location)).get match {
         case Left(expression) =>
-          val id = makeIdentifier(extractNameOpt(x._1), x._1.location)
+          val id = Core.Identifier(x._1.id, x._1.location)
           translatedExpressions.expressions += id -> expression.get(List(x._1.location))
           id
         case Right(ref) => ref.translateStrict.get(List(x._1.location)) match {
           case Core.ExpressionRef(id, _, _) => id
           case expression: Core.Expression =>
-            val id = makeIdentifier(extractNameOpt(x._1), x._1.location)
+            val id = Core.Identifier(x._1.id, x._1.location)
             translatedExpressions.expressions += id -> expression
             id
         }
@@ -216,7 +217,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
     translatedExpressions.complete()
 
-    Core.Specification(spec.in.map(x => (translateIdentifier(x._1), (translateType(x._2._1), Nil))), translatedExpressions.expressions.toMap, outputs)
+    Core.Specification(spec.in.map(x => (translateIdentifier(x._1), (translateType(x._2._1), Nil))), translatedExpressions.expressions.toMap, outputs, counter)
   } catch {
     case e: ClassCastException => throw InternalError(e.toString + "\n" + e.getStackTrace.mkString("\n"))
   }
@@ -280,7 +281,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
             val innerTypeEnv = typeEnv -- typeParams
 
             val translatedParams = params.map { param =>
-              val paramId = makeIdentifier(extractNameOpt(param._1), param._1.location)
+              val paramId = Core.Identifier(param._1.id, param._1.location)
               val tpe = translateType(param._3.resolve(innerTypeEnv))
               val ref = Lazy(Core.ExpressionRef(paramId, tpe))
               param._1 -> (paramId, translateEvaluation(param._2), tpe,
@@ -431,7 +432,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
       Core.TypeParam(translateIdentifier(name), location)
   }
 
-  private var counter = 0
+  private var counter = spec.maxIdentifier
 
   def makeIdentifier(nameOpt: Option[String], location: Location = Location.unknown): Core.Identifier = {
     counter += 1
