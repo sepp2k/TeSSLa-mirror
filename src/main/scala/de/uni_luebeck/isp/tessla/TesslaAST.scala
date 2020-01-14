@@ -1,7 +1,9 @@
 package de.uni_luebeck.isp.tessla
 
 import cats._
+import cats.data.Ior
 import cats.implicits._
+
 import scala.collection.immutable.ArraySeq
 
 object TesslaAST {
@@ -93,7 +95,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   case class Specification(in: Map[Identifier, (TypeAnnotation[Type], List[DefinitionExpression])],
     definitions: Map[Identifier, DefinitionExpression],
     out: List[(Identifier, Option[String], List[DefinitionExpression])],
-    maxIdentifier: Int
+    maxIdentifier: Long
   ) { // TODO: make optional output name an annotation
     def print(options: PrintOptions) = {
       val i = in.map(s => withTypeAnnotation(_ => s"in ${s._1}", s._2._1, types = true, mayNeedBraces = false)).mkString("\n")
@@ -111,24 +113,31 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     override def toString = print(PrintOptions())
   }
 
-  final class Identifier(val id: String, override val location: Location = Location.unknown) extends Locatable {
-    override def hashCode() = id.hashCode
+  // Identifiers can either have a globaly unique id or locally unique name or both.
+  // For TeSSLa Core only external names, i.e. input streams do not carry a id.
+  // TODO: currently also generated type parameters may not carry an id, this should be fixed once all externs are declared in the standard library.
+  final class Identifier(val idOrName: Ior[String, Long], override val location: Location = Location.unknown) extends Locatable {
+    override def hashCode = idOrName.hashCode
 
-    override def equals(o: Any) = o match {
-      case tmp: Identifier => tmp.id.equals(id)
-      case _ => false
+    override def equals(o: Any) = o.isInstanceOf[Identifier] && o.asInstanceOf[Identifier].idOrName.equals(idOrName)
+
+    val fullName = idOrName match {
+      case Ior.Left(a) => a
+      case Ior.Right(b) => "$" + b
+      case Ior.Both(a, b) => a + "$" + b
     }
 
-    def print(options: PrintOptions, mayNeedBraces: Boolean) = withLocation(_ => id, options, mayNeedBraces)
+    def print(options: PrintOptions, mayNeedBraces: Boolean) = withLocation(_ => fullName, options, mayNeedBraces)
 
     override def toString = print(PrintOptions(), mayNeedBraces = false)
   }
 
-  // TODO: Add support for numeric ids
   object Identifier {
-    def apply(id: String, location: Location = Location.unknown) = new Identifier(id, location)
+    def apply(id: Ior[String, Long], location: Location = Location.unknown) = new Identifier(id, location)
 
-    def unapply(arg: Identifier): Option[(String, Location)] = Some((arg.id, arg.location))
+    def apply(id: String) = new Identifier(Ior.Left(id))
+
+    def unapply(arg: Identifier): Option[(Option[Long], Option[String], Location)] = Some((arg.idOrName.right, arg.idOrName.left, arg.location))
   }
 
 
@@ -314,7 +323,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   case class TypeParam(name: Identifier, location: Location = Location.unknown) extends Type {
     override def resolve(args: Map[Identifier, Type]) = args.getOrElse(name, this)
 
-    override def toString = name.id
+    override def toString = name.toString
   }
 
   val FloatType = InstatiatedType("Float", Nil, Location.builtIn)

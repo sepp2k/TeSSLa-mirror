@@ -5,6 +5,7 @@ import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.util.LazyWithStack
 import TesslaAST.{Core, Typed}
 import cats._
+import cats.data.Ior
 import cats.implicits._
 
 import scala.collection.immutable.ArraySeq
@@ -115,10 +116,12 @@ object ConstantEvaluator {
   type Extern = ArraySeq[TranslatableMonad[Any]] => TranslatableMonad[Any]
 
 
+  // TODO: shoud be declared in standard library
+  val errorExternA = Core.Identifier(Ior.Left("A"))
   val errorExtern = Core.ExternExpression(
-    List(Core.Identifier("A")),
+    List(errorExternA),
     List((TesslaAST.LazyEvaluation, Core.StringType)),
-    Core.TypeParam(Core.Identifier("A")),
+    Core.TypeParam(errorExternA),
     "error"
   )
 
@@ -182,8 +185,8 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     }
 
     lazy val env: Env = inputs ++ spec.definitions.map { entry =>
-      val result = translateExpressionArg(entry._2, env, Map(), extractNameOpt(entry._1)).translate(translatedExpressions)
-      lazy val id = Core.Identifier(entry._1.id, entry._1.location)
+      val result = translateExpressionArg(entry._2, env, Map(), entry._1.idOrName.left).translate(translatedExpressions)
+      lazy val id = translateIdentifier(entry._1)
       (entry._1, pushStack(TranslationResult[Any, Some](result.value, StackLazy { stack =>
         Some(result.expression.get(stack).value match {
           case Left(expression) =>
@@ -202,13 +205,13 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     val outputs = spec.out.map { x =>
       (env(x._1).expression.get(List(x._1.location)).get match {
         case Left(expression) =>
-          val id = Core.Identifier(x._1.id, x._1.location)
+          val id = translateIdentifier(x._1)
           translatedExpressions.expressions += id -> expression.get(List(x._1.location))
           id
         case Right(ref) => ref.translateStrict.get(List(x._1.location)) match {
           case Core.ExpressionRef(id, _, _) => id
           case expression: Core.Expression =>
-            val id = Core.Identifier(x._1.id, x._1.location)
+            val id = translateIdentifier(x._1)
             translatedExpressions.expressions += id -> expression
             id
         }
@@ -220,11 +223,6 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     Core.Specification(spec.in.map(x => (translateIdentifier(x._1), (translateType(x._2._1), Nil))), translatedExpressions.expressions.toMap, outputs, counter)
   } catch {
     case e: ClassCastException => throw InternalError(e.toString + "\n" + e.getStackTrace.mkString("\n"))
-  }
-
-  def extractNameOpt(id: Typed.Identifier) = {
-    val namePos = id.id.indexOf("$")
-    if (namePos > 0) Some(id.id.substring(0, namePos)) else None
   }
 
   def translateExpressionArg(expr: Typed.ExpressionArg, env: => Env, typeEnv: TypeEnv, nameOpt: Option[String]): Translatable[Any, Some] = Translatable { translatedExpressions =>
@@ -281,7 +279,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
             val innerTypeEnv = typeEnv -- typeParams
 
             val translatedParams = params.map { param =>
-              val paramId = Core.Identifier(param._1.id, param._1.location)
+              val paramId = translateIdentifier(param._1)
               val tpe = translateType(param._3.resolve(innerTypeEnv))
               val ref = Lazy(Core.ExpressionRef(paramId, tpe))
               param._1 -> (paramId, translateEvaluation(param._2), tpe,
@@ -290,7 +288,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
             lazy val innerEnv: Env = env ++ translatedParams.map(x => (x._1, x._2._4)) ++ translatedBody
             lazy val translatedBody = body.map { entry =>
-              entry._1 -> translateExpressionArg(entry._2, innerEnv, innerTypeEnv, extractNameOpt(entry._1)).translate(innerTranslatedExpressions)
+              entry._1 -> translateExpressionArg(entry._2, innerEnv, innerTypeEnv, entry._1.idOrName.left).translate(innerTranslatedExpressions)
             }
 
             val translatedResult = getExpressionArgStrict(pushStack(translateExpressionArg(result, innerEnv, innerTypeEnv, None).translate(innerTranslatedExpressions), location)).get(stack)
@@ -312,7 +310,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
                 lazy val innerEnv: Env = env ++ params.zip(args).map(a => (a._1._1 -> reified(a._2.translate(translatedExpressions),
                   translateType(a._1._3.resolve(innerTypeEnv))))) ++
                   body.map(e => (e._1,
-                    translateExpressionArg(e._2, innerEnv, innerTypeEnv, extractNameOpt(e._1)).translate(translatedExpressions)
+                    translateExpressionArg(e._2, innerEnv, innerTypeEnv, e._1.idOrName.left).translate(translatedExpressions)
                   ))
                 translateExpressionArg(result, innerEnv, innerTypeEnv, nameOpt).translate(translatedExpressions)
               }
@@ -434,11 +432,11 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
 
   private var counter = spec.maxIdentifier
 
-  def makeIdentifier(nameOpt: Option[String], location: Location = Location.unknown): Core.Identifier = {
+  def makeIdentifier(name: Option[String], location: Location = Location.unknown): Core.Identifier = {
     counter += 1
-    new Core.Identifier(nameOpt.getOrElse("") + "$" + counter, location)
+    new Core.Identifier(name.map(Ior.Both(_, counter)).getOrElse(Ior.Right(counter)), location)
   }
 
   def translateIdentifier(identifier: Typed.Identifier) =
-    Core.Identifier(identifier.id, identifier.location)
+    Core.Identifier(identifier.idOrName, identifier.location)
 }

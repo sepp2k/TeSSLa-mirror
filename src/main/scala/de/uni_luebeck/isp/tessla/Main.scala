@@ -105,11 +105,11 @@ object Main extends SexyOpt {
       }
 
       if (listInStreams) {
-        core.in.foreach { is => println(is._1.id) }
+        core.in.foreach { is => println(is._1.idOrName) }
       }
 
       if (listOutStreams) {
-        core.out.foreach { os => println(os._1.id) }
+        core.out.foreach { os => println(os._1.idOrName) }
       }
 
       if (computationDepth) {

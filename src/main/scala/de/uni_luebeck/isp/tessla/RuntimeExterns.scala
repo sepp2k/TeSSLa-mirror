@@ -224,7 +224,7 @@ object RuntimeExterns {
         case e: ClassCastException => RuntimeError(e.getMessage)
       }).pure[A]
     }),
-    "error" -> strict(propagate(_) { arguments =>
+    "error" -> strict(propagate(_) { arguments => // TODO: declare in standard library
       RuntimeEvaluator.RuntimeError(arguments(0).asInstanceOf[String]).pure[A]
     })
   )

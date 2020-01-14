@@ -8,6 +8,7 @@ import cats.implicits._
 import de.uni_luebeck.isp.tessla.Errors.InternalError
 import de.uni_luebeck.isp.tessla.util.ArraySeqMonad.instance
 
+// TODO: use extern declarations from the standard library
 object CompiletimeExterns {
 
   type Reifier = (Any, List[Core.Type]) => (ArraySeq[(Any, Core.Type)], ArraySeq[Core.ExpressionArg] => Core.Expression)

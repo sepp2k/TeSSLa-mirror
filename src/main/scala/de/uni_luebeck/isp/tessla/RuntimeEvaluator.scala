@@ -40,7 +40,7 @@ class RuntimeEvaluator(externs: Map[String, Extern[Lazy]]) {
 
   def evalExpressionArg(arg: Core.ExpressionArg, env: => Env): Lazy[Any] = arg match {
     case Core.ExpressionRef(id, _, _) => Lazy {
-      env(id.id).get
+      env(id.fullName).get
     }
     case e: Core.Expression => Lazy(evalExpression(e, env))
   }
@@ -54,7 +54,7 @@ class RuntimeEvaluator(externs: Map[String, Extern[Lazy]]) {
         if (params.size != args.size) {
           throw InternalError(s"Called with wrong number of arguments.", location)
         }
-        lazy val newEnv: Env = env ++ params.map(_._1.id).zip(args) ++ body.map(e => (e._1.id, evalExpressionArg(e._2, newEnv)))
+        lazy val newEnv: Env = env ++ params.map(_._1.fullName).zip(args) ++ body.map(e => (e._1.fullName, evalExpressionArg(e._2, newEnv)))
         evalExpressionArg(result, newEnv)
       }
     case e: Core.ExternExpression =>

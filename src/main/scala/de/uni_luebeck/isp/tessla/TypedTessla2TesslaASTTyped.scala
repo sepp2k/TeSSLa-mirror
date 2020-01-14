@@ -2,6 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import TesslaAST.Typed
 import Typed.Identifier
+import cats.data.Ior
 import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.UndefinedTimeUnit
 import de.uni_luebeck.isp.tessla.Tessla.{FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
@@ -67,13 +68,13 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
       Typed.TypeParam(Identifier("B")),
       "List_fold")
   )
-  val ins = mutable.Map[Identifier, (Typed.Type, List[Nothing])]()
+  val ins = mutable.Map[Typed.Identifier, (Typed.Type, List[Nothing])]()
 
   override protected def translateSpec() = {
     val outs = spec.outStreams.map(x => (toIdenifier(x.id, x.loc), x.nameOpt, Nil)).toList
-    val defs: Map[Identifier, Typed.ExpressionArg] = translateEnv(spec.globalDefs)
+    val defs: Map[Typed.Identifier, Typed.ExpressionArg] = translateEnv(spec.globalDefs)
 
-    Typed.Specification(ins.toMap, defs, outs, defs.map(i => extractId(i._1)).max)
+    Typed.Specification(ins.toMap, defs, outs, defs.flatMap(_._1.idOrName.right).max)
   }
 
   def lookupType(id: TypedTessla.Identifier, env: TypedTessla.Definitions): Typed.Type = {
@@ -94,17 +95,17 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     case None => lookupType2(id, env.parent.get)
   }
 
-  def translateEnv(env: TypedTessla.Definitions): Map[Identifier, Typed.ExpressionArg] = env.variables.toMap.map { case (id, definition) =>
+  def translateEnv(env: TypedTessla.Definitions): Map[Typed.Identifier, Typed.ExpressionArg] = env.variables.toMap.map { case (id, definition) =>
     (toIdenifier(id, definition.loc), definition.expression match {
       case InputStream(name, streamType, typeLoc, loc) =>
-        ins += (Identifier(name, loc) -> (toType(streamType), Nil))
-        Typed.ExpressionRef(Identifier(name, loc), toType(streamType, typeLoc), loc)
+        ins += (Typed.Identifier(Ior.Left(name), loc) -> (toType(streamType), Nil))
+        Typed.ExpressionRef(Typed.Identifier(Ior.Left(name), loc), toType(streamType, typeLoc), loc)
       case Parameter(param, parameterType, id) =>
-        Typed.ExpressionRef(Identifier(param.id.name, param.id.loc), toType(parameterType), param.loc)
+        Typed.ExpressionRef(Typed.Identifier(Ior.Left(param.id.name), param.id.loc), toType(parameterType), param.loc)
       case Macro(typeParameters, parameters, body, returnType, headerLoc, result, loc, _) =>
         Typed.FunctionExpression(
           typeParameters.map(toIdenifier(_, Location.unknown)).toList,
-          parameters.map(x => (Identifier(x.param.id.name, x.loc), if (x.parameterType.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation,
+          parameters.map(x => (Typed.Identifier(Ior.Left(x.param.id.name), x.loc), if (x.parameterType.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation,
             toType(x.parameterType))).toList,
           translateEnv(body),
           Typed.ExpressionRef(toIdenifier(result.id, Location.unknown), lookupType(result.id, body), result.loc),
@@ -171,12 +172,8 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
   def lookup(env: TypedTessla.Definitions, id: TypedTessla.Identifier): VariableEntry =
     env.variables.getOrElse(id, lookup(env.parent.get, id))
 
-  def toIdenifier(identifier: TypedTessla.Identifier, location: Location) = Identifier(identifier.nameOpt.getOrElse("") + "$" + identifier.uid, location)
+  def toIdenifier(identifier: TypedTessla.Identifier, location: Location) = Typed.Identifier(Ior.fromOptions(identifier.nameOpt, Some(identifier.uid)).get, location)
 
-  def extractId(id: Typed.Identifier) = {
-    val namePos = id.id.indexOf("$")
-    id.id.substring(namePos + 1, id.id.length).toInt
-  }
 }
 
 class TypedTessla2TesslaASTCore(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {

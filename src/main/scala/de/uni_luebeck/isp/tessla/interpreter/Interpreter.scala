@@ -11,7 +11,7 @@ import scala.collection.immutable.ArraySeq
 
 class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEvaluator.Record(Map())) {
   val inStreams: Map[String, (Input, Core.Type)] = spec.in.map { inStream =>
-    inStream._1.id -> (new Input, inStream._2._1)
+    inStream._1.idOrName.left.get -> (new Input, inStream._2._1)
   }
 
   val streamExterns: Map[String, ArraySeq[Lazy[Any]] => Lazy[Any]] = Map(
@@ -40,10 +40,10 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
 
   val runtimeEvaluator: RuntimeEvaluator = new RuntimeEvaluator(RuntimeExterns.runtimeCommonenExterns ++ streamExterns)
 
-  lazy val definitions: RuntimeEvaluator.Env = inStreams.view.mapValues(x => Lazy(x._1)).toMap ++ spec.definitions.map(d => (d._1.id, runtimeEvaluator.evalExpressionArg(d._2, definitions)))
+  lazy val definitions: RuntimeEvaluator.Env = inStreams.view.mapValues(x => Lazy(x._1)).toMap ++ spec.definitions.map(d => (d._1.fullName, runtimeEvaluator.evalExpressionArg(d._2, definitions)))
 
   lazy val outStreams: Seq[(Option[String], Stream, Core.Type)] = spec.out.map { os =>
-    val definition = definitions(os._1.id).get
+    val definition = definitions(os._1.fullName).get
     (os._2, definition.asInstanceOf[Stream], null) // TODO find type of output stream
   }
 
