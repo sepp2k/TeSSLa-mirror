@@ -21,12 +21,6 @@ object Errors {
     override def toString = super.toString() + stackTraceString
   }
 
-  case class RuntimeError(inner: TesslaError) extends Exception(inner) with TesslaError {
-    override def loc = inner.loc
-
-    override def message = inner.message
-  }
-
   case class MissingBody(id: Tessla.Identifier) extends TesslaError {
     override def loc = id.loc
 
@@ -109,6 +103,10 @@ object Errors {
 
   case class InternalError(m: String, loc: Location = Location.unknown) extends TesslaError {
     override def message = s"Internal error: $m"
+  }
+
+  case class RuntimeError(m: String, loc: Location = Location.unknown) extends TesslaError {
+    override def message = s"Runtime error: $m"
   }
 
   case class UnknownTimeUnit(name: String, loc: Location) extends TesslaError {

@@ -52,6 +52,8 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
+  case class InterperterError()
+
   def run(spec: Core.Specification, input: Trace, stopOn: Option[String]): Trace = {
     val interpreter = new Interpreter(spec)
     new Iterator[Trace.Event] {
@@ -68,8 +70,8 @@ object Interpreter {
                 val timeStamp = Trace.TimeStamp(Location.unknown, interpreter.getTime)
                 val idOpt = nameOpt.map(Trace.Identifier(_, Location.unknown))
                 value match {
-                  case RuntimeEvaluator.RuntimeError(msg) => throw new RuntimeException(msg)
-                  case _ => nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value) // TODO: handle somewhere if value contains RuntimExecption
+                  case RuntimeEvaluator.RuntimeError(msg) => throw Errors.RuntimeError(msg)
+                  case _ => nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value)
                 }
               }
             case None =>
