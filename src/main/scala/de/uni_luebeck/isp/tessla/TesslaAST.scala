@@ -329,5 +329,5 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   val FloatType = InstatiatedType("Float", Nil, Location.builtIn)
   val IntType = InstatiatedType("Int", Nil, Location.builtIn)
   val StringType = InstatiatedType("String", Nil, Location.builtIn)
-  val BoolType = InstatiatedType("Bool", Nil, Location.builtIn) // TODO: consider removing as no corresponding literal
+  val BoolType = InstatiatedType("Bool", Nil, Location.builtIn)
 }
