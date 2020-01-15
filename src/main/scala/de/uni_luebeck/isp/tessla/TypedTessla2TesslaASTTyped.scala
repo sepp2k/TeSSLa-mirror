@@ -66,7 +66,36 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
         ))
       ),
       Typed.TypeParam(Identifier("B")),
-      "List_fold")
+      "List_fold"),
+    "Set_fold" -> Typed.ExternExpression(
+      List(Identifier("A"), Identifier("B")),
+      List(
+        (TesslaAST.StrictEvaluation, Typed.InstatiatedType("Set", List(Typed.TypeParam(Identifier("A"))))),
+        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
+        (TesslaAST.StrictEvaluation, Typed.FunctionType(
+          Nil, List(
+            (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("B"))),
+            (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A")))),
+          Typed.TypeParam(Identifier("B"))
+        ))
+      ),
+      Typed.TypeParam(Identifier("B")),
+      "Set_fold"),
+    "Map_fold" -> Typed.ExternExpression(
+      List(Identifier("A"), Identifier("B"), Identifier("C")),
+      List(
+        (TesslaAST.StrictEvaluation, Typed.InstatiatedType("Map", List(Typed.TypeParam(Identifier("A")), Typed.TypeParam(Identifier("B"))))),
+        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("C"))),
+        (TesslaAST.StrictEvaluation, Typed.FunctionType(
+          Nil, List(
+            (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("C"))),
+            (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A"))),
+            (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("B")))),
+          Typed.TypeParam(Identifier("C"))
+        ))
+      ),
+      Typed.TypeParam(Identifier("C")),
+      "Map_fold")
   )
   val ins = mutable.Map[Typed.Identifier, (Typed.Type, List[Nothing])]()
 
