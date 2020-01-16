@@ -51,7 +51,7 @@ object Main extends SexyOpt {
           timeUnitString = None,
           includeResolver = IncludeResolvers.fromFile,
           stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-          stdlibPath = "Predef.tessla"
+          stdlibPath = "stdlib.tessla"
         )
         val (backend, stdinRead) : (backends.BackendInterface, Boolean) = target.value match {
           case "java" => (new backends.JavaBackend, true)

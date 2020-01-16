@@ -26,10 +26,12 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
 
     definitions.foreach { case (id, definition) => {
       currSource = definition match {
+        case e: ApplicationExpression => translateExpressionArg(id, e, Seq(), Seq(), currSource)
+        case e: TypeApplicationExpression => translateExpressionArg(id, e, Seq(), Seq(), currSource)
+
+        //TODO: Can any of these happen???
         case FunctionExpression(typeParams, params, body, result, location) => throw Errors.NotYetImplementedError("Translation of FunctionExpression not supported yet")
-        case e: ExternExpression => throw Errors.NotYetImplementedError("Translation of ApplicationExpression not supported yet")
-        case e: ApplicationExpression => translateApplication(id, e, currSource)
-        case TypeApplicationExpression(applicable, typeArgs, location) => throw Errors.NotYetImplementedError("Translation of TypeApplicationExpression not supported yet")
+        case _: ExternExpression => throw Errors.NotYetImplementedError("Translation of ExternExpression not supported yet")
         case RecordConstructorExpression(entries, location) => throw Errors.NotYetImplementedError("Translation of RecordConstructorExpression not supported yet")
         case RecordAccesorExpression(name, target, location) => throw Errors.NotYetImplementedError("Translation of RecordAccessorExpression not supported yet")
         case StringLiteralExpression(value, location) => throw Errors.NotYetImplementedError("Translation of StringLiteralExpression not supported yet")
@@ -60,34 +62,45 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     Success(currSource, warnings)
   }
 
-  def translateApplication(id: Identifier, e: ApplicationExpression, currSource: SourceListing) : SourceListing = {
-    e.applicable match {
-      case FunctionExpression(typeParams, params, body, result, location) =>
-        throw Errors.NotYetImplementedError("Application of FunctionExpression not supported yet")
-      case ExternExpression(typeParams, params, resultType, name, location) => name match {
-        case "nil"  =>
-          throw Errors.NotYetImplementedError("Translation of nil is not supported yet")
-        case "default"  =>
-          IntermediateCodeGenerator.produceDefaultStepCode(id, resultType, e.args(0), e.args(1), e.location, currSource)
-        case "defaultFrom" =>
-          IntermediateCodeGenerator.produceDefaultFromStepCode(id, resultType, e.args(0), e.args(1), e.location, currSource)
-        case "time" =>
-          IntermediateCodeGenerator.produceTimeStepCode(id, e.args(0), e.location, currSource)
-        case "last" =>
-          IntermediateCodeGenerator.produceLastStepCode(id, resultType, e.args(0), e.args(1), e.location, currSource)
-        case "delay" =>
-          IntermediateCodeGenerator.produceDelayStepCode(id, e.args(0), e.args(1), e.location, currSource)
-        case "lift" =>
-          IntermediateCodeGenerator.produceLiftStepCode(id, resultType, e.args.dropRight(1), e.args.last, e.location, currSource)
-        case "slift" =>
-          IntermediateCodeGenerator.produceSignalLiftStepCode(id, resultType, e.args.dropRight(1), e.args.last, e.location, currSource)
-        case "merge" =>
-          throw Errors.NotYetImplementedError("Translation of merge is not supported yet")
-        case _ => throw Errors.CommandNotSupportedError(e.toString)
-      }
-      case r: ExpressionRef =>
-        throw Errors.NotYetImplementedError("Application of ExpressionRef not supported yet")
-      case _ => throw Errors.TranslationError("Application to non-applicable expression", e.location)
+  def translateExpressionArg(id: Identifier, e: ExpressionArg, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing) : SourceListing = {
+    e match {
+      case e: ExternExpression => translateExternExpression(id, e, args, typeArgs, currSource)
+      case e: ApplicationExpression => translateExpressionArg(id, e.applicable, e.args, typeArgs, currSource)
+      case e: TypeApplicationExpression => translateExpressionArg(id, e.applicable, args, e.typeArgs, currSource)
+
+      //TODO: Can any of these happen???
+      case FunctionExpression(typeParams, params, body, result, location) => throw Errors.NotYetImplementedError("Translation of FunctionExpression not supported yet")
+      case RecordConstructorExpression(entries, location) => throw Errors.NotYetImplementedError("Translation of RecordConstructorExpression not supported yet")
+      case RecordAccesorExpression(name, target, location) => throw Errors.NotYetImplementedError("Translation of RecordAccessorExpression not supported yet")
+      case StringLiteralExpression(value, location) => throw Errors.NotYetImplementedError("Translation of StringLiteralExpression not supported yet")
+      case IntLiteralExpression(value, location) => throw Errors.NotYetImplementedError("Translation of IntLiteralExpression not supported yet")
+      case FloatLiteralExpression(value, location) => throw Errors.NotYetImplementedError("Translation of FloatLiteralExpression not supported yet")
+      case _ => throw Errors.CommandNotSupportedError(e.toString)
+    }
+  }
+
+  def translateExternExpression(id: Identifier, e: ExternExpression, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing) : SourceListing = {
+    val typeParamMap = e.typeParams.zip(typeArgs).toMap
+    e.name match {
+      case "nil" =>
+        throw Errors.NotYetImplementedError("Translation of nil is not supported yet")
+      case "default" =>
+        IntermediateCodeGenerator.produceDefaultStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
+      case "defaultFrom" =>
+        IntermediateCodeGenerator.produceDefaultFromStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
+      case "time" =>
+        IntermediateCodeGenerator.produceTimeStepCode(id, args(0), e.location, currSource)
+      case "last" =>
+        IntermediateCodeGenerator.produceLastStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
+      case "delay" =>
+        IntermediateCodeGenerator.produceDelayStepCode(id, args(0), args(1), e.location, currSource)
+      case "lift" =>
+        IntermediateCodeGenerator.produceLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, e.location, currSource)
+      case "slift" =>
+        IntermediateCodeGenerator.produceSignalLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, e.location, currSource)
+      case "merge" =>
+        throw Errors.NotYetImplementedError("Translation of merge is not supported yet")
+      case _ => throw Errors.CommandNotSupportedError(e.toString)
     }
   }
 

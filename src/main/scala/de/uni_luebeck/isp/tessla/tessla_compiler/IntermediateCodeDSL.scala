@@ -38,6 +38,7 @@ object IntermediateCodeDSL {
 
   implicit def typeConversion(t: Type): ImpLanType = {
     t match {
+      case InstatiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Dirty hack
       case InstatiatedType("Unit", Seq(), _) => UnitType //TODO: Do they exist at all under these names
       case InstatiatedType("Bool", Seq(), _) => BoolType
       case InstatiatedType("Int", Seq(), _) => LongType
@@ -57,6 +58,7 @@ object IntermediateCodeDSL {
 
   def defaultValueForType(t: Type): ImpLanVal = {
     t match {
+      case InstatiatedType("Events", Seq(t), _) => defaultValueForType(t) //TODO: Dirty hack
       case InstatiatedType("Unit", Seq(), _) => UnitValue //TODO: Do they exist at all under these names
       case InstatiatedType("Bool", Seq(), _) => BoolValue(false)
       case InstatiatedType("Int", Seq(), _) => LongValue(0)

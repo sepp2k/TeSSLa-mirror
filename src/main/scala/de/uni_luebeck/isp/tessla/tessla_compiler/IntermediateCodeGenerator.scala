@@ -134,11 +134,11 @@ object IntermediateCodeGenerator {
         If(Seq(Seq(Equal(s"${v}_ts", "currTs")))).
           Assignment(s"${o}_value", s"${v}_lastValue", defaultValueForType(ot), ot).
           Assignment(s"${o}_error", s"${v}_lastError", LongValue(0), LongType).
-          Assignment(s"${o}_init", s"${v}_lastInit", LongValue(0), LongType).
+          Assignment(s"${o}_init", s"${v}_lastInit", BoolValue(false), BoolType).
         Else().
           Assignment(s"${o}_value", s"${v}_value", defaultValueForType(ot), ot).
           Assignment(s"${o}_error", s"${v}_error", LongValue(0), LongType).
-          Assignment(s"${o}_init", s"${v}_init", LongValue(0), LongType).
+          Assignment(s"${o}_init", s"${v}_init", BoolValue(false), BoolType).
         EndIf().
       EndIf()
 
@@ -244,7 +244,7 @@ object IntermediateCodeGenerator {
   }
 
   def produceOutputCode(id: Identifier, t: Type, nameOpt: Option[String], currSrc: SourceListing) : SourceListing = {
-    val s = id.fullName
+    val s = s"var_${id.fullName}"
     val name = nameOpt.getOrElse(id.idOrName.left.get)
 
     val newStmt = (currSrc.stepSource.
@@ -258,7 +258,7 @@ object IntermediateCodeGenerator {
   }
 
   def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing) = {
-    val s = inStream.fullName
+    val s = s"var_${inStream.fullName}"
 
     val newStmt = (
       currSrc.stepSource.
