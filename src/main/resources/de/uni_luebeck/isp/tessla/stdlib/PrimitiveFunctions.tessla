@@ -21,27 +21,35 @@ def pow(base: Float, exponent: Float): Float = __builtin__(pow)
 @liftable
 def log(x: Float, base: Float): Float = __builtin__(log)
 
-## Returns the trigonometric sine of an angle `x` in radians. Special cases:
+## Returns the trigonometric sine of an angle `x` in radians.
+##
+## Special cases:
 ##
 ## * If the argument is NaN or an infinity, then the result is NaN.
 ## * If the argument is zero, then the result is a zero with the same sign as the argument.
 @liftable
 def sin(x: Float): Float = __builtin__(sin)
 
-## Returns the trigonometric cosine of an angle in radians. Special cases:
+## Returns the trigonometric cosine of an angle in radians.
+##
+## Special cases:
 ##
 ## * If the argument is NaN or an infinity, then the result is NaN.
 @liftable
 def cos(x: Float): Float = __builtin__(cos)
 
-## Returns the trigonometric tangent of an angle in radians. Special cases:
+## Returns the trigonometric tangent of an angle in radians.
+## 
+## Special cases:
 ##
 ## * If the argument is NaN or an infinity, then the result is NaN.
 ## * If the argument is zero, then the result is a zero with the same sign as the argument.
 @liftable
 def tan(x: Float): Float = __builtin__(tan)
 
-## Returns the arc tangent of a value; the returned angle is in the range _-π/2_ through _π/2_. Special cases:
+## Returns the arc tangent of a value; the returned angle is in the range _-π/2_ through _π/2_.
+## 
+## Special cases:
 ##
 ## * If the argument is NaN, then the result is NaN.
 ## * If the argument is zero, then the result is a zero with the same sign as the argument.
@@ -52,6 +60,6 @@ def atan(x: Float): Float = __builtin__(atan)
 @liftable
 def intToFloat(x: Int): Float = __builtin__(intToFloat)
 
-## Converts the given float to an integer without
+## Converts the given float to an integer removing the decimal part
 @liftable
 def floatToInt(x: Float): Int = __builtin__(floatToInt)

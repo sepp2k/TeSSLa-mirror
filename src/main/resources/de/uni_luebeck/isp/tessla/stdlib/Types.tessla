@@ -22,7 +22,7 @@ type Unit = ()
 type Events[T] = __builtin__(Events)
 
 ## Functions annotated with this annotation can be used on streams which will be equivalent to wrapping their call
-## with `slift`.
+## with [`slift`](#slift).
 def @liftable
 
 ## A Boolean value representing that a given proposition is true
