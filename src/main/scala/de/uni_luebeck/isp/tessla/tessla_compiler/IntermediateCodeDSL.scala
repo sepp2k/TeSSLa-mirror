@@ -2,79 +2,75 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import scala.language.implicitConversions
 import scala.language.postfixOps
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{StringValue, _}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
 import de.uni_luebeck.isp.tessla._
-import de.uni_luebeck.isp.tessla.TesslaCore.{BoolValue => _, StringValue => _, _}
+import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 
 /**
   * Class containing a DSL for easy creation of ImpLanStmt-Blocks
   */
 object IntermediateCodeDSL {
 
-  implicit def valueConversion(v: ValueOrError): ImpLanVal = {
-    v match {
-      case TesslaCore.BoolValue(b, _) => BoolValue(b)
-      case TesslaCore.IntValue(i, _) => LongValue(i.longValue())
-      case TesslaCore.FloatValue(f, _) => DoubleValue(f)
-      case TesslaCore.StringValue(s, _) => StringValue(s)
-      case TesslaCore.TesslaOption(scala.None, t, _) => None(t)
-      case TesslaCore.TesslaOption(v, _, _) => Some(v.get)
-      case TesslaCore.TesslaMap(m, TesslaCore.BuiltInType("Map", Seq(t1, t2)), loc) =>
-        if (m.size == 0)
-          EmptyImmutableMap(t1, t2)
-        else
-          throw new Errors.NotYetImplementedError(s"Translation of non empty maps into imperative code is not implemented yet", loc)
-      case TesslaCore.TesslaSet(s, TesslaCore.BuiltInType("Set", Seq(t)), loc) =>
-        if (s.size == 0)
-          EmptyImmutableSet(t)
-        else
-          throw new Errors.NotYetImplementedError(s"Translation of non empty sets into imperative code is not implemented yet", loc)
-      case TesslaCore.TesslaList(IndexedSeq(), TesslaCore.BuiltInType("List", Seq(t)), _) => EmptyImmutableList(t)
-      case Error(error) => throw new Errors.CoreASTError(error, error.loc)
-      case other => throw new Errors.NotYetImplementedError(s"Translation of $other into imperative code not implemented yet")
-      //FIXME: Unit value ?!
+//  implicit def valueConversion(v: ValueOrError): ImpLanVal = {
+//    v match {
+//      case TesslaCore.BoolValue(b, _) => BoolValue(b)
+//      case TesslaCore.IntValue(i, _) => LongValue(i.longValue())
+//      case TesslaCore.FloatValue(f, _) => DoubleValue(f)
+//      case TesslaCore.StringValue(s, _) => StringValue(s)
+//      case TesslaCore.TesslaOption(scala.None, t, _) => None(t)
+//      case TesslaCore.TesslaOption(v, _, _) => Some(v.get)
+//      case TesslaCore.TesslaMap(m, TesslaCore.BuiltInType("Map", Seq(t1, t2)), loc) =>
+//        if (m.size == 0)
+//          EmptyImmutableMap(t1, t2)
+//        else
+//          throw new Errors.NotYetImplementedError(s"Translation of non empty maps into imperative code is not implemented yet", loc)
+//      case TesslaCore.TesslaSet(s, TesslaCore.BuiltInType("Set", Seq(t)), loc) =>
+//        if (s.size == 0)
+//          EmptyImmutableSet(t)
+//        else
+//          throw new Errors.NotYetImplementedError(s"Translation of non empty sets into imperative code is not implemented yet", loc)
+//      case TesslaCore.TesslaList(IndexedSeq(), TesslaCore.BuiltInType("List", Seq(t)), _) => EmptyImmutableList(t)
+//      case Error(error) => throw new Errors.CoreASTError(error, error.loc)
+//      case other => throw new Errors.NotYetImplementedError(s"Translation of $other into imperative code not implemented yet")
+//      //FIXME: Unit value ?!
+//    }
+//  }
+
+  implicit def typeConversion(t: Type): ImpLanType = {
+    t match {
+      case InstatiatedType("Unit", Seq(), _) => UnitType //TODO: Do they exist at all under these names
+      case InstatiatedType("Bool", Seq(), _) => BoolType
+      case InstatiatedType("Int", Seq(), _) => LongType
+      case InstatiatedType("Float", Seq(), _) => DoubleType
+      case InstatiatedType("String", Seq(), _) => StringType
+      case InstatiatedType("Option", Seq(t), _) => OptionType(t)
+      case InstatiatedType("Set", Seq(t), _) => ImmutableSetType(t)
+      case InstatiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
+      case InstatiatedType("List", Seq(t), _) => ImmutableListType(t)
+      case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $i not supported")
+      case TypeParam(name, location) => throw tessla_compiler.Errors.TranslationError(s"Unknown type param $name cannot be used to gain default value")
+      case RecordType(entries, location) => throw tessla_compiler.Errors.NotYetImplementedError("Record types not supported yet")
+      case TesslaAST.Core.FunctionType(typeParams, paramTypes, resultType, location) => throw tessla_compiler.Errors.NotYetImplementedError("Default value for function types not supported yet")
+      case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
   }
 
-  implicit def typeConversion(t: ValueType): ImpLanType = {
+  def defaultValueForType(t: Type): ImpLanVal = {
     t match {
-      case TesslaCore.BuiltInType("Unit", Seq()) => UnitType //TODO: Does this exist at all
-      case TesslaCore.BuiltInType("Bool", Seq()) => BoolType
-      case TesslaCore.BuiltInType("Int", Seq()) => LongType
-      case TesslaCore.BuiltInType("Float", Seq()) => DoubleType
-      case TesslaCore.BuiltInType("String", Seq()) => StringType
-      case TesslaCore.BuiltInType("Option", Seq(t)) => OptionType(t)
-      case TesslaCore.BuiltInType("Set", Seq(t)) => ImmutableSetType(t)
-      case TesslaCore.BuiltInType("Map", Seq(t1, t2)) => ImmutableMapType(t1, t2)
-      case TesslaCore.BuiltInType("List", Seq(t)) => ImmutableListType(t)
-      case t: TesslaCore.BuiltInType => throw new Errors.NotYetImplementedError(s"BuiltInType $t cannot be translated into imperative code yet")
-      case TesslaCore.FunctionType => throw new Errors.CommandNotSupportedError("Function type without further type knowledge cannot be translated into imperative code")
-      case TesslaCore.ObjectType(memberTypes) => if (memberTypes.isEmpty) {
-        UnitType
-      } else {
-        throw new Errors.NotYetImplementedError("Object types cannot be translated into imperative code yet")
-      }
-    }
-  }
-
-  def defaultValueForType(t: ValueType): ImpLanVal = {
-    t match {
-      case TesslaCore.BuiltInType("Unit", Seq()) => UnitValue //TODO: Does this exist at all
-      case TesslaCore.BuiltInType("Bool", Seq()) => BoolValue(false)
-      case TesslaCore.BuiltInType("Int", Seq()) => LongValue(0)
-      case TesslaCore.BuiltInType("Float", Seq()) => DoubleValue(0)
-      case TesslaCore.BuiltInType("String", Seq()) => StringValue("")
-      case TesslaCore.BuiltInType("Option", Seq(t)) => None(t)
-      case TesslaCore.BuiltInType("Set", Seq(t)) => EmptyImmutableSet(t)
-      case TesslaCore.BuiltInType("Map", Seq(t1, t2)) => EmptyImmutableMap(t1, t2)
-      case TesslaCore.BuiltInType("List", Seq(t)) => EmptyImmutableList(t)
-      case t: TesslaCore.BuiltInType => throw new Errors.NotYetImplementedError(s"BuiltInType $t cannot be translated into imperative code yet")
-      case TesslaCore.FunctionType => throw new Errors.CommandNotSupportedError("Function type without further type knowledge cannot be translated into imperative code")
-      case TesslaCore.ObjectType(memberTypes) => if (memberTypes.isEmpty) {
-        UnitValue
-      } else {
-        throw new Errors.NotYetImplementedError("Object types cannot be translated into imperative code yet")
-      }
+      case InstatiatedType("Unit", Seq(), _) => UnitValue //TODO: Do they exist at all under these names
+      case InstatiatedType("Bool", Seq(), _) => BoolValue(false)
+      case InstatiatedType("Int", Seq(), _) => LongValue(0)
+      case InstatiatedType("Float", Seq(), _) => DoubleValue(0)
+      case InstatiatedType("String", Seq(), _) => StringValue("")
+      case InstatiatedType("Option", Seq(t), _) => None(t)
+      case InstatiatedType("Set", Seq(t), _) => EmptyImmutableSet(t)
+      case InstatiatedType("Map", Seq(t1, t2), _) => EmptyImmutableMap(t1, t2)
+      case InstatiatedType("List", Seq(t), _) => EmptyImmutableList(t)
+      case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
+      case TypeParam(name, location) => throw tessla_compiler.Errors.TranslationError(s"Unknown type param $name cannot be used to gain default value")
+      case RecordType(entries, location) => throw tessla_compiler.Errors.NotYetImplementedError("Record types not supported yet")
+      case TesslaAST.Core.FunctionType(typeParams, paramTypes, resultType, location) => throw tessla_compiler.Errors.NotYetImplementedError("Default value for function types not supported yet")
+      case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $t not supported")
     }
   }
 
@@ -103,11 +99,11 @@ class IntermediateCodeDSL(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq(O
 
     def generateStatements: Seq[ImpLanStmt] = {
       if (ifState(0) != Out) {
-        throw new Errors.DSLError("At least one unclosed If")
+        throw tessla_compiler.Errors.DSLError("At least one unclosed If")
       }
 
       if (ifStack.length != 0 || elseStack.length != 0 || condStack.length != 0) {
-        throw new Errors.DSLError("Stack sizes are not valid")
+        throw tessla_compiler.Errors.DSLError("Stack sizes are not valid")
       }
       stmts
     }
@@ -135,21 +131,21 @@ class IntermediateCodeDSL(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq(O
 
     def Else() : IntermediateCodeDSL = ifState(0) match {
       case InIf => new IntermediateCodeDSL(stmts, ifState.updated(0, InElse), ifStack, elseStack, condStack)
-      case InElse => throw new Errors.DSLError("Two subseqeuent Else blocks")
-      case Out => throw new Errors.DSLError("Else without previous If")
+      case InElse => throw tessla_compiler.Errors.DSLError("Two subseqeuent Else blocks")
+      case Out => throw tessla_compiler.Errors.DSLError("Else without previous If")
     }
 
     def EndIf() : IntermediateCodeDSL = {
       val stmt = ifState(0) match {
         case InIf | InElse =>  IntermediateCode.If(condStack(0), ifStack(0), elseStack(0))
-        case Out => throw new Errors.DSLError("EndIf without previous If")
+        case Out => throw tessla_compiler.Errors.DSLError("EndIf without previous If")
       }
       val tmpRes = new IntermediateCodeDSL(stmts, ifState.drop(1), ifStack.drop(1), elseStack.drop(1), condStack.drop(1))
       val (newStmts, newIfStack, newElseStack) = tmpRes.addStmt(stmt)
       new IntermediateCodeDSL(newStmts, ifState.drop(1), newIfStack, newElseStack, condStack.drop(1))
     }
 
-    def FunctionCall(name: String, params: Seq[ImpLanExpr], typeHint: FunctionType) : IntermediateCodeDSL = {
+    def FunctionCall(name: String, params: Seq[ImpLanExpr], typeHint: IntermediateCode.FunctionType) : IntermediateCodeDSL = {
       val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FunctionCall(name, params, typeHint))
       new IntermediateCodeDSL(newStmts, ifState, newIfStack, newElseStack, condStack)
     }

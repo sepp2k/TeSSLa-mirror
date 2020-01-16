@@ -50,14 +50,14 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
       case IntermediateCode.Subtraction(op1, op2) => s"${translateExpression(op1)} - ${translateExpression(op2)}"
       case IntermediateCode.TernaryExpression(guard, e1, e2) => s"${foldGuard(guard)} ? ${translateExpression(e1)} : ${translateExpression(e2)}"
       case IntermediateCode.Equal(a, b) => {
-        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.mapValues{case (typ, _) => typ}))) {
+        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues{case (typ, _) => typ}.toMap))) {
           s"${translateExpression(a)}.equals(${translateExpression(b)})"
         } else {
           s"${translateExpression(a)} == ${translateExpression(b)}"
         }
       }
       case IntermediateCode.NotEqual(a, b) => {
-        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.mapValues{case (typ, _) => typ}))) {
+        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues{case (typ, _) => typ}.toMap))) {
           s"!${translateExpression(a)}.equals(${translateExpression(b)})"
         } else {
           s"${translateExpression(a)} != ${translateExpression(b)}"

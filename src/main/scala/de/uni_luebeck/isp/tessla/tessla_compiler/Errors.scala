@@ -28,9 +28,8 @@ object Errors {
     override def message = s"The TeSSLa Core AST contains an error.\nDetails: ${baseError.message}"
   }
 
-  case class TranslationError(m: String) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
+  case class TranslationError(m: String, loc : Location = Location.unknown) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
     override def message = s"The Translation of the intermediate code failed.\nDetails: $m"
-    override def loc = Location.unknown
   }
 
   case class CLIError(m: String) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {

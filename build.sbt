@@ -10,7 +10,7 @@ organization := "de.uni_luebeck.isp"
 
 version := s"0.1.0-SNAPSHOT"
 
-scalaVersion := "2.12.3"
+scalaVersion := "2.13.1"
 
 resolvers ++= Seq(
   releases, snapshots,
@@ -18,9 +18,7 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.github.sepp2k" %% "sexyopt" % "0.1.1",
-  "de.uni_luebeck.isp" %% "tessla" % "1.0.4",
-  "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+  "de.uni_luebeck.isp" %% "tessla" % "1.2.0-SNAPSHOT"
 )
 
 scalacOptions += "-feature"

@@ -4,6 +4,7 @@ import sexyopt.SexyOpt
 import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.{MutabilityChecker, TesslaCoreWithMutabilityInfo}
 import org.antlr.v4.runtime.CharStreams
 
 /**
@@ -20,8 +21,10 @@ object Main extends SexyOpt {
   val debug = flag("debug", "Print stack traces for runtime errors")
   val noDiagnostics = flag("no-diagnostics", "Don't print error messages and warnings")
   val noOptimization = flag("no-optimization", "Produce non-optimized output code")
+  val noMutability = flag("no-mutability", "Produce code with exclusively immutable datastructures")
 
   def diagnostics = !noDiagnostics.value
+  def mutability = !noOptimization.value && !noMutability.value
 
   def main(args: Array[String]): Unit = {
 
@@ -48,8 +51,7 @@ object Main extends SexyOpt {
           timeUnitString = None,
           includeResolver = IncludeResolvers.fromFile,
           stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-          stdlibPath = "Predef.tessla",
-          currySignalLift = true
+          stdlibPath = "Predef.tessla"
         )
         val (backend, stdinRead) : (backends.BackendInterface, Boolean) = target.value match {
           case "java" => (new backends.JavaBackend, true)
@@ -59,8 +61,13 @@ object Main extends SexyOpt {
           case _=> throw new Errors.CLIError(s"Unvalid option for target: ${target.value}")
         }
 
-        val core = unwrapResult(Compiler.compile(specSource, compilerOptions))
-        val intermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(core))
+        val core = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
+        val coreWithMutInf = if (mutability) {
+          unwrapResult(MutabilityChecker.translate(core))
+        } else {
+          new TesslaCoreWithMutabilityInfo(core, Set())
+        }
+        val intermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(coreWithMutInf))
         val source = unwrapResult(backend.translate(intermediateCode))
 
         println(source)

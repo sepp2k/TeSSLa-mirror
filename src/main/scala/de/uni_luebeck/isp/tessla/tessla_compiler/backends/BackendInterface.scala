@@ -36,11 +36,11 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
     def extractAssignments(stmt: ImpLanStmt) : Seq[(String, ImpLanType, ImpLanVal)] = stmt match {
       case Assignment(lhs, _, defVal, typ) => Seq((lhs.name, typ, defVal))
       case FinalAssignment(lhs, defVal, typ) => Seq((lhs.name, typ, defVal))
-      case If(_, stmts, elseStmts) => stmts.union(elseStmts).flatMap(extractAssignments)
+      case If(_, stmts, elseStmts) => stmts.concat(elseStmts).flatMap(extractAssignments)
       case _ => Seq()
     }
 
-    val varDefs = listing.tsGenSource.union(listing.stepSource).union(listing.inputProcessing).
+    val varDefs = listing.tsGenSource.concat(listing.stepSource).concat(listing.inputProcessing).
                   flatMap(extractAssignments).distinct
     val duplicates = varDefs.groupBy{case (n, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
 
