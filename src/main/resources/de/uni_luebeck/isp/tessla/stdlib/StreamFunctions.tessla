@@ -1671,14 +1671,13 @@ def average(x: Events[Int]): Events[Int] = {
 ## **Usage example:**
 ## 
 ## ~~~ruby
-## in progress: Events[Unit]
 ## def output = period(3)
 ## out output
 ## ~~~
 ## 
 ## ~~~trace
+## option timeDomain: [0,19.5]
 ## option axis: true
-## stream progress: unit events
 ## stream output: unit events
 ## ---
 ## 0: output = ()
@@ -1688,7 +1687,6 @@ def average(x: Events[Int]): Events[Int] = {
 ## 12: output = ()
 ## 15: output = ()
 ## 18: output = ()
-## 20: progress = ()
 ## ~~~
 def period(freq: Int): Events[Unit] = {
   def s: Events[Int] = const(freq, default(delay(s, ()), ()))
@@ -1710,6 +1708,7 @@ def period(freq: Int): Events[Unit] = {
 ## **Trace example:**
 ## 
 ## ~~~trace
+## option timeDomain: [0,25.5]
 ## option axis: true
 ## stream x: events
 ## stream y: events
