@@ -13,6 +13,31 @@ module List {
   def isEmpty[T](list: List[T]): Bool = size(list) == 0
 
   ## Appends the given element to the end of the given list
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List_append(old, x), List_empty[Int])
+  ## out list
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream list: events
+  ## ---
+  ## 0: list = List()
+  ## 2: list = List(1)
+  ## 2: x = 1
+  ## 4: list = List(1, 2)
+  ## 4: x = 2
+  ## 6: list = List(1, 2, 3)
+  ## 6: x = 3
+  ## ~~~
   @liftable
   def append[T](list: List[T], element: T): List[T] = __builtin__(List_append)
 
@@ -20,7 +45,7 @@ module List {
   @liftable
   def prepend[T](element: T, list: List[T]): List[T] = __builtin__(List_prepend)
 
-  ## Comment2 The Tail
+  ## Returns the tail of the given list
   @liftable
   def tail[T](list: List[T]): List[T] = __builtin__(List_tail)
 
