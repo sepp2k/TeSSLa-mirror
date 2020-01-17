@@ -1,112 +1,63 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import de.uni_luebeck.isp.tessla.Location
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
+import de.uni_luebeck.isp.tessla.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{DoubleValue, FunctionCall, FunctionType, FunctionVarApplication, ImpLanExpr, ImpLanStmt, LongValue, SourceListing, StringValue}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeDSL._
 
-//TODO: Just a draft, does not work at all; Wait for new Function concept in TeSSLa
+import scala.language.implicitConversions
+import scala.language.postfixOps
+
 /**
   * Class for the translation of TeSSLaCore-Functions to ImpLan Lambda expressions
   */
 object FunctionGenerator {
 
-//  def generateLambda(f: Function, callName: String, stack: Map[Any, String] = Map()) : LambdaExpression = {
-//    generateLambdaInt(f, stack + (f -> callName))
-//  }
-//
-//  def generateLambdaInt(f: Function, callNames: Map[Any, String]) : LambdaExpression = {
-//
-//    def translateAssignment(a: (Identifier, ValueExpressionDescription)) : Seq[IntermediateCode.ImpLanStmt] = {
-//      val id = a._1
-//      val ved = a._2
-//      val e = ved.exp
-//
-//      e match {
-//         case Application(f, args, loc)  => getValueArgFunc(s"intVar_${id.uid}", f.get, args.map(translateValueArg), ved.typ, loc)
-//         case _ => {
-//           val exp = e match {
-//             case IfThenElse(cond, thenCase, elseCase, loc) => TernaryExpression(Seq(Seq(translateValueArg(cond))), translateValueArg(thenCase.get), translateValueArg(elseCase.get))
-//             case f: Function => if (callNames.contains(f)) { //FIXME: Not same elements; does not work currentlyl; Hope for better situation in TeSSLa's new function concept
-//               generateLambda(f, s"intVar_${id.uid}", callNames)
-//             } else {
-//               Variable(callNames(f))
-//             }
-//             case MemberAccess(obj, member, loc) => throw new Errors.NotYetImplementedError("Member access is not implemented yet", e.loc)
-//           }
-//           Seq() Assignment(s"intVar_${id.uid}", exp, defaultValueForType(ved.typ), ved.typ)
-//         }
-//      }
-//    }
-//
-//    def translateValueArg(v : ValueArg) : ImpLanExpr = {
-//      v match {
-//        case ValueExpressionRef(id) => Variable(s"intVar_${id.uid}")
-//        case ObjectCreation(members, loc) => throw new Errors.NotYetImplementedError("Object creation is not implemented yet", loc)
-//        case v: ValueOrError => v
-//      }
-//    }
-//
-//    def getValueArgFunc(target: String, v: ValueArg, args: Seq[ImpLanExpr], t: ValueType, loc: Location) : Seq[ImpLanStmt] = {
-//      v match {
-//        case BuiltInOperator(name, loc) => {
-//          (
-//            Seq()
-//            Assignment(target, getBuiltinOperator(name, args), defaultValueForType(t), t)
-//          )
-//        }
-//        case c: Closure => { //FIXME: Pass environment
-//          if (callNames.contains(c.function)) {
-//            (
-//              Seq()
-//                Assignment(target, FunctionVarApplication(callNames(c.function), args), defaultValueForType(t), t)
-//              )
-//          } else {
-//            val ft = FunctionType
-//            (
-//              Seq()
-//                Assignment(s"${target}_f", generateLambda(c.function, s"${target}_f", callNames), defaultValueForType(ft), ft)
-//                Assignment(target, FunctionVarApplication(s"${target}_f", args), defaultValueForType(t), t)
-//              )
-//          }
-//        }
-//        case Error(error) => throw new Errors.CoreASTError(error, error.loc)
-//        case _ => throw new Errors.CommandNotSupportedError("Application of unsupported value type", loc)
-//      }
-//    }
-//
-//    def getBuiltinOperator(name: String, args: Seq[ImpLanExpr]) : ImpLanExpr = {
-//      FunctionCall(name, args, Helpers.getBuiltinFunctionTypes(name))
-//    }
-//
-//    def determineEvalOrder(vds: Map[Identifier, ValueExpressionDescription], end: ValueArg) : Seq[(Identifier, ValueExpressionDescription)] = {
-//
-//      def getDependenciesVA(va: ValueArg) : Seq[Identifier] = {
-//        va match {
-//          case ValueExpressionRef(id) => (if (vds.contains(id)) getDependenciesVE(vds(id).exp) else Seq()) ++ Seq(id) //We are only interested in dependencies of the outermost scope
-//          case c: Closure => getDependenciesF(c.function) //?????
-//        }
-//      }
-//
-//      def getDependenciesVE(ve: ValueExpression) : Seq[Identifier] = {
-//        ve match {
-//          case f: Function => getDependenciesF(f) //?????
-//          case IfThenElse(cond, thenCase, elseCase, loc) => getDependenciesVA(cond) ++ getDependenciesVA(thenCase.get) ++ getDependenciesVA(elseCase.get)
-//          case Application(f, args, loc) => getDependenciesVA(f.get) ++ args.flatMap(getDependenciesVA)
-//          case MemberAccess(obj, member, loc) => getDependenciesVA(obj)
-//        }
-//      }
-//
-//      getDependenciesVA(end).filter{id => vds.contains(id)}.map{id => (id, vds(id))}
-//    }
-//
-//    def getDependenciesF(f: Function) : Seq[Identifier] = {
-//      Seq()
-//    }
-//
-//    val ret = ReturnStatement(translateValueArg(f.result))
-//    val stmts = determineEvalOrder(f.body, f.result).flatMap(translateAssignment).toSeq :+ ret
-//    //TODO: Function params have no type annotation
-//    LambdaExpression(f.parameters.map{id => s"intVar_${id.uid}"}, Seq(), LongType, stmts)
-//  }
+  def translateFunctionCall(e: ExpressionArg, args: Seq[ImpLanExpr], typeArgs: Seq[Type]) : ImpLanExpr = {
+    e match {
+      case ExternExpression(typeParams, params, resultType, name, location) => {
+        val typeParamMap = typeParams.zip(typeArgs).toMap
+        FunctionCall(s"__${name}__", args, FunctionType(params.map{case (_,t) => IntermediateCodeDSL.typeConversion(t.resolve(typeParamMap))},IntermediateCodeDSL.typeConversion(resultType.resolve(typeParamMap)))) //TODO: KW check
+      }
+      case f: FunctionExpression => {
+        val typeParamMap = f.typeParams.zip(typeArgs).toMap
+        FunctionCall(s"__${translateFunction(f)}__", args, FunctionType(f.params.map{case (_,_,t) => IntermediateCodeDSL.typeConversion(t.resolve(typeParamMap))},IntermediateCodeDSL.typeConversion(f.result.tpe.resolve(typeParamMap)))) //TODO: KW check
+      }
+      case ExpressionRef(id, tpe, location) => FunctionVarApplication(s"var_${id.fullName}", args)
+      case ApplicationExpression(applicable, args, _) => translateFunctionCall(applicable, args.map(translateExpressionArg), typeArgs)//TODO: Nested Calls???
+      case TypeApplicationExpression(applicable, typeArgs, _) => translateFunctionCall(applicable, args, typeArgs)//TODO: Nested Calls???
+
+      case e => throw Errors.CommandNotSupportedError("Non function expression cannot be translated", e.location)
+    }
+  }
+
+  //TODO: Recursion detection ???
+  //TODO: Where to put the translated function???
+  def translateFunction(e: FunctionExpression) : String = {
+    println(translateBody(e.body.toSeq).mkString("\n")) //TODO: Order body
+    "..."//TODO: Function naming
+  }
+
+  def translateBody(body: Seq[(Identifier, DefinitionExpression)]) : Seq[ImpLanStmt] = {
+    body.foldLeft[Seq[ImpLanStmt]](Seq()){
+      case (curr, (id, exp)) => curr.Assignment(s"var_${id.fullName}", translateExpressionArg(exp), defaultValueForType(exp.tpe), exp.tpe)
+    }
+  }
+
+  //TODO: Maybe put to more general place
+  def translateExpressionArg(e: ExpressionArg): ImpLanExpr = {
+    //TODO: Boolean translation
+    e match {
+      case FunctionExpression(typeParams, params, body, result, location) => ???
+      case ExternExpression(typeParams, params, resultType, name, location) => ???
+      case ApplicationExpression(applicable, args, _) => translateFunctionCall(applicable, args.map(translateExpressionArg), Seq())
+      case TypeApplicationExpression(applicable, typeArgs, _) => translateFunctionCall(applicable, Seq(), typeArgs)
+      case RecordConstructorExpression(entries, location) => ???
+      case RecordAccesorExpression(name, target, location) => ???
+      case StringLiteralExpression(value, _) => StringValue(value)
+      case IntLiteralExpression(value, _) => LongValue(value.toLong)
+      case FloatLiteralExpression(value, _) => DoubleValue(value)
+      case ExpressionRef(id, _, _) => s"var_${id.fullName}"
+    }
+  }
 
 }

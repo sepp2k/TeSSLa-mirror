@@ -13,6 +13,8 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.TesslaCoreWith
 class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
         TranslationPhase[TesslaCoreWithMutabilityInfo, SourceListing] {
 
+
+  //TODO: Stream operations can only occur here, but also everything else
   override def translate(tcMut: TesslaCoreWithMutabilityInfo): Result[SourceListing] = {
 
     val spec = tcMut.spec
@@ -24,20 +26,25 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     var currSource = SourceListing(Seq(), Seq(), Seq())
     var warnings = Seq()
 
+    //TODO: Ordering of definitions -> same in Function generator
     definitions.foreach { case (id, definition) => {
-      currSource = definition match {
-        case e: ApplicationExpression => translateExpressionArg(id, e, Seq(), Seq(), currSource)
-        case e: TypeApplicationExpression => translateExpressionArg(id, e, Seq(), Seq(), currSource)
-
-        //TODO: Can any of these happen???
-        case FunctionExpression(typeParams, params, body, result, location) => throw Errors.NotYetImplementedError("Translation of FunctionExpression not supported yet")
-        case _: ExternExpression => throw Errors.NotYetImplementedError("Translation of ExternExpression not supported yet")
-        case RecordConstructorExpression(entries, location) => throw Errors.NotYetImplementedError("Translation of RecordConstructorExpression not supported yet")
-        case RecordAccesorExpression(name, target, location) => throw Errors.NotYetImplementedError("Translation of RecordAccessorExpression not supported yet")
-        case StringLiteralExpression(value, location) => throw Errors.NotYetImplementedError("Translation of StringLiteralExpression not supported yet")
-        case IntLiteralExpression(value, location) => throw Errors.NotYetImplementedError("Translation of IntLiteralExpression not supported yet")
-        case FloatLiteralExpression(value, location) => throw Errors.NotYetImplementedError("Translation of FloatLiteralExpression not supported yet")
-        case _ => throw Errors.CommandNotSupportedError(definition.toString)
+      currSource = definition.tpe match {
+        case InstatiatedType("Events", _, _) => definition match {
+          case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, typeArgs, _), args, _) => translateExternSignalExpression(id, e, args, typeArgs, currSource)
+          case ApplicationExpression(e: ExternExpression, args, _) => translateExternSignalExpression(id, e, args, Seq(), currSource) //TODO: Does this exist?
+          case e => throw Errors.TranslationError("Non valid stream defining expression cannot be translated", e.location)
+        }
+        case _ => definition match {
+          case e: FunctionExpression => {FunctionGenerator.translateFunction(e); currSource} //TODO
+          case ExternExpression(typeParams, params, resultType, name, location) => ???
+          case ApplicationExpression(applicable, args, location) => ???
+          case TypeApplicationExpression(applicable, typeArgs, location) => ???
+          case RecordConstructorExpression(entries, location) => ???
+          case RecordAccesorExpression(name, target, location) => ???
+          case StringLiteralExpression(value, location) => ???
+          case IntLiteralExpression(value, location) => ???
+          case FloatLiteralExpression(value, location) => ???
+        }
       }
     }
     }
@@ -62,28 +69,11 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     Success(currSource, warnings)
   }
 
-  def translateExpressionArg(id: Identifier, e: ExpressionArg, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing) : SourceListing = {
-    e match {
-      case e: ExternExpression => translateExternExpression(id, e, args, typeArgs, currSource)
-      case e: ApplicationExpression => translateExpressionArg(id, e.applicable, e.args, typeArgs, currSource)
-      case e: TypeApplicationExpression => translateExpressionArg(id, e.applicable, args, e.typeArgs, currSource)
-
-      //TODO: Can any of these happen???
-      case FunctionExpression(typeParams, params, body, result, location) => throw Errors.NotYetImplementedError("Translation of FunctionExpression not supported yet")
-      case RecordConstructorExpression(entries, location) => throw Errors.NotYetImplementedError("Translation of RecordConstructorExpression not supported yet")
-      case RecordAccesorExpression(name, target, location) => throw Errors.NotYetImplementedError("Translation of RecordAccessorExpression not supported yet")
-      case StringLiteralExpression(value, location) => throw Errors.NotYetImplementedError("Translation of StringLiteralExpression not supported yet")
-      case IntLiteralExpression(value, location) => throw Errors.NotYetImplementedError("Translation of IntLiteralExpression not supported yet")
-      case FloatLiteralExpression(value, location) => throw Errors.NotYetImplementedError("Translation of FloatLiteralExpression not supported yet")
-      case _ => throw Errors.CommandNotSupportedError(e.toString)
-    }
-  }
-
-  def translateExternExpression(id: Identifier, e: ExternExpression, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing) : SourceListing = {
+  def translateExternSignalExpression(id: Identifier, e: ExternExpression, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing) : SourceListing = {
     val typeParamMap = e.typeParams.zip(typeArgs).toMap
     e.name match {
       case "nil" =>
-        throw Errors.NotYetImplementedError("Translation of nil is not supported yet")
+        IntermediateCodeGenerator.produceNilStepCode(id, e.resultType.resolve(typeParamMap), e.location, currSource)
       case "default" =>
         IntermediateCodeGenerator.produceDefaultStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
       case "defaultFrom" =>
@@ -99,7 +89,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
       case "slift" =>
         IntermediateCodeGenerator.produceSignalLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, e.location, currSource)
       case "merge" =>
-        throw Errors.NotYetImplementedError("Translation of merge is not supported yet")
+        IntermediateCodeGenerator.produceMergeStepCode(id, e.resultType.resolve(typeParamMap), args, e.location, currSource)
       case _ => throw Errors.CommandNotSupportedError(e.toString)
     }
   }

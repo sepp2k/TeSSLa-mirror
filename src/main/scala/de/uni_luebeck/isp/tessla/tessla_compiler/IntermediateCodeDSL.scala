@@ -39,8 +39,8 @@ object IntermediateCodeDSL {
   implicit def typeConversion(t: Type): ImpLanType = {
     t match {
       case InstatiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Dirty hack
-      case InstatiatedType("Unit", Seq(), _) => UnitType //TODO: Do they exist at all under these names
-      case InstatiatedType("Bool", Seq(), _) => BoolType
+      case RecordType(entries, _) if entries.isEmpty => UnitType
+      case InstatiatedType("Bool", Seq(), _) => BoolType //TODO: Do they exist at all under these names
       case InstatiatedType("Int", Seq(), _) => LongType
       case InstatiatedType("Float", Seq(), _) => DoubleType
       case InstatiatedType("String", Seq(), _) => StringType
@@ -59,8 +59,8 @@ object IntermediateCodeDSL {
   def defaultValueForType(t: Type): ImpLanVal = {
     t match {
       case InstatiatedType("Events", Seq(t), _) => defaultValueForType(t) //TODO: Dirty hack
-      case InstatiatedType("Unit", Seq(), _) => UnitValue //TODO: Do they exist at all under these names
-      case InstatiatedType("Bool", Seq(), _) => BoolValue(false)
+      case RecordType(entries, _) if entries.isEmpty => UnitValue
+      case InstatiatedType("Bool", Seq(), _) => BoolValue(false) //TODO: Do they exist at all under these names
       case InstatiatedType("Int", Seq(), _) => LongValue(0)
       case InstatiatedType("Float", Seq(), _) => DoubleValue(0)
       case InstatiatedType("String", Seq(), _) => StringValue("")

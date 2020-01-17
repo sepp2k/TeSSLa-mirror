@@ -20,6 +20,7 @@ object IntermediateCodeGenerator {
   }
 
   //TODO: Translation to expression necessary?
+  //TODO: Think over substitution with code from Functiongenerator
   def translateExpressionArg(ea: ExpressionArg) : ImpLanVal = {
     ea match {
       case FunctionExpression(typeParams, params, body, result, location) =>  throw tessla_compiler.Errors.NotYetImplementedError("FunctionExpression cannot be translated to ImpLanExpr yet", location)
@@ -33,6 +34,24 @@ object IntermediateCodeGenerator {
       case FloatLiteralExpression(value, location) => DoubleValue(value)
       case ExpressionRef(id, tpe, location) => throw tessla_compiler.Errors.NotYetImplementedError("Translation of ExpressionRef not supported yet", location)
     }
+  }
+
+  def produceNilStepCode(id: Identifier, ot: Type, loc: Location, currSrc: SourceListing): SourceListing = {
+    val o = s"var_${id.fullName}"
+
+    val newStmt = (currSrc.stepSource.
+
+      FinalAssignment(s"${o}_lastValue", defaultValueForType(ot), ot).
+      FinalAssignment(s"${o}_lastInit", BoolValue(false), BoolType).
+      FinalAssignment(s"${o}_lastError", LongValue(0), LongType).
+      FinalAssignment(s"${o}_value", defaultValueForType(ot), ot).
+      FinalAssignment(s"${o}_init", BoolValue(false), BoolType).
+      FinalAssignment(s"${o}_ts", LongValue(0), LongType).
+      FinalAssignment(s"${o}_error", LongValue(0), LongType).
+      FinalAssignment(s"${o}_changed", BoolValue(false), BoolType)
+      )
+
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing)
   }
 
   def produceDefaultStepCode(id: Identifier, ot: Type, stream : ExpressionArg, value : ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -73,10 +92,10 @@ object IntermediateCodeGenerator {
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
         Assignment(s"${o}_value", s"${s}_value", defaultValueForType(ot), ot).
-        Assignment(s"${o}_init", BoolValue(true), BoolValue(true), BoolType).
+        Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
         Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType).
-        Assignment(s"${o}_changed", BoolValue(true), BoolValue(true), BoolType).
+        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
       Else().
         If(Seq(Seq(Negation(s"${o}_init"),s"${d}_init"))).
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
@@ -86,7 +105,7 @@ object IntermediateCodeGenerator {
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
           Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType).
-          Assignment(s"${o}_changed", BoolValue(true), BoolValue(true), BoolType).
+          Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         EndIf().
       EndIf()
 
@@ -221,8 +240,11 @@ object IntermediateCodeGenerator {
   def produceSignalLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
-    val guard1 : Seq[Seq[ImpLanExpr]] = Seq(args.map{sr => Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_init")}) //TODO: Sufficient???
-    val guard2 : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))}
+    val guard1 : Seq[Seq[ImpLanExpr]] = Seq(args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_init")}) //TODO: Sufficient???
+    val guard2 : Seq[Seq[ImpLanExpr]] = args.map{arg => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_changed"))}
+    val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}
+
+    val fcall = FunctionGenerator.translateFunctionCall(function, fargs, Seq())
 
     val newStmt = (currSrc.stepSource.
 
@@ -232,14 +254,49 @@ object IntermediateCodeGenerator {
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
           Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-          //Assignment(s"${o}_value", ErrorGenerator.generateErrorPreventingCallSLift(op.name, fargs, ot), defaultValueForType(ot), ot) //TODO: Function Translation
+          Assignment(s"${o}_value", fcall, defaultValueForType(ot), ot).
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-          //Assignment(s"${o}_error", ErrorGenerator.generateErrorCodeExpressionSLift(op.name, fargs), LongValue(0), LongType) //TODO: Function Translation
+          Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType). //TODO: Function Translation --> Error
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         EndIf().
       EndIf()
       )
+    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing)
+  }
+
+  def produceMergeStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], loc: Location, currSrc: SourceListing): SourceListing = {
+    val o = s"var_${id.fullName}"
+
+    val guard : Seq[Seq[ImpLanExpr]] = args.map{arg =>
+      val n = streamNameAndTypeFromExpressionArg(arg)._1
+      Seq(Variable(s"${n}_init"), Variable(s"${n}_changed"))
+    }
+
+    var newStmt = (currSrc.stepSource.
+
+      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
+      If(guard).
+        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
+        Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
+        Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
+        Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
+        Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
+        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      )
+
+    args.foreach{arg =>
+      val (sn, _) = streamNameAndTypeFromExpressionArg(arg)
+      newStmt = (newStmt.
+        If(Seq(Seq(s"${sn}_init",s"${sn}_changed"))).
+          Assignment(s"${o}_value", s"${sn}_value", defaultValueForType(ot), ot).
+          Assignment(s"${o}_error", s"${sn}_error", defaultValueForType(ot), ot).
+        Else()
+      )
+    }
+
+    (1 to args.length + 1).foreach{_ => newStmt = newStmt.EndIf()}
+
     SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing)
   }
 

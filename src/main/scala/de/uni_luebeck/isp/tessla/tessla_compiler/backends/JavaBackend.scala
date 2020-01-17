@@ -65,7 +65,7 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
       }
       case IntermediateCode.Greater(a, b) => s"${translateExpression(a)} > ${translateExpression(b)}"
       case IntermediateCode.GreaterEqual(a, b) => s"${translateExpression(a)} >= ${translateExpression(b)}"
-      case IntermediateCode.Negation(a) => s"!${translateExpression(a)}}"
+      case IntermediateCode.Negation(a) => s"!${translateExpression(a)}"
       case IntermediateCode.Variable(name) => name
       case IntermediateCode.LambdaExpression(argNames, argsTypes, _, body) => {
         val args = argsTypes.zip(argNames).map{case (t,n) => s"${JavaConstants.typeTranslation(t)} $n"}.mkString(", ")
