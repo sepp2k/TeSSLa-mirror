@@ -61,7 +61,8 @@ object Main extends SexyOpt {
           case _=> throw new Errors.CLIError(s"Unvalid option for target: ${target.value}")
         }
 
-        val core = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
+        val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
+        val core = unwrapResult((new StreamDefFlattener).translate(unflatCore))
         val coreWithMutInf = if (mutability) {
           unwrapResult(MutabilityChecker.translate(core))
         } else {

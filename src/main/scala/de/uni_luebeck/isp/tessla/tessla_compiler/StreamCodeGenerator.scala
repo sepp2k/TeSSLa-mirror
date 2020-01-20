@@ -10,7 +10,7 @@ import de.uni_luebeck.isp.tessla._
 /**
   * Class containing functions for the translation of single TeSSLa expressions to imperative code
   */
-object IntermediateCodeGenerator {
+object StreamCodeGenerator {
 
   def streamNameAndTypeFromExpressionArg(ea : ExpressionArg) : (String, ImpLanType) = {
     ea match {
@@ -244,7 +244,7 @@ object IntermediateCodeGenerator {
     val guard2 : Seq[Seq[ImpLanExpr]] = args.map{arg => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_changed"))}
     val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}
 
-    val fcall = FunctionGenerator.translateFunctionCall(function, fargs, Seq())
+    val fcall = NonStreamCodeGenerator.translateFunctionCall(function, fargs, Seq())
 
     val newStmt = (currSrc.stepSource.
 

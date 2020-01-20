@@ -24,6 +24,7 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
         .replaceAllLiterally("//TRIGGER", generateCode(listing.tsGenSource))
         .replaceAllLiterally("//STEP", generateCode(listing.stepSource))
         .replaceAllLiterally("//INPUTPROCESSING", generateCode(listing.inputProcessing))
+        .replaceAllLiterally("//STATIC", generateCode(listing.staticSource))
     Success(rewrittenSource, warnings)
   }
 
@@ -40,7 +41,7 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
       case _ => Seq()
     }
 
-    val varDefs = listing.tsGenSource.concat(listing.stepSource).concat(listing.inputProcessing).
+    val varDefs = listing.tsGenSource.concat(listing.stepSource).concat(listing.inputProcessing).concat(listing.staticSource).
                   flatMap(extractAssignments).distinct
     val duplicates = varDefs.groupBy{case (n, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
 

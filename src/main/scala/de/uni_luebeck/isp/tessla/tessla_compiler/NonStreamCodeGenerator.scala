@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{DoubleValue, FunctionCall, FunctionType, FunctionVarApplication, ImpLanExpr, ImpLanStmt, LongValue, SourceListing, StringValue}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, DoubleValue, FunctionCall, FunctionType, FunctionVarApplication, ImpLanExpr, ImpLanStmt, LongValue, SourceListing, StringValue}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeDSL._
 
 import scala.language.implicitConversions
@@ -10,7 +10,7 @@ import scala.language.postfixOps
 /**
   * Class for the translation of TeSSLaCore-Functions to ImpLan Lambda expressions
   */
-object FunctionGenerator {
+object NonStreamCodeGenerator {
 
   def translateFunctionCall(e: ExpressionArg, args: Seq[ImpLanExpr], typeArgs: Seq[Type]) : ImpLanExpr = {
     e match {
@@ -30,11 +30,15 @@ object FunctionGenerator {
     }
   }
 
+  def translateDefinition(id: Identifier, e: ExpressionArg) : ImpLanStmt = {
+    Assignment(s"var_$id", translateExpressionArg(e), defaultValueForType(e.tpe), e.tpe)
+  }
+
   //TODO: Recursion detection ???
   //TODO: Where to put the translated function???
-  def translateFunction(e: FunctionExpression) : String = {
+  def translateFunction(e: FunctionExpression) : ImpLanExpr = {
     println(translateBody(e.body.toSeq).mkString("\n")) //TODO: Order body
-    "..."//TODO: Function naming
+    ???
   }
 
   def translateBody(body: Seq[(Identifier, DefinitionExpression)]) : Seq[ImpLanStmt] = {
@@ -47,7 +51,7 @@ object FunctionGenerator {
   def translateExpressionArg(e: ExpressionArg): ImpLanExpr = {
     //TODO: Boolean translation
     e match {
-      case FunctionExpression(typeParams, params, body, result, location) => ???
+      case f: FunctionExpression => translateFunction(f)
       case ExternExpression(typeParams, params, resultType, name, location) => ???
       case ApplicationExpression(applicable, args, _) => translateFunctionCall(applicable, args.map(translateExpressionArg), Seq())
       case TypeApplicationExpression(applicable, typeArgs, _) => translateFunctionCall(applicable, Seq(), typeArgs)

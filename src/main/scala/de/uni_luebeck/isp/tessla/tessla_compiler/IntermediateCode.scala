@@ -13,7 +13,8 @@ object IntermediateCode {
 
   case class SourceListing(stepSource: Seq[ImpLanStmt],
                            tsGenSource: Seq[ImpLanStmt],
-                           inputProcessing: Seq[ImpLanStmt]) {
+                           inputProcessing: Seq[ImpLanStmt],
+                           staticSource: Seq[ImpLanStmt]) {
 
   }
 

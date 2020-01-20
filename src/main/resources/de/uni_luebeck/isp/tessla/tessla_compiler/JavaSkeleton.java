@@ -28,6 +28,8 @@ public class Main {
         long lastProcessedTs = 0;
 //VARDEF
 
+//STATIC
+
         try {
             long newInputTs = 0;
 
