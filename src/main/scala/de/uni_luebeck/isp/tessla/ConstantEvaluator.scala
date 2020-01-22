@@ -203,7 +203,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
     }
 
     val outputs = spec.out.map { x =>
-      val annotations = getExpressionArgStrict(translateExpressionArg(x._3, env, Map(), None).translate(translatedExpressions)).get(Nil)
+      val annotations = x._2.view.mapValues(_.map(a => getExpressionArgStrict(translateExpressionArg(a, env, Map(), None).translate(translatedExpressions)).get(Nil))).toMap
       (env(x._1).expression.get(List(x._1.location)).get match {
         case Left(expression) =>
           val id = translateIdentifier(x._1)
@@ -216,11 +216,11 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
             translatedExpressions.expressions += id -> expression
             id
         }
-      }, x._2, annotations)
+      }, annotations)
     }
 
     val ins = spec.in.map { x =>
-      val annotations = getExpressionArgStrict(translateExpressionArg(x._2._2, env, Map(), None).translate(translatedExpressions)).get(Nil)
+      val annotations = x._2._2.view.mapValues(_.map(a => getExpressionArgStrict(translateExpressionArg(a, env, Map(), None).translate(translatedExpressions)).get(Nil))).toMap
       (translateIdentifier(x._1), (translateType(x._2._1), annotations))
     }
 

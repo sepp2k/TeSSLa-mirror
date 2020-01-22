@@ -5,6 +5,7 @@ import cats.data.Ior
 import cats.implicits._
 
 import scala.collection.immutable.ArraySeq
+import scala.util.Try
 
 object TesslaAST {
 
@@ -59,6 +60,8 @@ object TesslaAST {
 
     override def withTypeAnnotation(s: Boolean => String, tpe: Option[Type], types: Boolean, mayNeedBraces: Boolean) =
       tpe.filter(_ => types).map(tpe => s"${s(true)}").getOrElse(s(mayNeedBraces))
+
+    override type Annotations = Map[String, ArraySeq[ExpressionArg]]
   }
 
   object Typed extends TesslaAST[Id] {
@@ -68,6 +71,8 @@ object TesslaAST {
 
     override def withTypeAnnotation(s: Boolean => String, tpe: Type, types: Boolean, mayNeedBraces: Boolean) =
       if (types) s"${s(true)}: $tpe" else s(mayNeedBraces)
+
+    override type Annotations = Map[String, ArraySeq[ExpressionArg]]
   }
 
   object Core extends TesslaAST[Id] {
@@ -77,6 +82,11 @@ object TesslaAST {
 
     override def withTypeAnnotation(s: Boolean => String, tpe: Type, types: Boolean, mayNeedBraces: Boolean) =
       withBraces(if (types) s"${s(true)}: $tpe" else s(mayNeedBraces), types && mayNeedBraces)
+
+    override type Annotations = Map[String, ArraySeq[ExpressionArg]]
+
+    override def getOutputName(annotations: Annotations) = Try(annotations("name")(0).asInstanceOf[Core.StringLiteralExpression].value).toOption
+
   }
 
   def withBraces(s: String, addBraces: Boolean) = if (addBraces) s"(${s})" else s
@@ -92,16 +102,18 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
   type Evaluation >: StrictEvaluation.type
 
-  case class Specification(in: Map[Identifier, (TypeAnnotation[Type], ExpressionArg)],
+  type Annotations
+
+  case class Specification(in: Map[Identifier, (TypeAnnotation[Type], Annotations)],
     definitions: Map[Identifier, DefinitionExpression],
-    out: List[(Identifier, Option[String], ExpressionArg)],
+    out: List[(Identifier, Annotations)],
     maxIdentifier: Long
-  ) { // TODO: make optional output name an annotation
+  ) {
     def print(options: PrintOptions) = {
       val i = in.map(s => withTypeAnnotation(_ => s"in ${s._1}", s._2._1, types = true, mayNeedBraces = false)).mkString("\n")
-      val o = out.map(x => x._2 match {
+      val o = out.map(x => getOutputName(x._2) match {
         case Some(name) => s"out $name = ${x._1}"
-        case None => "out" + x._1
+        case None => "out " + x._1
       }).mkString("\n")
       val d = definitions.map { x =>
         val tpeString = if (options.defTypes) s": ${x._2.tpe}" else ""
@@ -112,6 +124,8 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
     override def toString = print(PrintOptions())
   }
+
+  def getOutputName(annotations: Annotations): Option[String] = None
 
   // Identifiers can either have a globaly unique id or locally unique name or both.
   // For TeSSLa Core only external names, i.e. input streams do not carry a id.

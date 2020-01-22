@@ -8,6 +8,7 @@ import scala.collection.mutable
 import TesslaAST.Core
 
 import scala.collection.immutable.ArraySeq
+import scala.util.Try
 
 class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEvaluator.Record(Map())) {
   val inStreams: Map[String, (Input, Core.Type)] = spec.in.map { inStream =>
@@ -44,7 +45,8 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
 
   lazy val outStreams: Seq[(Option[String], Stream, Core.Type)] = spec.out.map { os =>
     val definition = definitions(os._1.fullName).get
-    (os._2, definition.asInstanceOf[Stream], null) // TODO find type of output stream
+    val nameOpt = Try(os._2("name")(0).asInstanceOf[Core.StringLiteralExpression].value).toOption
+    (nameOpt, definition.asInstanceOf[Stream], null) // TODO find type of output stream
   }
 
 }

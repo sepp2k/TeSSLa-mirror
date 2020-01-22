@@ -105,10 +105,16 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
       Typed.TypeParam(Identifier("C")),
       "Map_fold")
   )
-  val ins = mutable.Map[Typed.Identifier, (Typed.Type, Typed.ExpressionArg)]()
+  val ins = mutable.Map[Typed.Identifier, (Typed.Type, Typed.Annotations)]()
 
   override protected def translateSpec() = {
-    val outs = spec.outStreams.map(x => (toIdenifier(x.id, x.loc), x.nameOpt, translateAnnotations(spec.globalDefs.variables.find(_._1 == x.id).get._2.annotations))).toList
+    val outs = spec.outStreams.map { x =>
+      val annotations = translateAnnotations(spec.globalDefs.variables.find(_._1 == x.id).get._2.annotations)
+      val name = x.nameOpt.map { n =>
+        "name" -> ArraySeq(Typed.StringLiteralExpression(n))
+      }.iterator.toMap
+      (toIdenifier(x.id, x.loc), annotations ++ name)
+    }.toList
     val defs: Map[Typed.Identifier, Typed.ExpressionArg] = translateEnv(spec.globalDefs)
 
     Typed.Specification(ins.toMap, defs, outs, defs.flatMap(_._1.idOrName.right).max)
@@ -192,14 +198,13 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     })
   }
 
-  def translateAnnotations(annotations: Seq[Annotation]) = Typed.RecordConstructorExpression(annotations.map { annotation =>
-    val translatedArguments = annotation.arguments.map { arg =>
-      TesslaAST.Name(arg._1) -> translateConstantExpression(arg._2)
-    }
-    TesslaAST.Name(annotation.name) -> Typed.RecordConstructorExpression(translatedArguments)
-  }.groupBy(_._1).view.mapValues { x =>
-    Typed.RecordConstructorExpression(LazyList.from(0).map(i => TesslaAST.Name(i.toString)).zip(x.map(_._2)).toMap)
-  }.toMap)
+  def translateAnnotations(annotations: Seq[Annotation]) =
+    annotations.map { annotation =>
+      val translatedArguments = annotation.arguments.map { arg =>
+        TesslaAST.Name(arg._1) -> translateConstantExpression(arg._2)
+      }
+      annotation.name -> Typed.RecordConstructorExpression(translatedArguments)
+    }.groupBy(_._1).view.mapValues(_.map(_._2).to(ArraySeq)).toMap
 
   def translateConstantExpression(exp: ConstantExpression): Typed.ExpressionArg = exp match {
     case ConstantExpression.Object(members, loc) =>
