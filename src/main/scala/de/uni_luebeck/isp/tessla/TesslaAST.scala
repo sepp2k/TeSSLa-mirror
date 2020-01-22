@@ -90,11 +90,11 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
   type DefinitionExpression <: ExpressionArg
 
-  type Evaluation
+  type Evaluation >: StrictEvaluation.type
 
-  case class Specification(in: Map[Identifier, (TypeAnnotation[Type], List[DefinitionExpression])],
+  case class Specification(in: Map[Identifier, (TypeAnnotation[Type], ExpressionArg)],
     definitions: Map[Identifier, DefinitionExpression],
-    out: List[(Identifier, Option[String], List[DefinitionExpression])],
+    out: List[(Identifier, Option[String], ExpressionArg)],
     maxIdentifier: Long
   ) { // TODO: make optional output name an annotation
     def print(options: PrintOptions) = {

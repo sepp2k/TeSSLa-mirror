@@ -3,10 +3,9 @@ package de.uni_luebeck.isp.tessla
 import TesslaAST.Typed
 import Typed.Identifier
 import cats.data.Ior
-import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.UndefinedTimeUnit
-import de.uni_luebeck.isp.tessla.Tessla.{FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
-import de.uni_luebeck.isp.tessla.TypedTessla.{BuiltInOperator, InputStream, Literal, Macro, MacroCall, MemberAccess, ObjectLiteral, Parameter, StaticIfThenElse, Variable, VariableEntry}
+import de.uni_luebeck.isp.tessla.Tessla.{ConstantExpression, FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
+import de.uni_luebeck.isp.tessla.TypedTessla.{BuiltInOperator, InputStream, Literal, Macro, MacroCall, MemberAccess, ObjectLiteral, Parameter, StaticIfThenElse, Variable, VariableEntry, Annotation}
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
@@ -18,6 +17,16 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
     (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
   ), Typed.TypeParam(Identifier("A")), "staticite")
+
+  val annotationExtern = Typed.ExternExpression(
+    List(Identifier("A")),
+    List(
+      (TesslaAST.StrictEvaluation, Typed.InstatiatedType("String", List())),
+      (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A")))
+    ),
+    Typed.InstatiatedType("Annotation", List(Typed.TypeParam(Identifier("A")))),
+    "annotation"
+  )
 
   val knownExterns = Map(
     "true" -> Typed.ApplicationExpression(Typed.TypeApplicationExpression(
@@ -96,10 +105,10 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
       Typed.TypeParam(Identifier("C")),
       "Map_fold")
   )
-  val ins = mutable.Map[Typed.Identifier, (Typed.Type, List[Nothing])]()
+  val ins = mutable.Map[Typed.Identifier, (Typed.Type, Typed.ExpressionArg)]()
 
   override protected def translateSpec() = {
-    val outs = spec.outStreams.map(x => (toIdenifier(x.id, x.loc), x.nameOpt, Nil)).toList
+    val outs = spec.outStreams.map(x => (toIdenifier(x.id, x.loc), x.nameOpt, translateAnnotations(spec.globalDefs.variables.find(_._1 == x.id).get._2.annotations))).toList
     val defs: Map[Typed.Identifier, Typed.ExpressionArg] = translateEnv(spec.globalDefs)
 
     Typed.Specification(ins.toMap, defs, outs, defs.flatMap(_._1.idOrName.right).max)
@@ -126,7 +135,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
   def translateEnv(env: TypedTessla.Definitions): Map[Typed.Identifier, Typed.ExpressionArg] = env.variables.toMap.map { case (id, definition) =>
     (toIdenifier(id, definition.loc), definition.expression match {
       case InputStream(name, streamType, typeLoc, loc) =>
-        ins += (Typed.Identifier(Ior.Left(name), loc) -> (toType(streamType), Nil))
+        ins += (Typed.Identifier(Ior.Left(name), loc) -> (toType(streamType), translateAnnotations(definition.annotations)))
         Typed.ExpressionRef(Typed.Identifier(Ior.Left(name), loc), toType(streamType, typeLoc), loc)
       case Parameter(param, parameterType, id) =>
         Typed.ExpressionRef(Typed.Identifier(Ior.Left(param.id.name), param.id.loc), toType(parameterType), param.loc)
@@ -163,10 +172,10 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
           Typed.ExpressionRef(toIdenifier(thenCase.id, loc), lookupType(thenCase.id, env), loc),
           Typed.ExpressionRef(toIdenifier(elseCase.id, loc), lookupType(elseCase.id, env), loc)
         ), loc)
-      case ObjectLiteral(members, loc) => Typed.RecordConstructorExpression(
-        members.map(x => (TesslaAST.Name(x._1), Typed.ExpressionRef(toIdenifier(x._2.id, x._2.loc), lookupType(x._2.id, env)))), loc)
       case MemberAccess(receiver, member, memberLoc, loc) =>
         Typed.RecordAccesorExpression(TesslaAST.Name(member), Typed.ExpressionRef(toIdenifier(receiver.id, receiver.loc), lookupType(receiver.id, env)), loc)
+      case ObjectLiteral(members, loc) => Typed.RecordConstructorExpression(
+        members.map(x => (TesslaAST.Name(x._1), Typed.ExpressionRef(toIdenifier(x._2.id, x._2.loc), lookupType(x._2.id, env)))), loc)
       case Literal(value, loc) => value match {
         case IntLiteral(value) => Typed.IntLiteralExpression(value, loc)
         case FloatLiteral(value) => Typed.FloatLiteralExpression(value, loc)
@@ -181,6 +190,34 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
         }
       }
     })
+  }
+
+  def translateAnnotations(annotations: Seq[Annotation]) = Typed.RecordConstructorExpression(annotations.map { annotation =>
+    val translatedArguments = annotation.arguments.map { arg =>
+      TesslaAST.Name(arg._1) -> translateConstantExpression(arg._2)
+    }
+    TesslaAST.Name(annotation.name) -> Typed.RecordConstructorExpression(translatedArguments)
+  }.groupBy(_._1).view.mapValues { x =>
+    Typed.RecordConstructorExpression(LazyList.from(0).map(i => TesslaAST.Name(i.toString)).zip(x.map(_._2)).toMap)
+  }.toMap)
+
+  def translateConstantExpression(exp: ConstantExpression): Typed.ExpressionArg = exp match {
+    case ConstantExpression.Object(members, loc) =>
+      val translatedMembers = members.map(x => (TesslaAST.Name(x._1.name), translateConstantExpression(x._2)))
+      Typed.RecordConstructorExpression(translatedMembers, loc)
+    case ConstantExpression.Literal(value, loc) => value match {
+      case IntLiteral(value) => Typed.IntLiteralExpression(value, loc)
+      case FloatLiteral(value) => Typed.FloatLiteralExpression(value, loc)
+      case StringLiteral(value) => Typed.StringLiteralExpression(value, loc)
+      case TimeLiteral(x, tu) => baseTimeUnit match {
+        case Some(base) =>
+          val conversionFactor = tu.convertTo(base).getOrElse(throw Errors.TimeUnitConversionError(tu, base))
+          Typed.IntLiteralExpression(conversionFactor * x, loc)
+        case None =>
+          error(UndefinedTimeUnit(tu.loc))
+          Typed.IntLiteralExpression(x, loc)
+      }
+    }
   }
 
   def toType(tpe: TypedTessla.Type, location: Location = Location.unknown): Typed.Type = tpe match {
