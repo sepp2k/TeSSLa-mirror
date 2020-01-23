@@ -177,6 +177,7 @@ def lift1[T, U](stream: Events[T], f: (Option[T]) => Option[U]): Events[U] = __b
 ## ~~~
 def lift2[T, U, V](stream1: Events[T], stream2: Events[U], f: (Option[T], Option[U]) => Option[V]): Events[V] = __builtin__(lift)
 
+## `lift` is an alias for [`lift2`](#lift2).
 def lift = lift2
 
 ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
@@ -555,6 +556,7 @@ def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] = __builtin__(slift)
 ## ~~~
 def slift2[T,U,V](a: Events[T], b: Events[U], f: (T,U) => V): Events[V] = __builtin__(slift)
 
+## `slift` is an alias for [`slift2`](#slift2)
 def slift = slift2
 
 ## Takes a function `f` on values and lifts it to a function on streams
@@ -721,6 +723,7 @@ def slift5_curried[T1, T2, T3, T4, T5, U](f: (T1, T2, T3, T4, T5) => U) =
 ## ~~~
 def merge2[T](stream1: Events[T], stream2: Events[T]): Events[T] = __builtin__(merge)
 
+## `merge` is an alias for [`merge2`](#merge2)
 def merge = merge2
 
 ## Merges the given event streams. Prioritizing the event streams
@@ -831,6 +834,7 @@ def merge8[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T], e: Events[
 ## ~~~
 def mergeUnit2[T, U](a: Events[T], b: Events[U]): Events[Unit] = merge(const((), a), const((), b))
 
+## `mergeUnit` is an alias for [`mergeUnit2`](#mergeUnit2)
 def mergeUnit = mergeUnit2
 
 ## Merges streams of different types, resulting in a stream that contains a unit
