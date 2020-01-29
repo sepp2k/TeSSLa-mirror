@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
+import java.io.{File, PrintWriter}
+
 import sexyopt.SexyOpt
 import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
@@ -22,6 +24,7 @@ object Main extends SexyOpt {
   val noDiagnostics = flag("no-diagnostics", "Don't print error messages and warnings")
   val noOptimization = flag("no-optimization", "Produce non-optimized output code")
   val noMutability = flag("no-mutability", "Produce code with exclusively immutable datastructures")
+  val outputPath = option("output-file", 'o', "Location of the output (including filename)")
 
   def diagnostics = !noDiagnostics.value
   def mutability = !noOptimization.value && !noMutability.value
@@ -72,6 +75,13 @@ object Main extends SexyOpt {
         val source = unwrapResult(backend.translate(intermediateCode))
 
         println(source)
+        if (outputPath.get != "") {
+          val pw = new PrintWriter(new File(outputPath.get))
+          pw.write(source)
+          pw.close
+        } else {
+          println(source)
+        }
     } catch {
       case ex: TesslaError =>
         System.err.println(s"Compilation error: $ex")
