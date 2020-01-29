@@ -135,7 +135,7 @@ object IntermediateCode {
     override def toString = s"If $guard :\n${stmts.mkString("\n")}\nElse :\n${elseStmts.mkString("\n")}\nEndIf"
   }
 
-  final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: ImpLanVal, typ: ImpLanType)
+  final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: Option[ImpLanVal], typ: ImpLanType)
     extends ImpLanStmt {
     override def toString = s"$lhs = ${rexpr} (default: ${defVal})"
   }
@@ -152,8 +152,8 @@ object IntermediateCode {
     override def toString = s"$name( ${params.mkString(", ")} ) [[type: $typeHint]]"
   }
 
-  final case class FunctionVarApplication(variable: Variable, params: Seq[ImpLanExpr]) extends ImpLanExpr {
-    override def toString = s"$variable( ${params.mkString(", ")} )"
+  final case class LambdaApplication(exp: ImpLanExpr, params: Seq[ImpLanExpr]) extends ImpLanExpr {
+    override def toString = s"$exp( ${params.mkString(", ")} )"
   }
 
   final case class Addition(op1: ImpLanExpr, op2: ImpLanExpr) extends ImpLanExpr {

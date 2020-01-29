@@ -9,6 +9,7 @@ import de.uni_luebeck.isp.tessla.Location
 
 import scala.collection.mutable
 
+//TODO: Unclear if really necessary
 class StreamDefFlattener extends TranslationPhase[Core.Specification, Core.Specification] {
 
   override def translate(spec: Core.Specification): Result[Core.Specification] = {

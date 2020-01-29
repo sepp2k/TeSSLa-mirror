@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
 import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode, IntermediateCodeTypeInference}
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, BoolType, FinalAssignment, ImpLanExpr, ImpLanStmt, ImpLanType, ImpLanVal}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 
 /**
   * BackendInterface implementation for the translation to Java code
@@ -10,7 +10,8 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
 
   def generateVariableDeclarations() : Seq[String] = {
     variables.map{
-      case (name, (typ, default)) => s"${JavaConstants.typeTranslation(typ)} $name = ${JavaConstants.valueTranslation(default)};"
+      case (name, (typ, scala.Some(default))) => s"${JavaConstants.typeTranslation(typ)} $name = ${translateExpression(default)};"
+      case (name, (typ, scala.None)) => s"${JavaConstants.typeTranslation(typ)} $name;"
     }.toSeq
   }
 
@@ -18,7 +19,9 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
     guard.map{c => ("(" + c.map(translateExpression).mkString(" && ") + ")")}.mkString(" || ")
   }
 
-  def generateCode(stmts: Seq[ImpLanStmt]) : String = {
+  override def generateCode(stmts: Seq[ImpLanStmt]): String = generateCode(stmts, false)
+
+  def generateCode(stmts: Seq[ImpLanStmt], inLambda: Boolean = false) : String = {
     stmts.map{
       case expr: IntermediateCode.ImpLanExpr => s"${translateExpression(expr)};"
       case IntermediateCode.If(guard, stmts, elseStmts) => {
@@ -29,8 +32,12 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
 
         s"if ($guardFormatted) {\n$ifPart\n}$optElse"
       }
-      case Assignment(lhs, rexpr, _, typ) => s"$lhs = ${translateExpression(rexpr)};"
+      case Assignment(lhs, rexpr, _, t) if inLambda => s"${JavaConstants.typeTranslation(t)} $lhs = ${translateExpression(rexpr)};"
+      case Assignment(lhs, rexpr, _, _) => s"$lhs = ${translateExpression(rexpr)};"
+
+      case FinalAssignment(lhs, rhs, t) if inLambda => s"${JavaConstants.typeTranslation(t)} $lhs = ${translateExpression(rhs)};"
       case FinalAssignment(_, _, _) => ""
+
       case IntermediateCode.ReturnStatement(expr) => s"return ${translateExpression(expr)};"
     }.filter(_ != "").mkString("\n")
   }
@@ -44,7 +51,7 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
           s"$name(${params.map(translateExpression).mkString(", ")})"
         }
       }
-      case IntermediateCode.FunctionVarApplication(variable, params) => s"$variable.apply(${params.map(translateExpression).mkString(", ")})"
+      case IntermediateCode.LambdaApplication(exp, params) => s"${translateExpression(exp)}.apply(${params.map(translateExpression).mkString(", ")})"
       case IntermediateCode.Addition(op1, op2) => s"${translateExpression(op1)} + ${translateExpression(op2)}"
       case IntermediateCode.BitwiseOr(op1, op2) => s"${translateExpression(op1)} | ${translateExpression(op2)}"
       case IntermediateCode.Subtraction(op1, op2) => s"${translateExpression(op1)} - ${translateExpression(op2)}"
@@ -68,8 +75,8 @@ class JavaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_com
       case IntermediateCode.Negation(a) => s"!${translateExpression(a)}"
       case IntermediateCode.Variable(name) => name
       case IntermediateCode.LambdaExpression(argNames, argsTypes, _, body) => {
-        val args = argsTypes.zip(argNames).map{case (t,n) => s"${JavaConstants.typeTranslation(t)} $n"}.mkString(", ")
-        s"($args) -> {${generateCode(body)}}"
+        val args = argsTypes.zip(argNames).map{case (t,n) => s"${JavaConstants.objectTypeTranslation(t)} $n"}.mkString(", ")
+        s"($args) -> {\n${generateCode(body, true)}\n}"
       }
   }
 

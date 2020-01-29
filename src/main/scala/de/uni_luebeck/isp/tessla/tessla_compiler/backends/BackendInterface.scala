@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
 import de.uni_luebeck.isp.tessla.TranslationPhase
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, FinalAssignment, If, ImpLanStmt, ImpLanType, ImpLanVal, LongType, LongValue, SourceListing, StringType, StringValue}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
 
@@ -11,13 +11,13 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
   */
 abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase[SourceListing, String] {
 
-  var variables : Map[String, (ImpLanType, ImpLanVal)] = Map()
+  var variables : Map[String, (ImpLanType, Option[ImpLanVal])] = Map()
 
   def translate(listing: SourceListing) : Result[String] = {
     var warnings = Seq()
-    variables = getVariableMap(listing) ++ Map("inputStream" -> (StringType, StringValue("")),
-                                               "value" -> (StringType, StringValue("")),
-                                               "currTs" -> (LongType, LongValue(0)))
+    variables = getVariableMap(listing) ++ Map("inputStream" -> (StringType, scala.Some(StringValue(""))),
+                                               "value" -> (StringType, scala.Some(StringValue(""))),
+                                               "currTs" -> (LongType, scala.Some(LongValue(0))))
 
     val source =  scala.io.Source.fromResource(sourceTemplate).mkString
     val rewrittenSource = source.replaceAllLiterally("//VARDEF", generateVariableDeclarations().mkString("\n"))
@@ -32,11 +32,11 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
 
   def generateCode(stmts: Seq[ImpLanStmt]) : String
 
-  def getVariableMap(listing: SourceListing) : Map[String, (ImpLanType, ImpLanVal)] = {
+  def getVariableMap(listing: SourceListing) : Map[String, (ImpLanType, Option[ImpLanVal])] = {
 
-    def extractAssignments(stmt: ImpLanStmt) : Seq[(String, ImpLanType, ImpLanVal)] = stmt match {
+    def extractAssignments(stmt: ImpLanStmt) : Seq[(String, ImpLanType, Option[ImpLanVal])] = stmt match {
       case Assignment(lhs, _, defVal, typ) => Seq((lhs.name, typ, defVal))
-      case FinalAssignment(lhs, defVal, typ) => Seq((lhs.name, typ, defVal))
+      case FinalAssignment(lhs, defVal, typ) => Seq((lhs.name, typ, scala.Some(defVal)))
       case If(_, stmts, elseStmts) => stmts.concat(elseStmts).flatMap(extractAssignments)
       case _ => Seq()
     }

@@ -117,6 +117,10 @@ class IntermediateCodeDSL(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq(O
     }
 
     def Assignment(lhs: Variable, rhs: ImpLanExpr, default: ImpLanVal, typ: ImpLanType) : IntermediateCodeDSL = {
+      Assignment(lhs, rhs, scala.Some(default), typ)
+    }
+
+    def Assignment(lhs: Variable, rhs: ImpLanExpr, default: Option[ImpLanVal], typ: ImpLanType) : IntermediateCodeDSL = {
       val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.Assignment(lhs, rhs, default, typ))
       new IntermediateCodeDSL(newStmts, ifState, newIfStack, newElseStack, condStack)
     }
@@ -152,8 +156,8 @@ class IntermediateCodeDSL(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq(O
       new IntermediateCodeDSL(newStmts, ifState, newIfStack, newElseStack, condStack)
     }
 
-   def FunctionVarApplication(name: String, params: Seq[ImpLanExpr]) : IntermediateCodeDSL = {
-    val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FunctionVarApplication(Variable(name), params))
+   def LambdaApllication(exp: ImpLanExpr, params: Seq[ImpLanExpr]) : IntermediateCodeDSL = {
+    val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.LambdaApplication(exp, params))
     new IntermediateCodeDSL(newStmts, ifState, newIfStack, newElseStack, condStack)
    }
 

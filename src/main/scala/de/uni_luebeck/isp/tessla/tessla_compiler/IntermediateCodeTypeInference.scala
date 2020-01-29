@@ -31,17 +31,17 @@ object IntermediateCodeTypeInference {
                 throw new Errors.TypeError(s"Function is applied to expressions with wrong type: $name")
               }
             }
-            case FunctionVarApplication(variable, params) => {
+            case LambdaApplication(exp, params) => {
               val paramTypes = params.map{p => typeInference(p, varTypes)}
-              varTypes(variable.name) match {
+              typeInference(exp, varTypes) match {
                 case FunctionType(p, r) => {
                     if (p == paramTypes) {
                         r
                       } else {
-                        throw new Errors.TypeError(s"Lambda variable is applied to expressions with wrong type: $variable")
+                        throw new Errors.TypeError(s"Lambda application to expressions with wrong type: $exp")
                       }
                   }
-                  case _ => throw new Errors.TypeError(s"Non-Lambda variable is used in application: $variable")
+                  case _ => throw new Errors.TypeError(s"Non-Lambda expression is used in application: $exp")
                 }
             }
             case BitwiseOr(op1, op2) => {

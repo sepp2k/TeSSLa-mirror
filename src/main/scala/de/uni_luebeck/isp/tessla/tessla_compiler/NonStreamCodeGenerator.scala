@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import de.uni_luebeck.isp.tessla.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{Assignment, DoubleValue, FunctionCall, FunctionType, FunctionVarApplication, ImpLanExpr, ImpLanStmt, LongValue, SourceListing, StringValue}
+import de.uni_luebeck.isp.tessla.TesslaAST.Core.{FunctionType => _, _}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeDSL._
 
 import scala.language.implicitConversions
@@ -16,51 +16,50 @@ object NonStreamCodeGenerator {
     e match {
       case ExternExpression(typeParams, params, resultType, name, location) => {
         val typeParamMap = typeParams.zip(typeArgs).toMap
-        FunctionCall(s"__${name}__", args, FunctionType(params.map{case (_,t) => IntermediateCodeDSL.typeConversion(t.resolve(typeParamMap))},IntermediateCodeDSL.typeConversion(resultType.resolve(typeParamMap)))) //TODO: KW check
+        FunctionCall(s"__${name}__", args, FunctionType(params.map{case (_,t) => IntermediateCodeDSL.typeConversion(t.resolve(typeParamMap))},IntermediateCodeDSL.typeConversion(resultType.resolve(typeParamMap))))
       }
-      case f: FunctionExpression => {
-        val typeParamMap = f.typeParams.zip(typeArgs).toMap
-        FunctionCall(s"__${translateFunction(f)}__", args, FunctionType(f.params.map{case (_,_,t) => IntermediateCodeDSL.typeConversion(t.resolve(typeParamMap))},IntermediateCodeDSL.typeConversion(f.result.tpe.resolve(typeParamMap)))) //TODO: KW check
-      }
-      case ExpressionRef(id, tpe, location) => FunctionVarApplication(s"var_${id.fullName}", args)
-      case ApplicationExpression(applicable, args, _) => translateFunctionCall(applicable, args.map(translateExpressionArg), typeArgs)//TODO: Nested Calls???
-      case TypeApplicationExpression(applicable, typeArgs, _) => translateFunctionCall(applicable, args, typeArgs)//TODO: Nested Calls???
-
+      case _: FunctionExpression |
+           _: ExpressionRef |
+           ApplicationExpression(TypeApplicationExpression(_, _, _), _, _) => LambdaApplication(translateExpressionArg(e), args)
       case e => throw Errors.CommandNotSupportedError("Non function expression cannot be translated", e.location)
     }
   }
 
   def translateDefinition(id: Identifier, e: ExpressionArg) : ImpLanStmt = {
-    Assignment(s"var_$id", translateExpressionArg(e), defaultValueForType(e.tpe), e.tpe)
+    Assignment(s"var_$id", translateExpressionArg(e), scala.None, e.tpe)
   }
 
   //TODO: Recursion detection ???
-  //TODO: Where to put the translated function???
   def translateFunction(e: FunctionExpression) : ImpLanExpr = {
-    println(translateBody(e.body.toSeq).mkString("\n")) //TODO: Order body
-    ???
+    //TODO: Possibly type param resolution
+    //Fix for avoiding generic types where not necessary
+      val resType = e.result match {
+        case ExpressionRef(id, tpe, location) => e.body(id).tpe
+        case _ => e.result.tpe
+      }
+      LambdaExpression(e.params.map{case (id,_,_) => s"var_$id"}, e.params.map{case (_,_,t) => t}, resType, translateBody(e.body, e.result))
   }
 
-  def translateBody(body: Seq[(Identifier, DefinitionExpression)]) : Seq[ImpLanStmt] = {
-    body.foldLeft[Seq[ImpLanStmt]](Seq()){
-      case (curr, (id, exp)) => curr.Assignment(s"var_${id.fullName}", translateExpressionArg(exp), defaultValueForType(exp.tpe), exp.tpe)
+  def translateBody(body: Map[Identifier, DefinitionExpression], ret: ExpressionArg) : Seq[ImpLanStmt] = {
+    val translatedBody = DefinitionOrdering.order(body).foldLeft[Seq[ImpLanStmt]](Seq()){
+      case (curr, (id, exp)) => curr.Assignment(s"var_${id.fullName}", translateExpressionArg(exp), scala.None, exp.tpe)
     }
+    translatedBody :+ ReturnStatement(translateExpressionArg(ret))
   }
 
-  //TODO: Maybe put to more general place
   def translateExpressionArg(e: ExpressionArg): ImpLanExpr = {
     //TODO: Boolean translation
     e match {
       case f: FunctionExpression => translateFunction(f)
-      case ExternExpression(typeParams, params, resultType, name, location) => ???
-      case ApplicationExpression(applicable, args, _) => translateFunctionCall(applicable, args.map(translateExpressionArg), Seq())
-      case TypeApplicationExpression(applicable, typeArgs, _) => translateFunctionCall(applicable, Seq(), typeArgs)
-      case RecordConstructorExpression(entries, location) => ???
-      case RecordAccesorExpression(name, target, location) => ???
+      case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) => translateFunctionCall(e, args.map(translateExpressionArg), typeArgs)
       case StringLiteralExpression(value, _) => StringValue(value)
       case IntLiteralExpression(value, _) => LongValue(value.toLong)
       case FloatLiteralExpression(value, _) => DoubleValue(value)
       case ExpressionRef(id, _, _) => s"var_${id.fullName}"
+      case ExternExpression(typeParams, params, resultType, name, location) => ???
+      case RecordConstructorExpression(entries, location) => ???
+      case RecordAccesorExpression(name, target, location) => ???
+      case _ => ???
     }
   }
 
