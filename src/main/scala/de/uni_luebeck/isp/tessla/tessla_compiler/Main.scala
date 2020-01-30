@@ -25,6 +25,7 @@ object Main extends SexyOpt {
   val noOptimization = flag("no-optimization", "Produce non-optimized output code")
   val noMutability = flag("no-mutability", "Produce code with exclusively immutable datastructures")
   val outputPath = option("output-file", 'o', "Location of the output (including filename)")
+  val verbose = flag("verbose", 'v', "Produce a lot of output")
 
   def diagnostics = !noDiagnostics.value
   def mutability = !noOptimization.value && !noMutability.value
@@ -66,15 +67,32 @@ object Main extends SexyOpt {
 
         val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
         val core = unwrapResult((new StreamDefFlattener).translate(unflatCore))
+
+        if (verbose.value) {
+          println("###############################")
+          println("#        TeSSLa Core          #")
+          println("###############################")
+          println(core)
+          println("###############################")
+        }
+
         val coreWithMutInf = if (mutability) {
           unwrapResult(MutabilityChecker.translate(core))
         } else {
           new TesslaCoreWithMutabilityInfo(core, Set())
         }
         val intermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(coreWithMutInf))
+
+        if (verbose.value) {
+          println("###############################")
+          println("#      Intermediate Code      #")
+          println("###############################")
+          println(intermediateCode)
+          println("###############################")
+        }
+
         val source = unwrapResult(backend.translate(intermediateCode))
 
-        println(source)
         if (outputPath.get != "") {
           val pw = new PrintWriter(new File(outputPath.get))
           pw.write(source)
