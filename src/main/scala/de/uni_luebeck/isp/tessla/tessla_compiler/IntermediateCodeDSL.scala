@@ -48,10 +48,10 @@ object IntermediateCodeDSL {
       case InstatiatedType("Set", Seq(t), _) => ImmutableSetType(t)
       case InstatiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
       case InstatiatedType("List", Seq(t), _) => ImmutableListType(t)
+      case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) => IntermediateCode.FunctionType(paramTypes.map{case (_,t) => typeConversion(t)}, typeConversion(resultType)) //TODO: Type params
+      case TypeParam(name, location) => GeneralType//TODO: Resolve type params if possible
       case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $i not supported")
-      case TypeParam(name, location) => throw tessla_compiler.Errors.TranslationError(s"Unknown type param $name cannot be used to gain default value")
       case RecordType(entries, location) => throw tessla_compiler.Errors.NotYetImplementedError("Record types not supported yet")
-      case TesslaAST.Core.FunctionType(typeParams, paramTypes, resultType, location) => throw tessla_compiler.Errors.NotYetImplementedError("Default value for function types not supported yet")
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
   }
@@ -60,7 +60,7 @@ object IntermediateCodeDSL {
     t match {
       case InstatiatedType("Events", Seq(t), _) => defaultValueForType(t) //TODO: Dirty hack
       case RecordType(entries, _) if entries.isEmpty => UnitValue
-      case InstatiatedType("Bool", Seq(), _) => BoolValue(false) //TODO: Do they exist at all under these names
+      case InstatiatedType("Bool", Seq(), _) => BoolValue(false)
       case InstatiatedType("Int", Seq(), _) => LongValue(0)
       case InstatiatedType("Float", Seq(), _) => DoubleValue(0)
       case InstatiatedType("String", Seq(), _) => StringValue("")
@@ -68,10 +68,10 @@ object IntermediateCodeDSL {
       case InstatiatedType("Set", Seq(t), _) => EmptyImmutableSet(t)
       case InstatiatedType("Map", Seq(t1, t2), _) => EmptyImmutableMap(t1, t2)
       case InstatiatedType("List", Seq(t), _) => EmptyImmutableList(t)
-      case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
+      case TesslaAST.Core.FunctionType(_, _, _, _) => EmptyFunction(t)
       case TypeParam(name, location) => throw tessla_compiler.Errors.TranslationError(s"Unknown type param $name cannot be used to gain default value")
+      case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
       case RecordType(entries, location) => throw tessla_compiler.Errors.NotYetImplementedError("Record types not supported yet")
-      case TesslaAST.Core.FunctionType(typeParams, paramTypes, resultType, location) => throw tessla_compiler.Errors.NotYetImplementedError("Default value for function types not supported yet")
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $t not supported")
     }
   }

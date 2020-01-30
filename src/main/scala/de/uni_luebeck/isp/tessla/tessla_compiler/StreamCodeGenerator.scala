@@ -19,12 +19,10 @@ object StreamCodeGenerator {
     }
   }
 
-  //TODO: Translation to expression necessary?
-  //TODO: Think over substitution with code from Functiongenerator
-  def translateExpressionArg(ea: ExpressionArg) : ImpLanVal = {
+  //TODO: Possibly duplicate of translateExpressionArg from NonStreamCodeGenerator
+  def translateExpressionArg(ea: ExpressionArg) : ImpLanExpr = {
     ea match {
       case FunctionExpression(typeParams, params, body, result, location) =>  throw tessla_compiler.Errors.NotYetImplementedError("FunctionExpression cannot be translated to ImpLanExpr yet", location)
-      case ExternExpression(typeParams, params, resultType, name, location) =>  throw tessla_compiler.Errors.NotYetImplementedError("ExternExpression cannot be translated to ImpLanExpr yet", location)
       case ApplicationExpression(applicable, args, location) => throw tessla_compiler.Errors.NotYetImplementedError("ApplicationExpression cannot be translated to ImpLanExpr yet", location)
       case TypeApplicationExpression(applicable, typeArgs, location) => throw tessla_compiler.Errors.NotYetImplementedError("TypeApplicationExpression cannot be translated to ImpLanExpr yet", location)
       case RecordConstructorExpression(entries, location) => throw tessla_compiler.Errors.NotYetImplementedError("Records not implemented yet", location)
@@ -32,7 +30,11 @@ object StreamCodeGenerator {
       case StringLiteralExpression(value, location) => StringValue(value)
       case IntLiteralExpression(value, location) => LongValue(value.longValue)
       case FloatLiteralExpression(value, location) => DoubleValue(value)
-      case ExpressionRef(id, tpe, location) => throw tessla_compiler.Errors.NotYetImplementedError("Translation of ExpressionRef not supported yet", location)
+      case ExternExpression(_, _, _, "true", _) => BoolValue(true)
+      case ExternExpression(_, _, _, "false", _) => BoolValue(false)
+      case ExternExpression(_, _, InstatiatedType("Option", Seq(t), _), "None", _) => None(t)
+      case ExpressionRef(id, tpe, location) => Variable(s"var_${id.fullName}")
+      case _ => throw tessla_compiler.Errors.NotYetImplementedError(s"$ea cannot be translated to ImpLanExpr yet", ea.location)
     }
   }
 
@@ -63,12 +65,13 @@ object StreamCodeGenerator {
 
       If(Seq(Seq(NotEqual("currTs", LongValue(0))))).
         Assignment(s"${o}_changed", BoolValue(false), BoolValue(true), BoolType).
+        Assignment(s"${o}_value", default, defaultValueForType(ot), ot).
       EndIf().
       If(Seq(Seq(s"${s}_changed"))).
         Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-        Assignment(s"${o}_value", s"${s}_value", default, ot).
+        Assignment(s"${o}_value", s"${s}_value", defaultValueForType(ot), ot).
         Assignment(s"${o}_init", BoolValue(true), BoolValue(true), BoolType).
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
         Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType).
@@ -204,12 +207,12 @@ object StreamCodeGenerator {
     SourceListing(newStmt, newTsGen, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg,loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
     val params = args.map{sr => { val (sName, sType) = streamNameAndTypeFromExpressionArg(sr) //TODO: Sufficient???
                                   TernaryExpression(Seq(Seq(Equal(s"${sName}_ts", "currTs"))),
-                                                  FunctionCall("Some", Seq(s"${sName}_value"), IntermediateCode.FunctionType(Seq(sType), OptionType(sType))),
+                                                  FunctionCall("__Some__", Seq(s"${sName}_value"), IntermediateCode.FunctionType(Seq(sType), OptionType(sType))),
                                                   None(sType))
                                 }
                          }
@@ -219,16 +222,15 @@ object StreamCodeGenerator {
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
       If(guard).
-        //Assignment(s"${o}_f", FunctionGenerator.generateLambda(f, s"${o}_f"), defaultValueForType(FunctionType), FunctionType) //TODO: Function Translation
-        Assignment(s"${o}_fval", LambdaApplication(s"${o}_f", params), defaultValueForType(ot), ot).
-        If(Seq(Seq(FunctionCall("isSome", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
+        Assignment(s"${o}_fval", LambdaApplication(NonStreamCodeGenerator.translateExpressionArg(function), params), scala.None, OptionType(ot)).
+        If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
           Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-          Assignment(s"${o}_value", FunctionCall("getSome", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForType(ot), ot).
+          Assignment(s"${o}_value", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForType(ot), ot).
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-          // Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType) //TODO: Error Generation
+          FinalAssignment(s"${o}_error", LongValue(0), LongType). //TODO: Error Generation
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         EndIf().
       EndIf()
@@ -290,7 +292,7 @@ object StreamCodeGenerator {
       newStmt = (newStmt.
         If(Seq(Seq(s"${sn}_init",s"${sn}_changed"))).
           Assignment(s"${o}_value", s"${sn}_value", defaultValueForType(ot), ot).
-          Assignment(s"${o}_error", s"${sn}_error", defaultValueForType(ot), ot).
+          Assignment(s"${o}_error", s"${sn}_error", LongValue(0), LongType).
         Else()
       )
     }

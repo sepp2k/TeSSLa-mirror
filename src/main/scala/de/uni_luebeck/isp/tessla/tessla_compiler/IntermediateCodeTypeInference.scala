@@ -16,6 +16,8 @@ object IntermediateCodeTypeInference {
             case IntermediateCode.BoolValue(_) => BoolType
             case IntermediateCode.UnitValue => UnitType
             case IntermediateCode.StringValue(_) => StringType
+            case IntermediateCode.GeneralValue => GeneralType
+            case IntermediateCode.EmptyFunction(typeHint) => typeHint
             case IntermediateCode.None(typeHint) => typeHint
             case IntermediateCode.Some(content) => OptionType(typeInference(content, varTypes))
             case IntermediateCode.EmptyMutableSet(valType) => MutableSetType(valType)

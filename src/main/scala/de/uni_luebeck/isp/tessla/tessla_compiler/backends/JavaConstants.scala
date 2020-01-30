@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
 import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode}
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{FunctionCall, FunctionType, ImpLanExpr, ImpLanType, ImpLanVal}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{FunctionType, ImpLanType, ImpLanVal}
 
 /**
   * Class containing Java-specific constants for the translation
@@ -15,6 +15,8 @@ object JavaConstants {
       case IntermediateCode.BoolType => "boolean"
       case IntermediateCode.UnitType => "boolean"
       case IntermediateCode.StringType => "String"
+      case IntermediateCode.GeneralType => "Object"
+      case IntermediateCode.OptionType(IntermediateCode.GeneralType) => s"java.util.Optional" //TODO: Also do for other types
       case IntermediateCode.OptionType(valType) => s"java.util.Optional<${objectTypeTranslation(valType)}>"
       case IntermediateCode.MutableSetType(valType) => s"scala.collection.mutable.HashSet<${objectTypeTranslation(valType)}>"
       case IntermediateCode.ImmutableSetType(valType) => s"scala.collection.immutable.HashSet<${objectTypeTranslation(valType)}>"
@@ -46,6 +48,8 @@ object JavaConstants {
       case IntermediateCode.BoolValue(value) => value.toString()
       case IntermediateCode.UnitValue => "true"
       case IntermediateCode.StringValue(value) => s""""${value.replaceAllLiterally("\"", "\\\"")}"""" //TODO: Find better solution, re-escaping all special chars
+      case IntermediateCode.GeneralValue => "null"
+      case IntermediateCode.EmptyFunction(_) => "null"
       case IntermediateCode.None(_) => "java.util.Optional.empty()"
       case IntermediateCode.Some(content) => s"java.util.Optional.of(${valueTranslation(content)})"
       case IntermediateCode.EmptyMutableSet(valType) => s"new scala.collection.mutable.HashSet<${objectTypeTranslation(valType)}>()"
@@ -61,6 +65,7 @@ object JavaConstants {
     name match {
       case "__[TC]output__" => s"outputVar(${getParseExpressionToString(typeHint.argsTypes(0), args(0))}, ${args(1)}, ${args(2)}, currTs)"
       case "__[TC]inputParse__" => getStringParseExpression(typeHint.retType, args(0))
+      case "__ite__" => s"${args(0)} ? ${args(1)} : ${args(2)}"
       case "__not__" => s"!${args(0)}"
       case "__negate__" |
            "__fnegate__"  => s"-${args(0)}"
@@ -91,6 +96,10 @@ object JavaConstants {
       case "__bitxor__" => s"${args(0)} ^ ${args(1)}"
       case "__leftshift__" => s"${args(0)} << ${args(1)}"
       case "__rightshift__" => s"${args(0)} >> ${args(1)}"
+      case "__Some__" => s"java.util.Optional.of(${args(0)})"
+      case "__getSome__" => s"${args(0)}.get()"
+      case "__isSome__" => s"!${args(0)}.isPresent()"
+      case "__isNone__" => s"!${args(0)}.isPresent()"
       case _ => throw new Errors.CommandNotSupportedError(s"Unsupported built-in function for Java backend: $name")
     }
   }

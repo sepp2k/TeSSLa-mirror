@@ -16,6 +16,12 @@ object IntermediateCode {
                            inputProcessing: Seq[ImpLanStmt],
                            staticSource: Seq[ImpLanStmt]) {
 
+    override def toString: String =
+      s"## Static Code:\n${staticSource.mkString("\n")}\n" +
+      s"## Step Source:\\n${stepSource.mkString("\n")}\n" +
+      s"## TS Generation:\\n${tsGenSource.mkString("\n")}\n" +
+      s"## Input Processing:\\n${inputProcessing.mkString("\n")}\n"
+
   }
 
   sealed trait ImpLanType
@@ -25,6 +31,10 @@ object IntermediateCode {
   sealed trait ImpLanExpr extends ImpLanStmt
 
   sealed trait ImpLanVal extends ImpLanExpr
+
+  final case object GeneralType extends  ImpLanType {
+    override def toString = "GeneralType"
+  }
 
   final case object LongType extends ImpLanType {
     override def toString = "Long"
@@ -94,6 +104,10 @@ object IntermediateCode {
     override def toString = "()"
   }
 
+  final case object GeneralValue extends ImpLanVal {
+    override def toString = "GeneralValue"
+  }
+
   final case class StringValue(value: String) extends ImpLanVal {
     override def toString = value.toString
   }
@@ -128,6 +142,10 @@ object IntermediateCode {
 
   final case class EmptyImmutableList(valType: ImpLanType) extends ImpLanVal {
     override def toString = s"ImmutList<$valType>{}"
+  }
+
+  final case class EmptyFunction(typeHint: ImpLanType) extends ImpLanVal {
+    override def toString = s"(...) -> {}"
   }
 
   final case class If(guard: Seq[Seq[ImpLanExpr]], stmts: Seq[ImpLanStmt], elseStmts: Seq[ImpLanStmt])
@@ -197,7 +215,7 @@ object IntermediateCode {
   }
 
   final case class LambdaExpression(argNames: Seq[String], argsTypes: Seq[ImpLanType], retType: ImpLanType, body: Seq[ImpLanStmt]) extends ImpLanExpr {
-    override def toString = s"${argsTypes.zip(argNames).mkString(" x ")} -> $retType {\n${body.mkString("\n")}\n}"
+    override def toString = s"(${argsTypes.zip(argNames).map{case (a,b) => s"$b : $a"}.mkString(" x ")}) -> $retType {\n${body.mkString("\n")}\n}"
   }
 
 }

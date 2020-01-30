@@ -14,7 +14,10 @@ object NonStreamCodeGenerator {
 
   def translateFunctionCall(e: ExpressionArg, args: Seq[ImpLanExpr], typeArgs: Seq[Type]) : ImpLanExpr = {
     e match {
-      case ExternExpression(typeParams, params, resultType, name, location) => {
+      case ExternExpression(_, _, _, "true", _) => BoolValue(true)
+      case ExternExpression(_, _, _, "false", _) => BoolValue(false)
+      case ExternExpression(_, _, InstatiatedType("Option", Seq(t), _), "None", _) => None(t)
+      case ExternExpression(typeParams, params, resultType, name, _) => {
         val typeParamMap = typeParams.zip(typeArgs).toMap
         FunctionCall(s"__${name}__", args, FunctionType(params.map{case (_,t) => IntermediateCodeDSL.typeConversion(t.resolve(typeParamMap))},IntermediateCodeDSL.typeConversion(resultType.resolve(typeParamMap))))
       }
@@ -26,7 +29,7 @@ object NonStreamCodeGenerator {
   }
 
   def translateDefinition(id: Identifier, e: ExpressionArg) : ImpLanStmt = {
-    Assignment(s"var_$id", translateExpressionArg(e), scala.None, e.tpe)
+    Assignment(s"var_$id", translateExpressionArg(e), scala.Some(defaultValueForType(e.tpe)), e.tpe)
   }
 
   //TODO: Recursion detection ???
