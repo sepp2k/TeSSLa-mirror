@@ -16,7 +16,7 @@ object NonStreamCodeGenerator {
     e match {
       case ExternExpression(_, _, _, "true", _) => BoolValue(true)
       case ExternExpression(_, _, _, "false", _) => BoolValue(false)
-      case ExternExpression(_, _, InstatiatedType("Option", Seq(t), _), "None", _) => None(t)
+      case ExternExpression(tps, _, InstatiatedType("Option", Seq(t), _), "None", _) => None(t.resolve(tps.zip(typeArgs).toMap))
       case ExternExpression(typeParams, params, resultType, name, _) => {
         val typeParamMap = typeParams.zip(typeArgs).toMap
         FunctionCall(s"__${name}__", args, FunctionType(params.map{case (_,t) => IntermediateCodeDSL.typeConversion(t.resolve(typeParamMap))},IntermediateCodeDSL.typeConversion(resultType.resolve(typeParamMap))))

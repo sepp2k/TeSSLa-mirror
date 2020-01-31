@@ -58,7 +58,7 @@ object Main extends SexyOpt {
           stdlibPath = "stdlib.tessla"
         )
         val (backend, stdinRead) : (backends.BackendInterface, Boolean) = target.value match {
-          case "java" => (new backends.JavaBackend, true)
+          case "java" => (new backends.ScalaBackend, true)
           case "javascript" => throw new Errors.NotYetImplementedError("Javascript translation not implemented yet")
           case "rust" => throw new Errors.NotYetImplementedError("Rust translation not implemented yet")
           case "rust-bare" => throw new Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")

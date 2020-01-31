@@ -153,12 +153,12 @@ object IntermediateCode {
     override def toString = s"If $guard :\n${stmts.mkString("\n")}\nElse :\n${elseStmts.mkString("\n")}\nEndIf"
   }
 
-  final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: Option[ImpLanVal], typ: ImpLanType)
+  final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: Option[ImpLanExpr], typ: ImpLanType)
     extends ImpLanStmt {
     override def toString = s"$lhs = ${rexpr} (default: ${defVal})"
   }
 
-  final case class FinalAssignment(lhs: Variable, defVal: ImpLanVal, typ: ImpLanType) extends ImpLanStmt {
+  final case class FinalAssignment(lhs: Variable, defVal: ImpLanExpr, typ: ImpLanType) extends ImpLanStmt {
     override def toString = s"$lhs = ${defVal} (final)"
   }
 

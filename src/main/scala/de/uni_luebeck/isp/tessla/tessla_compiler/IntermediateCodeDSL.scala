@@ -116,11 +116,11 @@ class IntermediateCodeDSL(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq(O
       case Out => (stmts :+ stmt, ifStack, elseStack)
     }
 
-    def Assignment(lhs: Variable, rhs: ImpLanExpr, default: ImpLanVal, typ: ImpLanType) : IntermediateCodeDSL = {
+    def Assignment(lhs: Variable, rhs: ImpLanExpr, default: ImpLanExpr, typ: ImpLanType) : IntermediateCodeDSL = {
       Assignment(lhs, rhs, scala.Some(default), typ)
     }
 
-    def Assignment(lhs: Variable, rhs: ImpLanExpr, default: Option[ImpLanVal], typ: ImpLanType) : IntermediateCodeDSL = {
+    def Assignment(lhs: Variable, rhs: ImpLanExpr, default: Option[ImpLanExpr], typ: ImpLanType) : IntermediateCodeDSL = {
       val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.Assignment(lhs, rhs, default, typ))
       new IntermediateCodeDSL(newStmts, ifState, newIfStack, newElseStack, condStack)
     }

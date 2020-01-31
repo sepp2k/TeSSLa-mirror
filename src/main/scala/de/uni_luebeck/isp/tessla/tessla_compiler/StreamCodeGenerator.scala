@@ -65,13 +65,12 @@ object StreamCodeGenerator {
 
       If(Seq(Seq(NotEqual("currTs", LongValue(0))))).
         Assignment(s"${o}_changed", BoolValue(false), BoolValue(true), BoolType).
-        Assignment(s"${o}_value", default, defaultValueForType(ot), ot).
       EndIf().
       If(Seq(Seq(s"${s}_changed"))).
         Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-        Assignment(s"${o}_value", s"${s}_value", defaultValueForType(ot), ot).
+        Assignment(s"${o}_value", s"${s}_value", default, ot).
         Assignment(s"${o}_init", BoolValue(true), BoolValue(true), BoolType).
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
         Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType).
@@ -211,7 +210,7 @@ object StreamCodeGenerator {
     val o = s"var_${id.fullName}"
 
     val params = args.map{sr => { val (sName, sType) = streamNameAndTypeFromExpressionArg(sr) //TODO: Sufficient???
-                                  TernaryExpression(Seq(Seq(Equal(s"${sName}_ts", "currTs"))),
+                                  TernaryExpression(Seq(Seq(s"${sName}_changed")),
                                                   FunctionCall("__Some__", Seq(s"${sName}_value"), IntermediateCode.FunctionType(Seq(sType), OptionType(sType))),
                                                   None(sType))
                                 }
