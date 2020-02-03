@@ -6,123 +6,49 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
   * Class containing code for determining the type of ImpLan-Expressions
   */
 
-//TODO: Ideally this class will not be needed anymore in the future
 object IntermediateCodeTypeInference {
 
+  //Note: Does no type checking
   def typeInference(impLanExpr: ImpLanExpr, varTypes: Map[String, ImpLanType]): ImpLanType = {
-        impLanExpr match {
-            case IntermediateCode.LongValue(_) => LongType
-            case IntermediateCode.DoubleValue(_) => DoubleType
-            case IntermediateCode.BoolValue(_) => BoolType
-            case IntermediateCode.UnitValue => UnitType
-            case IntermediateCode.StringValue(_) => StringType
-            case IntermediateCode.GeneralValue => GeneralType
-            case IntermediateCode.EmptyFunction(typeHint) => typeHint
-            case IntermediateCode.None(typeHint) => OptionType(typeHint)
-            case IntermediateCode.Some(content) => OptionType(typeInference(content, varTypes))
-            case IntermediateCode.EmptyMutableSet(valType) => MutableSetType(valType)
-            case IntermediateCode.EmptyImmutableSet(valType) => ImmutableSetType(valType)
-            case IntermediateCode.EmptyMutableMap(keyType, valType) => MutableMapType(keyType, valType)
-            case IntermediateCode.EmptyImmutableMap(keyType, valType) => ImmutableMapType(keyType, valType)
-            case IntermediateCode.EmptyMutableList(valType) => MutableListType(valType)
-            case IntermediateCode.EmptyImmutableList(valType) => ImmutableListType(valType)
-            case FunctionCall(name, params, typeHint) => {
-              val paramTypes = params.map(p => typeInference(p, varTypes))
-              if (typeHint.argsTypes.zip(paramTypes).foldLeft[Boolean](true){case (r, (t1, t2)) => r && checkCompatibleType(t1, t2)})  {
-                typeHint.retType
-              } else {
-                throw new Errors.TypeError(s"Function is applied to expressions with wrong type: $name")
-              }
-            }
-            case LambdaApplication(exp, params) => {
-              val paramTypes = params.map{p => typeInference(p, varTypes)}
-              typeInference(exp, varTypes) match {
-                case FunctionType(p, r) => {
-                    if (p.zip(paramTypes).foldLeft[Boolean](true){case (r, (t1, t2)) => r && checkCompatibleType(t1, t2)}) {
-                        r
-                      } else {
-                        throw new Errors.TypeError(s"Lambda application to expressions with wrong type: $exp")
-                      }
-                  }
-                  case _ => throw new Errors.TypeError(s"Non-Lambda expression is used in application: $exp")
-                }
-            }
-            case BitwiseOr(op1, op2) => {
-              typeInferenceWithEqualityCheck(op1, op2, varTypes) match {
-                case LongType => LongType
-                case _ => throw new Errors.TypeError(s"$op1 and $op2 have invalid types for bitwise or")
-                }
-            }
-            case Addition(op1, op2) => {
-              typeInferenceWithEqualityCheck(op1, op2, varTypes) match {
-                case LongType => LongType
-                case DoubleType => DoubleType
-                case _ => throw new Errors.TypeError(s"$op1 and $op2 have invalid types for addition")
-              }
-            }
-            case Subtraction(op1, op2) => {
-              typeInferenceWithEqualityCheck(op1, op2, varTypes) match {
-                case LongType => LongType
-                case DoubleType => DoubleType
-                case _ => throw new Errors.TypeError(s"$op1 and $op2 have invalid types for subtraction")
-                }
-            }
-            case TernaryExpression(cnf, e1, e2) => {
-              val allSound = cnf.flatten.foldLeft[Boolean](true){case (res, e) => res && typeInference(e, varTypes) == BoolType}
-              if (allSound) {
-                typeInferenceWithEqualityCheck(e1, e2, varTypes)
-              } else {
-                throw new Errors.TypeError(s"Not all DNF members have bool type, but are used inside a ternary Expression: $cnf")
-              }
-            }
-            case Equal(e1, e2) => {
-              typeInferenceWithEqualityCheck(e1, e2, varTypes); BoolType
-            }
-            case NotEqual(e1, e2) => {
-              typeInferenceWithEqualityCheck(e1, e2, varTypes); BoolType
-            }
-            case Greater(e1, e2) => {
-              val t = typeInferenceWithEqualityCheck(e1, e2, varTypes);
-              if (checkCompatibleType(t, LongType) || checkCompatibleType(t, DoubleType)) {
-                BoolType
-              } else {
-                throw new Errors.TypeError(s"$e1, $e2 have invalid types for Greater operation")
-              }
-            }
-            case GreaterEqual(e1, e2) => {
-              val t = typeInferenceWithEqualityCheck(e1, e2, varTypes);
-              if (checkCompatibleType(t, LongType) || checkCompatibleType(t, DoubleType)) {
-                BoolType
-              } else {
-                throw new Errors.TypeError(s"$e1, $e2 have invalid types for GreaterEqual operation")
-              }
-            }
-            case Negation(e) => if (checkCompatibleType(typeInference(e, varTypes), BoolType)) {
-              BoolType
-            } else {
-              throw new Errors.TypeError(s"$e has no bool type, but is used inside a negation")
-            }
-            case Variable(name)  => if (varTypes.contains(name)) varTypes(name) else GeneralType //FIXME: Dirty, nasty hack
-            case LambdaExpression(_, argsTypes, retType, _) => FunctionType(argsTypes, retType)
-          }
+    impLanExpr match {
+      case CastingExpression(_, targetType) => targetType
+      case LongValue(_) => LongType
+      case DoubleValue(_) => DoubleType
+      case BoolValue(_) => BoolType
+      case UnitValue => UnitType
+      case StringValue(_) => StringType
+      case GeneralValue => GeneralType
+      case EmptyFunction(typeHint) => typeHint
+      case None(typeHint) => OptionType(typeHint)
+      case Some(content) => OptionType(typeInference(content, varTypes))
+      case EmptyMutableSet(valType) => MutableSetType(valType)
+      case EmptyImmutableSet(valType) => ImmutableSetType(valType)
+      case EmptyMutableMap(keyType, valType) => MutableMapType(keyType, valType)
+      case EmptyImmutableMap(keyType, valType) => ImmutableMapType(keyType, valType)
+      case EmptyMutableList(valType) => MutableListType(valType)
+      case EmptyImmutableList(valType) => ImmutableListType(valType)
+      case FunctionCall(_, _, typeHint) => typeHint.retType
+      case BitwiseOr(_, _) => LongType
+      case Addition(_, _) => LongType
+      case Subtraction(_, _) => LongType
+      case TernaryExpression(_, e1, e2) => getLeastCommonType(typeInference(e1, varTypes), typeInference(e2, varTypes), (_, _) => true)
+      case Equal(_, _) => BoolType
+      case NotEqual(_, _) => BoolType
+      case Greater(_, _) => BoolType
+      case GreaterEqual(_, _) => BoolType
+      case Negation(e) => BoolType
+      case Variable(name) if varTypes.contains(name) => varTypes(name)
+      case Variable(name) => throw Errors.TypeError(s"Type of used variable $name is unknown")
+      case LambdaExpression(_, argsTypes, retType, _) => FunctionType(argsTypes, retType)
+      case LambdaApplication(exp, _) => {
+        typeInference(exp, varTypes) match {
+          case FunctionType(_, r) => r
+          case _ => throw Errors.TypeError(s"Non-Lambda expression is used in application: $exp")
+        }
+      }
+    }
       }
 
-      def typeInferenceWithEqualityCheck(impLanExpr1: ImpLanExpr, impLanExpr2: ImpLanExpr, varTypes: Map[String, ImpLanType]): ImpLanType = {
-        val e1_type = typeInference(impLanExpr1, varTypes)
-        val e2_type = typeInference(impLanExpr2, varTypes)
-
-          if (checkCompatibleType(e1_type, e2_type)) {
-            e1_type
-          } else {
-            throw new Errors.TypeError(s"$impLanExpr1 of type $e1_type and $impLanExpr2 of type $e2_type are supposed to have the same type")
-          }
-      }
-
-      def checkCompatibleType(e1_type: ImpLanType, e2_type: ImpLanType): Boolean = {
-        e1_type == e2_type || e1_type == GeneralType || e2_type == GeneralType
-      }
-
-      //TODO: A string-based extendable type system would be advantageous here
       def castingNecessary(e1_type: ImpLanType, e2_type: ImpLanType): Boolean = {
         if (e1_type == e2_type || e1_type == GeneralType) {
           false
@@ -164,4 +90,104 @@ object IntermediateCodeTypeInference {
           }
         }
       }
+
+      def generateCodeWithCasts(listing: SourceListing, varTypes: Map[String, ImpLanType], languageSpecificCastRequired: (ImpLanType, ImpLanType) => Boolean) : SourceListing = {
+        SourceListing(generateCodeWithCasts(listing.stepSource, varTypes, languageSpecificCastRequired),
+                      generateCodeWithCasts(listing.tsGenSource, varTypes, languageSpecificCastRequired),
+                      generateCodeWithCasts(listing.inputProcessing, varTypes, languageSpecificCastRequired),
+                      generateCodeWithCasts(listing.staticSource, varTypes, languageSpecificCastRequired))
+      }
+
+      def generateCodeWithCasts(stmts: Seq[ImpLanStmt], varTypes: Map[String, ImpLanType], languageSpecificCastRequired: (ImpLanType, ImpLanType) => Boolean, retType: Option[ImpLanType] = scala.None) : Seq[ImpLanStmt] = {
+          stmts.map {
+            case expr: ImpLanExpr => castExpression(expr, scala.None, varTypes, languageSpecificCastRequired)
+            case If(guard, stmts, elseStmts) => If (guard.map{_.map(e => castExpression(e, scala.Some(BoolType), varTypes, languageSpecificCastRequired))}, generateCodeWithCasts(stmts, varTypes, languageSpecificCastRequired, retType), generateCodeWithCasts(elseStmts, varTypes, languageSpecificCastRequired, retType))
+            case Assignment(lhs, rexpr, defVal, typ) => Assignment(lhs, castExpression(rexpr, scala.Some(typ), varTypes, languageSpecificCastRequired), defVal, typ)
+            case FinalAssignment(lhs, defVal, typ) => FinalAssignment(lhs, castExpression(defVal, scala.Some(typ), varTypes, languageSpecificCastRequired), typ)
+            case ReturnStatement(expr) if retType.isDefined => ReturnStatement(castExpression(expr, scala.Some(retType.get), varTypes, languageSpecificCastRequired))
+            case ReturnStatement(expr) => ReturnStatement(expr)
+          }
+      }
+
+      def castExpression(exp: ImpLanExpr, target: Option[ImpLanType], varTypes: Map[String, ImpLanType], languageSpecificCastRequired: (ImpLanType, ImpLanType) => Boolean) : ImpLanExpr = {
+        val innerExp : ImpLanExpr = exp match {
+          case lanVal: ImpLanVal => lanVal
+          case CastingExpression(e, target) => CastingExpression(castExpression(e, scala.None, varTypes, languageSpecificCastRequired), target)
+          case FunctionCall(name, params, typeHint) => FunctionCall(name, params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes, languageSpecificCastRequired)}, typeHint)
+          case LambdaApplication(exp, params) => typeInference(exp, varTypes) match {
+            case FunctionType(argsTypes, _) => LambdaApplication(exp, params.zip(argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes, languageSpecificCastRequired)})
+            case _ => throw Errors.TranslationError(s"Lambda Application to non-function expression $exp")
+          }
+
+          case Addition(op1, op2) => Addition(castExpression(op1, scala.Some(LongType), varTypes, languageSpecificCastRequired), castExpression(op2, scala.Some(LongType), varTypes, languageSpecificCastRequired))
+          case Subtraction(op1, op2) => Subtraction(castExpression(op1, scala.Some(LongType), varTypes, languageSpecificCastRequired), castExpression(op2, scala.Some(LongType), varTypes, languageSpecificCastRequired))
+          case Greater(a, b) => Greater(castExpression(a, scala.Some(LongType), varTypes, languageSpecificCastRequired), castExpression(b, scala.Some(LongType), varTypes, languageSpecificCastRequired))
+          case GreaterEqual(a, b) => GreaterEqual(castExpression(a, scala.Some(LongType), varTypes, languageSpecificCastRequired), castExpression(b, scala.Some(LongType), varTypes, languageSpecificCastRequired))
+          case BitwiseOr(op1, op2) => BitwiseOr(castExpression(op1, scala.Some(LongType), varTypes, languageSpecificCastRequired), castExpression(op2, scala.Some(LongType), varTypes, languageSpecificCastRequired))
+          case Negation(a) => Negation(castExpression(a, scala.Some(BoolType), varTypes, languageSpecificCastRequired))
+          case Equal(a, b) => {
+            val lct = scala.Some(getLeastCommonType(typeInference(a, varTypes), typeInference(b, varTypes), languageSpecificCastRequired))
+            Equal(castExpression(a, lct, varTypes, languageSpecificCastRequired), castExpression(b, lct, varTypes, languageSpecificCastRequired))
+          }
+          case NotEqual(a, b) => {
+            val lct = scala.Some(getLeastCommonType(typeInference(a, varTypes), typeInference(b, varTypes), languageSpecificCastRequired))
+            NotEqual(castExpression(a, lct, varTypes, languageSpecificCastRequired), castExpression(b, lct, varTypes, languageSpecificCastRequired))
+          }
+          case TernaryExpression(guard, e1, e2) => {
+            val lct = scala.Some(getLeastCommonType(typeInference(e1, varTypes), typeInference(e2, varTypes), languageSpecificCastRequired))
+            TernaryExpression(guard.map{_.map { c => castExpression(c, scala.Some(BoolType), varTypes, languageSpecificCastRequired)}}, castExpression(e1, lct, varTypes, languageSpecificCastRequired), castExpression(e2, lct, varTypes, languageSpecificCastRequired))
+          }
+
+          case Variable(name) => Variable(name)
+          case LambdaExpression(argNames, argsTypes, retType, body) => LambdaExpression(argNames, argsTypes, retType,
+              generateCodeWithCasts(
+                body,
+                getVariableMap(body, varTypes.view.mapValues{a => (a, scala.None)}.toMap ++ argNames.zip(argsTypes).map{case (a,b) => (a,(b, scala.None))}.toMap).view.mapValues{case (a,_) => a}.toMap,
+                languageSpecificCastRequired,
+                scala.Some(retType)
+              ))
+        }
+
+        target match {
+          case scala.None => innerExp
+          case scala.Some(t) => {
+            val actualType = typeInference(innerExp, varTypes)
+            if (t == actualType || !languageSpecificCastRequired(t, actualType) || !castingNecessary(t, actualType)) {
+              innerExp
+            } else {
+              CastingExpression(innerExp, t)
+            }
+          }
+        }
+      }
+
+    def getLeastCommonType(t1: ImpLanType, t2: ImpLanType, languageSpecificCastRequired: (ImpLanType, ImpLanType) => Boolean) : ImpLanType = {
+      if (t1 == t2 || !languageSpecificCastRequired(t1, t2) || castingNecessary(t1, t2)) {
+          t1
+      } else {
+        //Note: No type checking here
+        t2
+      }
+    }
+
+
+    //TODO: Not the optimal location for this code
+    def getVariableMap(stmts: Seq[ImpLanStmt], baseMap: Map[String, (ImpLanType, Option[ImpLanExpr])] = Map()) : Map[String, (ImpLanType, Option[ImpLanExpr])] = {
+
+      def extractAssignments(stmt: ImpLanStmt) : Seq[(String, ImpLanType, Option[ImpLanExpr])] = stmt match {
+        case Assignment(lhs, _, defVal, typ) => Seq((lhs.name, typ, defVal))
+        case FinalAssignment(lhs, defVal, typ) => Seq((lhs.name, typ, scala.Some(defVal)))
+        case If(_, stmts, elseStmts) => stmts.concat(elseStmts).flatMap(extractAssignments)
+        case _ => Seq()
+      }
+
+      val varDefs : Seq[(String, ImpLanType, Option[ImpLanExpr])] = baseMap.toSeq.map{case (a, (b,c)) => (a,b,c)} ++ stmts.flatMap(extractAssignments).distinct
+      val duplicates = varDefs.groupBy{case (n, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
+
+      if (duplicates.nonEmpty) {
+        throw new Errors.TranslationError(s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}")
+      }
+
+      varDefs.map{case (name, typ, default) => (name, (typ, default))}.toMap
+    }
 }

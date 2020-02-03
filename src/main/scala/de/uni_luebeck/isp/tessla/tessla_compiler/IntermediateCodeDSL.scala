@@ -40,7 +40,7 @@ object IntermediateCodeDSL {
     t match {
       case InstatiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Dirty hack
       case RecordType(entries, _) if entries.isEmpty => UnitType
-      case InstatiatedType("Bool", Seq(), _) => BoolType //TODO: Do they exist at all under these names
+      case InstatiatedType("Bool", Seq(), _) => BoolType
       case InstatiatedType("Int", Seq(), _) => LongType
       case InstatiatedType("Float", Seq(), _) => DoubleType
       case InstatiatedType("String", Seq(), _) => StringType

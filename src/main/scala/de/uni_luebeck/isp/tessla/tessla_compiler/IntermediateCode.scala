@@ -4,6 +4,8 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
   * Class containing subclasses for the representation of abstract imperative code which can afterwards be
   * transduced into Java/Rust/... code
   */
+
+//TODO: Work more with string based expressions
 object IntermediateCode {
 
   /**
@@ -164,6 +166,10 @@ object IntermediateCode {
 
   final case class ReturnStatement(expr: ImpLanExpr) extends ImpLanStmt {
     override def toString = s"return ${expr}"
+  }
+
+  final case class CastingExpression(e: ImpLanExpr, target: ImpLanType) extends ImpLanExpr {
+    override def toString = s"($target)$e"
   }
 
   final case class FunctionCall(name: String, params: Seq[ImpLanExpr], typeHint: FunctionType) extends ImpLanExpr {

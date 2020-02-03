@@ -51,7 +51,7 @@ object NonStreamCodeGenerator {
   }
 
   def translateExpressionArg(e: ExpressionArg): ImpLanExpr = {
-    //TODO: Boolean translation
+    //TODO: Plain application expression
     e match {
       case f: FunctionExpression => translateFunction(f)
       case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) => translateFunctionCall(e, args.map(translateExpressionArg), typeArgs)
