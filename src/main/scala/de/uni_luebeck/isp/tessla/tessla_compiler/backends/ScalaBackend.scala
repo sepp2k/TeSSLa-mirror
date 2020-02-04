@@ -32,7 +32,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
 
         s"if ($guardFormatted) {\n$ifPart\n}$optElse"
       }
-      case Assignment(lhs, rexpr, _, t) if inLambda => s"var $lhs :${ScalaConstants.typeTranslation(t)} = " +
+      case Assignment(lhs, rexpr, _, t) if inLambda => s"var $lhs : ${ScalaConstants.typeTranslation(t)} = " +
         s"${translateExpression(rexpr)}"
       case Assignment(lhs, rexpr, _, t) => s"$lhs = " +
         s"${translateExpression(rexpr)}"
@@ -58,7 +58,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       case IntermediateCode.Addition(op1, op2) => s"${translateExpression(op1)} + ${translateExpression(op2)}"
       case IntermediateCode.BitwiseOr(op1, op2) => s"${translateExpression(op1)} | ${translateExpression(op2)}"
       case IntermediateCode.Subtraction(op1, op2) => s"${translateExpression(op1)} - ${translateExpression(op2)}"
-      case IntermediateCode.TernaryExpression(guard, e1, e2) => s"if(${foldGuard(guard)}) { ${translateExpression(e1)} } else { ${translateExpression(e2)}}"
+      case IntermediateCode.TernaryExpression(guard, e1, e2) => s"if(${foldGuard(guard)}) {${translateExpression(e1)}} else {${translateExpression(e2)}}"
       case IntermediateCode.Equal(a, b) => {
         if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _) => typ }.toMap))) {
           s"${translateExpression(a)}.equals(${translateExpression(b)})"
