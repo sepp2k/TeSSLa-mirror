@@ -40,7 +40,7 @@ object NonStreamCodeGenerator {
         case ExpressionRef(id, tpe, location) => e.body(id).tpe
         case _ => e.result.tpe
       }
-      LambdaExpression(e.params.map{case (id,_,_) => s"var_$id"}, e.params.map{case (_,_,t) => t}, resType, translateBody(e.body, e.result))
+      LambdaExpression(e.params.map{case (id,_,_) => if (id.fullName == "_")  "_" else s"var_$id"}, e.params.map{case (_,_,t) => t}, resType, translateBody(e.body, e.result))
   }
 
   def translateBody(body: Map[Identifier, DefinitionExpression], ret: ExpressionArg) : Seq[ImpLanStmt] = {
