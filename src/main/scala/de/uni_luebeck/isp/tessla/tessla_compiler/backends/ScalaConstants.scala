@@ -19,7 +19,7 @@ object ScalaConstants {
       case IntermediateCode.StringType => "String"
       case IntermediateCode.GeneralType if asTypePar => "_"
       case IntermediateCode.GeneralType => "Object"
-      case IntermediateCode.OptionType(valType) => s"java.util.Optional[${typeTranslation(valType, true)}]"
+      case IntermediateCode.OptionType(valType) => s"Option[${typeTranslation(valType, true)}]"
       case IntermediateCode.MutableSetType(valType) => s"scala.collection.mutable.HashSet[${typeTranslation(valType, true)}]"
       case IntermediateCode.ImmutableSetType(valType) => s"scala.collection.immutable.HashSet[${typeTranslation(valType, true)}]"
       case IntermediateCode.MutableMapType(keyType, valType) => s"scala.collection.mutable.HashMap[${typeTranslation(keyType, true)}, ${typeTranslation(valType, true)}]"
@@ -42,8 +42,8 @@ object ScalaConstants {
       case IntermediateCode.StringValue(value) => s""""${value.replaceAllLiterally("\"", "\\\"")}"""" //TODO: Find better solution, re-escaping all special chars
       case IntermediateCode.GeneralValue => "null"
       case IntermediateCode.EmptyFunction(_) => "null"
-      case IntermediateCode.None(_) => "java.util.Optional.empty()"
-      case IntermediateCode.Some(content) => s"java.util.Optional.of(${valueTranslation(content)})"
+      case IntermediateCode.None(_) => "None"
+      case IntermediateCode.Some(content) => s"Option(${valueTranslation(content)})"
       case IntermediateCode.EmptyMutableSet(valType) => s"new scala.collection.mutable.HashSet()"
       case IntermediateCode.EmptyImmutableSet(valType) => s"new scala.collection.immutable.HashSet()"
       case IntermediateCode.EmptyMutableMap(keyType, valType) => s"new scala.collection.mutable.HashMap()"
@@ -88,10 +88,10 @@ object ScalaConstants {
       case "__bitxor__" => s"${args(0)} ^ ${args(1)}"
       case "__leftshift__" => s"${args(0)} << ${args(1)}"
       case "__rightshift__" => s"${args(0)} >> ${args(1)}"
-      case "__Some__" => s"java.util.Optional.of(${args(0)})"
-      case "__getSome__" => s"${args(0)}.get()"
-      case "__isSome__" => s"${args(0)}.isPresent()"
-      case "__isNone__" => s"!${args(0)}.isPresent()"
+      case "__Some__" => s"Option(${args(0)})"
+      case "__getSome__" => s"${args(0)}.get"
+      case "__isSome__" => s"${args(0)}.isDefined"
+      case "__isNone__" => s"${args(0)}.isEmpty"
       case _ => throw new Errors.CommandNotSupportedError(s"Unsupported built-in function for Java backend: $name")
     }
   }
