@@ -22,6 +22,16 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     val definitions = spec.definitions
     val out = spec.out
 
+    def getInStreamDefStreamType(id: Identifier) : Type = {
+      if (definitions.contains(id)) {
+        definitions(id).tpe
+      } else if (in.contains(id)) {
+        in(id)._1
+      } else {
+        throw Errors.TranslationError(s"Type of output stream $id cannot be found")
+      }
+    }
+
     var currSource = SourceListing(Seq(), Seq(), Seq(), Seq())
     var warnings = Seq()
 
@@ -38,7 +48,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     }
 
     out.foreach {o =>
-      currSource = StreamCodeGenerator.produceOutputCode(o._1, definitions(o._1).tpe, o._2, currSource)
+      currSource = StreamCodeGenerator.produceOutputCode(o._1, getInStreamDefStreamType(o._1), o._2, currSource)
     }
 
     in.foreach {i =>
