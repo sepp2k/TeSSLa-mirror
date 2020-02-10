@@ -155,6 +155,10 @@ object IntermediateCode {
     override def toString = s"If $guard :\n${stmts.mkString("\n")}\nElse :\n${elseStmts.mkString("\n")}\nEndIf"
   }
 
+  final case class TryCatchBlock(tr: Seq[ImpLanStmt], cat: Seq[ImpLanStmt]) extends ImpLanStmt {
+    override def toString = s"Try: \n$tr\nCATCH var_err: \n$cat\nEndTry"
+  }
+
   final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: Option[ImpLanExpr], typ: ImpLanType)
     extends ImpLanStmt {
     override def toString = s"$lhs = ${rexpr} (default: ${defVal})"

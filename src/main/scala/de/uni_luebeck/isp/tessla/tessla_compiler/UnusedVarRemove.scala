@@ -42,6 +42,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
       case FinalAssignment(lhs, _, _) if del.contains(lhs.name) => scala.None
 
       case If(guard, stmts, elseStmts) => scala.Some(If(guard.map(_.map(removeAssignments(_, del))), removeAssignments(stmts, del), removeAssignments(elseStmts, del)))
+      case TryCatchBlock(tr, cat) => scala.Some(TryCatchBlock(removeAssignments(tr, del), removeAssignments(cat, del)))
       case Assignment(lhs, rexpr, scala.None, typ) => scala.Some(Assignment(lhs, removeAssignments(rexpr, del), scala.None, typ))
       case Assignment(lhs, rexpr, scala.Some(defExp), typ) => scala.Some(Assignment(lhs, removeAssignments(rexpr, del), scala.Some(removeAssignments(defExp, del)), typ))
       case FinalAssignment(lhs, defExp, typ) => scala.Some(FinalAssignment(lhs, removeAssignments(defExp, del), typ))
@@ -77,6 +78,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
   def getUsageMapforStmt(currMap: Map[String, Set[String]], stmt: ImpLanStmt): Map[String, Set[String]] = {
     stmt match {
       case If(guard, stmts, elseStmts) => getUsageMap(stmts, getUsageMap(elseStmts, getUsageMap(guard.flatten, currMap)))
+      case TryCatchBlock(tr, cat) => getUsageMap(tr, getUsageMap(cat, currMap))
       case Assignment(lhs, rexpr, defExpr, _) => currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(rexpr)).union(if (defExpr.isDefined) getUsagesInExpr(defExpr.get) else Set()))
       case FinalAssignment(lhs, defExp, _) => currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(defExp)))
       case e: ImpLanExpr => currMap + ("*" -> currMap.getOrElse("*", Set()).union(getUsagesInExpr(e)))

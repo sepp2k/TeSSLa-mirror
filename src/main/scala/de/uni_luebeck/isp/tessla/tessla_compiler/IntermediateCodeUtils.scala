@@ -44,6 +44,7 @@ object IntermediateCodeUtils {
     stmt match {
       case expr: ImpLanExpr => Seq(expr)
       case If(guard, stmts, elseStmts) => guard.flatten ++ extractExpressions(stmts) ++ extractExpressions(elseStmts)
+      case TryCatchBlock(tr, cat) => extractExpressions(tr) ++ extractExpressions(cat)
       case Assignment(_, rexpr, _, _) => Seq(rexpr)
       case FinalAssignment(_, defVal, _) => Seq(defVal)
       case ReturnStatement(expr) => Seq(expr)
@@ -56,6 +57,7 @@ object IntermediateCodeUtils {
       case Assignment(lhs, _, defVal, typ) => Seq((lhs.name, typ, defVal))
       case FinalAssignment(lhs, defVal, typ) => Seq((lhs.name, typ, scala.Some(defVal)))
       case If(_, stmts, elseStmts) => stmts.concat(elseStmts).flatMap(extractAssignments)
+      case TryCatchBlock(tr, cat) => tr.concat(cat).flatMap(extractAssignments)
       case _ => Seq()
     }
 
@@ -122,31 +124,32 @@ object IntermediateCodeUtils {
   }
 }
 
-sealed trait IfState
+sealed trait BlockState
+case object InIf extends BlockState
+case object InElse extends BlockState
+case object InTry extends BlockState
+case object InCatch extends BlockState
+case object Out extends BlockState
 
-final case object InIf extends IfState
-final case object InElse extends IfState
-final case object Out extends IfState
-
-class IntermediateCodeUtils(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq(Out),
-                            ifStack: Seq[Seq[ImpLanStmt]] = Seq(), elseStack: Seq[Seq[ImpLanStmt]] = Seq(),
+class IntermediateCodeUtils(stmts: Seq[ImpLanStmt], blockState : Seq[BlockState] = Seq(Out),
+                            ifTryStack: Seq[Seq[ImpLanStmt]] = Seq(), elseCatchStack: Seq[Seq[ImpLanStmt]] = Seq(),
                             condStack: Seq[Seq[Seq[ImpLanExpr]]] = Seq()) {
 
     def generateStatements: Seq[ImpLanStmt] = {
-      if (ifState(0) != Out) {
+      if (blockState.head != Out) {
         throw tessla_compiler.Errors.DSLError("At least one unclosed If")
       }
 
-      if (ifStack.length != 0 || elseStack.length != 0 || condStack.length != 0) {
+      if (ifTryStack.nonEmpty || elseCatchStack.nonEmpty || condStack.nonEmpty) {
         throw tessla_compiler.Errors.DSLError("Stack sizes are not valid")
       }
       stmts
     }
 
-    def addStmt(stmt: ImpLanStmt) : (Seq[ImpLanStmt], Seq[Seq[ImpLanStmt]], Seq[Seq[ImpLanStmt]]) = ifState(0) match {
-      case InIf => (stmts, ifStack.updated(0, ifStack(0) :+ stmt), elseStack)
-      case InElse => (stmts, ifStack, elseStack.updated(0, elseStack(0) :+ stmt))
-      case Out => (stmts :+ stmt, ifStack, elseStack)
+    def addStmt(stmt: ImpLanStmt) : (Seq[ImpLanStmt], Seq[Seq[ImpLanStmt]], Seq[Seq[ImpLanStmt]]) = blockState.head match {
+      case InIf | InTry => (stmts, ifTryStack.updated(0, ifTryStack.head :+ stmt), elseCatchStack)
+      case InElse | InCatch => (stmts, ifTryStack, elseCatchStack.updated(0, elseCatchStack.head :+ stmt))
+      case Out => (stmts :+ stmt, ifTryStack, elseCatchStack)
     }
 
     def Assignment(lhs: Variable, rhs: ImpLanExpr, default: ImpLanExpr, typ: ImpLanType) : IntermediateCodeUtils = {
@@ -155,43 +158,64 @@ class IntermediateCodeUtils(stmts: Seq[ImpLanStmt], ifState : Seq[IfState] = Seq
 
     def Assignment(lhs: Variable, rhs: ImpLanExpr, default: Option[ImpLanExpr], typ: ImpLanType) : IntermediateCodeUtils = {
       val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.Assignment(lhs, rhs, default, typ))
-      new IntermediateCodeUtils(newStmts, ifState, newIfStack, newElseStack, condStack)
+      new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
     }
 
     def FinalAssignment(lhs: Variable, default: ImpLanVal, typ: ImpLanType) : IntermediateCodeUtils = {
       val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FinalAssignment(lhs, default, typ))
-      new IntermediateCodeUtils(newStmts, ifState, newIfStack, newElseStack, condStack)
+      new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
     }
 
     def If(cond : Seq[Seq[ImpLanExpr]]) : IntermediateCodeUtils = {
-      new IntermediateCodeUtils(stmts, Seq(InIf) ++ ifState, Seq(Seq()) ++ ifStack, Seq(Seq()) ++ elseStack,
+      new IntermediateCodeUtils(stmts, Seq(InIf) ++ blockState, Seq(Seq()) ++ ifTryStack, Seq(Seq()) ++ elseCatchStack,
         Seq(cond) ++ condStack)
     }
 
-    def Else() : IntermediateCodeUtils = ifState(0) match {
-      case InIf => new IntermediateCodeUtils(stmts, ifState.updated(0, InElse), ifStack, elseStack, condStack)
+    def Else() : IntermediateCodeUtils = blockState.head match {
+      case InIf => new IntermediateCodeUtils(stmts, blockState.updated(0, InElse), ifTryStack, elseCatchStack, condStack)
       case InElse => throw tessla_compiler.Errors.DSLError("Two subseqeuent Else blocks")
-      case Out => throw tessla_compiler.Errors.DSLError("Else without previous If")
+      case _ => throw tessla_compiler.Errors.DSLError("Else without previous If")
     }
 
     def EndIf() : IntermediateCodeUtils = {
-      val stmt = ifState(0) match {
-        case InIf | InElse =>  IntermediateCode.If(condStack(0), ifStack(0), elseStack(0))
-        case Out => throw tessla_compiler.Errors.DSLError("EndIf without previous If")
+      val stmt = blockState.head match {
+        case InIf | InElse =>  IntermediateCode.If(condStack(0), ifTryStack(0), elseCatchStack(0))
+        case _ => throw tessla_compiler.Errors.DSLError("EndIf without previous If")
       }
-      val tmpRes = new IntermediateCodeUtils(stmts, ifState.drop(1), ifStack.drop(1), elseStack.drop(1), condStack.drop(1))
+      val tmpRes = new IntermediateCodeUtils(stmts, blockState.drop(1), ifTryStack.drop(1), elseCatchStack.drop(1), condStack.drop(1))
       val (newStmts, newIfStack, newElseStack) = tmpRes.addStmt(stmt)
-      new IntermediateCodeUtils(newStmts, ifState.drop(1), newIfStack, newElseStack, condStack.drop(1))
+      new IntermediateCodeUtils(newStmts, blockState.drop(1), newIfStack, newElseStack, condStack.drop(1))
+    }
+
+    def Try() : IntermediateCodeUtils = {
+      new IntermediateCodeUtils(stmts, Seq(InTry) ++ blockState, Seq(Seq()) ++ ifTryStack, Seq(Seq()) ++ elseCatchStack,
+        condStack)
+    }
+
+    def Catch() : IntermediateCodeUtils = blockState.head match {
+      case InTry => new IntermediateCodeUtils(stmts, blockState.updated(0, InCatch), ifTryStack, elseCatchStack, condStack)
+      case InCatch => throw tessla_compiler.Errors.DSLError("Two subseqeuent Catch blocks")
+      case _ => throw tessla_compiler.Errors.DSLError("Catch without previous Try")
+    }
+
+    def EndTry() : IntermediateCodeUtils = {
+      val stmt = blockState.head match {
+        case InTry | InCatch =>  IntermediateCode.TryCatchBlock(ifTryStack.head, elseCatchStack.head)
+        case _ => throw tessla_compiler.Errors.DSLError("EndTry without previous Try")
+      }
+      val tmpRes = new IntermediateCodeUtils(stmts, blockState.drop(1), ifTryStack.drop(1), elseCatchStack.drop(1), condStack)
+      val (newStmts, newIfStack, newElseStack) = tmpRes.addStmt(stmt)
+      new IntermediateCodeUtils(newStmts, blockState.drop(1), newIfStack, newElseStack, condStack)
     }
 
     def FunctionCall(name: String, params: Seq[ImpLanExpr], typeHint: IntermediateCode.FunctionType) : IntermediateCodeUtils = {
       val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FunctionCall(name, params, typeHint))
-      new IntermediateCodeUtils(newStmts, ifState, newIfStack, newElseStack, condStack)
+      new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
     }
 
    def LambdaApllication(exp: ImpLanExpr, params: Seq[ImpLanExpr]) : IntermediateCodeUtils = {
     val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.LambdaApplication(exp, params))
-    new IntermediateCodeUtils(newStmts, ifState, newIfStack, newElseStack, condStack)
+    new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
    }
 
   }
