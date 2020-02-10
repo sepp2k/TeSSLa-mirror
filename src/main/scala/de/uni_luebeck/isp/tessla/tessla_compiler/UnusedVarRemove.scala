@@ -10,7 +10,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
 
   override def translate(listing: SourceListing): Result[SourceListing] = {
     val outerStmts = listing.stepSource ++ listing.tsGenSource ++ listing.inputProcessing ++ listing.staticSource
-    val innerStmts = outerStmts.foldLeft[Seq[ImpLanStmt]](Seq()){case (curr, stmt) => curr ++ getLambdaBodies(stmt)}
+    val innerStmts = getLambdaBodies(outerStmts)
 
     val usages = getUsageMap(innerStmts ++ outerStmts, Map())
     var usedIn = usages.foldLeft[Map[String, Set[String]]](Map()) { case (map, (k, v)) => v.foldLeft(map) { case (map, e) => map + (e -> (map.getOrElse(e, Set()) + k)) } }
@@ -33,41 +33,22 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
   }
 
   def removeAssignments(stmts: Seq[ImpLanStmt], del: Set[String]) : Seq[ImpLanStmt] = {
-    stmts.flatMap(removeAssignments(_, del))
-  }
 
-  def removeAssignments(stmt: ImpLanStmt, del: Set[String]) : Option[ImpLanStmt] = {
-    stmt match {
-      case Assignment(lhs, _, _, _) if del.contains(lhs.name) => scala.None
-      case FinalAssignment(lhs, _, _) if del.contains(lhs.name) => scala.None
-
-      case If(guard, stmts, elseStmts) => scala.Some(If(guard.map(_.map(removeAssignments(_, del))), removeAssignments(stmts, del), removeAssignments(elseStmts, del)))
-      case TryCatchBlock(tr, cat) => scala.Some(TryCatchBlock(removeAssignments(tr, del), removeAssignments(cat, del)))
-      case Assignment(lhs, rexpr, scala.None, typ) => scala.Some(Assignment(lhs, removeAssignments(rexpr, del), scala.None, typ))
-      case Assignment(lhs, rexpr, scala.Some(defExp), typ) => scala.Some(Assignment(lhs, removeAssignments(rexpr, del), scala.Some(removeAssignments(defExp, del)), typ))
-      case FinalAssignment(lhs, defExp, typ) => scala.Some(FinalAssignment(lhs, removeAssignments(defExp, del), typ))
-      case e: ImpLanExpr => scala.Some(removeAssignments(e, del))
-      case ReturnStatement(exp) => scala.Some(ReturnStatement(removeAssignments(exp, del)))
+    val f = (stmt: ImpLanStmt) => {
+      stmt match {
+        case Assignment(lhs, _, _, _) if del.contains(lhs.name) => scala.None
+        case FinalAssignment(lhs, _, _) if del.contains(lhs.name) => scala.None
+        case _ => scala.Some(stmt)
+      }
     }
-  }
 
-  def removeAssignments(exp: ImpLanExpr, del: Set[String]) : ImpLanExpr = {
-    exp match {
-      case CastingExpression(e, target) => CastingExpression(removeAssignments(e, del), target)
-      case FunctionCall(name, params, typeHint) => FunctionCall(name, params.map(removeAssignments(_, del)), typeHint)
-      case LambdaApplication(exp, params) => LambdaApplication(removeAssignments(exp, del), params.map(removeAssignments(_, del)))
-      case TernaryExpression(guard, e1, e2) => TernaryExpression(guard.map(_.map(removeAssignments(_, del))), removeAssignments(e1, del), removeAssignments(e2, del))
-      case Equal(a, b) => Equal(removeAssignments(a, del), removeAssignments(b, del))
-      case LambdaExpression(argNames, argsTypes, retType, body) => LambdaExpression(argNames, argsTypes, retType, removeAssignments(body, del))
-      case _ => exp
-    }
+    IntermediateCodeUtils.mapAST(stmts, identity, f)
   }
 
   def getUsageMap(stmts: Seq[ImpLanStmt], currMap: Map[String, Set[String]]): Map[String, Set[String]] = {
     stmts.foldLeft(currMap)(getUsageMapforStmt)
   }
 
-  @scala.annotation.tailrec
   def getUsageMapforStmt(currMap: Map[String, Set[String]], stmt: ImpLanStmt): Map[String, Set[String]] = {
     stmt match {
       case If(guard, stmts, elseStmts) => getUsageMap(stmts, getUsageMap(elseStmts, getUsageMap(guard.flatten, currMap)))
@@ -75,7 +56,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
       case Assignment(lhs, rexpr, defExpr, _) => currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(rexpr)).union(if (defExpr.isDefined) getUsagesInExpr(defExpr.get) else Set()))
       case FinalAssignment(lhs, defExp, _) => currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(defExp)))
       case e: ImpLanExpr => currMap + ("*" -> currMap.getOrElse("*", Set()).union(getUsagesInExpr(e)))
-      case ReturnStatement(exp) => getUsageMapforStmt(currMap, exp)
+      case ReturnStatement(_) => currMap
     }
   }
 
@@ -87,10 +68,10 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
       }
     }
 
-    IntermediateCodeUtils.expressionFold(exp, Seq(), f).toSet
+    IntermediateCodeUtils.foldAST(exp, Seq(), f, (n : Seq[String], _) => n).toSet
   }
 
-  def getLambdaBodies(stmt: ImpLanStmt): Seq[ImpLanStmt] = {
+  def getLambdaBodies(stmts: Seq[ImpLanStmt]): Seq[ImpLanStmt] = {
     val f = (curr: Seq[ImpLanStmt], exp: ImpLanExpr) => {
       exp match {
         case LambdaExpression(_, _, _, body) => curr ++ body
@@ -98,7 +79,6 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
       }
     }
 
-    //FIXME: Only top-level
-    IntermediateCodeUtils.extractExpressions(stmt).foldLeft[Seq[ImpLanStmt]](Seq())(f)
+    IntermediateCodeUtils.foldAST(stmts, Seq(), f, (n : Seq[ImpLanStmt], _) => n)
   }
 }
