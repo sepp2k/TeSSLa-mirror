@@ -20,9 +20,9 @@ object IntermediateCode {
 
     override def toString: String =
       s"## Static Code:\n${staticSource.mkString("\n")}\n" +
-      s"## Step Source:\\n${stepSource.mkString("\n")}\n" +
-      s"## TS Generation:\\n${tsGenSource.mkString("\n")}\n" +
-      s"## Input Processing:\\n${inputProcessing.mkString("\n")}\n"
+      s"## Step Source:\n${stepSource.mkString("\n")}\n" +
+      s"## TS Generation:\n${tsGenSource.mkString("\n")}\n" +
+      s"## Input Processing:\n${inputProcessing.mkString("\n")}\n"
 
   }
 
