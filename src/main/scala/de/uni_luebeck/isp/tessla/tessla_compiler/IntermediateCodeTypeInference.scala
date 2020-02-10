@@ -45,42 +45,16 @@ object IntermediateCodeTypeInference {
       def castingNecessary(e1_type: ImpLanType, e2_type: ImpLanType): Boolean = {
         if (e1_type == e2_type || e1_type == GeneralType) {
           false
-        } else {
+        } else if (e1_type.getClass == e2_type.getClass) {
           e1_type match {
-            case OptionType(vt1) => e2_type match {
-              case OptionType(vt2) => castingNecessary(vt1, vt2)
-              case _ => true
-            }
-            case MutableSetType(vt1) => e2_type match {
-              case MutableSetType(vt2) => castingNecessary(vt1, vt2)
-              case _ => true
-            }
-            case ImmutableSetType(vt1) => e2_type match {
-              case ImmutableSetType(vt2) => castingNecessary(vt1, vt2)
-              case _ => true
-            }
-            case MutableMapType(kt1, vt1) =>e2_type match {
-              case MutableMapType(kt2, vt2) => castingNecessary(kt1, kt2) && castingNecessary(vt1, vt2)
-              case _ => true
-            }
-            case ImmutableMapType(kt1, vt1) =>e2_type match {
-              case ImmutableMapType(kt2, vt2) => castingNecessary(kt1, kt2) && castingNecessary(vt1, vt2)
-              case _ => true
-            }
-            case MutableListType(vt1) => e2_type match {
-              case MutableListType(vt2) => castingNecessary(vt1, vt2)
-              case _ => true
-            }
-            case ImmutableListType(vt1) => e2_type match {
-              case ImmutableListType(vt2) => castingNecessary(vt1, vt2)
-              case _ => true
-            }
-            case FunctionType(argsTypes1, retType1) => e2_type match {
-              case FunctionType(argsTypes2, retType2) => castingNecessary(retType1, retType2) || argsTypes1.zip(argsTypes2).foldLeft[Boolean](false){case (r, (t1,t2)) => r || castingNecessary(t1, t2)}
-              case _ => true
-            }
-            case _ => true
+            case t1: GenericImpLanType => e2_type match {
+                case t2: GenericImpLanType => t1.genTypes.zip(t2.genTypes).map{case (a,b) => castingNecessary(a,b)}.reduce(_ || _)
+                case _ => true
+              }
+            case _ => false
           }
+        } else {
+          true
         }
       }
 

@@ -28,6 +28,10 @@ object IntermediateCode {
 
   sealed trait ImpLanType
 
+  abstract class GenericImpLanType(gt: Seq[ImpLanType]) extends ImpLanType {
+    val genTypes = gt
+  }
+
   sealed trait ImpLanStmt
 
   sealed trait ImpLanExpr extends ImpLanStmt
@@ -58,35 +62,35 @@ object IntermediateCode {
     override def toString = "String"
   }
 
-  final case class OptionType(valType: ImpLanType) extends ImpLanType {
+  final case class OptionType(valType: ImpLanType) extends GenericImpLanType(Seq(valType)) {
     override def toString = s"Option<$valType>"
   }
 
-  final case class MutableSetType(valType: ImpLanType) extends ImpLanType {
+  final case class MutableSetType(valType: ImpLanType) extends GenericImpLanType(Seq(valType)) {
     override def toString = s"MutSet<$valType>"
   }
 
-  final case class ImmutableSetType(valType: ImpLanType) extends ImpLanType {
+  final case class ImmutableSetType(valType: ImpLanType) extends GenericImpLanType(Seq(valType)) {
     override def toString = s"ImmutSet<$valType>"
   }
 
-  final case class MutableMapType(keyType: ImpLanType, valType: ImpLanType) extends ImpLanType {
+  final case class MutableMapType(keyType: ImpLanType, valType: ImpLanType) extends GenericImpLanType(Seq(keyType, valType)) {
     override def toString = s"MutMap<$keyType, $valType>"
   }
 
-  final case class ImmutableMapType(keyType: ImpLanType, valType: ImpLanType) extends ImpLanType {
+  final case class ImmutableMapType(keyType: ImpLanType, valType: ImpLanType) extends GenericImpLanType(Seq(keyType, valType)) {
     override def toString = s"ImmutMap<$keyType, $valType>"
   }
 
-  final case class MutableListType(valType: ImpLanType) extends ImpLanType {
+  final case class MutableListType(valType: ImpLanType) extends GenericImpLanType(Seq(valType)) {
     override def toString = s"MutList<$valType>"
   }
 
-  final case class ImmutableListType(valType: ImpLanType) extends ImpLanType {
+  final case class ImmutableListType(valType: ImpLanType) extends GenericImpLanType(Seq(valType)) {
     override def toString = s"ImmutList<$valType>"
   }
 
-  final case class FunctionType(argsTypes: Seq[ImpLanType], retType: ImpLanType) extends ImpLanType {
+  final case class FunctionType(argsTypes: Seq[ImpLanType], retType: ImpLanType) extends GenericImpLanType(argsTypes :+ retType) {
     override def toString = s"${argsTypes.mkString(" x ")} -> $retType"
   }
 
