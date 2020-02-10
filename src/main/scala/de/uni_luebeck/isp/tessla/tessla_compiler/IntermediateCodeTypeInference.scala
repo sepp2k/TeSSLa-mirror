@@ -28,7 +28,7 @@ object IntermediateCodeTypeInference {
       case EmptyMutableList(valType) => MutableListType(valType)
       case EmptyImmutableList(valType) => ImmutableListType(valType)
       case FunctionCall(_, _, typeHint) => typeHint.retType
-      case TernaryExpression(_, e1, e2) => getLeastCommonType(typeInference(e1, varTypes), typeInference(e2, varTypes), (_, _) => true)
+      case TernaryExpression(_, e1, e2) => getLeastCommonType(typeInference(e1, varTypes), typeInference(e2, varTypes))
       case Equal(_, _) => BoolType
       case Variable(name) if varTypes.contains(name) => varTypes(name)
       case Variable(name) => throw Errors.TypeError(s"Type of used variable $name is unknown")
@@ -58,57 +58,55 @@ object IntermediateCodeTypeInference {
         }
       }
 
-      def generateCodeWithCasts(listing: SourceListing, varTypes: Map[String, ImpLanType], languageSpecificCastRequired: (ImpLanType, ImpLanType) => Boolean) : SourceListing = {
-        SourceListing(generateCodeWithCasts(listing.stepSource, varTypes, languageSpecificCastRequired),
-                      generateCodeWithCasts(listing.tsGenSource, varTypes, languageSpecificCastRequired),
-                      generateCodeWithCasts(listing.inputProcessing, varTypes, languageSpecificCastRequired),
-                      generateCodeWithCasts(listing.staticSource, varTypes, languageSpecificCastRequired))
+      def generateCodeWithCasts(listing: SourceListing, varTypes: Map[String, ImpLanType]) : SourceListing = {
+        SourceListing(generateCodeWithCasts(listing.stepSource, varTypes),
+                      generateCodeWithCasts(listing.tsGenSource, varTypes),
+                      generateCodeWithCasts(listing.inputProcessing, varTypes),
+                      generateCodeWithCasts(listing.staticSource, varTypes))
       }
 
-      def generateCodeWithCasts(stmts: Seq[ImpLanStmt], varTypes: Map[String, ImpLanType], languageSpecificCastRequired: (ImpLanType, ImpLanType) => Boolean, retType: Option[ImpLanType] = scala.None) : Seq[ImpLanStmt] = {
+      def generateCodeWithCasts(stmts: Seq[ImpLanStmt], varTypes: Map[String, ImpLanType], retType: Option[ImpLanType] = scala.None) : Seq[ImpLanStmt] = {
           stmts.map {
-            case expr: ImpLanExpr => castExpression(expr, scala.None, varTypes, languageSpecificCastRequired)
-            case If(guard, stmts, elseStmts) => If (guard.map{_.map(e => castExpression(e, scala.Some(BoolType), varTypes, languageSpecificCastRequired))}, generateCodeWithCasts(stmts, varTypes, languageSpecificCastRequired, retType), generateCodeWithCasts(elseStmts, varTypes, languageSpecificCastRequired, retType))
-            case TryCatchBlock(tr, cat) => TryCatchBlock(generateCodeWithCasts(tr, varTypes, languageSpecificCastRequired, retType), generateCodeWithCasts(cat, varTypes + ("var_err" -> GeneralType), languageSpecificCastRequired, retType))
-            case Assignment(lhs, rexpr, defVal, typ) => Assignment(lhs, castExpression(rexpr, scala.Some(typ), varTypes, languageSpecificCastRequired), defVal, typ)
-            case FinalAssignment(lhs, defVal, typ) => FinalAssignment(lhs, castExpression(defVal, scala.Some(typ), varTypes, languageSpecificCastRequired), typ)
-            case ReturnStatement(expr) if retType.isDefined => ReturnStatement(castExpression(expr, scala.Some(retType.get), varTypes, languageSpecificCastRequired))
+            case expr: ImpLanExpr => castExpression(expr, scala.None, varTypes)
+            case If(guard, stmts, elseStmts) => If (guard.map{_.map(e => castExpression(e, scala.Some(BoolType), varTypes))}, generateCodeWithCasts(stmts, varTypes, retType), generateCodeWithCasts(elseStmts, varTypes, retType))
+            case TryCatchBlock(tr, cat) => TryCatchBlock(generateCodeWithCasts(tr, varTypes, retType), generateCodeWithCasts(cat, varTypes + ("var_err" -> GeneralType), retType))
+            case Assignment(lhs, rexpr, defVal, typ) => Assignment(lhs, castExpression(rexpr, scala.Some(typ), varTypes), defVal, typ)
+            case FinalAssignment(lhs, defVal, typ) => FinalAssignment(lhs, castExpression(defVal, scala.Some(typ), varTypes), typ)
+            case ReturnStatement(expr) if retType.isDefined => ReturnStatement(castExpression(expr, scala.Some(retType.get), varTypes))
             case ReturnStatement(expr) => ReturnStatement(expr)
           }
       }
 
-      def castExpression(exp: ImpLanExpr, target: Option[ImpLanType], varTypes: Map[String, ImpLanType], languageSpecificCastRequired: (ImpLanType, ImpLanType) => Boolean) : ImpLanExpr = {
+      def castExpression(exp: ImpLanExpr, target: Option[ImpLanType], varTypes: Map[String, ImpLanType]) : ImpLanExpr = {
         val innerExp : ImpLanExpr = exp match {
-          case lanVal: ImpLanVal => lanVal
-          case CastingExpression(e, target) => CastingExpression(castExpression(e, scala.None, varTypes, languageSpecificCastRequired), target)
-          case FunctionCall(name, params, typeHint) => FunctionCall(name, params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes, languageSpecificCastRequired)}, typeHint)
+          case CastingExpression(e, target) => CastingExpression(castExpression(e, scala.None, varTypes), target)
+          case FunctionCall(name, params, typeHint) => FunctionCall(name, params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)}, typeHint)
           case LambdaApplication(exp, params) => typeInference(exp, varTypes) match {
-            case FunctionType(argsTypes, _) => LambdaApplication(exp, params.zip(argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes, languageSpecificCastRequired)})
+            case FunctionType(argsTypes, _) => LambdaApplication(exp, params.zip(argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)})
             case _ => throw Errors.TranslationError(s"Lambda Application to non-function expression $exp")
           }
           case Equal(a, b) => {
-            val lct = scala.Some(getLeastCommonType(typeInference(a, varTypes), typeInference(b, varTypes), languageSpecificCastRequired))
-            Equal(castExpression(a, lct, varTypes, languageSpecificCastRequired), castExpression(b, lct, varTypes, languageSpecificCastRequired))
+            val lct = scala.Some(getLeastCommonType(typeInference(a, varTypes), typeInference(b, varTypes)))
+            Equal(castExpression(a, lct, varTypes), castExpression(b, lct, varTypes))
           }
           case TernaryExpression(guard, e1, e2) => {
-            val lct = scala.Some(getLeastCommonType(typeInference(e1, varTypes), typeInference(e2, varTypes), languageSpecificCastRequired))
-            TernaryExpression(guard.map{_.map { c => castExpression(c, scala.Some(BoolType), varTypes, languageSpecificCastRequired)}}, castExpression(e1, lct, varTypes, languageSpecificCastRequired), castExpression(e2, lct, varTypes, languageSpecificCastRequired))
+            val lct = scala.Some(getLeastCommonType(typeInference(e1, varTypes), typeInference(e2, varTypes)))
+            TernaryExpression(guard.map{_.map { c => castExpression(c, scala.Some(BoolType), varTypes)}}, castExpression(e1, lct, varTypes), castExpression(e2, lct, varTypes))
           }
-          case Variable(name) => Variable(name)
           case LambdaExpression(argNames, argsTypes, retType, body) => LambdaExpression(argNames, argsTypes, retType,
               generateCodeWithCasts(
                 body,
                 IntermediateCodeUtils.getVariableMap(body, varTypes.view.mapValues{a => (a, scala.None)}.toMap ++ argNames.zip(argsTypes).map{case (a,b) => (a,(b, scala.None))}.toMap).view.mapValues{case (a,_) => a}.toMap,
-                languageSpecificCastRequired,
                 scala.Some(retType)
               ))
+          case _ => exp
         }
 
         target match {
           case scala.None => innerExp
           case scala.Some(t) => {
             val actualType = typeInference(innerExp, varTypes)
-            if (t == actualType || !languageSpecificCastRequired(t, actualType) || !castingNecessary(t, actualType)) {
+            if (!castingNecessary(t, actualType)) {
               innerExp
             } else {
               CastingExpression(innerExp, t)
@@ -117,8 +115,8 @@ object IntermediateCodeTypeInference {
         }
       }
 
-    def getLeastCommonType(t1: ImpLanType, t2: ImpLanType, languageSpecificCastRequired: (ImpLanType, ImpLanType) => Boolean) : ImpLanType = {
-      if (t1 == t2 || !languageSpecificCastRequired(t1, t2) || castingNecessary(t1, t2)) {
+    def getLeastCommonType(t1: ImpLanType, t2: ImpLanType) : ImpLanType = {
+      if (t1 == t2 || castingNecessary(t1, t2)) {
           t1
       } else {
         //Note: No type checking here

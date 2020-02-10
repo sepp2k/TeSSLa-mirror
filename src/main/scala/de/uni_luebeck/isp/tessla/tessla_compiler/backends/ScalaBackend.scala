@@ -83,8 +83,4 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       case _ => true
     }
   }
-
-  override def languageSpecificCastRequired(t1: ImpLanType, t2: ImpLanType): Boolean = {
-    true
-  }
 }

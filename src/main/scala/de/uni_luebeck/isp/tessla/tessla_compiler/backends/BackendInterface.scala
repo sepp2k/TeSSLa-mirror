@@ -25,7 +25,7 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
 
     variables = nonStaticVars ++ staticVars
 
-    val listing = IntermediateCodeTypeInference.generateCodeWithCasts(orgListing, variables.map{case (n, (t, _)) => (n, t)}, languageSpecificCastRequired)
+    val listing = IntermediateCodeTypeInference.generateCodeWithCasts(orgListing, variables.map{case (n, (t, _)) => (n, t)})
 
     val source =  scala.io.Source.fromResource(sourceTemplate).mkString
     val rewrittenSource = source.replaceAllLiterally("//VARDEF", generateVariableDeclarations(nonStaticVars).mkString("\n"))
@@ -36,8 +36,6 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
 
     Success(rewrittenSource, warnings)
   }
-
-  def languageSpecificCastRequired(t1: ImpLanType, t2: ImpLanType) : Boolean
 
   def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr])]) : Seq[String]
 
