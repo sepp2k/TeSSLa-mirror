@@ -5,7 +5,6 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
   * transduced into Java/Rust/... code
   */
 
-//TODO: Work more with string based expressions
 object IntermediateCode {
 
   /**
@@ -29,7 +28,7 @@ object IntermediateCode {
   sealed trait ImpLanType
 
   abstract class GenericImpLanType(gt: Seq[ImpLanType]) extends ImpLanType {
-    val genTypes = gt
+    val genTypes: Seq[ImpLanType] = gt
   }
 
   sealed trait ImpLanStmt
@@ -37,6 +36,8 @@ object IntermediateCode {
   sealed trait ImpLanExpr extends ImpLanStmt
 
   sealed trait ImpLanVal extends ImpLanExpr
+
+  /* Types */
 
   final case object GeneralType extends  ImpLanType {
     override def toString = "GeneralType"
@@ -93,6 +94,8 @@ object IntermediateCode {
   final case class FunctionType(argsTypes: Seq[ImpLanType], retType: ImpLanType) extends GenericImpLanType(argsTypes :+ retType) {
     override def toString = s"${argsTypes.mkString(" x ")} -> $retType"
   }
+
+  /* Values */
 
   final case class LongValue(value: Long) extends ImpLanVal {
     override def toString = value.toString
@@ -154,6 +157,8 @@ object IntermediateCode {
     override def toString = s"(...) -> {}"
   }
 
+  /* Statements */
+
   final case class If(guard: Seq[Seq[ImpLanExpr]], stmts: Seq[ImpLanStmt], elseStmts: Seq[ImpLanStmt])
     extends ImpLanStmt {
     override def toString = s"If $guard :\n${stmts.mkString("\n")}\nElse :\n${elseStmts.mkString("\n")}\nEndIf"
@@ -175,6 +180,8 @@ object IntermediateCode {
   final case class ReturnStatement(expr: ImpLanExpr) extends ImpLanStmt {
     override def toString = s"return ${expr}"
   }
+
+  /* Expressions */
 
   final case class CastingExpression(e: ImpLanExpr, target: ImpLanType) extends ImpLanExpr {
     override def toString = s"($target)$e"
