@@ -58,9 +58,6 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
         }
       }
       case IntermediateCode.LambdaApplication(exp, params) => s"${translateExpression(exp)}.apply(${params.map(translateExpression).mkString(", ")})"
-      case IntermediateCode.Addition(op1, op2) => s"${translateExpression(op1)} + ${translateExpression(op2)}"
-      case IntermediateCode.BitwiseOr(op1, op2) => s"${translateExpression(op1)} | ${translateExpression(op2)}"
-      case IntermediateCode.Subtraction(op1, op2) => s"${translateExpression(op1)} - ${translateExpression(op2)}"
       case IntermediateCode.TernaryExpression(guard, e1, e2) => s"if(${foldGuard(guard)}) {${translateExpression(e1)}} else {${translateExpression(e2)}}"
       case IntermediateCode.Equal(a, b) => {
         if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _) => typ }.toMap))) {
@@ -69,16 +66,6 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
           s"${translateExpression(a)} == ${translateExpression(b)}"
         }
       }
-      case IntermediateCode.NotEqual(a, b) => {
-        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _) => typ }.toMap))) {
-          s"!${translateExpression(a)}.equals(${translateExpression(b)})"
-        } else {
-          s"${translateExpression(a)} != ${translateExpression(b)}"
-        }
-      }
-      case IntermediateCode.Greater(a, b) => s"${translateExpression(a)} > ${translateExpression(b)}"
-      case IntermediateCode.GreaterEqual(a, b) => s"${translateExpression(a)} >= ${translateExpression(b)}"
-      case IntermediateCode.Negation(a) => s"!${translateExpression(a)}"
       case IntermediateCode.LambdaExpression(argNames, argsTypes, _, body) => {
         val args = argsTypes.zip(argNames).map { case (t, n) => s"$n : ${ScalaConstants.typeTranslation(t)}" }.mkString(", ")
         s"($args) => {\n${generateCode(body, true)}\n}"

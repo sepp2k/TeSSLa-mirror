@@ -192,7 +192,7 @@ object StreamCodeGenerator {
       If(Seq(Seq(s"${o}_changed", s"${d}_changed"), Seq(s"${r}_changed", s"${d}_changed"))).
         If(Seq(Seq(NotEqual(s"${o}_error", LongValue(0))), Seq(NotEqual(s"${d}_error", LongValue(0))), Seq(NotEqual(s"${r}_error", LongValue(0))))).
           Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType).
-          Assignment(s"${o}_error", BitwiseOr(BitwiseOr(s"${o}_error", s"${d}_error"), s"${r}_error"), LongValue(-1), LongType).
+          Assignment(s"${o}_error", BitwiseOr(Seq(s"${o}_error", s"${d}_error", s"${r}_error")), LongValue(-1), LongType).
         Else().
           Assignment(s"${o}_nextTs", Addition("lastProcessedTs", s"${d}_value"), LongValue(-1), LongType).
         EndIf().
@@ -217,12 +217,7 @@ object StreamCodeGenerator {
                          }
 
     //TODO: Special case: if
-    //TODO: Create bitwise or with arbitrary parameter number
-    val inputError = args.foldLeft[ImpLanExpr](LongValue(0)){case (curr, sr) => {
-      val (sName, _) = streamNameAndTypeFromExpressionArg(sr)
-      BitwiseOr(curr, s"${sName}_error")
-    }
-    }
+    val inputError = BitwiseOr(args.map(streamNameAndTypeFromExpressionArg(_)._1 + "_error"))
     val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))}
 
     val newStmt = (currSrc.stepSource.
@@ -272,12 +267,7 @@ object StreamCodeGenerator {
     val fcall = NonStreamCodeGenerator.translateFunctionCall(function, fargs, Seq())
 
     //TODO: Special case: if
-    //TODO: Create bitwise or with arbitrary parameter number
-    val inputError = args.foldLeft[ImpLanExpr](LongValue(0)){case (curr, sr) => {
-      val (sName, _) = streamNameAndTypeFromExpressionArg(sr)
-      BitwiseOr(curr, s"${sName}_error")
-    }
-    }
+    val inputError = BitwiseOr(args.map(streamNameAndTypeFromExpressionArg(_)._1 + "_error"))
 
     val newStmt = (currSrc.stepSource.
 

@@ -184,40 +184,12 @@ object IntermediateCode {
     override def toString = s"$exp( ${params.mkString(", ")} )"
   }
 
-  final case class Addition(op1: ImpLanExpr, op2: ImpLanExpr) extends ImpLanExpr {
-    override def toString = s"$op1 + $op2"
-  }
-
-  final case class Subtraction(op1: ImpLanExpr, op2: ImpLanExpr) extends ImpLanExpr {
-    override def toString = s"$op1 - $op2"
-  }
-
-  final case class BitwiseOr(op1: ImpLanExpr, op2: ImpLanExpr) extends ImpLanExpr {
-    override def toString = s"$op1 | $op2"
-  }
-
   final case class TernaryExpression(guard: Seq[Seq[ImpLanExpr]], e1: ImpLanExpr, e2: ImpLanExpr) extends ImpLanExpr {
     override def toString = s"$guard ? $e1 : $e2"
   }
 
-  final case class Equal(a: ImpLanExpr, b: ImpLanExpr) extends ImpLanExpr {
-    override def toString = s"$a == $b"
-  }
-
-  final case class NotEqual(a: ImpLanExpr, b: ImpLanExpr) extends ImpLanExpr {
-    override def toString = s"$a != $b"
-  }
-
-  final case class Greater(a: ImpLanExpr, b: ImpLanExpr) extends ImpLanExpr {
-    override def toString = s"$a > $b"
-  }
-
-  final case class GreaterEqual(a: ImpLanExpr, b: ImpLanExpr) extends ImpLanExpr {
-    override def toString = s"$a >= $b"
-  }
-
-  final case class Negation(a: ImpLanExpr) extends ImpLanExpr {
-    override def toString = s"!($a)"
+  final case class Equal(e1: ImpLanExpr, e2: ImpLanExpr) extends ImpLanExpr {
+    override def toString = s"$e1 == $e2"
   }
 
   final case class Variable(name: String) extends ImpLanExpr {

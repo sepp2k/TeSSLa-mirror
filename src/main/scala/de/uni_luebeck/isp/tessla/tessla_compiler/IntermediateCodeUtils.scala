@@ -20,15 +20,8 @@ object IntermediateCodeUtils {
       case CastingExpression(e, _) =>  Seq(e)
       case FunctionCall(_, params, _) => params
       case LambdaApplication(exp, params) => params :+ exp
-      case Addition(op1, op2) => Seq(op1, op2)
-      case Subtraction(op1, op2) => Seq(op1, op2)
-      case BitwiseOr(op1, op2) => Seq(op1, op2)
       case TernaryExpression(guard, e1, e2) => guard.flatten :+ e1 :+ e2
       case Equal(a, b) => Seq(a, b)
-      case NotEqual(a, b) => Seq(a, b)
-      case Greater(a, b) => Seq(a, b)
-      case GreaterEqual(a, b) => Seq(a, b)
-      case Negation(a) => Seq(a)
       case LambdaExpression(_, _, _, body) => extractExpressions(body)
       case _ => Seq()
     }
@@ -122,6 +115,29 @@ object IntermediateCodeUtils {
   implicit def stmtConversion(dsl: IntermediateCodeUtils): Seq[ImpLanStmt] = {
     dsl.generateStatements
   }
+
+  implicit def Addition(op1: ImpLanExpr, op2: ImpLanExpr) : ImpLanExpr =
+    FunctionCall("__add__", Seq(op1, op2), IntermediateCode.FunctionType(Seq(LongType, LongType), LongType))
+
+  implicit def  Subtraction(op1: ImpLanExpr, op2: ImpLanExpr) : ImpLanExpr =
+    FunctionCall("__sub__", Seq(op1, op2), IntermediateCode.FunctionType(Seq(LongType, LongType), LongType))
+
+  implicit def  BitwiseOr(ops: Seq[ImpLanExpr]) : ImpLanExpr =
+    FunctionCall("__bitor__", ops, IntermediateCode.FunctionType(ops.map{_ => LongType}, LongType))
+
+  implicit def  NotEqual(a: ImpLanExpr, b: ImpLanExpr) : ImpLanExpr =
+    Negation(Equal(a, b))
+
+  implicit def  Greater(a: ImpLanExpr, b: ImpLanExpr) : ImpLanExpr =
+    FunctionCall("__gt__", Seq(a, b), IntermediateCode.FunctionType(Seq(LongType, LongType), BoolType))
+
+  implicit def  GreaterEqual(a: ImpLanExpr, b: ImpLanExpr) : ImpLanExpr =
+    FunctionCall("__geq__", Seq(a, b), IntermediateCode.FunctionType(Seq(LongType, LongType), BoolType))
+
+  implicit def  Negation(a: ImpLanExpr) : ImpLanExpr =
+    FunctionCall("__not__", Seq(a), IntermediateCode.FunctionType(Seq(BoolType), BoolType))
+
+
 }
 
 sealed trait BlockState

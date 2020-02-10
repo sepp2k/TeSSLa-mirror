@@ -60,12 +60,12 @@ object ScalaConstants {
       case "__[TC]getErrorCode__" => s"getErrorCode(${args(0)})"
 
       case "__ite__" => s"if (${args(0)}) ${args(1)} else ${args(2)}"
-      case "__not__" => s"!${args(0)}"
+      case "__not__" => s"!(${args(0)})"
       case "__negate__" |
            "__fnegate__"  => s"-${args(0)}"
       case "__bitflip__" => s"~${args(0)}"
-      case "__and__" => s"${args(0)} && ${args(1)}"
-      case "__or__" => s"${args(0)} || ${args(1)}"
+      case "__and__" => args.mkString(" && ")
+      case "__or__" => args.mkString(" || ")
       case "__eq__" => s"${args(0)} == ${args(1)}"
       case "__neq__" => s"${args(0)} != ${args(1)}"
       case "__gt__" |
@@ -85,9 +85,9 @@ object ScalaConstants {
       case "__div__" |
            "__fdiv__" => s"${args(0)} / ${args(1)}"
       case "__mod__" => s"${args(0)} % ${args(1)}"
-      case "__bitand__" => s"${args(0)} & ${args(1)}"
-      case "__bitor__" => s"${args(0)} | ${args(1)}"
-      case "__bitxor__" => s"${args(0)} ^ ${args(1)}"
+      case "__bitand__" => args.mkString(" & ")
+      case "__bitor__" => args.mkString(" | ")
+      case "__bitxor__" => args.mkString(" ^ ")
       case "__leftshift__" => s"${args(0)} << ${args(1)}"
       case "__rightshift__" => s"${args(0)} >> ${args(1)}"
 

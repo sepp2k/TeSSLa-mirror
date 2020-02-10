@@ -56,15 +56,8 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
       case CastingExpression(e, target) => CastingExpression(removeAssignments(e, del), target)
       case FunctionCall(name, params, typeHint) => FunctionCall(name, params.map(removeAssignments(_, del)), typeHint)
       case LambdaApplication(exp, params) => LambdaApplication(removeAssignments(exp, del), params.map(removeAssignments(_, del)))
-      case Addition(op1, op2) => Addition(removeAssignments(op1, del), removeAssignments(op2, del))
-      case Subtraction(op1, op2) => Subtraction(removeAssignments(op1, del), removeAssignments(op2, del))
-      case BitwiseOr(op1, op2) => BitwiseOr(removeAssignments(op1, del), removeAssignments(op2, del))
       case TernaryExpression(guard, e1, e2) => TernaryExpression(guard.map(_.map(removeAssignments(_, del))), removeAssignments(e1, del), removeAssignments(e2, del))
       case Equal(a, b) => Equal(removeAssignments(a, del), removeAssignments(b, del))
-      case NotEqual(a, b) => NotEqual(removeAssignments(a, del), removeAssignments(b, del))
-      case Greater(a, b) => Greater(removeAssignments(a, del), removeAssignments(b, del))
-      case GreaterEqual(a, b) => GreaterEqual(removeAssignments(a, del), removeAssignments(b, del))
-      case Negation(a) => Negation(removeAssignments(a, del))
       case LambdaExpression(argNames, argsTypes, retType, body) => LambdaExpression(argNames, argsTypes, retType, removeAssignments(body, del))
       case _ => exp
     }
