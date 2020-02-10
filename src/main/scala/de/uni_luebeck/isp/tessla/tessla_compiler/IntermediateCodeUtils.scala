@@ -11,8 +11,8 @@ import de.uni_luebeck.isp.tessla.TesslaAST.Core._
   */
 object IntermediateCodeUtils {
 
-  def expressionFold[A](exp: ImpLanExpr, n: A, f: (A, ImpLanExpr) => A): A = {
-    val subExp: Seq[ImpLanExpr] = exp match {
+  def foldAST[A](exp: ImpLanExpr, n: A, f: (A, ImpLanExpr) => A, g: (A, ImpLanStmt) => A): A = {
+    val subStmts: Seq[ImpLanStmt] = exp match {
       case v: ImpLanVal => v match {
         case Some(content) => Seq(content)
         case _ => Seq()
@@ -22,26 +22,60 @@ object IntermediateCodeUtils {
       case LambdaApplication(exp, params) => params :+ exp
       case TernaryExpression(guard, e1, e2) => guard.flatten :+ e1 :+ e2
       case Equal(a, b) => Seq(a, b)
-      case LambdaExpression(_, _, _, body) => extractExpressions(body)
+      case LambdaExpression(_, _, _, body) => body
       case _ => Seq()
     }
 
-    subExp.foldLeft[A](f(n, exp)) { case (n, p) => expressionFold(p, n, f)}
+    foldAST(subStmts, f(n, exp), f, g)
   }
 
-  def extractExpressions(stmts: Seq[ImpLanStmt]): Seq[ImpLanExpr] = {
-    stmts.foldLeft[Seq[ImpLanExpr]](Seq()){case (exps, stmt) => exps ++ extractExpressions(stmt)}
-  }
+  def foldAST[A](stmts: Seq[ImpLanStmt], n: A, f: (A, ImpLanExpr) => A, g: (A, ImpLanStmt) => A): A = {
+    stmts.foldLeft[A](n) {
+      case (currN, stmt) => {
+        val subStmts = stmt match {
+          case expr: ImpLanExpr => Seq()
+          case If(guard, stmts, elseStmts) => guard.flatten ++ stmts ++ elseStmts
+          case TryCatchBlock(tr, cat) => tr ++ cat
+          case Assignment(_, rexpr, defVal, _) => Seq(rexpr) ++ (if (defVal.isDefined) Seq(defVal.get) else Seq())
+          case FinalAssignment(_, defVal, _) => Seq(defVal)
+          case ReturnStatement(expr) => Seq(expr)
+        }
 
-  def extractExpressions(stmt: ImpLanStmt): Seq[ImpLanExpr] = {
-    stmt match {
-      case expr: ImpLanExpr => Seq(expr)
-      case If(guard, stmts, elseStmts) => guard.flatten ++ extractExpressions(stmts) ++ extractExpressions(elseStmts)
-      case TryCatchBlock(tr, cat) => extractExpressions(tr) ++ extractExpressions(cat)
-      case Assignment(_, rexpr, _, _) => Seq(rexpr)
-      case FinalAssignment(_, defVal, _) => Seq(defVal)
-      case ReturnStatement(expr) => Seq(expr)
+        stmt match {
+          case e : ImpLanExpr => foldAST(e, currN , f, g)
+          case _ => foldAST(subStmts, g(currN, stmt), f, g)
+        }
+      }
     }
+  }
+
+  def mapAST(stmts: Seq[ImpLanStmt], f: ImpLanExpr => ImpLanExpr, g: ImpLanStmt => Option[ImpLanStmt]): Seq[ImpLanStmt] = {
+    stmts.flatMap { stmt =>
+      {
+        val mappedStmt = stmt match {
+          case expr: ImpLanExpr => mapAST(expr, f, g)
+          case If(guard, stmts, elseStmts) => If(guard.map(_.map(mapAST(_, f, g))), mapAST(stmts, f, g), mapAST(elseStmts, f, g))
+          case TryCatchBlock(tr, cat) => TryCatchBlock(mapAST(tr, f, g), mapAST(cat, f, g))
+          case Assignment(lhs, rexpr, defVal, typ) => Assignment(lhs, mapAST(rexpr, f, g), if (defVal.isDefined) scala.Some(mapAST(defVal.get, f, g)) else scala.None, typ)
+          case FinalAssignment(lhs, defVal, typ) => FinalAssignment(lhs, mapAST(defVal, f, g), typ)
+          case ReturnStatement(expr) => ReturnStatement(mapAST(expr, f, g))
+        }
+        g(mappedStmt)
+      }}
+  }
+
+  def mapAST(exp: ImpLanExpr, f: ImpLanExpr => ImpLanExpr, g: ImpLanStmt => Option[ImpLanStmt]): ImpLanExpr = {
+    val mappedExp = exp match {
+      case lanVal: ImpLanVal => lanVal
+      case CastingExpression(e, target) => CastingExpression(mapAST(e, f, g), target)
+      case FunctionCall(name, params, typeHint) => FunctionCall(name, params.map(mapAST(_, f, g)), typeHint)
+      case LambdaApplication(exp, params) => LambdaApplication(mapAST(exp, f, g), params.map(mapAST(_, f, g)))
+      case TernaryExpression(guard, e1, e2) => TernaryExpression(guard.map(_.map(mapAST(_, f, g))), mapAST(e1, f, g), mapAST(e2, f, g))
+      case Equal(e1, e2) => Equal(mapAST(e1, f, g), mapAST(e2, f, g))
+      case LambdaExpression(argNames, argsTypes, retType, body) => LambdaExpression(argNames, argsTypes, retType, mapAST(body, f, g))
+      case _ => exp
+    }
+    f(mappedExp)
   }
 
   def getVariableMap(stmts: Seq[ImpLanStmt], baseMap: Map[String, (ImpLanType, Option[ImpLanExpr])] = Map()) : Map[String, (ImpLanType, Option[ImpLanExpr])] = {
