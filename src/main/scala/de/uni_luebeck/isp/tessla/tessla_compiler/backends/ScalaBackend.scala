@@ -33,7 +33,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
         s"if ($guardFormatted) {\n$ifPart\n}$optElse"
       }
       case IntermediateCode.TryCatchBlock(tr, cat) =>
-        s"try {\n${generateCode(tr, inLambda)}\n} catch {\n case var_err => {\n${generateCode(cat, inLambda)}\n}}"
+        s"try {\n${generateCode(tr, inLambda)}\n} catch {\ncase var_err : Throwable => {\n${generateCode(cat, inLambda)}\n}\n}"
 
       case Assignment(lhs, rexpr, _, t) if inLambda => s"var $lhs : ${ScalaConstants.typeTranslation(t)} = " +
         s"${translateExpression(rexpr)}"

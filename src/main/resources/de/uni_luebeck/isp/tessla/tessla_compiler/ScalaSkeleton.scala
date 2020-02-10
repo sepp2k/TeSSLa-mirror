@@ -6,6 +6,14 @@ import java.io.InputStreamReader
 
 object Main {
 
+    def getErrorCode(err: Throwable) : Long = {
+        err match {
+            case err: java.lang.ArithmeticException if err.getMessage == "/ by zero" => 1
+            case _: java.util.NoSuchElementException => 2
+            case _ => 2048
+        }
+    }
+
     def outputVar(output: String, trueName: String, errorCode: Long, ts: Long) : Unit = {
         var outputWithError: String = if (errorCode != 0)  "FATAL: " + trueName + " evaluation encountered an Error: " else ""
 

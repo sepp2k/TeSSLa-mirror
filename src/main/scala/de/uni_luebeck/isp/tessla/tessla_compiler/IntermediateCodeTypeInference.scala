@@ -102,7 +102,7 @@ object IntermediateCodeTypeInference {
           stmts.map {
             case expr: ImpLanExpr => castExpression(expr, scala.None, varTypes, languageSpecificCastRequired)
             case If(guard, stmts, elseStmts) => If (guard.map{_.map(e => castExpression(e, scala.Some(BoolType), varTypes, languageSpecificCastRequired))}, generateCodeWithCasts(stmts, varTypes, languageSpecificCastRequired, retType), generateCodeWithCasts(elseStmts, varTypes, languageSpecificCastRequired, retType))
-            case TryCatchBlock(tr, cat) => TryCatchBlock(generateCodeWithCasts(tr, varTypes, languageSpecificCastRequired, retType), generateCodeWithCasts(cat, varTypes, languageSpecificCastRequired, retType))
+            case TryCatchBlock(tr, cat) => TryCatchBlock(generateCodeWithCasts(tr, varTypes, languageSpecificCastRequired, retType), generateCodeWithCasts(cat, varTypes + ("var_err" -> GeneralType), languageSpecificCastRequired, retType))
             case Assignment(lhs, rexpr, defVal, typ) => Assignment(lhs, castExpression(rexpr, scala.Some(typ), varTypes, languageSpecificCastRequired), defVal, typ)
             case FinalAssignment(lhs, defVal, typ) => FinalAssignment(lhs, castExpression(defVal, scala.Some(typ), varTypes, languageSpecificCastRequired), typ)
             case ReturnStatement(expr) if retType.isDefined => ReturnStatement(castExpression(expr, scala.Some(retType.get), varTypes, languageSpecificCastRequired))

@@ -106,7 +106,7 @@ object StreamCodeGenerator {
           Assignment(s"${o}_value", s"${d}_value", defaultValueForType(ot), ot).
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-          Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType).
+          Assignment(s"${o}_error", s"${d}_error", LongValue(0), LongType).
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         EndIf().
       EndIf()
@@ -215,21 +215,44 @@ object StreamCodeGenerator {
                                                   None(sType))
                                 }
                          }
+
+    //TODO: Create bitwise or with arbitrary parameter number
+    val inputError = args.foldLeft[ImpLanExpr](LongValue(0)){case (curr, sr) => {
+      val (sName, _) = streamNameAndTypeFromExpressionArg(sr)
+      BitwiseOr(curr, s"${sName}_error")
+    }
+    }
     val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))}
 
     val newStmt = (currSrc.stepSource.
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
       If(guard).
-        Assignment(s"${o}_fval", LambdaApplication(NonStreamCodeGenerator.translateExpressionArg(function), params), scala.None, OptionType(ot)).
-        If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
+        Assignment(s"${o}_errval", inputError, LongValue(0), LongType).
+        If(Seq(Seq(Equal(s"${o}_errval", LongValue(0))))).
+          Try().
+            Assignment(s"${o}_fval", LambdaApplication(NonStreamCodeGenerator.translateExpressionArg(function), params), scala.None, OptionType(ot)).
+            If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
+              Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
+              Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
+              Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
+              Assignment(s"${o}_value", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForType(ot), ot).
+              Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
+              Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
+              Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType).
+              Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
+            EndIf().
+          Catch().
+            Assignment(s"${o}_errval", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
+          EndTry().
+        EndIf().
+        If(Seq(Seq(NotEqual(s"${o}_errval", LongValue(0))))).
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
           Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-          Assignment(s"${o}_value", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForType(ot), ot).
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-          FinalAssignment(s"${o}_error", LongValue(0), LongType). //TODO: Error Generation
+          Assignment(s"${o}_error", s"${o}_errval", LongValue(0), LongType).
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         EndIf().
       EndIf()
@@ -247,6 +270,13 @@ object StreamCodeGenerator {
 
     val fcall = NonStreamCodeGenerator.translateFunctionCall(function, fargs, Seq())
 
+    //TODO: Create bitwise or with arbitrary parameter number
+    val inputError = args.foldLeft[ImpLanExpr](LongValue(0)){case (curr, sr) => {
+      val (sName, _) = streamNameAndTypeFromExpressionArg(sr)
+      BitwiseOr(curr, s"${sName}_error")
+    }
+    }
+
     val newStmt = (currSrc.stepSource.
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
@@ -255,10 +285,18 @@ object StreamCodeGenerator {
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
           Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-          Assignment(s"${o}_value", fcall, defaultValueForType(ot), ot).
+          Assignment(s"${o}_error", inputError, LongValue(0), LongType).
+          If(Seq(Seq(Equal(s"${o}_error", LongValue(0))))).
+            Try().
+                Assignment(s"${o}_value", fcall, defaultValueForType(ot), ot).
+                Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType).
+              Catch().
+                Assignment(s"${o}_error", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
+              EndTry().
+          EndIf().
+
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-          Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType). //TODO: Function Translation --> Error
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         EndIf().
       EndIf()

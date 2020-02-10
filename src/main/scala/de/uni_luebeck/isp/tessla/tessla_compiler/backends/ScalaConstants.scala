@@ -57,6 +57,7 @@ object ScalaConstants {
     name match {
       case "__[TC]output__" => s"outputVar(${getParseExpressionToString(typeHint.argsTypes(0), args(0))}, ${args(1)}, ${args(2)}, currTs)"
       case "__[TC]inputParse__" => getStringParseExpression(typeHint.retType, args(0))
+      case "__[TC]getErrorCode__" => s"getErrorCode(${args(0)})"
 
       case "__ite__" => s"if (${args(0)}) ${args(1)} else ${args(2)}"
       case "__not__" => s"!${args(0)}"
@@ -136,7 +137,7 @@ object ScalaConstants {
       case IntermediateCode.BoolType => s"java.lang.Boolean.parseBoolean($exp)"
       case IntermediateCode.UnitType => "true"
       case IntermediateCode.StringType => s"$exp"
-      case t => throw new Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Java translation")
+      case t => throw Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Java translation")
     }
   }
 
