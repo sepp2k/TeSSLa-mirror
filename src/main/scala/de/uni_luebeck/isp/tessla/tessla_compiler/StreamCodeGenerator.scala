@@ -216,6 +216,7 @@ object StreamCodeGenerator {
                                 }
                          }
 
+    //TODO: Special case: if
     //TODO: Create bitwise or with arbitrary parameter number
     val inputError = args.foldLeft[ImpLanExpr](LongValue(0)){case (curr, sr) => {
       val (sName, _) = streamNameAndTypeFromExpressionArg(sr)
@@ -270,6 +271,7 @@ object StreamCodeGenerator {
 
     val fcall = NonStreamCodeGenerator.translateFunctionCall(function, fargs, Seq())
 
+    //TODO: Special case: if
     //TODO: Create bitwise or with arbitrary parameter number
     val inputError = args.foldLeft[ImpLanExpr](LongValue(0)){case (curr, sr) => {
       val (sName, _) = streamNameAndTypeFromExpressionArg(sr)
