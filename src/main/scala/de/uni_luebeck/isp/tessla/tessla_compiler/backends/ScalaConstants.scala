@@ -44,12 +44,12 @@ object ScalaConstants {
       case IntermediateCode.EmptyFunction(_) => "null"
       case IntermediateCode.None(_) => "None"
       case IntermediateCode.Some(content) => s"Option(${valueTranslation(content)})"
-      case IntermediateCode.EmptyMutableSet(valType) => s"scala.collection.mutable.HashSet()"
-      case IntermediateCode.EmptyImmutableSet(valType) => s"Set()"
-      case IntermediateCode.EmptyMutableMap(keyType, valType) => s"scala.collection.mutable.HashMap()"
-      case IntermediateCode.EmptyImmutableMap(keyType, valType) => "Map()"
-      case IntermediateCode.EmptyMutableList(valType) => "scala.collection.mutable.ArrayBuffer()"
-      case IntermediateCode.EmptyImmutableList(valType) => "List()"
+      case IntermediateCode.EmptyMutableSet(_) => s"scala.collection.mutable.HashSet()"
+      case IntermediateCode.EmptyImmutableSet(_) => s"Set()"
+      case IntermediateCode.EmptyMutableMap(_, _) => s"scala.collection.mutable.HashMap()"
+      case IntermediateCode.EmptyImmutableMap(_, _) => "Map()"
+      case IntermediateCode.EmptyMutableList(_) => "scala.collection.mutable.ArrayBuffer()"
+      case IntermediateCode.EmptyImmutableList(_) => "List()"
     }
   }
 
