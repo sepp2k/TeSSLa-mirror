@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import de.uni_luebeck.isp.tessla.TesslaAST.Core.{FunctionType => _, _}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeDSL._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
 
 import scala.language.implicitConversions
 import scala.language.postfixOps
@@ -12,49 +12,52 @@ import scala.language.postfixOps
   */
 object NonStreamCodeGenerator {
 
-  def translateFunctionCall(e: ExpressionArg, args: Seq[ImpLanExpr], typeArgs: Seq[Type]) : ImpLanExpr = {
+  def translateFunctionCall(e: ExpressionArg, args: Seq[ImpLanExpr], typeArgs: Seq[Type], defContext: Map[Identifier, DefinitionExpression] = Map()) : ImpLanExpr = {
     e match {
       case ExternExpression(_, _, _, "true", _) => BoolValue(true)
       case ExternExpression(_, _, _, "false", _) => BoolValue(false)
       case ExternExpression(tps, _, InstatiatedType("Option", Seq(t), _), "None", _) => None(t.resolve(tps.zip(typeArgs).toMap))
       case ExternExpression(typeParams, params, resultType, name, _) => {
         val typeParamMap = typeParams.zip(typeArgs).toMap
-        FunctionCall(s"__${name}__", args, FunctionType(params.map{case (_,t) => IntermediateCodeDSL.typeConversion(t.resolve(typeParamMap))},IntermediateCodeDSL.typeConversion(resultType.resolve(typeParamMap))))
+        FunctionCall(s"__${name}__", args, FunctionType(params.map{case (_,t) => IntermediateCodeUtils.typeConversion(t.resolve(typeParamMap))}, IntermediateCodeUtils.typeConversion(resultType.resolve(typeParamMap))))
       }
       case _: FunctionExpression |
            _: ExpressionRef |
-           ApplicationExpression(TypeApplicationExpression(_, _, _), _, _) => LambdaApplication(translateExpressionArg(e), args)
+           ApplicationExpression(TypeApplicationExpression(_, _, _), _, _) => LambdaApplication(translateExpressionArg(e, defContext), args)
       case e => throw Errors.CommandNotSupportedError("Non function expression cannot be translated", e.location)
     }
   }
 
-  def translateDefinition(id: Identifier, e: ExpressionArg) : ImpLanStmt = {
-    Assignment(s"var_$id", translateExpressionArg(e), scala.Some(defaultValueForType(e.tpe)), e.tpe)
+  def translateDefinition(id: Identifier, e: ExpressionArg, defContext: Map[Identifier, DefinitionExpression]) : ImpLanStmt = {
+    Assignment(s"var_$id", translateExpressionArg(e, defContext), scala.Some(defaultValueForType(e.tpe)), e.tpe)
   }
 
   //TODO: Recursion detection ???
-  def translateFunction(e: FunctionExpression) : ImpLanExpr = {
+  def translateFunction(e: FunctionExpression, defContext: Map[Identifier, DefinitionExpression]) : ImpLanExpr = {
     //TODO: Possibly type param resolution
-    //Fix for avoiding generic types where not necessary
-      val resType = e.result match {
-        case ExpressionRef(id, tpe, location) => e.body(id).tpe
-        case _ => e.result.tpe
-      }
-      LambdaExpression(e.params.map{case (id,_,_) => if (id.fullName == "_")  "_" else s"var_$id"}, e.params.map{case (_,_,t) => t}, resType, translateBody(e.body, e.result))
+      LambdaExpression(e.params.map{case (id,_,_) => if (id.fullName == "_")  "_" else s"var_$id"}, e.params.map{case (_,_,t) => t}, e.result.tpe, translateBody(e.body, e.result, defContext))
   }
 
-  def translateBody(body: Map[Identifier, DefinitionExpression], ret: ExpressionArg) : Seq[ImpLanStmt] = {
+  def translateBody(body: Map[Identifier, DefinitionExpression], ret: ExpressionArg, defContext: Map[Identifier, DefinitionExpression]) : Seq[ImpLanStmt] = {
+    val newDefContext = defContext ++ body
+
     val translatedBody = DefinitionOrdering.order(body).foldLeft[Seq[ImpLanStmt]](Seq()){
-      case (curr, (id, exp)) => curr.Assignment(s"var_${id.fullName}", translateExpressionArg(exp), scala.None, exp.tpe)
+      case (curr, (id, exp)) => curr.Assignment(s"var_${id.fullName}", translateExpressionArg(exp, newDefContext), scala.None, exp.tpe)
     }
-    translatedBody :+ ReturnStatement(translateExpressionArg(ret))
+    translatedBody :+ ReturnStatement(translateExpressionArg(ret, newDefContext))
   }
 
-  def translateExpressionArg(e: ExpressionArg): ImpLanExpr = {
+  def translateExpressionArg(e: ExpressionArg, defContext: Map[Identifier, DefinitionExpression] = Map()): ImpLanExpr = {
     //TODO: Plain application expression
     e match {
-      case f: FunctionExpression => translateFunction(f)
-      case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) => translateFunctionCall(e, args.map(translateExpressionArg), typeArgs)
+      case f: FunctionExpression => translateFunction(f, defContext)
+      case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) => {
+        val inlinedArgs  = e match {
+          case ExternExpression(_, _, _, "ite", _) => args.map(reInlineTempVars(_, defContext))
+          case _ => args
+        }
+        translateFunctionCall(e, inlinedArgs.map(translateExpressionArg(_, defContext)), typeArgs, defContext)
+      }
       case StringLiteralExpression(value, _) => StringValue(value)
       case IntLiteralExpression(value, _) => LongValue(value.toLong)
       case FloatLiteralExpression(value, _) => DoubleValue(value)
@@ -65,5 +68,40 @@ object NonStreamCodeGenerator {
       case _ => ???
     }
   }
+
+
+  //TODO: Redundancy
+  def reInlineTempVars(e: ExpressionArg, defContext: Map[Identifier, DefinitionExpression]) : ExpressionArg = {
+    e match {
+      case e: Expression => e match {
+        case FunctionExpression(typeParams, params, body, result, location) => FunctionExpression(typeParams, params, reInlineTempVarsBody(body, defContext), reInlineTempVars(result, defContext), location)
+        case ApplicationExpression(applicable, args, location) => ApplicationExpression(reInlineTempVars(applicable, defContext), args.map{a => reInlineTempVars(a, defContext)}, location)
+        case TypeApplicationExpression(applicable, typeArgs, location) => TypeApplicationExpression(reInlineTempVars(applicable, defContext), typeArgs, location)
+        case RecordConstructorExpression(entries, location) => RecordConstructorExpression(entries.map{case (n,e) => (n, reInlineTempVars(e, defContext))}, location)
+        case RecordAccesorExpression(name, target, location) => RecordAccesorExpression(name, reInlineTempVars(target, defContext), location)
+        case _ => e
+      }
+      case ExpressionRef(id, _, _) if id.idOrName.left.isEmpty && defContext.contains(id) => defContext(id)
+      case _ => e
+    }
+  }
+
+  def reInlineTempVars(e: DefinitionExpression, defContext: Map[Identifier, DefinitionExpression]) : DefinitionExpression = {
+    e match {
+      case e: Expression => e match {
+        case FunctionExpression(typeParams, params, body, result, location) => FunctionExpression(typeParams, params, reInlineTempVarsBody(body, defContext), reInlineTempVars(result, defContext), location)
+        case ApplicationExpression(applicable, args, location) => ApplicationExpression(reInlineTempVars(applicable, defContext), args.map{a => reInlineTempVars(a, defContext)}, location)
+        case TypeApplicationExpression(applicable, typeArgs, location) => TypeApplicationExpression(reInlineTempVars(applicable, defContext), typeArgs, location)
+        case RecordConstructorExpression(entries, location) => RecordConstructorExpression(entries.map{case (n,e) => (n, reInlineTempVars(e, defContext))}, location)
+        case RecordAccesorExpression(name, target, location) => RecordAccesorExpression(name, reInlineTempVars(target, defContext), location)
+        case _ => e
+      }
+      case _ => e
+    }
+  }
+
+  def reInlineTempVarsBody(b: Map[Identifier, DefinitionExpression], defContext: Map[Identifier, DefinitionExpression]) : Map[Identifier, DefinitionExpression] = {
+      b.map {case (id, de) => (id, reInlineTempVars(de, defContext))}
+   }
 
 }

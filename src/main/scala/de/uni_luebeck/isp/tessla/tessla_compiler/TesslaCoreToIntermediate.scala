@@ -42,7 +42,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
           case ApplicationExpression(e: ExternExpression, args, _) => translateExternSignalExpression(id, e, args, Seq(), currSource) //TODO: Does this exist?
           case e => throw Errors.TranslationError("Non valid stream defining expression cannot be translated", e.location)
         }
-        case _ => SourceListing(currSource.stepSource, currSource.tsGenSource, currSource.inputProcessing, currSource.staticSource :+ NonStreamCodeGenerator.translateDefinition(id, definition))
+        case _ => SourceListing(currSource.stepSource, currSource.tsGenSource, currSource.inputProcessing, currSource.staticSource :+ NonStreamCodeGenerator.translateDefinition(id, definition, definitions))
       }
     }
     }

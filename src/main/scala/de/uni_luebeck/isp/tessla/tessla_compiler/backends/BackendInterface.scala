@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 import de.uni_luebeck.isp.tessla.TranslationPhase
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCodeTypeInference}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCodeTypeInference, IntermediateCodeUtils}
 
 /**
   * Abstract base class for the translation from IntermediateCode to real source code
@@ -16,12 +16,12 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
   def translate(orgListing: SourceListing) : Result[String] = {
     var warnings = Seq()
 
-    val nonStaticVars = IntermediateCodeTypeInference.getVariableMap(orgListing.tsGenSource.concat(orgListing.stepSource).concat(orgListing.inputProcessing)) ++
+    val nonStaticVars = IntermediateCodeUtils.getVariableMap(orgListing.tsGenSource.concat(orgListing.stepSource).concat(orgListing.inputProcessing)) ++
       Map("inputStream" -> (StringType, scala.Some(StringValue(""))),
       "value" -> (StringType, scala.Some(StringValue(""))),
       "currTs" -> (LongType, scala.Some(LongValue(0))))
 
-    val staticVars = IntermediateCodeTypeInference.getVariableMap(orgListing.staticSource)
+    val staticVars = IntermediateCodeUtils.getVariableMap(orgListing.staticSource)
 
     variables = nonStaticVars ++ staticVars
 

@@ -142,7 +142,7 @@ object IntermediateCodeTypeInference {
           case LambdaExpression(argNames, argsTypes, retType, body) => LambdaExpression(argNames, argsTypes, retType,
               generateCodeWithCasts(
                 body,
-                getVariableMap(body, varTypes.view.mapValues{a => (a, scala.None)}.toMap ++ argNames.zip(argsTypes).map{case (a,b) => (a,(b, scala.None))}.toMap).view.mapValues{case (a,_) => a}.toMap,
+                IntermediateCodeUtils.getVariableMap(body, varTypes.view.mapValues{a => (a, scala.None)}.toMap ++ argNames.zip(argsTypes).map{case (a,b) => (a,(b, scala.None))}.toMap).view.mapValues{case (a,_) => a}.toMap,
                 languageSpecificCastRequired,
                 scala.Some(retType)
               ))
@@ -168,26 +168,5 @@ object IntermediateCodeTypeInference {
         //Note: No type checking here
         t2
       }
-    }
-
-
-    //TODO: Not the optimal location for this code
-    def getVariableMap(stmts: Seq[ImpLanStmt], baseMap: Map[String, (ImpLanType, Option[ImpLanExpr])] = Map()) : Map[String, (ImpLanType, Option[ImpLanExpr])] = {
-
-      def extractAssignments(stmt: ImpLanStmt) : Seq[(String, ImpLanType, Option[ImpLanExpr])] = stmt match {
-        case Assignment(lhs, _, defVal, typ) => Seq((lhs.name, typ, defVal))
-        case FinalAssignment(lhs, defVal, typ) => Seq((lhs.name, typ, scala.Some(defVal)))
-        case If(_, stmts, elseStmts) => stmts.concat(elseStmts).flatMap(extractAssignments)
-        case _ => Seq()
-      }
-
-      val varDefs : Seq[(String, ImpLanType, Option[ImpLanExpr])] = baseMap.toSeq.map{case (a, (b,c)) => (a,b,c)} ++ stmts.flatMap(extractAssignments).distinct
-      val duplicates = varDefs.groupBy{case (n, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
-
-      if (duplicates.nonEmpty) {
-        throw new Errors.TranslationError(s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}")
-      }
-
-      varDefs.map{case (name, typ, default) => (name, (typ, default))}.toMap
     }
 }

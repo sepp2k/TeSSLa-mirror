@@ -82,16 +82,17 @@ object Main extends SexyOpt {
           new TesslaCoreWithMutabilityInfo(core, Set())
         }
         val intermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(coreWithMutInf))
+        val optIntermediateCode = unwrapResult(UnusedVarRemove.translate(intermediateCode))
 
         if (verbose.value) {
           println("###############################")
           println("#      Intermediate Code      #")
           println("###############################")
-          println(intermediateCode)
+          println(optIntermediateCode)
           println("###############################")
         }
 
-        val source = unwrapResult(backend.translate(intermediateCode))
+        val source = unwrapResult(backend.translate(optIntermediateCode))
 
         if (outputPath.get != "") {
           val pw = new PrintWriter(new File(outputPath.get))
