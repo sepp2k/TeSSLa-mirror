@@ -100,7 +100,7 @@ object IntermediateCodeUtils {
 
   implicit def typeConversion(t: Type): ImpLanType = {
     t match {
-      case InstatiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Dirty hack
+      case InstatiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Unclean solution but not easy to surpass because of implicit
       case RecordType(entries, _) if entries.isEmpty => UnitType
       case InstatiatedType("Bool", Seq(), _) => BoolType
       case InstatiatedType("Int", Seq(), _) => LongType
@@ -120,7 +120,6 @@ object IntermediateCodeUtils {
 
   def defaultValueForType(t: Type): ImpLanVal = {
     t match {
-      case InstatiatedType("Events", Seq(t), _) => defaultValueForType(t) //TODO: Dirty hack
       case RecordType(entries, _) if entries.isEmpty => UnitValue
       case InstatiatedType("Bool", Seq(), _) => BoolValue(false)
       case InstatiatedType("Int", Seq(), _) => LongValue(0)
@@ -135,6 +134,13 @@ object IntermediateCodeUtils {
       case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
       case RecordType(entries, location) => throw tessla_compiler.Errors.NotYetImplementedError("Record types not supported yet")
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $t not supported")
+    }
+  }
+
+  def defaultValueForStreamType(t: Type): ImpLanVal = {
+    t match {
+      case InstatiatedType("Events", Seq(t), _) => defaultValueForType(t)
+      case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Stream type required but non-stream type $t passed.")
     }
   }
 

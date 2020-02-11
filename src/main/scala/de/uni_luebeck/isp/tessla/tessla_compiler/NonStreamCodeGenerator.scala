@@ -32,7 +32,6 @@ object NonStreamCodeGenerator {
     Assignment(s"var_$id", translateExpressionArg(e, defContext), scala.Some(defaultValueForType(e.tpe)), e.tpe)
   }
 
-  //TODO: Recursion detection ???
   def translateFunction(e: FunctionExpression, defContext: Map[Identifier, DefinitionExpression]) : ImpLanExpr = {
     //TODO: Possibly type param resolution
       LambdaExpression(e.params.map{case (id,_,_) => if (id.fullName == "_")  "_" else s"var_$id"}, e.params.map{case (_,_,t) => t}, e.result.tpe, translateBody(e.body, e.result, defContext))
@@ -70,7 +69,7 @@ object NonStreamCodeGenerator {
   }
 
 
-  //TODO: Redundancy
+  //TODO: Redundancy --> Daniel
   def reInlineTempVars(e: ExpressionArg, defContext: Map[Identifier, DefinitionExpression]) : ExpressionArg = {
     e match {
       case e: Expression => e match {

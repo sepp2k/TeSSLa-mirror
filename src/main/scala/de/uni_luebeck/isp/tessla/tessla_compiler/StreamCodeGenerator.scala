@@ -19,34 +19,15 @@ object StreamCodeGenerator {
     }
   }
 
-  //TODO: Possibly duplicate of translateExpressionArg from NonStreamCodeGenerator
-  def translateExpressionArg(ea: ExpressionArg) : ImpLanExpr = {
-    ea match {
-      case FunctionExpression(typeParams, params, body, result, location) =>  throw tessla_compiler.Errors.NotYetImplementedError("FunctionExpression cannot be translated to ImpLanExpr yet", location)
-      case ApplicationExpression(applicable, args, location) => throw tessla_compiler.Errors.NotYetImplementedError("ApplicationExpression cannot be translated to ImpLanExpr yet", location)
-      case TypeApplicationExpression(applicable, typeArgs, location) => throw tessla_compiler.Errors.NotYetImplementedError("TypeApplicationExpression cannot be translated to ImpLanExpr yet", location)
-      case RecordConstructorExpression(entries, location) => throw tessla_compiler.Errors.NotYetImplementedError("Records not implemented yet", location)
-      case RecordAccesorExpression(name, target, location) => throw tessla_compiler.Errors.NotYetImplementedError("Records not implemented yet", location)
-      case StringLiteralExpression(value, location) => StringValue(value)
-      case IntLiteralExpression(value, location) => LongValue(value.longValue)
-      case FloatLiteralExpression(value, location) => DoubleValue(value)
-      case ExternExpression(_, _, _, "true", _) => BoolValue(true)
-      case ExternExpression(_, _, _, "false", _) => BoolValue(false)
-      case ExternExpression(_, _, InstatiatedType("Option", Seq(t), _), "None", _) => None(t)
-      case ExpressionRef(id, tpe, location) => Variable(s"var_${id.fullName}")
-      case _ => throw tessla_compiler.Errors.NotYetImplementedError(s"$ea cannot be translated to ImpLanExpr yet", ea.location)
-    }
-  }
-
   def produceNilStepCode(id: Identifier, ot: Type, loc: Location, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
     val newStmt = (currSrc.stepSource.
 
-      FinalAssignment(s"${o}_lastValue", defaultValueForType(ot), ot).
+      FinalAssignment(s"${o}_lastValue", defaultValueForStreamType(ot), ot).
       FinalAssignment(s"${o}_lastInit", BoolValue(false), BoolType).
       FinalAssignment(s"${o}_lastError", LongValue(0), LongType).
-      FinalAssignment(s"${o}_value", defaultValueForType(ot), ot).
+      FinalAssignment(s"${o}_value", defaultValueForStreamType(ot), ot).
       FinalAssignment(s"${o}_init", BoolValue(false), BoolType).
       FinalAssignment(s"${o}_ts", LongValue(0), LongType).
       FinalAssignment(s"${o}_error", LongValue(0), LongType).
@@ -59,7 +40,7 @@ object StreamCodeGenerator {
   def produceDefaultStepCode(id: Identifier, ot: Type, stream : ExpressionArg, value : ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val o = s"var_${id.fullName}"
-    val default = translateExpressionArg(value) //TODO: Translation of which possibilities is necessary?
+    val default = NonStreamCodeGenerator.translateExpressionArg(value)
 
     val newStmt = (currSrc.stepSource.
 
@@ -67,7 +48,7 @@ object StreamCodeGenerator {
         Assignment(s"${o}_changed", BoolValue(false), BoolValue(true), BoolType).
       EndIf().
       If(Seq(Seq(s"${s}_changed"))).
-        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
+        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
         Assignment(s"${o}_value", s"${s}_value", default, ot).
@@ -90,20 +71,20 @@ object StreamCodeGenerator {
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
       If(Seq(Seq(s"${s}_changed"))).
-        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
+        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-        Assignment(s"${o}_value", s"${s}_value", defaultValueForType(ot), ot).
+        Assignment(s"${o}_value", s"${s}_value", defaultValueForStreamType(ot), ot).
         Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
         Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType).
         Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
       Else().
         If(Seq(Seq(Negation(s"${o}_init"),s"${d}_init"))).
-          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
+          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
           Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-          Assignment(s"${o}_value", s"${d}_value", defaultValueForType(ot), ot).
+          Assignment(s"${o}_value", s"${d}_value", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
           Assignment(s"${o}_error", s"${d}_error", LongValue(0), LongType).
@@ -147,17 +128,17 @@ object StreamCodeGenerator {
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
       If(Seq(Seq(s"${c}_changed", s"${v}_init"))).
-        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
+        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
         Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         If(Seq(Seq(Equal(s"${v}_ts", "currTs")))).
-          Assignment(s"${o}_value", s"${v}_lastValue", defaultValueForType(ot), ot).
+          Assignment(s"${o}_value", s"${v}_lastValue", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_error", s"${v}_lastError", LongValue(0), LongType).
           Assignment(s"${o}_init", s"${v}_lastInit", BoolValue(false), BoolType).
         Else().
-          Assignment(s"${o}_value", s"${v}_value", defaultValueForType(ot), ot).
+          Assignment(s"${o}_value", s"${v}_value", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_error", s"${v}_error", LongValue(0), LongType).
           Assignment(s"${o}_init", s"${v}_init", BoolValue(false), BoolType).
         EndIf().
@@ -229,10 +210,10 @@ object StreamCodeGenerator {
           Try().
             Assignment(s"${o}_fval", LambdaApplication(NonStreamCodeGenerator.translateExpressionArg(function), params), scala.None, OptionType(ot)).
             If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
-              Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
+              Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
               Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
               Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-              Assignment(s"${o}_value", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForType(ot), ot).
+              Assignment(s"${o}_value", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForStreamType(ot), ot).
               Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
               Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
               Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType).
@@ -243,7 +224,7 @@ object StreamCodeGenerator {
           EndTry().
         EndIf().
         If(Seq(Seq(NotEqual(s"${o}_errval", LongValue(0))))).
-          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
+          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
           Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
@@ -260,7 +241,7 @@ object StreamCodeGenerator {
   def produceSignalLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
-    val guard1 : Seq[Seq[ImpLanExpr]] = Seq(args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_init")}) //TODO: Sufficient???
+    val guard1 : Seq[Seq[ImpLanExpr]] = Seq(args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_init")})
     val guard2 : Seq[Seq[ImpLanExpr]] = args.map{arg => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_changed"))}
     val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}
 
@@ -274,13 +255,13 @@ object StreamCodeGenerator {
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
       If(guard1).
         If(guard2).
-          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
+          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
           Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
           Assignment(s"${o}_error", inputError, LongValue(0), LongType).
           If(Seq(Seq(Equal(s"${o}_error", LongValue(0))))).
             Try().
-                Assignment(s"${o}_value", fcall, defaultValueForType(ot), ot).
+                Assignment(s"${o}_value", fcall, defaultValueForStreamType(ot), ot).
                 Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType).
               Catch().
                 Assignment(s"${o}_error", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
@@ -308,7 +289,7 @@ object StreamCodeGenerator {
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
       If(guard).
-        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForType(ot), ot).
+        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
         Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
@@ -320,7 +301,7 @@ object StreamCodeGenerator {
       val (sn, _) = streamNameAndTypeFromExpressionArg(arg)
       newStmt = (newStmt.
         If(Seq(Seq(s"${sn}_init",s"${sn}_changed"))).
-          Assignment(s"${o}_value", s"${sn}_value", defaultValueForType(ot), ot).
+          Assignment(s"${o}_value", s"${sn}_value", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_error", s"${sn}_error", LongValue(0), LongType).
         Else()
       )
@@ -361,12 +342,12 @@ object StreamCodeGenerator {
 
     val newInputProcessing = (currSrc.inputProcessing.
       If(Seq(Seq(Equal("inputStream", StringValue(inStream.idOrName.left.get))))).
-        Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForType(typ), typ).
+        Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForStreamType(typ), typ).
         Assignment(s"${s}_lastInit", s"${s}_init", BoolValue(false), BoolType).
         FinalAssignment(s"${s}_lastError", LongValue(0), LongType).
         Assignment(s"${s}_value", FunctionCall("__[TC]inputParse__", Seq("value"),
                    IntermediateCode.FunctionType(Seq(StringType), typ)
-                   ), defaultValueForType(typ), typ).
+                   ), defaultValueForStreamType(typ), typ).
         Assignment(s"${s}_init", BoolValue(true), BoolValue(false), BoolType).
         Assignment(s"${s}_ts", "currTs", LongValue(0), LongType).
         FinalAssignment(s"${s}_error", LongValue(0), LongType).
