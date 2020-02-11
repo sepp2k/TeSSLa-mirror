@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode}
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{FunctionType, ImpLanType, ImpLanVal}
+import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 
 /**
   * Class containing Java-specific constants for the translation
@@ -12,21 +12,21 @@ object ScalaConstants {
 
   def typeTranslation(t: ImpLanType, asTypePar: Boolean) : String = {
     t match {
-      case IntermediateCode.LongType => "Long"
-      case IntermediateCode.DoubleType => "Double"
-      case IntermediateCode.BoolType => "Boolean"
-      case IntermediateCode.UnitType => "Boolean"
-      case IntermediateCode.StringType => "String"
-      case IntermediateCode.GeneralType if asTypePar => "_"
-      case IntermediateCode.GeneralType => "Object"
-      case IntermediateCode.OptionType(valType) => s"Option[${typeTranslation(valType, true)}]"
-      case IntermediateCode.MutableSetType(valType) => s"scala.collection.mutable.HashSet[${typeTranslation(valType, true)}]"
-      case IntermediateCode.ImmutableSetType(valType) => s"Set[${typeTranslation(valType, true)}]"
-      case IntermediateCode.MutableMapType(keyType, valType) => s"scala.collection.mutable.HashMap[${typeTranslation(keyType, true)}, ${typeTranslation(valType, true)}]"
-      case IntermediateCode.ImmutableMapType(keyType, valType) => s"Map[${typeTranslation(keyType, true)}, ${typeTranslation(valType, true)}]"
-      case IntermediateCode.MutableListType(valType) => s"scala.collection.mutable.ArrayBuffer[${typeTranslation(valType, true)}]"
-      case IntermediateCode.ImmutableListType(valType) => s"List[${typeTranslation(valType, true)}]"
-      case IntermediateCode.FunctionType(argsTypes, retType) => {
+      case LongType => "Long"
+      case DoubleType => "Double"
+      case BoolType => "Boolean"
+      case UnitType => "Boolean"
+      case StringType => "String"
+      case GeneralType if asTypePar => "_"
+      case GeneralType => "Object"
+      case OptionType(valType) => s"Option[${typeTranslation(valType, true)}]"
+      case MutableSetType(valType) => s"scala.collection.mutable.HashSet[${typeTranslation(valType, true)}]"
+      case ImmutableSetType(valType) => s"Set[${typeTranslation(valType, true)}]"
+      case MutableMapType(keyType, valType) => s"scala.collection.mutable.HashMap[${typeTranslation(keyType, true)}, ${typeTranslation(valType, true)}]"
+      case ImmutableMapType(keyType, valType) => s"Map[${typeTranslation(keyType, true)}, ${typeTranslation(valType, true)}]"
+      case MutableListType(valType) => s"scala.collection.mutable.ArrayBuffer[${typeTranslation(valType, true)}]"
+      case ImmutableListType(valType) => s"List[${typeTranslation(valType, true)}]"
+      case FunctionType(argsTypes, retType) => {
         val ret = ((if (argsTypes.size == 0) "" else ", ") + typeTranslation(retType))
         s"scala.Function${argsTypes.size}[${argsTypes.map(typeTranslation).mkString(", ")}${ret}]"
       }
@@ -35,21 +35,21 @@ object ScalaConstants {
 
   def valueTranslation(v: ImpLanVal) : String = {
     v match {
-      case IntermediateCode.LongValue(value) => value.toString()
-      case IntermediateCode.DoubleValue(value) => value.toString()
-      case IntermediateCode.BoolValue(value) => value.toString()
-      case IntermediateCode.UnitValue => "true"
-      case IntermediateCode.StringValue(value) => s""""${value.replaceAllLiterally("\"", "\\\"")}"""" //TODO: Find better solution, re-escaping all special chars
-      case IntermediateCode.GeneralValue => "null"
-      case IntermediateCode.EmptyFunction(_) => "null"
-      case IntermediateCode.None(_) => "None"
-      case IntermediateCode.Some(content) => s"Option(${valueTranslation(content)})"
-      case IntermediateCode.EmptyMutableSet(_) => s"scala.collection.mutable.HashSet()"
-      case IntermediateCode.EmptyImmutableSet(_) => s"Set()"
-      case IntermediateCode.EmptyMutableMap(_, _) => s"scala.collection.mutable.HashMap()"
-      case IntermediateCode.EmptyImmutableMap(_, _) => "Map()"
-      case IntermediateCode.EmptyMutableList(_) => "scala.collection.mutable.ArrayBuffer()"
-      case IntermediateCode.EmptyImmutableList(_) => "List()"
+      case LongValue(value) => value.toString()
+      case DoubleValue(value) => value.toString()
+      case BoolValue(value) => value.toString()
+      case UnitValue => "true"
+      case StringValue(value) => s""""${value.replaceAllLiterally("\"", "\\\"")}"""" //TODO: Find better solution, re-escaping all special chars
+      case GeneralValue => "null"
+      case EmptyFunction(_) => "null"
+      case None(_) => "None"
+      case Some(content) => s"Option(${valueTranslation(content)})"
+      case EmptyMutableSet(_) => s"scala.collection.mutable.HashSet()"
+      case EmptyImmutableSet(_) => s"Set()"
+      case EmptyMutableMap(_, _) => s"scala.collection.mutable.HashMap()"
+      case EmptyImmutableMap(_, _) => "Map()"
+      case EmptyMutableList(_) => "scala.collection.mutable.ArrayBuffer()"
+      case EmptyImmutableList(_) => "List()"
     }
   }
 
@@ -132,22 +132,22 @@ object ScalaConstants {
 
   def getStringParseExpression(to: ImpLanType, exp: String) : String = {
     to match {
-      case IntermediateCode.LongType => s"java.lang.Long.parseLong($exp)"
-      case IntermediateCode.DoubleType => s"java.lang.Double.parseDouble($exp)"
-      case IntermediateCode.BoolType => s"java.lang.Boolean.parseBoolean($exp)"
-      case IntermediateCode.UnitType => "true"
-      case IntermediateCode.StringType => s"$exp"
+      case LongType => s"java.lang.Long.parseLong($exp)"
+      case DoubleType => s"java.lang.Double.parseDouble($exp)"
+      case BoolType => s"java.lang.Boolean.parseBoolean($exp)"
+      case UnitType => "true"
+      case StringType => s"$exp"
       case t => throw Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Java translation")
     }
   }
 
   def getParseExpressionToString(from: ImpLanType, exp: String) : String = {
     from match {
-      case IntermediateCode.LongType |
-           IntermediateCode.DoubleType |
-           IntermediateCode.BoolType => s"String.valueOf($exp)"
-      case IntermediateCode.UnitType => "\"()\""
-      case IntermediateCode.StringType => s"$exp"
+      case LongType |
+           DoubleType |
+           BoolType => s"String.valueOf($exp)"
+      case UnitType => "\"()\""
+      case StringType => s"$exp"
       case t => s"$exp.toString()"
     }
   }

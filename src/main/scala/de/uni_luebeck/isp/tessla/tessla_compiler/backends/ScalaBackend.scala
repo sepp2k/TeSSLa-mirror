@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode, IntermediateCodeTypeInference}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeTypeInference
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 
 /**
@@ -23,8 +23,8 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
 
   def generateCode(stmts: Seq[ImpLanStmt], inLambda: Boolean = false): String = {
     stmts.map {
-      case expr: IntermediateCode.ImpLanExpr => translateExpression(expr)
-      case IntermediateCode.If(guard, stmts, elseStmts) => {
+      case expr: ImpLanExpr => translateExpression(expr)
+      case If(guard, stmts, elseStmts) => {
         val guardFormatted = foldGuard(guard)
         val ifPart = generateCode(stmts)
         val elsePart = generateCode(elseStmts)
@@ -32,7 +32,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
 
         s"if ($guardFormatted) {\n$ifPart\n}$optElse"
       }
-      case IntermediateCode.TryCatchBlock(tr, cat) =>
+      case TryCatchBlock(tr, cat) =>
         s"try {\n${generateCode(tr, inLambda)}\n} catch {\ncase var_err : Throwable => {\n${generateCode(cat, inLambda)}\n}\n}"
 
       case Assignment(lhs, rexpr, _, t) if inLambda => s"var $lhs : ${ScalaConstants.typeTranslation(t)} = " +
@@ -44,42 +44,42 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
         s"${translateExpression(rhs)}"
       case FinalAssignment(_, _, _) => ""
 
-      case IntermediateCode.ReturnStatement(expr) => translateExpression(expr)
+      case ReturnStatement(expr) => translateExpression(expr)
     }.filter(_ != "").mkString("\n")
   }
 
   def translateExpression(e: ImpLanExpr): String = e match {
       case lanVal: ImpLanVal => ScalaConstants.valueTranslation(lanVal)
-      case IntermediateCode.FunctionCall(name, params, typeHint) => {
+      case FunctionCall(name, params, typeHint) => {
         if (name.startsWith("__")) {
           ScalaConstants.builtinFunctionCallTranslation(name, params.zip(typeHint.argsTypes).map{case (e,_) => translateExpression(e)}, typeHint)
         } else {
           s"$name(${params.zip(typeHint.argsTypes).map{case (e,t) => translateExpression(e)}.mkString(", ")})"
         }
       }
-      case IntermediateCode.LambdaApplication(exp, params) => s"${translateExpression(exp)}.apply(${params.map(translateExpression).mkString(", ")})"
-      case IntermediateCode.TernaryExpression(guard, e1, e2) => s"if(${foldGuard(guard)}) {${translateExpression(e1)}} else {${translateExpression(e2)}}"
-      case IntermediateCode.Equal(a, b) => {
+      case LambdaApplication(exp, params) => s"${translateExpression(exp)}.apply(${params.map(translateExpression).mkString(", ")})"
+      case TernaryExpression(guard, e1, e2) => s"if(${foldGuard(guard)}) {${translateExpression(e1)}} else {${translateExpression(e2)}}"
+      case Equal(a, b) => {
         if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _) => typ }.toMap))) {
           s"${translateExpression(a)}.equals(${translateExpression(b)})"
         } else {
           s"${translateExpression(a)} == ${translateExpression(b)}"
         }
       }
-      case IntermediateCode.LambdaExpression(argNames, argsTypes, _, body) => {
+      case LambdaExpression(argNames, argsTypes, _, body) => {
         val args = argsTypes.zip(argNames).map { case (t, n) => s"$n : ${ScalaConstants.typeTranslation(t)}" }.mkString(", ")
         s"($args) => {\n${generateCode(body, true)}\n}"
       }
-      case IntermediateCode.Variable(name) => name
-      case IntermediateCode.CastingExpression(e, t) => s"(${translateExpression(e)}).asInstanceOf[${ScalaConstants.typeTranslation(t)}]"
+      case Variable(name) => name
+      case CastingExpression(e, t) => s"(${translateExpression(e)}).asInstanceOf[${ScalaConstants.typeTranslation(t)}]"
     }
 
   def isObjectType(t: ImpLanType) : Boolean = {
     t match {
-      case IntermediateCode.LongType |
-           IntermediateCode.DoubleType |
-           IntermediateCode.BoolType |
-           IntermediateCode.UnitType => false
+      case LongType |
+           DoubleType |
+           BoolType |
+           UnitType => false
       case _ => true
     }
   }
