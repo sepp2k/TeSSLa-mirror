@@ -24,12 +24,8 @@ object Errors {
     override def loc = Location.unknown
   }
 
-  case class CoreASTError(baseError : de.uni_luebeck.isp.tessla.Errors.TesslaError, loc: Location = Location.unknown) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
-    override def message = s"The TeSSLa Core AST contains an error.\nDetails: ${baseError.message}"
-  }
-
-  case class TranslationError(m: String, loc : Location = Location.unknown) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
-    override def message = s"The Translation of the intermediate code failed.\nDetails: $m"
+  case class CoreASTError(m: String, loc: Location = Location.unknown) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
+    override def message = s"The TeSSLa Core AST contains an error.\nDetails: $m"
   }
 
   case class CLIError(m: String) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {

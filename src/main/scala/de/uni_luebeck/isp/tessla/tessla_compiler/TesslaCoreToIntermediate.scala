@@ -28,7 +28,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
       } else if (in.contains(id)) {
         in(id)._1
       } else {
-        throw Errors.TranslationError(s"Type of output stream $id cannot be found")
+        throw Errors.CoreASTError(s"Type of output stream $id cannot be found")
       }
     }
 
@@ -40,7 +40,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
         case InstatiatedType("Events", _, _) => definition match {
           case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, typeArgs, _), args, _) => translateExternSignalExpression(id, e, args, typeArgs, currSource)
           case ApplicationExpression(e: ExternExpression, args, _) => translateExternSignalExpression(id, e, args, Seq(), currSource) //TODO: Does this exist?
-          case e => throw Errors.TranslationError("Non valid stream defining expression cannot be translated", e.location)
+          case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
         }
         case _ => SourceListing(currSource.stepSource, currSource.tsGenSource, currSource.inputProcessing, currSource.staticSource :+ NonStreamCodeGenerator.translateDefinition(id, definition, definitions))
       }

@@ -83,7 +83,7 @@ object IntermediateCodeTypeInference {
           case FunctionCall(name, params, typeHint) => FunctionCall(name, params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)}, typeHint)
           case LambdaApplication(exp, params) => typeInference(exp, varTypes) match {
             case FunctionType(argsTypes, _) => LambdaApplication(exp, params.zip(argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)})
-            case _ => throw Errors.TranslationError(s"Lambda Application to non-function expression $exp")
+            case _ => throw Errors.TypeError(s"Lambda Application to non-function expression $exp")
           }
           case Equal(a, b) => {
             val lct = scala.Some(getLeastCommonType(typeInference(a, varTypes), typeInference(b, varTypes)))

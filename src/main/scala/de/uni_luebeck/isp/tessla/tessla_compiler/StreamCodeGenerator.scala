@@ -15,7 +15,7 @@ object StreamCodeGenerator {
   def streamNameAndTypeFromExpressionArg(ea : ExpressionArg) : (String, ImpLanType) = {
     ea match {
       case ExpressionRef(id, tpe, _) =>("var_" + id.fullName, tpe)
-      case e: Expression => throw tessla_compiler.Errors.TranslationError("Required ExpressionRef, but Expression found", e.location)
+      case e: Expression => throw tessla_compiler.Errors.CoreASTError("Required ExpressionRef, but Expression found", e.location)
     }
   }
 

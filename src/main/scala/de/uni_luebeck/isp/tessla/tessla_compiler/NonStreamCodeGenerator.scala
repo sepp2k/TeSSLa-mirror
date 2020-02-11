@@ -24,7 +24,7 @@ object NonStreamCodeGenerator {
       case _: FunctionExpression |
            _: ExpressionRef |
            ApplicationExpression(TypeApplicationExpression(_, _, _), _, _) => LambdaApplication(translateExpressionArg(e, defContext), args)
-      case e => throw Errors.CommandNotSupportedError("Non function expression cannot be translated", e.location)
+      case e => throw Errors.CoreASTError("Non function expression cannot be translated", e.location)
     }
   }
 

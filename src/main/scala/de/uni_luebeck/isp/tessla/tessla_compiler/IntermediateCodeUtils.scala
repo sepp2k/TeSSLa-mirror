@@ -92,7 +92,7 @@ object IntermediateCodeUtils {
     val duplicates = varDefs.groupBy{case (n, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
 
     if (duplicates.nonEmpty) {
-      throw tessla_compiler.Errors.TranslationError(s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}")
+      throw tessla_compiler.Errors.DSLError(s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}")
     }
 
     varDefs.map{case (name, typ, default) => (name, (typ, default))}.toMap
@@ -130,7 +130,7 @@ object IntermediateCodeUtils {
       case InstatiatedType("Map", Seq(t1, t2), _) => EmptyImmutableMap(t1, t2)
       case InstatiatedType("List", Seq(t), _) => EmptyImmutableList(t)
       case TesslaAST.Core.FunctionType(_, _, _, _) => EmptyFunction(t)
-      case TypeParam(name, location) => throw tessla_compiler.Errors.TranslationError(s"Unknown type param $name cannot be used to gain default value")
+      case TypeParam(name, location) => throw tessla_compiler.Errors.CommandNotSupportedError(s"Unknown type param $name cannot be used to gain default value")
       case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
       case RecordType(entries, location) => throw tessla_compiler.Errors.NotYetImplementedError("Record types not supported yet")
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $t not supported")
@@ -140,7 +140,7 @@ object IntermediateCodeUtils {
   def defaultValueForStreamType(t: Type): ImpLanVal = {
     t match {
       case InstatiatedType("Events", Seq(t), _) => defaultValueForType(t)
-      case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Stream type required but non-stream type $t passed.")
+      case _ => throw tessla_compiler.Errors.CoreASTError(s"Stream type required but non-stream type $t passed.")
     }
   }
 
