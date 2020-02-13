@@ -26,7 +26,7 @@ object IntermediateCodeUtils {
       case _ => Seq()
     }
 
-    foldAST(subStmts, f(n, exp), f, g)
+    f(foldAST(subStmts, n, f, g), exp)
   }
 
   def foldAST[A](stmts: Seq[ImpLanStmt], n: A, f: (A, ImpLanExpr) => A, g: (A, ImpLanStmt) => A): A = {
@@ -43,7 +43,7 @@ object IntermediateCodeUtils {
 
         stmt match {
           case e : ImpLanExpr => foldAST(e, currN , f, g)
-          case _ => foldAST(subStmts, g(currN, stmt), f, g)
+          case _ => g(foldAST(subStmts, currN, f, g), stmt)
         }
       }
     }
