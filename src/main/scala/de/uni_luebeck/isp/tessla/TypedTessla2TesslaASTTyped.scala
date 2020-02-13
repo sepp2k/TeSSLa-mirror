@@ -5,7 +5,7 @@ import Typed.Identifier
 import cats.data.Ior
 import de.uni_luebeck.isp.tessla.Errors.UndefinedTimeUnit
 import de.uni_luebeck.isp.tessla.Tessla.{ConstantExpression, FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
-import de.uni_luebeck.isp.tessla.TypedTessla.{BuiltInOperator, InputStream, Literal, Macro, MacroCall, MemberAccess, ObjectLiteral, Parameter, StaticIfThenElse, Variable, VariableEntry, Annotation}
+import de.uni_luebeck.isp.tessla.TypedTessla.{Annotation, BuiltInOperator, InputStream, Literal, Macro, MacroCall, MemberAccess, ObjectLiteral, Parameter, StaticIfThenElse, Variable, VariableEntry}
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
@@ -157,12 +157,21 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
       case Variable(id, loc) =>
         Typed.ExpressionRef(toIdenifier(id, lookup(env, id).loc), lookupType(id, env), loc)
       case MacroCall(macroID, macroLoc, typeArgs, args, loc) =>
+        val callable = Typed.TypeApplicationExpression(
+          Typed.ExpressionRef(toIdenifier(macroID, macroLoc), lookupType(macroID, env)),
+          typeArgs.map(x => toType(x)).toList
+        )
         Typed.ApplicationExpression(
-          Typed.TypeApplicationExpression(
-            Typed.ExpressionRef(toIdenifier(macroID, macroLoc), lookupType(macroID, env)),
-            typeArgs.map(x => toType(x)).toList
-          ),
-          args.map(x => Typed.ExpressionRef(toIdenifier(x.id, lookup(env, x.id).loc), lookupType(x.id, env), x.loc)).to(ArraySeq),
+          callable,
+          args.zip(callable.tpe.asInstanceOf[Typed.FunctionType].paramTypes).map { case (arg, (_, t)) =>
+            val tpe = lookupType(arg.id, env)
+            val ref = Typed.ExpressionRef(toIdenifier(arg.id, lookup(env, arg.id).loc), tpe, arg.loc)
+            if (t == tpe || !tpe.isInstanceOf[Typed.FunctionType]) ref else  {
+              val typeParams = determineTypeParameters(t, tpe)
+              val typeArgs = tpe.asInstanceOf[Typed.FunctionType].typeParams.map(typeParams)
+              Typed.TypeApplicationExpression(ref, typeArgs)
+            }
+          }.to(ArraySeq),
           loc
         )
       case BuiltInOperator(name, typeParameters, parameters, referenceImplementation, loc) => // TODO: suport reference implementation
@@ -244,6 +253,26 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
 
   def toIdenifier(identifier: TypedTessla.Identifier, location: Location) = Typed.Identifier(Ior.fromOptions(identifier.nameOpt, Some(identifier.uid)).get, location)
 
+  def determineTypeParameters(resolved: Typed.Type, resolvable: Typed.Type): Map[Typed.Identifier, Typed.Type] = (resolved, resolvable) match {
+    case (tpe, Typed.TypeParam(name, _)) =>
+      Map(name -> tpe)
+    case (Typed.InstatiatedType(_, typeArgs1, _), Typed.InstatiatedType(_, typeArgs2, _)) =>
+      typeArgs1.zip(typeArgs2).map { case (arg1, arg2) =>
+        determineTypeParameters(arg1, arg2)
+      }.fold(Map())(_ ++ _)
+    case (Typed.FunctionType(typeParams, paramTypes1, resultType1, _), Typed.FunctionType(_, paramTypes2, resultType2, _)) =>
+      (paramTypes1.zip(paramTypes2).map { case ((_, t1), (_, t2)) =>
+        determineTypeParameters(t1, t2)
+      }.fold(Map())(_ ++ _) ++ determineTypeParameters(resultType1, resultType2)) -- typeParams
+    case (Typed.RecordType(entries1, _), Typed.RecordType(entries2, _)) =>
+      entries1.map { case (name, tpe) =>
+        determineTypeParameters(tpe, entries2(name))
+      }.fold(Map())(_ ++ _)
+    case (t1, t2) =>
+      println("Resolvable: " + t2)
+      println("Resolved: " + t1)
+      Map()
+  }
 }
 
 class TypedTessla2TesslaASTCore(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {

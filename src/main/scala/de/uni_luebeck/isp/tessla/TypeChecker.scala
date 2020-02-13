@@ -407,7 +407,8 @@ class TypeChecker(spec: FlatTessla.Specification)
             val returnType = typeSubst(possiblyLiftedType.returnType, possiblyLiftedType.returnType,
               typeParams, typeSubstitutions)
             val newTypeArgs = if (t.isLiftable && call.args.exists(arg => typeMap(env(arg.id)).isStreamType)) {
-              t.parameterTypes :+ t.returnType
+              t.parameterTypes.map(x => typeSubst(x, x, typeParams, typeSubstitutions)) :+
+                typeSubst(t.returnType, t.returnType, typeParams, typeSubstitutions)
             } else {
               calculatedTypeArgs
             }
