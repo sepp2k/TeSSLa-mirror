@@ -1,0 +1,8 @@
+in progress: Events[Unit]
+in delays: Events[Int]
+
+def p: Events[Unit] := merge(delay(const(2, p), ()), ())
+out p
+
+def q: Events[Unit] := delay(merge(first(delays, q), delays), delays)
+out q

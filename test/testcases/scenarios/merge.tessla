@@ -1,0 +1,17 @@
+in x: Events[Int]
+in y: Events[Int]
+in z: Events[Int]
+
+def myMergeUnit[T,U](x: Events[T], y: Events[U]): Events[Unit] :=
+  constIf((), default(x==x, false) || default(y==y, false))
+
+def mergeValues[T](a: Events[T], b: Events[T]): Events[T] :=
+  if default(time(a), 0) >= default(time(b), 0)
+  then defaultFrom(a,b)
+  else defaultFrom(b,a)
+
+def a := myMergeUnit(x,y)
+def b := mergeValues(x,y)
+
+out a
+out b

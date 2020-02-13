@@ -1,0 +1,9 @@
+in x: Events[Int]
+in y: Events[Int]
+in z: Events[Int]
+
+def a := mergeUnit(x,y)
+def b := merge(x,y)
+
+out a
+out b

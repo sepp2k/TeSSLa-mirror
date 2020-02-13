@@ -1,0 +1,3 @@
+in x: Events[Int]
+def y := default(x,42)
+out y

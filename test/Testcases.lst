@@ -1,0 +1,6 @@
+CountingMap1 testcases/datastructures/counting_map.tessla testcases/datastructures/whole_lotta_xs.input testcases/datastructures/counting_map.output 0
+CountingMap2 testcases/datastructures/counting_map2.tessla testcases/datastructures/whole_lotta_xs.input testcases/datastructures/counting_map.output 0
+Remove testcases/datastructures/remove.tessla testcases/datastructures/remove.input testcases/datastructures/remove.output 0
+SeenSet testcases/datastructures/seen_set.tessla testcases/datastructures/whole_lotta_xs.input testcases/datastructures/seen_set.output 0
+SetFold testcases/datastructures/set_fold.tessla testcases/datastructures/set_fold.input testcases/datastructures/set_fold.output 0
+SetUnionIntersection testcases/datastructures/set_union_intersection.tessla testcases/datastructures/set_union_intersection.input testcases/datastructures/set_union_intersection.output 0

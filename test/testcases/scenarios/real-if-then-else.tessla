@@ -1,0 +1,13 @@
+-- This if-then-else completely ignores the events on the other input
+-- (depending on the condition). Nevertheless for every event on the
+-- condition stream an output event is generated if we know a last value
+-- of the corresponding stream. (signal semantics!)
+def ifThenElse[T](a: Events[Bool], b: Events[T], c: Events[T]) :=
+  merge(if a then b, if !a then c)
+
+in a: Events[Bool]
+in b: Events[Int]
+in c: Events[Int]
+in z: Events[Int]
+
+out ifThenElse(a,b,c) as z

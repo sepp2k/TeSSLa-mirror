@@ -1,0 +1,12 @@
+in x: Events[Int]
+
+def seen: Events[Set[Int]] = default(Set.add(last(seen, x), x), Set.empty[Int])
+
+def newOrOld =
+    if Set.contains(last(seen, seen), x)
+    then "old"
+    else "new"
+
+def size = Set.size(seen)
+
+out *

@@ -1,0 +1,4 @@
+0: Foo.double(17) = 34
+1: Foo.bar = 28
+2: Foo.bar = 48
+3: Foo.bar = 86

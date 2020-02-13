@@ -1,0 +1,13 @@
+def curry[T,U,V](f: (T,U)=>V): (T)=>(U)=>V := {
+    def g(x: T): (U)=>V := {
+        def h(y: U): V := f(x, y)
+        h
+    }
+    g
+}
+
+def add(x: Int, y: Int) := x+y
+
+def cadd := curry(add)
+
+out cadd(23)(42)
