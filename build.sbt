@@ -26,3 +26,8 @@ scalacOptions += "-unchecked"
 scalacOptions += "-deprecation"
 
 cancelable in Global := true
+
+assemblyMergeStrategy in assembly := {
+ case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+ case x => MergeStrategy.first
+}
