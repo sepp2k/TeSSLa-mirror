@@ -80,7 +80,7 @@ object NonStreamCodeGenerator {
         case RecordAccesorExpression(name, target, location) => RecordAccesorExpression(name, reInlineTempVars(target, defContext), location)
         case _ => e
       }
-      case ExpressionRef(id, _, _) if id.idOrName.left.isEmpty && defContext.contains(id) => defContext(id)
+      case ExpressionRef(id, _, _) if id.idOrName.left.isEmpty && defContext.contains(id) => reInlineTempVars(defContext(id), defContext)
       case _ => e
     }
   }
