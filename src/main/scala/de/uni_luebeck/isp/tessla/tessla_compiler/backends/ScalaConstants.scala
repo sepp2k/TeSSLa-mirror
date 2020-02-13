@@ -64,32 +64,32 @@ object ScalaConstants {
       case "__negate__" |
            "__fnegate__"  => s"-${args(0)}"
       case "__bitflip__" => s"~${args(0)}"
-      case "__and__" => args.mkString(" && ")
-      case "__or__" => args.mkString(" || ")
-      case "__eq__" => s"${args(0)} == ${args(1)}"
-      case "__neq__" => s"${args(0)} != ${args(1)}"
+      case "__and__" => "(" + args.mkString(" && ") + ")"
+      case "__or__" => "(" +  args.mkString(" || ") + ")"
+      case "__eq__" => s"(${args(0)} == ${args(1)})"
+      case "__neq__" => s"(${args(0)} != ${args(1)})"
       case "__gt__" |
-           "__fgt__" => s"${args(0)} > ${args(1)}"
+           "__fgt__" => s"(${args(0)} > ${args(1)})"
       case "__lt__" |
-           "__flt__" => s"${args(0)} < ${args(1)}"
+           "__flt__" => s"(${args(0)} < ${args(1)})"
       case "__geq__" |
-           "__fgeq__" => s"${args(0)} >= ${args(1)}"
+           "__fgeq__" => s"(${args(0)} >= ${args(1)})"
       case "__leq__" |
-           "__fleq__"=> s"${args(0)} <= ${args(1)}"
+           "__fleq__"=> s"(${args(0)} <= ${args(1)})"
       case "__add__" |
-           "__fadd__" => s"${args(0)} + ${args(1)}"
+           "__fadd__" => s"(${args(0)} + ${args(1)})"
       case "__sub__" |
-           "__fsub__" => s"${args(0)} - ${args(1)}"
+           "__fsub__" => s"(${args(0)} - ${args(1)})"
       case "__mul__" |
-           "__fmul__" => s"${args(0)} * ${args(1)}"
+           "__fmul__" => s"(${args(0)} * ${args(1)})"
       case "__div__" |
-           "__fdiv__" => s"${args(0)} / ${args(1)}"
-      case "__mod__" => s"${args(0)} % ${args(1)}"
-      case "__bitand__" => args.mkString(" & ")
-      case "__bitor__" => args.mkString(" | ")
-      case "__bitxor__" => args.mkString(" ^ ")
-      case "__leftshift__" => s"${args(0)} << ${args(1)}"
-      case "__rightshift__" => s"${args(0)} >> ${args(1)}"
+           "__fdiv__" => s"(${args(0)} / ${args(1)})"
+      case "__mod__" => s"(${args(0)} % ${args(1)})"
+      case "__bitand__" => "(" + args.mkString(" & ") + ")"
+      case "__bitor__" => "(" + args.mkString(" | ") + ")"
+      case "__bitxor__" => "(" + args.mkString(" ^ ") + ")"
+      case "__leftshift__" => "(" + s"${args(0)} << ${args(1)}" + ")"
+      case "__rightshift__" => "(" + s"${args(0)} >> ${args(1)}" + ")"
 
       case "__Some__" => s"Option(${args(0)})"
       case "__getSome__" => s"${args(0)}.get"
@@ -107,7 +107,7 @@ object ScalaConstants {
       case "__Map_keys__" => s"${args(0)}.keys"
 
       case "__Set_empty__" => "Set()"
-      case "__Set_add__" => s"${args(0)} :+ ${args(1)}"
+      case "__Set_add__" => s"${args(0)} + ${args(1)}"
       case "__Set_contains__" => s"${args(0)}(${args(1)})"
       case "__Set_remove__" => s"${args(0)} - ${args(1)}"
       case "__Set_size__" => s"${args(0)}.size"
@@ -137,7 +137,7 @@ object ScalaConstants {
       case BoolType => s"java.lang.Boolean.parseBoolean($exp)"
       case UnitType => "true"
       case StringType => s"$exp"
-      case t => throw Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Java translation")
+      case t => throw Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Scala translation")
     }
   }
 
