@@ -314,7 +314,7 @@ object StreamCodeGenerator {
 
   def produceOutputCode(id: Identifier, t: Type, nameOpt: Option[String], currSrc: SourceListing) : SourceListing = {
     val s = s"var_${id.fullName}"
-    val name = nameOpt.getOrElse(id.idOrName.left.get)
+    val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
 
     val newStmt = (currSrc.stepSource.
       If(Seq(Seq(s"${s}_changed"))).
