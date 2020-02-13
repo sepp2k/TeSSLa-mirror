@@ -69,17 +69,9 @@ object NonStreamCodeGenerator {
   }
 
 
-  //TODO: Redundancy --> Daniel
   def reInlineTempVars(e: ExpressionArg, defContext: Map[Identifier, DefinitionExpression]) : ExpressionArg = {
     e match {
-      case e: Expression => e match {
-        case FunctionExpression(typeParams, params, body, result, location) => FunctionExpression(typeParams, params, reInlineTempVarsBody(body, defContext), reInlineTempVars(result, defContext), location)
-        case ApplicationExpression(applicable, args, location) => ApplicationExpression(reInlineTempVars(applicable, defContext), args.map{a => reInlineTempVars(a, defContext)}, location)
-        case TypeApplicationExpression(applicable, typeArgs, location) => TypeApplicationExpression(reInlineTempVars(applicable, defContext), typeArgs, location)
-        case RecordConstructorExpression(entries, location) => RecordConstructorExpression(entries.map{case (n,e) => (n, reInlineTempVars(e, defContext))}, location)
-        case RecordAccesorExpression(name, target, location) => RecordAccesorExpression(name, reInlineTempVars(target, defContext), location)
-        case _ => e
-      }
+      case e: Expression => reInlineTempVars(e, defContext)
       case ExpressionRef(id, _, _) if id.idOrName.left.isEmpty && defContext.contains(id) => reInlineTempVars(defContext(id), defContext)
       case _ => e
     }
