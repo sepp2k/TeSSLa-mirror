@@ -94,7 +94,7 @@ object Main extends SexyOpt {
 
         val source = unwrapResult(backend.translate(optIntermediateCode))
 
-        if (outputPath.get != "") {
+        if (outputPath.isDefined) {
           val pw = new PrintWriter(new File(outputPath.get))
           pw.write(source)
           pw.close
