@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode, IntermediateCodeUtils}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 
 /**
@@ -30,6 +30,7 @@ object ScalaConstants {
         val ret = ((if (argsTypes.size == 0) "" else ", ") + typeTranslation(retType))
         s"scala.Function${argsTypes.size}[${argsTypes.map(typeTranslation).mkString(", ")}${ret}]"
       }
+      case StructType(types, _) => s"(${types.map(typeTranslation).mkString(", ")})"
     }
   }
 
@@ -50,6 +51,7 @@ object ScalaConstants {
       case EmptyImmutableMap(_, _) => "Map()"
       case EmptyMutableList(_) => "scala.collection.mutable.ArrayBuffer()"
       case EmptyImmutableList(_) => "List()"
+      case StructValue(vals) => s"(${vals.toSeq.sortWith{case ((n1,_),(n2,_)) => n1 < n2}.map{case (_, v) => valueTranslation(v)}.mkString(", ")})"
     }
   }
 
@@ -125,6 +127,16 @@ object ScalaConstants {
       case "__List_get__" => s"${args(0)}(${args(1)})"
       case "__List_set__" => s"${args(0)}.updated(${args(1)}, ${args(2)})"
       case "__List_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1), true)}](${args(1)})(${args(2)})"
+
+      case "__getStruct__" => {
+        typeHint match {
+          case FunctionType(Seq(StructType(_, fieldNames), IntermediateCode.StringType), _) => {
+            s"${args(0)}._${fieldNames.indexOf(args(1).replace("\"", "")) + 1}" //TODO: Somehow unclean solution
+          }
+          case _ => throw Errors.DSLError(s"__getStruct__ call has wrong type hint $typeHint")
+        }
+      }
+      case "__mkStruct__" => s"(${args.mkString(", ")})"
 
       case _ => throw Errors.CommandNotSupportedError(s"Unsupported built-in function for Java backend: $name")
     }

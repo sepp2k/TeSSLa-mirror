@@ -18,6 +18,10 @@ object IntermediateCodeTypeInference {
       case UnitValue => UnitType
       case StringValue(_) => StringType
       case GeneralValue => GeneralType
+      case StructValue(vals) => {
+        val orderedVals = vals.toSeq.sortWith{case ((n1, _), (n2, _)) => n1 < n2}
+        StructType(orderedVals.map{case (_, v) => typeInference(v, varTypes)}, orderedVals.map(_._1))
+      }
       case EmptyFunction(typeHint) => typeHint
       case None(typeHint) => OptionType(typeHint)
       case Some(content) => OptionType(typeInference(content, varTypes))

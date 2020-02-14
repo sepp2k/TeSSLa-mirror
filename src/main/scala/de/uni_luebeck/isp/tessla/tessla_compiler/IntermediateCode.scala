@@ -63,6 +63,12 @@ object IntermediateCode {
     override def toString = "String"
   }
 
+
+  final case class StructType(subTypes : Seq[ImpLanType], fieldNames: Seq[String]) extends ImpLanType {
+    override def toString = s"(${fieldNames.zip(subTypes).map{case (n,t) => s"$n : $t"}.mkString(", ")})"
+  }
+
+
   final case class OptionType(valType: ImpLanType) extends GenericImpLanType(Seq(valType)) {
     override def toString = s"Option<$valType>"
   }
@@ -115,6 +121,10 @@ object IntermediateCode {
 
   final case object GeneralValue extends ImpLanVal {
     override def toString = "GeneralValue"
+  }
+
+  final case class StructValue(values: Map[String, ImpLanVal]) extends  ImpLanVal {
+    override def toString = s"{${values.map{case (k,v) => s"$k: $v)"}.mkString(", ")}}"
   }
 
   final case class StringValue(value: String) extends ImpLanVal {

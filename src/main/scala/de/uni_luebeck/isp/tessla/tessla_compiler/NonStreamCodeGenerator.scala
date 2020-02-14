@@ -62,8 +62,8 @@ object NonStreamCodeGenerator {
       case FloatLiteralExpression(value, _) => DoubleValue(value)
       case ExpressionRef(id, _, _) => s"var_${id.fullName}"
       case ExternExpression(typeParams, params, resultType, name, location) => ???
-      case RecordConstructorExpression(entries, location) => ???
-      case RecordAccesorExpression(name, target, location) => ???
+      case RecordConstructorExpression(entries, _) => MkStruct(entries.toSeq.map{case (n, ea) => (n.name, translateExpressionArg(ea, defContext))}, e.tpe)
+      case RecordAccesorExpression(name, target, _) => GetStruct(translateExpressionArg(target), name.name, target.tpe)
       case _ => ???
     }
   }

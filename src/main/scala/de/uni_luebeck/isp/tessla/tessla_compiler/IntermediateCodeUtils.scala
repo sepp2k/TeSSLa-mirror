@@ -5,6 +5,7 @@ import scala.language.postfixOps
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
 import de.uni_luebeck.isp.tessla._
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.tessla_compiler.Errors.CoreASTError
 
 /**
   * Class containing a DSL for easy creation of ImpLanStmt-Blocks
@@ -102,6 +103,7 @@ object IntermediateCodeUtils {
     t match {
       case InstatiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Unclean solution but not easy to surpass because of implicit
       case RecordType(entries, _) if entries.isEmpty => UnitType
+      case RecordType(entries, _) if entries.size == 1 => typeConversion(entries.toSeq.head._2)
       case InstatiatedType("Bool", Seq(), _) => BoolType
       case InstatiatedType("Int", Seq(), _) => LongType
       case InstatiatedType("Float", Seq(), _) => DoubleType
@@ -111,9 +113,14 @@ object IntermediateCodeUtils {
       case InstatiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
       case InstatiatedType("List", Seq(t), _) => ImmutableListType(t)
       case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) => IntermediateCode.FunctionType(paramTypes.map{case (_,t) => typeConversion(t)}, typeConversion(resultType)) //TODO: Type params
+      case RecordType(entries, _) => {
+        val sortedEntries = entries.toSeq.sortWith{case ((n1, _), (n2, _)) => n1.name < n2.name}
+        val names = sortedEntries.map(_._1.name)
+        val types = sortedEntries.map{case (n,t) => typeConversion(t)}
+        StructType(types, names)
+      }
       case TypeParam(name, location) => GeneralType//TODO: Resolve type params if possible
       case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $i not supported")
-      case RecordType(entries, location) => throw tessla_compiler.Errors.NotYetImplementedError("Record types not supported yet")
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
   }
@@ -121,6 +128,7 @@ object IntermediateCodeUtils {
   def defaultValueForType(t: Type): ImpLanVal = {
     t match {
       case RecordType(entries, _) if entries.isEmpty => UnitValue
+      case RecordType(entries, _) if entries.size == 1 => defaultValueForType(entries.toSeq.head._2)
       case InstatiatedType("Bool", Seq(), _) => BoolValue(false)
       case InstatiatedType("Int", Seq(), _) => LongValue(0)
       case InstatiatedType("Float", Seq(), _) => DoubleValue(0)
@@ -132,7 +140,7 @@ object IntermediateCodeUtils {
       case TesslaAST.Core.FunctionType(_, _, _, _) => EmptyFunction(t)
       case TypeParam(name, location) => throw tessla_compiler.Errors.CommandNotSupportedError(s"Unknown type param $name cannot be used to gain default value")
       case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
-      case RecordType(entries, location) => throw tessla_compiler.Errors.NotYetImplementedError("Record types not supported yet")
+      case RecordType(entries, _) => StructValue(entries.map{case (n,t) => (n.name, defaultValueForType(t))})
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $t not supported")
     }
   }
@@ -177,6 +185,24 @@ object IntermediateCodeUtils {
   implicit def  Negation(a: ImpLanExpr) : ImpLanExpr =
     FunctionCall("__not__", Seq(a), IntermediateCode.FunctionType(Seq(BoolType), BoolType))
 
+  implicit def MkStruct(content: Seq[(String, ImpLanExpr)], targetType: ImpLanType) : ImpLanExpr = {
+    targetType match {
+      case castedTargetType: StructType => {
+        val sortedContent = content.sortBy { case (n1, _) => castedTargetType.fieldNames.indexOf(n1) }
+        FunctionCall("__mkStruct__", sortedContent.map(_._2), IntermediateCode.FunctionType(castedTargetType.subTypes, targetType))
+      }
+      case _ => content.head._2
+    }
+  }
+
+  implicit def GetStruct(struct: ImpLanExpr, fieldName: String, structType: ImpLanType) : ImpLanExpr = {
+    structType match {
+      case castedStructType: StructType => {
+        FunctionCall("__getStruct__", Seq(struct, StringValue(fieldName)), IntermediateCode.FunctionType(Seq(structType, StringType), castedStructType.subTypes(castedStructType.fieldNames.indexOf(fieldName))))
+      }
+      case _ => struct
+    }
+  }
 
 }
 
