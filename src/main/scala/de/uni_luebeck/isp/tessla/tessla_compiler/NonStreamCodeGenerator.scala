@@ -14,6 +14,7 @@ object NonStreamCodeGenerator {
 
   def translateFunctionCall(e: ExpressionArg, args: Seq[ImpLanExpr], typeArgs: Seq[Type], defContext: Map[Identifier, DefinitionExpression] = Map()) : ImpLanExpr = {
     e match {
+      case TypeApplicationExpression(app, types, _) => translateFunctionCall(app, args, typeArgs ++ types, defContext)
       case ExternExpression(_, _, _, "true", _) => BoolValue(true)
       case ExternExpression(_, _, _, "false", _) => BoolValue(false)
       case ExternExpression(tps, _, InstatiatedType("Option", Seq(t), _), "None", _) => None(t.resolve(tps.zip(typeArgs).toMap))
@@ -41,7 +42,7 @@ object NonStreamCodeGenerator {
     val newDefContext = defContext ++ body
 
     val translatedBody = DefinitionOrdering.order(body).foldLeft[Seq[ImpLanStmt]](Seq()){
-      case (curr, (id, exp)) => curr.Assignment(s"var_${id.fullName}", translateExpressionArg(exp, newDefContext), scala.None, exp.tpe)
+      case (curr, (id, exp)) => curr :+ translateDefinition(id, exp, newDefContext)
     }
     translatedBody :+ ReturnStatement(translateExpressionArg(ret, newDefContext))
   }

@@ -208,7 +208,7 @@ object StreamCodeGenerator {
         Assignment(s"${o}_errval", inputError, LongValue(0), LongType).
         If(Seq(Seq(Equal(s"${o}_errval", LongValue(0))))).
           Try().
-            Assignment(s"${o}_fval", LambdaApplication(NonStreamCodeGenerator.translateExpressionArg(function), params), scala.None, OptionType(ot)).
+            Assignment(s"${o}_fval", NonStreamCodeGenerator.translateFunctionCall(function, params, Seq()), scala.None, OptionType(ot)).
             If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
               Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
               Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
@@ -243,7 +243,7 @@ object StreamCodeGenerator {
 
     val guard1 : Seq[Seq[ImpLanExpr]] = Seq(args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_init")})
     val guard2 : Seq[Seq[ImpLanExpr]] = args.map{arg => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_changed"))}
-    val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}
+    val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}//TODO: Sufficient?
 
     val fcall = NonStreamCodeGenerator.translateFunctionCall(function, fargs, Seq())
 
