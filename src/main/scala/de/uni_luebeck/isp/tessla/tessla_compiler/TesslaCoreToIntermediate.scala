@@ -6,6 +6,8 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.TesslaCoreWithMutabilityInfo
 
+import scala.collection.immutable.ArraySeq
+
 /**
   * Class implementing de.uni_luebeck.isp.tessla.TranslationPhase for the translation from TeSSLa Core to
   * abstract imperative code
@@ -48,7 +50,14 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     }
 
     out.foreach {o =>
-      currSource = StreamCodeGenerator.produceOutputCode(o._1, getInStreamDefStreamType(o._1), o._1.idOrName.left, currSource)
+      val name = o._2.get("name") match {
+        case Some(s) => s(0) match {
+          case StringLiteralExpression(n, _) => Some(n)
+          case _ => None
+        }
+        case None => None
+      }
+      currSource = StreamCodeGenerator.produceOutputCode(o._1, getInStreamDefStreamType(o._1), name, currSource)
     }
 
     in.foreach {i =>
