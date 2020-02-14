@@ -52,7 +52,8 @@ object NonStreamCodeGenerator {
       case f: FunctionExpression => translateFunction(f, defContext)
       case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) => {
         val inlinedArgs  = e match {
-          case ExternExpression(_, _, _, "ite", _) => args.map(reInlineTempVars(_, defContext))
+          case ExternExpression(_, _, _, "ite", _) |
+               ExternExpression(_, _, _, "staticite", _) => args.map(reInlineTempVars(_, defContext))
           case _ => args
         }
         translateFunctionCall(e, inlinedArgs.map(translateExpressionArg(_, defContext)), typeArgs, defContext)

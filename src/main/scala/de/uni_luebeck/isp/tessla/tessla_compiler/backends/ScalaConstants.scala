@@ -61,7 +61,8 @@ object ScalaConstants {
       case "__[TC]inputParse__" => getStringParseExpression(typeHint.retType, args(0))
       case "__[TC]getErrorCode__" => s"getErrorCode(${args(0)})"
 
-      case "__ite__" => s"if (${args(0)}) ${args(1)} else ${args(2)}"
+      case "__ite__" |
+           "__staticite__" => s"if (${args(0)}) ${args(1)} else ${args(2)}"
       case "__not__" => s"!(${args(0)})"
       case "__negate__" |
            "__fnegate__"  => s"-${args(0)}"
