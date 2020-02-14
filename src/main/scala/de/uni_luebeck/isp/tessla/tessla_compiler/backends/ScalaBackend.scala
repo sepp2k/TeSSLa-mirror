@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeTypeInference
+import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference, IntermediateCodeUtils}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 
 /**
@@ -19,9 +19,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
     guard.map { c => ("(" + c.map(translateExpression).mkString(" && ") + ")") }.mkString(" || ")
   }
 
-  override def generateCode(stmts: Seq[ImpLanStmt]): String = generateCode(stmts, false)
-
-  def generateCode(stmts: Seq[ImpLanStmt], inLambda: Boolean = false): String = {
+  override def generateCode(stmts: Seq[ImpLanStmt]): String = {
     stmts.map {
       case expr: ImpLanExpr => translateExpression(expr)
       case If(guard, stmts, elseStmts) => {
@@ -33,15 +31,10 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
         s"if ($guardFormatted) {\n$ifPart\n}$optElse"
       }
       case TryCatchBlock(tr, cat) =>
-        s"try {\n${generateCode(tr, inLambda)}\n} catch {\ncase var_err : Throwable => {\n${generateCode(cat, inLambda)}\n}\n}"
+        s"try {\n${generateCode(tr)}\n} catch {\ncase var_err : Throwable => {\n${generateCode(cat)}\n}\n}"
 
-      case Assignment(lhs, rexpr, _, t) if inLambda => s"var $lhs : ${ScalaConstants.typeTranslation(t)} = " +
-        s"${translateExpression(rexpr)}"
       case Assignment(lhs, rexpr, _, t) => s"$lhs = " +
         s"${translateExpression(rexpr)}"
-
-      case FinalAssignment(lhs, rhs, t) if inLambda => s"var $lhs : ${ScalaConstants.typeTranslation(t)} = " +
-        s"${translateExpression(rhs)}"
       case FinalAssignment(_, _, _) => ""
 
       case ReturnStatement(expr) => translateExpression(expr)
@@ -68,7 +61,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       }
       case LambdaExpression(argNames, argsTypes, _, body) => {
         val args = argsTypes.zip(argNames).map { case (t, n) => s"$n : ${ScalaConstants.typeTranslation(t)}" }.mkString(", ")
-        s"($args) => {\n${generateCode(body, true)}\n}"
+        s"($args) => {\n${generateVariableDeclarations(IntermediateCodeUtils.getVariableMap(body)).mkString("\n")}\n${generateCode(body)}\n}"
       }
       case Variable(name) => name
       case CastingExpression(e, t) => s"(${translateExpression(e)}).asInstanceOf[${ScalaConstants.typeTranslation(t)}]"
