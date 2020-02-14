@@ -193,7 +193,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
         s"def ${x._1}$defType = ${x._2.print(options, mayNeedBraces = false)}"
       }.mkString("", "\n", "\n") + result.print(options, mayNeedBraces = false))
       val paramsString = params.map { x =>
-        x._1.print(options, mayNeedBraces = false) + (if (options.paramTypes) " " + x._2.toString + " " + x._3 else "")
+        x._1.print(options, mayNeedBraces = false) + (if (options.paramTypes) ": " + x._2.toString + " " + x._3 else "")
       }.mkString(", ")
       val typeParamsString = if (typeParams.isEmpty) "" else s"[${typeParams.mkString(", ")}]"
       withTypeAndLocation(b => withBraces(s"$typeParamsString($paramsString) => {\n$bodyString\n}", b), options, mayNeedBraces)
