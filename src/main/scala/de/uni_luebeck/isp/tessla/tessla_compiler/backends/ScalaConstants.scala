@@ -36,8 +36,8 @@ object ScalaConstants {
 
   def valueTranslation(v: ImpLanVal) : String = {
     v match {
-      case LongValue(value) => value.toString()
-      case DoubleValue(value) => value.toString()
+      case LongValue(value) => s"${value}L"
+      case DoubleValue(value) => s"${value}d"
       case BoolValue(value) => value.toString()
       case UnitValue => "true"
       case StringValue(value) => s""""${value.replaceAllLiterally("\"", "\\\"")}"""" //TODO: Find better solution, re-escaping all special chars
@@ -110,7 +110,7 @@ object ScalaConstants {
       case "__Map_keys__" => s"${args(0)}.keys"
 
       case "__Set_empty__" => "Set()"
-      case "__Set_add__" => s"${args(0)} + ${args(1)}"
+      case "__Set_add__" => s"${args(0)} + (${args(1)})"
       case "__Set_contains__" => s"${args(0)}(${args(1)})"
       case "__Set_remove__" => s"${args(0)} - ${args(1)}"
       case "__Set_size__" => s"${args(0)}.size"
