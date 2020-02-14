@@ -441,7 +441,7 @@ class TypeChecker(spec: FlatTessla.Specification)
             macroDefs.addVariable(TypedTessla.VariableEntry(resultId, resultExp, memberType, Seq(), acc.loc))
             val mac = TypedTessla.Macro(Seq(), Seq(param), macroDefs, memberType, acc.loc,
               TypedTessla.IdLoc(resultId, acc.loc), acc.loc, isLiftable = false)
-            defs.addVariable(TypedTessla.VariableEntry(macroId, mac, memberType, Seq(), acc.loc))
+            defs.addVariable(TypedTessla.VariableEntry(macroId, mac, TypedTessla.FunctionType(Seq(), Seq(ot), memberType, true), Seq(), acc.loc))
             val arg = TypedTessla.PositionalArgument(receiver, acc.receiver.loc)
             val macroArg = TypedTessla.PositionalArgument(macroId, acc.loc)
             val liftedMacroCall = TypedTessla.MacroCall(slift1Id, acc.loc, Seq(ot, memberType), Seq(arg, macroArg), acc.loc)

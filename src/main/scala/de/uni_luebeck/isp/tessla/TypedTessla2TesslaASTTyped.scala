@@ -166,7 +166,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
           args.zip(callable.tpe.asInstanceOf[Typed.FunctionType].paramTypes).map { case (arg, (_, t)) =>
             val tpe = lookupType(arg.id, env)
             val ref = Typed.ExpressionRef(toIdenifier(arg.id, lookup(env, arg.id).loc), tpe, arg.loc)
-            if (t == tpe || !tpe.isInstanceOf[Typed.FunctionType]) ref else  {
+            if (t == tpe) ref else  {
               val typeParams = determineTypeParameters(t, tpe)
               val typeArgs = tpe.asInstanceOf[Typed.FunctionType].typeParams.map(typeParams)
               Typed.TypeApplicationExpression(ref, typeArgs)
