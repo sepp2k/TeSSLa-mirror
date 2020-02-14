@@ -165,7 +165,7 @@ object IntermediateCode {
   }
 
   final case class TryCatchBlock(tr: Seq[ImpLanStmt], cat: Seq[ImpLanStmt]) extends ImpLanStmt {
-    override def toString = s"Try: \n$tr\nCATCH var_err: \n$cat\nEndTry"
+    override def toString = s"Try: \n${tr.mkString("\n")}\nCATCH var_err: \n${cat.mkString("\n")}\nEndTry"
   }
 
   final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: Option[ImpLanExpr], typ: ImpLanType)
