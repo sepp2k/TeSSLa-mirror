@@ -8,26 +8,23 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
   */
 object ScalaConstants {
 
-  def typeTranslation(t: ImpLanType) :String = typeTranslation(t, false)
-
-  def typeTranslation(t: ImpLanType, asTypePar: Boolean) : String = {
+  def typeTranslation(t: ImpLanType) : String = {
     t match {
       case LongType => "Long"
       case DoubleType => "Double"
       case BoolType => "Boolean"
       case UnitType => "Boolean"
       case StringType => "String"
-      case GeneralType if asTypePar => "_"
-      case GeneralType => "Object"
-      case OptionType(valType) => s"Option[${typeTranslation(valType, true)}]"
-      case MutableSetType(valType) => s"scala.collection.mutable.HashSet[${typeTranslation(valType, true)}]"
-      case ImmutableSetType(valType) => s"Set[${typeTranslation(valType, true)}]"
-      case MutableMapType(keyType, valType) => s"scala.collection.mutable.HashMap[${typeTranslation(keyType, true)}, ${typeTranslation(valType, true)}]"
-      case ImmutableMapType(keyType, valType) => s"Map[${typeTranslation(keyType, true)}, ${typeTranslation(valType, true)}]"
-      case MutableListType(valType) => s"scala.collection.mutable.ArrayBuffer[${typeTranslation(valType, true)}]"
-      case ImmutableListType(valType) => s"List[${typeTranslation(valType, true)}]"
+      case GeneralType => "Any"
+      case OptionType(valType) => s"Option[${typeTranslation(valType)}]"
+      case MutableSetType(valType) => s"scala.collection.mutable.HashSet[${typeTranslation(valType)}]"
+      case ImmutableSetType(valType) => s"Set[${typeTranslation(valType)}]"
+      case MutableMapType(keyType, valType) => s"scala.collection.mutable.HashMap[${typeTranslation(keyType)}, ${typeTranslation(valType)}]"
+      case ImmutableMapType(keyType, valType) => s"Map[${typeTranslation(keyType)}, ${typeTranslation(valType)}]"
+      case MutableListType(valType) => s"scala.collection.mutable.ArrayBuffer[${typeTranslation(valType)}]"
+      case ImmutableListType(valType) => s"List[${typeTranslation(valType)}]"
       case FunctionType(argsTypes, retType) => {
-        val ret = ((if (argsTypes.size == 0) "" else ", ") + typeTranslation(retType))
+        val ret = ((if (argsTypes.isEmpty) "" else ", ") + typeTranslation(retType))
         s"scala.Function${argsTypes.size}[${argsTypes.map(typeTranslation).mkString(", ")}${ret}]"
       }
       case StructType(types, _) => s"(${types.map(typeTranslation).mkString(", ")})"
@@ -106,7 +103,7 @@ object ScalaConstants {
       case "__Map_get__" => s"${args(0)}(${args(1)})"
       case "__Map_remove__" => s"${args(0)} - ${args(1)}"
       case "__Map_size__" => s"${args(0)}.size"
-      case "__Map_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1), true)}](${args(1)})(${args(2)})"
+      case "__Map_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
       case "__Map_keys__" => s"${args(0)}.keys"
 
       case "__Set_empty__" => "Set()"
@@ -117,7 +114,7 @@ object ScalaConstants {
       case "__Set_union__" => s"${args(0)}.union(${args(1)})"
       case "__Set_intersection__" => s"${args(0)}.intersect(${args(1)})"
       case "__Set_minus__" => s"${args(0)} -- ${args(1)}"
-      case "__Set_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1), true)}](${args(1)})(${args(2)})"
+      case "__Set_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
 
       case "__List_empty__" => s"List()"
       case "__List_size__" => s"${args(0)}.size"
@@ -127,7 +124,7 @@ object ScalaConstants {
       case "__List_init__" => ???
       case "__List_get__" => s"${args(0)}(${args(1)})"
       case "__List_set__" => s"${args(0)}.updated(${args(1)}, ${args(2)})"
-      case "__List_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1), true)}](${args(1)})(${args(2)})"
+      case "__List_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
 
       case "__getStruct__" => {
         typeHint match {
