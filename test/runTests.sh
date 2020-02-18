@@ -23,15 +23,17 @@ do
     scala Main < ../$trace &> out.trace
     retVal=$?
     cat out.trace | ../sort.py | sed -E 's/  */ /' > out.trace.sorted
+    echo >> out.trace.sorted
     
     cp ../$expected expected.trace
     cat expected.trace | ../sort.py | sed -E 's/  */ /' > expected.trace.sorted
+    echo >> expected.trace.sorted
 
     if [[ $expectedRet -ne $retVal ]]; then
         echo $retVal > ../errors/${tcName}.unexprectedErrCode
     fi
     
-    (diff out.trace.sorted expected.trace.sorted > /dev/null)
+    (diff --ignore-blank-lines out.trace.sorted expected.trace.sorted > /dev/null)
     cmpResult=$?
     
     if [[ $cmpResult -ne 0 ]]; then
