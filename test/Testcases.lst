@@ -1,3 +1,14 @@
+CurriedFunctionApp testcases/lift/curried-function-application.tessla testcases/lift/curried-function-application.input testcases/lift/curried-function-application.output 0
+Filter testcases/lift/filter.tessla testcases/lift/filter.input testcases/lift/filter.output 0
+HofInList testcases/lift/hof-in-lift.tessla testcases/lift/hof-in-lift.input testcases/lift/hof-in-lift.output 0
+Recursive testcases/functions/recursive.tessla testcases/functions/recursive.input testcases/functions/recursive.output 0
+FunctionToBuiltin testcases/functions/pass-function-to-builtin.tessla testcases/functions/pass-function-to-builtin.input testcases/functions/pass-function-to-builtin.output 0
+SelfToBuiltin testcases/functions/pass-self-to-builtin.tessla testcases/functions/pass-self-to-builtin.input testcases/functions/pass-self-to-builtin.output 0
+ExpandRecursiveFunction testcases/functions/expand-recursive-function.tessla testcases/functions/expand-recursive-function.input testcases/functions/expand-recursive-function.output 0
+IfThenElse testcases/functions/if-then-else.tessla testcases/functions/if-then-else.input testcases/functions/if-then-else.output 0
+MemberAccess testcases/functions/member-access.tessla testcases/functions/member-access.input testcases/functions/member-access.output 0
+Nested testcases/functions/nested.tessla testcases/functions/nested.input testcases/functions/nested.output 0
+Objects testcases/functions/objects.tessla testcases/functions/objects.input testcases/functions/objects.output 0
 CountingMap1 testcases/datastructures/counting_map.tessla testcases/datastructures/whole_lotta_xs.input testcases/datastructures/counting_map.output 0
 CountingMap2 testcases/datastructures/counting_map2.tessla testcases/datastructures/whole_lotta_xs.input testcases/datastructures/counting_map.output 0
 Remove testcases/datastructures/remove.tessla testcases/datastructures/remove.input testcases/datastructures/remove.output 0
