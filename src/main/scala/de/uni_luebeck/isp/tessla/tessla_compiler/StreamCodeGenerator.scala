@@ -187,6 +187,29 @@ object StreamCodeGenerator {
     SourceListing(newStmt, newTsGen, currSrc.inputProcessing, currSrc.staticSource)
   }
 
+  @scala.annotation.tailrec
+  def getErrorExpressionsforLiftSLift(args: Seq[ExpressionArg], f: ExpressionArg): (ImpLanExpr, ImpLanExpr) = {
+    f match {
+      case TypeApplicationExpression(exp, _, _) => getErrorExpressionsforLiftSLift(args, exp)
+      case _ => {
+        val inputError = f match {
+          case ExternExpression(_, _, _, "ite", _) |
+               ExternExpression(_, _, _, "staticite", _) => Variable(streamNameAndTypeFromExpressionArg(args.head)._1 + "_error")
+          case _ => BitwiseOr(args.map(streamNameAndTypeFromExpressionArg(_)._1 + "_error"))
+        }
+        val outputError = f match {
+          case ExternExpression(_, _, _, "ite", _) |
+               ExternExpression(_, _, _, "staticite", _) => TernaryExpression(Seq(Seq(streamNameAndTypeFromExpressionArg(args.head)._1 + "_value")),
+            streamNameAndTypeFromExpressionArg(args(1))._1 + "_error",
+            streamNameAndTypeFromExpressionArg(args(2))._1 + "_error")
+          case _ => LongValue(0)
+        }
+
+        (inputError, outputError)
+      }
+    }
+  }
+
   def produceLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
@@ -197,8 +220,8 @@ object StreamCodeGenerator {
                                 }
                          }
 
-    //TODO: Special case: if
-    val inputError = BitwiseOr(args.map(streamNameAndTypeFromExpressionArg(_)._1 + "_error"))
+    val (inputError, outputError) = getErrorExpressionsforLiftSLift(args, function)
+
     val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))}
 
     val newStmt = (currSrc.stepSource.
@@ -216,7 +239,7 @@ object StreamCodeGenerator {
               Assignment(s"${o}_value", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForStreamType(ot), ot).
               Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
               Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-              Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType).
+              Assignment(s"${o}_error", outputError, LongValue(0), LongType).
               Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
             EndIf().
           Catch().
@@ -247,8 +270,7 @@ object StreamCodeGenerator {
 
     val fcall = NonStreamCodeGenerator.translateFunctionCall(function, fargs, Seq())
 
-    //TODO: Special case: if
-    val inputError = BitwiseOr(args.map(streamNameAndTypeFromExpressionArg(_)._1 + "_error"))
+    val (inputError, outputError) = getErrorExpressionsforLiftSLift(args, function)
 
     val newStmt = (currSrc.stepSource.
 
@@ -262,12 +284,11 @@ object StreamCodeGenerator {
           If(Seq(Seq(Equal(s"${o}_error", LongValue(0))))).
             Try().
                 Assignment(s"${o}_value", fcall, defaultValueForStreamType(ot), ot).
-                Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType).
+                Assignment(s"${o}_error", outputError, LongValue(0), LongType).
               Catch().
                 Assignment(s"${o}_error", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
               EndTry().
           EndIf().
-
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
