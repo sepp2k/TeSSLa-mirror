@@ -31,7 +31,7 @@ do
         echo $retVal > ../errors/${tcName}.unexprectedErrCode
     fi
     
-    cmp --silent out.trace.sorted expected.trace.sorted
+    (diff out.trace.sorted expected.trace.sorted > /dev/null)
     cmpResult=$?
     
     if [[ $cmpResult -ne 0 ]]; then
