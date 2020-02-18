@@ -119,7 +119,7 @@ object IntermediateCodeUtils {
         val types = sortedEntries.map{case (n,t) => typeConversion(t)}
         StructType(types, names)
       }
-      case TypeParam(name, location) => GeneralType//TODO: Resolve type params if possible
+      case TypeParam(_, _) => GeneralType //TODO: Resolve type params if possible //TODO: Introduce GenericType in Intermediate Code for Rust translation
       case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $i not supported")
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
@@ -138,7 +138,7 @@ object IntermediateCodeUtils {
       case InstatiatedType("Map", Seq(t1, t2), _) => EmptyImmutableMap(t1, t2)
       case InstatiatedType("List", Seq(t), _) => EmptyImmutableList(t)
       case TesslaAST.Core.FunctionType(_, _, _, _) => EmptyFunction(t)
-      case TypeParam(name, location) => throw tessla_compiler.Errors.CommandNotSupportedError(s"Unknown type param $name cannot be used to gain default value")
+      case TypeParam(_, _) => GeneralValue //TODO: Introduce GenericType in Intermediate Code for Rust translation
       case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
       case RecordType(entries, _) => StructValue(entries.map{case (n,t) => (n.name, defaultValueForType(t))})
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $t not supported")
