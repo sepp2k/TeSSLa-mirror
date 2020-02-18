@@ -146,7 +146,7 @@ object ScalaConstants {
       case DoubleType => s"java.lang.Double.parseDouble($exp)"
       case BoolType => s"java.lang.Boolean.parseBoolean($exp)"
       case UnitType => "true"
-      case StringType => s"$exp"
+      case StringType => s"processStringInput($exp)"
       case t => throw Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Scala translation")
     }
   }

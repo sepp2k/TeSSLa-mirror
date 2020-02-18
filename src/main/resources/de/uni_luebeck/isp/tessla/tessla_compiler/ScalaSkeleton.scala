@@ -6,6 +6,16 @@ import java.io.InputStreamReader
 
 object Main {
 
+    def processStringInput(s: String) : String = {
+        if (s.charAt(0) == '\"' && s.charAt(s.length - 1) == '\"') {
+            s.substring(1, s.length - 1)
+        } else {
+            System.err.println("FATAL: String input has incorrect format: \n" + s)
+            System.exit(514)
+            ""
+        }
+    }
+
     def getErrorCode(err: Throwable) : Long = {
         err match {
             case err: java.lang.ArithmeticException if err.getMessage == "/ by zero" => 1
@@ -84,14 +94,14 @@ object Main {
                     }
                 } else if (newInputTs < currTs) {
                     System.err.println(s"$currTs: FATAL: decreasing timestamp received")
-                    System.exit(1)
+                    System.exit(512)
                 }
 //INPUTPROCESSING
             }
         } catch {
             case e: Exception => {
                 System.err.println("ERROR parsing the input Stream\n\n" + e)
-                System.exit(2)
+                System.exit(513)
             }
         }
     }
