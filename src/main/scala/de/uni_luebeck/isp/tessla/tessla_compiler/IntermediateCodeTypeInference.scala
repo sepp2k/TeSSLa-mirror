@@ -51,6 +51,9 @@ object IntermediateCodeTypeInference {
           false
         } else if (e1_type.getClass == e2_type.getClass) {
           e1_type match {
+            case f1: FunctionType => e2_type match {
+              case f2: FunctionType => f2.argsTypes.zip(f1.argsTypes).appended((f1.retType, f2.retType)).map{case (a,b) => castingNecessary(a,b)}.reduce(_ || _)
+            }
             case t1: GenericImpLanType => e2_type match {
                 case t2: GenericImpLanType => t1.genTypes.zip(t2.genTypes).map{case (a,b) => castingNecessary(a,b)}.reduce(_ || _)
                 case _ => true
