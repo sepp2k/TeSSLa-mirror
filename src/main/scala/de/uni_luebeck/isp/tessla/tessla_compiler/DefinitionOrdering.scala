@@ -13,6 +13,7 @@ object DefinitionOrdering {
     def calcExpressionDependencies(exp: ExpressionArg) : Unit = {
       exp match {
         case ApplicationExpression(TypeApplicationExpression(ExternExpression(_,_,_,"last",_), _, _), args, _) => calcExpressionDependencies(args(1))
+        case ApplicationExpression(TypeApplicationExpression(ExternExpression(_,_,_,"delay",_), _, _), args, _) => calcExpressionDependencies(args(1))
         case ApplicationExpression(app, args, _) => args.appended(app).foreach(exp => calcExpressionDependencies(exp))
         case ExpressionRef(id, _, _) if input.contains(id) => calcMissingDependencies(id, input(id))
         case TypeApplicationExpression(e, _, _) => calcExpressionDependencies(e)
