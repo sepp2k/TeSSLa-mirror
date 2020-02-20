@@ -45,9 +45,9 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       case lanVal: ImpLanVal => ScalaConstants.valueTranslation(lanVal)
       case FunctionCall(name, params, typeHint) => {
         if (name.startsWith("__")) {
-          ScalaConstants.builtinFunctionCallTranslation(name, params.zip(typeHint.argsTypes).map{case (e,_) => translateExpression(e)}, typeHint)
+          ScalaConstants.builtinFunctionCallTranslation(name, params.map(translateExpression), typeHint)
         } else {
-          s"$name(${params.zip(typeHint.argsTypes).map{case (e,t) => translateExpression(e)}.mkString(", ")})"
+          s"$name(${params.map(translateExpression).mkString(", ")})"
         }
       }
       case LambdaApplication(exp, params) => s"${translateExpression(exp)}.apply(${params.map(translateExpression).mkString(", ")})"
