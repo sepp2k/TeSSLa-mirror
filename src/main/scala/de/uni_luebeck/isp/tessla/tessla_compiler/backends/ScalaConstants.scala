@@ -123,7 +123,7 @@ object ScalaConstants {
       case "__List_tail__" => s"${args(0)}.tail"
       case "__List_init__" => ???
       case "__List_get__" => s"${args(0)}(${args(1)})"
-      case "__List_set__" => s"${args(0)}.updated(${args(1)}, ${args(2)})"
+      case "__List_set__" => s"${args(0)}.updated(${args(1)}.asInstanceOf[Int], ${args(2)})"
       case "__List_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
 
       case "__getStruct__" => {
@@ -136,7 +136,7 @@ object ScalaConstants {
       }
       case "__mkStruct__" => s"(${args.mkString(", ")})"
 
-      case _ => throw Errors.CommandNotSupportedError(s"Unsupported built-in function for Java backend: $name")
+      case _ => throw Errors.CommandNotSupportedError(s"Unsupported built-in function for Scala backend: $name")
     }
   }
 
