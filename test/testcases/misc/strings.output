@@ -1,3 +1,4 @@
+0: f(x) = <>
 0: f("hallo") = <hallo>
 0: f(()) = <()>
 0: f(42) = <42>
@@ -6,3 +7,4 @@
 0: f(None[Unit]) = <None>
 0: f(Set.add(Set.empty[String], "hallo")) = <Set(hallo)>
 0: f(Some(23)) = <Some(23)>
+3: f(x) = <Hallo Welt>

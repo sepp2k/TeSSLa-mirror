@@ -1,5 +1,9 @@
+@liftable
 def f[T](x: T) := String.concat("<", String.concat(toString(x), ">"))
 
+in x: Events[String]
+
+out f(x)
 out f(42)
 out f(Some(23))
 out f(None[Unit])
