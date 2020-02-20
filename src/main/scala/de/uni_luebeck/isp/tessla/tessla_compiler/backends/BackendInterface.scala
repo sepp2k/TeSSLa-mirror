@@ -16,10 +16,12 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
   def translate(orgListing: SourceListing) : Result[String] = {
     var warnings = Seq()
 
-    val nonStaticVars = IntermediateCodeUtils.getVariableMap(orgListing.tsGenSource.concat(orgListing.stepSource).concat(orgListing.inputProcessing)) ++
+    val nonStaticVars = IntermediateCodeUtils.getVariableMap(orgListing.tsGenSource.concat(orgListing.stepSource).concat(orgListing.inputProcessing).concat(orgListing.tailSource)) ++
       Map("inputStream" -> (StringType, scala.Some(StringValue(""))),
       "value" -> (StringType, scala.Some(StringValue(""))),
-      "currTs" -> (LongType, scala.Some(LongValue(0))))
+      "currTs" -> (LongType, scala.Some(LongValue(0))),
+      "lastProcessedTs" -> (LongType, scala.Some(LongValue(0))),
+      "newInputTs" -> (LongType, scala.Some(LongValue(0))))
 
     val staticVars = IntermediateCodeUtils.getVariableMap(orgListing.staticSource)
 
@@ -31,6 +33,7 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
     val rewrittenSource = source.replaceAllLiterally("//VARDEF", generateVariableDeclarations(nonStaticVars).mkString("\n"))
         .replaceAllLiterally("//TRIGGER", generateCode(listing.tsGenSource))
         .replaceAllLiterally("//STEP", generateCode(listing.stepSource))
+        .replaceAllLiterally("//TAIL", generateCode(listing.tailSource))
         .replaceAllLiterally("//INPUTPROCESSING", generateCode(listing.inputProcessing))
         .replaceAllLiterally("//STATIC", generateVariableDeclarations(staticVars).mkString("\n") + "\n\n" + generateCode(listing.staticSource))
 

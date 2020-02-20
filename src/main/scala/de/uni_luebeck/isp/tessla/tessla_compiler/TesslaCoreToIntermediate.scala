@@ -34,7 +34,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
       }
     }
 
-    var currSource = SourceListing(Seq(), Seq(), Seq(), Seq())
+    var currSource = SourceListing(Seq(), Seq(), Seq(), Seq(), Seq())
     var warnings = Seq()
 
     DefinitionOrdering.order(definitions).foreach { case (id, definition) => {
@@ -44,7 +44,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
           case ApplicationExpression(e: ExternExpression, args, _) => translateExternSignalExpression(id, e, args, Seq(), currSource) //TODO: Does this exist?
           case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
         }
-        case _ => SourceListing(currSource.stepSource, currSource.tsGenSource, currSource.inputProcessing, currSource.staticSource :+ NonStreamCodeGenerator.translateDefinition(id, definition, definitions))
+        case _ => SourceListing(currSource.stepSource, currSource.tailSource, currSource.tsGenSource, currSource.inputProcessing, currSource.staticSource :+ NonStreamCodeGenerator.translateDefinition(id, definition, definitions))
       }
     }
     }

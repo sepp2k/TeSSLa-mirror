@@ -13,12 +13,14 @@ object IntermediateCode {
     */
 
   case class SourceListing(stepSource: Seq[ImpLanStmt],
+                           tailSource: Seq[ImpLanStmt],
                            tsGenSource: Seq[ImpLanStmt],
                            inputProcessing: Seq[ImpLanStmt],
                            staticSource: Seq[ImpLanStmt]) {
 
     override def toString: String =
       s"## Static Code:\n${staticSource.mkString("\n")}\n" +
+      s"## Tail Code:\n${tailSource.mkString("\n")}\n" +
       s"## Step Source:\n${stepSource.mkString("\n")}\n" +
       s"## TS Generation:\n${tsGenSource.mkString("\n")}\n" +
       s"## Input Processing:\n${inputProcessing.mkString("\n")}\n"

@@ -34,7 +34,7 @@ object StreamCodeGenerator {
       FinalAssignment(s"${o}_changed", BoolValue(false), BoolType)
       )
 
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceDefaultStepCode(id: Identifier, ot: Type, stream : ExpressionArg, value : ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -59,7 +59,7 @@ object StreamCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceDefaultFromStepCode(id: Identifier, ot: Type, stream : ExpressionArg, default : ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -93,7 +93,7 @@ object StreamCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceTimeStepCode(id: Identifier, stream: ExpressionArg, loc: Location, currSrc: SourceListing) : SourceListing = {
@@ -116,7 +116,7 @@ object StreamCodeGenerator {
     EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceLastStepCode(id: Identifier, ot: Type, values: ExpressionArg, clock: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -145,7 +145,7 @@ object StreamCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceDelayStepCode(id: Identifier, delay: ExpressionArg, reset: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -170,21 +170,25 @@ object StreamCodeGenerator {
 
     val newTsGen = (currSrc.tsGenSource.
 
-      If(Seq(Seq(s"${o}_changed", s"${d}_changed"), Seq(s"${r}_changed", s"${d}_changed"))).
-        If(Seq(Seq(NotEqual(s"${o}_error", LongValue(0))), Seq(NotEqual(s"${d}_error", LongValue(0))), Seq(NotEqual(s"${r}_error", LongValue(0))))).
-          Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType).
-          Assignment(s"${o}_error", BitwiseOr(Seq(s"${o}_error", s"${d}_error", s"${r}_error")), LongValue(-1), LongType).
-        Else().
-          Assignment(s"${o}_nextTs", Addition("lastProcessedTs", s"${d}_value"), LongValue(-1), LongType).
-        EndIf().
-      EndIf().
       If(Seq(Seq(Greater(s"${o}_nextTs", "lastProcessedTs"), Greater("currTs", s"${o}_nextTs"), Greater("newInputTs", s"${o}_nextTs")))).
         Assignment("currTs", s"${o}_nextTs", LongValue(0), LongType).
       EndIf()
 
       )
 
-    SourceListing(newStmt, newTsGen, currSrc.inputProcessing, currSrc.staticSource)
+    val newTail = (currSrc.tailSource.
+
+      If(Seq(Seq(s"${o}_changed", s"${d}_changed"), Seq(s"${r}_changed", s"${d}_changed"))).
+        If(Seq(Seq(NotEqual(s"${o}_error", LongValue(0))), Seq(NotEqual(s"${d}_error", LongValue(0))), Seq(NotEqual(s"${r}_error", LongValue(0))))).
+          Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType).
+          Assignment(s"${o}_error", BitwiseOr(Seq(s"${o}_error", s"${d}_error", s"${r}_error")), LongValue(0), LongType).
+        Else().
+          Assignment(s"${o}_nextTs", Addition("currTs", s"${d}_value"), LongValue(-1), LongType).
+        EndIf().
+      EndIf()
+      )
+
+    SourceListing(newStmt, newTail, newTsGen, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   @scala.annotation.tailrec
@@ -258,7 +262,7 @@ object StreamCodeGenerator {
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceSignalLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -295,7 +299,7 @@ object StreamCodeGenerator {
         EndIf().
       EndIf()
       )
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceMergeStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], loc: Location, currSrc: SourceListing): SourceListing = {
@@ -330,32 +334,32 @@ object StreamCodeGenerator {
 
     (1 to args.length + 1).foreach{_ => newStmt = newStmt.EndIf()}
 
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceOutputCode(id: Identifier, t: Type, nameOpt: Option[String], currSrc: SourceListing) : SourceListing = {
     val s = s"var_${id.fullName}"
     val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
 
-    val newStmt = (currSrc.stepSource.
+    val newTail = (currSrc.tailSource.
       If(Seq(Seq(s"${s}_changed"))).
         FunctionCall("__[TC]output__", Seq(s"${s}_value", StringValue(name), s"${s}_error"),
                       IntermediateCode.FunctionType(Seq(t, StringType, LongType), UnitType)).
       EndIf()
     )
 
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing) = {
     val s = s"var_${inStream.fullName}"
 
-    val newStmt = (
-      currSrc.stepSource.
+    val newTail = (
+      currSrc.tailSource.
         Assignment(s"${s}_changed", BoolValue(false), BoolValue(false), BoolType)
       )
 
-    SourceListing(newStmt, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceInputFromConsoleCode(inStream: Identifier, typ: Type, currSrc: SourceListing) = {
@@ -376,7 +380,7 @@ object StreamCodeGenerator {
       EndIf()
     )
 
-    SourceListing(currSrc.stepSource, currSrc.tsGenSource, newInputProcessing, currSrc.staticSource)
+    SourceListing(currSrc.stepSource, currSrc.tailSource, currSrc.tsGenSource, newInputProcessing, currSrc.staticSource)
   }
 
 }

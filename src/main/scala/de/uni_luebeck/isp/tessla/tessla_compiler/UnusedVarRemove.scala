@@ -9,7 +9,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
 
   override def translate(listing: SourceListing): Result[SourceListing] = {
-    val outerStmts = listing.stepSource ++ listing.tsGenSource ++ listing.inputProcessing ++ listing.staticSource
+    val outerStmts = listing.stepSource ++ listing.tailSource ++ listing.tsGenSource ++ listing.inputProcessing ++ listing.staticSource
 
     val usages = getUsageMap(outerStmts, Map())
     var usedIn = usages.foldLeft[Map[String, Set[String]]](Map()) { case (map, (k, v)) => v.foldLeft(map) { case (map, e) => map + (e -> (map.getOrElse(e, Set()) + k)) } }
@@ -26,6 +26,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
     }
 
     Success(SourceListing(removeAssignments(listing.stepSource, deleteVars.toSet),
+                          removeAssignments(listing.tailSource, deleteVars.toSet),
                           removeAssignments(listing.tsGenSource, deleteVars.toSet),
                           removeAssignments(listing.inputProcessing, deleteVars.toSet),
                           removeAssignments(listing.staticSource, deleteVars.toSet),

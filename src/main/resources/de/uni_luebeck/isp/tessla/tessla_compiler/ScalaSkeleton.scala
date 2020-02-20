@@ -41,24 +41,17 @@ object Main {
 
 //STATIC
 
-        var lastProcessedTs: Long = 0
 //VARDEF
 
         try {
-            var newInputTs: Long = 0;
-
             val br: BufferedReader = new BufferedReader(new InputStreamReader(System.in))
 
             var line: String = "";
             var inputEndReached: Boolean = false;
 
-            while (true) breakable {
+            while (true) {
 
                 if ({line = br.readLine(); line != null}) {
-                    if (line.startsWith("$timeunit")) {
-                        println(line)
-                        break
-                    }
                     newInputTs = java.lang.Long.parseLong(line.split(":")(0).trim())
                     val rightPart : String = line.split(":")(1)
                     inputStream = rightPart.split("=")(0).trim()
@@ -76,18 +69,22 @@ object Main {
                         newInputTs += 1
                     }
 
-                    breakable {
-                        while (true) {
+                    var doProcessing = true
+                    while (doProcessing) {
 
 //TRIGGER
 
-                            if (currTs == newInputTs) break
+                            if (currTs == newInputTs) {
+                                doProcessing = false
+                            } else {
 
 //STEP
 
-                            lastProcessedTs = currTs
-                            currTs = newInputTs
-                        }
+//TAIL
+
+                                lastProcessedTs = currTs
+                                currTs = newInputTs
+                            }
                     }
                     if (inputEndReached) {
                         System.exit(0)

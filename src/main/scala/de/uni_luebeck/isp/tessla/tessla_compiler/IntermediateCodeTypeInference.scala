@@ -62,6 +62,7 @@ object IntermediateCodeTypeInference {
 
       def generateCodeWithCasts(listing: SourceListing, varTypes: Map[String, ImpLanType]) : SourceListing = {
         SourceListing(generateCodeWithCasts(listing.stepSource, varTypes),
+                      generateCodeWithCasts(listing.tailSource, varTypes),
                       generateCodeWithCasts(listing.tsGenSource, varTypes),
                       generateCodeWithCasts(listing.inputProcessing, varTypes),
                       generateCodeWithCasts(listing.staticSource, varTypes))
