@@ -49,19 +49,14 @@ object IntermediateCodeTypeInference {
       def castingNecessary(e1_type: ImpLanType, e2_type: ImpLanType): Boolean = {
         if (e1_type == e2_type || e1_type == GeneralType) {
           false
-        } else if (e1_type.getClass == e2_type.getClass) {
+        } else {
           e1_type match {
             case f1: FunctionType => e2_type match {
               case f2: FunctionType => f2.argsTypes.zip(f1.argsTypes).appended((f1.retType, f2.retType)).map{case (a,b) => castingNecessary(a,b)}.reduce(_ || _)
+              case _ => true
             }
-            case t1: GenericImpLanType => e2_type match {
-                case t2: GenericImpLanType => t1.genTypes.zip(t2.genTypes).map{case (a,b) => castingNecessary(a,b)}.reduce(_ || _)
-                case _ => true
-              }
-            case _ => false
+            case _ => true
           }
-        } else {
-          true
         }
       }
 
@@ -89,7 +84,7 @@ object IntermediateCodeTypeInference {
           case CastingExpression(e, target) => CastingExpression(castExpression(e, scala.None, varTypes), target)
           case FunctionCall(name, params, typeHint) => FunctionCall(name, params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)}, typeHint)
           case LambdaApplication(exp, params) => typeInference(exp, varTypes) match {
-            case FunctionType(argsTypes, _) => LambdaApplication(exp, params.zip(argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)})
+            case FunctionType(argsTypes, _) => LambdaApplication(castExpression(exp, scala.None, varTypes), params.zip(argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)})
             case _ => throw Errors.TypeError(s"Lambda Application to non-function expression $exp")
           }
           case Equal(a, b) => {
