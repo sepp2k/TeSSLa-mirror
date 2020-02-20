@@ -77,7 +77,8 @@ object ScalaConstants {
       case "__leq__" |
            "__fleq__"=> s"(${args(0)} <= ${args(1)})"
       case "__add__" |
-           "__fadd__" => s"(${args(0)} + ${args(1)})"
+           "__fadd__" |
+           "__String_concat__" => s"(${args(0)} + ${args(1)})"
       case "__sub__" |
            "__fsub__" => s"(${args(0)} - ${args(1)})"
       case "__mul__" |
@@ -95,6 +96,8 @@ object ScalaConstants {
       case "__getSome__" => s"${args(0)}.get"
       case "__isSome__" => s"${args(0)}.isDefined"
       case "__isNone__" => s"${args(0)}.isEmpty"
+
+      case "__toString__" => s"${args(0)}.toString"
 
       //TODO: Handle mutable datastructures
       case "__Map_empty__" => "Map()"
