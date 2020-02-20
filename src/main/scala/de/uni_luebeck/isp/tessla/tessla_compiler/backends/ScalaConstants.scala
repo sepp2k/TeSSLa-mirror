@@ -151,13 +151,29 @@ object ScalaConstants {
     }
   }
 
-  def getParseExpressionToString(from: ImpLanType, exp: String) : String = {
+  //TODO: Tuple recognition
+  def getParseExpressionToString(from: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
+    val expName = s"exp$freshVarCount"
     from match {
       case LongType |
            DoubleType |
            BoolType => s"String.valueOf($exp)"
       case UnitType => "\"()\""
       case StringType => s"$exp"
+      case OptionType(t) => s"""{val $expName = $exp; if (${expName}.isDefined) "Some(" + ${getParseExpressionToString(t, expName + ".get", freshVarCount + 1)} + ")" else "None"}"""
+      case MutableSetType(valType) => s""""Set(" + ${exp}.toSeq.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
+      case ImmutableSetType(valType) => s""""Set(" + ${exp}.toSeq.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
+      case MutableMapType(keyType, valType) => s""""Map(" + ${exp}.map{case (k,v) => ${getParseExpressionToString(keyType, "k", freshVarCount + 1)} + " -> " + ${getParseExpressionToString(valType, "v", freshVarCount + 1)} }.mkString(", ") + ")""""
+      case ImmutableMapType(keyType, valType) => s""""Map(" + ${exp}.map{case (k,v) => ${getParseExpressionToString(keyType, "k", freshVarCount + 1)} + " -> " + ${getParseExpressionToString(valType, "v", freshVarCount + 1)} }.mkString(", ") + ")""""
+      case MutableListType(valType) => s""""List(" + ${exp}.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
+      case ImmutableListType(valType) => s""""List(" + ${exp}.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
+      case StructType(subTypes, fieldNames) => {
+        val elems = fieldNames.zip(subTypes).zipWithIndex.map { case ((n, t), i) =>
+          s""""$n = " + ${getParseExpressionToString(t, s"$expName._${i+1}", freshVarCount + 1)}"""
+        }.mkString(""" + ", " + """)
+        s"""{val $expName = $exp; "{" + $elems + "}"}"""
+      }
+      case GeneralType => throw Errors.DSLError(s"General type expression $exp cannot be used for printing")
       case t => s"$exp.toString()"
     }
   }
