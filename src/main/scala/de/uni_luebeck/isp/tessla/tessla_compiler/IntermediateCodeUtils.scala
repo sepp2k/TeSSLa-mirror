@@ -152,6 +152,10 @@ object IntermediateCodeUtils {
     }
   }
 
+  def structIsTuple(structType: StructType) : Boolean = {
+    structType.fieldNames.zipWithIndex.map{case (n, i) => n == s"_${i+1}"}.reduce(_ && _)
+  }
+
   implicit def stringToVariable(str: String): Variable = {
     Variable(str)
   }

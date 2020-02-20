@@ -170,6 +170,12 @@ object ScalaConstants {
       case ImmutableMapType(keyType, valType) => s""""Map(" + ${exp}.map{case (k,v) => ${getParseExpressionToString(keyType, "k", freshVarCount + 1)} + " -> " + ${getParseExpressionToString(valType, "v", freshVarCount + 1)} }.mkString(", ") + ")""""
       case MutableListType(valType) => s""""List(" + ${exp}.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
       case ImmutableListType(valType) => s""""List(" + ${exp}.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
+      case StructType(subTypes, fieldNames) if IntermediateCodeUtils.structIsTuple(StructType(subTypes, fieldNames)) => {
+        val elems = fieldNames.zip(subTypes).zipWithIndex.map { case ((n, t), i) =>
+          s"""${getParseExpressionToString(t, s"$expName._${i+1}", freshVarCount + 1)}"""
+        }.mkString(""" + ", " + """)
+        s"""{val $expName = $exp; "(" + $elems + ")"}"""
+      }
       case StructType(subTypes, fieldNames) => {
         val elems = fieldNames.zip(subTypes).zipWithIndex.map { case ((n, t), i) =>
           s""""$n = " + ${getParseExpressionToString(t, s"$expName._${i+1}", freshVarCount + 1)}"""
@@ -180,5 +186,6 @@ object ScalaConstants {
       case t => s"$exp.toString()"
     }
   }
+
 
 }
