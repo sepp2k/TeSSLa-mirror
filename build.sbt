@@ -66,3 +66,8 @@ antlr4GenVisitor in Antlr4 := true
 
 javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 scalacOptions += "-target:jvm-1.8"
+
+assemblyMergeStrategy in assembly := {
+  case PathList("module-info.class") => MergeStrategy.discard
+  case x => (assemblyMergeStrategy in assembly).value(x)
+}
