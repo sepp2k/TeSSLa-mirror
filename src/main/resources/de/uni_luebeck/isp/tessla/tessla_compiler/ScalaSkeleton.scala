@@ -11,7 +11,7 @@ object Main {
             s.substring(1, s.length - 1)
         } else {
             System.err.println("FATAL: String input has incorrect format: \n" + s)
-            System.exit(514)
+            System.exit(129)
             ""
         }
     }
@@ -91,14 +91,14 @@ object Main {
                     }
                 } else if (newInputTs < currTs) {
                     System.err.println(s"$currTs: FATAL: decreasing timestamp received")
-                    System.exit(512)
+                    System.exit(128)
                 }
 //INPUTPROCESSING
             }
         } catch {
             case e: Exception => {
                 System.err.println("ERROR parsing the input Stream\n\n" + e)
-                System.exit(513)
+                System.exit(129)
             }
         }
     }
