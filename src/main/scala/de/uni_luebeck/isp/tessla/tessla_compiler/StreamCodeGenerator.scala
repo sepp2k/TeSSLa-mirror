@@ -342,7 +342,7 @@ object StreamCodeGenerator {
     val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
 
     val newTail = (currSrc.tailSource.
-      If(Seq(Seq(s"${s}_changed"))).
+      If(Seq(Seq(s"${s}_changed", s"${s}_init"))).
         FunctionCall("__[TC]output__", Seq(s"${s}_value", StringValue(name), s"${s}_error"),
                       IntermediateCode.FunctionType(Seq(t, StringType, LongType), UnitType)).
       EndIf()
