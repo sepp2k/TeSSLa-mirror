@@ -1,4 +1,0 @@
-errors/types/missing-parameter-type.tessla(1,7 - 1,8): Parameter x needs a type annotation
-errors/types/missing-parameter-type.tessla(1,10 - 1,11): Parameter y needs a type annotation
-errors/types/missing-parameter-type.tessla(2,7 - 2,8): Parameter x needs a type annotation
-errors/types/missing-parameter-type.tessla(3,9 - 3,10): Parameter x needs a type annotation

@@ -1,3 +1,0 @@
-errors/infinite/direct-infinite-recursion.tessla(1,23 - 1,24): Infinite recursion detected
-    called from errors/infinite/direct-infinite-recursion.tessla(1,1 - 1,19)
-    called from errors/infinite/direct-infinite-recursion.tessla(2,5 - 2,6)

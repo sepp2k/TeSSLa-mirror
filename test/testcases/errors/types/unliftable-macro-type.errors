@@ -1,2 +1,0 @@
-errors/types/unliftable-macro-type.tessla(1,1 - 2,30): Macro has been annotated with @liftable, but its type does not allow being lifted
-errors/types/unliftable-macro-type.tessla(4,1 - 5,23): Macro has been annotated with @liftable, but its type does not allow being lifted

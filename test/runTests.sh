@@ -29,18 +29,24 @@ do
     cat expected.trace | ../sort.py | sed -E 's/  */ /' > expected.trace.sorted
     echo >> expected.trace.sorted
 
+    cmpResult=0
+    
     if [[ $expectedRet -ne $retVal ]]; then
         echo $retVal > ../errors/${tcName}.unexprectedErrCode
     fi
     
-    (diff --ignore-blank-lines out.trace.sorted expected.trace.sorted > /dev/null)
-    cmpResult=$?
+    # TODO: Check outputs even if error occured
+    if [[ $retVal -eq 0 ]] then
+        (diff --ignore-blank-lines out.trace.sorted expected.trace.sorted > /dev/null)
+        cmpResult=$?
+        
+        if [[ $cmpResult -ne 0 ]]; then
+            diff out.trace.sorted expected.trace.sorted > diff
+            cp out.trace.sorted ../errors/${tcName}.trace
+            cp expected.trace.sorted ../errors/${tcName}.expected
+            mv diff ../errors/${tcName}.diff
+        fi
     
-    if [[ $cmpResult -ne 0 ]]; then
-        diff out.trace.sorted expected.trace.sorted > diff
-        cp out.trace.sorted ../errors/${tcName}.trace
-        cp expected.trace.sorted ../errors/${tcName}.expected
-        mv diff ../errors/${tcName}.diff
     fi
     
     if [[ $cmpResult -ne 0 ]] || [[ $expectedRet -ne $retVal ]]; then
@@ -56,4 +62,4 @@ do
 
 done < Testcases.lst
 
- rm -r output
+rm -r output

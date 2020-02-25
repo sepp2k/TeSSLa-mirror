@@ -1,43 +1,51 @@
 # Read lists/maps/... from input
-List testcases/datastructures/list.tessla testcases/datastructures/list.input testcases/datastructures/list.output 0
-MapFold testcases/datastructures/map_fold.tessla testcases/datastructures/map_fold.input testcases/datastructures/map_fold.output 0
+    List testcases/datastructures/list.tessla testcases/datastructures/list.input testcases/datastructures/list.output 0
+    MapFold testcases/datastructures/map_fold.tessla testcases/datastructures/map_fold.input testcases/datastructures/map_fold.output 0
 
 # Read Objects/Tuples from input
-InputStream testcases/objects/input-stream.tessla testcases/objects/input-stream.input testcases/objects/input-stream.output 0
-TupleInputStreams testcases/objects/tuple-input-streams.tessla testcases/objects/tuple-input-streams.input testcases/objects/tuple-input-streams.output 0
+    InputStream testcases/objects/input-stream.tessla testcases/objects/input-stream.input testcases/objects/input-stream.output 0
+    TupleInputStreams testcases/objects/tuple-input-streams.tessla testcases/objects/tuple-input-streams.input testcases/objects/tuple-input-streams.output 0
+    ObjectTypeError testcases/errors/object-type-error.tessla testcases/errors/object-type-error.input testcases/errors/empty.output 0
 
 # Read options from input
-SimpleOptions testcases/misc/simple-options.tessla testcases/misc/simple-options.input testcases/misc/simple-options.output 0
-UnitOptions testcases/misc/unit-options.tessla testcases/misc/unit-options.input testcases/misc/unit-options.output 0
-ObjectOptions testcases/objects/object-options.tessla testcases/objects/object-options.input testcases/objects/object-options.output 0
+    SimpleOptions testcases/misc/simple-options.tessla testcases/misc/simple-options.input testcases/misc/simple-options.output 0
+    UnitOptions testcases/misc/unit-options.tessla testcases/misc/unit-options.input testcases/misc/unit-options.output 0
+    ObjectOptions testcases/objects/object-options.tessla testcases/objects/object-options.input testcases/objects/object-options.output 0
 
 # Float handling with strange values
-FloatConvErrorAvoided testcases/misc/float-conversion-error-avoided.tessla testcases/misc/float-conversion-error-avoided.input testcases/misc/float-conversion-error-avoided.output 0
-Floats testcases/misc/floats.tessla testcases/misc/floats.input testcases/misc/floats.output 0
+    FloatConvErrorAvoided testcases/misc/float-conversion-error-avoided.tessla testcases/misc/float-conversion-error-avoided.input testcases/misc/float-conversion-error-avoided.output 0
+    Floats testcases/misc/floats.tessla testcases/misc/floats.input testcases/misc/floats.output 0
 
 # String formatting
-FormatStrings testcases/misc/format-strings.tessla testcases/misc/format-strings.input testcases/misc/format-strings.output 0
-StringInterpolation testcases/misc/string-interpolation.tessla testcases/misc/string-interpolation.input testcases/misc/string-interpolation.output 0
+    FormatStrings testcases/misc/format-strings.tessla testcases/misc/format-strings.input testcases/misc/format-strings.output 0
+    StringInterpolation testcases/misc/string-interpolation.tessla testcases/misc/string-interpolation.input testcases/misc/string-interpolation.output 0
 
 #toString method missing
-Out testcases/misc/out.tessla testcases/misc/out.input testcases/misc/out.output 0
+    Out testcases/misc/out.tessla testcases/misc/out.input testcases/misc/out.output 0
 
 # Hex parsing
-Hexliterals testcases/misc/hexliterals.tessla testcases/misc/hexliterals.input testcases/misc/hexliterals.output 0
+    Hexliterals testcases/misc/hexliterals.tessla testcases/misc/hexliterals.input testcases/misc/hexliterals.output 0
 
 # Comments in Input 
-CommentsInInput testcases/misc/comments-in-input.tessla testcases/misc/comments-in-input.input testcases/misc/comments-in-input.output 0
+    CommentsInInput testcases/misc/comments-in-input.tessla testcases/misc/comments-in-input.input testcases/misc/comments-in-input.output 0
 
 # Struct output printing
-IncludeTest testcases/misc/include-test.tessla testcases/misc/empty.input testcases/misc/include-test.output 0
+    IncludeTest testcases/misc/include-test.tessla testcases/misc/empty.input testcases/misc/include-test.output 0
 
 #Timestamp ranges
-Timestampranges testcases/misc/timestampranges.tessla testcases/misc/timestampranges.input testcases/misc/timestampranges.output 0
-Timestampranges2 testcases/misc/timestampranges2.tessla testcases/misc/timestampranges2.input testcases/misc/timestampranges2.output 0
+    Timestampranges testcases/misc/timestampranges.tessla testcases/misc/timestampranges.input testcases/misc/timestampranges.output 0
+    Timestampranges2 testcases/misc/timestampranges2.tessla testcases/misc/timestampranges2.input testcases/misc/timestampranges2.output 0
+    NegativeStepError testcases/errors/negative-step-error.tessla testcases/errors/negative-step-error.input testcases/errors/empty.output 0
 
 #Timeunit -> Missing base time unit
-Tiumeunits testcases/misc/timeunits.tessla testcases/misc/timeunits.input testcases/misc/timeunits.output 0
-Tiumeunits2 testcases/misc/timeunits2.tessla testcases/misc/timeunits2.input testcases/misc/timeunits2.output 0
+    Tiumeunits testcases/misc/timeunits.tessla testcases/misc/timeunits.input testcases/misc/timeunits.output 0
+    Tiumeunits2 testcases/misc/timeunits2.tessla testcases/misc/timeunits2.input testcases/misc/timeunits2.output 0
+    TimeunitsConversionError testcases/errors/timeunits-conversion-error.tessla testcases/errors/timeunits-conversion-error.input testcases/errors/empty.output 0
+    TimeunitsUndefined testcases/errors/timeunits-undefined.tessla testcases/errors/timeunits-undefined.input testcases/errors/empty.output 0
 
 #sin,cos,tan
-Trig testcases/misc/trig.tessla testcases/misc/trig.input testcases/misc/trig.output 0
+    Trig testcases/misc/trig.tessla testcases/misc/trig.input testcases/misc/trig.output 0
+
+#shifts
+    LeftShift testcases/tessladoc/lifted-functions/integer/left-shift.tessla testcases/tessladoc/lifted-functions/integer/left-shift.input testcases/tessladoc/lifted-functions/integer/left-shift.output 0
+    RightShift testcases/tessladoc/lifted-functions/integer/right-shift.tessla testcases/tessladoc/lifted-functions/integer/right-shift.input testcases/tessladoc/lifted-functions/integer/right-shift.output 0

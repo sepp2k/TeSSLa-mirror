@@ -1,2 +1,0 @@
-errors/types/no-subtyping.tessla(4,44 - 4,65): Type mismatch: Expected {x: Events[Int], y: Events[Int]}, found {x: Events[Int], y: Events[Int], z: Events[Int]}
-errors/types/no-subtyping.tessla(11,11 - 11,13): Type mismatch: Expected {x: Events[Int], y: Events[Int]}, found {x: Events[Int], y: Events[Int], z: Events[Int]}

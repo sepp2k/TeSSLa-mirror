@@ -1,3 +1,0 @@
-def sonMacro(mit: Int) := mit+1
-
-out sonMacro(miut = 41)
