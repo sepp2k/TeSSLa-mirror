@@ -178,12 +178,19 @@ object StreamCodeGenerator {
 
     val newTail = (currSrc.tailSource.
 
-      If(Seq(Seq(s"${o}_changed", s"${d}_changed"), Seq(s"${r}_changed", s"${d}_changed"))).
-        If(Seq(Seq(NotEqual(s"${o}_error", LongValue(0))), Seq(NotEqual(s"${d}_error", LongValue(0))), Seq(NotEqual(s"${r}_error", LongValue(0))))).
+      If(Seq(Seq(s"${d}_changed"))).
+        If(Seq(Seq(s"${o}_changed"), Seq(s"${r}_changed"))).
+          If(Seq(Seq(NotEqual(s"${o}_error", LongValue(0))), Seq(NotEqual(s"${d}_error", LongValue(0))), Seq(NotEqual(s"${r}_error", LongValue(0))))).
+            Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType).
+            Assignment(s"${o}_error", BitwiseOr(Seq(s"${o}_error", s"${d}_error", s"${r}_error")), LongValue(0), LongType).
+          Else().
+            Assignment(s"${o}_nextTs", Addition("currTs", s"${d}_value"), LongValue(-1), LongType).
+          EndIf().
+        EndIf().
+      Else().
+        If(Seq(Seq(s"${r}_changed"))).
           Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType).
-          Assignment(s"${o}_error", BitwiseOr(Seq(s"${o}_error", s"${d}_error", s"${r}_error")), LongValue(0), LongType).
-        Else().
-          Assignment(s"${o}_nextTs", Addition("currTs", s"${d}_value"), LongValue(-1), LongType).
+          Assignment(s"${o}_error", s"${r}_error", LongValue(0), LongType).
         EndIf().
       EndIf()
       )
