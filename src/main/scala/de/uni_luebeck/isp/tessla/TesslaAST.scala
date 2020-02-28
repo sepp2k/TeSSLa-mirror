@@ -62,6 +62,10 @@ object TesslaAST {
       tpe.filter(_ => types).map(tpe => s"${s(true)}").getOrElse(s(mayNeedBraces))
 
     override type Annotations = Map[String, ArraySeq[ExpressionArg]]
+
+    override def printAnnotations(annotations: Annotations, options: PrintOptions) = annotations.toList.sortBy(_._1).map { case (name, exp) =>
+      s"@$name(${exp.map(_.print(options, mayNeedBraces = false)).mkString(", ")})"
+    }
   }
 
   object Typed extends TesslaAST[Id] {
@@ -73,6 +77,10 @@ object TesslaAST {
       if (types) s"${s(true)}: $tpe" else s(mayNeedBraces)
 
     override type Annotations = Map[String, ArraySeq[ExpressionArg]]
+
+    override def printAnnotations(annotations: Annotations, options: PrintOptions) = annotations.toList.sortBy(_._1).map { case (name, exp) =>
+      s"@$name(${exp.map(_.print(options, mayNeedBraces = false)).mkString(", ")})"
+    }
   }
 
   object Core extends TesslaAST[Id] {
@@ -86,6 +94,10 @@ object TesslaAST {
     override type Annotations = Map[String, ArraySeq[ExpressionArg]]
 
     override def getOutputName(annotations: Annotations) = Try(annotations("name")(0).asInstanceOf[Core.StringLiteralExpression].value).toOption
+
+    override def printAnnotations(annotations: Annotations, options: PrintOptions) = annotations.toList.sortBy(_._1).map { case (name, exp) =>
+      s"@$name(${exp.map(_.print(options, mayNeedBraces = false)).mkString(", ")})"
+    }
 
   }
 
@@ -111,10 +123,10 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   ) {
     def print(options: PrintOptions) = {
       val i = in.map(s => withTypeAnnotation(_ => s"in ${s._1}", s._2._1, types = true, mayNeedBraces = false)).mkString("\n")
-      val o = out.map(x => getOutputName(x._2) match {
-        case Some(name) => s"out $name = ${x._1}"
-        case None => "out " + x._1
-      }).mkString("\n")
+      val o = out.map { x =>
+        val as = printAnnotations(x._2, options)
+        (if (as.nonEmpty) as.mkString("", "\n", "\n") else "") + "out " + x._1
+      }.mkString("\n")
       val d = definitions.map { x =>
         val tpeString = if (options.defTypes) s": ${x._2.tpe}" else ""
         s"def ${x._1}$tpeString = ${x._2.print(options, mayNeedBraces = false)}"
@@ -126,6 +138,8 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   }
 
   def getOutputName(annotations: Annotations): Option[String] = None
+
+  def printAnnotations(annotations: Annotations, options: PrintOptions): List[String] = Nil
 
   // Identifiers can either have a globaly unique id or locally unique name or both.
   // For TeSSLa Core only external names, i.e. input streams do not carry a id.
