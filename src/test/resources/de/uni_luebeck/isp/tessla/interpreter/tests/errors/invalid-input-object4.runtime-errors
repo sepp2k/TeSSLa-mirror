@@ -1,1 +1,1 @@
-errors/invalid-input-object4.input(1,8 - 1,17): Unexpected value of type {x: ?} ({x = 42}), expected type Int, in input stream 'i'
+errors/invalid-input-object4.input(1,1 - 1,17): input i: {x = 42} is not of type Int.

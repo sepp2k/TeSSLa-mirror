@@ -3,7 +3,14 @@ package de.uni_luebeck.isp.tessla
 import java.util.IllegalFormatException
 
 object Errors {
+
   trait TesslaError extends Exception with Diagnostic
+
+  def mkTesslaError(msg: String, location: Location = Location.unknown) = new TesslaError {
+    override def loc = location
+
+    override def message = msg
+  }
 
   case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends Exception(error) with TesslaError {
     override def loc: Location = error.loc
@@ -26,7 +33,7 @@ object Errors {
 
     override def message =
       s"Member definition $id needs a body. Eliding the body is only allowed if the definition" +
-      " consists of an identifier and nothing else"
+        " consists of an identifier and nothing else"
   }
 
   case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location) extends TesslaError {
@@ -260,4 +267,5 @@ object Errors {
   case class AnnotationDefInModule(loc: Location) extends TesslaError {
     override def message = "Annotation definitions are not allowed inside of modules"
   }
+
 }

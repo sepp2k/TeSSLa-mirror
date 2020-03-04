@@ -97,7 +97,12 @@ object Interpreter {
           }
           interpreter.inStreams.get(event.stream.name) match {
             case Some((inStream, elementType)) =>
-              // TODO: reenable line below to check type of input values
+              val tpe = elementType.asInstanceOf[Core.InstatiatedType]
+              assert(tpe.name == "Events")
+              assert(tpe.typeArgs.size == 1)
+              RuntimeTypeChecker.check(tpe.typeArgs.head, event.value).foreach(error =>
+                throw mkTesslaError("input " + event.stream.name + ": " + error, event.loc)
+              )
               //ValueTypeChecker.check(event.value, elementType, event.stream.name)
               if (seen.contains(event.stream.name)) {
                 throw SameTimeStampError(eventTime, event.stream.name, event.timeStamp.loc)

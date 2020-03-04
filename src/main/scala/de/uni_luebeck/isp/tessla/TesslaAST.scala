@@ -340,7 +340,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
         val sorted = entries.toList.map(x => (x._1.name.substring(1).toInt, x._2)).sortBy(_._1).map(_._2)
         s"(${sorted.mkString(", ")})"
       } else {
-        val sorted = entries.toList.sortBy(_._1.name).map(x => "" + x._1 + " = " + x._2)
+        val sorted = entries.toList.sortBy(_._1.name).map(x => "" + x._1 + ": " + x._2)
         s"{${sorted.mkString(", ")}}"
       }
     }

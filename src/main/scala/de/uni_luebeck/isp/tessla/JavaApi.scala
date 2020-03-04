@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla
-import de.uni_luebeck.isp.tessla.Errors.{DecreasingTimeStampsError, SameTimeStampError, TesslaError, TesslaErrorWithTimestamp}
+import de.uni_luebeck.isp.tessla.Errors.{DecreasingTimeStampsError, SameTimeStampError, TesslaError, TesslaErrorWithTimestamp, mkTesslaError}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.{CharStream, CharStreams}
@@ -72,7 +72,12 @@ object JavaApi {
 
       spec.inStreams.get(stream) match {
         case Some((inStream, elementType)) =>
-          // FIXME: renable input checks: ValueTypeChecker.check(value, elementType, stream)
+          val tpe = elementType.asInstanceOf[TesslaAST.Core.InstatiatedType]
+          assert(tpe.name == "Events")
+          assert(tpe.typeArgs.size == 1)
+          RuntimeTypeChecker.check(tpe.typeArgs.head, value).foreach(error =>
+            throw mkTesslaError("input " + stream + ": " + error)
+          )
           inStream.provide(value)
           true
         case None =>
