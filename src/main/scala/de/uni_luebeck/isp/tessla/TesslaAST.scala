@@ -102,6 +102,22 @@ object TesslaAST {
   }
 
   def withBraces(s: String, addBraces: Boolean) = if (addBraces) s"(${s})" else s
+
+  def printRecord(entries: Map[String, Any], sep: String, unit: String) = if (entries.isEmpty) unit else {
+    val tuplified = entries.flatMap {case (key, value) =>
+      if(key.matches("_\\d+")) {
+        Some(key.substring(1).toInt -> value)
+      } else None
+    }
+    if (tuplified.size == entries.size && tuplified.keys.min == 1 && tuplified.keys.max == entries.size) {
+      val sorted = tuplified.toList.sortBy(_._1).map(_._2)
+      s"(${sorted.mkString(", ")})"
+    } else {
+      val sorted = entries.toList.sortBy(_._1).map(x => "" + x._1 + sep + x._2)
+      s"{${sorted.mkString(", ")}}"
+    }
+  }
+
 }
 
 abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
@@ -334,19 +350,10 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
   case class RecordType(entries: Map[Name, Type], location: Location = Location.unknown) extends Type {
     override def resolve(args: Map[Identifier, Type]) = RecordType(entries.view.mapValues(_.resolve(args)).toMap)
 
-    override def toString = if (entries.isEmpty) "Unit" else {
-      val isTuple = entries.keys.forall(_.name.matches("_\\d+"))
-      if (isTuple) {
-        val sorted = entries.toList.map(x => (x._1.name.substring(1).toInt, x._2)).sortBy(_._1).map(_._2)
-        s"(${sorted.mkString(", ")})"
-      } else {
-        val sorted = entries.toList.sortBy(_._1.name).map(x => "" + x._1 + ": " + x._2)
-        s"{${sorted.mkString(", ")}}"
-      }
-    }
+    override def toString = printRecord(entries.map(x => (x._1.name, x._2)), ": ", "Unit")
   }
 
-  val UnitType = RecordType(Map(), Location.unknown)
+  val UnitType = RecordType(Map(), Location.builtIn)
 
   case class TypeParam(name: Identifier, location: Location = Location.unknown) extends Type {
     override def resolve(args: Map[Identifier, Type]) = args.getOrElse(name, this)

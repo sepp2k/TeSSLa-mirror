@@ -1,13 +1,15 @@
-/*package de.uni_luebeck.isp.tessla.analyses
+package de.uni_luebeck.isp.tessla.analyses
 
-import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaAST, TesslaCore, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaAST, TranslationPhase}
+import TesslaAST.Core
 import Observations._
 import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError, TesslaErrorWithTimestamp}
 import de.uni_luebeck.isp.tessla.CPatternParser.{ArrayContext, DerefContext, MemberContext, PatternContext, RefContext, VariableContext}
-import de.uni_luebeck.isp.tessla.TesslaCore.InStreamDescription
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
+
+import scala.collection.immutable.ArraySeq
 
 case class Observations(FunctionCalls: Seq[Function] = Seq(),
   FunctionCalled: Seq[Function] = Seq(),
@@ -38,6 +40,10 @@ case class Observations(FunctionCalls: Seq[Function] = Seq(),
 
 object Observations {
 
+  type Annotation = Core.RecordConstructorExpression
+
+  type InStreamDescription = (Core.Identifier, (Core.Type, Core.Annotations))
+
   case class Function(FunctionName: String, code: String)
 
   case class Pattern(Variable: Option[Variable] = None, ArrayAccess: Option[Pattern] = None, StructUnionAccess: Option[StructUnionAccess] = None, Ref: Option[Pattern] = None, DeRef: Option[Pattern] = None, code: Option[String] = None)
@@ -62,7 +68,7 @@ object Observations {
       val parser = new CPatternParser(tokens)
       parser.removeErrorListeners()
       parser.addErrorListener(new BaseErrorListener {
-        override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException) = {
+        override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException): Unit = {
           error(ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token])))
         }
       })
@@ -84,33 +90,29 @@ object Observations {
       translatePattern(pattern)
     }
 
-    private def argumentAsString(annotation: TesslaCore.Annotation, argumentName: String): String = {
-      val argument = annotation.arguments.getOrElse(argumentName,
-        throw InternalError("Annotation has no argument " + argumentName + ", should have been caught by the (not yet implemented) type checker.", annotation.loc))
+    private def argumentAsString(annotation: Annotation, name: String): String = {
+      val argument = annotation.entries(TesslaAST.Name(name))
       argument match {
-        case Tessla.ConstantExpression.Literal(Tessla.StringLiteral(x), _) => x
-        case _ => throw InternalError("Expression must be a string, should have been caught by the (not yet implemented) type checker.", argument.loc)
+        case Core.StringLiteralExpression(x, _) => x
+        case _ => throw new Error("Expression must be a string, should have been caught by the (not yet implemented) type checker.")
       }
     }
 
-    private def argumentAsInt(annotation: TesslaCore.Annotation, argumentName: String): Int = {
-      val argument = annotation.arguments.getOrElse(argumentName,
-        throw InternalError("Annotation has no argument " + argumentName + ", should have been caught by the (not yet implemented) type checker.", annotation.loc))
+    private def argumentAsInt(annotation: Annotation, name: String): BigInt = {
+      val argument = annotation.entries(TesslaAST.Name(name))
       argument match {
-        case Tessla.ConstantExpression.Literal(Tessla.IntLiteral(x), _) => x.toInt
-        case _ => throw InternalError("Expression must be an Int, should have been caught by the (not yet implemented) type checker.", argument.loc)
+        case Core.IntLiteralExpression(x, _) => x
+        case _ => throw InternalError("Expression must be an int, should have been caught by the (not yet implemented) type checker.", argument.location)
       }
     }
 
-    val threadIdInStreams: List[TesslaAST.Identifier] = Nil
-    // TODO: reactiate
-    //    val threadIdInStreams = spec.inStreams.filter{ in =>
-    //      in.annotations.exists(_.name == "ThreadId")
-    //    }
+    val threadIdInStreams = spec.in.filter { case (name, (tpe, annotations)) =>
+      annotations.contains("ThreadId")
+    }.keys.toList
 
     protected def encloseInstrumentationCode(code: String): String = {
       val lines = code.split("\n") ++
-        threadIdInStreams.map { in => s"""trace_push_thread_id(events, "${in.id}");""" }
+        threadIdInStreams.map { in => s"""trace_push_thread_id(events, "${in.fullName}");""" }
       s"uint8_t* events = trace_create_events(${lines.length});\n" +
         lines.sorted.mkString("\n") +
         "\ntrace_write(events);"
@@ -136,46 +138,46 @@ object Observations {
         pattern.copy(code = pattern.code.map(encloseInstrumentationCode))
       }
 
-    private def createFunctionObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Function] = Nil // TODO: reactivate
-    //      spec.inStreams.flatMap { in =>
-    //        in.annotations.filter(_.name == annotationName).map { annotation =>
-    //          val name = argumentAsString(annotation, "name")
-    //          val code = createCode(annotation, in)
-    //          Function(FunctionName = name, code = code)
-    //        }
-    //      }
+    private def createFunctionObservations(annotationName: String, createCode: (Annotation, InStreamDescription) => String): Seq[Function] =
+      spec.in.toList.flatMap { case in@(_, (_, annotations)) =>
+        annotations.get(annotationName).toList.flatten.map { case annotation: Core.RecordConstructorExpression =>
+          val name = argumentAsString(annotation, "name")
+          val code = createCode(annotation, in)
+          Function(FunctionName = name, code = code)
+        }
+      }
 
-    private def createPatternObservations(annotationName: String, createCode: (TesslaCore.Annotation, InStreamDescription) => String): Seq[Pattern] = Nil // TODO: reactivate
-    //      spec.inStreams.flatMap { in =>
-    //        in.annotations.filter(_.name == annotationName).map { annotation =>
-    //          val function = if (annotation.arguments.contains("function")) {
-    //            Some(argumentAsString(annotation, "function"))
-    //          } else {
-    //            None
-    //          }
-    //          val lvalue = argumentAsString(annotation, "lvalue")
-    //          val pattern = parsePattern(lvalue, annotation.arguments("lvalue").loc, function)
-    //          pattern.copy(code = Some(createCode(annotation, in)))
-    //        }
-    //      }
+    private def createPatternObservations(annotationName: String, createCode: (Annotation, InStreamDescription) => String): Seq[Pattern] =
+      spec.in.toList.flatMap { case in @ (_, (_, annotations)) =>
+        annotations.get(annotationName).toList.flatten.map { case annotation: Core.RecordConstructorExpression =>
+          val function = if (annotationName.startsWith("Local")) {
+            Some(argumentAsString(annotation, "function"))
+          } else {
+            None
+          }
+          val lvalue = argumentAsString(annotation, "lvalue")
+          val pattern = parsePattern(lvalue, annotation.entries(TesslaAST.Name("lvalue")).location, function)
+          pattern.copy(code = Some(createCode(annotation, in)))
+        }
+      }
 
-    protected def printEvent(in: InStreamDescription, value: String): String = in.typ.elementType match {
-      case TesslaCore.BuiltInType("Int", Seq()) =>
-        s"""trace_push_int(events, "${in.name}", (int64_t) $value);"""
-      case TesslaCore.BuiltInType("Float", Seq()) =>
-        s"""trace_push_float(events, "${in.name}", (double) $value);"""
-      case TesslaCore.BuiltInType("Bool", Seq()) =>
-        s"""trace_push_bool(events, "${in.name}", (bool) $value);"""
+    protected def printEvent(in: InStreamDescription, value: String): String = in._2._1.asInstanceOf[Core.InstatiatedType].typeArgs.head match {
+      case Core.InstatiatedType("Int", Nil, _) =>
+        s"""trace_push_int(events, "${in._1.fullName}", (int64_t) $value);"""
+      case Core.InstatiatedType("Float", Nil, _)=>
+        s"""trace_push_float(events, "${in._1.fullName}", (double) $value);"""
+      case Core.InstatiatedType("Bool", Nil, _) =>
+        s"""trace_push_bool(events, "${in._1.fullName}", (bool) $value);"""
       case _ =>
-        error(Errors.WrongType("Events[Int], Events[Float] or Events[Bool]", in.typ, in.loc))
+        error(Errors.WrongType("Events[Int], Events[Float] or Events[Bool]", in._2._1, in._1.location))
         ""
     }
 
-    protected def printUnitEvent(in: InStreamDescription): String = in.typ.elementType match {
-      case TesslaCore.ObjectType(memberTypes) if memberTypes.isEmpty =>
-        s"""trace_push_unit(events, "${in.name}");"""
+    protected def printUnitEvent(in: InStreamDescription): String = in._2._1.asInstanceOf[Core.InstatiatedType].typeArgs.head match {
+      case Core.RecordType(entries, _) if entries.isEmpty =>
+        s"""trace_push_unit(events, "${in._1.fullName}");"""
       case _ =>
-        error(Errors.WrongType("Events[Unit]", in.typ, in.loc))
+        error(Errors.WrongType("Events[Unit]", in._2._1, in._1.location))
         ""
     }
 
@@ -183,7 +185,7 @@ object Observations {
 
     protected def printEventIndex(in: InStreamDescription): String = printEvent(in, "index")
 
-    protected def printEventArgument(in: InStreamDescription, index: Int): String = printEvent(in, s"arg$index")
+    protected def printEventArgument(in: InStreamDescription, index: BigInt): String = printEvent(in, s"arg$index")
 
     protected val setups = Seq()
     protected val teardowns = Seq()
@@ -246,4 +248,3 @@ object Observations {
   }
 
 }
-*/

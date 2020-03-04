@@ -4,6 +4,7 @@ import java.io.IOException
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.analyses.Observations
 import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
@@ -100,7 +101,7 @@ object Main extends SexyOpt {
       val core = unwrapResult(result._2)
 
       if (observations) {
-        // FIXME: port to new tessla core: println(unwrapResult(Observations.Generator.translate(core)))
+        println(unwrapResult(Observations.Generator.translate(core)))
         return
       }
 

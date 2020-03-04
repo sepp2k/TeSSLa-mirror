@@ -1,15 +1,11 @@
 package de.uni_luebeck.isp.tessla
 
-import java.util.Locale
-
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.RuntimeEvaluator.{RuntimeError, _}
 import de.uni_luebeck.isp.tessla.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.util.Lazy
 
 import scala.collection.immutable.ArraySeq
-import cats._
-import cats.implicits._
 import de.uni_luebeck.isp.tessla.RuntimeExterns.Extern
 
 object RuntimeEvaluator {
@@ -17,16 +13,7 @@ object RuntimeEvaluator {
   type Env = Map[String, Lazy[Any]]
 
   case class Record(entries: Map[String, Any]) {
-    override def toString = {
-      val isTuple = entries.keys.forall(_.matches("_\\d+"))
-      if (isTuple) {
-        val sorted = entries.toList.map(x => (x._1.substring(1).toInt, x._2)).sortBy(_._1).map(_._2)
-        s"(${sorted.mkString(", ")})"
-      } else {
-        val sorted = entries.toList.sortBy(_._1).map(x => x._1 + " = " + x._2)
-        s"{${sorted.mkString(", ")}}"
-      }
-    }
+    override def toString = TesslaAST.printRecord(entries, " = ", "()")
   }
 
   case class RuntimeError(msg: String) // TODO: support location information etc
