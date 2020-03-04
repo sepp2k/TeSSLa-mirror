@@ -91,7 +91,7 @@ object Observations {
     }
 
     private def argumentAsString(annotation: Annotation, name: String): String = {
-      val argument = annotation.entries(TesslaAST.Name(name))
+      val argument = annotation.entries(name)._1
       argument match {
         case Core.StringLiteralExpression(x, _) => x
         case _ => throw new Error("Expression must be a string, should have been caught by the (not yet implemented) type checker.")
@@ -99,7 +99,7 @@ object Observations {
     }
 
     private def argumentAsInt(annotation: Annotation, name: String): BigInt = {
-      val argument = annotation.entries(TesslaAST.Name(name))
+      val argument = annotation.entries(name)._1
       argument match {
         case Core.IntLiteralExpression(x, _) => x
         case _ => throw InternalError("Expression must be an int, should have been caught by the (not yet implemented) type checker.", argument.location)
@@ -156,7 +156,7 @@ object Observations {
             None
           }
           val lvalue = argumentAsString(annotation, "lvalue")
-          val pattern = parsePattern(lvalue, annotation.entries(TesslaAST.Name("lvalue")).location, function)
+          val pattern = parsePattern(lvalue, annotation.entries("lvalue")._1.location, function)
           pattern.copy(code = Some(createCode(annotation, in)))
         }
       }

@@ -13,7 +13,7 @@ object RuntimeEvaluator {
   type Env = Map[String, Lazy[Any]]
 
   case class Record(entries: Map[String, Any]) {
-    override def toString = TesslaAST.printRecord(entries, " = ", "()")
+    override def toString = TesslaAST.printRecord(entries, " = ", (x: Any) => x.toString, "()")
   }
 
   case class RuntimeError(msg: String) // TODO: support location information etc
@@ -66,9 +66,9 @@ class RuntimeEvaluator(externs: Map[String, Extern[Lazy]]) {
     case Core.TypeApplicationExpression(applicable, _, _) =>
       evalExpressionArg(applicable, env).get
     case Core.RecordConstructorExpression(entries, _) =>
-      Record(entries.map(e => (e._1.name, evalExpressionArg(e._2, env).get))) // TODO: entries are now strictly evaluated, should they be lazy?
-    case Core.RecordAccesorExpression(name, target, _) =>
-      propagateInternal(evalExpressionArg(target, env).get)(_.asInstanceOf[Record].entries(name.name))
+      Record(entries.map(e => (e._1, evalExpressionArg(e._2._1, env).get))) // TODO: entries are now strictly evaluated, should they be lazy?
+    case Core.RecordAccesorExpression(name, target, _, _) =>
+      propagateInternal(evalExpressionArg(target, env).get)(_.asInstanceOf[Record].entries(name))
     case Core.StringLiteralExpression(value, _) => value
     case Core.IntLiteralExpression(value, _) => value
     case Core.FloatLiteralExpression(value, _) => value

@@ -16,25 +16,11 @@ object TesslaAST {
   trait Locatable {
     def location: Location
 
-    def withLocation(s: Boolean => String, options: PrintOptions, mayNeedBraces: Boolean) =
-      withBraces(if (options.locations && location != Location.unknown) s"${s(true)} @ $location" else s(mayNeedBraces), mayNeedBraces && options.locations)
+    def withLocation(s: Boolean => String, options: PrintOptions, mayNeedBraces: Boolean) = printWithLocation(s, options, mayNeedBraces, location)
   }
 
-  final class Name(val name: String, override val location: Location = Location.unknown) extends Locatable {
-    override def hashCode() = name.hashCode
-
-    override def equals(o: Any) = o.isInstanceOf[Name] && o.asInstanceOf[Name].name == name
-
-    def print(options: PrintOptions, mayNeedBraces: Boolean) = withLocation(_ => name, options, mayNeedBraces)
-
-    override def toString = print(PrintOptions(), mayNeedBraces = false)
-  }
-
-  object Name {
-    def apply(name: String, location: Location = Location.unknown) = new Name(name, location)
-
-    def unapply(arg: Name): Option[(String, Location)] = Some((arg.name, arg.location))
-  }
+  def printWithLocation(s: Boolean => String, options: PrintOptions, mayNeedBraces: Boolean, location: Location) =
+    withBraces(if (options.locations && location != Location.unknown) s"${s(true)} @ $location" else s(mayNeedBraces), mayNeedBraces && options.locations)
 
   sealed trait CompiletimeEvaluation
 
@@ -103,17 +89,19 @@ object TesslaAST {
 
   def withBraces(s: String, addBraces: Boolean) = if (addBraces) s"(${s})" else s
 
-  def printRecord(entries: Map[String, Any], sep: String, unit: String) = if (entries.isEmpty) unit else {
-    val tuplified = entries.flatMap {case (key, value) =>
-      if(key.matches("_\\d+")) {
+  def printRecord[A](entries: Map[String, A], sep: String, str: A => String, unit: String, options: PrintOptions = PrintOptions(), strName: (String, A) => String = (s: String, _: A) => s) = if (entries.isEmpty) unit else {
+    val tuplified = entries.flatMap { case (key, value) =>
+      if (key.matches("_\\d+")) {
         Some(key.substring(1).toInt -> value)
       } else None
     }
     if (tuplified.size == entries.size && tuplified.keys.min == 1 && tuplified.keys.max == entries.size) {
-      val sorted = tuplified.toList.sortBy(_._1).map(_._2)
+      val sorted = tuplified.toList.sortBy(_._1).map(x => str(x._2))
       s"(${sorted.mkString(", ")})"
     } else {
-      val sorted = entries.toList.sortBy(_._1).map(x => "" + x._1 + sep + x._2)
+      val sorted = entries.toList.sortBy(_._1).map { case (k, v) =>
+        strName(k, v) + sep + str(v)
+      }
       s"{${sorted.mkString(", ")}}"
     }
   }
@@ -274,34 +262,31 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     }
   }
 
-  // TODO: print location of entry names
-  case class RecordConstructorExpression(entries: Map[Name, ExpressionArg],
+  // TODO: use print record
+  case class RecordConstructorExpression(entries: Map[String, (ExpressionArg, Location)],
     location: Location = Location.unknown
   ) extends Expression {
-    override def tpe = entries.view.mapValues(_.tpe).toMap.unorderedSequence.map { m =>
+    override def tpe = entries.view.mapValues(x => x._1.tpe.map(t => (t, x._2))).toMap.unorderedSequence.map { m =>
       RecordType(m)
     }
 
     override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
       withTypeAndLocation(_ => {
         val entriesString = if (entries.isEmpty) "" else
-          indent(entries.map(x => x._1.toString + ": " + x._2.print(options, mayNeedBraces = false)).mkString("\n", ",\n", "\n"))
+          indent(entries.map(x => printWithLocation(_ => x._1, options, mayNeedBraces = false, x._2._2) + ": " + x._2._1.print(options, mayNeedBraces = false)).mkString("\n", ",\n", "\n"))
         s"{$entriesString}"
       }, options, mayNeedBraces)
   }
 
-  // TODO: print location of accesor name
-  case class RecordAccesorExpression(name: Name, target: ExpressionArg,
-    location: Location = Location.unknown
+  case class RecordAccesorExpression(name: String, target: ExpressionArg,
+    nameLocation: Location = Location.unknown, location: Location = Location.unknown
   ) extends Expression {
     override def tpe = target.tpe.map { t =>
-      t.asInstanceOf[RecordType].entries(name)
+      t.asInstanceOf[RecordType].entries(name)._1
     }
 
-    override def toString = "" + target + "." + name
-
     override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation(_ => s"${target.print(options, mayNeedBraces = true)}.$name", options, mayNeedBraces)
+      withTypeAndLocation(_ => s"${target.print(options, mayNeedBraces = true)}.${printWithLocation(_ => name, options, mayNeedBraces = false, nameLocation)}", options, mayNeedBraces)
   }
 
   case class StringLiteralExpression(value: String, location: Location = Location.unknown) extends Expression {
@@ -347,10 +332,10 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     override def toString = name + (if (typeArgs.nonEmpty) "[" + typeArgs.mkString(", ") + "]" else "")
   }
 
-  case class RecordType(entries: Map[Name, Type], location: Location = Location.unknown) extends Type {
-    override def resolve(args: Map[Identifier, Type]) = RecordType(entries.view.mapValues(_.resolve(args)).toMap)
+  case class RecordType(entries: Map[String, (Type, Location)], location: Location = Location.unknown) extends Type {
+    override def resolve(args: Map[Identifier, Type]) = RecordType(entries.view.mapValues(x => (x._1.resolve(args), x._2)).toMap)
 
-    override def toString = printRecord(entries.map(x => (x._1.name, x._2)), ": ", "Unit")
+    override def toString = printRecord(entries, ": ", (x: (Type, Location)) => x._1.toString, "Unit")
   }
 
   val UnitType = RecordType(Map(), Location.builtIn)

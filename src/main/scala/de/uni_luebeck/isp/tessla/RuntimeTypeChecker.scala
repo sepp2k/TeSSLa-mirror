@@ -33,13 +33,13 @@ object RuntimeTypeChecker {
     case Core.RecordType(entries, _) =>
       value match {
         case record: RuntimeEvaluator.Record =>
-          if (record.entries.keys == entries.keys.map(_.name)) {
+          if (record.entries.keys == entries.keys) {
             entries.flatMap { entry =>
-              check(entry._2, record.entries(entry._1.name))
+              check(entry._2._1, record.entries(entry._1))
             }.headOption
           } else {
-            val missing = entries.keys.map(_.name).to(SortedSet) -- record.entries.keys
-            val notallowed = record.entries.keys.to(SortedSet) -- entries.keys.map(_.name)
+            val missing = entries.keys.to(SortedSet) -- record.entries.keys
+            val notallowed = record.entries.keys.to(SortedSet) -- entries.keys
 
             Some(s"Expected $tpe but${if (missing.nonEmpty) missing.mkString(" ", ", ", s" ${if (missing.size == 1) "is" else "are"} missing") else ""}${if (missing.nonEmpty && notallowed.nonEmpty) " and" else ""}${if (notallowed.nonEmpty) notallowed.mkString(" ", ", ", s" ${if (missing.size == 1) "is" else "are"} not allowed") else ""}.")
           }

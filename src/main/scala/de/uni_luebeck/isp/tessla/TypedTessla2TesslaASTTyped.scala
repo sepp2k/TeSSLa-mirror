@@ -124,11 +124,11 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     val value = lookup(env, id)
     value.expression match {
       case TypedTessla.MemberAccess(receiver, member, _, _) =>
-        lookupType(receiver.id, env).asInstanceOf[Typed.RecordType].entries(TesslaAST.Name(member))
+        lookupType(receiver.id, env).asInstanceOf[Typed.RecordType].entries(member)._1
       case TypedTessla.BuiltInOperator(name, _, _, _, _) =>
         knownExterns.get(name).map(_.tpe).getOrElse(toType(value.typeInfo))
       case TypedTessla.ObjectLiteral(members, _) =>
-        Typed.RecordType(members.map(x => (TesslaAST.Name(x._1) -> lookupType(x._2.id, env))))
+        Typed.RecordType(members.map(x => (x._1 -> (lookupType(x._2.id, env), Location.unknown))))
       case _ => toType(value.typeInfo)
     }
   }
@@ -188,9 +188,9 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
           Typed.ExpressionRef(toIdenifier(elseCase.id, loc), lookupType(elseCase.id, env), loc)
         ), loc)
       case MemberAccess(receiver, member, memberLoc, loc) =>
-        Typed.RecordAccesorExpression(TesslaAST.Name(member), Typed.ExpressionRef(toIdenifier(receiver.id, receiver.loc), lookupType(receiver.id, env)), loc)
+        Typed.RecordAccesorExpression(member, Typed.ExpressionRef(toIdenifier(receiver.id, receiver.loc), lookupType(receiver.id, env)), memberLoc, loc)
       case ObjectLiteral(members, loc) => Typed.RecordConstructorExpression(
-        members.map(x => (TesslaAST.Name(x._1), Typed.ExpressionRef(toIdenifier(x._2.id, x._2.loc), lookupType(x._2.id, env)))), loc)
+        members.map(x => (x._1, (Typed.ExpressionRef(toIdenifier(x._2.id, x._2.loc), lookupType(x._2.id, env)), Location.unknown))), loc)
       case Literal(value, loc) => value match {
         case IntLiteral(value) => Typed.IntLiteralExpression(value, loc)
         case FloatLiteral(value) => Typed.FloatLiteralExpression(value, loc)
@@ -210,14 +210,14 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
   def translateAnnotations(annotations: Seq[Annotation]) =
     annotations.map { annotation =>
       val translatedArguments = annotation.arguments.map { arg =>
-        TesslaAST.Name(arg._1) -> translateConstantExpression(arg._2)
+        arg._1 -> (translateConstantExpression(arg._2), Location.unknown)
       }
       annotation.name -> Typed.RecordConstructorExpression(translatedArguments)
     }.groupBy(_._1).view.mapValues(_.map(_._2).to(ArraySeq)).toMap
 
   def translateConstantExpression(exp: ConstantExpression): Typed.ExpressionArg = exp match {
     case ConstantExpression.Object(members, loc) =>
-      val translatedMembers = members.map(x => (TesslaAST.Name(x._1.name), translateConstantExpression(x._2)))
+      val translatedMembers = members.map(x => (x._1.name, (translateConstantExpression(x._2), x._1.loc)))
       Typed.RecordConstructorExpression(translatedMembers, loc)
     case ConstantExpression.Literal(value, loc) => value match {
       case IntLiteral(value) => Typed.IntLiteralExpression(value, loc)
@@ -244,7 +244,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
       if (isOpen) {
         throw new IllegalArgumentException("Open types not supported.")
       }
-      Typed.RecordType(memberTypes.map(x => (TesslaAST.Name(x._1), toType(x._2))))
+      Typed.RecordType(memberTypes.map(x => (x._1, (toType(x._2), Location.unknown))))
     case TypedTessla.TypeParameter(id, loc) => Typed.TypeParam(toIdenifier(id, loc), loc)
   }
 
@@ -266,7 +266,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
       }.fold(Map())(_ ++ _) ++ determineTypeParameters(resultType1, resultType2)) -- typeParams
     case (Typed.RecordType(entries1, _), Typed.RecordType(entries2, _)) =>
       entries1.map { case (name, tpe) =>
-        determineTypeParameters(tpe, entries2(name))
+        determineTypeParameters(tpe._1, entries2(name)._1)
       }.fold(Map())(_ ++ _)
     case (t1, t2) =>
       println("Resolvable: " + t2)

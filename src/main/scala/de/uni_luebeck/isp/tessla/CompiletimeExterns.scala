@@ -30,7 +30,7 @@ object CompiletimeExterns {
     case Core.RecordType(entries, _) =>
       val entries = value.asInstanceOf[RuntimeEvaluator.Record].entries.map { v =>
         //reify(v._2, entries(Identifier(v._1))).map(y => (Identifier(v._1), y))
-        TesslaAST.Name(v._1) -> ConstantEvaluator.getExpressionArgStrict(v._2.asInstanceOf[ConstantEvaluator.TranslationResult[Any, Some]])
+        v._1 -> ConstantEvaluator.getExpressionArgStrict(v._2.asInstanceOf[ConstantEvaluator.TranslationResult[Any, Some]]).map(x => (x, Location.unknown))
       }
       entries.unorderedSequence.map(v => Right(Core.RecordConstructorExpression(v)))
     case _ => Lazy(Left(InternalError(s"Could not reify value for type $tpe.")))
