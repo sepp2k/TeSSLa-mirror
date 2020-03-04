@@ -257,17 +257,16 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
       case Typed.StringLiteralExpression(value, location) =>
         mkLiteralResult(Some(value), Core.StringLiteralExpression(value, location))
       case Typed.ExternExpression(typeParams, params, resultType, name, location) =>
-        val paramTypes = params.map(x => (x._1, x._2))
         val expression = Core.ExternExpression(typeParams.map(translateIdentifier), params.map(x => (translateEvaluation(x._1), translateType(x._2, typeEnv))), translateType(resultType, typeEnv), name, location)
         val value: StackLazy[Option[Any]] = Lazy {
           val f: TypeApplicable = typeArgs => {
-            val innerTypeEnv = typeEnv ++ typeParams.zip(typeArgs).map(x => (x._1, x._2))
+            val innerTypeEnv = typeEnv ++ typeParams.zip(typeArgs)
             args =>
               Translatable { translatedExpressions =>
                 val extern = externs(name)
                 val result = tryReified(extern(typeArgs)(args).translate(translatedExpressions), translateType(resultType, innerTypeEnv))
                 TranslationResult[Any, Some](result.value, result.expression.map(e => Some(e.getOrElse(Left(StackLazy { stack =>
-                  mkApplicationExpression(Core.TypeApplicationExpression(expression, typeArgs.map(translateType(_, innerTypeEnv))), paramTypes,
+                  mkApplicationExpression(Core.TypeApplicationExpression(expression, typeArgs.map(translateType(_, innerTypeEnv))), params,
                     args.zip(params).map(a => reified(a._1.translate(translatedExpressions), translateType(a._2._2, innerTypeEnv))),
                     innerTypeEnv, stack, translatedExpressions, location)
                 })))))
@@ -311,7 +310,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[Ti
           val f: TypeApplicable = typeArgs => {
             args =>
               Translatable { translatedExpressions =>
-                val innerTypeEnv = typeEnv ++ typeParams.zip(typeArgs).map(x => (x._1, x._2))
+                val innerTypeEnv = typeEnv ++ typeParams.zip(typeArgs)
                 lazy val innerEnv: Env = env ++ params.zip(args).map(a => (a._1._1 -> reified(a._2.translate(translatedExpressions),
                   translateType(a._1._3, innerTypeEnv)))) ++
                   body.map(e => (e._1,
