@@ -2,7 +2,7 @@
 
 ## Download
 
-You can get the latest version of the TeSSLa compiler and interpreter from the [Gitlab Artifact Browser](https://gitlab.isp.uni-luebeck.de/tessla/tessla/builds/artifacts/TesslaCoreProposal/browse/target/scala-2.13?job=deploy).
+You can get the latest version of the TeSSLa compiler and interpreter from the [Gitlab Artifact Browser](https://gitlab.isp.uni-luebeck.de/tessla/tessla/builds/artifacts/development/browse/target/scala-2.13?job=deploy).
 
 ## Docker Image
 

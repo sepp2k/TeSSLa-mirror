@@ -10,7 +10,6 @@ test:
   only:
     - master
     - development
-    - TesslaCoreProposal
   tags:
     - docker
   script:
@@ -20,7 +19,6 @@ deploy:
   only:
     - master
     - development
-    - TesslaCoreProposal
   tags:
     - docker
   script:
