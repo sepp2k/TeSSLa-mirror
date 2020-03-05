@@ -24,7 +24,7 @@ object Main extends SexyOpt {
     parse(args)
     val streams = files.map(CharStreams.fromFileName)
     val includeResolver = optionIf(includes)(IncludeResolvers.fromFile _)
-    val output = TesslaDoc.extract(streams, includeResolver, includeStdlib = stdLib) match {
+    val output = TesslaDoc.extract(streams.toSeq, includeResolver, includeStdlib = stdLib) match {
       case Success(tesslaDocs, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         val relevantDocs = if(globalsOnly) tesslaDocs.globalsOnly else tesslaDocs

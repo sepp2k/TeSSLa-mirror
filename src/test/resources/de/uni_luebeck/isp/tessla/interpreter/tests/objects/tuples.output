@@ -1,4 +1,4 @@
-0: (1, "lala", ())._2 = "lala"
+0: (1, "lala", ())._2 = lala
 1: sumPair(t2) = 5
 2: sumPair(t1) = 5
 4: sumPair(t1) = 6

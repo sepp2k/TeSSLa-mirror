@@ -4,7 +4,7 @@ import java.io.IOException
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
-import de.uni_luebeck.isp.tessla.analyses._
+import de.uni_luebeck.isp.tessla.analyses.Observations
 import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
@@ -28,6 +28,12 @@ object Main extends SexyOpt {
   def diagnostics = !noDiagnostics.value
 
   val printCore = flag("print-core", "Print the Tessla Core representation generated from the Tessla specification")
+
+  val printTyped = flag("print-typed", "Print the typed Tessla representation generated from the Tessla specification")
+
+  val printLocations = flag("print-locations", "Print ASTs with locations")
+
+  val printAllTypes = flag("print-all-types", "Print ASTs with all types")
 
   val debug = flag("debug", "Print stack traces for runtime errors")
 
@@ -77,8 +83,7 @@ object Main extends SexyOpt {
 
     parse(args)
 
-    val evaluator = new Evaluator(Map())
-    val compiler = new Compiler(evaluator)
+    val compiler = new Compiler
     try {
       val specSource = CharStreams.fromFileName(tesslaFile)
       val compilerOptions = Compiler.Options(
@@ -87,7 +92,13 @@ object Main extends SexyOpt {
         stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
         stdlibPath = "stdlib.tessla"
       )
-      val core = unwrapResult(compiler.compile(specSource, compilerOptions))
+      val result = unwrapResult(compiler.compile(specSource, compilerOptions))
+
+      if (printTyped) {
+        println(result._1.print(TesslaAST.PrintOptions(!printAllTypes, printAllTypes, printAllTypes, true, printLocations)))
+      }
+
+      val core = unwrapResult(result._2)
 
       if (observations) {
         println(unwrapResult(Observations.Generator.translate(core)))
@@ -95,27 +106,27 @@ object Main extends SexyOpt {
       }
 
       if (listInStreams) {
-        core.inStreams.foreach { is => println(is.name) }
+        core.in.foreach { is => println(is._1.idOrName) }
       }
 
       if (listOutStreams) {
-        core.outStreams.foreach { os => println(os.nameOpt.getOrElse(s"print ${os.stream}")) }
+        core.out.foreach { os => println(os._1.idOrName) }
       }
 
       if (computationDepth) {
-        println(DepthChecker.nestingDepth(core))
+        // FIXME: port to new tessla core: println(DepthChecker.nestingDepth(core))
       }
 
       if (recursionDepth) {
-        println(RecursiveDepthChecker.nestingDepth(core))
+        // FIXME: port to new tessla core: println(RecursiveDepthChecker.nestingDepth(core))
       }
 
       if (nodeCount) {
-        println(NodeCounter.nodeCount(core))
+        // FIXME: port to new tessla core: println(NodeCounter.nodeCount(core))
       }
 
       if (printCore) {
-        println(core)
+        println(core.print(TesslaAST.PrintOptions(!printAllTypes, printAllTypes, printAllTypes, true, printLocations)))
       }
 
       if (listInStreams || listOutStreams || computationDepth || recursionDepth || nodeCount || verifyOnly) {
@@ -124,7 +135,7 @@ object Main extends SexyOpt {
 
       val abortAtValue = abortAt.map(BigInt(_))
 
-      val traceInstance = new Trace(evaluator)
+      val traceInstance = new Trace()
 
       if (ctfTrace) {
         if (!traceFile.isDefined) {
@@ -132,7 +143,7 @@ object Main extends SexyOpt {
           sys.exit(17)
         }
         val trace = traceInstance.fromCtfFile(traceFile.get, abortAtValue)
-        val output = Interpreter.run(core, trace, stopOn, evaluator)
+        val output = Interpreter.run(core, trace, stopOn)
         output.foreach(println)
       } else {
         val trace = if (csvTrace) {
@@ -145,7 +156,7 @@ object Main extends SexyOpt {
         if (flattenInput) {
           trace.foreach(println)
         } else {
-          val output = Interpreter.run(core, trace, stopOn, evaluator)
+          val output = Interpreter.run(core, trace, stopOn)
           output.foreach(println)
         }
       }

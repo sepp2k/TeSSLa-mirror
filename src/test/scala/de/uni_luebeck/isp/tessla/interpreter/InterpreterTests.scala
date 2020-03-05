@@ -2,19 +2,21 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import java.nio.charset.StandardCharsets
 
+import com.eclipsesource.schema.drafts.Version4._
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, Evaluator, IncludeResolvers, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
 import de.uni_luebeck.isp.tessla.analyses.Observations
 import org.antlr.v4.runtime.CharStream
 import spray.json.JsonParser
+
 import scala.io.Source
 
-class InterpreterTests extends FunSuite {
+class InterpreterTests extends AnyFunSuite {
 
   object JSON {
 
@@ -46,7 +48,7 @@ class InterpreterTests extends FunSuite {
   }
 
   val root = "tests/"
-  val testCases: Stream[(String, String)] = getFilesRecursively().filter {
+  val testCases: LazyList[(String, String)] = getFilesRecursively().filter {
     case (path, file) => file.endsWith(".json") && !(file.endsWith("Schema.json") && path.isEmpty)
   }.map {
     case (path, file) => (path, stripExtension(file))
@@ -54,14 +56,14 @@ class InterpreterTests extends FunSuite {
 
   def stripExtension(fileName: String): String = fileName.replaceFirst("""\.[^.]+$""", "")
 
-  def getFilesRecursively(path: String = ""): Stream[(String, String)] = {
+  def getFilesRecursively(path: String = ""): LazyList[(String, String)] = {
     def isDir(filename: String) = !filename.contains(".")
 
     Source.fromInputStream(getClass.getResourceAsStream(s"$root$path"))
       .getLines.flatMap { file =>
       if (isDir(file)) getFilesRecursively(s"$path$file/")
-      else Stream((path, file))
-    }.toStream
+      else LazyList((path, file))
+    }.to(LazyList)
   }
 
   def assert(condition: Boolean, message: String): Unit = {
@@ -144,22 +146,21 @@ class InterpreterTests extends FunSuite {
           stdlibPath = "stdlib.tessla"
         )
         val src = testStream(testCase.spec)
-        val evaluator = new Evaluator(Map())
-        val compiler = new Compiler(evaluator)
+        val compiler = new Compiler()
         testCase.expectedObservations.foreach { observationFile =>
           val expectedObservation = JsonParser(Source.fromInputStream(getClass.getResourceAsStream(s"$root$path$observationFile")).mkString).convertTo[Observations]
-          handleResult(compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedErrors, testCase.expectedWarnings) { actualObservation =>
+          handleResult(compiler.compile(src, options).andThen(x => x._2.andThen(Observations.Generator)), testCase.expectedErrors, testCase.expectedWarnings) { actualObservation =>
             assertEquals(actualObservation, expectedObservation, "Observation")
           }
         }
         testCase.expectedObservationErrors.foreach { _ =>
-          handleResult(compiler.compile(src, options).andThen(Observations.Generator), testCase.expectedObservationErrors, testCase.expectedWarnings)(_ => ())
+          handleResult(compiler.compile(src, options).andThen(x => x._2.andThen(Observations.Generator)), testCase.expectedObservationErrors, testCase.expectedWarnings)(_ => ())
         }
         testCase.input match {
           case Some(input) =>
             try {
-              val trace = new Trace(evaluator).fromSource(testSource(input), s"$path$input", testCase.abortAt.map(BigInt(_)))
-              val result = compiler.compile(src, options).map(spec => Interpreter.run(spec, trace, None, evaluator))
+              val trace = new Trace().fromSource(testSource(input), s"$path$input", testCase.abortAt.map(BigInt(_)))
+              val result = compiler.compile(src, options).andThen(_._2.map(spec => Interpreter.run(spec, trace, None)))
 
               handleResult(result, testCase.expectedErrors, testCase.expectedWarnings) { output =>
                 val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
@@ -179,7 +180,7 @@ class InterpreterTests extends FunSuite {
                 }
             }
           case None =>
-            handleResult(compiler.compile(src, options), testCase.expectedErrors, testCase.expectedWarnings)(_ => ())
+            handleResult(compiler.compile(src, options).andThen(_._2), testCase.expectedErrors, testCase.expectedWarnings)(_ => ())
         }
       }
   }

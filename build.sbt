@@ -1,8 +1,8 @@
 val nexus = "https://sourcecode.isp.uni-luebeck.de/nexus/"
 val snapshots = "ISP Snapshots" at nexus + "content/repositories/snapshots"
 val releases = "ISP Releases" at nexus + "content/repositories/releases"
-val playResolver = "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
-val validatorResolver = "emueller-bintray" at "http://dl.bintray.com/emueller/maven"
+val playResolver = "Typesafe repository" at "https://repo.typesafe.com/typesafe/releases/"
+val validatorResolver = "emueller-bintray" at "https://dl.bintray.com/emueller/maven"
 val efficiosSnapshots = "efficios-snapshots" at "https://mvn.efficios.com/repository/snapshots"
 val efficiosReleases = "efficios-releases" at "https://mvn.efficios.com/repository/releases"
 
@@ -16,7 +16,7 @@ val versionPattern = "def\\s+version(?:\\s*:\\s*String)?\\s*=\\s*\"([^\"]+)\"".r
 
 version := versionPattern.findFirstMatchIn(IO.read(versionFile)).get.group(1)
 
-scalaVersion := "2.12.7"
+scalaVersion := "2.13.1"
 
 resolvers ++= Seq(
   releases, snapshots,
@@ -34,13 +34,14 @@ publishTo := {
 credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials")
 
 libraryDependencies ++= Seq(
-  "com.github.sepp2k" %% "sexyopt" % "0.1.1",
+  "de.uni_luebeck.isp" %% "sexyopt" % "0.1.1",
   "com.github.rjeschke" % "txtmark" % "0.13",
-  "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-  "com.typesafe.play" %% "play-json" % "2.6.6",
-  "com.eclipsesource" %% "play-json-schema-validator" % "0.9.4" % "test",
+  "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+  "com.typesafe.play" %% "play-json" % "2.8.0",
+  "com.eclipsesource" %% "play-json-schema-validator" % "0.9.5" % "test",
   "io.spray" %% "spray-json" % "1.3.5",
-  "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT"
+  "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT",
+  "org.typelevel" %% "cats-core" % "2.0.0"
 )
 
 mainClass in (Compile, run) := Some("de.uni_luebeck.isp.tessla.Main")
@@ -65,3 +66,8 @@ antlr4GenVisitor in Antlr4 := true
 
 javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 scalacOptions += "-target:jvm-1.8"
+
+assemblyMergeStrategy in assembly := {
+  case PathList("module-info.class") => MergeStrategy.discard
+  case x => (assemblyMergeStrategy in assembly).value(x)
+}

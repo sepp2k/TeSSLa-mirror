@@ -28,7 +28,7 @@ object ReverseTopologicalSort {
     if (nodesInCycles.isEmpty) {
       Sorted(nodes.reverse)
     } else {
-      Cycles(nodesInCycles)
+      Cycles(nodesInCycles.toSeq)
     }
   }
 }

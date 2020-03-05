@@ -1,10 +1,10 @@
 package de.uni_luebeck.isp.tessla
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import TranslationPhase.{Result, Success, Failure, SimpleWarning}
 import Errors.{DivideByZero, IndexOutOfRange}
 
-class ResultTests extends FunSuite {
+class ResultTests extends AnyFunSuite {
   def w(msgs: String*) = msgs.toList.map(SimpleWarning(Location.unknown, _))
   val dbz = DivideByZero(Location.unknown)
   val ioor = IndexOutOfRange(42, IndexedSeq(), Location.unknown)

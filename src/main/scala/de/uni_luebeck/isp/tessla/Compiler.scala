@@ -16,19 +16,20 @@ object Compiler {
 
 }
 
-class Compiler(evaluator: Evaluator) {
+class Compiler {
 
-  def instantiatePipeline(options: Options): TranslationPhase[CharStream, TesslaCore.Specification] = {
+  def instantiatePipeline(options: Options): TranslationPhase[CharStream, (TesslaAST.Typed.Specification, TranslationPhase.Result[TesslaAST.Core.Specification])] = {
     new TesslaParser.WithIncludes(options.includeResolver)
       .andThen(new StdlibIncluder(options.stdlibIncludeResolver, options.stdlibPath))
       .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
-      .andThen(new ConstantEvaluator(options.timeUnit, evaluator))
-      .andThen(RemoveUnusedDefinitions)
+      .andThen(new TypedTessla2TesslaASTCore(options.timeUnit))
+      .andThen(new TranslationPhase.BypassPhase(new ConstantEvaluator(options.timeUnit)))
+    //.andThen(RemoveUnusedDefinitions)
   }
 
-  def compile(src: CharStream, options: Options): TranslationPhase.Result[TesslaCore.Specification] = {
+  def compile(src: CharStream, options: Options): TranslationPhase.Result[(TesslaAST.Typed.Specification, TranslationPhase.Result[TesslaAST.Core.Specification])] = {
     instantiatePipeline(options).translate(src)
   }
 
@@ -40,7 +41,7 @@ class Compiler(evaluator: Evaluator) {
     }
   }
 
-  class EnableIf[T](condition: Boolean, phase: TranslationPhase[T,T]) extends TranslationPhase[T, T] {
+  class EnableIf[T](condition: Boolean, phase: TranslationPhase[T, T]) extends TranslationPhase[T, T] {
     override def translate(spec: T) = {
       if (condition) {
         phase.translate(spec)
@@ -49,4 +50,5 @@ class Compiler(evaluator: Evaluator) {
       }
     }
   }
+
 }

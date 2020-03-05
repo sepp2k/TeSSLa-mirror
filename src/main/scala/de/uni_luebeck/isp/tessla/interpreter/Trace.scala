@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{Evaluator, Location, Tessla, TesslaCore}
+import de.uni_luebeck.isp.tessla.{Location, Tessla}
 import de.uni_luebeck.isp.tessla.Errors.InternalError
 import de.uni_luebeck.isp.tessla.interpreter.Trace.TimeStamp
 import org.eclipse.tracecompass.ctf.core.CTFException
@@ -12,14 +12,11 @@ object Trace {
   type Identifier = Tessla.Identifier
   val Identifier = Tessla.Identifier
 
-  case class Event(loc: Location, timeStamp: TimeStamp, streamOpt: Option[Identifier], value: TesslaCore.Value) {
+  case class Event(loc: Location, timeStamp: TimeStamp, streamOpt: Option[Identifier], value: Any) {
     override def toString: String = streamOpt match {
       case Some(stream) => s"$timeStamp: ${stream.name} = $value"
-      case None => value match {
-        case str: TesslaCore.StringValue => str.value
-        case _ => value.toString
+      case None => value.toString
       }
-    }
 
     def stream = streamOpt match {
       case Some(stream) => stream
@@ -33,7 +30,7 @@ object Trace {
 
 }
 
-class Trace(evaluator: Evaluator){
+class Trace(){
 
   def fromCtfFile(ctfFileName: String, abortAt: Option[BigInt]): Interpreter.Trace = {
     val reader = new CTFTraceReader(new CTFTrace(ctfFileName))
@@ -53,7 +50,7 @@ class Trace(evaluator: Evaluator){
         }
         val ts = TimeStamp(Location.unknown, BigInt(event.getTimestamp))
         val stream = Trace.Identifier(event.getDeclaration.getName, Location.unknown)
-        val value = TesslaCore.Ctf(event.getFields, Location.unknown)
+        val value = event.getFields
         eventCounter += 1
         Trace.Event(Location.unknown, ts, Some(stream), value)
       }
@@ -62,7 +59,7 @@ class Trace(evaluator: Evaluator){
 
   def fromLineIterator(lineIterator: Iterator[String], fileName: String, abortAt: Option[Specification.Time] = None) = {
     val rawTrace = new TraceParser(lineIterator, fileName).parseTrace()
-    new FlatEventIterator(rawTrace, abortAt, evaluator)
+    new FlatEventIterator(rawTrace, abortAt)
   }
 
   def fromSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {
@@ -77,7 +74,7 @@ class Trace(evaluator: Evaluator){
 
   def fromCsvLineIterator(lineIterator: Iterator[String], fileName: String, abortAt: Option[Specification.Time] = None) = {
     val rawTrace = new CsvTraceParser(lineIterator, fileName).parseTrace()
-    new FlatEventIterator(rawTrace, abortAt, evaluator)
+    new FlatEventIterator(rawTrace, abortAt)
   }
 
   def fromCsvSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {

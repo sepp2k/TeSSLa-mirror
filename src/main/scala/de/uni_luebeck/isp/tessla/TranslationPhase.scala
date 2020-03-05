@@ -2,6 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import TranslationPhase._
 import de.uni_luebeck.isp.tessla.Errors._
+import de.uni_luebeck.isp.tessla.TesslaAST.{Core, Typed}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -24,17 +25,38 @@ trait TranslationPhase[-T, +U] extends (T=>Result[U]) {
 }
 
 object TranslationPhase {
+  class ParallelPhase[A, B, C](phase1: TranslationPhase[A, B], phase2: TranslationPhase[A, C]) extends TranslationPhase[A, (B, C)] {
+    override def translate(spec: A) = {
+      val result1 = phase1.translate(spec)
+      val result2 = phase2.translate(spec)
+      result1.combine(result2)((a, b) => (a, b))
+    }
+  }
+
+
+  class BypassPhase[A, B](phase: TranslationPhase[A, B]) extends TranslationPhase[A, (A, Result[B])] {
+    override def translate(spec: A) = {
+      val result = phase.translate(spec)
+      Success((spec, result), Seq())
+    }
+  }
+
+  class IdentityPhase[A] extends TranslationPhase[A, A] {
+    override def translate(spec: A) = Success(spec, Nil)
+  }
+
   trait Translator[U] {
     protected def translateSpec(): U
 
     def translate(): Result[U] = {
       try {
         val result = translateSpec()
-        if (errors.isEmpty) Success(result, warnings)
-        else Failure(errors, warnings)
+        if (errors.isEmpty) Success(result, warnings.toSeq)
+        else Failure(errors.toSeq, warnings.toSeq)
       } catch {
         case ex: TesslaError =>
-          Failure(errors += ex, warnings)
+          errors += ex
+          Failure(errors.toSeq, warnings.toSeq)
       }
     }
 
@@ -45,7 +67,7 @@ object TranslationPhase {
       warnings += diagnostic
     }
 
-    protected def error(error: TesslaError) {
+    protected def error(error: TesslaError): Unit = {
       errors += error
     }
 

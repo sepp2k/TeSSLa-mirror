@@ -1,1 +1,1 @@
-errors/error-propagation.input(3,8 - 3,9): Division by zero (t = 2)
+<unknown location>: Runtime error: Division by zero (t = 2)

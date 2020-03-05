@@ -1,12 +1,12 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla
-import de.uni_luebeck.isp.tessla.Errors.{DecreasingTimeStampsError, SameTimeStampError, TesslaError, TesslaErrorWithTimestamp}
+import de.uni_luebeck.isp.tessla.Errors.{DecreasingTimeStampsError, SameTimeStampError, TesslaError, TesslaErrorWithTimestamp, mkTesslaError}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.{CharStream, CharStreams}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable
 
 object JavaApi {
@@ -22,9 +22,9 @@ object JavaApi {
   case class Result(warnings: java.util.List[Diagnostic], errors: java.util.List[Diagnostic])
 
   abstract class EngineListener {
-    def event(stream: String, time: Specification.Time, value: TesslaCore.Value)
+    def event(stream: String, time: Specification.Time, value: Any): Unit
 
-    def printEvent(time: Specification.Time, value: TesslaCore.Value)
+    def printEvent(time: Specification.Time, value: Any): Unit
   }
 
   case class CompilationResult(result: Result, engine: Engine)
@@ -32,39 +32,39 @@ object JavaApi {
   case class Engine(spec: Interpreter) {
     private val seen = mutable.Set.empty[String]
 
-    def addListener(listener: EngineListener) {
+    def addListener(listener: EngineListener): Unit = {
       spec.outStreams.foreach {
         case (Some(name), stream, _) =>
           stream.addListener {
             case Some(value) =>
-              listener.event(name, spec.getTime, value.forceValue)
+              listener.event(name, spec.getTime, value)
             case None =>
           }
         case (None, stream, _) =>
           stream.addListener {
             case Some(value) =>
-              listener.printEvent(spec.getTime, value.forceValue)
+              listener.printEvent(spec.getTime, value)
             case None =>
           }
       }
     }
 
     def provide(stream: String, value: Int): Boolean =
-      provide(stream, TesslaCore.IntValue(BigInt(value), Location.unknown))
+      provide(stream, BigInt(value))
 
     def provide(stream: String, value: BigInt): Boolean =
-      provide(stream, TesslaCore.IntValue(value, Location.unknown))
+      provide(stream, value)
 
     def provide(stream: String, value: Boolean): Boolean =
-      provide(stream, TesslaCore.BoolValue(value, Location.unknown))
+      provide(stream, value)
 
     def provide(stream: String, value: String): Boolean =
-      provide(stream, TesslaCore.StringValue(value, Location.unknown))
+      provide(stream, value)
 
     def provide(stream: String): Boolean =
-      provide(stream, TesslaCore.TesslaObject(Map(), Location.unknown))
+      provide(stream, RuntimeEvaluator.Record(Map()))
 
-    def provide(stream: String, value: TesslaCore.Value): Boolean =  {
+    def provide(stream: String, value: Any): Boolean =  {
       if (seen.contains(stream)) {
         throw SameTimeStampError(spec.getTime, stream, Location.unknown)
       }
@@ -72,7 +72,12 @@ object JavaApi {
 
       spec.inStreams.get(stream) match {
         case Some((inStream, elementType)) =>
-          ValueTypeChecker.check(value, elementType, stream)
+          val tpe = elementType.asInstanceOf[TesslaAST.Core.InstatiatedType]
+          assert(tpe.name == "Events")
+          assert(tpe.typeArgs.size == 1)
+          RuntimeTypeChecker.check(tpe.typeArgs.head, value).foreach(error =>
+            throw mkTesslaError("input " + stream + ": " + error)
+          )
           inStream.provide(value)
           true
         case None =>
@@ -133,13 +138,15 @@ object JavaApi {
       stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
       stdlibPath = "stdlib.tessla"
     )
-    compile(specSource, compilerOptions, new Evaluator(Map()))
+    compile(specSource, compilerOptions)
   }
 
-  def compile(specSource: CharStream, compilerOptions: Compiler.Options, evaluator: Evaluator): CompilationResult = {
-    new Compiler(evaluator).compile(specSource, compilerOptions) match {
-      case Success(spec, warnings) =>
-        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(new Interpreter(spec, evaluator)))
+  def compile(specSource: CharStream, compilerOptions: Compiler.Options): CompilationResult = {
+    new Compiler().compile(specSource, compilerOptions) match {
+      case Success((_, Success(spec, warnings)), _) =>
+        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(new Interpreter(spec)))
+      case Success((_, Failure(errors, warnings)), _) =>
+        CompilationResult(Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava), null)
       case Failure(errors, warnings) =>
         CompilationResult(Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava), null)
     }

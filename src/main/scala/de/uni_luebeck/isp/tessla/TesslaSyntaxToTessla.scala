@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors._
 import org.antlr.v4.runtime._
 import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.ArrayBuffer
 
 class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
@@ -33,10 +33,10 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
   def translateDefinition(definition: TesslaSyntax.DefContext) = {
     val annotations = definition.header.annotations.asScala.map(translateAnnotation)
     val typeParameters = definition.header.typeParameters.asScala.map(mkID)
-    checkForDuplicates(typeParameters)
+    checkForDuplicates(typeParameters.toSeq)
     val parameters = definition.header.parameters.asScala.map(translateParameter)
     val paramIDs = parameters.map(_.id)
-    checkForDuplicates(paramIDs)
+    checkForDuplicates(paramIDs.toSeq)
     val body = translateBody(definition.body)
     body match {
       case Tessla.ExpressionBody(block: Tessla.Block) =>
@@ -49,7 +49,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
     val loc = Location.fromToken(definition.header.DEF).merge(Location.fromNode(definition.body))
     Tessla.Definition(
-      annotations, mkID(definition.header.name), typeParameters, parameters,
+      annotations.toSeq, mkID(definition.header.name), typeParameters.toSeq, parameters.toSeq,
       Option(definition.header.resultType).map(translateType),
       Location.fromNode(definition.header), body, loc
     )
@@ -86,11 +86,11 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       val members = obj.members.asScala.map { member =>
         mkID(member.name) -> translateConstantExpression(member.value)
       }
-      checkForDuplicates(members.map(_._1))
+      checkForDuplicates(members.map(_._1).toSeq)
       Tessla.ConstantExpression.Object(members.toMap, Location.fromNode(obj))
     case tup: TesslaSyntax.ConstantTupleContext =>
       val elements = tup.elems.asScala.map(translateConstantExpression)
-      Tessla.ConstantExpression.Object(tupleToObject(elements), Location.fromNode(tup))
+      Tessla.ConstantExpression.Object(tupleToObject(elements.toSeq), Location.fromNode(tup))
   }
 
   def translateAnnotation(annotation: TesslaSyntax.AnnotationContext): Tessla.Annotation = {
@@ -101,7 +101,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         Tessla.PositionalArgument(translateConstantExpression(arg.constantExpression))
       }
     }
-    Tessla.Annotation(mkID(annotation.ID), args, Location.fromNode(annotation))
+    Tessla.Annotation(mkID(annotation.ID), args.toSeq, Location.fromNode(annotation))
   }
 
   def translateBody(body: TesslaSyntax.BodyContext): Tessla.Body = body match {
@@ -110,7 +110,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       if (expBody.defs.isEmpty) {
         Tessla.ExpressionBody(exp)
       } else {
-        Tessla.ExpressionBody(Tessla.Block(expBody.defs.asScala.map(translateDefinition), exp, Location.fromNode(body)))
+        Tessla.ExpressionBody(Tessla.Block(expBody.defs.asScala.map(translateDefinition).toSeq, exp, Location.fromNode(body)))
       }
     case builtIn: TesslaSyntax.BuiltInBodyContext =>
       Tessla.BuiltInBody(mkID(builtIn.name), Option(builtIn.expression).map(translateExpression))
@@ -125,7 +125,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       val endLoc = Location.fromToken(Option(annotationDef.RPAR).getOrElse(annotationDef.ID))
       val loc = Location.fromToken(annotationDef.DEF).merge(endLoc)
       val params = annotationDef.parameters.asScala.map(translateParameter)
-      Tessla.AnnotationDefinition(mkID(annotationDef.ID), params, loc)
+      Tessla.AnnotationDefinition(mkID(annotationDef.ID), params.toSeq, loc)
     }
 
     override def visitOut(out: TesslaSyntax.OutContext) = {
@@ -164,7 +164,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
 
     override def visitIn(in: TesslaSyntax.InContext) = {
       val annotations = in.annotations.asScala.map(translateAnnotation)
-      Tessla.In(mkID(in.ID), translateType(in.`type`), annotations, Location.fromNode(in))
+      Tessla.In(mkID(in.ID), translateType(in.`type`), annotations.toSeq, Location.fromNode(in))
     }
 
     override def visitTypeDefinition(typeDef: TesslaSyntax.TypeDefinitionContext) = {
@@ -176,13 +176,13 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         case builtIn: TesslaSyntax.BuiltInTypeBodyContext =>
           Tessla.BuiltInType(mkID(builtIn.name))
       }
-      checkForDuplicates(typeParams)
-      Tessla.TypeDefinition(mkID(typeDef.name), typeParams, body, loc)
+      checkForDuplicates(typeParams.toSeq)
+      Tessla.TypeDefinition(mkID(typeDef.name), typeParams.toSeq, body, loc)
     }
 
     override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext) = {
       val contents = module.contents.asScala.map(_.statement).map(visit)
-      Tessla.Module(mkID(module.name), contents, Location.fromNode(module))
+      Tessla.Module(mkID(module.name), contents.toSeq, Location.fromNode(module))
     }
   }
 
@@ -206,12 +206,12 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
 
     override def visitTypeApplication(typ: TesslaSyntax.TypeApplicationContext) = {
       val loc = Location.fromNode(typ)
-      Tessla.TypeApplication(mkID(typ.ID), typ.typeArguments.asScala.map(translateType), loc)
+      Tessla.TypeApplication(mkID(typ.ID), typ.typeArguments.asScala.map(translateType).toSeq, loc)
     }
 
     override def visitFunctionType(typ: TesslaSyntax.FunctionTypeContext) = {
       val loc = Location.fromNode(typ)
-      Tessla.FunctionType(typ.parameterTypes.asScala.map(translateType), translateType(typ.resultType), loc)
+      Tessla.FunctionType(typ.parameterTypes.asScala.map(translateType).toSeq, translateType(typ.resultType), loc)
     }
 
     override def visitObjectType(typ: TesslaSyntax.ObjectTypeContext) = {
@@ -221,13 +221,13 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       val memberTypes = typ.memberSigs.asScala.map { sig =>
         (mkID(sig.name), translateType(sig.`type`))
       }
-      checkForDuplicates(memberTypes.map(_._1))
+      checkForDuplicates(memberTypes.map(_._1).toSeq)
       Tessla.ObjectType(memberTypes.toMap, isOpen = typ.DOTDOT != null, Location.fromNode(typ))
     }
 
     override def visitTupleType(typ: TesslaSyntax.TupleTypeContext) = {
       val types = typ.elementTypes.asScala.map(translateType)
-      Tessla.ObjectType(tupleToObject(types), isOpen = false, Location.fromNode(typ))
+      Tessla.ObjectType(tupleToObject(types.toSeq), isOpen = false, Location.fromNode(typ))
     }
   }
 
@@ -257,7 +257,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       val typeArgs = funCall.typeArguments.asScala.map(translateType)
       val args = funCall.arguments.asScala.map(translateArgument)
       val loc = Location.fromNode(funCall)
-      Tessla.MacroCall(translateExpression(funCall.function), typeArgs, args, loc)
+      Tessla.MacroCall(translateExpression(funCall.function), typeArgs.toSeq, args.toSeq, loc)
     }
 
     def translateArgument(arg: TesslaSyntax.ArgContext): Tessla.Argument[Tessla.Expression] = {
@@ -272,7 +272,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       if (exp.elems.size == 1 && exp.lastComma == null) {
         visit(exp.elems.get(0))
       } else {
-        val members = tupleToObject(exp.elems.asScala.map(visit))
+        val members = tupleToObject(exp.elems.asScala.map(visit).toSeq)
         Tessla.ObjectLiteral(members, Location.fromNode(exp))
       }
     }
@@ -282,7 +282,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         warn(Location.fromToken(obj.DOLLAR_BRACE), "Use of '${' for objects is deprecated, use '{' instead")
       }
       val members = obj.members.asScala.map(translateMemberDefinition)
-      checkForDuplicates(members.map(_._1))
+      checkForDuplicates(members.map(_._1).toSeq)
       Tessla.ObjectLiteral(members.toMap, Location.fromNode(obj))
     }
 
@@ -294,11 +294,11 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
 
     override def visitBlock(block: TesslaSyntax.BlockContext) = {
       val defs = block.definitions.asScala.map(translateDefinition)
-      checkForDuplicates(defs.map(_.id))
+      checkForDuplicates(defs.map(_.id).toSeq)
       if (block.RETURN != null) {
         warn(Location.fromToken(block.RETURN), "The keyword 'return' is deprecated")
       }
-      Tessla.Block(defs, translateExpression(block.expression), Location.fromNode(block))
+      Tessla.Block(defs.toSeq, translateExpression(block.expression), Location.fromNode(block))
     }
 
     override def visitLambda(lambda: TesslaSyntax.LambdaContext) = {
@@ -307,8 +307,8 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       val headerLoc = startHeaderLoc.merge(endHeaderLoc)
       val body = translateExpression(lambda.expression)
       val params = lambda.params.asScala.map(translateParameter)
-      checkForDuplicates(params.map(_.id))
-      Tessla.Lambda(params, headerLoc, body, Location.fromNode(lambda))
+      checkForDuplicates(params.map(_.id).toSeq)
+      Tessla.Lambda(params.toSeq, headerLoc, body, Location.fromNode(lambda))
     }
 
     def translateOperator(operator: Token, operatorMap: Map[String, String]) = {

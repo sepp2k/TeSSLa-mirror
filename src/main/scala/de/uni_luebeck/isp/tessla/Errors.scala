@@ -3,7 +3,14 @@ package de.uni_luebeck.isp.tessla
 import java.util.IllegalFormatException
 
 object Errors {
+
   trait TesslaError extends Exception with Diagnostic
+
+  def mkTesslaError(msg: String, location: Location = Location.unknown) = new TesslaError {
+    override def loc = location
+
+    override def message = msg
+  }
 
   case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends Exception(error) with TesslaError {
     override def loc: Location = error.loc
@@ -21,18 +28,12 @@ object Errors {
     override def toString = super.toString() + stackTraceString
   }
 
-  case class RuntimeError(inner: TesslaError) extends Exception(inner) with TesslaError {
-    override def loc = inner.loc
-
-    override def message = inner.message
-  }
-
   case class MissingBody(id: Tessla.Identifier) extends TesslaError {
     override def loc = id.loc
 
     override def message =
       s"Member definition $id needs a body. Eliding the body is only allowed if the definition" +
-      " consists of an identifier and nothing else"
+        " consists of an identifier and nothing else"
   }
 
   case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location) extends TesslaError {
@@ -45,7 +46,7 @@ object Errors {
     }
   }
 
-  case class WrongType(expected: String, found: TesslaCore.Type, loc: Location) extends TesslaError {
+  case class WrongType(expected: String, found: TesslaAST.Core.Type, loc: Location) extends TesslaError {
     override def message = s"Type mismatch: Expected $expected, but found $found"
   }
 
@@ -111,6 +112,10 @@ object Errors {
     override def message = s"Internal error: $m"
   }
 
+  case class RuntimeError(m: String, loc: Location = Location.unknown) extends TesslaError {
+    override def message = s"Runtime error: $m"
+  }
+
   case class UnknownTimeUnit(name: String, loc: Location) extends TesslaError {
     override def message = s"Unknown time unit: $name. " +
       "Allowed time units: fs, ps, ns, us, ms, s, m, h, d"
@@ -161,7 +166,7 @@ object Errors {
     override def message: String = s"Non-positive delay $value"
   }
 
-  case class InputTypeMismatch(value: TesslaCore.Value, valueType: String, streamName: String, streamType: TesslaCore.Type, loc: Location) extends TesslaError {
+  case class InputTypeMismatch(value: Any, valueType: String, streamName: String, streamType: TesslaAST.Core.Type, loc: Location) extends TesslaError {
     override def message: String = s"Unexpected value of type $valueType ($value), expected type $streamType, in input stream '$streamName'"
   }
 
@@ -169,7 +174,7 @@ object Errors {
     override def message: String = s"Non-positive step in time stamp range: $value"
   }
 
-  case class KeyNotFound(key: TesslaCore.Value, map: Map[_, _], loc: Location) extends TesslaError {
+  case class KeyNotFound(key: Any, map: Map[_, _], loc: Location) extends TesslaError {
     override def message: String = s"Key $key was not found in $map"
   }
 
@@ -262,4 +267,5 @@ object Errors {
   case class AnnotationDefInModule(loc: Location) extends TesslaError {
     override def message = "Annotation definitions are not allowed inside of modules"
   }
+
 }
