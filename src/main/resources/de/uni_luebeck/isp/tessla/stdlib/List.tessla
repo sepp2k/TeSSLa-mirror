@@ -1,37 +1,194 @@
 ## Lists
 module List {
+
+  ## Returns an empty list without any element of type `T`
   def empty[T]: List[T] = __builtin__(List_empty)
 
+  ## Returns the number of elements in the given `list`
   @liftable
   def size[T](list: List[T]): Int = __builtin__(List_size)
 
+  ## Returns [`true`](#true) if the given `list` has a size of zero
   @liftable
   def isEmpty[T](list: List[T]): Bool = size(list) == 0
 
+  ## Appends the given `element` to the end of the given `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List_append(old, x), List_empty[Int])
+  ## out list
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream list: events
+  ## ---
+  ## 0: list = List()
+  ## 2: list = List(1)
+  ## 2: x = 1
+  ## 4: list = List(1, 2)
+  ## 4: x = 2
+  ## 6: list = List(1, 2, 3)
+  ## 6: x = 3
+  ## ~~~
   @liftable
   def append[T](list: List[T], element: T): List[T] = __builtin__(List_append)
 
+  ## Prepends the given `element` to the begining of the given `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List_prepend( x, old), List_empty[Int])
+  ## out list
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream list: events
+  ## ---
+  ## 0: list = List()
+  ## 2: list = List(1)
+  ## 2: x = 1
+  ## 4: list = List(2, 1)
+  ## 4: x = 2
+  ## 6: list = List(3, 2, 1)
+  ## 6: x = 3
+  ## ~~~
   @liftable
   def prepend[T](element: T, list: List[T]): List[T] = __builtin__(List_prepend)
 
+  ## Selects all elements except the first
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List_append(old, x), List_empty[Int])
+  ## def tail = List_tail(list)
+  ## out tail
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream list: events
+  ## stream tail: events
+  ## ---
+  ## 0: tail = List()
+  ## 0: list = List()
+  ## 2: tail = List()
+  ## 2: list = List(1)
+  ## 2: x = 1
+  ## 4: tail = List(2)
+  ## 4: list = List(1, 2)
+  ## 4: x = 2
+  ## 6: tail = List(2, 3)
+  ## 6: list = List(1, 2, 3)
+  ## 6: x = 3
+  ## ~~~
   @liftable
   def tail[T](list: List[T]): List[T] = __builtin__(List_tail)
 
+  ## Selects all elements except the last
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List_append(old, x), List_empty[Int])
+  ## def init = List_init(list)
+  ## out init
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream list: events
+  ## stream init: events
+  ## ---
+  ## 0: init = List()
+  ## 0: list = List()
+  ## 2: init = List()
+  ## 2: list = List(1)
+  ## 2: x = 1
+  ## 4: init = List(1)
+  ## 4: list = List(1, 2)
+  ## 4: x = 2
+  ## 6: init = List(1, 2)
+  ## 6: list = List(1, 2, 3)
+  ## 6: x = 3
+  ## ~~~
   @liftable
   def init[T](list: List[T]): List[T] = __builtin__(List_init)
 
+  ## Gets the element at the requested `index`
   @liftable
   def get[T](list: List[T], index: Int): T = __builtin__(List_get)
 
+  ## Sets the value at the given `index`
   @liftable
   def set[T](list: List[T], index: Int, value: T): List[T] = __builtin__(List_set)
 
+  ## Selects the first element
   @liftable
   def head[T](list: List[T]): T = get(list, 0)
 
+  ## Selects the last element
   @liftable
   def last[T](list: List[T]): T = get(list, size(list)-1)
 
+  ## Fold a function `f` on all values of the `list`. Starting with
+  ## the initial value `start` the function `f` is called for every element
+  ## of `list` with the last result and the current elements’s value as arguments.
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List_append(old, x), List_empty[Int])
+  ## def s = List_fold(list, 0, (a:Int,b:Int) => a + b)
+  ## out s
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream list: events
+  ## stream s: events
+  ## ---
+  ## 0: s = 0
+  ## 0: list = List()
+  ## 2: s = 1
+  ## 2: list = List(1)
+  ## 2: x = 1
+  ## 4: s = 3
+  ## 4: list = List(1, 2)
+  ## 4: x = 2
+  ## 6: s = 6
+  ## 6: list = List(1, 2, 3)
+  ## 6: x = 3
+  ## ~~~
   @liftable
   def fold[T, U](list: List[T], start: U, f: (U, T) => U): U = __builtin__(List_fold)
 }

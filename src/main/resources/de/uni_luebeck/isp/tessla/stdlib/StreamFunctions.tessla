@@ -124,6 +124,19 @@ def defaultFrom[T](valueStream: Events[T], defaultStream: Events[T]): Events[T] 
 ## 5: b = 9
 ## 5: a = 9
 ## ~~~
+##
+## **Alternative trace example:**
+##
+## ~~~trace
+## stream a: bubbles
+## stream b: bubbles
+## ---
+## 1: a = 1
+## 2: a = 2
+## 4: a = 3
+## 5: b = 9
+## 5: a = 9
+## ~~~
 def lift1[T, U](stream: Events[T], f: (Option[T]) => Option[U]): Events[U] = __builtin__(lift)
 
 ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
@@ -164,6 +177,7 @@ def lift1[T, U](stream: Events[T], f: (Option[T]) => Option[U]): Events[U] = __b
 ## ~~~
 def lift2[T, U, V](stream1: Events[T], stream2: Events[U], f: (Option[T], Option[U]) => Option[V]): Events[V] = __builtin__(lift)
 
+## `lift` is an alias for [`lift2`](#lift2).
 def lift = lift2
 
 ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
@@ -180,7 +194,8 @@ def lift = lift2
 ## in c: Events[Int]
 ## def f(a: Option[Int], b: Option[Int], c: Option[Int]) =
 ##   if isSome(a) && getSome(a) > 5 then a
-##   else if isSome(b) then b else c
+##   else if isSome(b) then b
+##   else c
 ## def d = lift3(a,b,c,f)
 ## out d
 ## ~~~
@@ -270,7 +285,6 @@ def lift4[T1, T2, T3, T4, T5](stream1: Events[T1], stream2: Events[T2], stream3:
 ## called with all arguments being `None`.
 ##
 ## See [`lift4`](#lift4) for a usage example.
-## ~~~
 def lift5[T1, T2, T3, T4, T5, U](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3], stream4: Events[T4], stream5: Events[T5],
                               f: (Option[T1], Option[T2], Option[T3], Option[T4], Option[T5]) => Option[U]): Events[U] = __builtin__(lift)
 
@@ -286,7 +300,7 @@ def lift5[T1, T2, T3, T4, T5, U](stream1: Events[T1], stream2: Events[T2], strea
 ## ~~~ruby
 ## in values: Events[Int]
 ## in trigger: Events[Unit]
-## def result = last(x,y)
+## def result = last(values,trigger)
 ## out result
 ## ~~~
 ##
@@ -303,39 +317,41 @@ def lift5[T1, T2, T3, T4, T5, U](stream1: Events[T1], stream2: Events[T2], strea
 ## 3: trigger = ()
 ## 4: result = 5
 ## 4: trigger = ()
-## 4: values = 3
-## 5: result = 3
+## 5: result = 5
 ## 5: trigger = ()
+## 5: values = 3
+## 6: result = 3
+## 6: trigger = ()
 ## ~~~
 ##
 def last[T, U](stream: Events[T], trigger: Events[U]): Events[T] = __builtin__(last)
 
-## Return the previous event of `a`. Does not work in recursive equations.
+## Return the previous event of `a`, when the current event occurs. Does not work in recursive equations.
 ## Use [`last`](#last) with an explicit external trigger in recursive equations
 ## instead.
 ##
 ## **Usage example:**
 ##
 ## ~~~ruby
-## in x: Events[Int]
-## def y = prev(x)
-## out y
+## in a: Events[Int]
+## def b = prev(a)
+## out b
 ## ~~~
 ##
 ## **Trace example:**
 ##
 ## ~~~trace
 ## option axis: true
-## stream x: bubbles
-## stream y: bubbles
+## stream a: bubbles
+## stream b: bubbles
 ## ---
-## 1: x = 3
-## 3: y = 3
-## 3: x = 2
-## 7: y = 2
-## 7: x = 1
-## 8: y = 1
-## 8: x = 5
+## 1: a = 3
+## 3: b = 3
+## 3: a = 2
+## 7: b = 2
+## 7: a = 1
+## 8: b = 1
+## 8: a = 5
 ## ~~~
 def prev[A](a: Events[A]): Events[A] = last(a,a)
 
@@ -346,7 +362,7 @@ def prev[A](a: Events[A]): Events[A] = last(a,a)
 ## ~~~ruby
 ## in x: Events[Int]
 ## def y = time(x)
-## out result
+## out y
 ## ~~~
 ##
 ## **Trace example:**
@@ -375,7 +391,7 @@ def time[T](stream: Events[T]): Events[Int] = __builtin__(time)
 ##
 ## ~~~ruby
 ## in values: Events[Int]
-## in resets: Events[Int]
+## in resets: Events[Unit]
 ## def result = delay(values, resets)
 ## out result
 ## ~~~
@@ -540,6 +556,7 @@ def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] = __builtin__(slift)
 ## ~~~
 def slift2[T,U,V](a: Events[T], b: Events[U], f: (T,U) => V): Events[V] = __builtin__(slift)
 
+## `slift` is an alias for [`slift2`](#slift2)
 def slift = slift2
 
 ## Takes a function `f` on values and lifts it to a function on streams
@@ -706,12 +723,48 @@ def slift5_curried[T1, T2, T3, T4, T5, U](f: (T1, T2, T3, T4, T5) => U) =
 ## ~~~
 def merge2[T](stream1: Events[T], stream2: Events[T]): Events[T] = __builtin__(merge)
 
+## `merge` is an alias for [`merge2`](#merge2)
 def merge = merge2
 
 ## Merges the given event streams. Prioritizing the event streams
 ## from the left to the right in case of simultaneous events.
 ##
-## See [`merge`](#merge) for a usage example.
+## **Usage example:**
+##
+## ~~~ruby
+## in a: Events[Int]
+## in b: Events[Int]
+## in c: Events[Int]
+## def z = merge3(a,b,c)
+## out z
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## stream a: bubbles
+## stream b: bubbles
+## stream c: bubbles
+## stream z: bubbles
+## ---
+## 1: a = 3
+## 1: z = 3
+## 2: b = 4
+## 2: z = 4
+## 3: z = 5
+## 3: c = 5
+## 7: b = 6
+## 7: a = 1
+## 7: z = 1
+## 8: a = 5
+## 8: z = 5
+## 9: b = 10
+## 9: z = 10
+## 9: c = 11
+## 10: a = 6
+## 10: z = 6
+## 10: c = 9
+## ~~~
 def merge3[T](a: Events[T], b: Events[T], c: Events[T]): Events[T] = __builtin__(merge)
 
 ## Merges the given event streams. Prioritizing the event streams
@@ -781,6 +834,7 @@ def merge8[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T], e: Events[
 ## ~~~
 def mergeUnit2[T, U](a: Events[T], b: Events[U]): Events[Unit] = merge(const((), a), const((), b))
 
+## `mergeUnit` is an alias for [`mergeUnit2`](#mergeUnit2)
 def mergeUnit = mergeUnit2
 
 ## Merges streams of different types, resulting in a stream that contains a unit
@@ -801,24 +855,24 @@ def mergeUnit4[T, U, V, W](a: Events[T], b: Events[U], c: Events[V], d: Events[W
 ## **Usage example:**
 ##
 ## ~~~ruby
-## in x: Events[String]
+## in e: Events[String]
 ## in c: Events[Bool]
-## def y = filter(x, c)
-## out y
+## def r = filter(e, c)
+## out r
 ## ~~~
 ##
 ## ~~~trace
-## stream x: events
+## stream e: events
 ## stream c: signal
-## stream y: events
+## stream r: events
 ## ---
-## 1: x = "Hello"
+## 1: e = "Hello"
 ## 2: c = true
-## 3: x = "World"
-## 3: y = "World"
+## 3: e = "World"
+## 3: r = "World"
 ## 7: c = false
-## 7: x = "Hey"
-## 8: x = "You"
+## 7: e = "Hey"
+## 8: e = "You"
 ## ~~~
 def filter[A](events: Events[A], condition: Events[Bool]): Events[A] =
   lift(events, merge(condition, last(condition, events)), (e: Option[A], c: Option[Bool]) =>
@@ -851,6 +905,22 @@ def filter[A](events: Events[A], condition: Events[Bool]): Events[A] =
 ## 10: x = 2
 ## 12: y = 4
 ## 12: x = 4
+## ~~~
+##
+## **Alternative trace example:**
+##
+## ~~~trace
+## stream x: signal
+## stream y: signal
+## ---
+## 2: y = 1
+## 2: x = 1
+## 4: y = 2
+## 4: x = 2
+## 6: y = 1
+## 6: x = 1
+## 8: y = 2
+## 8: x = 2
 ## ~~~
 def pure[T](x: Events[T]): Events[T] =
   filter(x, merge(last(x,x) != x, true))
@@ -967,6 +1037,22 @@ def defined[T](x: Events[T]): Events[Bool] = default(const(true, x), false)
 ## 57: call = ()
 ## 69: ret = ()
 ## 69: rt = 12
+## ~~~
+##
+## **Alternative trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [5,20]
+## stream call: unit events
+## stream ret: unit events
+## stream rt: events
+## ---
+## 10: call = ()
+## 15: ret = ()
+## 15: rt = 5
+## 17: ret = ()
+## 17: rt = 7
 ## ~~~
 def runtime[A,B](call: Events[A], ret: Events[B]): Events[Int] =
   on(ret, time(ret) - time(call))
@@ -1206,8 +1292,10 @@ def resetCount[A,B](events: Events[A], reset: Events[B]): Events[Int] = count wh
 ## Check if events on `e` follow the burst pattern:
 ## After first event on `e` only `burstAmount` many events allowed
 ## during `burstLength` time. After `burstLength` during `waitingPeriod`
-## time no event allowed. After `waitingPeriod` we wait for the next event
+## time no event is allowed. After `waitingPeriod` we wait for the next event
 ## on `e`.
+##
+## **Usage example:**
 ##
 ## ~~~ruby
 ## in send: Events[Unit]
@@ -1216,6 +1304,8 @@ def resetCount[A,B](events: Events[A], reset: Events[B]): Events[Int] = count wh
 ##     waitingPeriod = 2s, burstAmount = 4)
 ## out property
 ## ~~~
+##
+## **Trace example:**
 ##
 ## ~~~trace
 ## option axis: true
@@ -1243,6 +1333,41 @@ def resetCount[A,B](events: Events[A], reset: Events[B]): Events[Int] = count wh
 ## 8501245567: property = true
 ## 8501245567: send = ()
 ## ~~~
+##
+## **Alternative usage example:**
+## 
+## exceeded `burstAmount`
+##
+## ~~~ruby
+## in send: Events[Unit]
+## def property :=
+##   bursts(send, burstLength = 6,
+##     waitingPeriod = 2, burstAmount = 4)
+## out property
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0, 12]
+## stream send: unit events
+## stream property: signal
+## ---
+## 0: property = true
+## 1: property = true
+## 1: send = ()
+## 2: property = true
+## 2: send = ()
+## 3: property = true
+## 3: send = ()
+## 4: property = true
+## 4: send = ()
+## 5: property = false
+## 5: send = ()
+## 9: property = true
+## 9: send = ()
+## ~~~
 def bursts[A](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int): Events[Bool] := {
   def burstStarts: Events[A] :=
     defaultFrom(
@@ -1255,7 +1380,7 @@ def bursts[A](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: I
 ## Check if events on `e` follow the burst pattern since the last event on `since`:
 ## After first event on `e` only `burstAmount` many events allowed
 ## during `burstLength` time. After `burstLength` during `waitingPeriod`
-## time no event allowed. After `waitingPeriod` we wait for the next event
+## time no event is allowed. After `waitingPeriod` we wait for the next event
 ## on `e`.
 ##
 ## **Usage example:**
@@ -1269,7 +1394,9 @@ def bursts[A](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: I
 ##                         since = reset)
 ## out p
 ## ~~~
-## 
+##
+## **Trace example:**
+##
 ## ~~~trace
 ## option axis: true
 ## option timeDomain: [0, 17000]
@@ -1336,6 +1463,26 @@ def burstsSince[A,B](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAm
 ## 6: p = true
 ## 12: e = ()
 ## 12: p = false
+## ~~~
+## 
+## **Alternative trace example:**
+##
+## ~~~trace
+## option timeDomain: [0,16]
+## stream e: unit events
+## stream reset: unit events
+## stream p: signal
+## ---
+## 0: p = true
+## 2: e = ()
+## 2: p = false
+## 4: e = ()
+## 4: reset = ()
+## 4: p = false
+## 6: reset = ()
+## 6: p = true
+## 8: reset = ()
+## 8: p = true
 ## ~~~
 def noEvent[A,B](on: Events[A], since: Events[B]): Events[Bool] =
   resetCount(on, reset = since) == 0
@@ -1528,14 +1675,13 @@ def average(x: Events[Int]): Events[Int] = {
 ## **Usage example:**
 ## 
 ## ~~~ruby
-## in progress: Events[Unit]
 ## def output = period(3)
 ## out output
 ## ~~~
 ## 
 ## ~~~trace
+## option timeDomain: [0,19.5]
 ## option axis: true
-## stream progress: unit events
 ## stream output: unit events
 ## ---
 ## 0: output = ()
@@ -1545,7 +1691,6 @@ def average(x: Events[Int]): Events[Int] = {
 ## 12: output = ()
 ## 15: output = ()
 ## 18: output = ()
-## 20: progress = ()
 ## ~~~
 def period(freq: Int): Events[Unit] = {
   def s: Events[Int] = const(freq, default(delay(s, ()), ()))
@@ -1567,6 +1712,7 @@ def period(freq: Int): Events[Unit] = {
 ## **Trace example:**
 ## 
 ## ~~~trace
+## option timeDomain: [0,25.5]
 ## option axis: true
 ## stream x: events
 ## stream y: events
