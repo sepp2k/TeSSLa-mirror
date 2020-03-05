@@ -38,6 +38,13 @@
 * `TesslaCore.Lift`, `TesslaCore.Default`, `TesslaCore.DefaultFrom` and `TesslaCore.Time` no longer exist. They are represented as `TesslaCore.CustomBuiltInCall` now.
 
 
+## Version 1.0.9
+
+### Additions and Fixes
+
+* Fix bug regarding the name of the `CTF` type.
+
+
 ## Version 1.0.8
 
 ### Breaking Changes
