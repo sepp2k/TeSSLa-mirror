@@ -1,21 +1,40 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla.Errors.{CtfInvalidPrefix, CtfKeyNotFound, CtfTypeError}
+import org.eclipse.tracecompass.ctf.core.event.IEventDefinition
 import org.eclipse.tracecompass.ctf.core.event.types.{ICompositeDefinition, IDefinition, IntegerDefinition, StringDefinition}
 
 object Ctf {
-  def getString(composite: ICompositeDefinition, key: String): String = {
-    getDefinition(composite, key) match {
+  def getString(event: IEventDefinition, key: String, loc: Location): String = {
+    getDefinition(event, key, loc) match {
       case Some(str: StringDefinition) => str.getValue
-      case Some(_) => throw new RuntimeException(s"""Value for key "$key" is not of type String""")
-      case _ => throw new RuntimeException(s"""Key "$key" not found""")
+      case Some(_) => throw CtfTypeError(key, "String", loc)
+      case _ => throw CtfKeyNotFound(key, loc)
     }
   }
 
-  def getInt(composite: ICompositeDefinition, key: String): BigInt = {
-    getDefinition(composite, key) match {
+  def getInt(event: IEventDefinition, key: String, loc: Location): BigInt = {
+    getDefinition(event, key, loc) match {
       case Some(i: IntegerDefinition) => BigInt(i.getIntegerValue)
-      case Some(_) => throw new RuntimeException(s"""Value for key "$key" is not of type Int""")
-      case _ => throw new RuntimeException(s"""Key "$key" not found""")
+      case Some(_) => throw CtfTypeError(key, "Int", loc)
+      case _ => throw CtfKeyNotFound(key, loc)
+    }
+  }
+
+  def getDefinition(event: IEventDefinition, key: String, loc: Location): Option[IDefinition] = {
+    if (key.contains(":")) {
+      val Array(prefix, suffix) = key.split(":", 2)
+      val fields = prefix match {
+        case "context" => event.getContext
+        case "eventcontext" => event.getEventContext
+        case "eventheader" => event.getEventHeader
+        case "packetcontext" => event.getPacketContext
+        case "fields" => event.getFields
+        case x => throw CtfInvalidPrefix(prefix, loc)
+      }
+      getDefinition(fields, suffix)
+    } else {
+      getDefinition(event.getFields, key)
     }
   }
 

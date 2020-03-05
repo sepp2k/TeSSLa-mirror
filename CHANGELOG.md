@@ -38,6 +38,19 @@
 * `TesslaCore.Lift`, `TesslaCore.Default`, `TesslaCore.DefaultFrom` and `TesslaCore.Time` no longer exist. They are represented as `TesslaCore.CustomBuiltInCall` now.
 
 
+## Version 1.0.10
+
+### Additions and Fixes
+
+* Improved error messages related to CTF input traces
+* Added support for additional CTF event data beyond the payload field of the event's packet. The functions `CTF_getInt` and `CTF_getString` now support a colon separated prefix. The following prefix values are supported:
+  * `fields:` gets the payload field of the event's packet. This is the same as specifying a key without any prefix
+  * `context:` gets the context of this event within a stream
+  * `eventcontext:` gets the context of this event without the context of the stream
+  * `eventheader:` get the event header
+  * `packetcontext:` gets the context of packet the event is in
+
+
 ## Version 1.0.9
 
 ### Additions and Fixes

@@ -50,9 +50,8 @@ class Trace(){
         }
         val ts = TimeStamp(Location.unknown, BigInt(event.getTimestamp))
         val stream = Trace.Identifier(event.getDeclaration.getName, Location.unknown)
-        val value = event.getFields
         eventCounter += 1
-        Trace.Event(Location.unknown, ts, Some(stream), value)
+        Trace.Event(Location.unknown, ts, Some(stream), event)
       }
     }
   }

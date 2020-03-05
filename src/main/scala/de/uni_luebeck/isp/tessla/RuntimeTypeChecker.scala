@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.TesslaAST.Core
+import org.eclipse.tracecompass.ctf.core.event.IEventDefinition
 import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 import scala.collection.immutable.SortedSet
@@ -12,7 +13,7 @@ object RuntimeTypeChecker {
     "Int" -> ((_, value) => checkAtomic(value.isInstanceOf[BigInt],"Int", value)),
     "Float" -> ((_, value) => checkAtomic(value.isInstanceOf[Double],"Float", value)),
     "String" -> ((_, value) => checkAtomic(value.isInstanceOf[String],"String", value)),
-    "CTF" -> ((_, value) => checkAtomic(value.isInstanceOf[ICompositeDefinition],"CTF", value)),
+    "CTF" -> ((_, value) => checkAtomic(value.isInstanceOf[IEventDefinition],"CTF", value)),
     "Option" -> ((typeArgs, value) => checkAtomic(value.isInstanceOf[Option[_]],"Option", value).orElse(value.asInstanceOf[Option[Any]].flatMap(check(typeArgs.head, _)))),
     "List" -> ((typeArgs, value) => checkAtomic(value.isInstanceOf[List[_]],"List", value).orElse(value.asInstanceOf[List[Any]].flatMap(check(typeArgs.head, _)).headOption)),
     "Set" -> ((typeArgs, value) => checkAtomic(value.isInstanceOf[Set[_]],"Set", value).orElse(value.asInstanceOf[Set[Any]].flatMap(check(typeArgs.head, _)).headOption)),

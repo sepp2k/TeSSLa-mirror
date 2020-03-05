@@ -11,6 +11,7 @@ import scala.collection.immutable.ArraySeq
 import cats._
 import cats.implicits._
 import de.uni_luebeck.isp.tessla.util.ArraySeqMonad._
+import org.eclipse.tracecompass.ctf.core.event.IEventDefinition
 
 object RuntimeExterns {
 
@@ -212,14 +213,14 @@ object RuntimeExterns {
     }),
     "CTF_getInt" -> strict(propagate(_) { arguments =>
       (try {
-        Ctf.getInt(arguments(0).asInstanceOf[ICompositeDefinition], arguments(1).asInstanceOf[String])
+        Ctf.getInt(arguments(0).asInstanceOf[IEventDefinition], arguments(1).asInstanceOf[String], Location.unknown) // TODO: error handling?
       } catch {
         case e: ClassCastException => RuntimeError(e.getMessage)
       }).pure[A]
     }),
     "CTF_getString" -> strict(propagate(_) { arguments =>
       (try {
-        Ctf.getString(arguments(0).asInstanceOf[ICompositeDefinition], arguments(1).asInstanceOf[String])
+        Ctf.getString(arguments(0).asInstanceOf[IEventDefinition], arguments(1).asInstanceOf[String], Location.unknown) // TODO: error handling?
       } catch {
         case e: ClassCastException => RuntimeError(e.getMessage)
       }).pure[A]

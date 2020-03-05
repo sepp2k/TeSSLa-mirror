@@ -276,4 +276,15 @@ object Errors {
     override def message = "Annotation definitions are not allowed inside of modules"
   }
 
+  case class CtfInvalidPrefix(prefix: String, loc: Location) extends TesslaError {
+    override def message = s"""Unknown prefix "${prefix}". Available prefixes are context, eventcontext, eventheader, packetcontext and fields"""
+  }
+
+  case class CtfTypeError(key: String, expectedType: String, loc: Location) extends TesslaError {
+    override def message = s"""Value for key "$key" is not of type $expectedType"""
+  }
+
+  case class CtfKeyNotFound(key: String, loc: Location) extends TesslaError {
+    override def message = s"""Key "$key" not found"""
+  }
 }
