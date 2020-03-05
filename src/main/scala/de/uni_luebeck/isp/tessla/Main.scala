@@ -45,7 +45,7 @@ object Main extends SexyOpt {
   val listInStreams =
     flag("list-in-streams", "Print a list of the input streams defined in the given tessla spec and then exit")
 
-  val timeUnit = option("timeunit", "Use the given unit as the unit for timestamps in the input")
+  val baseTime = option("basetime", "Use the given time constant (including a unit) as the reference time for timestamps in the input trace")
 
   val observations = flag("observations", "Generate observation specification file from the corresponding annotations")
 
@@ -87,7 +87,7 @@ object Main extends SexyOpt {
     try {
       val specSource = CharStreams.fromFileName(tesslaFile)
       val compilerOptions = Compiler.Options(
-        timeUnitString = timeUnit,
+        baseTimeString = baseTime,
         includeResolver = IncludeResolvers.fromFile,
         stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
         stdlibPath = "stdlib.tessla"

@@ -163,13 +163,13 @@ object ConstantEvaluator {
 
 }
 
-class ConstantEvaluator(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[Typed.Specification, Core.Specification] {
+class ConstantEvaluator extends TranslationPhase[Typed.Specification, Core.Specification] {
   override def translate(spec: Typed.Specification) = {
-    new ConstantEvaluatorWorker(spec, baseTimeUnit).translate()
+    new ConstantEvaluatorWorker(spec).translate()
   }
 }
 
-class ConstantEvaluatorWorker(spec: Typed.Specification, baseTimeUnit: Option[TimeUnit])
+class ConstantEvaluatorWorker(spec: Typed.Specification)
   extends TranslationPhase.Translator[Core.Specification] {
 
   import ConstantEvaluator._

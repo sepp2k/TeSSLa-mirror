@@ -1,17 +1,18 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Compiler.Options
+import de.uni_luebeck.isp.tessla.Tessla.TimeLiteral
 import org.antlr.v4.runtime.CharStream
 
 object Compiler {
 
   case class Options(
-    timeUnitString: Option[String],
-    includeResolver: String => Option[CharStream],
-    stdlibIncludeResolver: String => Option[CharStream],
-    stdlibPath: String
+                      baseTimeString: Option[String],
+                      includeResolver: String => Option[CharStream],
+                      stdlibIncludeResolver: String => Option[CharStream],
+                      stdlibPath: String
   ) {
-    lazy val timeUnit = timeUnitString.map(TimeUnit.fromString(_, Location.option("timeunit")))
+    lazy val baseTime = baseTimeString.map(TimeLiteral.fromString(_, Location.option("basetime")))
   }
 
 }
@@ -24,8 +25,8 @@ class Compiler {
       .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
-      .andThen(new TypedTessla2TesslaASTCore(options.timeUnit))
-      .andThen(new TranslationPhase.BypassPhase(new ConstantEvaluator(options.timeUnit)))
+      .andThen(new TypedTessla2TesslaASTCore(options.baseTime))
+      .andThen(new TranslationPhase.BypassPhase(new ConstantEvaluator))
     //.andThen(RemoveUnusedDefinitions)
   }
 

@@ -2,6 +2,8 @@ package de.uni_luebeck.isp.tessla
 
 import java.util.IllegalFormatException
 
+import de.uni_luebeck.isp.tessla.Tessla.TimeLiteral
+
 object Errors {
 
   trait TesslaError extends Exception with Diagnostic
@@ -121,8 +123,8 @@ object Errors {
       "Allowed time units: fs, ps, ns, us, ms, s, m, h, d"
   }
 
-  case class UndefinedTimeUnit(loc: Location) extends TesslaError {
-    override def message = s"Use of time units is only allowed when a base time unit is set for the data"
+  case class UndefinedBaseTime(loc: Location) extends TesslaError {
+    override def message = s"Use of time units is only allowed when a base time is set for the data"
   }
 
   case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit) extends TesslaError {
@@ -132,6 +134,12 @@ object Errors {
     override def loc = from.loc
 
     override def message = s"Cannot convert from $from to $to"
+  }
+
+  case class TimeConversionError(value: TimeLiteral, base: TimeLiteral) extends TesslaError {
+    override def loc = value.unit.loc
+
+    override def message = s"Cannot represent $value in terms of base time $base."
   }
 
   case class DivideByZero(loc: Location) extends TesslaError {

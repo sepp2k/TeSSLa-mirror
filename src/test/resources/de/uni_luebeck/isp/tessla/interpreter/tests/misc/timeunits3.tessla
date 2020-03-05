@@ -1,0 +1,4 @@
+out 100ms as ms100
+out 1s as s1
+out 10s as s10
+out 1min as min1

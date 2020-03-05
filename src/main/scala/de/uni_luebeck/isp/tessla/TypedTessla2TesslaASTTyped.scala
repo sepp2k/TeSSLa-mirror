@@ -3,14 +3,14 @@ package de.uni_luebeck.isp.tessla
 import TesslaAST.Typed
 import Typed.Identifier
 import cats.data.Ior
-import de.uni_luebeck.isp.tessla.Errors.UndefinedTimeUnit
-import de.uni_luebeck.isp.tessla.Tessla.{ConstantExpression, FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
+import de.uni_luebeck.isp.tessla.Errors.UndefinedBaseTime
+import de.uni_luebeck.isp.tessla.Tessla.{ConstantExpression, FloatLiteral, IntLiteral, LiteralValue, StringLiteral, TimeLiteral}
 import de.uni_luebeck.isp.tessla.TypedTessla.{Annotation, BuiltInOperator, InputStream, Literal, Macro, MacroCall, MemberAccess, ObjectLiteral, Parameter, StaticIfThenElse, Variable, VariableEntry}
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 
-class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, baseTimeUnit: Option[TimeUnit]) extends TranslationPhase.Translator[Typed.Specification] {
+class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, baseTime: Option[TimeLiteral]) extends TranslationPhase.Translator[Typed.Specification] {
 
   val staticiteExtern = Typed.ExternExpression(List(Identifier("A")), List(
     (TesslaAST.StrictEvaluation, Typed.BoolType),
@@ -191,19 +191,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
         Typed.RecordAccesorExpression(member, Typed.ExpressionRef(toIdenifier(receiver.id, receiver.loc), lookupType(receiver.id, env)), memberLoc, loc)
       case ObjectLiteral(members, loc) => Typed.RecordConstructorExpression(
         members.map(x => (x._1, (Typed.ExpressionRef(toIdenifier(x._2.id, x._2.loc), lookupType(x._2.id, env)), Location.unknown))), loc)
-      case Literal(value, loc) => value match {
-        case IntLiteral(value) => Typed.IntLiteralExpression(value, loc)
-        case FloatLiteral(value) => Typed.FloatLiteralExpression(value, loc)
-        case StringLiteral(value) => Typed.StringLiteralExpression(value, loc)
-        case TimeLiteral(x, tu) => baseTimeUnit match {
-          case Some(base) =>
-            val conversionFactor = tu.convertTo(base).getOrElse(throw Errors.TimeUnitConversionError(tu, base))
-            Typed.IntLiteralExpression(conversionFactor * x, loc)
-          case None =>
-            error(UndefinedTimeUnit(tu.loc))
-            Typed.IntLiteralExpression(x, loc)
-        }
-      }
+      case Literal(value, loc) => translateLiteralValue(value, loc)
     })
   }
 
@@ -215,23 +203,32 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
       annotation.name -> Typed.RecordConstructorExpression(translatedArguments)
     }.groupBy(_._1).view.mapValues(_.map(_._2).to(ArraySeq)).toMap
 
+  def translateLiteralValue(value: LiteralValue, loc: Location): Typed.ExpressionArg = value match {
+    case IntLiteral(value) => Typed.IntLiteralExpression(value, loc)
+    case FloatLiteral(value) => Typed.FloatLiteralExpression(value, loc)
+    case StringLiteral(value) => Typed.StringLiteralExpression(value, loc)
+    case timeLit@TimeLiteral(x, tu) => baseTime match {
+      case Some(base) =>
+        val unitConversionFactor = timeLit.unit.convertTo(base.unit).getOrElse {
+          error(Errors.TimeUnitConversionError(timeLit.unit, base.unit))
+          BigInt(1)
+        }
+        val value = unitConversionFactor * timeLit.value / base.value
+        if (timeLit.value > 0 && value == 0) {
+          error(Errors.TimeConversionError(timeLit, base))
+        }
+        Typed.IntLiteralExpression(value, loc)
+      case None =>
+        error(UndefinedBaseTime(tu.loc))
+        Typed.IntLiteralExpression(x, loc)
+    }
+  }
+
   def translateConstantExpression(exp: ConstantExpression): Typed.ExpressionArg = exp match {
     case ConstantExpression.Object(members, loc) =>
       val translatedMembers = members.map(x => (x._1.name, (translateConstantExpression(x._2), x._1.loc)))
       Typed.RecordConstructorExpression(translatedMembers, loc)
-    case ConstantExpression.Literal(value, loc) => value match {
-      case IntLiteral(value) => Typed.IntLiteralExpression(value, loc)
-      case FloatLiteral(value) => Typed.FloatLiteralExpression(value, loc)
-      case StringLiteral(value) => Typed.StringLiteralExpression(value, loc)
-      case TimeLiteral(x, tu) => baseTimeUnit match {
-        case Some(base) =>
-          val conversionFactor = tu.convertTo(base).getOrElse(throw Errors.TimeUnitConversionError(tu, base))
-          Typed.IntLiteralExpression(conversionFactor * x, loc)
-        case None =>
-          error(UndefinedTimeUnit(tu.loc))
-          Typed.IntLiteralExpression(x, loc)
-      }
-    }
+    case ConstantExpression.Literal(value, loc) => translateLiteralValue(value, loc)
   }
 
   def toType(tpe: TypedTessla.Type, location: Location = Location.unknown): Typed.Type = tpe match {
@@ -275,8 +272,8 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
   }
 }
 
-class TypedTessla2TesslaASTCore(baseTimeUnit: Option[TimeUnit]) extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {
+class TypedTessla2TesslaASTCore(baseTime: Option[TimeLiteral]) extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {
   override def translate(spec: TypedTessla.TypedSpecification) = {
-    new TypedTessla2TesslaASTTypedWorker(spec, baseTimeUnit).translate()
+    new TypedTessla2TesslaASTTypedWorker(spec, baseTime).translate()
   }
 }
