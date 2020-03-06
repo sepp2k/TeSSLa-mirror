@@ -53,12 +53,6 @@ object Main extends SexyOpt {
 
   val flattenInput = flag("flatten-input", "Print the input trace in a flattened form.")
 
-  val computationDepth = flag("print-computation-depth", "Print the length of the longest path a propagation message travels")
-
-  val recursionDepth = flag("print-recursion-depth", "Print the length of the longest recursion")
-
-  val nodeCount = flag("print-node-count", "Print the number of nodes in the TeSSLaCore graph")
-
   val ctfTrace = flag("ctf", "The trace-file with the input data is in CTF format. With this option you must specify " +
     "a trace-file. stdin is not supported.")
 
@@ -111,18 +105,6 @@ object Main extends SexyOpt {
 
       if (listOutStreams) {
         core.out.foreach { os => println(os._1.idOrName) }
-      }
-
-      if (computationDepth) {
-        // FIXME: port to new tessla core: println(DepthChecker.nestingDepth(core))
-      }
-
-      if (recursionDepth) {
-        // FIXME: port to new tessla core: println(RecursiveDepthChecker.nestingDepth(core))
-      }
-
-      if (nodeCount) {
-        // FIXME: port to new tessla core: println(NodeCounter.nodeCount(core))
       }
 
       if (printCore) {
