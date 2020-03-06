@@ -100,6 +100,7 @@ object Main extends SexyOpt {
 
       if (printCore) {
         println(core.print(TesslaAST.PrintOptions(!printAllTypes, printAllTypes, printAllTypes, true, printLocations)))
+        return
       }
 
       if (observations) {

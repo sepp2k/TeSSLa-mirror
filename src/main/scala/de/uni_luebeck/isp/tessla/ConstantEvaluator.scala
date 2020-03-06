@@ -134,9 +134,6 @@ object ConstantEvaluator {
 
   val noExtern: TypeExtern = _ => _ => Translatable[Any, Option](_ => TranslationResult[Any, Option](Lazy(None), Lazy(None)))
 
-  val streamExterns: Map[String, TypeExtern] = List("last", "slift", "default", "lift", "nil", "time",
-    "delay", "defaultFrom", "merge").map(_ -> noExtern).toMap
-
   val doNotExpandExterns: Map[String, TypeExtern] = List("CTF_getInt", "CTF_getString").map(_ -> noExtern).toMap
 
   implicit val translatableMonad: Monad[TranslatableMonad] = new Monad[TranslatableMonad] {
@@ -159,7 +156,7 @@ object ConstantEvaluator {
 
   val valueExterns: Map[String, TypeExtern] = RuntimeExterns.commonExterns[TranslatableMonad].view.mapValues(f => (_: List[Typed.Type]) => f).toMap
 
-  val externs = streamExterns ++ valueExterns
+  val externs = valueExterns.withDefaultValue(noExtern)
 
 }
 
