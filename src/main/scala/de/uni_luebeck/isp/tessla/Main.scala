@@ -58,6 +58,8 @@ object Main extends SexyOpt {
 
   val csvTrace = flag("csv", "The trace-file or the input stream is in CSV format.")
 
+  val stdlib = option("stdlib", "Use the given stdlib instead of the default.")
+
   def main(args: Array[String]): Unit = {
     def unwrapResult[T](result: Result[T]): T = result match {
       case Success(res, warnings) =>
@@ -80,12 +82,14 @@ object Main extends SexyOpt {
     val compiler = new Compiler
     try {
       val specSource = CharStreams.fromFileName(tesslaFile)
-      val compilerOptions = Compiler.Options(
+      val defaultCompilerOptions = Compiler.Options(
         baseTimeString = baseTime,
         includeResolver = IncludeResolvers.fromFile,
         stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
         stdlibPath = "stdlib.tessla"
       )
+      val compilerOptions = stdlib.map(s => defaultCompilerOptions.copy(stdlibPath = s, stdlibIncludeResolver = IncludeResolvers.fromFile)).getOrElse(defaultCompilerOptions)
+
       val result = unwrapResult(compiler.compile(specSource, compilerOptions))
 
       if (printTyped) {
