@@ -94,6 +94,10 @@ object Main extends SexyOpt {
 
       val core = unwrapResult(result._2)
 
+      if (printCore) {
+        println(core.print(TesslaAST.PrintOptions(!printAllTypes, printAllTypes, printAllTypes, true, printLocations)))
+      }
+
       if (observations) {
         println(unwrapResult(Observations.Generator.translate(core)))
         return
@@ -101,17 +105,15 @@ object Main extends SexyOpt {
 
       if (listInStreams) {
         core.in.foreach { is => println(is._1.idOrName) }
+        return
       }
 
       if (listOutStreams) {
         core.out.foreach { os => println(os._1.idOrName) }
+        return
       }
 
-      if (printCore) {
-        println(core.print(TesslaAST.PrintOptions(!printAllTypes, printAllTypes, printAllTypes, true, printLocations)))
-      }
-
-      if (listInStreams || listOutStreams || computationDepth || recursionDepth || nodeCount || verifyOnly) {
+      if (verifyOnly) {
         return
       }
 
