@@ -103,7 +103,7 @@ object IntermediateCodeUtils {
     t match {
       case InstatiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Unclean solution but not easy to surpass because of implicit
       case RecordType(entries, _) if entries.isEmpty => UnitType
-      case RecordType(entries, _) if entries.size == 1 => typeConversion(entries.toSeq.head._2)
+      case RecordType(entries, _) if entries.size == 1 => typeConversion(entries.toSeq.head._2._1)
       case InstatiatedType("Bool", Seq(), _) => BoolType
       case InstatiatedType("Int", Seq(), _) => LongType
       case InstatiatedType("Float", Seq(), _) => DoubleType
@@ -116,7 +116,7 @@ object IntermediateCodeUtils {
       case RecordType(entries, _) => {
         val sortedEntries = entries.toSeq.sortWith{case ((n1, _), (n2, _)) => n1.name < n2.name}
         val names = sortedEntries.map(_._1.name)
-        val types = sortedEntries.map{case (n,t) => typeConversion(t)}
+        val types = sortedEntries.map{case (n,t) => typeConversion(t._1)}
         StructType(types, names)
       }
       case TypeParam(_, _) => GeneralType //TODO: Resolve type params if possible //TODO: Introduce GenericType in Intermediate Code for Rust translation
@@ -128,7 +128,7 @@ object IntermediateCodeUtils {
   def defaultValueForType(t: Type): ImpLanVal = {
     t match {
       case RecordType(entries, _) if entries.isEmpty => UnitValue
-      case RecordType(entries, _) if entries.size == 1 => defaultValueForType(entries.toSeq.head._2)
+      case RecordType(entries, _) if entries.size == 1 => defaultValueForType(entries.toSeq.head._2._1)
       case InstatiatedType("Bool", Seq(), _) => BoolValue(false)
       case InstatiatedType("Int", Seq(), _) => LongValue(0)
       case InstatiatedType("Float", Seq(), _) => DoubleValue(0)
@@ -140,7 +140,7 @@ object IntermediateCodeUtils {
       case TesslaAST.Core.FunctionType(_, _, _, _) => EmptyFunction(t)
       case TypeParam(_, _) => GeneralValue //TODO: Introduce GenericType in Intermediate Code for Rust translation
       case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
-      case RecordType(entries, _) => StructValue(entries.map{case (n,t) => (n.name, defaultValueForType(t))})
+      case RecordType(entries, _) => StructValue(entries.map{case (n,t) => (n.name, defaultValueForType(t._1))})
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $t not supported")
     }
   }

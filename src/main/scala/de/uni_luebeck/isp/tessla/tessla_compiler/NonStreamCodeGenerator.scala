@@ -65,8 +65,8 @@ object NonStreamCodeGenerator {
       case ExpressionRef(id, _, _) => s"var_${id.fullName}"
       case ExternExpression(typeParams, params, resultType, name, location) => ???
       case RecordConstructorExpression(entries, _) if entries.isEmpty => UnitValue
-      case RecordConstructorExpression(entries, _) => MkStruct(entries.toSeq.map{case (n, ea) => (n.name, translateExpressionArg(ea, defContext))}, e.tpe)
-      case RecordAccesorExpression(name, target, _) => GetStruct(translateExpressionArg(target), name.name, target.tpe)
+      case RecordConstructorExpression(entries, _) => MkStruct(entries.toSeq.map{case (n, (ea, _)) => (n.name, translateExpressionArg(ea, defContext))}, e.tpe)
+      case RecordAccesorExpression(name, target, _, _) => GetStruct(translateExpressionArg(target), name.name, target.tpe)
       case _ => ???
     }
   }
@@ -86,8 +86,8 @@ object NonStreamCodeGenerator {
         case FunctionExpression(typeParams, params, body, result, location) => FunctionExpression(typeParams, params, reInlineTempVarsBody(body, defContext), reInlineTempVars(result, defContext), location)
         case ApplicationExpression(applicable, args, location) => ApplicationExpression(reInlineTempVars(applicable, defContext), args.map{a => reInlineTempVars(a, defContext)}, location)
         case TypeApplicationExpression(applicable, typeArgs, location) => TypeApplicationExpression(reInlineTempVars(applicable, defContext), typeArgs, location)
-        case RecordConstructorExpression(entries, location) => RecordConstructorExpression(entries.map{case (n,e) => (n, reInlineTempVars(e, defContext))}, location)
-        case RecordAccesorExpression(name, target, location) => RecordAccesorExpression(name, reInlineTempVars(target, defContext), location)
+        case RecordConstructorExpression(entries, location) => RecordConstructorExpression(entries.map{case (n,(e,l)) => (n, (reInlineTempVars(e, defContext), l))}, location)
+        case RecordAccesorExpression(name, target, nameLoc, location) => RecordAccesorExpression(name, reInlineTempVars(target, defContext), nameLoc, location)
         case _ => e
       }
       case _ => e

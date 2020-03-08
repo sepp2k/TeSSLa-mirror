@@ -17,8 +17,8 @@ object DefinitionOrdering {
         case ApplicationExpression(app, args, _) => args.appended(app).foreach(exp => calcExpressionDependencies(exp))
         case ExpressionRef(id, _, _) if input.contains(id) => calcMissingDependencies(id, input(id))
         case TypeApplicationExpression(e, _, _) => calcExpressionDependencies(e)
-        case RecordConstructorExpression(entries, _) => entries.foreach(exp => calcExpressionDependencies(exp._2))
-        case RecordAccesorExpression(_, target, _) => calcExpressionDependencies(target)
+        case RecordConstructorExpression(entries, _) => entries.foreach{case (_,(exp,_)) => calcExpressionDependencies(exp)}
+        case RecordAccesorExpression(_, target, _, _) => calcExpressionDependencies(target)
         case _ => ()
       }
     }

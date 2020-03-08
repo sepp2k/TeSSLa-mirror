@@ -52,7 +52,7 @@ object Main extends SexyOpt {
     try {
         val specSource = CharStreams.fromFileName(tesslaFile)
         val compilerOptions = Compiler.Options(
-          timeUnitString = None,
+          baseTimeString = None,
           includeResolver = IncludeResolvers.fromFile,
           stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
           stdlibPath = "stdlib.tessla"
