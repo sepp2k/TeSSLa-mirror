@@ -98,6 +98,56 @@ object MutabilityChecker extends
       passDependencies.getOrElse(k, Set(k)).map((_,(v,k)))
     }.groupBy(_._1).view.mapValues{vs => vs.map(_._2).toSet}.toMap
 
+    //No Double Write
+    immutVars ++= writeMap.filter(_._2.size > 1).keys.flatMap(variableFamilies.equivalenceClass)
+
+    //No Replicating Lasts
+    def cleanParent(node: Identifier, beat: Seq[Identifier], caller: Identifier) : (Set[Identifier], Boolean) = {
+      if (writeMap.getOrElse(node, Set()).size > (if (beat.isEmpty) 1 else 0) || (beat.nonEmpty && !repsMap.getOrElse(node, Set()).filter(_._1 == beat.head).exists(c => coloring.freqImplication(beat.head, c._2)))) {
+        (Set(), false)
+      } else {
+        val childs = repsMap.getOrElse(node, Set()).filter(_._1 != caller)
+        val childAnswer = childs.map(c => cleanChild(c._1, beat, node)).foldLeft[(Set[Identifier], Boolean)]((Set(), true)){case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2)}
+
+        val repParents = repsMap.flatMap{case (k, v) => if (v.exists(_._1 == node)) Some(k) else None}
+
+        if (childAnswer._2) {
+          repParents.map(cleanParent(_, node +: beat, node)).foldLeft[(Set[Identifier], Boolean)](childAnswer){case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2)}
+        } else {
+          (Set(), false)
+        }
+
+      }
+    }
+
+    def cleanChild(node: Identifier, beat: Seq[Identifier], caller: Identifier) : (Set[Identifier], Boolean) = {
+      val cr : (Set[Identifier], Boolean) = if (beat.nonEmpty) cleanChild(node, beat.drop(1), caller) else (Set(), false)
+      if (cr._2) {
+        cr
+      } else if (beat.isEmpty || writeMap.getOrElse(node, Set()).nonEmpty || repsMap.getOrElse(caller, Set()).filter(_._1 == node).exists(c => {println(s"${beat.head} ${c._2}"); !coloring.freqImplication(beat.head, c._2)})) {
+        (Set(), false)
+      } else {
+        if (repsMap.getOrElse(node, Set()).nonEmpty) {
+          repsMap(node).map(c => cleanChild(c._1, beat.drop(1), node)).reduce[(Set[Identifier], Boolean)]{case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2)}
+        } else {
+          (readMap.getOrElse(node, Set()), true)
+        }
+      }
+    }
+
+    writeMap.foreach{case (writtenNode, writers) => writers.foreach{ writeNode =>
+        if (!immutVars.contains(writeNode)) {
+          val (readDeps, clean) = cleanParent(writtenNode, Seq(), writeNode)
+          if (!repsMap.getOrElse(writtenNode, Set()).map(_._1).contains(writeNode) && clean) {
+            if (readDeps.nonEmpty) {
+              readMap += (writtenNode -> (readMap.getOrElse(writtenNode, Set()) ++ readDeps))
+            }
+          } else {
+            immutVars ++= variableFamilies.equivalenceClass(writtenNode)
+          }
+        }
+      }
+    }
 
     (nodes.toSet, edges.toSet)
   }
