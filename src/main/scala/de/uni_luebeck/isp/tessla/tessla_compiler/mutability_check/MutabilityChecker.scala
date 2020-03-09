@@ -41,10 +41,10 @@ object MutabilityChecker extends
 
     val variableFamilies : UnionFind[Identifier] = new UnionFind()
 
-    val coloring = new ImplicationChecker(spec)
+    val implicationChecker = new ImplicationChecker(spec)
 
     def processStreamDef(id: Identifier, exp: ExternExpression, args: Seq[ExpressionArg]) : Unit = {
-      val dep = getAllDependencies(id, exp, args, coloring)
+      val dep = getAllDependencies(id, exp, args, implicationChecker)
 
       if (dep.reads != Set() || dep.writes != Set() || dep.reps != Set()) {
         nodes += id
@@ -103,7 +103,7 @@ object MutabilityChecker extends
 
     //No Replicating Lasts
     def cleanParent(node: Identifier, beat: Seq[Identifier], caller: Identifier) : (Set[Identifier], Boolean) = {
-      if (writeMap.getOrElse(node, Set()).size > (if (beat.isEmpty) 1 else 0) || (beat.nonEmpty && !repsMap.getOrElse(node, Set()).filter(_._1 == beat.head).exists(c => coloring.freqImplication(beat.head, c._2)))) {
+      if (writeMap.getOrElse(node, Set()).size > (if (beat.isEmpty) 1 else 0) || (beat.nonEmpty && !repsMap.getOrElse(node, Set()).filter(_._1 == beat.head).exists(c => implicationChecker.freqImplication(beat.head, c._2)))) {
         (Set(), false)
       } else {
         val childs = repsMap.getOrElse(node, Set()).filter(_._1 != caller)
@@ -124,7 +124,7 @@ object MutabilityChecker extends
       val cr : (Set[Identifier], Boolean) = if (beat.nonEmpty) cleanChild(node, beat.drop(1), caller) else (Set(), false)
       if (cr._2) {
         cr
-      } else if (beat.isEmpty || writeMap.getOrElse(node, Set()).nonEmpty || repsMap.getOrElse(caller, Set()).filter(_._1 == node).exists(c => {println(s"${beat.head} ${c._2}"); !coloring.freqImplication(beat.head, c._2)})) {
+      } else if (beat.isEmpty || writeMap.getOrElse(node, Set()).nonEmpty || repsMap.getOrElse(caller, Set()).filter(_._1 == node).exists(c => {println(s"${beat.head} ${c._2}"); !implicationChecker.freqImplication(beat.head, c._2)})) {
         (Set(), false)
       } else {
         if (repsMap.getOrElse(node, Set()).nonEmpty) {
