@@ -87,7 +87,6 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
     }
 
   def freqImplication(i: Identifier, j: Identifier, notInit: Set[Identifier] = Set(), jInit: Boolean = false) : Boolean = {
-    println(s"$i, $j, $notInit, $jInit")
     if (i == j) {
       true
     } else {
