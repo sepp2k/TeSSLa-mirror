@@ -4,6 +4,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.SourceListing
 import de.uni_luebeck.isp.tessla.TranslationPhase
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.TesslaCoreWithMutabilityInfo
 
 import scala.collection.immutable.ArraySeq
 
@@ -12,13 +13,18 @@ import scala.collection.immutable.ArraySeq
   * abstract imperative code
   */
 class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
-        TranslationPhase[Specification, SourceListing] {
+        TranslationPhase[TesslaCoreWithMutabilityInfo, SourceListing] {
 
 
-  override def translate(spec: Specification): Result[SourceListing] = {
+  override def translate(tcMut: TesslaCoreWithMutabilityInfo): Result[SourceListing] = {
+    val spec = tcMut.spec
+
     val in = spec.in
     val definitions = spec.definitions
     val out = spec.out
+
+    val myNonStreamCodeGenerator = new NonStreamCodeGenerator(tcMut.addDeps)
+    val myStreamCodeGenerator = new StreamCodeGenerator(myNonStreamCodeGenerator)
 
     def getInStreamDefStreamType(id: Identifier) : Type = {
       if (definitions.contains(id)) {
@@ -33,14 +39,14 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     var currSource = SourceListing(Seq(), Seq(), Seq(), Seq(), Seq())
     var warnings = Seq()
 
-    DefinitionOrdering.order(definitions).foreach { case (id, definition) => {
+    DefinitionOrdering.order(definitions, tcMut.addDeps).foreach { case (id, definition) => {
       currSource = definition.tpe match {
         case InstantiatedType("Events", _, _) => definition match {
-          case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, typeArgs, _), args, _) => translateExternSignalExpression(id, e, args, typeArgs, currSource)
-          case ApplicationExpression(e: ExternExpression, args, _) => translateExternSignalExpression(id, e, args, Seq(), currSource) //TODO: Does this exist?
+          case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, typeArgs, _), args, _) => translateExternSignalExpression(id, e, args, typeArgs, currSource, myStreamCodeGenerator)
+          case ApplicationExpression(e: ExternExpression, args, _) => translateExternSignalExpression(id, e, args, Seq(), currSource, myStreamCodeGenerator) //TODO: Does this exist?
           case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
         }
-        case _ => SourceListing(currSource.stepSource, currSource.tailSource, currSource.tsGenSource, currSource.inputProcessing, currSource.staticSource :+ NonStreamCodeGenerator.translateDefinition(id, definition, definitions))
+        case _ => SourceListing(currSource.stepSource, currSource.tailSource, currSource.tsGenSource, currSource.inputProcessing, currSource.staticSource :+ myNonStreamCodeGenerator.translateDefinition(id, definition, definitions))
       }
     }
     }
@@ -53,42 +59,42 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
         }
         case None => None
       }
-      currSource = StreamCodeGenerator.produceOutputCode(o._1, getInStreamDefStreamType(o._1), name, currSource)
+      currSource = myStreamCodeGenerator.produceOutputCode(o._1, getInStreamDefStreamType(o._1), name, currSource)
     }
 
     in.foreach {i =>
       if (consoleInterface) {
-        currSource = StreamCodeGenerator.produceInputFromConsoleCode(i._1, i._2._1, currSource)
+        currSource = myStreamCodeGenerator.produceInputFromConsoleCode(i._1, i._2._1, currSource)
       } else {
         throw Errors.NotYetImplementedError("Translation without value consumption from stdin is not implemented yet")
       }
-      currSource = StreamCodeGenerator.produceInputUnchangeCode(i._1, currSource)
+      currSource = myStreamCodeGenerator.produceInputUnchangeCode(i._1, currSource)
     }
 
     Success(currSource, warnings)
   }
 
-  def translateExternSignalExpression(id: Identifier, e: ExternExpression, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing) : SourceListing = {
+  def translateExternSignalExpression(id: Identifier, e: ExternExpression, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing, streamCodeGenerator: StreamCodeGenerator) : SourceListing = {
     val typeParamMap = e.typeParams.zip(typeArgs).toMap
     e.name match {
       case "nil" =>
-        StreamCodeGenerator.produceNilStepCode(id, e.resultType.resolve(typeParamMap), e.location, currSource)
+        streamCodeGenerator.produceNilStepCode(id, e.resultType.resolve(typeParamMap), e.location, currSource)
       case "default" =>
-        StreamCodeGenerator.produceDefaultStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
+        streamCodeGenerator.produceDefaultStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
       case "defaultFrom" =>
-        StreamCodeGenerator.produceDefaultFromStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
+        streamCodeGenerator.produceDefaultFromStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
       case "time" =>
-        StreamCodeGenerator.produceTimeStepCode(id, args(0), e.location, currSource)
+        streamCodeGenerator.produceTimeStepCode(id, args(0), e.location, currSource)
       case "last" =>
-        StreamCodeGenerator.produceLastStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
+        streamCodeGenerator.produceLastStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
       case "delay" =>
-        StreamCodeGenerator.produceDelayStepCode(id, args(0), args(1), e.location, currSource)
+        streamCodeGenerator.produceDelayStepCode(id, args(0), args(1), e.location, currSource)
       case "lift" =>
-        StreamCodeGenerator.produceLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, e.location, currSource)
+        streamCodeGenerator.produceLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, e.location, currSource)
       case "slift" =>
-        StreamCodeGenerator.produceSignalLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, e.location, currSource)
+        streamCodeGenerator.produceSignalLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, e.location, currSource)
       case "merge" =>
-        StreamCodeGenerator.produceMergeStepCode(id, e.resultType.resolve(typeParamMap), args, e.location, currSource)
+        streamCodeGenerator.produceMergeStepCode(id, e.resultType.resolve(typeParamMap), args, e.location, currSource)
       case _ => throw Errors.CommandNotSupportedError(e.toString)
     }
   }

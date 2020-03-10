@@ -6,7 +6,7 @@ import scala.collection.mutable
 
 object DefinitionOrdering {
 
-  def order(input: Map[Identifier, DefinitionExpression]) : Seq[(Identifier, DefinitionExpression)] = {
+  def order(input: Map[Identifier, DefinitionExpression], addOrderingConstraints: Map[Identifier, Set[Identifier]]) : Seq[(Identifier, DefinitionExpression)] = {
 
     val ordered : mutable.ArrayBuffer[(Identifier, DefinitionExpression)] = mutable.ArrayBuffer()
 
@@ -24,6 +24,9 @@ object DefinitionOrdering {
     }
 
     def calcMissingDependencies(id: Identifier, dExp: DefinitionExpression) : Unit = {
+      addOrderingConstraints.getOrElse(id, Set()).foreach{case prev =>
+        if (input.contains(prev)) calcMissingDependencies(prev, input(prev))
+      }
       if (!ordered.contains((id, dExp))) {
         calcExpressionDependencies(dExp)
         ordered += ((id, dExp))

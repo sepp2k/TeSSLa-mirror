@@ -10,9 +10,10 @@ import scala.language.postfixOps
 /**
   * Class for the translation of TeSSLaCore-Functions to ImpLan Lambda expressions
   */
-object NonStreamCodeGenerator {
+class NonStreamCodeGenerator(val addDeps: Map[Identifier, Set[Identifier]]) {
 
-  def translateFunctionCall(e: ExpressionArg, args: Seq[ImpLanExpr], typeArgs: Seq[Type], defContext: Map[Identifier, DefinitionExpression] = Map()) : ImpLanExpr = {
+  @scala.annotation.tailrec
+  final def translateFunctionCall(e: ExpressionArg, args: Seq[ImpLanExpr], typeArgs: Seq[Type], defContext: Map[Identifier, DefinitionExpression] = Map()) : ImpLanExpr = {
     e match {
       case TypeApplicationExpression(app, types, _) => translateFunctionCall(app, args, typeArgs ++ types, defContext)
       case ExternExpression(_, _, _, "true", _) => BoolValue(true)
@@ -41,7 +42,7 @@ object NonStreamCodeGenerator {
   def translateBody(body: Map[Identifier, DefinitionExpression], ret: ExpressionArg, defContext: Map[Identifier, DefinitionExpression]) : Seq[ImpLanStmt] = {
     val newDefContext = defContext ++ body
 
-    val translatedBody = DefinitionOrdering.order(body).foldLeft[Seq[ImpLanStmt]](Seq()){
+    val translatedBody = DefinitionOrdering.order(body, addDeps).foldLeft[Seq[ImpLanStmt]](Seq()){
       case (curr, (id, exp)) => curr :+ translateDefinition(id, exp, newDefContext)
     }
     translatedBody :+ ReturnStatement(translateExpressionArg(ret, newDefContext))

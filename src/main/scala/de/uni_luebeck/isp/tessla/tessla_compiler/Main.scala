@@ -7,6 +7,7 @@ import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{ASTPreprocessor, ASTRemoveUnused, StreamDefFlattener}
+import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check._
 import org.antlr.v4.runtime.CharStreams
 
 /**
@@ -76,7 +77,12 @@ object Main extends SexyOpt {
           println("###############################")
         }
 
-        val intermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(core))
+        val coreWithMutInf = if (mutability) {
+          unwrapResult(MutabilityChecker.translate(core))
+        } else {
+          new TesslaCoreWithMutabilityInfo(core, Set(), Map())
+        }
+        val intermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(coreWithMutInf))
         val optIntermediateCode = unwrapResult(UnusedVarRemove.translate(intermediateCode))
 
         if (verbose.value) {

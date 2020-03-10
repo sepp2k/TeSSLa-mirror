@@ -6,9 +6,10 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Errors}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Errors.CoreASTError
 import de.uni_luebeck.isp.tessla.{TesslaAST, TranslationPhase}
 
-class TesslaCoreWithMutabilityInfo(val spec: TesslaAST.Core.Specification, val mutableStreams: Set[Identifier]) {
-  override def toString = s"${spec}\nMutable streams:${mutableStreams.mkString(", ")}"
+import scala.collection.mutable
 
+class TesslaCoreWithMutabilityInfo(val spec: TesslaAST.Core.Specification, val mutableStreams: Set[Identifier], val addDeps: Map[Identifier, Set[Identifier]]) {
+  override def toString = s"${spec}\nMutable streams:${mutableStreams.mkString(", ")}"
 }
 
 object MutabilityChecker extends
@@ -19,15 +20,7 @@ object MutabilityChecker extends
     val in = spec.in
     val definitions = spec.definitions
     val out = spec.out
-    val mutableStreams : Set[Identifier] = Set()
 
-    val simplifiedGraph = generateSimplifiedGraph(spec)
-
-    Success(new TesslaCoreWithMutabilityInfo(TesslaAST.Core.Specification(in, definitions, out, spec.maxIdentifier), mutableStreams), Seq())
-
-  }
-
-  def generateSimplifiedGraph(spec: TesslaAST.Core.Specification): (Set[Identifier], Set[(Identifier, Identifier)]) = {
     val nodes: collection.mutable.ArrayBuffer[Identifier] = collection.mutable.ArrayBuffer()
     val edges: collection.mutable.ArrayBuffer[(Identifier, Identifier)] = collection.mutable.ArrayBuffer()
     val immutVars: collection.mutable.ArrayBuffer[Identifier] = collection.mutable.ArrayBuffer()
@@ -40,10 +33,12 @@ object MutabilityChecker extends
     val passDependencies: collection.mutable.Map[Identifier, Set[Identifier]] = collection.mutable.Map()
 
     val variableFamilies : UnionFind[Identifier] = new UnionFind()
+    val allMutableRelevantVars: collection.mutable.ArrayBuffer[Identifier] = collection.mutable.ArrayBuffer()
 
     val implicationChecker = new ImplicationChecker(spec)
 
     def processStreamDef(id: Identifier, exp: ExternExpression, args: Seq[ExpressionArg]) : Unit = {
+      allMutableRelevantVars += id
       val dep = getAllDependencies(id, exp, args, implicationChecker)
 
       if (dep.reads != Set() || dep.writes != Set() || dep.reps != Set()) {
@@ -82,7 +77,7 @@ object MutabilityChecker extends
       }
     }
 
-    DefinitionOrdering.order(spec.definitions).foreach { case (id, defExpr) => {
+    DefinitionOrdering.order(spec.definitions, Map()).foreach { case (id, defExpr) => {
       defExpr.tpe match {
         case InstantiatedType("Events", _, _) => defExpr match {
           case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, _, _), args, _) => processStreamDef(id, e, args)
@@ -156,7 +151,37 @@ object MutabilityChecker extends
         }
     }
 
-    (nodes.toSet, edges.toSet)
+    //No Read before Write
+    val z3H = new Z3Handler(edges.toSet, readBeforeWrites.toSet, variableFamilies)
+    immutVars ++= z3H.getImmutableVars
+
+    val addDeps = readBeforeWrites.flatMap{case (from, to, mut) =>
+      if (!immutVars.contains(mut)) Some(from -> to) else None
+    }.groupBy(_._1).view.mapValues(e => e.map(x => x._2).toSet).toMap
+
+
+//    println("========================")
+//    println(nodes)
+//    println("-READS-")
+//    println(readMap)
+//    println("-WRITES-")
+//    println(writeMap)
+//    println("-REPS-")
+//    println(repsMap)
+//    println("-EDGES-")
+//    println(edges)
+//    println("-FAMILIES-")
+//    println(variableFamilies.toMap)
+//    println("-IMMUT_VARS-")
+//    println(immutVars)
+//    println("-FREQ_IMP-")
+//    println(implicationChecker.knownImplications)
+//    println("-Read_Before_Write-")
+//    println(readBeforeWrites)
+//    println("-Z3-IMMUT-")
+//    println(z3H.getImmutableVars)
+
+    Success(new TesslaCoreWithMutabilityInfo(TesslaAST.Core.Specification(in, definitions, out, spec.maxIdentifier), allMutableRelevantVars.toSet -- immutVars, addDeps), Seq())
   }
 
   final case class Dependencies(reads: Set[Identifier],
