@@ -15,18 +15,20 @@ import org.antlr.v4.runtime.CharStreams
  */
 object Main extends SexyOpt {
   override val programName = "tessla-compiler"
-  override val version = Some("0.0.1")
+  override val version: Option[String] = Some("0.0.1")
   override val programDescription = "Generate Java/Rust code from a TeSSLa specification"
 
-  val tesslaFile = posArg("tessla-file", "The file containing the Tessla specification")
-  val target = option("target", 't', "Target language: java (default), javascript, rust or rust-bare", "java")
-  val debug = flag("debug", "Print stack traces for runtime errors")
-  val noDiagnostics = flag("no-diagnostics", "Don't print error messages and warnings")
-  val noOptimization = flag("no-optimization", "Produce non-optimized output code")
-  val outputPath = option("output-file", 'o', "Location of the output (including filename)")
-  val verbose = flag("verbose", 'v', "Produce a lot of output")
+  val tesslaFile: Main.Argument[String] = posArg("tessla-file", "The file containing the Tessla specification")
+  val target: Main.Argument[String] = option("target", 't', "Target language: java (default), javascript, rust or rust-bare", "java")
+  val debug: Main.Argument[Boolean] = flag("debug", "Print stack traces for runtime errors")
+  val noDiagnostics: Main.Argument[Boolean] = flag("no-diagnostics", "Don't print error messages and warnings")
+  val noOptimization: Main.Argument[Boolean] = flag("no-optimization", "Produce non-optimized output code")
+  val noMutability: Main.Argument[Boolean] = flag("no-mutability", "Produce code with exclusively immutable datastructures")
+  val outputPath: Main.Argument[Option[String]] = option("output-file", 'o', "Location of the output (including filename)")
+  val verbose: Main.Argument[Boolean] = flag("verbose", 'v', "Produce a lot of output")
 
-  def diagnostics = !noDiagnostics.value
+  def diagnostics: Boolean = !noDiagnostics.value
+  def mutability: Boolean = !noOptimization.value && !noMutability.value
 
   def main(args: Array[String]): Unit = {
 
@@ -57,10 +59,10 @@ object Main extends SexyOpt {
         )
         val (backend, stdinRead) : (backends.BackendInterface, Boolean) = target.value match {
           case "java" => (new backends.ScalaBackend, true)
-          case "javascript" => throw new Errors.NotYetImplementedError("Javascript translation not implemented yet")
-          case "rust" => throw new Errors.NotYetImplementedError("Rust translation not implemented yet")
-          case "rust-bare" => throw new Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
-          case _=> throw new Errors.CLIError(s"Unvalid option for target: ${target.value}")
+          case "javascript" => throw Errors.NotYetImplementedError("Javascript translation not implemented yet")
+          case "rust" => throw Errors.NotYetImplementedError("Rust translation not implemented yet")
+          case "rust-bare" => throw Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
+          case _=> throw Errors.CLIError(s"Unvalid option for target: ${target.value}")
         }
 
         val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
@@ -90,7 +92,7 @@ object Main extends SexyOpt {
         if (outputPath.isDefined) {
           val pw = new PrintWriter(new File(outputPath.get))
           pw.write(source)
-          pw.close
+          pw.close()
         } else {
           println(source)
         }

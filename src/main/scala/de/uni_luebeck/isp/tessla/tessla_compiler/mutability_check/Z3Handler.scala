@@ -50,7 +50,7 @@ class Z3Handler(edges: Set[(Identifier, Identifier)], readBeforeWriteConstraints
     }.toSet
   }
 
-  def getOrder: Seq[Identifier] = {
+  def getOrder: Seq[Identifier] = { //FIXME: Dead code
     val mdl = optimizer.getModel
     posStringIDMap.toSeq.sortBy{case (_, varName) => mdl.getConstInterp(ctx.mkIntConst(varName)).getNumArgs}.map(_._1)
   }
