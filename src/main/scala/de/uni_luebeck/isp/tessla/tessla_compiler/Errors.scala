@@ -33,4 +33,9 @@ object Errors {
     override def loc = Location.unknown
   }
 
+  case class OptimizationError(m: String) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
+    override def message = s"Error during Code Optimization.\nDetails: $m"
+    override def loc = Location.unknown
+  }
+
 }
