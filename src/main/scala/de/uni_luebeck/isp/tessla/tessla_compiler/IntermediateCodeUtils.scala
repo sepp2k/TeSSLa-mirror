@@ -228,7 +228,7 @@ case object Out extends BlockState
 
 class IntermediateCodeUtils(stmts: Seq[ImpLanStmt], blockState : Seq[BlockState] = Seq(Out),
                             ifTryStack: Seq[Seq[ImpLanStmt]] = Seq(), elseCatchStack: Seq[Seq[ImpLanStmt]] = Seq(),
-                            condStack: Seq[Seq[Seq[ImpLanExpr]]] = Seq()) {
+                            condStack: Seq[Seq[Seq[ImpLanExpr]]] = Seq()) { //TODO: Distinguish from Object
 
     def generateStatements: Seq[ImpLanStmt] = {
       if (blockState.head != Out) {

@@ -6,8 +6,6 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Errors}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Errors.CoreASTError
 import de.uni_luebeck.isp.tessla.{TesslaAST, TranslationPhase}
 
-import scala.collection.mutable
-
 class TesslaCoreWithMutabilityInfo(val spec: TesslaAST.Core.Specification, val mutableStreams: Set[Identifier], val addDeps: Map[Identifier, Set[Identifier]]) {
   override def toString = s"${spec}\nMutable streams:${mutableStreams.mkString(", ")}"
 }
@@ -152,8 +150,10 @@ object MutabilityChecker extends
     }
 
     //No Read before Write
-    val z3H = new Z3Handler(edges.toSet, readBeforeWrites.toSet, variableFamilies)
-    immutVars ++= z3H.getImmutableVars
+    if (readBeforeWrites.nonEmpty) {
+      val z3H = new Z3Handler(edges.toSet, readBeforeWrites.toSet, variableFamilies)
+      immutVars ++= z3H.getImmutableVars
+    }
 
     val addDeps = readBeforeWrites.flatMap{case (from, to, mut) =>
       if (!immutVars.contains(mut)) Some(from -> to) else None
@@ -225,7 +225,9 @@ object MutabilityChecker extends
     }
   }
 
-  def mutabilityCheckRelevantType(tpe: Type) : Boolean = { //TODO: TypeArg
+  def mutabilityCheckRelevantType(tpe: Type) : Boolean = {
+    //TODO: TypeArg
+    //TODO: Option[Set] ...
     tpe match {
       case InstantiatedType("Map", _, _) |
            InstantiatedType("Set", _, _) |

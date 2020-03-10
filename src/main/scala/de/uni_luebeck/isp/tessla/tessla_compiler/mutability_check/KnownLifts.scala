@@ -5,7 +5,8 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.MutabilityChec
 
 object KnownLifts {
 
-  //TODO: --> STDLIB Annotations
+  //TODO: --> STDLIB Annotations ?!
+  //TODO: Set[Set] ...
   def getDependenciesFromLift(liftExpr: ExpressionArg, args: Seq[ExpressionArg]) : MutabilityChecker.Dependencies = { //reads, writes, reps, pass, deps
     liftExpr match {
       case TypeApplicationExpression(e, _, _) => getDependenciesFromLift(e, args)
