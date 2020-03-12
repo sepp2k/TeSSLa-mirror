@@ -78,10 +78,13 @@ object Main extends SexyOpt {
         }
 
         val coreWithMutInf = if (mutability) {
-          unwrapResult(MutabilityChecker.translate(core))
+          unwrapResult(PreprocessingTransformation.translate(core).andThen(MutabilityChecker).andThen(ASTTransformation))
         } else {
-          new TesslaCoreWithMutabilityInfo(core, Set(), Map())
+          ??? //TODO: new TesslaCoreWithMutabilityInfo(core, Set(), Map())
         }
+
+      println(coreWithMutInf)
+
         val intermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(coreWithMutInf))
         val optIntermediateCode = unwrapResult(UnusedVarRemove.translate(intermediateCode))
 

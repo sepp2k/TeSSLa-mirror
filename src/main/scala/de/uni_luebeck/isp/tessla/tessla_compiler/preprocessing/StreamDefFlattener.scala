@@ -8,7 +8,9 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 
 import scala.collection.mutable
 
-//TODO: Unclear if really necessary
+//TODO: Always pull out Set/Map/... constructor calls
+//TODO: Make all identifier unique
+
 class StreamDefFlattener extends TranslationPhase[Core.Specification, Core.Specification] {
 
   override def translate(spec: Core.Specification): Result[Core.Specification] = {

@@ -3,7 +3,6 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check
 import de.uni_luebeck.isp.tessla.TesslaAST
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
-import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.MutabilityChecker.getUsedStream
 
 final case class Activation(base: Set[Identifier], init: Set[Identifier])
 
@@ -15,6 +14,11 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
   (spec.definitions.keys ++ spec.in.keys).toSet.foreach{id : Identifier =>
     activationMap += (id -> processStreamDef(id, Set()))
   }
+
+    def getUsedStream(e: ExpressionArg): Identifier = e match { //TODO: Extend case to any Expression
+      case ExpressionRef(id, _, _) => id
+      case _ => ???
+    }
 
     def processStreamDef(id: Identifier, stack: Set[Identifier]) : (Set[Activation], Boolean) = { //Activates, Always Init
       if (stack(id)) {

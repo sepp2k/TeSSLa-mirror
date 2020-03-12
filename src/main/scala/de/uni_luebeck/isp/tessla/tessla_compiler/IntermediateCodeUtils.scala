@@ -5,7 +5,6 @@ import scala.language.postfixOps
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
 import de.uni_luebeck.isp.tessla._
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.tessla_compiler.Errors.CoreASTError
 
 /**
   * Class containing a DSL for easy creation of ImpLanStmt-Blocks
@@ -104,6 +103,7 @@ object IntermediateCodeUtils {
       case InstantiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Unclean solution but not easy to surpass because of implicit
       case RecordType(entries, _) if entries.isEmpty => UnitType
       case RecordType(entries, _) if entries.size == 1 => typeConversion(entries.toSeq.head._2._1)
+<<<<<<< HEAD
       case InstantiatedType("Bool", Seq(), _) => BoolType
       case InstantiatedType("Int", Seq(), _) => LongType
       case InstantiatedType("Float", Seq(), _) => DoubleType
@@ -112,6 +112,19 @@ object IntermediateCodeUtils {
       case InstantiatedType("Set", Seq(t), _) => ImmutableSetType(t)
       case InstantiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
       case InstantiatedType("List", Seq(t), _) => ImmutableListType(t)
+=======
+      case InstatiatedType("Bool", Seq(), _) => BoolType
+      case InstatiatedType("Int", Seq(), _) => LongType
+      case InstatiatedType("Float", Seq(), _) => DoubleType
+      case InstatiatedType("String", Seq(), _) => StringType
+      case InstatiatedType("Option", Seq(t), _) => OptionType(t)
+      case InstatiatedType("Set", Seq(t), _) => ImmutableSetType(t)
+      case InstatiatedType("MutSet", Seq(t), _) => MutableSetType(t)
+      case InstatiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
+      case InstatiatedType("MutMap", Seq(t1, t2), _) => MutableMapType(t1, t2)
+      case InstatiatedType("List", Seq(t), _) => ImmutableListType(t)
+      case InstatiatedType("MutList", Seq(t), _) => MutableListType(t)
+>>>>>>> c1e32d6... First ideas towards mutability check including non-stream vars
       case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) => IntermediateCode.FunctionType(paramTypes.map{case (_,t) => typeConversion(t)}, typeConversion(resultType)) //TODO: Type params
       case RecordType(entries, _) => {
         def comp(s1: String, s2: String) : Boolean = {
@@ -144,8 +157,11 @@ object IntermediateCodeUtils {
       case InstantiatedType("String", Seq(), _) => StringValue("")
       case InstantiatedType("Option", Seq(t), _) => None(t)
       case InstantiatedType("Set", Seq(t), _) => EmptyImmutableSet(t)
+      case InstantiatedType("MutSet", Seq(t), _) => EmptyMutableSet(t)
       case InstantiatedType("Map", Seq(t1, t2), _) => EmptyImmutableMap(t1, t2)
+      case InstantiatedType("MutMap", Seq(t1, t2), _) => EmptyMutableMap(t1, t2)
       case InstantiatedType("List", Seq(t), _) => EmptyImmutableList(t)
+      case InstantiatedType("MutList", Seq(t), _) => EmptyMutableList(t)
       case TesslaAST.Core.FunctionType(_, _, _, _) => EmptyFunction(t)
       case TypeParam(_, _) => GeneralValue //TODO: Introduce GenericType in Intermediate Code for Rust translation
       case i: InstantiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")

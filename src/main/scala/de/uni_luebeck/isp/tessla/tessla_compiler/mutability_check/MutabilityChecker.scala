@@ -2,12 +2,12 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check
 
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Success
-import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Errors}
-import de.uni_luebeck.isp.tessla.tessla_compiler.Errors.CoreASTError
+import de.uni_luebeck.isp.tessla.tessla_compiler.DefinitionOrdering
 import de.uni_luebeck.isp.tessla.{TesslaAST, TranslationPhase}
 
-class TesslaCoreWithMutabilityInfo(val spec: TesslaAST.Core.Specification, val mutableStreams: Set[Identifier], val addDeps: Map[Identifier, Set[Identifier]]) {
-  override def toString = s"${spec}\nMutable streams:${mutableStreams.mkString(", ")}"
+class TesslaCoreWithMutabilityInfo(val spec: TesslaAST.Core.Specification, val idTypes: Identifier => Type,
+                                   val addDeps: Map[Identifier, Set[Identifier]], val impCheck: ImplicationChecker) {
+  override def toString = s"${spec}"
 }
 
 object MutabilityChecker extends
@@ -33,11 +33,13 @@ object MutabilityChecker extends
     val variableFamilies : UnionFind[Identifier] = new UnionFind()
     val allMutableRelevantVars: collection.mutable.ArrayBuffer[Identifier] = collection.mutable.ArrayBuffer()
 
-    val implicationChecker = new ImplicationChecker(spec)
+    val impCheck = new ImplicationChecker(spec)
+    val expFlowAnalysis = new ExpressionFlowAnalysis(impCheck)
 
-    def processStreamDef(id: Identifier, exp: ExternExpression, args: Seq[ExpressionArg]) : Unit = {
+    def processDependencies(id: Identifier, dep: ExpressionFlowAnalysis.IdentifierDependencies) : Unit = {
       allMutableRelevantVars += id
-      val dep = getAllDependencies(id, exp, args, implicationChecker)
+
+      dep.calls.foreach(c => variableFamilies.union(c._1, c._2))
 
       if (dep.reads != Set() || dep.writes != Set() || dep.reps != Set()) {
         nodes += id
@@ -75,17 +77,26 @@ object MutabilityChecker extends
       }
     }
 
-    DefinitionOrdering.order(spec.definitions, Map()).foreach { case (id, defExpr) => {
-      defExpr.tpe match {
-        case InstantiatedType("Events", _, _) => defExpr match {
-          case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, _, _), args, _) => processStreamDef(id, e, args)
-          case ApplicationExpression(e: ExternExpression, args, _) => processStreamDef(id, e, args)
-          case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
+    def processDefinitions(defs: Seq[(Identifier, DefinitionExpression)], scope: Map[Identifier, DefinitionExpression]) : Unit = {
+
+      def execOnFuncExpr(e : ExpressionArg) : Unit = {
+        e match {
+          case FunctionExpression(_, _, body, _, _) => processDefinitions(DefinitionOrdering.order(body, Map()), scope ++ body) //TODO: Make Result only Ref
+          case ApplicationExpression(applicable, args, _) => (args :+ applicable).foreach(execOnFuncExpr)
+          case TypeApplicationExpression(applicable, _, _) => execOnFuncExpr(applicable)
+          case RecordConstructorExpression(entries, _) => entries.foreach(e => execOnFuncExpr(e._2._1))
+          case RecordAccesorExpression(_, target, _, _) => execOnFuncExpr(target)
+          case _ =>
         }
-        case _ =>
       }
+
+      defs.foreach{case (id, d) =>
+        execOnFuncExpr(d)
+        processDependencies(id, expFlowAnalysis.getExpFlow(d, scope))
       }
     }
+
+    processDefinitions(DefinitionOrdering.order(spec.definitions, Map()), spec.definitions)
 
     val repsMap : Map[Identifier, Set[(Identifier, Identifier)]] = invRepsMap.flatMap{case (k,v) =>
       passDependencies.getOrElse(k, Set(k)).map((_,(v,k)))
@@ -96,7 +107,7 @@ object MutabilityChecker extends
 
     //No Replicating Lasts
     def cleanParent(node: Identifier, beat: Seq[Identifier], caller: Identifier) : (Set[Identifier], Boolean) = {
-      if (writeMap.getOrElse(node, Set()).size > (if (beat.isEmpty) 1 else 0) || (beat.nonEmpty && !repsMap.getOrElse(node, Set()).filter(_._1 == beat.head).exists(c => implicationChecker.freqImplication(beat.head, c._2)))) {
+      if (writeMap.getOrElse(node, Set()).size > (if (beat.isEmpty) 1 else 0) || (beat.nonEmpty && !repsMap.getOrElse(node, Set()).filter(_._1 == beat.head).exists(c => impCheck.freqImplication(beat.head, c._2)))) {
         (Set(), false)
       } else {
         val (childReads, childClean) = dealChilds(node, beat, caller)
@@ -115,7 +126,7 @@ object MutabilityChecker extends
       val cr : (Set[Identifier], Boolean) = if (beat.nonEmpty) cleanChild(node, beat.drop(1), caller) else (Set(), false)
       if (cr._2) {
         cr
-      } else if (beat.isEmpty || writeMap.getOrElse(node, Set()).nonEmpty || repsMap.getOrElse(caller, Set()).filter(_._1 == node).exists(c => !implicationChecker.freqImplication(beat.head, c._2))) {
+      } else if (beat.isEmpty || writeMap.getOrElse(node, Set()).nonEmpty || repsMap.getOrElse(caller, Set()).filter(_._1 == node).exists(c => !impCheck.freqImplication(beat.head, c._2))) {
         (Set(), false)
       } else {
         dealChilds(node, beat.drop(1), caller)
@@ -160,68 +171,57 @@ object MutabilityChecker extends
     }.groupBy(_._1).view.mapValues(e => e.map(x => x._2).toSet).toMap
 
 
-//    println("========================")
-//    println(nodes)
-//    println("-READS-")
-//    println(readMap)
-//    println("-WRITES-")
-//    println(writeMap)
-//    println("-REPS-")
-//    println(repsMap)
-//    println("-EDGES-")
-//    println(edges)
-//    println("-FAMILIES-")
-//    println(variableFamilies.toMap)
-//    println("-IMMUT_VARS-")
-//    println(immutVars)
-//    println("-FREQ_IMP-")
-//    println(implicationChecker.knownImplications)
-//    println("-Read_Before_Write-")
-//    println(readBeforeWrites)
-//    println("-Z3-IMMUT-")
-//    println(z3H.getImmutableVars)
+    println("========================")
+    println(nodes)
+    println("-READS-")
+    println(readMap)
+    println("-WRITES-")
+    println(writeMap)
+    println("-REPS-")
+    println(repsMap)
+    println("-EDGES-")
+    println(edges)
+    println("-FAMILIES-")
+    println(variableFamilies.toMap)
+    println("-IMMUT_VARS-")
+    println(immutVars)
+    println("-FREQ_IMP-")
+    println(impCheck.knownImplications)
+    println("-Read_Before_Write-")
+    println(readBeforeWrites)
+    println("-Z3-IMMUT-")
+    println(immutVars)
 
-    Success(new TesslaCoreWithMutabilityInfo(TesslaAST.Core.Specification(in, definitions, out, spec.maxIdentifier), allMutableRelevantVars.toSet -- immutVars, addDeps), Seq())
-  }
-
-  final case class Dependencies(reads: Set[Identifier],
-                          writes: Set[Identifier],
-                          reps: Set[Identifier],
-                          pass: Set[Identifier],
-                          deps: Set[Identifier])
-
-  def getAllDependencies(id: Identifier, defExp: ExternExpression, args: Seq[ExpressionArg], coloring: ImplicationChecker) : Dependencies = {
-
-    defExp.name match {
-      case "nil" => Dependencies(Set(), Set(), Set(), Set(), Set())
-      case "default" => Dependencies(Set(), Set(), Set(), Set(getUsedStream(args(0))), Set(getUsedStream(args(0))))
-      case "defaultFrom" => Dependencies(Set(), Set(), Set(), Set(getUsedStream(args(0)), getUsedStream(args(1))), Set(getUsedStream(args(0)), getUsedStream(args(1))))
-      case "time" => Dependencies(Set(), Set(), Set(), Set(), Set(getUsedStream(args(0))))
-      case "last" => {
-        if (KnownLifts.mutabilityCheckRelevantType(args(0).tpe)) {
-          val valStream  = getUsedStream(args(0))
-          Dependencies(Set(), Set(), Set(valStream), Set(), Set(getUsedStream(args(1))))
-        } else {
-          Dependencies(Set(), Set(), Set(), Set(), Set(getUsedStream(args(1))))
+    def targetVarType(id: Identifier) : Type = {
+      val origType = if (spec.in.contains(id)) {
+        spec.in(id)._1
+      } else {
+        spec.definitions(id).tpe
+      }
+      if (origType.isInstanceOf[FunctionType]) {
+        definitions(id) match {
+          case FunctionExpression(typeParams, params, _, result, _) =>
+            FunctionType(typeParams, params.map{case (id, ev, _) => (ev, targetVarType(id))}, targetVarType(result.asInstanceOf[ExpressionRef].id))
+          case ExternExpression(typeParams, params, resultType, name, location) => ???
+          case ApplicationExpression(applicable, args, location) => ???
+          case RecordAccesorExpression(name, target, nameLocation, location) => ???
         }
-
       }
-      case "delay" => Dependencies(Set(), Set(), Set(), Set(), Set(getUsedStream(args(0)), getUsedStream(args(1))))
-      case "lift" => KnownLifts.getDependenciesFromLift(args.last, args.dropRight(1))
-      case "slift" => {
-        val dep = KnownLifts.getDependenciesFromLift(args.last, args.dropRight(1))
-        val addReps = (dep.reads ++ dep.writes).filter(i => !coloring.freqImplication(id, i))
-        Dependencies(dep.reads, dep.writes, dep.reps ++ addReps, dep.pass, dep.deps)
+      else if ((mutabilityCheckRelevantType(origType) || mutabilityCheckRelevantStreamType(origType)) && !immutVars.contains(id)) {
+        mkTypeMutable(origType)
+      } else {
+        origType
       }
-      case "merge" => Dependencies(Set(), Set(), Set(), args.map(getUsedStream).toSet, args.map(getUsedStream).toSet)
-      case _ => throw Errors.CommandNotSupportedError(defExp.toString)
     }
+
+
+    Success(new TesslaCoreWithMutabilityInfo(TesslaAST.Core.Specification(in, definitions, out, spec.maxIdentifier),
+            targetVarType, addDeps, impCheck), Seq())
   }
 
-  def getUsedStream(e: ExpressionArg) : Identifier = {
-    e match {
-      case ExpressionRef(id, _, _) => id
-      case e: Expression => throw CoreASTError(s"Required ExpressionRef, but Expression found: $e", e.location)
+  def mutabilityCheckRelevantStreamType(tpe: Type) : Boolean = {
+    tpe match {
+      case InstatiatedType("Events", Seq(t), _) => mutabilityCheckRelevantType(t)
     }
   }
 
@@ -234,6 +234,19 @@ object MutabilityChecker extends
            InstantiatedType("List", _, _) => true
       case RecordType(entries, _) => entries.values.map{case (t,_) => mutabilityCheckRelevantType(t)}.reduce(_ || _)
       case _ => false
+    }
+  }
+
+  def mkTypeMutable(t: Type): Type = {
+    t match {
+      case InstatiatedType("Events", List(t), l) => InstatiatedType("Events", List(mkTypeMutable(t)), l)
+      case InstatiatedType("Option", List(t), l) => InstatiatedType("Option", List(mkTypeMutable(t)), l)
+      case InstatiatedType("Set", t, l) => InstatiatedType("MutSet", t, l)
+      case InstatiatedType("Map", t, l) => InstatiatedType("MutMap", t, l)
+      case InstatiatedType("List", t, l) => InstatiatedType("MutList", t, l)
+      case RecordType(entries, _) => RecordType(entries.map{case (n,(t,l)) => (n, (mkTypeMutable(t), l))})
+      case _ : TypeParam => t
+      //TODO: Add Error
     }
   }
 
