@@ -67,7 +67,7 @@ class RuntimeEvaluator(externs: Map[String, Extern[Lazy]]) {
       evalExpressionArg(applicable, env).get
     case Core.RecordConstructorExpression(entries, _) =>
       Record(entries.map(e => (e._1, evalExpressionArg(e._2._1, env).get))) // TODO: entries are now strictly evaluated, should they be lazy?
-    case Core.RecordAccesorExpression(name, target, _, _) =>
+    case Core.RecordAccessorExpression(name, target, _, _) =>
       propagateInternal(evalExpressionArg(target, env).get)(_.asInstanceOf[Record].entries(name))
     case Core.StringLiteralExpression(value, _) => value
     case Core.IntLiteralExpression(value, _) => value

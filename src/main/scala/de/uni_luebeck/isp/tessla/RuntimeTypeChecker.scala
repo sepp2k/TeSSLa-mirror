@@ -29,7 +29,7 @@ object RuntimeTypeChecker {
   def check(tpe: Core.Type, value: Any): Option[String] = tpe match {
     case Core.FunctionType(_, _, _, _) =>
       Some("Cannot check function type at runtime.")
-    case Core.InstatiatedType(name, typeArgs, _) =>
+    case Core.InstantiatedType(name, typeArgs, _) =>
       checker.get(name).map(f => f(typeArgs, value)).getOrElse(Some(s"No checker found for instatiated type $name."))
     case Core.RecordType(entries, _) =>
       value match {

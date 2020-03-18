@@ -278,7 +278,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       }, options, mayNeedBraces)
   }
 
-  case class RecordAccesorExpression(name: String, target: ExpressionArg,
+  case class RecordAccessorExpression(name: String, target: ExpressionArg,
     nameLocation: Location = Location.unknown, location: Location = Location.unknown
   ) extends Expression {
     override def tpe = target.tpe.map { t =>
@@ -326,8 +326,8 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     }
   }
 
-  case class InstatiatedType(name: String, typeArgs: List[Type], location: Location = Location.unknown) extends Type {
-    override def resolve(args: Map[Identifier, Type]) = InstatiatedType(name, typeArgs.map(_.resolve(args)))
+  case class InstantiatedType(name: String, typeArgs: List[Type], location: Location = Location.unknown) extends Type {
+    override def resolve(args: Map[Identifier, Type]) = InstantiatedType(name, typeArgs.map(_.resolve(args)))
 
     override def toString = name + (if (typeArgs.nonEmpty) "[" + typeArgs.mkString(", ") + "]" else "")
   }
@@ -346,8 +346,8 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     override def toString = name.toString
   }
 
-  val FloatType = InstatiatedType("Float", Nil, Location.builtIn)
-  val IntType = InstatiatedType("Int", Nil, Location.builtIn)
-  val StringType = InstatiatedType("String", Nil, Location.builtIn)
-  val BoolType = InstatiatedType("Bool", Nil, Location.builtIn)
+  val FloatType = InstantiatedType("Float", Nil, Location.builtIn)
+  val IntType = InstantiatedType("Int", Nil, Location.builtIn)
+  val StringType = InstantiatedType("String", Nil, Location.builtIn)
+  val BoolType = InstantiatedType("Bool", Nil, Location.builtIn)
 }

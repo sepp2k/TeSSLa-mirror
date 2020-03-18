@@ -72,7 +72,7 @@ object JavaApi {
 
       spec.inStreams.get(stream) match {
         case Some((inStream, elementType)) =>
-          val tpe = elementType.asInstanceOf[TesslaAST.Core.InstatiatedType]
+          val tpe = elementType.asInstanceOf[TesslaAST.Core.InstantiatedType]
           assert(tpe.name == "Events")
           assert(tpe.typeArgs.size == 1)
           RuntimeTypeChecker.check(tpe.typeArgs.head, value).foreach(error =>

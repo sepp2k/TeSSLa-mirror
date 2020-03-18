@@ -328,7 +328,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification)
           }))
         }
         pushStack(TranslationResult[Any, Some](value, expression), location)
-      case Typed.RecordAccesorExpression(name, entries, nameLocation, location) =>
+      case Typed.RecordAccessorExpression(name, entries, nameLocation, location) =>
         lazy val translatedEntries = translateExpressionArg(entries, env, typeEnv, nameOpt).translate(translatedExpressions)
         val Typed.RecordType(entryTypes, _) = entries.tpe
         val value = StackLazy { stack =>
@@ -340,7 +340,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification)
         val expression = StackLazy { stack =>
           value.get(stack).map(_.expression.get(stack)).getOrElse(
             Some(Left(StackLazy { stack =>
-              Core.RecordAccesorExpression(name, getExpressionArgStrict(translatedEntries).get(stack), nameLocation, location)
+              Core.RecordAccessorExpression(name, getExpressionArgStrict(translatedEntries).get(stack), nameLocation, location)
             })))
         }
         pushStack(TranslationResult[Any, Some](value.flatMap(_.traverse(_.value).map(_.flatten)), expression), location)
@@ -425,8 +425,8 @@ class ConstantEvaluatorWorker(spec: Typed.Specification)
   def translateResolvedType(tpe: Typed.Type): Core.Type = tpe match {
     case Typed.FunctionType(typeParams, paramTypes, resultType, location) =>
       Core.FunctionType(typeParams.map(translateIdentifier), paramTypes.map(x => (translateEvaluation(x._1), translateResolvedType(x._2))), translateResolvedType(resultType), location)
-    case Typed.InstatiatedType(name, typeArgs, location) =>
-      Core.InstatiatedType(name, typeArgs.map(translateResolvedType), location)
+    case Typed.InstantiatedType(name, typeArgs, location) =>
+      Core.InstantiatedType(name, typeArgs.map(translateResolvedType), location)
     case Typed.RecordType(entries, location) =>
       Core.RecordType(entries.map(x => (x._1, (translateResolvedType(x._2._1), x._2._2))).toMap, location)
     case Typed.TypeParam(name, location) =>

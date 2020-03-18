@@ -161,19 +161,19 @@ object Observations {
         }
       }
 
-    protected def printEvent(in: InStreamDescription, value: String): String = in._2._1.asInstanceOf[Core.InstatiatedType].typeArgs.head match {
-      case Core.InstatiatedType("Int", Nil, _) =>
+    protected def printEvent(in: InStreamDescription, value: String): String = in._2._1.asInstanceOf[Core.InstantiatedType].typeArgs.head match {
+      case Core.InstantiatedType("Int", Nil, _) =>
         s"""trace_push_int(events, "${in._1.fullName}", (int64_t) $value);"""
-      case Core.InstatiatedType("Float", Nil, _)=>
+      case Core.InstantiatedType("Float", Nil, _)=>
         s"""trace_push_float(events, "${in._1.fullName}", (double) $value);"""
-      case Core.InstatiatedType("Bool", Nil, _) =>
+      case Core.InstantiatedType("Bool", Nil, _) =>
         s"""trace_push_bool(events, "${in._1.fullName}", (bool) $value);"""
       case _ =>
         error(Errors.WrongType("Events[Int], Events[Float] or Events[Bool]", in._2._1, in._1.location))
         ""
     }
 
-    protected def printUnitEvent(in: InStreamDescription): String = in._2._1.asInstanceOf[Core.InstatiatedType].typeArgs.head match {
+    protected def printUnitEvent(in: InStreamDescription): String = in._2._1.asInstanceOf[Core.InstantiatedType].typeArgs.head match {
       case Core.RecordType(entries, _) if entries.isEmpty =>
         s"""trace_push_unit(events, "${in._1.fullName}");"""
       case _ =>

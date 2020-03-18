@@ -21,34 +21,34 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
   val annotationExtern = Typed.ExternExpression(
     List(Identifier("A")),
     List(
-      (TesslaAST.StrictEvaluation, Typed.InstatiatedType("String", List())),
+      (TesslaAST.StrictEvaluation, Typed.InstantiatedType("String", List())),
       (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A")))
     ),
-    Typed.InstatiatedType("Annotation", List(Typed.TypeParam(Identifier("A")))),
+    Typed.InstantiatedType("Annotation", List(Typed.TypeParam(Identifier("A")))),
     "annotation"
   )
 
   val knownExterns = Map(
     "true" -> Typed.ApplicationExpression(Typed.TypeApplicationExpression(
-      Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), "true"), Nil), ArraySeq()),
+      Typed.ExternExpression(Nil, Nil, Typed.InstantiatedType("Bool", Nil), "true"), Nil), ArraySeq()),
     "false" -> Typed.ApplicationExpression(Typed.TypeApplicationExpression(
-      Typed.ExternExpression(Nil, Nil, Typed.InstatiatedType("Bool", Nil), "false"), Nil), ArraySeq()),
+      Typed.ExternExpression(Nil, Nil, Typed.InstantiatedType("Bool", Nil), "false"), Nil), ArraySeq()),
     "last" -> Typed.ExternExpression(
       List(Identifier("A"), Identifier("B")),
       List(
-        (TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A"))))),
-        (TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("B")))))
+        (TesslaAST.LazyEvaluation, Typed.InstantiatedType("Events", List(Typed.TypeParam(Identifier("A"))))),
+        (TesslaAST.StrictEvaluation, Typed.InstantiatedType("Events", List(Typed.TypeParam(Identifier("B")))))
       ),
-      Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A")))),
+      Typed.InstantiatedType("Events", List(Typed.TypeParam(Identifier("A")))),
       "last"
     ),
     "delay" -> Typed.ExternExpression(
       List(Identifier("A")),
       List(
-        (TesslaAST.LazyEvaluation, Typed.InstatiatedType("Events", List(Typed.IntType))),
-        (TesslaAST.StrictEvaluation, Typed.InstatiatedType("Events", List(Typed.TypeParam(Identifier("A")))))
+        (TesslaAST.LazyEvaluation, Typed.InstantiatedType("Events", List(Typed.IntType))),
+        (TesslaAST.StrictEvaluation, Typed.InstantiatedType("Events", List(Typed.TypeParam(Identifier("A")))))
       ),
-      Typed.InstatiatedType("Events", List(Typed.UnitType)),
+      Typed.InstantiatedType("Events", List(Typed.UnitType)),
       "delay"
     ),
     "ite" -> Typed.ExternExpression(
@@ -64,7 +64,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     "List_fold" -> Typed.ExternExpression(
       List(Identifier("A"), Identifier("B")),
       List(
-        (TesslaAST.StrictEvaluation, Typed.InstatiatedType("List", List(Typed.TypeParam(Identifier("A"))))),
+        (TesslaAST.StrictEvaluation, Typed.InstantiatedType("List", List(Typed.TypeParam(Identifier("A"))))),
         (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
         (TesslaAST.StrictEvaluation, Typed.FunctionType(
           Nil, List(
@@ -78,7 +78,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     "Set_fold" -> Typed.ExternExpression(
       List(Identifier("A"), Identifier("B")),
       List(
-        (TesslaAST.StrictEvaluation, Typed.InstatiatedType("Set", List(Typed.TypeParam(Identifier("A"))))),
+        (TesslaAST.StrictEvaluation, Typed.InstantiatedType("Set", List(Typed.TypeParam(Identifier("A"))))),
         (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
         (TesslaAST.StrictEvaluation, Typed.FunctionType(
           Nil, List(
@@ -92,7 +92,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     "Map_fold" -> Typed.ExternExpression(
       List(Identifier("A"), Identifier("B"), Identifier("C")),
       List(
-        (TesslaAST.StrictEvaluation, Typed.InstatiatedType("Map", List(Typed.TypeParam(Identifier("A")), Typed.TypeParam(Identifier("B"))))),
+        (TesslaAST.StrictEvaluation, Typed.InstantiatedType("Map", List(Typed.TypeParam(Identifier("A")), Typed.TypeParam(Identifier("B"))))),
         (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("C"))),
         (TesslaAST.StrictEvaluation, Typed.FunctionType(
           Nil, List(
@@ -188,7 +188,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
           Typed.ExpressionRef(toIdenifier(elseCase.id, loc), lookupType(elseCase.id, env), loc)
         ), loc)
       case MemberAccess(receiver, member, memberLoc, loc) =>
-        Typed.RecordAccesorExpression(member, Typed.ExpressionRef(toIdenifier(receiver.id, receiver.loc), lookupType(receiver.id, env)), memberLoc, loc)
+        Typed.RecordAccessorExpression(member, Typed.ExpressionRef(toIdenifier(receiver.id, receiver.loc), lookupType(receiver.id, env)), memberLoc, loc)
       case ObjectLiteral(members, loc) => Typed.RecordConstructorExpression(
         members.map(x => (x._1, (Typed.ExpressionRef(toIdenifier(x._2.id, x._2.loc), lookupType(x._2.id, env)), Location.unknown))), loc)
       case Literal(value, loc) => translateLiteralValue(value, loc)
@@ -232,7 +232,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
   }
 
   def toType(tpe: TypedTessla.Type, location: Location = Location.unknown): Typed.Type = tpe match {
-    case TypedTessla.BuiltInType(name, typeArgs) => Typed.InstatiatedType(name, typeArgs.map(toType(_)).toList)
+    case TypedTessla.BuiltInType(name, typeArgs) => Typed.InstantiatedType(name, typeArgs.map(toType(_)).toList)
     case TypedTessla.FunctionType(typeParameters, parameterTypes, returnType, _) =>
       Typed.FunctionType(typeParameters.map(toIdenifier(_, Location.unknown)).toList,
         parameterTypes.map(x => (if (x.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation, toType(x))).toList,
@@ -253,7 +253,7 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
   def determineTypeParameters(resolved: Typed.Type, resolvable: Typed.Type): Map[Typed.Identifier, Typed.Type] = (resolved, resolvable) match {
     case (tpe, Typed.TypeParam(name, _)) =>
       Map(name -> tpe)
-    case (Typed.InstatiatedType(_, typeArgs1, _), Typed.InstatiatedType(_, typeArgs2, _)) =>
+    case (Typed.InstantiatedType(_, typeArgs1, _), Typed.InstantiatedType(_, typeArgs2, _)) =>
       typeArgs1.zip(typeArgs2).map { case (arg1, arg2) =>
         determineTypeParameters(arg1, arg2)
       }.fold(Map())(_ ++ _)

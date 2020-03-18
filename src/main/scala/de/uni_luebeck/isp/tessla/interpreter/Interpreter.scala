@@ -97,7 +97,7 @@ object Interpreter {
           }
           interpreter.inStreams.get(event.stream.name) match {
             case Some((inStream, elementType)) =>
-              val tpe = elementType.asInstanceOf[Core.InstatiatedType]
+              val tpe = elementType.asInstanceOf[Core.InstantiatedType]
               assert(tpe.name == "Events")
               assert(tpe.typeArgs.size == 1)
               RuntimeTypeChecker.check(tpe.typeArgs.head, event.value).foreach(error =>
