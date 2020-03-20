@@ -134,7 +134,7 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         TesslaCoreLegacy.BuiltInOperator(name, loc)
       }
 
-      val externs = RuntimeExterns.runtimeCommonenExterns
+      val externs = RuntimeExterns.runtimeCommonExterns
 
       override def visitUnaryExpression(exp: UnaryExpressionContext) = {
         val operatorName = Tessla.unaryOperators(exp.op.getText)

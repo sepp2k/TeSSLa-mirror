@@ -39,7 +39,7 @@ object RuntimeExterns {
 
   type Extern[A[+ _]] = ArraySeq[A[Any]] => A[Any]
 
-  val runtimeCommonenExterns = commonExterns[Lazy]
+  val runtimeCommonExterns = commonExterns[Lazy]
 
   def commonExterns[A[+ _] : Monad]: Map[String, Extern[A]] = Map(
     "true" -> ((_: ArraySeq[A[Any]]) => true.pure[A]),
