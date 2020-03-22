@@ -40,7 +40,7 @@ object PreprocessingTransformation extends TranslationPhase[Specification, Speci
         case ApplicationExpression(applicable, args, location) => ApplicationExpression(translateExp(applicable), args.map(translateExp), location)
         case TypeApplicationExpression(applicable, typeArgs, location) => TypeApplicationExpression(translateExp(applicable), typeArgs, location)
         case RecordConstructorExpression(entries, location) => RecordConstructorExpression(entries.view.mapValues{case (e, l) => (translateExp(e), l)}.toMap, location)
-        case RecordAccesorExpression(name, target, nameLocation, location) => RecordAccesorExpression(name, translateExp(target), nameLocation, location)
+        case RecordAccessorExpression(name, target, nameLocation, location) => RecordAccessorExpression(name, translateExp(target), nameLocation, location)
         case e => e
       }
     }

@@ -32,7 +32,7 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
       } else {
         val defExpr = spec.definitions(id)
         defExpr.tpe match {
-          case InstatiatedType("Events", _, _) => defExpr match {
+          case InstantiatedType("Events", _, _) => defExpr match {
             case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, _, _), args, _) => processStreamDefExp(id, e, args, stack + id)
             case ApplicationExpression(e: ExternExpression, args, _) => processStreamDefExp(id, e, args, stack + id)
             case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)

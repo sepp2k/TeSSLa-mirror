@@ -118,7 +118,7 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
         getLiftFlow(None, applicable, args, scope)
       case TypeApplicationExpression(applicable, _, _) => getExpFlow(applicable, scope)
       case RecordConstructorExpression(entries, _) => getExpsFlow(entries.map(e => e._2._1).toSet, scope)
-      case RecordAccesorExpression(_, target, _, _) => getExpFlow(target, scope)
+      case RecordAccessorExpression(_, target, _, _) => getExpFlow(target, scope)
       case ExpressionRef(id, _, _) => IdentifierDependencies(Set(), Set(), Set(), Set(id), Set(id), Set())
       case _ => IdentifierDependencies.empty
     }

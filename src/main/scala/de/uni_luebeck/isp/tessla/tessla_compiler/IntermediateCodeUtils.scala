@@ -103,28 +103,17 @@ object IntermediateCodeUtils {
       case InstantiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Unclean solution but not easy to surpass because of implicit
       case RecordType(entries, _) if entries.isEmpty => UnitType
       case RecordType(entries, _) if entries.size == 1 => typeConversion(entries.toSeq.head._2._1)
-<<<<<<< HEAD
       case InstantiatedType("Bool", Seq(), _) => BoolType
       case InstantiatedType("Int", Seq(), _) => LongType
       case InstantiatedType("Float", Seq(), _) => DoubleType
       case InstantiatedType("String", Seq(), _) => StringType
       case InstantiatedType("Option", Seq(t), _) => OptionType(t)
       case InstantiatedType("Set", Seq(t), _) => ImmutableSetType(t)
+      case InstantiatedType("MutSet", Seq(t), _) => MutableSetType(t)
       case InstantiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
+      case InstantiatedType("MutMap", Seq(t1, t2), _) => MutableMapType(t1, t2)
       case InstantiatedType("List", Seq(t), _) => ImmutableListType(t)
-=======
-      case InstatiatedType("Bool", Seq(), _) => BoolType
-      case InstatiatedType("Int", Seq(), _) => LongType
-      case InstatiatedType("Float", Seq(), _) => DoubleType
-      case InstatiatedType("String", Seq(), _) => StringType
-      case InstatiatedType("Option", Seq(t), _) => OptionType(t)
-      case InstatiatedType("Set", Seq(t), _) => ImmutableSetType(t)
-      case InstatiatedType("MutSet", Seq(t), _) => MutableSetType(t)
-      case InstatiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
-      case InstatiatedType("MutMap", Seq(t1, t2), _) => MutableMapType(t1, t2)
-      case InstatiatedType("List", Seq(t), _) => ImmutableListType(t)
-      case InstatiatedType("MutList", Seq(t), _) => MutableListType(t)
->>>>>>> c1e32d6... First ideas towards mutability check including non-stream vars
+      case InstantiatedType("MutList", Seq(t), _) => MutableListType(t)
       case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) => IntermediateCode.FunctionType(paramTypes.map{case (_,t) => typeConversion(t)}, typeConversion(resultType)) //TODO: Type params
       case RecordType(entries, _) => {
         def comp(s1: String, s2: String) : Boolean = {

@@ -85,7 +85,7 @@ object MutabilityChecker extends
           case ApplicationExpression(applicable, args, _) => (args :+ applicable).foreach(execOnFuncExpr)
           case TypeApplicationExpression(applicable, _, _) => execOnFuncExpr(applicable)
           case RecordConstructorExpression(entries, _) => entries.foreach(e => execOnFuncExpr(e._2._1))
-          case RecordAccesorExpression(_, target, _, _) => execOnFuncExpr(target)
+          case RecordAccessorExpression(_, target, _, _) => execOnFuncExpr(target)
           case _ =>
         }
       }
@@ -204,7 +204,7 @@ object MutabilityChecker extends
             FunctionType(typeParams, params.map{case (id, ev, _) => (ev, targetVarType(id))}, targetVarType(result.asInstanceOf[ExpressionRef].id))
           case ExternExpression(typeParams, params, resultType, name, location) => ???
           case ApplicationExpression(applicable, args, location) => ???
-          case RecordAccesorExpression(name, target, nameLocation, location) => ???
+          case RecordAccessorExpression(name, target, nameLocation, location) => ???
         }
       }
       else if ((mutabilityCheckRelevantType(origType) || mutabilityCheckRelevantStreamType(origType)) && !immutVars.contains(id)) {
@@ -221,7 +221,7 @@ object MutabilityChecker extends
 
   def mutabilityCheckRelevantStreamType(tpe: Type) : Boolean = {
     tpe match {
-      case InstatiatedType("Events", Seq(t), _) => mutabilityCheckRelevantType(t)
+      case InstantiatedType("Events", Seq(t), _) => mutabilityCheckRelevantType(t)
     }
   }
 
@@ -239,11 +239,11 @@ object MutabilityChecker extends
 
   def mkTypeMutable(t: Type): Type = {
     t match {
-      case InstatiatedType("Events", List(t), l) => InstatiatedType("Events", List(mkTypeMutable(t)), l)
-      case InstatiatedType("Option", List(t), l) => InstatiatedType("Option", List(mkTypeMutable(t)), l)
-      case InstatiatedType("Set", t, l) => InstatiatedType("MutSet", t, l)
-      case InstatiatedType("Map", t, l) => InstatiatedType("MutMap", t, l)
-      case InstatiatedType("List", t, l) => InstatiatedType("MutList", t, l)
+      case InstantiatedType("Events", List(t), l) => InstantiatedType("Events", List(mkTypeMutable(t)), l)
+      case InstantiatedType("Option", List(t), l) => InstantiatedType("Option", List(mkTypeMutable(t)), l)
+      case InstantiatedType("Set", t, l) => InstantiatedType("MutSet", t, l)
+      case InstantiatedType("Map", t, l) => InstantiatedType("MutMap", t, l)
+      case InstantiatedType("List", t, l) => InstantiatedType("MutList", t, l)
       case RecordType(entries, _) => RecordType(entries.map{case (n,(t,l)) => (n, (mkTypeMutable(t), l))})
       case _ : TypeParam => t
       //TODO: Add Error

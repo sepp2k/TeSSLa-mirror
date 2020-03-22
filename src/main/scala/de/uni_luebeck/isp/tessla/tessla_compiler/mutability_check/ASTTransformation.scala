@@ -33,8 +33,8 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
           case FunctionType(_, paramTypes, resultType, _) =>
             paramTypes.zip(t2.asInstanceOf[FunctionType].paramTypes).foreach { case (e1, e2) => calcTypeParams(e1._2, e2._2) }
             calcTypeParams(resultType, t2.asInstanceOf[FunctionType].resultType)
-          case InstatiatedType(name, typeArgs, _) if Set(name, s"Mut$name").contains(t2.asInstanceOf[InstatiatedType].name) =>
-            typeArgs.zip(t2.asInstanceOf[InstatiatedType].typeArgs).foreach { case (e1, e2) => calcTypeParams(e1, e2) }
+          case InstantiatedType(name, typeArgs, _) if Set(name, s"Mut$name").contains(t2.asInstanceOf[InstantiatedType].name) =>
+            typeArgs.zip(t2.asInstanceOf[InstantiatedType].typeArgs).foreach { case (e1, e2) => calcTypeParams(e1, e2) }
           case RecordType(entries, _) =>
             entries.zip(t2.asInstanceOf[RecordType].entries).foreach { case (e1, e2) => calcTypeParams(e1._2._1, e2._2._1) }
           case TypeParam(id, _) =>
@@ -52,14 +52,14 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
             case FunctionExpression(typeParams, params, body, result, location) => FunctionExpression(typeParams, params, body.map{case (id, defExp) => (id, transformDefinitionExpression(defExp, scope ++ body))}, transformExpressionArg(result, scope), location)
             case a: ApplicationExpression => transformApp(a, ArraySeq(), scope)._1.asInstanceOf[ApplicationExpression]
             case RecordConstructorExpression(entries, location) => RecordConstructorExpression(entries.view.mapValues {case (e, l) => (transformExpressionArg(e, scope), l) }.toMap, location)
-            case RecordAccesorExpression(name, target, nameLocation, location) => RecordAccesorExpression(name, transformExpressionArg(target, scope), nameLocation, location)
+            case RecordAccessorExpression(name, target, nameLocation, location) => RecordAccessorExpression(name, transformExpressionArg(target, scope), nameLocation, location)
             case e => e
       }
     }
 
     def barkEvents(t: Type) : Type = {
       t match {
-        case InstatiatedType("Events", Seq(t), _) => t
+        case InstantiatedType("Events", Seq(t), _) => t
         case _ => ??? //TODO: Error
       }
     }
