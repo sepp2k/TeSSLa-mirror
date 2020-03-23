@@ -3,7 +3,6 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check
 import de.uni_luebeck.isp.tessla.{Location, TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Success
-import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
 
 import scala.collection.immutable.ArraySeq
 
@@ -16,15 +15,8 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
 
     //TODO: Inlining of mutable vars
 
-    def transformInitiatingExpression(app: ApplicationExpression, desiredType: Type, translatedArgs: ArraySeq[ExpressionArg]) : ApplicationExpression = {
-      app match {
-        case ApplicationExpression(TypeApplicationExpression(ExternExpression(typePars, pars, _, name, l0), targs, l1), _, l2) =>
-          ApplicationExpression(TypeApplicationExpression(ExternExpression(typePars, pars, desiredType, name, l0), targs, l1), translatedArgs, l2)
-        case _ => throw Errors.CoreASTError(s"No valid initiating expression $app", app.location)
-      }
-    }
 
-    def typeArgInference(fType: FunctionType, argTypes: ArraySeq[Type]): List[Type] = {
+    def typeArgInference(fType: FunctionType, argTypes: Seq[Type]): List[Type] = {
       val types: collection.mutable.Map[Identifier, Type] = collection.mutable.Map()
 
       def calcTypeParams(t1: Type, t2: Type) : Unit = {
@@ -47,81 +39,49 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
       fType.typeParams.map(types(_))
     }
 
-    def transformDefinitionExpression(defExp: DefinitionExpression, scope: Map[Identifier, DefinitionExpression]): DefinitionExpression = {
-      defExp match {
-            case FunctionExpression(typeParams, params, body, result, location) => FunctionExpression(typeParams, params, body.map{case (id, defExp) => (id, transformDefinitionExpression(defExp, scope ++ body))}, transformExpressionArg(result, scope), location)
-            case a: ApplicationExpression => transformApp(a, ArraySeq(), scope)._1.asInstanceOf[ApplicationExpression]
-            case RecordConstructorExpression(entries, location) => RecordConstructorExpression(entries.view.mapValues {case (e, l) => (transformExpressionArg(e, scope), l) }.toMap, location)
-            case RecordAccessorExpression(name, target, nameLocation, location) => RecordAccessorExpression(name, transformExpressionArg(target, scope), nameLocation, location)
-            case e => e
+    def getApplicable(app: ExpressionArg, args: ArraySeq[ExpressionArg], scope: Map[Identifier, DefinitionExpression], resType: Type, loc: Location = Location.unknown): (ExpressionArg, ArraySeq[ExpressionArg]) = {
+
+      def newArgsAndTypes: (ArraySeq[TesslaAST.Core.ExpressionArg], ArraySeq[TesslaAST.Core.Type]) = app match {
+        case ExternExpression(_, _, _, "lift", _)
+             | ExternExpression(_, _, _, "slift", _) =>
+          val lArg = getApplicable(args.last, args.dropRight(1), scope, resType)
+
+          (lArg._2 :+ lArg._1, lArg._2.map(ExpressionFlowAnalysis.getExpArgID).map(idTypes(_, scope)) :+ lArg._1.tpe)
+        case _ =>
+          (args, args.map(ExpressionFlowAnalysis.getExpArgID).map(idTypes(_, scope)))
+      }
+
+      app match {
+        case TypeApplicationExpression(applicable, _, location) =>
+          getApplicable(applicable, args, scope, resType, location)
+        case ExternExpression(_, params, _, name, location) =>
+          //TypeApplication is erased here since types are fully known
+          val newExtExp = ExternExpression(List(), newArgsAndTypes._2.zip(params).map{ case (typ, (ev, _)) => (ev, typ)}.toList, resType, name, location)
+          (TypeApplicationExpression(newExtExp, List(), loc), newArgsAndTypes._1)
+        case _ =>
+          (TypeApplicationExpression(app, typeArgInference(app.tpe.asInstanceOf[FunctionType], newArgsAndTypes._2), loc), args)
       }
     }
 
-    def barkEvents(t: Type) : Type = {
-      t match {
-        case InstantiatedType("Events", Seq(t), _) => t
-        case _ => ??? //TODO: Error
-      }
-    }
-
-    def transformApp(applicable: ExpressionArg, args : ArraySeq[ExpressionArg], scope: Map[Identifier, DefinitionExpression],
-                     inApp : Boolean = false, slift : Boolean = false) : (ExpressionArg, List[Type], ArraySeq[ExpressionArg]) = {
-      val argTypes = if (slift) args.map(a => barkEvents(a.tpe)) else args.map(_.tpe)
-
-      applicable match {
-        case ExternExpression(typePars, pars, _, name, location) =>
-          val (newArgs, newTypeArgs) =  if (name == "lift" || name == "slift") {
-            val (newExp, typeArgs, newArgs) = transformApp(args.last, args.dropRight(1), scope, true, true)
-            (newArgs :+ newExp, typeArgs)
-          } else {
-            (args, typeArgInference(applicable.tpe.asInstanceOf[FunctionType], argTypes))
-          }
-          val newParamTypes = if (slift) newArgs.map(a => barkEvents(a.tpe)) else newArgs.map(_.tpe)
-          val newResType = ExpressionFlowAnalysis.getOutputTypeForExternExpression(None,  applicable.asInstanceOf[ExternExpression], newArgs, idTypes, tcMut.impCheck, scope)
-          (ExternExpression(typePars, pars.zip(newParamTypes).map{case ((ev, _), nt) => (ev, nt)}, newResType, name, location), newTypeArgs, newArgs)
-
-        case TypeApplicationExpression(applicable, _, location) => {
-          val (exp, tArgs, newArgs) = transformApp(applicable, args, scope,true, slift)
-          (TypeApplicationExpression(exp, tArgs, location), List(), newArgs)
+    def transformDefs(defs: Map[Identifier, DefinitionExpression], scope: Map[Identifier, DefinitionExpression]): Map[Identifier, DefinitionExpression] = {
+      defs.map{ case (id, exp) =>
+        val newExp = exp match {
+          case FunctionExpression(typeParams, params, body, result, location) =>
+            FunctionExpression(typeParams, params.map{ case (id, ev, _) => (id, ev, idTypes(id, scope))}, transformDefs(body, scope ++ body), result, location)
+          case ApplicationExpression(app, args, location) =>
+            val (newApp, newArgs) = getApplicable(app, args, scope, idTypes(id, scope))
+            ApplicationExpression(newApp, newArgs, location)
+          case _ =>
+            exp
         }
-        case ApplicationExpression(app, appArgs, _) => {
-          val newArgs = appArgs.map(transformExpressionArg(_, scope))
-          val targs = applicable.tpe match {
-            case _: FunctionType if inApp => typeArgInference(applicable.tpe.asInstanceOf[FunctionType], argTypes)
-            case _ => List()
-          }
-          val (newAppExp, _, finArgs) = transformApp(app, newArgs, scope)
-          (ApplicationExpression(newAppExp, finArgs), targs, args)
-        }
-        case _: FunctionExpression |
-             _: ExpressionRef => (transformExpressionArg(applicable, scope), typeArgInference(applicable.tpe.asInstanceOf[FunctionType], argTypes), args)
-        case _ => ???
+        (id, newExp)
       }
     }
 
-    def transformExpressionArg(ea: ExpressionArg, scope: Map[Identifier, DefinitionExpression]): ExpressionArg = {
-      ea match {
-        case e: Expression => transformDefinitionExpression(e, scope)
-        case ExpressionRef(id, _, loc) => ExpressionRef(id, idTypes(id), loc)
-      }
-    }
-
-    val in = spec.in.map{case (id, (_, annos)) =>
-      (id, (idTypes(id), annos))
-    }
-
-    val definitions = spec.definitions.map{case (id, defExp) =>
-      defExp match {
-        // TODO: Real  detection of this case
-        // TODO: Put recognition of expressions creating new Objects to central position.
-        // Note: Such expressions are always flattened out at this place and hence cannot occur inside the second case
-        case ApplicationExpression(TypeApplicationExpression(_: ExternExpression, _, _), ArraySeq(), _) => (id, transformInitiatingExpression(defExp.asInstanceOf[ApplicationExpression], idTypes(id), ArraySeq()))
-        case _ => (id, transformDefinitionExpression(defExp, spec.definitions))
-      }
-    }
+    val in = spec.in.map{case (id, (_, anno)) => (id, (idTypes(id, spec.definitions), anno))}
 
     //TODO: Plain specification sufficient?
-    Success(new TesslaCoreWithMutabilityInfo(TesslaAST.Core.Specification(in, definitions, spec.out, spec.maxIdentifier), tcMut.idTypes, tcMut.addDeps, tcMut.impCheck), Seq())
+    Success(new TesslaCoreWithMutabilityInfo(TesslaAST.Core.Specification(in, transformDefs(spec.definitions, spec.definitions), spec.out, spec.maxIdentifier), tcMut.idTypes, tcMut.addDeps, tcMut.impCheck), Seq())
   }
 
 }
