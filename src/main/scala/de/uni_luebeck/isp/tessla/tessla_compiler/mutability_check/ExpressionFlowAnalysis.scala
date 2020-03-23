@@ -180,6 +180,9 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
         IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(0)), Set())
       case ExternExpression(_,  _, _, "delay",  _) =>
         IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(0), args(1)), Set())
+      case _: ExternExpression =>
+        //Fallback
+        IdentifierDependencies(Set(), Set(), Set(), Set(), args.toSet, Set())
       case _: ApplicationExpression |
            _: RecordAccessorExpression => ??? //TODO: In WC every identifier of the specification could be used
       case _ => ???
