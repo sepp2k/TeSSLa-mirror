@@ -50,7 +50,7 @@ class ASTPreprocessor extends TranslationPhase[Core.Specification, Core.Specific
           add += (newID -> exp)
           ExpressionRef(newID, exp.tpe, Location.unknown)
         }
-        case ExpressionRef(id, tpe, location) => ExpressionRef(newIDFromOld(id), tpe, location)
+        case e: ExpressionRef => e
       }
     }
 
@@ -64,9 +64,12 @@ class ASTPreprocessor extends TranslationPhase[Core.Specification, Core.Specific
         case ApplicationExpression(applicable, args, location) =>
           applicable match {
             case ExternExpression(_, _, _, "lift", _)
-               | ExternExpression(_, _, _, "slift", _) =>
+               | ExternExpression(_, _, _, "slift", _)
+               | TypeApplicationExpression(ExternExpression(_, _, _, "lift", _), _, _)
+               | TypeApplicationExpression(ExternExpression(_, _, _, "slift", _), _, _) =>
               ApplicationExpression(applicable, args.dropRight(1).map(getExpRef(_, add)) :+ args.last, location)
-            case _: ExternExpression =>
+            case _: ExternExpression |
+                 TypeApplicationExpression(_: ExternExpression, _, _) =>
               ApplicationExpression(applicable, args.map(getExpRef(_, add)), location)
             case _ =>
               ApplicationExpression(getExpRef(applicable, add), args.map(getExpRef(_, add)), location)
