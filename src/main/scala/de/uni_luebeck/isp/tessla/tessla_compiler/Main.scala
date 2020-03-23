@@ -67,7 +67,7 @@ object Main extends SexyOpt {
         }
 
         val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
-        val core = unwrapResult((new StreamDefFlattener).translate(unflatCore).andThen(new ASTPreprocessor).andThen(new ASTRemoveUnused))
+        val core = unwrapResult((new StreamDefFlattener).translate(unflatCore).andThen(new ASTPreprocessor(mutability)).andThen(new ASTRemoveUnused))
 
         if (verbose.value) {
           println("###############################")
