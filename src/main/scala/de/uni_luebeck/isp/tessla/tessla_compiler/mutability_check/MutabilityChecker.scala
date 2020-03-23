@@ -99,7 +99,7 @@ object MutabilityChecker extends
 
       defs.foreach{case (id, d) =>
         execOnFuncExpr(d)
-        processDependencies(id, expFlowAnalysis.getExpFlow(d, scope))
+        processDependencies(id, expFlowAnalysis.getExpFlow(id, d, scope))
       }
     }
 

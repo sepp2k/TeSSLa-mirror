@@ -71,30 +71,32 @@ object ExpressionFlowAnalysis {
 class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
 
   //TODO: Maybe duplicate exists somewhere else
-  def getExpsFlow(exps: Set[ExpressionArg], scope: Map[Identifier, DefinitionExpression]): IdentifierDependencies = {
+  def getExpsFlow(exps: Set[(Identifier, ExpressionArg)], scope: Map[Identifier, DefinitionExpression]): IdentifierDependencies = {
     if (exps.isEmpty) {
       IdentifierDependencies.empty
     } else {
-      exps.map(getExpFlow(_, scope)).reduce(_ ++ _)
+      exps.map{case (i, e) => getExpFlow(i, e, scope)}.reduce(_ ++ _)
     }
   }
 
-  def getExpFlow(e: ExpressionArg, scope: Map[Identifier, DefinitionExpression], withParams: Boolean = false): IdentifierDependencies = {
+  def getExpFlow(resID: Identifier, e: ExpressionArg, scope: Map[Identifier, DefinitionExpression], onlyParams: Boolean = false): IdentifierDependencies = {
 
     val idDeps = e match {
       case FunctionExpression(_, params, body, result, _) =>
-        val exps : Seq[ExpressionArg] = body.values.toSeq :+ result
+        val exps = body.toSeq :+ (resID, result)
         val deps = getExpsFlow(exps.toSet, scope ++ body)
-          if (withParams) {
-            deps
+          if (onlyParams) {
+            deps.mapAll(_.intersect(params.map(_._1).toSet))
           } else {
-            deps.removeAll(params.map(_._1).toSet)
+            deps.removeAll(body.keys.toSet)
           }
       case ApplicationExpression(applicable, args, _) =>
-        getLiftFlow(None, applicable, args, scope)
-      case TypeApplicationExpression(applicable, _, _) => getExpFlow(applicable, scope)
-      case RecordConstructorExpression(entries, _) => getExpsFlow(entries.map(e => e._2._1).toSet, scope)
-      case RecordAccessorExpression(_, target, _, _) => getExpFlow(target, scope)
+        getLiftFlow(resID, applicable, args, scope)
+      case TypeApplicationExpression(applicable, _, _) => getExpFlow(resID, applicable, scope)
+      case RecordConstructorExpression(entries, _) =>
+        val entryIDs = entries.map{ case (_, (exp, _)) => ExpressionFlowAnalysis.getExpArgID(exp)}.toSet
+        IdentifierDependencies(Set(), Set(), Set(), entryIDs, entryIDs, Set())
+      case RecordAccessorExpression(_, target, _, _) => getExpFlow(resID, target, scope)
       case ExpressionRef(id, _, _) => IdentifierDependencies(Set(), Set(), Set(), Set(id), Set(id), Set())
       case _ => IdentifierDependencies.empty
     }
@@ -102,7 +104,7 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
     idDeps.mapAll(set => set.filter(e => !scope.contains(e) /*inputs*/ || !ASTTransformation.isInlineExpression(scope(e), scope)))
   }
 
-  def getLiftFlow(id: Option[Identifier], liftExpr: ExpressionArg, argExps: Seq[ExpressionArg], scope: Map[Identifier, DefinitionExpression]) : IdentifierDependencies = {
+  def getLiftFlow(resID: Identifier, liftExpr: ExpressionArg, argExps: Seq[ExpressionArg], scope: Map[Identifier, DefinitionExpression]) : IdentifierDependencies = {
 
     val argsL = Lazy(argExps.map(a => ExpressionFlowAnalysis.getExpArgID(a)))
     def args: Seq[TesslaAST.Core.Identifier] = argsL.get
@@ -114,14 +116,14 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
           ids.map(id => depsPerParam.getOrElse(id, id))
         }
 
-        val transDeps = getExpFlow(fe, scope, true).mapAll(replaceParams)
+        val transDeps = getExpFlow(resID, fe, scope, true).mapAll(replaceParams)
+        val feResID = ExpressionFlowAnalysis.getExpArgID(fe.result)
 
-        //TODO: Tie arguments and params
-        IdentifierDependencies(transDeps.reads, transDeps.writes, transDeps.reps, transDeps.pass, transDeps.deps, transDeps.calls ++ depsPerParam.toSet)
+        IdentifierDependencies(transDeps.reads, transDeps.writes, transDeps.reps, transDeps.pass, transDeps.deps, transDeps.calls ++ depsPerParam.toSet + (feResID -> resID))
       case r: ExpressionRef =>
-        getLiftFlow(id, scope(r.id), argExps, scope)
+        getLiftFlow(resID, scope(r.id), argExps, scope)
       case TypeApplicationExpression(e, _, _) =>
-        getLiftFlow(id, e, argExps, scope)
+        getLiftFlow(resID, e, argExps, scope)
       case ExternExpression(_, _, _, "Set_empty", _) |
            ExternExpression(_, _, _, "Map_empty", _) |
            ExternExpression(_, _, _, "List_empty", _) =>
@@ -167,11 +169,11 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
           IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(1)), Set())
         }
       case ExternExpression(_, _, _, "lift", _) =>
-        getLiftFlow(id, argExps.last, argExps.dropRight(1), scope)
+        getLiftFlow(resID, argExps.last, argExps.dropRight(1), scope)
       case ExternExpression(_, _, _, "slift", _) =>
-        val dep = getLiftFlow(id, argExps.last, argExps.dropRight(1), scope)
-        val addReps = (dep.reads ++ dep.writes).filter(i => id.isEmpty || !impCheck.freqImplication(id.get, i))
-          IdentifierDependencies(dep.reads, dep.writes, dep.reps ++ addReps, dep.pass, dep.deps, Set())
+        val dep = getLiftFlow(resID, argExps.last, argExps.dropRight(1), scope)
+        val addReps = (dep.reads ++ dep.writes).filter(i => !impCheck.freqImplication(resID, i))
+          IdentifierDependencies(dep.reads, dep.writes, dep.reps ++ addReps, dep.pass, dep.deps, dep.calls)
       case ExternExpression(_, _, _, "merge", _) =>
         IdentifierDependencies(Set(), Set(), Set(), args.toSet, args.toSet, Set())
       case ExternExpression(_, _, _, "time", _) =>
