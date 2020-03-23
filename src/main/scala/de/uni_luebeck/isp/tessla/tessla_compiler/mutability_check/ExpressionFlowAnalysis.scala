@@ -80,7 +80,8 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
   }
 
   def getExpFlow(e: ExpressionArg, scope: Map[Identifier, DefinitionExpression], withParams: Boolean = false): IdentifierDependencies = {
-      e match {
+
+    val idDeps = e match {
       case FunctionExpression(_, params, body, result, _) =>
         val exps : Seq[ExpressionArg] = body.values.toSeq :+ result
         val deps = getExpsFlow(exps.toSet, scope ++ body)
@@ -97,6 +98,8 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
       case ExpressionRef(id, _, _) => IdentifierDependencies(Set(), Set(), Set(), Set(id), Set(id), Set())
       case _ => IdentifierDependencies.empty
     }
+
+    idDeps.mapAll(set => set.filter(e => !scope.contains(e) /*inputs*/ || !ASTTransformation.isInlineExpression(scope(e), scope)))
   }
 
   def getLiftFlow(id: Option[Identifier], liftExpr: ExpressionArg, argExps: Seq[ExpressionArg], scope: Map[Identifier, DefinitionExpression]) : IdentifierDependencies = {
