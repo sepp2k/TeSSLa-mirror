@@ -134,7 +134,7 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
         val newExp = exp match {
           case FunctionExpression(typeParams, params, body, result, location) =>
             val resID = ExpressionFlowAnalysis.getExpArgID(result)
-            val newRes = ExpressionRef(resID, idTypes(resID, scope), result.location)
+            val newRes = ExpressionRef(resID, idTypes(resID, scope ++ body), result.location)
             FunctionExpression(typeParams, params.map{ case (id, ev, _) => (id, ev, idTypes(id, scope))}, transformDefs(body, scope ++ body), newRes, location)
           case ApplicationExpression(app, args, location) =>
             val (newApp, newArgs) = getApplicable(app, args, scope, idTypes(id, scope))

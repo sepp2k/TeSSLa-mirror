@@ -202,8 +202,8 @@ object MutabilityChecker extends
     def targetVarType(id: Identifier, scope: Map[Identifier, DefinitionExpression]) : Type = {
       val origType = if (spec.in.contains(id)) {
         spec.in(id)._1
-      } else if (spec.definitions.contains(id)){
-        spec.definitions(id).tpe
+      } else if (scope.contains(id)){
+        scope(id).tpe
       } else {
         paramTypes(id)
       }
