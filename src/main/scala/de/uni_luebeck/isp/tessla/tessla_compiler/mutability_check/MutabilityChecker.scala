@@ -20,6 +20,7 @@ object MutabilityChecker extends
     val definitions = spec.definitions
     val out = spec.out
 
+    //TODO: Get rid of some maps
     val nodes: collection.mutable.ArrayBuffer[Identifier] = collection.mutable.ArrayBuffer()
     val edges: collection.mutable.ArrayBuffer[(Identifier, Identifier)] = collection.mutable.ArrayBuffer()
     val immutVars: collection.mutable.ArrayBuffer[Identifier] = collection.mutable.ArrayBuffer()
@@ -33,6 +34,9 @@ object MutabilityChecker extends
 
     val variableFamilies : UnionFind[Identifier] = new UnionFind()
     val allMutableRelevantVars: collection.mutable.ArrayBuffer[Identifier] = collection.mutable.ArrayBuffer()
+
+    //TODO: Find better solution
+    val paramTypes: collection.mutable.Map[Identifier, Type] = collection.mutable.Map()
 
     val impCheck = new ImplicationChecker(spec)
     val expFlowAnalysis = new ExpressionFlowAnalysis(impCheck)
@@ -82,7 +86,9 @@ object MutabilityChecker extends
 
       def execOnFuncExpr(e : ExpressionArg) : Unit = {
         e match {
-          case FunctionExpression(_, _, body, _, _) => processDefinitions(DefinitionOrdering.order(body, Map()), scope ++ body) //TODO: Make Result only Ref
+          case FunctionExpression(_, pars, body, _, _) =>
+            pars.foreach{case (id, _, typ) => paramTypes += (id -> typ)}
+            processDefinitions(DefinitionOrdering.order(body, Map()), scope ++ body)
           case ApplicationExpression(applicable, args, _) => (args :+ applicable).foreach(execOnFuncExpr)
           case TypeApplicationExpression(applicable, _, _) => execOnFuncExpr(applicable)
           case RecordConstructorExpression(entries, _) => entries.foreach(e => execOnFuncExpr(e._2._1))
@@ -196,8 +202,10 @@ object MutabilityChecker extends
     def targetVarType(id: Identifier, scope: Map[Identifier, DefinitionExpression]) : Type = {
       val origType = if (spec.in.contains(id)) {
         spec.in(id)._1
-      } else {
+      } else if (spec.definitions.contains(id)){
         spec.definitions(id).tpe
+      } else {
+        paramTypes(id)
       }
       if (origType.isInstanceOf[FunctionType]) {
         scope(id) match {
@@ -224,17 +232,18 @@ object MutabilityChecker extends
   def mutabilityCheckRelevantStreamType(tpe: Type) : Boolean = {
     tpe match {
       case InstantiatedType("Events", Seq(t), _) => mutabilityCheckRelevantType(t)
+      case _ => false
     }
   }
 
   def mutabilityCheckRelevantType(tpe: Type) : Boolean = {
     //TODO: TypeArg
     //TODO: Option[Set] ...
+    //TODO: Make Record types also mutable under circumstances --> Problem: Inlining
     tpe match {
       case InstantiatedType("Map", _, _) |
            InstantiatedType("Set", _, _) |
            InstantiatedType("List", _, _) => true
-      case RecordType(entries, _) => entries.values.map{case (t,_) => mutabilityCheckRelevantType(t)}.reduce(_ || _)
       case _ => false
     }
   }
@@ -246,7 +255,6 @@ object MutabilityChecker extends
       case InstantiatedType("Set", t, l) => InstantiatedType("MutSet", t, l)
       case InstantiatedType("Map", t, l) => InstantiatedType("MutMap", t, l)
       case InstantiatedType("List", t, l) => InstantiatedType("MutList", t, l)
-      case RecordType(entries, _) => RecordType(entries.map{case (n,(t,l)) => (n, (mkTypeMutable(t), l))})
       case _ : TypeParam => t
       //TODO: Add Error
     }
