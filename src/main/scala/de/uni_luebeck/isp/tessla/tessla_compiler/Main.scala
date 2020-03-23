@@ -83,8 +83,6 @@ object Main extends SexyOpt {
           ??? //TODO: new TesslaCoreWithMutabilityInfo(core, Set(), Map())
         }
 
-      println(coreWithMutInf)
-
         val optIntermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(coreWithMutInf).andThen(UnusedVarRemove))
 
         if (verbose.value) {
