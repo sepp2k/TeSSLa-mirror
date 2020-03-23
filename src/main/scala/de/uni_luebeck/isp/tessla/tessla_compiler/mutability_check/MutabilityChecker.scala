@@ -5,7 +5,8 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.Success
 import de.uni_luebeck.isp.tessla.tessla_compiler.DefinitionOrdering
 import de.uni_luebeck.isp.tessla.{TesslaAST, TranslationPhase}
 
-class TesslaCoreWithMutabilityInfo(val spec: TesslaAST.Core.Specification, val idTypes: Identifier => Type,
+class TesslaCoreWithMutabilityInfo(val spec: TesslaAST.Core.Specification,
+                                   val idTypes: (Identifier, Map[Identifier, DefinitionExpression]) => Type,
                                    val addDeps: Map[Identifier, Set[Identifier]], val impCheck: ImplicationChecker) {
   override def toString = s"${spec}"
 }
@@ -192,19 +193,20 @@ object MutabilityChecker extends
     println("-Z3-IMMUT-")
     println(immutVars)
 
-    def targetVarType(id: Identifier) : Type = {
+    def targetVarType(id: Identifier, scope: Map[Identifier, DefinitionExpression]) : Type = {
       val origType = if (spec.in.contains(id)) {
         spec.in(id)._1
       } else {
         spec.definitions(id).tpe
       }
       if (origType.isInstanceOf[FunctionType]) {
-        definitions(id) match {
-          case FunctionExpression(typeParams, params, _, result, _) =>
-            FunctionType(typeParams, params.map{case (id, ev, _) => (ev, targetVarType(id))}, targetVarType(result.asInstanceOf[ExpressionRef].id))
-          case ExternExpression(typeParams, params, resultType, name, location) => ???
-          case ApplicationExpression(applicable, args, location) => ???
-          case RecordAccessorExpression(name, target, nameLocation, location) => ???
+        scope(id) match {
+          case FunctionExpression(typeParams, params, body, result, _) =>
+            FunctionType(typeParams, params.map{case (id, ev, _) => (ev, targetVarType(id, scope))}, targetVarType(result.asInstanceOf[ExpressionRef].id, scope ++ body))
+
+          //TODO: Extern Expression: Preprocess, wrap in lambda -> Error
+          case _: ExternExpression=> ???
+          case _ => definitions(id).tpe
         }
       }
       else if ((mutabilityCheckRelevantType(origType) || mutabilityCheckRelevantStreamType(origType)) && !immutVars.contains(id)) {

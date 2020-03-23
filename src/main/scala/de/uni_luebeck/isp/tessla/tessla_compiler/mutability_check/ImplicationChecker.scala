@@ -15,11 +15,6 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
     activationMap += (id -> processStreamDef(id, Set()))
   }
 
-    def getUsedStream(e: ExpressionArg): Identifier = e match { //TODO: Extend case to any Expression
-      case ExpressionRef(id, _, _) => id
-      case _ => ???
-    }
-
     def processStreamDef(id: Identifier, stack: Set[Identifier]) : (Set[Activation], Boolean) = { //Activates, Always Init
       if (stack(id)) {
         (Set(), false)
@@ -51,15 +46,15 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
 
         case "nil" => (Set(), false)
 
-        case "time" => processStreamDef(getUsedStream(args(0)), stack)
+        case "time" => processStreamDef(ExpressionFlowAnalysis.getExpArgID(args(0)), stack)
 
-        case "default" => (processStreamDef(getUsedStream(args(0)), stack)._1, true)
+        case "default" => (processStreamDef(ExpressionFlowAnalysis.getExpArgID(args(0)), stack)._1, true)
 
-        case "delay" => (Set(Activation(Set(id), Set(getUsedStream(args(0))))), false)
+        case "delay" => (Set(Activation(Set(id), Set(ExpressionFlowAnalysis.getExpArgID(args(0))))), false)
 
         case "last" =>
-          val v = getUsedStream(args(0))
-          val t = getUsedStream(args(1))
+          val v = ExpressionFlowAnalysis.getExpArgID(args(0))
+          val t = ExpressionFlowAnalysis.getExpArgID(args(1))
           val colv = processStreamDef(v, stack)
           val colt = processStreamDef(t, stack)
           if (colv._2) {
@@ -69,7 +64,7 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
           }
 
         case "slift" => //TODO: Here lies NP-completeness
-          val argIDs = args.dropRight(1).map(getUsedStream)
+          val argIDs = args.dropRight(1).map(ExpressionFlowAnalysis.getExpArgID)
           val argIDCols = argIDs.map(i => (i -> processStreamDef(i, stack))).toMap
           val cols =
             (1 to argIDs.size).flatMap(i => argIDs.combinations(i)).flatMap{ids =>
@@ -79,7 +74,7 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
           (cols.toSet, argIDCols.values.forall(_._2))
 
         case "merge" =>
-          val argIDs = args.map(getUsedStream)
+          val argIDs = args.map(ExpressionFlowAnalysis.getExpArgID)
           argIDs.map(processStreamDef(_, stack)).reduce[(Set[Activation], Boolean)]{case ((s, b),(s2, b2)) => (s ++ s2, b || b2)}
 
         case _ => throw Errors.CommandNotSupportedError(defExp.toString)
