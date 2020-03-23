@@ -11,15 +11,6 @@ object ExpressionFlowAnalysis {
   //TODO: --> STDLIB Annotations ?!
   //TODO: Set[Set] ...
 
-  def getOutputTypeForExternExpression(id: Option[Identifier], e: ExternExpression, args: Seq[ExpressionArg],
-                                       idTypes: (Identifier, Map[Identifier, DefinitionExpression]) => Type,
-                                       impCheck: ImplicationChecker, scope: Map[Identifier, DefinitionExpression]) : Type = {
-    val expFlowAnalysis = new ExpressionFlowAnalysis(impCheck)
-    val flowDef = expFlowAnalysis.getLiftFlow(id, e, args, scope)
-    val pass = flowDef.pass ++ flowDef.reps ++ flowDef.writes
-    if (pass.nonEmpty) idTypes(pass.head, scope) else e.tpe.asInstanceOf[FunctionType].resultType
-  }
-
   final case class IdentifierDependencies(reads: Set[Identifier],
                                           writes: Set[Identifier],
                                           reps: Set[Identifier],
