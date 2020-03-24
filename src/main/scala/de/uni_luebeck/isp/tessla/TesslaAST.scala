@@ -257,8 +257,10 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     }
 
     override def print(options: PrintOptions, mayNeedBraces: Boolean): String = {
-      val typeArgsString = if (typeArgs.isEmpty) "" else s"[${typeArgs.mkString(", ")}]"
-      withTypeAndLocation(_ => s"${applicable.print(options, mayNeedBraces = typeArgs.nonEmpty)}$typeArgsString", options, mayNeedBraces)
+      if (typeArgs.isEmpty) applicable.print(options, mayNeedBraces) else {
+        val typeArgsString = s"[${typeArgs.mkString(", ")}]"
+        withTypeAndLocation(_ => s"${applicable.print(options, mayNeedBraces = typeArgs.nonEmpty)}$typeArgsString", options, mayNeedBraces)
+      }
     }
   }
 
