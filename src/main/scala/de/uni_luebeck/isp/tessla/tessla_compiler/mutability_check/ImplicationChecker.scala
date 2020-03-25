@@ -55,13 +55,9 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
         case "last" =>
           val v = ExpressionFlowAnalysis.getExpArgID(args(0))
           val t = ExpressionFlowAnalysis.getExpArgID(args(1))
-          val colv = processStreamDef(v, stack)
           val colt = processStreamDef(t, stack)
-          if (colv._2) {
-            (colt._1, false)
-          } else {
-            (addCond(colt._1, v), false)
-          }
+
+          (addCond(colt._1, v), false)
 
         case "slift" => //TODO: Here lies NP-completeness
           val argIDs = args.dropRight(1).map(ExpressionFlowAnalysis.getExpArgID)
@@ -99,7 +95,7 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
             } else {
               colj._1.exists { possColor =>
                 if (possColor.base.subsetOf(mandatoryColor.base)) {
-                  possColor.init.forall(possImp => mandatoryColor.init.exists(mandImp => freqImplication(mandImp, possImp, notInit + possImp, true)))
+                  possColor.init.forall(possImp => activationMap(possImp)._2 || mandatoryColor.init.exists(mandImp => freqImplication(mandImp, possImp, notInit + possImp, true)))
                 } else {
                   false
                 }
