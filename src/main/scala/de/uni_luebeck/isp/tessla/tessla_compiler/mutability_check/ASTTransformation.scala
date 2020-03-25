@@ -79,12 +79,19 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
       }
     }
 
-    def typeArgInference(fType: FunctionType, argTypes: Seq[Type]): List[Type] = {
+    def barkOption(t: Type) : Type = {
+      t match {
+        case InstantiatedType("Option", Seq(t), _) => t
+      }
+    }
+
+    //FIXME: Result type?
+    def typeArgInference(fType: FunctionType, argTypes: Seq[Type], wrappedInOption: Boolean): List[Type] = {
       val types: collection.mutable.Map[Identifier, Type] = collection.mutable.Map()
 
-      def calcTypeParams(t1: Type, t2: Type) : Unit = {
+      def calcTypeParams(t1: Type, t2: Type, wrappedInOption: Boolean = false) : Unit = {
         //TODO: Better solution
-        val t1n = barkEvents(t1)
+        val t1n = if (wrappedInOption) barkOption(barkEvents(t1)) else barkEvents(t1)
         val t2n = barkEvents(t2)
 
         t1n match {
@@ -100,21 +107,32 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
         }
       }
 
-      fType.paramTypes.zip(argTypes).foreach{case ((_, t1), t2) => calcTypeParams(t1, t2)}
+      fType.paramTypes.zip(argTypes).foreach{case ((_, t1), t2) => calcTypeParams(t1, t2, wrappedInOption)}
 
       fType.typeParams.map(types(_))
     }
 
-    def getApplicable(app: ExpressionArg, args: ArraySeq[ExpressionArg], scope: Map[Identifier, DefinitionExpression], resType: Type, loc: Location = Location.unknown): (ExpressionArg, ArraySeq[ExpressionArg]) = {
+    def actualizeRef(e: ExpressionArg, scope: Map[Identifier, DefinitionExpression]): ExpressionArg = {
+      e match {
+        case ExpressionRef(id, _, location) => ExpressionRef(id, idTypes(id, scope), location)
+        case RecordConstructorExpression(entreis, loc) => RecordConstructorExpression(entreis.map{ case (n, (e, l)) => (n, (actualizeRef(e, scope), l))})
+        case RecordAccessorExpression(name, target, nameLoc, loc) => RecordAccessorExpression(name, actualizeRef(target, scope), nameLoc, loc)
+        //We're flat. Everything with subexpression actually can't happen
+        case _ => e
+      }
+    }
+
+    def getApplicable(app: ExpressionArg, args: ArraySeq[ExpressionArg], scope: Map[Identifier, DefinitionExpression],
+                      resType: Type, loc: Location = Location.unknown, wrappedInOption: Boolean = false): (ExpressionArg, ArraySeq[ExpressionArg]) = {
 
       def newArgsAndTypes: (ArraySeq[TesslaAST.Core.ExpressionArg], ArraySeq[TesslaAST.Core.Type]) = app match {
         case ExternExpression(_, _, _, "lift", _)
              | ExternExpression(_, _, _, "slift", _) =>
-          val lArg = getApplicable(args.last, args.dropRight(1), scope, resType)
+          val lArg = getApplicable(args.last, args.dropRight(1), scope, resType, Location.unknown, app.asInstanceOf[ExternExpression].name == "lift")
 
           (lArg._2 :+ lArg._1, lArg._2.map(ExpressionFlowAnalysis.getExpArgID).map(idTypes(_, scope)) :+ lArg._1.tpe)
         case _ =>
-          (args, args.map(ExpressionFlowAnalysis.getExpArgID).map(idTypes(_, scope)))
+          (args.map(actualizeRef(_, scope)), args.map(ExpressionFlowAnalysis.getExpArgID).map(idTypes(_, scope)))
       }
 
       app match {
@@ -125,7 +143,7 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
           val newExtExp = ExternExpression(List(), newArgsAndTypes._2.zip(params).map{ case (typ, (ev, _)) => (ev, typ)}.toList, resType, name, location)
           (TypeApplicationExpression(newExtExp, List(), loc), newArgsAndTypes._1)
         case _ =>
-          (TypeApplicationExpression(app, typeArgInference(app.tpe.asInstanceOf[FunctionType], newArgsAndTypes._2), loc), args)
+          (TypeApplicationExpression(actualizeRef(app, scope), typeArgInference(app.tpe.asInstanceOf[FunctionType], newArgsAndTypes._2, wrappedInOption), loc), args)
       }
     }
 
@@ -140,7 +158,7 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
             val (newApp, newArgs) = getApplicable(app, args, scope, idTypes(id, scope))
             ApplicationExpression(newApp, newArgs, location)
           case _ =>
-            exp
+            actualizeRef(exp, scope).asInstanceOf[DefinitionExpression]
         }
         (id, newExp)
       }
