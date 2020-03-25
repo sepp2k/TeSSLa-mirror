@@ -101,7 +101,7 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
       case _ => IdentifierDependencies.empty
     }
 
-    idDeps.mapAll(set => set.filter(e => !scope.contains(e) /*inputs*/ || !ASTTransformation.isInlineExpression(scope(e), scope)))
+    idDeps
   }
 
   def getLiftFlow(resID: Identifier, liftExpr: ExpressionArg, argExps: Seq[ExpressionArg], scope: Map[Identifier, DefinitionExpression]) : IdentifierDependencies = {
