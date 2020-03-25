@@ -348,14 +348,14 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator) 
     val s = s"var_${id.fullName}"
     val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
 
-    val newTail = (currSrc.tailSource.
+    val newStepSrc = (currSrc.stepSource.
       If(Seq(Seq(s"${s}_changed", s"${s}_init"))).
         FunctionCall("__[TC]output__", Seq(s"${s}_value", StringValue(name), s"${s}_error"),
                       IntermediateCode.FunctionType(Seq(t, StringType, LongType), UnitType)).
       EndIf()
     )
 
-    SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStepSrc, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
   def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing) = {
