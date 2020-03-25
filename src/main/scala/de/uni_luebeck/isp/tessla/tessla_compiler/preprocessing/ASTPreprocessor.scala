@@ -47,6 +47,8 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
     def getExpRef(exp: ExpressionArg, add: mutable.Map[Identifier, DefinitionExpression], scope: Map[Identifier, DefinitionExpression],
                   fPars: Map[Identifier, Identifier]):  ExpressionArg = {
       exp match {
+        case TypeApplicationExpression(app, tArgs, loc) =>
+          TypeApplicationExpression(getExpRef(app, add, scope, fPars), tArgs, loc)
         case exp : Expression =>
           val newID = freshId()
           add += (newID -> flattenDefExp(exp, add, scope, fPars, newID))
