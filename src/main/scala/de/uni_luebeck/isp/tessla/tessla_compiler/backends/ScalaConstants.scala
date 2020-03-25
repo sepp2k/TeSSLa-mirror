@@ -103,6 +103,7 @@ object ScalaConstants {
       case "__toString__" => s"${args(0)}.toString"
 
       //TODO: Handle mutable datastructures
+      case "__Map_empty__" if typeHint.retType.isInstanceOf[MutableMapType] => "scala.collection.mutable.HashMap()"
       case "__Map_empty__" => "Map()"
       case "__Map_add__" if typeHint.retType.isInstanceOf[MutableMapType] => s"${args(0)} += ((${args(1)}) -> (${args(2)}))"
       case "__Map_add__" => s"${args(0)} + ((${args(1)}) -> (${args(2)}))"
@@ -113,6 +114,7 @@ object ScalaConstants {
       case "__Map_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
       case "__Map_keys__" => s"${args(0)}.keys"
 
+      case "__Set_empty__" if typeHint.retType.isInstanceOf[MutableSetType] => "scala.collection.mutable.HashSet()"
       case "__Set_empty__" => "Set()"
       case "__Set_add__" => s"${args(0)} + (${args(1)})"
       case "__Set_contains__" => s"${args(0)}(${args(1)})"
@@ -123,6 +125,7 @@ object ScalaConstants {
       case "__Set_minus__" => s"${args(0)} -- ${args(1)}"
       case "__Set_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
 
+      case "__List_empty__" if typeHint.retType.isInstanceOf[MutableListType] => "scala.collection.mutable.ArrayBuffer()"
       case "__List_empty__" => s"List()"
       case "__List_size__" => s"${args(0)}.size"
       case "__List_append__" => s"${args(0)} :+ ${args(1)}"
