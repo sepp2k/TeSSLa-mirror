@@ -132,10 +132,11 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
            ExternExpression(_, _, _, "Set_add", _) |
            ExternExpression(_, _, _, "Map_remove", _) |
            ExternExpression(_, _, _, "Set_remove", _) |
-           ExternExpression(_, _, _, "List_prepend", _) |
            ExternExpression(_, _, _, "List_append", _) |
            ExternExpression(_, _, _, "List_set", _) =>
         IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set())
+      case ExternExpression(_, _, _, "List_prepend", _) =>
+        IdentifierDependencies(Set(), Set(args(1)), Set(), Set(), args.toSet, Set())
       case ExternExpression(_, _, _, "Map_contains", _) |
            ExternExpression(_, _, _, "Map_get", _) |
            ExternExpression(_, _, _, "Map_keys", _) |
@@ -153,15 +154,13 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
       case ExternExpression(_, _, _, "Set_minus", _) |
            ExternExpression(_, _, _, "Set_union", _) |
            ExternExpression(_, _, _, "Set_intersection", _) =>
-        IdentifierDependencies(args.toSet, Set(), Set(), Set(), args.toSet, Set())//TODO: Really?
+        IdentifierDependencies(Set(args(1)), Set(args(0)), Set(), Set(), args.toSet, Set())//TODO: Really?
 
       case ExternExpression(_, _, _, "nil", _) =>
         IdentifierDependencies(Set(), Set(), Set(), Set(), Set(), Set())
-      case ExternExpression(_, _, _, "default", _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(args(0)), Set(args(0)), Set())
-      case ExternExpression(_, _, _, "defaultFrom", _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(args(0), args(1)),
-                     Set(args(0), args(1)), Set())
+      case ExternExpression(_, _, _, "default", _) |
+           ExternExpression(_, _, _, "defaultFrom", _) =>
+        IdentifierDependencies(Set(), Set(), Set(), Set(args(0), args(1)), Set(args(0), args(1)), Set())
       case ExternExpression(_, _, _, "last", _) =>
         if (MutabilityChecker.mutabilityCheckRelevantStreamType(argExps(0).tpe)) {
           IdentifierDependencies(Set(), Set(), Set(args(0)), Set(), Set(args(1)), Set())
@@ -180,6 +179,12 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
         IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(0)), Set())
       case ExternExpression(_,  _, _, "delay",  _) =>
         IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(0), args(1)), Set())
+      case ExternExpression(_,  _, _, "getSome",  _) |
+           ExternExpression(_,  _, _, "Some",  _) =>
+        IdentifierDependencies(Set(), Set(), Set(), Set(args(0)), Set(args(0)), Set())
+      case ExternExpression(_,  _, _, "ite",  _) |
+           ExternExpression(_,  _, _, "staticite",  _) =>
+        IdentifierDependencies(Set(), Set(), Set(), Set(args(1), args(2)), args.toSet, Set())
       case _: ExternExpression =>
         //Fallback
         IdentifierDependencies(Set(), Set(), Set(), Set(), args.toSet, Set())
