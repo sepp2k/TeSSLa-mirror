@@ -234,13 +234,18 @@ object MutabilityChecker extends
         paramTypes(id)
       }
       if (origType.isInstanceOf[FunctionType]) {
-        scope(id) match {
-          case FunctionExpression(typeParams, params, body, result, _) =>
-            FunctionType(typeParams, params.map{case (id, ev, _) => (ev, targetVarType(id, scope))}, targetVarType(result.asInstanceOf[ExpressionRef].id, scope ++ body))
+        if (scope.contains(id)) {
+          scope(id) match {
+            case FunctionExpression(typeParams, params, body, result, _) =>
+              FunctionType(typeParams, params.map { case (id, ev, _) => (ev, targetVarType(id, scope)) }, targetVarType(result.asInstanceOf[ExpressionRef].id, scope ++ body))
 
-          //TODO: Extern Expression: Preprocess, wrap in lambda -> Error
-          case _: ExternExpression=> ???
-          case _ => definitions(id).tpe
+            //TODO: Extern Expression: Preprocess, wrap in lambda -> Error
+            case _: ExternExpression => ???
+            case _ => definitions(id).tpe
+          }
+        } else {
+          //Id is param ---> immutable
+          origType
         }
       }
       else if ((mutabilityCheckRelevantType(origType) || mutabilityCheckRelevantStreamType(origType)) && !immutVars.contains(id)) {
