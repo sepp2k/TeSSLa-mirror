@@ -114,7 +114,8 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
 
     def actualizeRef(e: ExpressionArg, scope: Map[Identifier, DefinitionExpression]): ExpressionArg = {
       e match {
-        case ExpressionRef(id, _, location) => ExpressionRef(id, idTypes(id, scope), location)
+        case ExpressionRef(id, _, location) =>
+          ExpressionRef(id, idTypes(id, scope), location)
         case RecordConstructorExpression(entreis, loc) => RecordConstructorExpression(entreis.map{ case (n, (e, l)) => (n, (actualizeRef(e, scope), l))})
         case RecordAccessorExpression(name, target, nameLoc, loc) => RecordAccessorExpression(name, actualizeRef(target, scope), nameLoc, loc)
         //We're flat. Everything with subexpression actually can't happen
@@ -143,7 +144,7 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
           val newExtExp = ExternExpression(List(), newArgsAndTypes._2.zip(params).map{ case (typ, (ev, _)) => (ev, typ)}.toList, resType, name, location)
           (TypeApplicationExpression(newExtExp, List(), loc), newArgsAndTypes._1)
         case _ =>
-          (TypeApplicationExpression(actualizeRef(app, scope), typeArgInference(app.tpe.asInstanceOf[FunctionType], newArgsAndTypes._2, wrappedInOption), loc), args)
+          (TypeApplicationExpression(actualizeRef(app, scope), typeArgInference(app.tpe.asInstanceOf[FunctionType], newArgsAndTypes._2, wrappedInOption), loc), newArgsAndTypes._1)
       }
     }
 
