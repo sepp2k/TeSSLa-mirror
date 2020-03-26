@@ -47,6 +47,8 @@ object MutabilityChecker extends
 
       dep.calls.foreach(c => variableFamilies.union(c._1, c._2))
 
+      dep.immut.foreach(id => immutVars += id) //TODO: Filter for mutablecheck relevant types
+
       if (dep.reads != Set() || dep.writes != Set() || dep.reps != Set()) {
         nodes += id
 
@@ -100,7 +102,7 @@ object MutabilityChecker extends
 
       defs.foreach{case (id, d) =>
         execOnFuncExpr(d)
-        processDependencies(id, expFlowAnalysis.getExpFlow(id, d, scope))
+        processDependencies(id, expFlowAnalysis.getExpFlow(id, d, scope, Map()))
       }
     }
 
@@ -109,6 +111,9 @@ object MutabilityChecker extends
     val repsMap : Map[Identifier, Set[(Identifier, Identifier)]] = invRepsMap.flatMap{case (k,v) =>
       passDependencies.getOrElse(k, Set(k)).map((_,(v,k)))
     }.groupBy(_._1).view.mapValues{vs => vs.map(_._2).toSet}.toMap
+
+    //No IDs belonging to already immutable vars
+    immutVars ++= immutVars.flatMap(variableFamilies.equivalenceClass)
 
     //No Double Write
     immutVars ++= writeMap.filter(_._2.size > 1).keys.flatMap(variableFamilies.equivalenceClass)
@@ -196,6 +201,7 @@ object MutabilityChecker extends
       if (!immutVars.contains(mut)) Some(from -> to) else None
     }.groupBy(_._1).view.mapValues(e => e.map(x => x._2).toSet).toMap
 
+
     /*
     println("========================")
     println(nodes)
@@ -215,7 +221,9 @@ object MutabilityChecker extends
     println(readBeforeWrites)
     println("-Z3-IMMUT-")
     println(immutVars)
-    */
+     */
+
+
 
     def targetVarType(id: Identifier, scope: Map[Identifier, DefinitionExpression]) : Type = {
       val origType = if (spec.in.contains(id)) {

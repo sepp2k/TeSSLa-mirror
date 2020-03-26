@@ -16,6 +16,7 @@ object ExpressionFlowAnalysis {
                                           reps: Set[Identifier],
                                           pass: Set[Identifier],
                                           deps: Set[Identifier],
+                                          immut: Set[Identifier],
                                           calls: Set[(Identifier, Identifier)]) {
 
     def ++(o: IdentifierDependencies): IdentifierDependencies = {
@@ -25,6 +26,7 @@ object ExpressionFlowAnalysis {
         reps ++ o.reps,
         pass ++ o.pass,
         deps ++ o.deps,
+        immut ++ o.immut,
         calls ++ o.calls
       )
     }
@@ -36,6 +38,7 @@ object ExpressionFlowAnalysis {
         reps -- ids,
         pass -- ids,
         deps -- ids,
+        immut -- ids,
         calls.filter(id => !ids.contains(id._1) && !ids.contains(id._2))
       )
     }
@@ -47,6 +50,7 @@ object ExpressionFlowAnalysis {
         f(reps),
         f(pass),
         f(deps),
+        f(immut),
         calls
       )
     }
@@ -55,7 +59,7 @@ object ExpressionFlowAnalysis {
 
   object IdentifierDependencies {
     def empty: IdentifierDependencies = {
-      IdentifierDependencies(Set(), Set(), Set(), Set(), Set(), Set())
+      IdentifierDependencies(Set(), Set(), Set(), Set(), Set(), Set(), Set())
     }
   }
 
@@ -71,40 +75,59 @@ object ExpressionFlowAnalysis {
 class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
 
   //TODO: Maybe duplicate exists somewhere else
-  def getExpsFlow(exps: Set[(Identifier, ExpressionArg)], scope: Map[Identifier, DefinitionExpression]): IdentifierDependencies = {
+  def getExpsFlow(exps: Set[(Identifier, ExpressionArg)], scope: Map[Identifier, DefinitionExpression],
+                  fixedPoints: Map[Identifier, IdentifierDependencies]): IdentifierDependencies = {
     if (exps.isEmpty) {
       IdentifierDependencies.empty
     } else {
-      exps.map{case (i, e) => getExpFlow(i, e, scope)}.reduce(_ ++ _)
+      exps.map{case (i, e) => getExpFlow(i, e, scope, fixedPoints)}.reduce(_ ++ _)
     }
   }
 
-  def getExpFlow(resID: Identifier, e: ExpressionArg, scope: Map[Identifier, DefinitionExpression], onlyParams: Boolean = false): IdentifierDependencies = {
+  def getExpFlow(resID: Identifier, e: ExpressionArg, scope: Map[Identifier, DefinitionExpression],
+                 fixedPoints: Map[Identifier, IdentifierDependencies], onlyParams: Boolean = false): IdentifierDependencies = {
 
     val idDeps = e match {
       case FunctionExpression(_, params, body, result, _) =>
         val exps = body.toSeq :+ (resID, result)
-        val deps = getExpsFlow(exps.toSet, scope ++ body)
+        val deps = getExpsFlow(exps.toSet, scope ++ body, fixedPoints)
           if (onlyParams) {
             deps.mapAll(_.intersect(params.map(_._1).toSet))
           } else {
             deps.removeAll(body.keys.toSet)
           }
       case ApplicationExpression(applicable, args, _) =>
-        getLiftFlow(resID, applicable, args, scope)
-      case TypeApplicationExpression(applicable, _, _) => getExpFlow(resID, applicable, scope)
+        getLiftFlow(resID, applicable, args, scope, fixedPoints)
+      case TypeApplicationExpression(applicable, _, _) => getExpFlow(resID, applicable, scope, fixedPoints)
       case RecordConstructorExpression(entries, _) =>
         val entryIDs = entries.map{ case (_, (exp, _)) => ExpressionFlowAnalysis.getExpArgID(exp)}.toSet
-        IdentifierDependencies(Set(), Set(), Set(), entryIDs, entryIDs, Set())
-      case RecordAccessorExpression(_, target, _, _) => getExpFlow(resID, target, scope)
-      case ExpressionRef(id, _, _) => IdentifierDependencies(Set(), Set(), Set(), Set(id), Set(id), Set())
+        IdentifierDependencies(Set(), Set(), Set(), entryIDs, entryIDs, entryIDs, Set())
+      case RecordAccessorExpression(_, target, _, _) => getExpFlow(resID, target, scope, fixedPoints)
+      case ExpressionRef(id, _, _) => IdentifierDependencies(Set(), Set(), Set(), Set(id), Set(id), Set(), Set())
       case _ => IdentifierDependencies.empty
     }
 
     idDeps
   }
 
-  def getLiftFlow(resID: Identifier, liftExpr: ExpressionArg, argExps: Seq[ExpressionArg], scope: Map[Identifier, DefinitionExpression]) : IdentifierDependencies = {
+  def getExpRefCallFixedPoint(resID: Identifier, liftID: Identifier, argExps: Seq[ExpressionArg],
+                              scope: Map[Identifier, DefinitionExpression],
+                              fixedPoints: Map[Identifier, IdentifierDependencies]) : IdentifierDependencies = {
+
+    var oldFixedPoint = IdentifierDependencies.empty
+    var newFixedPoint = IdentifierDependencies.empty
+
+    do {
+      oldFixedPoint = newFixedPoint
+      newFixedPoint = oldFixedPoint ++ getLiftFlow(resID, scope(liftID), argExps, scope, fixedPoints + (liftID -> oldFixedPoint))
+    } while (newFixedPoint != oldFixedPoint)
+
+    newFixedPoint
+  }
+
+  //TODO: Functions which are used outside of applications must be made immutable in all params
+  def getLiftFlow(resID: Identifier, liftExpr: ExpressionArg, argExps: Seq[ExpressionArg], scope: Map[Identifier, DefinitionExpression],
+                  fixedPoints: Map[Identifier, IdentifierDependencies]) : IdentifierDependencies = {
 
     val argsL = Lazy(argExps.map(a => ExpressionFlowAnalysis.getExpArgID(a)))
     def args: Seq[TesslaAST.Core.Identifier] = argsL.get
@@ -116,78 +139,83 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
           ids.map(id => depsPerParam.getOrElse(id, id))
         }
 
-        val transDeps = getExpFlow(resID, fe, scope, true).mapAll(replaceParams)
+        val transDeps = getExpFlow(resID, fe, scope, fixedPoints,true).mapAll(replaceParams)
         val feResID = ExpressionFlowAnalysis.getExpArgID(fe.result)
 
-        IdentifierDependencies(transDeps.reads, transDeps.writes, transDeps.reps, transDeps.pass, transDeps.deps, transDeps.calls ++ depsPerParam.toSet + (feResID -> resID))
-      case r: ExpressionRef =>
-        getLiftFlow(resID, scope(r.id), argExps, scope)
+        IdentifierDependencies(transDeps.reads, transDeps.writes, transDeps.reps, transDeps.pass, transDeps.deps, transDeps.immut, transDeps.calls ++ depsPerParam.toSet + (feResID -> resID))
+      case r : ExpressionRef if scope.contains(r.id) =>
+        if (fixedPoints.contains(r.id)) fixedPoints(r.id) else getExpRefCallFixedPoint(resID, r.id, argExps, scope, fixedPoints)
+      case r : ExpressionRef /*Function is param*/ =>
+        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(), args.toSet + resID, Set())
       case TypeApplicationExpression(e, _, _) =>
-        getLiftFlow(resID, e, argExps, scope)
+        getLiftFlow(resID, e, argExps, scope, fixedPoints)
       case ExternExpression(_, _, _, "Set_empty", _) |
            ExternExpression(_, _, _, "Map_empty", _) |
            ExternExpression(_, _, _, "List_empty", _) =>
         IdentifierDependencies.empty
-      case ExternExpression(_, _, _, "Map_add", _) |
-           ExternExpression(_, _, _, "Set_add", _) |
+      case ExternExpression(_, _, _, "Map_add", _) =>
+        IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(args(1), args(2)), Set())
+      case ExternExpression(_, _, _, "Set_add", _) |
            ExternExpression(_, _, _, "Map_remove", _) |
            ExternExpression(_, _, _, "Set_remove", _) |
-           ExternExpression(_, _, _, "List_append", _) |
-           ExternExpression(_, _, _, "List_set", _) =>
-        IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set())
+           ExternExpression(_, _, _, "List_append", _) =>
+        IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(args(1)), Set())
+      case ExternExpression(_, _, _, "List_set", _) =>
+        IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(args(2)), Set())
       case ExternExpression(_, _, _, "List_prepend", _) =>
-        IdentifierDependencies(Set(), Set(args(1)), Set(), Set(), args.toSet, Set())
+        IdentifierDependencies(Set(), Set(args(1)), Set(), Set(), args.toSet, Set(args(0)), Set())
       case ExternExpression(_, _, _, "Map_contains", _) |
-           ExternExpression(_, _, _, "Map_get", _) |
            ExternExpression(_, _, _, "Map_keys", _) |
            ExternExpression(_, _, _, "Set_contains", _) |
-           ExternExpression(_, _, _, "List_get", _) |
            ExternExpression(_, _, _, "Set_fold", _) |
            ExternExpression(_, _, _, "Map_fold", _) |
            ExternExpression(_, _, _, "List_fold", _) |
            ExternExpression(_, _, _, "Map_size", _) |
            ExternExpression(_, _, _, "Set_size", _) |
            ExternExpression(_, _, _, "List_size", _) |
-           ExternExpression(_, _, _, "List_tail", _) |
+           ExternExpression(_, _, _, "List_tail", _) | //TODO: Pass???
            ExternExpression(_, _, _, "List_init", _) =>
-        IdentifierDependencies(Set(args(0)), Set(), Set(), Set(), args.toSet, Set())
+        IdentifierDependencies(Set(args(0)), Set(), Set(), Set(), args.toSet, Set(), Set())
+      case ExternExpression(_, _, _, "Map_get", _) |
+           ExternExpression(_, _, _, "List_get", _) =>
+        IdentifierDependencies(Set(args(0)), Set(), Set(), Set(), args.toSet, Set(resID), Set())
       case ExternExpression(_, _, _, "Set_minus", _) |
            ExternExpression(_, _, _, "Set_union", _) |
            ExternExpression(_, _, _, "Set_intersection", _) =>
-        IdentifierDependencies(Set(args(1)), Set(args(0)), Set(), Set(), args.toSet, Set())//TODO: Really?
+        IdentifierDependencies(Set(args(1)), Set(args(0)), Set(), Set(), args.toSet, Set(), Set())
 
       case ExternExpression(_, _, _, "nil", _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(), Set())
+        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(), Set(), Set())
       case ExternExpression(_, _, _, "default", _) |
            ExternExpression(_, _, _, "defaultFrom", _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(args(0), args(1)), Set(args(0), args(1)), Set())
+        IdentifierDependencies(Set(), Set(), Set(), Set(args(0), args(1)), Set(args(0), args(1)), Set(), Set())
       case ExternExpression(_, _, _, "last", _) =>
         if (MutabilityChecker.mutabilityCheckRelevantStreamType(argExps(0).tpe)) {
-          IdentifierDependencies(Set(), Set(), Set(args(0)), Set(), Set(args(1)), Set())
+          IdentifierDependencies(Set(), Set(), Set(args(0)), Set(), Set(args(1)), Set(), Set())
         } else {
-          IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(1)), Set())
+          IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(1)), Set(), Set())
         }
       case ExternExpression(_, _, _, "lift", _) =>
-        getLiftFlow(resID, argExps.last, argExps.dropRight(1), scope)
+        getLiftFlow(resID, argExps.last, argExps.dropRight(1), scope, fixedPoints)
       case ExternExpression(_, _, _, "slift", _) =>
-        val dep = getLiftFlow(resID, argExps.last, argExps.dropRight(1), scope)
+        val dep = getLiftFlow(resID, argExps.last, argExps.dropRight(1), scope, fixedPoints)
         val addReps = (dep.reads ++ dep.writes).filter(i => !impCheck.freqImplication(resID, i))
-          IdentifierDependencies(dep.reads, dep.writes, dep.reps ++ addReps, dep.pass, dep.deps, dep.calls)
+          IdentifierDependencies(dep.reads, dep.writes, dep.reps ++ addReps, dep.pass, dep.deps, dep.immut, dep.calls)
       case ExternExpression(_, _, _, "merge", _) =>
-        IdentifierDependencies(Set(), Set(), Set(), args.toSet, args.toSet, Set())
+        IdentifierDependencies(Set(), Set(), Set(), args.toSet, args.toSet, Set(), Set())
       case ExternExpression(_, _, _, "time", _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(0)), Set())
+        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(0)), Set(), Set())
       case ExternExpression(_,  _, _, "delay",  _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(0), args(1)), Set())
+        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(0), args(1)), Set(), Set())
       case ExternExpression(_,  _, _, "getSome",  _) |
            ExternExpression(_,  _, _, "Some",  _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(args(0)), Set(args(0)), Set())
+        IdentifierDependencies(Set(), Set(), Set(), Set(args(0)), Set(args(0)), Set(), Set())
       case ExternExpression(_,  _, _, "ite",  _) |
            ExternExpression(_,  _, _, "staticite",  _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(args(1), args(2)), args.toSet, Set())
+        IdentifierDependencies(Set(), Set(), Set(), Set(args(1), args(2)), args.toSet, Set(), Set())
       case _: ExternExpression =>
         //Fallback
-        IdentifierDependencies(Set(), Set(), Set(), Set(), args.toSet, Set())
+        IdentifierDependencies(Set(), Set(), Set(), Set(), args.toSet, Set(), Set())
       case _: ApplicationExpression |
            _: RecordAccessorExpression => ??? //TODO: In WC every identifier of the specification could be used
       case _ => ???
