@@ -262,6 +262,7 @@ object MutabilityChecker extends
     }
   }
 
+  @scala.annotation.tailrec
   def mutabilityCheckRelevantType(tpe: Type) : Boolean = {
     //TODO: TypeArg
     //TODO: Option[Set] ...
@@ -270,6 +271,7 @@ object MutabilityChecker extends
       case InstantiatedType("Map", _, _) |
            InstantiatedType("Set", _, _) |
            InstantiatedType("List", _, _) => true
+      case InstantiatedType("Option", Seq(t), _) => mutabilityCheckRelevantType(t)
       case _ => false
     }
   }
