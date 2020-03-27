@@ -139,7 +139,9 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
           ids.map(id => depsPerParam.getOrElse(id, id))
         }
 
-        val transDeps = getExpFlow(resID, fe, scope, fixedPoints,true).mapAll(replaceParams)
+        val expFlow = getExpFlow(resID, fe, scope, fixedPoints,true)
+        val adjExpFlow = IdentifierDependencies(expFlow.reads -- expFlow.writes, expFlow.writes, expFlow.reps, expFlow.pass, expFlow.deps, expFlow.immut, expFlow.calls)
+        val transDeps = adjExpFlow.mapAll(replaceParams)
         val feResID = ExpressionFlowAnalysis.getExpArgID(fe.result)
 
         IdentifierDependencies(transDeps.reads, transDeps.writes, transDeps.reps, transDeps.pass, transDeps.deps, transDeps.immut, transDeps.calls ++ depsPerParam.toSet + (feResID -> resID))
