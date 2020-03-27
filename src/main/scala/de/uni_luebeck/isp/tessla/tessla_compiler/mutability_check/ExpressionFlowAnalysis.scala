@@ -191,7 +191,7 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
         IdentifierDependencies(Set(), Set(), Set(), Set(args(0), args(1)), Set(args(0), args(1)), Set(), Set())
       case ExternExpression(_, _, _, "last", _) =>
         if (MutabilityChecker.mutabilityCheckRelevantStreamType(argExps(0).tpe)) {
-          IdentifierDependencies(Set(), Set(), Set(args(0)), Set(), Set(args(1)), Set(), Set())
+          IdentifierDependencies(Set(), Set(), Set(args(0)), Set(), Set(args(1)), Set(), Set((resID, args(0))))
         } else {
           IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(1)), Set(), Set())
         }

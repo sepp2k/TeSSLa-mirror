@@ -63,7 +63,6 @@ object MutabilityChecker extends
 
         dep.reps.foreach{i =>
           invRepsMap += (i -> id)
-          variableFamilies.union(i, id)
         }
 
         dep.deps.foreach {
