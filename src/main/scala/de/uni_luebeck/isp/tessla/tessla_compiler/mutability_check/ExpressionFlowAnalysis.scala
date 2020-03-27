@@ -94,7 +94,7 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
           if (onlyParams) {
             deps.mapAll(_.intersect(params.map(_._1).toSet))
           } else {
-            deps.removeAll(body.keys.toSet)
+            deps.removeAll(body.keys.toSet ++ params.map(_._1))
           }
       case ApplicationExpression(applicable, args, _) =>
         getLiftFlow(resID, applicable, args, scope, fixedPoints)
