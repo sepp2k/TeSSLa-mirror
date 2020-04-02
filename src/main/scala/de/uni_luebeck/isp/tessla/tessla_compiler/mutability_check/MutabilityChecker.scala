@@ -84,6 +84,42 @@ object MutabilityChecker extends
       dep.pass.foreach{i => variableFamilies.union(id, i)}
     }
 
+    //TODO: Only a dirty hack, find better holistic way to deal with if's lazyness
+    //TODO: Care that function types are not inlined and ordered correctly
+    //TODO: Is name really a good way to recognize that a variable already existed?
+    def getInlinedIdentifiers(e: ExpressionArg, scope: Map[Identifier, DefinitionExpression]): Set[Identifier] = {
+       val args : Set[ExpressionArg]= e match {
+            case RecordAccessorExpression(_, target, _, _) => Set(target)
+            case ApplicationExpression(applicable, args, _) => args.toSet + applicable
+            case TypeApplicationExpression(applicable, _, _) => Set(applicable)
+            case RecordConstructorExpression(entries, _) => entries.map(_._2._1).toSet
+            case ExpressionRef(id, tpe, _) if id.idOrName.left.isEmpty && !tpe.isInstanceOf[FunctionType] =>
+              if (scope.contains(id)) Set(scope(id)) else Set()
+            case _ => Set()
+       }
+       val inl : Set[Identifier] = e match {
+         case ExpressionRef(id, tpe, _) if id.idOrName.left.isEmpty && !tpe.isInstanceOf[FunctionType] =>
+           if (scope.contains(id)) Set(id) else Set()
+         case _ => Set()
+       }
+
+      inl ++ args.foldLeft[Set[Identifier]](Set()){case (c, e) => c ++ getInlinedIdentifiers(e, scope)}
+    }
+
+    def getIDsIfInlineExpression(e: ExpressionArg, scope: Map[Identifier, DefinitionExpression]): Set[Identifier] = {
+      e match {
+        case ApplicationExpression(TypeApplicationExpression(e, _, _), args, _) => {
+          e match {
+            case ExternExpression(_, _, _, op, _) if Set("ite", "staticite", "and", "or").contains(op) =>
+              args.drop(1).map(getInlinedIdentifiers(_, scope)).reduce(_ ++ _)
+            case _ =>
+              Set()
+          }
+        }
+        case _ => Set()
+      }
+    }
+
     def processDefinitions(defs: Seq[(Identifier, DefinitionExpression)], scope: Map[Identifier, DefinitionExpression]) : Unit = {
 
       def execOnFuncExpr(e : ExpressionArg) : Unit = {
@@ -102,6 +138,7 @@ object MutabilityChecker extends
       defs.foreach{case (id, d) =>
         execOnFuncExpr(d)
         processDependencies(id, expFlowAnalysis.getExpFlow(id, d, scope, Map()))
+        getIDsIfInlineExpression(d, scope).foreach(i => inlinings += (i -> inlinings.getOrElse(i, Set() + id)))
       }
     }
 
@@ -192,16 +229,15 @@ object MutabilityChecker extends
 
     //No Read before Write
     if (readBeforeWrites.nonEmpty) {
-      val z3H = new Z3Handler(edges.toSet, readBeforeWrites.toSet, variableFamilies)
+      val z3H = new Z3Handler(edges.toSet, readBeforeWrites.toSet, inlinings.toMap, variableFamilies)
       immutVars ++= z3H.getImmutableVars
     }
 
     val addDeps = readBeforeWrites.flatMap{case (from, to, mut) =>
-      if (!immutVars.contains(mut)) Some(from -> to) else None
+      if (!immutVars.contains(mut)) inlinings.getOrElse(from, Set()).map(to -> _) + (to -> from) else None
     }.groupBy(_._1).view.mapValues(e => e.map(x => x._2).toSet).toMap
 
 
-    /*
     println("========================")
     println(nodes)
     println("-READS-")
@@ -214,13 +250,14 @@ object MutabilityChecker extends
     println(edges)
     println("-FAMILIES-")
     println(variableFamilies.toMap)
+    println("-INLININGS-")
+    println(inlinings)
     println("-FREQ_IMP-")
     println(impCheck.knownImplications)
     println("-Read_Before_Write-")
     println(readBeforeWrites)
     println("-Z3-IMMUT-")
     println(immutVars)
-     */
 
 
 
