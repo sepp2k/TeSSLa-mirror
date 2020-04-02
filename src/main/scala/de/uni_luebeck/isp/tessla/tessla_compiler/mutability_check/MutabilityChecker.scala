@@ -21,19 +21,20 @@ object MutabilityChecker extends
     val out = spec.out
 
     //TODO: Get rid of some maps
-    val nodes: collection.mutable.ArrayBuffer[Identifier] = collection.mutable.ArrayBuffer()
-    val edges: collection.mutable.ArrayBuffer[(Identifier, Identifier)] = collection.mutable.ArrayBuffer()
-    val immutVars: collection.mutable.ArrayBuffer[Identifier] = collection.mutable.ArrayBuffer()
+    val nodes: collection.mutable.HashSet[Identifier] = collection.mutable.HashSet()
+    val edges: collection.mutable.HashSet[(Identifier, Identifier)] = collection.mutable.HashSet()
+    val immutVars: collection.mutable.HashSet[Identifier] = collection.mutable.HashSet()
 
     val readMap: collection.mutable.Map[Identifier, Set[Identifier]] = collection.mutable.Map()
     val writeMap: collection.mutable.Map[Identifier, Set[Identifier]] = collection.mutable.Map()
-    val invRepsMap: collection.mutable.ArrayBuffer[(Identifier, Identifier)] = collection.mutable.ArrayBuffer()
+    val invRepsMap: collection.mutable.HashSet[(Identifier, Identifier)] = collection.mutable.HashSet()
+    val inlinings: collection.mutable.Map[Identifier, Set[Identifier]] = collection.mutable.Map()
 
     val cfDependencies: collection.mutable.Map[Identifier, Set[Identifier]] = collection.mutable.Map()
     val passDependencies: collection.mutable.Map[Identifier, Set[Identifier]] = collection.mutable.Map()
 
     val variableFamilies : UnionFind[Identifier] = new UnionFind()
-    val allMutableRelevantVars: collection.mutable.ArrayBuffer[Identifier] = collection.mutable.ArrayBuffer()
+    val allMutableRelevantVars: collection.mutable.HashSet[Identifier] = collection.mutable.HashSet()
 
     //TODO: Find better solution
     val paramTypes: collection.mutable.Map[Identifier, Type] = collection.mutable.Map()
