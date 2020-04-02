@@ -207,7 +207,7 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
         getLiftFlow(resID, argExps.last, argExps.dropRight(1), scope, fixedPoints)
       case ExternExpression(_, _, _, "slift", _) =>
         val dep = getLiftFlow(resID, argExps.last, argExps.dropRight(1), scope, fixedPoints)
-        val addReps = (dep.reads ++ dep.writes).filter(i => !impCheck.freqImplication(resID, i))
+        val addReps = (dep.reads ++ dep.writes ++ dep.pass).filter(i => !impCheck.freqImplication(resID, i, true))
           IdentifierDependencies(dep.reads, dep.writes, dep.reps ++ addReps, dep.pass, dep.deps, dep.immut, dep.calls)
       case ExternExpression(_, _, _, "merge", _) =>
         IdentifierDependencies(Set(), Set(), Set(), args.toSet, args.toSet, Set(), Set())

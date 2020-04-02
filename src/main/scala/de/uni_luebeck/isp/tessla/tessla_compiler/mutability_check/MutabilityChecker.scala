@@ -161,7 +161,7 @@ object MutabilityChecker extends
       //println(s"cleanParent: $node")
 
       if (writeMap.getOrElse(node, Set()).size > (if (beat.isEmpty) 1 else 0) ||
-          (beat.nonEmpty && !repsMap.getOrElse(node, Set()).filter(_._1 == beat.head).exists(c => impCheck.freqImplication(beat.head, c._2)))) {
+          (beat.nonEmpty && !repsMap.getOrElse(node, Set()).filter(_._1 == beat.head).exists(c => impCheck.freqImplication(beat.head, c._2, false)))) {
         //println(s"cleanParent: $node : false")
         (Set(), false)
       } else {
@@ -171,7 +171,7 @@ object MutabilityChecker extends
 
         if (childClean) {
           val repParents = repsMap.flatMap{case (k, v) => if (v.exists(_._1 == node)) Some(k) else None}
-          val ret = repParents.map(cleanParent(_, node +: beat, node)).foldLeft[(Set[Identifier], Boolean)]((childReads, childClean)){case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2)}
+          val ret = repParents.map(cleanParent(_, node +: beat, node)).foldLeft[(Set[Identifier], Boolean)]((childReads, childClean)) { case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2) }
           //println(s"cleanParent: $node : $ret")
           ret
         } else {
@@ -188,7 +188,7 @@ object MutabilityChecker extends
 
       val cr : (Set[Identifier], Boolean) = if (beat.nonEmpty) cleanChild(node, beat.drop(1), caller) else (Set(), false)
       val pr : (Set[Identifier], Boolean) = if (beat.isEmpty || writeMap.getOrElse(node, Set()).nonEmpty ||
-                 repsMap.getOrElse(caller, Set()).filter(_._1 == node).exists(c => !impCheck.freqImplication(beat.head, c._2))) {
+                 repsMap.getOrElse(caller, Set()).filter(_._1 == node).exists(c => !impCheck.freqImplication(beat.head, c._2, false))) {
         (Set(), false)
       } else {
         dealChilds(node, beat.drop(1), caller)
@@ -261,7 +261,6 @@ object MutabilityChecker extends
     println(immutVars)
 
 
-
     def targetVarType(id: Identifier, scope: Map[Identifier, DefinitionExpression]) : Type = {
       val origType = if (spec.in.contains(id)) {
         spec.in(id)._1
@@ -291,7 +290,6 @@ object MutabilityChecker extends
         origType
       }
     }
-
 
     Success(new TesslaCoreWithMutabilityInfo(TesslaAST.Core.Specification(in, definitions, out, spec.maxIdentifier),
             targetVarType, addDeps, impCheck), Seq())

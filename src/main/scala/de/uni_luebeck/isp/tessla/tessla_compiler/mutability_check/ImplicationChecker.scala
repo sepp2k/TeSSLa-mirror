@@ -9,7 +9,7 @@ final case class Activation(base: Set[Identifier], init: Set[Identifier])
 class ImplicationChecker(spec: TesslaAST.Core.Specification) {
 
   val activationMap : collection.mutable.Map[Identifier, (Set[Activation], Boolean)] = collection.mutable.Map()
-  val knownImplications : collection.mutable.Map[(Identifier, Identifier, Set[Identifier], Boolean), Boolean] = collection.mutable.Map()
+  val knownImplications : collection.mutable.Map[(Identifier, Identifier, Set[Identifier], Boolean, Boolean), Boolean] = collection.mutable.Map()
 
   (spec.definitions.keys ++ spec.in.keys).toSet.foreach{id : Identifier =>
     activationMap += (id -> processStreamDef(id, Set()))
@@ -81,21 +81,26 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
       cols.map{case Activation(base, init) => Activation(base, init + id)}
     }
 
-  def freqImplication(i: Identifier, j: Identifier, notInit: Set[Identifier] = Set(), jInit: Boolean = false) : Boolean = {
+  def freqImplication(i: Identifier, j: Identifier, secondChance : Boolean, notInit: Set[Identifier] = Set(), jInit: Boolean = false) : Boolean = {
+
     if (i == j) {
       true
     } else {
-        if (!knownImplications.contains((i, j, notInit, jInit))) {
+        if (!knownImplications.contains((i, j, notInit, jInit, secondChance))) {
           val coli = activationMap(i)
           val colj = activationMap(j)
 
-          val res = coli._1.forall { mandatoryColor =>
-            if (mandatoryColor.init.intersect(notInit).nonEmpty || (jInit && mandatoryColor.init.exists(c => freqImplication(c, j, notInit + c, true)))) {
+          val res = (!coli._2 || colj._2) && coli._1.forall { mandatoryColor =>
+            if (mandatoryColor.init.intersect(notInit).nonEmpty ||
+                (jInit && mandatoryColor.init.exists(c => freqImplication(c, j, false, notInit + c, true)))) {
               true
             } else {
               colj._1.exists { possColor =>
                 if (possColor.base.subsetOf(mandatoryColor.base)) {
-                  possColor.init.forall(possImp => activationMap(possImp)._2 || mandatoryColor.init.exists(mandImp => freqImplication(mandImp, possImp, notInit + possImp, true)))
+                  possColor.init.forall(possImp =>
+                    !notInit(possImp) && (activationMap(possImp)._2 ||
+                    (secondChance && freqImplication(i, possImp, false, notInit + possImp, true)) ||
+                    mandatoryColor.init.exists(mandImp =>  freqImplication(mandImp, possImp, false, notInit + possImp, true))))
                 } else {
                   false
                 }
@@ -103,9 +108,9 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
             }
           }
 
-          knownImplications += ((i, j, notInit, jInit) -> res)
+          knownImplications += ((i, j, notInit, jInit, secondChance) -> res)
         }
-      knownImplications((i, j, notInit, jInit))
+      knownImplications((i, j, notInit, jInit, secondChance))
     }
   }
 
