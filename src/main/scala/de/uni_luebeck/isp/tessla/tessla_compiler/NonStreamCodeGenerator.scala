@@ -54,9 +54,10 @@ class NonStreamCodeGenerator(val addDeps: Map[Identifier, Set[Identifier]]) {
       case f: FunctionExpression => translateFunction(f, defContext)
       case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) => {
         val inlinedArgs  = e match {
-          case ExternExpression(_, _, _, "ite", _) |
-               ExternExpression(_, _, _, "staticite", _) => args.map(reInlineTempVars(_, defContext))
-          case _ => args
+          case ExternExpression(_, _, _, op, _) if Set("ite", "staticite", "and", "or").contains(op) =>
+            args.head +: args.drop(1).map(reInlineTempVars(_, defContext))
+          case _ =>
+            args
         }
         translateFunctionCall(e, inlinedArgs.map(translateExpressionArg(_, defContext)), typeArgs, defContext)
       }
