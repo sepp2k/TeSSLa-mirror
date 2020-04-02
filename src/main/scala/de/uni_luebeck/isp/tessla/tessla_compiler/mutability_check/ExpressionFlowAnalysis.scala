@@ -119,7 +119,7 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
 
     do {
       oldFixedPoint = newFixedPoint
-      newFixedPoint = oldFixedPoint ++ getLiftFlow(resID, scope(liftID), argExps, scope, fixedPoints + (liftID -> oldFixedPoint))
+      newFixedPoint = oldFixedPoint ++ getExpFlow(resID, scope(liftID), scope, fixedPoints + (liftID -> oldFixedPoint), true)
     } while (newFixedPoint != oldFixedPoint)
 
     newFixedPoint
@@ -133,21 +133,27 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
     def args: Seq[TesslaAST.Core.Identifier] = argsL.get
 
     liftExpr match {
-      case fe: FunctionExpression =>
-        val depsPerParam = fe.params.map(_._1).zip(args).toMap
+      case r : ExpressionRef if scope.contains(r.id) && !scope(r.id).isInstanceOf[FunctionExpression] =>
+        getLiftFlow(resID, scope(r.id), argExps, scope, fixedPoints)
+
+      case r : ExpressionRef if scope.contains(r.id) =>
+        val flow = if (fixedPoints.contains(r.id)) fixedPoints(r.id) else getExpRefCallFixedPoint(resID, r.id, argExps, scope, fixedPoints)
+        val fe = scope(r.id).asInstanceOf[FunctionExpression]
+
+        val depsPerParam = fe.params.map(_._1).zip(argExps.map(ExpressionFlowAnalysis.getExpArgID)).toMap
         def replaceParams(ids: Set[Identifier]): Set[Identifier] = {
           ids.map(id => depsPerParam.getOrElse(id, id))
         }
 
-        val expFlow = getExpFlow(resID, fe, scope, fixedPoints,true)
-        val adjExpFlow = IdentifierDependencies(expFlow.reads -- expFlow.writes, expFlow.writes, expFlow.reps, expFlow.pass, expFlow.deps, expFlow.immut, expFlow.calls)
+        val adjExpFlow = IdentifierDependencies(flow.reads -- flow.writes, flow.writes, flow.reps, flow.pass, flow.deps,
+                                                flow.immut, flow.calls)
         val transDeps = adjExpFlow.mapAll(replaceParams)
         val feResID = ExpressionFlowAnalysis.getExpArgID(fe.result)
 
-        IdentifierDependencies(transDeps.reads, transDeps.writes, transDeps.reps, transDeps.pass, transDeps.deps, transDeps.immut, transDeps.calls ++ depsPerParam.toSet + (feResID -> resID))
-      case r : ExpressionRef if scope.contains(r.id) =>
-        if (fixedPoints.contains(r.id)) fixedPoints(r.id) else getExpRefCallFixedPoint(resID, r.id, argExps, scope, fixedPoints)
-      case r : ExpressionRef /*Function is param*/ =>
+        IdentifierDependencies(transDeps.reads, transDeps.writes, transDeps.reps, transDeps.pass, transDeps.deps,
+                               transDeps.immut, transDeps.calls ++ depsPerParam.toSet + (feResID -> resID))
+
+      case _ : ExpressionRef /*Function is param*/ =>
         IdentifierDependencies(Set(), Set(), Set(), Set(), Set(), args.toSet + resID, Set())
       case TypeApplicationExpression(e, _, _) =>
         getLiftFlow(resID, e, argExps, scope, fixedPoints)
