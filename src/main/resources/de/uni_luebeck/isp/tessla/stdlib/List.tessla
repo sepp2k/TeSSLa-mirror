@@ -5,10 +5,72 @@ module List {
   def empty[T]: List[T] = __builtin__(List_empty)
 
   ## Returns the number of elements in the given `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def size = List.size(list)
+  ## out size
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream list: events
+  ## stream size: events
+  ## ---
+  ## 0: size = 0
+  ## 0: list = List()
+  ## 2: size = 1
+  ## 2: list = List(1)
+  ## 2: x = 1
+  ## 4: size = 2
+  ## 4: list = List(1, 2)
+  ## 4: x = 2
+  ## 6: size = 3
+  ## 6: list = List(1, 2, 3)
+  ## 6: x = 3
+  ## ~~~
   @liftable
   def size[T](list: List[T]): Int = __builtin__(List_size)
 
   ## Returns [`true`](#true) if the given `list` has a size of zero
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def empty = List.isEmpty(list)
+  ## out empty
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream list: events
+  ## stream empty: bubbles
+  ## ---
+  ## 0: empty = true
+  ## 0: list = List()
+  ## 2: empty = false
+  ## 2: list = List(1)
+  ## 2: x = 1
+  ## 4: empty = false
+  ## 4: list = List(1, 2)
+  ## 4: x = 2
+  ## 6: empty = false
+  ## 6: list = List(1, 2, 3)
+  ## 6: x = 3
+  ## ~~~
   @liftable
   def isEmpty[T](list: List[T]): Bool = size(list) == 0
 
@@ -149,10 +211,70 @@ module List {
   def set[T](list: List[T], index: Int, value: T): List[T] = __builtin__(List_set)
 
   ## Selects the first element
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def head = filter(List.head(list), !(List.isEmpty(list)))
+  ## out head
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream list: events
+  ## stream head: events
+  ## ---
+  ## 0: list = List()
+  ## 2: x = 1
+  ## 2: list = List(1)
+  ## 2: head = 1
+  ## 4: x = 2
+  ## 4: list = List(1, 2)
+  ## 4: head = 1
+  ## 6: x = 3
+  ## 6: list = List(1, 2, 3)
+  ## 6: head = 1
+  ## ~~~
   @liftable
   def head[T](list: List[T]): T = get(list, 0)
 
   ## Selects the last element
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def l = filter(List.last(list), !(List.isEmpty(list)))
+  ## out l
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream list: events
+  ## stream l: events
+  ## ---
+  ## 0: list = List()
+  ## 2: x = 1
+  ## 2: list = List(1)
+  ## 2: l = 1
+  ## 4: x = 2
+  ## 4: list = List(1, 2)
+  ## 4: l = 2
+  ## 6: x = 3
+  ## 6: list = List(1, 2, 3)
+  ## 6: l = 3
+  ## ~~~
   @liftable
   def last[T](list: List[T]): T = get(list, size(list)-1)
 
