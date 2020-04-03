@@ -316,4 +316,5 @@ module List {
 
 # Define the type outside of the module
 # so one can write `List[Int]` instead of `List.List[Int]`.
+## Type List
 type List[T] = __builtin__(List)
