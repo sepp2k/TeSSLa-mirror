@@ -1672,16 +1672,30 @@ def average(x: Events[Int]): Events[Int] = {
 ## Produce an event stream with a unit event every `delay` time units.
 ## Starting with an event at timestamp 0.
 ## 
-## **Usage example:**
+## **Usage example:** 
 ## 
 ## ~~~ruby
+## in progress: Events[Unit]
 ## def output = period(3)
 ## out output
 ## ~~~
 ## 
+## The tessla interpreter calculates only until the timestamp of the last input event.
+## The progress event in the trace example is needed to calculate `period` until the time of 20.
+##
+## ~~~
+## 20: progress = ()
+## ~~~
+##
+## Without this input `period` would only create a single event at timestamp 0.
+##
+##
+## **Trace example:**
+## 
 ## ~~~trace
-## option timeDomain: [0,19.5]
+## option timeDomain: [0,20.5]
 ## option axis: true
+## stream progress: unit events
 ## stream output: unit events
 ## ---
 ## 0: output = ()
@@ -1691,6 +1705,7 @@ def average(x: Events[Int]): Events[Int] = {
 ## 12: output = ()
 ## 15: output = ()
 ## 18: output = ()
+## 20: progress = ()
 ## ~~~
 def period(freq: Int): Events[Unit] = {
   def s: Events[Int] = const(freq, default(delay(s, ()), ()))
