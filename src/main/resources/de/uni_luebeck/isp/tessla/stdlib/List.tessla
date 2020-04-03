@@ -81,7 +81,7 @@ module List {
   ## ~~~ruby
   ## in x: Events[Int]
   ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List_append(old, x), List_empty[Int])
+  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
   ## out list
   ## ~~~
   ##
@@ -110,7 +110,7 @@ module List {
   ## ~~~ruby
   ## in x: Events[Int]
   ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List_prepend( x, old), List_empty[Int])
+  ## def list: Events[List[Int]] = merge(List.prepend( x, old), List.empty[Int])
   ## out list
   ## ~~~
   ##
@@ -139,8 +139,8 @@ module List {
   ## ~~~ruby
   ## in x: Events[Int]
   ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List_append(old, x), List_empty[Int])
-  ## def tail = List_tail(list)
+  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def tail = filter(List.tail(list), !(List.isEmpty(list)))
   ## out tail
   ## ~~~
   ##
@@ -152,7 +152,6 @@ module List {
   ## stream list: events
   ## stream tail: events
   ## ---
-  ## 0: tail = List()
   ## 0: list = List()
   ## 2: tail = List()
   ## 2: list = List(1)
@@ -174,8 +173,8 @@ module List {
   ## ~~~ruby
   ## in x: Events[Int]
   ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List_append(old, x), List_empty[Int])
-  ## def init = List_init(list)
+  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def init = filter(List.init(list), !(List.isEmpty(list)))
   ## out init
   ## ~~~
   ##
@@ -286,8 +285,8 @@ module List {
   ## ~~~ruby
   ## in x: Events[Int]
   ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List_append(old, x), List_empty[Int])
-  ## def s = List_fold(list, 0, (a:Int,b:Int) => a + b)
+  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def s = List.fold(list, 0, (a:Int,b:Int) => a + b)
   ## out s
   ## ~~~
   ##
