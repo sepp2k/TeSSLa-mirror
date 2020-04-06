@@ -59,7 +59,7 @@ object ScalaConstants {
       case "__[TC]getErrorCode__" => s"getErrorCode(${args(0)})"
 
       case "__ite__" |
-           "__staticite__" => s"if (${args(0)}) ${args(1)} else ${args(2)}"
+           "__staticite__" => s"(if (${args(0)}) ${args(1)} else ${args(2)})"
       case "__not__" => s"!(${args(0)})"
       case "__negate__" |
            "__fnegate__"  => s"-${args(0)}"
@@ -92,6 +92,9 @@ object ScalaConstants {
       case "__leftshift__" => "(" + s"${args(0)} << ${args(1)}" + ")"
       case "__rightshift__" => "(" + s"${args(0)} >> ${args(1)}" + ")"
 
+      case "__intToFloat__" => s"${args(0)}.asInstanceOf[Float]"
+      case "__floatToInt__" => s"${args(0)}.asInstanceOf[Long]"
+
       case "__Some__" => s"Option(${args(0)})"
       case "__getSome__" => s"${args(0)}.get"
       case "__isSome__" => s"${args(0)}.isDefined"
@@ -101,7 +104,8 @@ object ScalaConstants {
 
       //TODO: Handle mutable datastructures
       case "__Map_empty__" => "Map()"
-      case "__Map_add__" => s"${args(0)} + (${args(1)} -> ${args(2)})"
+      case "__Map_add__" if typeHint.retType.isInstanceOf[MutableMapType] => s"${args(0)} += ((${args(1)}) -> (${args(2)}))"
+      case "__Map_add__" => s"${args(0)} + ((${args(1)}) -> (${args(2)}))"
       case "__Map_contains__" => s"${args(0)}.contains(${args(1)})"
       case "__Map_get__" => s"${args(0)}(${args(1)})"
       case "__Map_remove__" => s"${args(0)} - ${args(1)}"
@@ -124,8 +128,9 @@ object ScalaConstants {
       case "__List_append__" => s"${args(0)} :+ ${args(1)}"
       case "__List_prepend__" => s"${args(0)} +: ${args(1)}"
       case "__List_tail__" => s"${args(0)}.tail"
-      case "__List_init__" => ???
-      case "__List_get__" => s"${args(0)}(${args(1)})"
+      case "__List_init__" => s"${args(0)}.init"
+      case "__List_get__" => s"${args(0)}(${args(1)}.asInstanceOf[Int])"
+      case "__List_set__" if typeHint.retType.isInstanceOf[MutableListType] => s"${args(0)}.update(${args(1)}.asInstanceOf[Int], ${args(2)})"
       case "__List_set__" => s"${args(0)}.updated(${args(1)}.asInstanceOf[Int], ${args(2)})"
       case "__List_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
 
@@ -150,6 +155,8 @@ object ScalaConstants {
       case BoolType => s"java.lang.Boolean.parseBoolean($exp)"
       case UnitType => "true"
       case StringType => s"processStringInput($exp)"
+      case StructType(subTypes, fieldNames) if IntermediateCodeUtils.structIsTuple(StructType(subTypes, fieldNames)) =>
+        s"""{val els = ${exp}.strip().substring(1, ${exp}.length - 1).split(",").map(_.strip()); (${fieldNames.indices.map(i => getStringParseExpression(subTypes(i), s"els($i)")).mkString(", ")})}"""
       case t => throw Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Scala translation")
     }
   }

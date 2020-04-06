@@ -114,9 +114,18 @@ object IntermediateCodeUtils {
       case InstantiatedType("List", Seq(t), _) => ImmutableListType(t)
       case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) => IntermediateCode.FunctionType(paramTypes.map{case (_,t) => typeConversion(t)}, typeConversion(resultType)) //TODO: Type params
       case RecordType(entries, _) => {
-        val sortedEntries = entries.toSeq.sortWith{case ((n1, _), (n2, _)) => n1.name < n2.name}
+        def comp(s1: String, s2: String) : Boolean = {
+          val n1 = s1.stripPrefix("_").toIntOption
+          val n2 = s2.stripPrefix("_").toIntOption
+          if (n1.isDefined && n2.isDefined && s1.startsWith("_") && s2.startsWith("_")) {
+            n1.get <= n2.get
+          } else {
+            s1 < s2
+          }
+        }
+        val sortedEntries = entries.toSeq.sortWith{case ((n1, _), (n2, _)) => comp(n1.name, n2.name)}
         val names = sortedEntries.map(_._1.name)
-        val types = sortedEntries.map{case (n,t) => typeConversion(t._1)}
+        val types = sortedEntries.map{case (_,t) => typeConversion(t._1)}
         StructType(types, names)
       }
       case TypeParam(_, _) => GeneralType //TODO: Resolve type params if possible //TODO: Introduce GenericType in Intermediate Code for Rust translation
@@ -153,7 +162,7 @@ object IntermediateCodeUtils {
   }
 
   def structIsTuple(structType: StructType) : Boolean = {
-    structType.fieldNames.zipWithIndex.map{case (n, i) => n == s"_${i+1}"}.reduce(_ && _)
+    structType.fieldNames.indices.forall(i => structType.fieldNames.contains(s"_${i+1}"))
   }
 
   implicit def stringToVariable(str: String): Variable = {
