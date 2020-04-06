@@ -272,6 +272,40 @@ module Set {
   @liftable
   def minus[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_minus)
 
+  ## Fold a function f on all values of the `set`.
+  ## Starting with the initial value start the function f is called for every element of the `set` with the
+  ## last result and the current elements’s value as arguments.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def result = Set.fold(set,0,(a:Int,b:Int) => a + b)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream set: events
+  ## stream result: events
+  ## ---
+  ## 0: result = 0
+  ## 0: set = Set()
+  ## 2: result = 1
+  ## 2: set = Set(1)
+  ## 2: x = 1
+  ## 4: result = 3
+  ## 4: set = Set(1, 2)
+  ## 4: x = 2
+  ## 6: result = 6
+  ## 6: set = Set(1, 2, 3)
+  ## 6: x = 3
+  ## ~~~
   @liftable
   def fold[T, U](set: Set[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
 
