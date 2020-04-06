@@ -74,6 +74,33 @@ module Set {
   @liftable
   def contains[T](set: Set[T], item: T): Bool = __builtin__(Set_contains)
 
+  ## Remove an element from the given `set`, if the `set` contains this element
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] # stream of items to remove from set
+  ## def filledSet = Set.add(Set.add(Set.add(Set.empty[Int], 1),2),3)
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.remove(old, x), filledSet)
+  ## out set
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream set: events
+  ## ---
+  ## 0: set = Set(3, 2, 1)
+  ## 2: set = Set(3, 2)
+  ## 2: x = 1
+  ## 4: set = Set(3)
+  ## 4: x = 2
+  ## 6: set = Set(3)
+  ## 6: x = 2
+  ## ~~~
   @liftable
   def remove[T](set: Set[T], item: T): Set[T] = __builtin__(Set_remove)
 
