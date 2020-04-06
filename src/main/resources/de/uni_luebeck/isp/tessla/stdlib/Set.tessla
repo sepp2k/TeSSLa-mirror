@@ -142,6 +142,42 @@ module Set {
   @liftable
   def size[T](set: Set[T]): Int = __builtin__(Set_size)
 
+
+  ## Returns the union of the given [`sets`](#set)
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def filledSet = Set.add(Set.add(Set.empty[Int], 1),2)
+  ## def set2 = merge(last(filledSet,x),filledSet)
+  ## def union = Set.union(set,set2)
+  ## out union
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-3,16]
+  ## stream x: events
+  ## stream set: events
+  ## stream set2: events
+  ## stream union: events
+  ## ---
+  ## 0: set2 = Set(2, 1)
+  ## 0: union = Set(2, 1)
+  ## 0: set = Set()
+  ## 5: set2 = Set(2, 1)
+  ## 5: union = Set(2, 1)
+  ## 5: set = Set(2)
+  ## 5: x = 2
+  ## 12: set2 = Set(2, 1)
+  ## 12: union = Set(2, 3, 1)
+  ## 12: set = Set(2, 3)
+  ## 12: x = 3
+  ## ~~~
   @liftable
   def union[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_union)
 
