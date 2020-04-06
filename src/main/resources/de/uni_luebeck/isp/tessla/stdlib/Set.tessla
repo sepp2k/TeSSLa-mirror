@@ -181,7 +181,7 @@ module Set {
   @liftable
   def union[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_union)
   
-  ## Returns the intersection of the given [`sets`](#set) as [`set`](#set).
+  ## Returns the intersection of the given `sets` as [`set`](#set).
   ##
   ## **Usage example:**
   ##
@@ -226,6 +226,49 @@ module Set {
   @liftable
   def intersection[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_intersection)
 
+  ## Returns a `set` containing the elements of `set1` which aren't part of `set2`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] # events with items to add to set
+  ## in y: Events[Int] # events with items to add to set2
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def old2 = last(set2, y)
+  ## def set2: Events[Set[Int]] = merge(Set.add(old2, y), Set.empty[Int])
+  ## def minus = Set.minus(set,set2)
+  ## out minus
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,11]
+  ## stream x: events
+  ## stream set: events
+  ## stream y: events
+  ## stream set2: events
+  ## stream minus: events
+  ## ---
+  ## 0: set = Set()
+  ## 0: set2 = Set()
+  ## 0: minus = Set()
+  ## 2: x = 1
+  ## 2: set = Set(1)
+  ## 2: minus = Set(1)
+  ## 4: y = 2
+  ## 4: set2 = Set(2)
+  ## 4: minus = Set(1)
+  ## 6: x = 2
+  ## 6: set = Set(1, 2)
+  ## 6: minus = Set(1)
+  ## 9: x = 3
+  ## 9: set = Set(1, 2, 3)
+  ## 9: y = 3
+  ## 9: set2 = Set(2, 3)
+  ## 9: minus = Set(1)
+  ## ~~~
   @liftable
   def minus[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_minus)
 
