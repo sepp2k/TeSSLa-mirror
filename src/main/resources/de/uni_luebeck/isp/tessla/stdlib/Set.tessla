@@ -309,6 +309,31 @@ module Set {
   @liftable
   def fold[T, U](set: Set[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
 
+  ## Collect the event values of the given stream in a set.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def result = Set.collect(x)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream result: events
+  ## ---
+  ## 0: result = Set()
+  ## 2: x = 1
+  ## 2: result = Set(1)
+  ## 4: x = 2
+  ## 4: result = Set(1, 2)
+  ## 6: x = 3
+  ## 6: result = Set(1, 2, 3)
+  ## ~~~
   def collect[T](value: Events[T]) = {
     def set: Events[Set[T]] = default(add(last(set, value), value), empty[T])
     set
