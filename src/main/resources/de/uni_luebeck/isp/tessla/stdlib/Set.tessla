@@ -3,6 +3,30 @@ module Set {
   ## Returns an empty set without any element of type `T`
   def empty[T]: Set[T] = __builtin__(Set_empty)
 
+  ## Creates a `set` with a single element
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] 
+  ## def result = Set.singleton(x)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: events
+  ## stream result: events
+  ## ---
+  ## 2: x = 1
+  ## 2: result = Set(1)
+  ## 4: x = 2
+  ## 4: result = Set(2)
+  ## 6: x = 3
+  ## 6: result = Set(3)
+  ## ~~~
   @liftable
   def singleton[T](value: T): Set[T] = add(empty[T], value)
 
@@ -339,6 +363,36 @@ module Set {
     set
   }
 
+  ## Creates a `set` by collecting the elements from `value` and removing the ones from `removeValue`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] # events with items to add to set
+  ## in y: Events[Int] # events with items to remove from the set 
+  ## def result = Set.collectWithRemove(x,y)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: events
+  ## stream y: events
+  ## stream result: events
+  ## ---
+  ## 0: result = Set()
+  ## 2: y = 1
+  ## 2: result = Set()
+  ## 4: x = 2
+  ## 4: y = 2
+  ## 4: result = Set()
+  ## 6: x = 3
+  ## 6: result = Set(3)
+  ## 8: y = 3
+  ## 8: result = Set()
+  ## ~~~
   def collectWithRemove[T](value: Events[T], removeValue: Events[T]) = {
     def old = last(set, merge(value, removeValue))
     def operation: Events[Set[T]] = lift3(old, value, removeValue, (o: Option[Set[T]], v: Option[T], r: Option[T]) =>
@@ -350,4 +404,5 @@ module Set {
 
 # Define the type outside of the module
 # so one can write `Set[Int]` instead of `Set.Set[Int]`.
+## Type Set
 type Set[T] = __builtin__(Set)
