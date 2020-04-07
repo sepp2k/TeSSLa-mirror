@@ -106,6 +106,31 @@ module Map {
   @liftable
   def get[K, V](map: Map[K, V], key: K): V = __builtin__(Map_get)
 
+  ## Removes the entry matching the given `key`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] # stream of keys to remove from map
+  ## def filledMap = Map.add(Map.add(Map.empty[Int,Int], 1,16),2,32)
+  ## def old = last(map, x)
+  ## def map: Events[Map[Int,Int]] = merge(Map.remove(old, x), filledMap)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-6,25]
+  ## stream x: events
+  ## stream map: events
+  ## ---
+  ## 0: map = Map(2 -> 32, 1 -> 16)
+  ## 11: x = 1
+  ## 11: map = Map(2 -> 32)
+  ## 19: x = 3
+  ## 19: map = Map(2 -> 32)
+  ## ~~~
   @liftable
   def remove[K, V](map: Map[K, V], key: K): Map[K, V] = __builtin__(Map_remove)
 
