@@ -21,8 +21,9 @@ module Map {
   ## stream x: events
   ## stream map: events
   ## ---
-  ## 0: x = (1, 16)
-  ## 0: map = Map(1 -> 16)
+  ## 0: map = Map()
+  ## 1: x = (1, 16)
+  ## 1: map = Map(1 -> 16)
   ## 10: x = (2, 32)
   ## 10: map = Map(1 -> 16, 2 -> 32)
   ## 23: x = (2, 64)
@@ -31,9 +32,77 @@ module Map {
   @liftable
   def add[K, V](map: Map[K, V], key: K, value: V): Map[K, V] = __builtin__(Map_add)
 
+  ## Returns true if the given `map` has a `key` matching the given `key`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[(Int,Int)]
+  ## in y: Events[Int]
+  ## def old = last(map, x)
+  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
+  ## def contains = Map.contains(map,y)
+  ## out contains
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-4,29.9]
+  ## stream x: events
+  ## stream map: events
+  ## stream y: events
+  ## stream contains: bubbles
+  ## ---
+  ## 0: map = Map()
+  ## 1: x = (1, 16)
+  ## 1: map = Map(1 -> 16)
+  ## 1: y = 2
+  ## 1: contains = false
+  ## 11: x = (2, 32)
+  ## 11: map = Map(1 -> 16, 2 -> 32)
+  ## 11: y = 2
+  ## 11: contains = true
+  ## 24: x = (2, 64)
+  ## 24: map = Map(1 -> 16, 2 -> 64)
+  ## 24: y = 16
+  ## 24: contains = false
+  ## ~~~
   @liftable
   def contains[K, V](map: Map[K, V], key: K): Bool = __builtin__(Map_contains)
 
+  ## Get the corresponding `value` for the given `key`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[(Int,Int)]
+  ## in y: Events[Int]
+  ## def old = last(map, x)
+  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
+  ## def contains = Map.contains(map,y)
+  ## out contains
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-4,29.9]
+  ## stream x: events
+  ## stream map: events
+  ## stream y: events
+  ## stream ele: events
+  ## ---
+  ## 0: map = Map()
+  ## 10: x = (2, 32)
+  ## 10: map = Map(2 -> 32)
+  ## 10: y = 2
+  ## 10: ele = 32
+  ## 23: x = (2, 64)
+  ## 23: map = Map(2 -> 64)
+  ## 23: y = 2
+  ## 23: ele = 64
+  ## ~~~
   @liftable
   def get[K, V](map: Map[K, V], key: K): V = __builtin__(Map_get)
 
