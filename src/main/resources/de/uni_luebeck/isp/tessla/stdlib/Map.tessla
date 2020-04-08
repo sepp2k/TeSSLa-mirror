@@ -168,9 +168,71 @@ module Map {
   @liftable
   def size[K, V](map: Map[K, V]): Int = __builtin__(Map_size)
 
+  ## Returns the `keys` of the elements in the given `map` as `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[(Int,Int)] # input stream with key value pairs as tupel (key,value)
+  ## def old = last(map, x)
+  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
+  ## def keys = Map.keys(map)
+  ## out keys
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-4,29.9]
+  ## stream x: events
+  ## stream map: events
+  ## ---
+  ## 0: keys = List()
+  ## 0: map = Map()
+  ## 10: keys = List(1)
+  ## 10: map = Map(1 -> 16)
+  ## 10: x = (1, 16)
+  ## 20: keys = List(1, 2)
+  ## 20: map = Map(1 -> 16, 2 -> 32)
+  ## 20: x = (2, 32)
+  ## ~~~
   @liftable
   def keys[K, V](map: Map[K, V]): List[K] = __builtin__(Map_keys)
 
+  ## Applies a function `f` on all values of the `map`.
+  ## Starting with the initial value `start` the function `f` is called for every pair of the `map` with the
+  ## last result and the current elements’s value as arguments.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[(Int,Int)] # input stream with key value pairs as tupel (key,value)
+  ## def old = last(map, x)
+  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
+  ## def result = Map.fold(map,0,(r:Int,k:Int, v:Int) => r + v)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-4,29.9]
+  ## stream x: events
+  ## stream map: events
+  ## stream result: events
+  ## ---
+  ## 0: map = Map()
+  ## 0: result = 0
+  ## 1: x = (1, 16)
+  ## 1: map = Map(1 -> 16)
+  ## 1: result = 16
+  ## 11: x = (2, 32)
+  ## 11: map = Map(1 -> 16, 2 -> 32)
+  ## 11: result = 48
+  ## 24: x = (2, 64)
+  ## 24: map = Map(1 -> 16, 2 -> 64)
+  ## 24: result = 80
+  ## ~~~
   @liftable
   def fold[K, V, R](map: Map[K, V], start: R, f: (R, K, V) => R): R = __builtin__(Map_fold)
 
