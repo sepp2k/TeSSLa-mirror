@@ -134,6 +134,37 @@ module Map {
   @liftable
   def remove[K, V](map: Map[K, V], key: K): Map[K, V] = __builtin__(Map_remove)
 
+  ## Returns the number of elements in the given `map`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[(Int,Int)] # input stream with key value pairs as tupel (key,value)
+  ## def old = last(map, x)
+  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
+  ## def size = Map.size(map)
+  ## out size
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-4,29.9]
+  ## stream x: events
+  ## stream map: events
+  ## ---
+  ## 0: size = 0
+  ## 0: map = Map()
+  ## 1: size = 1
+  ## 1: map = Map(1 -> 16)
+  ## 1: x = (1, 16)
+  ## 10: size = 2
+  ## 10: map = Map(1 -> 16, 2 -> 32)
+  ## 10: x = (2, 32)
+  ## 24: size = 2
+  ## 24: map = Map(1 -> 16, 2 -> 64)
+  ## 24: x = (2, 64)
+  ## ~~~
   @liftable
   def size[K, V](map: Map[K, V]): Int = __builtin__(Map_size)
 
