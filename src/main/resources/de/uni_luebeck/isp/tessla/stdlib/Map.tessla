@@ -236,6 +236,45 @@ module Map {
   @liftable
   def fold[K, V, R](map: Map[K, V], start: R, f: (R, K, V) => R): R = __builtin__(Map_fold)
 
+  ## Get the `value` to the `key` if a matching `key` exsits and the default value otherwise.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[(Int,Int)] # input stream with key value pairs as tupel (key,value)
+  ## in k: Events[Int] # requested key
+  ## def old = last(map, x)
+  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
+  ## def result = Map.getOrElse(map,k,42)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-4,29.9]
+  ## stream x: events
+  ## stream k: events
+  ## stream map: events
+  ## stream result: events
+  ## ---
+  ## 0: map = Map()
+  ## 1: x = (1, 16)
+  ## 1: map = Map(1 -> 16)
+  ## 1: k = 1
+  ## 1: result = 16
+  ## 5: k = 2
+  ## 5: result = 42
+  ## 11: x = (2, 32)
+  ## 11: map = Map(1 -> 16, 2 -> 32)
+  ## 11: k = 2
+  ## 11: result = 32
+  ## 16: k = 3
+  ## 16: result = 42
+  ## 24: x = (2, 64)
+  ## 24: map = Map(1 -> 16, 2 -> 64)
+  ## 24: result = 42
+  ## ~~~
   @liftable
   def getOrElse[K,V](map: Map[K, V], key: K, default: V): V =
     if contains(map, key)
