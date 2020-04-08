@@ -17,7 +17,7 @@ module Map {
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-4,29.9]
+  ## option timeDomain: [-2,29.9]
   ## stream x: events
   ## stream map: events
   ## ---
@@ -48,7 +48,7 @@ module Map {
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-4,29.9]
+  ## option timeDomain: [-2,29.9]
   ## stream x: events
   ## stream map: events
   ## stream y: events
@@ -87,7 +87,7 @@ module Map {
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-4,29.9]
+  ## option timeDomain: [-2,29.9]
   ## stream x: events
   ## stream map: events
   ## stream y: events
@@ -149,7 +149,7 @@ module Map {
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-4,29.9]
+  ## option timeDomain: [-1,29.9]
   ## stream x: events
   ## stream map: events
   ## ---
@@ -183,7 +183,7 @@ module Map {
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-4,29.9]
+  ## option timeDomain: [-2,29.9]
   ## stream x: events
   ## stream map: events
   ## ---
@@ -216,7 +216,7 @@ module Map {
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-4,29.9]
+  ## option timeDomain: [-1,29.9]
   ## stream x: events
   ## stream map: events
   ## stream result: events
@@ -252,7 +252,7 @@ module Map {
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-4,29.9]
+  ## option timeDomain: [-1,29.9]
   ## stream x: events
   ## stream k: events
   ## stream map: events
@@ -281,6 +281,32 @@ module Map {
     then get(map, key)
     else default
 
+  ## Increments the `value` of the given `key` if the key exsists and create a new entry with this `key` and the `value=1` otherwise.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in k: Events[Int]
+  ## def old = last(map, k)
+  ## def map: Events[Map[Int,Int]] = merge(Map.inc(old, k), Map.empty[Int,Int])
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-2,29.9]
+  ## stream k: events
+  ## stream map: events
+  ## ---
+  ## 0: map = Map()
+  ## 6: k = Apple
+  ## 6: map = Map(Apple -> 1)
+  ## 15: k = Apple
+  ## 15: map = Map(Apple -> 2)
+  ## 27: k = Carrot
+  ## 27: map = Map(Apple -> 2, Carrot -> 1)
+  ## ~~~
   @liftable
   def inc[K](counts: Map[K, Int], key: K): Map[K, Int] =
     add(counts, key, getOrElse(counts, key, 0) + 1)
