@@ -311,6 +311,31 @@ module Map {
   def inc[K](counts: Map[K, Int], key: K): Map[K, Int] =
     add(counts, key, getOrElse(counts, key, 0) + 1)
 
+  ## Counts how often an element appears in the input `events` and creates an entry with the element as key and its count as mapped value.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[String]
+  ## def map = Map.collectCount(x)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-2,29.9]
+  ## stream x: events
+  ## stream map: events
+  ## ---
+  ## 0: map = Map()
+  ## 6: x = A
+  ## 6: map = Map(A -> 1)
+  ## 15: x = A
+  ## 15: map = Map(A -> 2)
+  ## 24: x = C
+  ## 24: map = Map(A -> 2, C -> 1)
+  ## ~~~
   def collectCount[T](events: Events[T]): Events[Map[T, Int]] =
     __root__.fold(events, empty[T,Int], inc)
 
