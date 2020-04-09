@@ -177,7 +177,7 @@ object ScalaConstants {
            DoubleType |
            BoolType => s"String.valueOf($exp)"
       case UnitType => "\"()\""
-      case StringType => s"$exp"
+      case StringType => exp
       case OptionType(t) => s"""{val $expName = $exp; if (${expName}.isDefined) "Some(" + ${getParseExpressionToString(t, expName + ".get", freshVarCount + 1)} + ")" else "None"}"""
       case MutableSetType(valType) => s""""Set(" + ${exp}.toSeq.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
       case ImmutableSetType(valType) => s""""Set(" + ${exp}.toSeq.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
