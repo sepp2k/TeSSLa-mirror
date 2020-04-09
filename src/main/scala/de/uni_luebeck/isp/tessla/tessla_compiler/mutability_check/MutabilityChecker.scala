@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check
 
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Success
-import de.uni_luebeck.isp.tessla.tessla_compiler.DefinitionOrdering
+import de.uni_luebeck.isp.tessla.tessla_compiler.{ControlFlowAnalysis, DefinitionOrdering}
 import de.uni_luebeck.isp.tessla.{TesslaAST, TranslationPhase}
 
 class TesslaCoreWithMutabilityInfo(val spec: TesslaAST.Core.Specification,
@@ -19,6 +19,9 @@ object MutabilityChecker extends
     val in = spec.in
     val definitions = spec.definitions
     val out = spec.out
+
+    //TODO: Only create once
+    val cfAnalysis = new ControlFlowAnalysis(spec)
 
     //TODO: Get rid of some maps
     val nodes: collection.mutable.HashSet[Identifier] = collection.mutable.HashSet()
@@ -99,7 +102,7 @@ object MutabilityChecker extends
             case _ => Set()
        }
        val inl : Set[Identifier] = e match {
-         case ExpressionRef(id, tpe, _) if id.idOrName.left.isEmpty && !tpe.isInstanceOf[FunctionType] =>
+         case ExpressionRef(id, tpe, _) if cfAnalysis.varSuitableForInlining(id) && !tpe.isInstanceOf[FunctionType] =>
            if (scope.contains(id)) Set(id) else Set()
          case _ => Set()
        }

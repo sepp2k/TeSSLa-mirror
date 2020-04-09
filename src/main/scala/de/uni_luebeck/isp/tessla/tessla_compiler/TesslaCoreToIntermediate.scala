@@ -23,7 +23,10 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     val definitions = spec.definitions
     val out = spec.out.groupBy(_._1).view.mapValues(e => e.map(x => x._2).toSet).toMap
 
-    val myNonStreamCodeGenerator = new NonStreamCodeGenerator(tcMut.addDeps)
+    //TODO: Only create once
+    val cfAnalysis = new ControlFlowAnalysis(spec)
+
+    val myNonStreamCodeGenerator = new NonStreamCodeGenerator(tcMut.addDeps, cfAnalysis)
     val myStreamCodeGenerator = new StreamCodeGenerator(myNonStreamCodeGenerator)
 
     def getInStreamDefStreamType(id: Identifier) : Type = {

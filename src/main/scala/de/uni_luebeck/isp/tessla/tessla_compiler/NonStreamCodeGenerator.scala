@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
+import de.uni_luebeck.isp.tessla.TesslaAST
 import de.uni_luebeck.isp.tessla.TesslaAST.Core.{FunctionType => _, _}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
@@ -10,7 +11,7 @@ import scala.language.postfixOps
 /**
   * Class for the translation of TeSSLaCore-Functions to ImpLan Lambda expressions
   */
-class NonStreamCodeGenerator(val addDeps: Map[Identifier, Set[Identifier]]) {
+class NonStreamCodeGenerator(val addDeps: Map[Identifier, Set[Identifier]], cfAnalysis: ControlFlowAnalysis) {
 
   @scala.annotation.tailrec
   final def translateFunctionCall(e: ExpressionArg, args: Seq[ImpLanExpr], typeArgs: Seq[Type], defContext: Map[Identifier, DefinitionExpression] = Map()) : ImpLanExpr = {
@@ -77,7 +78,8 @@ class NonStreamCodeGenerator(val addDeps: Map[Identifier, Set[Identifier]]) {
   def reInlineTempVars(e: ExpressionArg, defContext: Map[Identifier, DefinitionExpression]) : ExpressionArg = {
     e match {
       case e: Expression => reInlineTempVars(e, defContext)
-      case ExpressionRef(id, _, _) if id.idOrName.left.isEmpty && defContext.contains(id) => reInlineTempVars(defContext(id), defContext)
+      case ExpressionRef(id, tpe, _) if cfAnalysis.varSuitableForInlining(id) && defContext.contains(id) && !tpe.isInstanceOf[TesslaAST.Core.FunctionType] =>
+        reInlineTempVars(defContext(id), defContext)
       case _ => e
     }
   }
