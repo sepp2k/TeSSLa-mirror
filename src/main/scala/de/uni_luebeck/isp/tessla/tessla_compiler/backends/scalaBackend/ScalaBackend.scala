@@ -17,7 +17,11 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
   }
 
   def foldGuard(guard: Seq[Seq[ImpLanExpr]]): String = {
-    guard.map { c => ("(" + c.map(translateExpression).mkString(" && ") + ")") }.mkString(" || ")
+    if (guard.flatten.isEmpty) {
+      "true"
+    } else {
+      guard.map { c => ("(" + (if (c.isEmpty) "false" else c.map(translateExpression).mkString(" && ")) + ")") }.mkString(" || ")
+    }
   }
 
   override def generateCode(stmts: Seq[ImpLanStmt]): String = {

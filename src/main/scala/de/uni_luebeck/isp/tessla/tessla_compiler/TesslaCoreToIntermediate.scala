@@ -25,7 +25,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     val cfAnalysis = new ControlFlowAnalysis(spec)
 
     val myNonStreamCodeGenerator = new NonStreamCodeGenerator(tcMut.addDeps, cfAnalysis)
-    val myStreamCodeGenerator = new StreamCodeGenerator(myNonStreamCodeGenerator)
+    val myStreamCodeGenerator = new StreamCodeGenerator(myNonStreamCodeGenerator, cfAnalysis)
 
     def getInStreamDefStreamType(id: Identifier) : Type = {
       if (definitions.contains(id)) {

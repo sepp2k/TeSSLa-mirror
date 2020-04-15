@@ -10,7 +10,16 @@ import de.uni_luebeck.isp.tessla._
 /**
   * Class containing functions for the translation of single TeSSLa expressions to imperative code
   */
-class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator) {
+class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
+                          val myControlFlowAnalysis: ControlFlowAnalysis) {
+
+  def getAdditionalGuard(id: Identifier): Seq[Seq[ImpLanExpr]] = {
+    val (pos, neg) = myControlFlowAnalysis.getAddConditions(id)
+
+    Seq(pos.map(i => Variable(s"var_${i.fullName}_value")).toSeq ++
+      neg.map(i => Negation(Variable(s"var_${i.fullName}_value"))).toSeq)
+  }
+
 
   def streamNameAndTypeFromExpressionArg(ea : ExpressionArg) : (String, ImpLanType) = {
     ea match {
@@ -233,11 +242,13 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator) 
 
     val (inputError, outputError) = getErrorExpressionsforLiftSLift(args, function)
 
+    val addGuard = getAdditionalGuard(id)
     val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))}
 
     val newStmt = (currSrc.stepSource.
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
+      If(addGuard).
       If(guard).
         Assignment(s"${o}_errval", inputError, LongValue(0), LongType).
         If(Seq(Seq(Equal(s"${o}_errval", LongValue(0))))).
@@ -266,8 +277,8 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator) 
           Assignment(s"${o}_error", s"${o}_errval", LongValue(0), LongType).
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         EndIf().
+      EndIf().
       EndIf()
-
       )
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
@@ -275,6 +286,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator) 
   def produceSignalLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
+    val addGuard = getAdditionalGuard(id)
     val guard1 : Seq[Seq[ImpLanExpr]] = Seq(args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_init")})
     val guard2 : Seq[Seq[ImpLanExpr]] = args.map{arg => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_changed"))}
     val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}//TODO: Sufficient?
@@ -286,6 +298,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator) 
     val newStmt = (currSrc.stepSource.
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
+      If(addGuard).
       If(guard1).
         If(guard2).
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
@@ -304,6 +317,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator) 
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         EndIf().
+      EndIf().
       EndIf()
       )
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
