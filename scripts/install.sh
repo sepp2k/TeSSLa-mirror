@@ -2,7 +2,7 @@
 
 # set -x # @echo on
 
-cd target/scala-2.12/ || {
+cd target/scala-2.13/ || {
   echo "Target directory not found. Run sbt clean assembly first!"
   exit 1
 }
