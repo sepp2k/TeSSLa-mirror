@@ -155,26 +155,23 @@ object MutabilityChecker extends
     //No IDs belonging to already immutable vars
     immutVars ++= immutVars.flatMap(variableFamilies.equivalenceClass)
 
-    //No Double Write
-    immutVars ++= writeMap.filter(_._2.size > 1).keys.flatMap(variableFamilies.equivalenceClass)
-
-    //No Replicating Lasts
-    def cleanParent(node: Identifier, beat: Seq[Identifier], caller: Identifier) : (Set[Identifier], Boolean) = {
+    def cleanParent(node: Identifier, beat: Seq[Identifier], caller: Identifier, origWrite: Identifier) : (Set[Identifier], Boolean) = {
 
       //println(s"cleanParent: $node")
+      val writes = if (beat.isEmpty) writeMap.getOrElse(node, Set()).filter(!incompatibleVars(_, caller)) else writeMap.getOrElse(node, Set())
 
-      if (writeMap.getOrElse(node, Set()).size > (if (beat.isEmpty) 1 else 0) ||
+      if (writes.size > (if (beat.isEmpty) 1 else 0) ||
           (beat.nonEmpty && !repsMap.getOrElse(node, Set()).filter(_._1 == beat.head).exists(c => impCheck.freqImplication(beat.head, c._2, false)))) {
         //println(s"cleanParent: $node : false")
         (Set(), false)
       } else {
-        val (childReads, childClean) = dealChilds(node, beat, caller)
+        val (childReads, childClean) = dealChilds(node, beat, caller, origWrite)
 
         //println(s"cleanParent: $node --> childR/C $childReads $childClean")
 
         if (childClean) {
           val repParents = repsMap.flatMap{case (k, v) => if (v.exists(_._1 == node)) Some(k) else None}
-          val ret = repParents.map(cleanParent(_, node +: beat, node)).foldLeft[(Set[Identifier], Boolean)]((childReads, childClean)) { case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2) }
+          val ret = repParents.map(cleanParent(_, node +: beat, node, origWrite)).foldLeft[(Set[Identifier], Boolean)]((childReads, childClean)) { case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2) }
           //println(s"cleanParent: $node : $ret")
           ret
         } else {
@@ -185,17 +182,19 @@ object MutabilityChecker extends
       }
     }
 
-    def cleanChild(node: Identifier, beat: Seq[Identifier], caller: Identifier) : (Set[Identifier], Boolean) = {
+    def cleanChild(node: Identifier, beat: Seq[Identifier], caller: Identifier, origWrite: Identifier) : (Set[Identifier], Boolean) = {
 
-      //println(s"cleanChild: $node")
+      //println(s"cleanChild: $node $origWrite")
 
-      val cr : (Set[Identifier], Boolean) = if (beat.nonEmpty) cleanChild(node, beat.drop(1), caller) else (Set(), false)
+      val cr : (Set[Identifier], Boolean) = if (beat.nonEmpty) cleanChild(node, beat.drop(1), caller, origWrite) else (Set(), false)
       val pr : (Set[Identifier], Boolean) = if (beat.isEmpty || writeMap.getOrElse(node, Set()).nonEmpty ||
                  repsMap.getOrElse(caller, Set()).filter(_._1 == node).exists(c => !impCheck.freqImplication(beat.head, c._2, false))) {
         (Set(), false)
       } else {
-        dealChilds(node, beat.drop(1), caller)
+        dealChilds(node, beat.drop(1), caller, origWrite)
       }
+
+
       if (pr._2) {
         //println(s"cleanChild: $node : $pr")
         pr
@@ -205,15 +204,27 @@ object MutabilityChecker extends
       }
     }
 
-    def dealChilds(node: Identifier, beat: Seq[Identifier], caller: Identifier) : (Set[Identifier], Boolean) = {
-      val childs : Set[Identifier] = repsMap.getOrElse(node, Set()).map(_._1) - caller
+    def dealChilds(node: Identifier, beat: Seq[Identifier], caller: Identifier, origWrite: Identifier) : (Set[Identifier], Boolean) = {
+      val childs : Set[Identifier] = if (beat.isEmpty) {
+        repsMap.getOrElse(node, Set()).map(_._1).filter(!incompatibleVars(_, origWrite))
+      } else {
+        repsMap.getOrElse(node, Set()).map(_._1)
+      } - caller
+
       if (childs.nonEmpty) {
-        childs.map(c => cleanChild(c, beat, caller)).reduce[(Set[Identifier], Boolean)]{case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2)}
+        childs.map(c => cleanChild(c, beat, caller, origWrite)).reduce[(Set[Identifier], Boolean)]{case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2)}
       } else if (beat.isEmpty) {
-        (readMap.getOrElse(node, Set()), true)
+        (readMap.getOrElse(node, Set()).filter(!incompatibleVars(_, origWrite)), true)
       } else {
         (Set(), true)
       }
+    }
+
+    def incompatibleVars(id1: Identifier, id2: Identifier) : Boolean = {
+      val c1 = cfAnalysis.getAddConditions(id1)
+      val c2 = cfAnalysis.getAddConditions(id2)
+
+      c1._1.intersect(c2._2).nonEmpty || c1._2.intersect(c2._1).nonEmpty
     }
 
     val readBeforeWrites : collection.mutable.ArrayBuffer[(Identifier, Identifier, Identifier)] = collection.mutable.ArrayBuffer()
