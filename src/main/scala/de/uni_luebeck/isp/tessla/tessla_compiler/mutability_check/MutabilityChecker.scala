@@ -23,9 +23,16 @@ object MutabilityChecker extends
     //TODO: Only create once
     val cfAnalysis = new ControlFlowAnalysis(spec)
 
+    val edges: collection.mutable.HashSet[(Identifier, Identifier)] = collection.mutable.HashSet()
+    val transEdges: collection.mutable.HashMap[Identifier, Set[Identifier]] = collection.mutable.HashMap()
+    def addEdge(i: Identifier, j: Identifier): Unit = {
+      edges += (i -> j)
+      transEdges += (i -> (transEdges.getOrElse(i, Set()) + j))
+      transEdges.mapValuesInPlace{case (_, s) => if (s.contains(i)) s + j else s}
+    }
+
     //TODO: Get rid of some maps
     val nodes: collection.mutable.HashSet[Identifier] = collection.mutable.HashSet()
-    val edges: collection.mutable.HashSet[(Identifier, Identifier)] = collection.mutable.HashSet()
     val immutVars: collection.mutable.HashSet[Identifier] = collection.mutable.HashSet()
 
     val readMap: collection.mutable.Map[Identifier, Set[Identifier]] = collection.mutable.Map()
@@ -71,9 +78,9 @@ object MutabilityChecker extends
 
         dep.deps.foreach {
           i => if (nodes.contains(i)) {
-            edges += ((i,id))
+            addEdge(i, id)
           } else {
-            cfDependencies.getOrElse(i, Set()).foreach{i => edges += ((i,id))}
+            cfDependencies.getOrElse(i, Set()).foreach{i => addEdge(i, id)}
           }
         }
 
@@ -227,24 +234,36 @@ object MutabilityChecker extends
       c1._1.intersect(c2._2).nonEmpty || c1._2.intersect(c2._1).nonEmpty
     }
 
+    //No double writes, replicating lasts  and collect Read-Before-Writes
     val readBeforeWrites : collection.mutable.ArrayBuffer[(Identifier, Identifier, Identifier)] = collection.mutable.ArrayBuffer()
-    writeMap.filter(_._2.size == 1).foreach{case (writtenNode, writeNodes) =>
-        val writeNode = writeNodes.toSeq.head
-        if (!immutVars.contains(writeNode)) {
-          val (readDeps, clean) = cleanParent(writtenNode, Seq(), writeNode)
-          if (!repsMap.getOrElse(writtenNode, Set()).map(_._1).contains(writeNode) && clean) {
-              readDeps.foreach{r =>
-                readBeforeWrites += ((r, writeNode, writtenNode))
-              }
-          } else {
-            immutVars ++= variableFamilies.equivalenceClass(writtenNode)
+    writeMap.foreach { case (writtenNode, writeNodes) =>
+      val writeNode = writeNodes.toSeq.head
+      if (!immutVars.contains(writeNode)) {
+        val (readDeps, clean) = cleanParent(writtenNode, Seq(), writeNode, writeNode)
+        if (!repsMap.getOrElse(writtenNode, Set()).map(_._1).contains(writeNode) && clean) {
+          readDeps.foreach { r =>
+            readBeforeWrites += ((r, writeNode, writtenNode))
           }
+        } else {
+          immutVars ++= variableFamilies.equivalenceClass(writtenNode)
         }
+      }
     }
 
     //No Read before Write
+      readBeforeWrites.flatMapInPlace{case (i, j, m) =>
+      if (transEdges.getOrElse(i, Set()).contains(j)) {
+        None
+      } else if (transEdges.getOrElse(j, Set()).contains(i)) {
+        immutVars ++= variableFamilies.equivalenceClass(m)
+        None
+      } else {
+        Some((i, j, m))
+      }
+    }
+
     if (readBeforeWrites.nonEmpty) {
-      val z3H = new Z3Handler(edges.toSet, readBeforeWrites.toSet, inlinings.toMap, variableFamilies)
+      val z3H = new Z3Handler(edges.toSet ++ cfAnalysis.getAddOrderingConstraints, readBeforeWrites.toSet, inlinings.toMap, variableFamilies)
       immutVars ++= z3H.getImmutableVars
     }
 
@@ -252,7 +271,7 @@ object MutabilityChecker extends
       if (!immutVars.contains(mut)) inlinings.getOrElse(from, Set()).map(to -> _) + (to -> from) else None
     }.groupBy(_._1).view.mapValues(e => e.map(x => x._2).toSet).toMap
 
-    /*
+   /*
     println("========================")
     println(nodes)
     println("-READS-")
@@ -263,6 +282,8 @@ object MutabilityChecker extends
     println(repsMap)
     println("-EDGES-")
     println(edges)
+    println("-TRANS_EDGES-")
+    println(transEdges)
     println("-FAMILIES-")
     println(variableFamilies.toMap)
     println("-INLININGS-")
@@ -273,7 +294,7 @@ object MutabilityChecker extends
     println(readBeforeWrites)
     println("-Z3-IMMUT-")
     println(immutVars)
-    */
+  */
 
     def targetVarType(id: Identifier, scope: Map[Identifier, DefinitionExpression]) : Type = {
       val origType = if (spec.in.contains(id)) {
