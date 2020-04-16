@@ -242,13 +242,11 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
 
     val (inputError, outputError) = getErrorExpressionsforLiftSLift(args, function)
 
-    val addGuard = getAdditionalGuard(id)
     val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))}
 
     val newStmt = (currSrc.stepSource.
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-      If(addGuard).
       If(guard).
         Assignment(s"${o}_errval", inputError, LongValue(0), LongType).
         If(Seq(Seq(Equal(s"${o}_errval", LongValue(0))))).
@@ -277,7 +275,6 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
           Assignment(s"${o}_error", s"${o}_errval", LongValue(0), LongType).
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         EndIf().
-      EndIf().
       EndIf()
       )
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
@@ -298,7 +295,6 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
     val newStmt = (currSrc.stepSource.
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-      If(addGuard).
       If(guard1).
         If(guard2).
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
@@ -307,17 +303,18 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
           Assignment(s"${o}_error", inputError, LongValue(0), LongType).
           If(Seq(Seq(Equal(s"${o}_error", LongValue(0))))).
             Try().
+              If(addGuard).
                 Assignment(s"${o}_value", fcall, defaultValueForStreamType(ot), ot).
-                Assignment(s"${o}_error", outputError, LongValue(0), LongType).
-              Catch().
-                Assignment(s"${o}_error", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
-              EndTry().
+              EndIf().
+              Assignment(s"${o}_error", outputError, LongValue(0), LongType).
+            Catch().
+              Assignment(s"${o}_error", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
+            EndTry().
           EndIf().
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         EndIf().
-      EndIf().
       EndIf()
       )
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)

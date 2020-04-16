@@ -56,16 +56,16 @@ class ControlFlowAnalysis(spec: Specification) {
     }
   }
 
-  def noLast(exp: ExpressionArg): Boolean = {
+  def noAppOf(exp: ExpressionArg, of: String): Boolean = {
     exp match {
-      case TypeApplicationExpression(applicable, _, _) => noLast(applicable)
-      case ApplicationExpression(ExternExpression(_, _, _, "last", _), _, _) => false
+      case TypeApplicationExpression(applicable, _, _) => noAppOf(applicable, of)
+      case ApplicationExpression(ExternExpression(_, _, _, of, _), _, _) => false
       case _ => true
     }
   }
 
   def addIfCond(cond: Identifier, neg: Boolean, exp: ExpressionArg, scope: Map[Identifier, DefinitionExpression]): Unit = {
-    if (!exp.tpe.isInstanceOf[FunctionType] && noLast(exp)) {
+    if (!exp.tpe.isInstanceOf[FunctionType] && noAppOf(exp, "last")) {
       exp match {
         case ApplicationExpression(_, args, _) => args.foreach {
           addIfCond(cond, neg, _, scope)
@@ -73,7 +73,7 @@ class ControlFlowAnalysis(spec: Specification) {
         case TypeApplicationExpression(applicable, _, _) => addIfCond(cond, neg, applicable, scope)
         case RecordConstructorExpression(entries, _) => entries.foreach { case (_, (e, _)) => addIfCond(cond, neg, e, scope) }
         case RecordAccessorExpression(_, target, _, _) => addIfCond(cond, neg, target, scope)
-        case ExpressionRef(id, _, _) => addIfCondId(cond, neg, id, scope)
+        case ExpressionRef(id, _, _) if !scope.contains(id) || noAppOf(scope(id), "lift") => addIfCondId(cond, neg, id, scope)
         case _ =>
       }
     }
@@ -109,7 +109,12 @@ class ControlFlowAnalysis(spec: Specification) {
   }
 
   def getAddOrderingConstraints: Set[(Identifier, Identifier)] = {
-    conditions.toSet.flatMap{case (id, (p, n)) => (p ++ n).map((_, id))}
+    conditions.toSeq.flatMap{case (id, c) => (c._1 ++ c._2).map((_, id))}.toSet
+  }
+
+  def addOrderingConstraints(in: Map[Identifier, Set[Identifier]]): Map[Identifier, Set[Identifier]] = {
+    val addConst = getAddOrderingConstraints.groupBy(_._2).view.mapValues(s => s.map(_._1)).toMap
+    (in.keys ++ addConst.keys).map(i => (i, in.getOrElse(i, Set()) ++ addConst.getOrElse(i, Set()))).toMap
   }
 
 }

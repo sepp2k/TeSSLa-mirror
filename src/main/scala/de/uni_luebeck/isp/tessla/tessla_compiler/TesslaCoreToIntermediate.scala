@@ -80,7 +80,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     var currSource = SourceListing(Seq(), Seq(), Seq(), Seq(), Seq())
     var warnings = Seq()
 
-    DefinitionOrdering.order(definitions, tcMut.addDeps).foreach { case (id, definition) => {
+    DefinitionOrdering.order(definitions, cfAnalysis.addOrderingConstraints(tcMut.addDeps)).foreach { case (id, definition) => {
       currSource = definition.tpe match {
         case InstantiatedType("Events", _, _) => definition match {
           case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, typeArgs, _), args, _) => translateExternSignalExpression(id, e, args, typeArgs, currSource)

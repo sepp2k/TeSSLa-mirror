@@ -43,7 +43,7 @@ class NonStreamCodeGenerator(val addDeps: Map[Identifier, Set[Identifier]], cfAn
   def translateBody(body: Map[Identifier, DefinitionExpression], ret: ExpressionArg, defContext: Map[Identifier, DefinitionExpression]) : Seq[ImpLanStmt] = {
     val newDefContext = defContext ++ body
 
-    val translatedBody = DefinitionOrdering.order(body, addDeps).foldLeft[Seq[ImpLanStmt]](Seq()){
+    val translatedBody = DefinitionOrdering.order(body, cfAnalysis.addOrderingConstraints(addDeps)).foldLeft[Seq[ImpLanStmt]](Seq()){
       case (curr, (id, exp)) => curr :+ translateDefinition(id, exp, newDefContext)
     }
     translatedBody :+ ReturnStatement(translateExpressionArg(ret, newDefContext))
