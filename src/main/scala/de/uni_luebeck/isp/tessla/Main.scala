@@ -15,7 +15,8 @@ object Main extends SexyOpt {
   override val programName = BuildInfo.name
   override val version = Some(BuildInfo.version)
   override val programDescription = "Evaluate the given Tessla specification on the input streams provided by the given trace file."
-
+  val licenseLocation = "de/uni_luebeck/isp/tessla/License"
+  
   val tesslaFile = posArg("tessla-file", "The file containing the Tessla specification")
 
   val traceFile = optionalPosArg("trace-file", "The file containing the trace data used as input for the specification." +
@@ -55,6 +56,8 @@ object Main extends SexyOpt {
 
   val ctfTrace = flag("ctf", "The trace-file with the input data is in CTF format. With this option you must specify " +
     "a trace-file. stdin is not supported.")
+  
+  flag("license", "Print the legal information for this software and exit.")
 
   val csvTrace = flag("csv", "The trace-file or the input stream is in CSV format.")
 
@@ -73,6 +76,12 @@ object Main extends SexyOpt {
           System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors")
         }
         sys.exit(1)
+    }
+    
+    //TODO: Use better CL-Parser, which enables ignoring positional arguments when certain flags are set
+    if (args.contains("--license")) {
+        println(scala.io.Source.fromResource(licenseLocation).mkString)
+        sys.exit(0)
     }
 
     parse(args)
