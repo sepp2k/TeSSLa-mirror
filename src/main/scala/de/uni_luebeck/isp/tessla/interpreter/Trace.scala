@@ -1,5 +1,7 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
+import java.io.File
+
 import de.uni_luebeck.isp.tessla.{Location, Tessla}
 import de.uni_luebeck.isp.tessla.Errors.InternalError
 import de.uni_luebeck.isp.tessla.interpreter.Trace.TimeStamp
@@ -32,8 +34,8 @@ object Trace {
 
 class Trace(){
 
-  def fromCtfFile(ctfFileName: String, abortAt: Option[BigInt]): Interpreter.Trace = {
-    val reader = new CTFTraceReader(new CTFTrace(ctfFileName))
+  def fromCtfFile(ctfFile: File, abortAt: Option[BigInt]): Interpreter.Trace = {
+    val reader = new CTFTraceReader(new CTFTrace(ctfFile))
 
     new Iterator[Trace.Event] {
       private var eventCounter = 0
@@ -65,8 +67,8 @@ class Trace(){
     fromLineIterator(traceSource.getLines, fileName, abortAt)
   }
 
-  def fromFile(fileName: String, abortAt: Option[Specification.Time] = None) =
-    fromSource(Source.fromFile(fileName), fileName, abortAt)
+  def fromFile(file: File, abortAt: Option[Specification.Time] = None) =
+    fromSource(Source.fromFile(file), file.getName, abortAt)
 
   def fromString(string: String, fileName: String, abortAt: Option[Specification.Time] = None) =
     fromSource(Source.fromString(string), fileName, abortAt)
@@ -80,8 +82,8 @@ class Trace(){
     fromCsvLineIterator(traceSource.getLines, fileName, abortAt)
   }
 
-  def fromCsvFile(fileName: String, abortAt: Option[Specification.Time] = None) =
-    fromCsvSource(Source.fromFile(fileName), fileName, abortAt)
+  def fromCsvFile(file: File, abortAt: Option[Specification.Time] = None) =
+    fromCsvSource(Source.fromFile(file), file.getName, abortAt)
 
   def fromCsvString(string: String, fileName: String, abortAt: Option[Specification.Time] = None) =
     fromCsvSource(Source.fromString(string), fileName, abortAt)

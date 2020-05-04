@@ -34,7 +34,7 @@ publishTo := {
 credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials")
 
 libraryDependencies ++= Seq(
-  "de.uni_luebeck.isp" %% "sexyopt" % "0.1.1",
+  "com.github.scopt" %% "scopt" % "4.0.0-RC2",
   "com.github.rjeschke" % "txtmark" % "0.13",
   "org.scalatest" %% "scalatest" % "3.1.0" % "test",
   "com.typesafe.play" %% "play-json" % "2.8.0",
