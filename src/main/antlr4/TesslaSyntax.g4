@@ -32,7 +32,7 @@ body
 
 definitionHeader:
     tessladoc+=DOCLINE* NL*
-    annotations+=annotation*
+    liftable='liftable'? NL*
     'def' NL* name=ID
     ('[' NL* typeParameters+=ID (',' NL* typeParameters+=ID)* NL* ']')?
     ('(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')')?

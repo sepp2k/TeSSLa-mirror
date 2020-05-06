@@ -226,14 +226,12 @@ object Errors {
     override def message = s"@raw out statements can not have an 'as' clause"
   }
 
-  case class MacroAnnotationOnNonMacro(annotationId: Tessla.Identifier, defName: String) extends TesslaError {
-    override def message = s"The annotation $annotationId can only be applied to macro definitions, which $defName is not"
-
-    override def loc = annotationId.loc
+  case class LiftableOnNonMacro(loc: Location, defName: String) extends TesslaError {
+    override def message = s"Non-macro $defName can not be liftable"
   }
 
   case class UnliftableMacroType(loc: Location) extends TesslaError {
-    override def message = "Macro has been annotated with @liftable, but its type does not allow being lifted"
+    override def message = "Macro has been defined as liftable, but its type does not allow being lifted"
   }
 
   case class MemberNotDefined(ot: TypedTessla.ObjectType, member: String, loc: Location) extends TesslaError {

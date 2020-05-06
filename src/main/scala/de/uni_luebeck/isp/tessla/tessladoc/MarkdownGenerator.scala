@@ -102,14 +102,14 @@ class MarkdownGenerator(docs: TesslaDoc.Docs) {
       case definition: TesslaDoc.DefDoc =>
         val typeParams = typeParamsToMarkdown(definition.typeParameters)
         val params = parametersToMarkdown(definition.parameters)
-        val annotations = annotationsToMarkdown(definition.annotations)
+        val liftable = if (definition.isLiftable) "@liftable<br>\n" else ""
         val returnType = definition.returnType match {
           case Some(typ) => ": " + typeToMarkdown(typ)
           case None => ""
         }
         s"""<h3 class="mt-5 anchor"><a id="${toAnchor(prefix + definition.name)}">ANCHOR</a>${htmlEscape(prefix + definition.name)}</h3>
            |
-           |<code>$annotations${htmlEscape(definition.name)}${htmlEscape(typeParams)}$params${returnType}</code>
+           |<code>$liftable${htmlEscape(definition.name)}${htmlEscape(typeParams)}$params${returnType}</code>
            |
            |${definition.doc}
            |""".stripMargin

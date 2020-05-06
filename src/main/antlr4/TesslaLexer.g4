@@ -27,6 +27,7 @@ RBRACKET: ']';
 LPAR: '(';
 RPAR: ')';
 AT: '@';
+LIFTABLE: 'liftable';
 COMMA: ',';
 SEMI: ';';
 DOT: '.';

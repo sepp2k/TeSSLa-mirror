@@ -1,10 +1,8 @@
 ## Common Trace Format
 module CTF {
-  @liftable
-  def getInt(ctfObject: CTF, member: String): Int = __builtin__(CTF_getInt)
+  liftable def getInt(ctfObject: CTF, member: String): Int = __builtin__(CTF_getInt)
 
-  @liftable
-  def getString(ctfObject: CTF, member: String): String = __builtin__(CTF_getString)
+  liftable def getString(ctfObject: CTF, member: String): String = __builtin__(CTF_getString)
 }
 
 type CTF = __builtin__(CTF)

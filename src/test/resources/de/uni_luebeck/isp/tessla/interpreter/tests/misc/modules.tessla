@@ -5,8 +5,7 @@ module Foo {
 
   def bar = double(foo)
 
-  @liftable
-  def double(i: I) = i*2
+  liftable def double(i: I) = i*2
 
   type I = Int
 }
