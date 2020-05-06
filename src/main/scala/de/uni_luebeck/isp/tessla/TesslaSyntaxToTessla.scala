@@ -7,7 +7,7 @@ import scala.jdk.CollectionConverters._
 import scala.collection.mutable.ArrayBuffer
 
 class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
-    extends TranslationPhase.Translator[Tessla.Specification] with TesslaParser.CanParseConstantString {
+  extends TranslationPhase.Translator[Tessla.Specification] with TesslaParser.CanParseConstantString {
   override def translateSpec() = {
     val statements = spec.flatMap(res => res.tree.entries.asScala.map(_.statement).map(translateStatement(_, res.tokens)))
     checkForDuplicates(statements.flatMap(Tessla.getId))
@@ -30,8 +30,8 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     new StatementVisitor(tokens).visit(stat)
   }
 
-  def translateDefinition(definition: TesslaSyntax.DefContext) = {
-    val annotations = definition.header.annotations.asScala.map(translateAnnotation)
+  def translateDefinition(definition: TesslaSyntax.DefContext): Tessla.Definition = {
+    val liftable = definition.header.liftable != null
     val typeParameters = definition.header.typeParameters.asScala.map(mkID)
     checkForDuplicates(typeParameters.toSeq)
     val parameters = definition.header.parameters.asScala.map(translateParameter)
@@ -48,10 +48,9 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       case _ =>
     }
     val loc = Location.fromToken(definition.header.DEF).merge(Location.fromNode(definition.body))
-    Tessla.Definition(
-      annotations.toSeq, mkID(definition.header.name), typeParameters.toSeq, parameters.toSeq,
+    Tessla.Definition(mkID(definition.header.name), typeParameters.toSeq, parameters.toSeq,
       Option(definition.header.resultType).map(translateType),
-      Location.fromNode(definition.header), body, loc
+      Location.fromNode(definition.header), body, loc, liftable
     )
   }
 
@@ -368,6 +367,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
           Tessla.TimeLiteral(x, TimeUnit.fromString(intLit.timeUnit.getText, Location.fromToken(intLit.timeUnit)))
         }
       }
+
       if (intLit.DECINT != null) {
         Tessla.Literal(mkLit(BigInt(intLit.DECINT.getText)), Location.fromNode(intLit))
       } else {
@@ -466,6 +466,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       }
     }
   }
+
 }
 
 object TesslaSyntaxToTessla extends TranslationPhase[Seq[TesslaParser.ParseResult], Tessla.Specification] {

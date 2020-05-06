@@ -2,24 +2,19 @@
 module PrimitiveFunctions {}
 
 ## Compute the maximum of two integer values.
-@liftable
-def max(a: Int, b: Int): Int = if a > b then a else b
+liftable def max(a: Int, b: Int): Int = if a > b then a else b
 
 ## Compute the minimum of two integer values.
-@liftable
-def min(a: Int, b: Int): Int = if a < b then a else b
+liftable def min(a: Int, b: Int): Int = if a < b then a else b
 
 ## Converts any type into its typical string representation
-@liftable
-def toString[T](arg: T): String = __builtin__(toString)
+liftable def toString[T](arg: T): String = __builtin__(toString)
 
 ## Returns the value of the first argument raised to the power of the second argument.
-@liftable
-def pow(base: Float, exponent: Float): Float = __builtin__(pow)
+liftable def pow(base: Float, exponent: Float): Float = __builtin__(pow)
 
 ## Returns the logarithm to base `base` of `x`
-@liftable
-def log(x: Float, base: Float): Float = __builtin__(log)
+liftable def log(x: Float, base: Float): Float = __builtin__(log)
 
 ## Returns the trigonometric sine of an angle `x` in radians.
 ##
@@ -27,16 +22,14 @@ def log(x: Float, base: Float): Float = __builtin__(log)
 ##
 ## * If the argument is NaN or an infinity, then the result is NaN.
 ## * If the argument is zero, then the result is a zero with the same sign as the argument.
-@liftable
-def sin(x: Float): Float = __builtin__(sin)
+liftable def sin(x: Float): Float = __builtin__(sin)
 
 ## Returns the trigonometric cosine of an angle in radians.
 ##
 ## Special cases:
 ##
 ## * If the argument is NaN or an infinity, then the result is NaN.
-@liftable
-def cos(x: Float): Float = __builtin__(cos)
+liftable def cos(x: Float): Float = __builtin__(cos)
 
 ## Returns the trigonometric tangent of an angle in radians.
 ## 
@@ -44,8 +37,7 @@ def cos(x: Float): Float = __builtin__(cos)
 ##
 ## * If the argument is NaN or an infinity, then the result is NaN.
 ## * If the argument is zero, then the result is a zero with the same sign as the argument.
-@liftable
-def tan(x: Float): Float = __builtin__(tan)
+liftable def tan(x: Float): Float = __builtin__(tan)
 
 ## Returns the arc tangent of a value; the returned angle is in the range _-π/2_ through _π/2_.
 ## 
@@ -53,13 +45,10 @@ def tan(x: Float): Float = __builtin__(tan)
 ##
 ## * If the argument is NaN, then the result is NaN.
 ## * If the argument is zero, then the result is a zero with the same sign as the argument.
-@liftable
-def atan(x: Float): Float = __builtin__(atan)
+liftable def atan(x: Float): Float = __builtin__(atan)
 
 ## Converts the given integer to a float.
-@liftable
-def intToFloat(x: Int): Float = __builtin__(intToFloat)
+liftable def intToFloat(x: Int): Float = __builtin__(intToFloat)
 
 ## Converts the given float to an integer removing the decimal part
-@liftable
-def floatToInt(x: Float): Int = __builtin__(floatToInt)
+liftable def floatToInt(x: Float): Int = __builtin__(floatToInt)

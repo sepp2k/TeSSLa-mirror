@@ -5,190 +5,159 @@ module Operators {
   ## **Operator usage:** `!x`
   ##
   ## Boolean complement
-  @liftable
-  def not(arg: Bool): Bool = __builtin__(not)
+  liftable def not(arg: Bool): Bool = __builtin__(not)
 
   ## **Operator usage:** `if c then a else b`
   ##
   ## If-Then-Else
-  @liftable
-  def ite[T](cond: Bool, thenCase: T, elseCase: T): T = __builtin__(ite)
+  liftable def ite[T](cond: Bool, thenCase: T, elseCase: T): T = __builtin__(ite)
 
   ## **Operator usage:** `a && b`
   ##
   ## Boolean conjunction
-  @liftable
-  def and(lhs: Bool, rhs: Bool): Bool = __builtin__(and)
+  liftable def and(lhs: Bool, rhs: Bool): Bool = __builtin__(and)
 
   ## **Operator usage:** `a || b`
   ##
   ## Boolean disjunction
-  @liftable
-  def or(lhs: Bool, rhs: Bool): Bool = __builtin__(or)
+  liftable def or(lhs: Bool, rhs: Bool): Bool = __builtin__(or)
 
   ## **Operator usage:** `a == b`
   ##
   ## Equivalence on arbitrary data types. On complex data structures this operator checks the object's identity. Note,
   ## that this operator is defined as `@liftable`, so it does neither check the equivalence nor the identity of streams,
   ## but applies the operator on two streams using the signal semantics.
-  @liftable
-  def eq[T](lhs: T, rhs: T): Bool = __builtin__(eq)
+  liftable def eq[T](lhs: T, rhs: T): Bool = __builtin__(eq)
 
   ## **Operator usage:** `a != b`
   ##
   ## Non-Equivalence on arbitrary data types. On complex data structures this operator checks the object's identity. Note,
   ## that this operator is defined as `@liftable`, so it does neither check the equivalence nor the identity of streams,
   ## but applies the operator on two streams using the signal semantics.
-  @liftable
-  def neq[T](lhs: T, rhs: T): Bool = __builtin__(neq)
+  liftable def neq[T](lhs: T, rhs: T): Bool = __builtin__(neq)
 
   ## **Operator usage:** `a > b`
   ##
   ## Returns [`true`](#true) if `a` is strictly greater than `b`
-  @liftable
-  def gt(lhs: Int, rhs: Int): Bool = __builtin__(gt)
+  liftable def gt(lhs: Int, rhs: Int): Bool = __builtin__(gt)
 
   ## **Operator usage:** `a < b`
   ##
   ## Returns [`true`](#true) if `a` is strictly lower than `b`
-  @liftable
-  def lt(lhs: Int, rhs: Int): Bool = __builtin__(lt)
+  liftable def lt(lhs: Int, rhs: Int): Bool = __builtin__(lt)
 
   ## **Operator usage:** `a >= b`
   ##
   ## Returns [`true`](#true) if `a` is greater than or equal to `b`
-  @liftable
-  def geq(lhs: Int, rhs: Int): Bool = __builtin__(geq)
+  liftable def geq(lhs: Int, rhs: Int): Bool = __builtin__(geq)
 
   ## **Operator usage:** `a <= b`
   ##
   ## Returns [`true`](#true) if `a` is lower than or equal to `b`
-  @liftable
-  def leq(lhs: Int, rhs: Int): Bool = __builtin__(leq)
+  liftable def leq(lhs: Int, rhs: Int): Bool = __builtin__(leq)
 
   ## **Operator usage:** `a >. b`
   ##
   ## Returns [`true`](#true) if `a` is strictly greater than `b`
-  @liftable
-  def fgt(lhs: Float, rhs: Float): Bool = __builtin__(fgt)
+  liftable def fgt(lhs: Float, rhs: Float): Bool = __builtin__(fgt)
 
   ## **Operator usage:** `a <. b`
   ##
   ## Returns [`true`](#true) if `a` is strictly lower than `b`
-  @liftable
-  def flt(lhs: Float, rhs: Float): Bool = __builtin__(flt)
+  liftable def flt(lhs: Float, rhs: Float): Bool = __builtin__(flt)
 
   ## **Operator usage:** `a >=. b`
   ##
   ## Returns [`true`](#true) if `a` is greater than or equal to `b`
-  @liftable
-  def fgeq(lhs: Float, rhs: Float): Bool = __builtin__(fgeq)
+  liftable def fgeq(lhs: Float, rhs: Float): Bool = __builtin__(fgeq)
 
   ## **Operator usage:** `a <=. b`
   ##
   ## Returns [`true`](#true) if `a` is lower than or equal to `b`
-  @liftable
-  def fleq(lhs: Float, rhs: Float): Bool = __builtin__(fleq)
+  liftable def fleq(lhs: Float, rhs: Float): Bool = __builtin__(fleq)
 
   ## **Operator usage:** `a + b`
   ##
   ## Returns the sum of two integers
-  @liftable
-  def add(lhs: Int, rhs: Int): Int = __builtin__(add)
+  liftable def add(lhs: Int, rhs: Int): Int = __builtin__(add)
 
   ## **Operator usage:** `a - b`
   ##
   ## Returns the difference of two integers
-  @liftable
-  def sub(lhs: Int, rhs: Int): Int = __builtin__(sub)
+  liftable def sub(lhs: Int, rhs: Int): Int = __builtin__(sub)
 
   ## **Operator usage:** `a * b`
   ##
   ## Returns the multiplication of two integers
-  @liftable
-  def mul(lhs: Int, rhs: Int): Int = __builtin__(mul)
+  liftable def mul(lhs: Int, rhs: Int): Int = __builtin__(mul)
 
   ## **Operator usage:** `a / b`
   ##
   ## Returns the division of two integers
-  @liftable
-  def div(lhs: Int, rhs: Int): Int = __builtin__(div)
+  liftable def div(lhs: Int, rhs: Int): Int = __builtin__(div)
 
   ## **Operator usage:** `a % b`
   ##
   ## Returns the remainder of two integers
-  @liftable
-  def mod(lhs: Int, rhs: Int): Int = __builtin__(mod)
+  liftable def mod(lhs: Int, rhs: Int): Int = __builtin__(mod)
 
   ## **Operator usage:** `-a`
   ##
   ## Unary minus on integers
-  @liftable
-  def negate(arg: Int): Int = __builtin__(negate)
+  liftable def negate(arg: Int): Int = __builtin__(negate)
 
   ## **Operator usage:** `a & b`
   ##
   ## Bitwise AND on integers
-  @liftable
-  def bitand(lhs: Int, rhs: Int): Int = __builtin__(bitand)
+  liftable def bitand(lhs: Int, rhs: Int): Int = __builtin__(bitand)
 
   ## **Operator usage:** `a | b`
   ##
   ## Bitwise OR on integers
-  @liftable
-  def bitor(lhs: Int, rhs: Int): Int = __builtin__(bitor)
+  liftable def bitor(lhs: Int, rhs: Int): Int = __builtin__(bitor)
 
   ## **Operator usage:** `a ^ b`
   ##
   ## Bitwise XOR on integers
-  @liftable
-  def bitxor(lhs: Int, rhs: Int): Int = __builtin__(bitxor)
+  liftable def bitxor(lhs: Int, rhs: Int): Int = __builtin__(bitxor)
 
   ## **Operator usage:** `~a`
   ##
   ## Bitflip on integers
-  @liftable
-  def bitflip(arg: Int): Int = __builtin__(bitflip)
+  liftable def bitflip(arg: Int): Int = __builtin__(bitflip)
 
   ## **Operator usage:** `a << b`
   ##
   ## Arithmetic left shift on integers
-  @liftable
-  def leftshift(lhs: Int, rhs: Int): Int = __builtin__(leftshift)
+  liftable def leftshift(lhs: Int, rhs: Int): Int = __builtin__(leftshift)
 
   ## **Operator usage:** `a >> b`
   ##
   ## Arithmetic right shift on integers
-  @liftable
-  def rightshift(lhs: Int, rhs: Int): Int = __builtin__(rightshift)
+  liftable def rightshift(lhs: Int, rhs: Int): Int = __builtin__(rightshift)
 
   ## **Operator usage:** `a +. b`
   ##
   ## Returns the sum of two floats
-  @liftable
-  def fadd(lhs: Float, rhs: Float): Float = __builtin__(fadd)
+  liftable def fadd(lhs: Float, rhs: Float): Float = __builtin__(fadd)
 
   ## **Operator usage:** `a -. b`
   ##
   ## Returns the difference of two floats
-  @liftable
-  def fsub(lhs: Float, rhs: Float): Float = __builtin__(fsub)
+  liftable def fsub(lhs: Float, rhs: Float): Float = __builtin__(fsub)
 
   ## **Operator usage:** `a *. b`
   ##
   ## Returns the multiplication of two floats
-  @liftable
-  def fmul(lhs: Float, rhs: Float): Float = __builtin__(fmul)
+  liftable def fmul(lhs: Float, rhs: Float): Float = __builtin__(fmul)
 
   ## **Operator usage:** `a /. b`
   ##
   ## Returns the division of two floats
-  @liftable
-  def fdiv(lhs: Float, rhs: Float): Float = __builtin__(fdiv)
+  liftable def fdiv(lhs: Float, rhs: Float): Float = __builtin__(fdiv)
 
   ## **Operator usage:** `-.a`
   ##
   ## Unary minus on floats
-  @liftable
-  def fnegate(arg: Float): Float = __builtin__(fnegate)
+  liftable def fnegate(arg: Float): Float = __builtin__(fnegate)
 }

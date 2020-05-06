@@ -1,7 +1,6 @@
 in a: Events[Int]
 
-@liftable
-def f[T](x: T) := x
+liftable def f[T](x: T) := x
 
 out a + 1
 out a+1

@@ -1,10 +1,8 @@
 in x: Events[Int]
 
-@liftable
-def f[T](x: T) := "<$x>"
+liftable def f[T](x: T) := "<$x>"
 
-@liftable
-def g[T, U](x: T, y: U) := "[$x${":"} ${y}]"
+liftable def g[T, U](x: T, y: U) := "[$x${":"} ${y}]"
 
 def 💩 := x+1
 

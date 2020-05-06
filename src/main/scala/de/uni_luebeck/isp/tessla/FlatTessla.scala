@@ -69,8 +69,8 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
                    loc: Location,
                    isLiftable: Boolean) extends Expression {
     override def toString = {
-      val annotationString = if (isLiftable) "@liftable " else ""
-      s"$annotationString[${typeParameters.mkString(", ")}](${parameters.mkString(", ")}) => {\n$body\n$result\n}"
+      val liftable = if (isLiftable) "liftable " else ""
+      s"$liftable[${typeParameters.mkString(", ")}](${parameters.mkString(", ")}) => {\n$body\n$result\n}"
     }
   }
 

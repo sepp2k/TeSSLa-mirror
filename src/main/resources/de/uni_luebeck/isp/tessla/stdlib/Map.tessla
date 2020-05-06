@@ -2,35 +2,26 @@
 module Map {
   def empty[K, V]: Map[K, V] = __builtin__(Map_empty)
 
-  @liftable
-  def add[K, V](map: Map[K, V], key: K, value: V): Map[K, V] = __builtin__(Map_add)
+  liftable def add[K, V](map: Map[K, V], key: K, value: V): Map[K, V] = __builtin__(Map_add)
 
-  @liftable
-  def contains[K, V](map: Map[K, V], key: K): Bool = __builtin__(Map_contains)
+  liftable def contains[K, V](map: Map[K, V], key: K): Bool = __builtin__(Map_contains)
 
-  @liftable
-  def get[K, V](map: Map[K, V], key: K): V = __builtin__(Map_get)
+  liftable def get[K, V](map: Map[K, V], key: K): V = __builtin__(Map_get)
 
-  @liftable
-  def remove[K, V](map: Map[K, V], key: K): Map[K, V] = __builtin__(Map_remove)
+  liftable def remove[K, V](map: Map[K, V], key: K): Map[K, V] = __builtin__(Map_remove)
 
-  @liftable
-  def size[K, V](map: Map[K, V]): Int = __builtin__(Map_size)
+  liftable def size[K, V](map: Map[K, V]): Int = __builtin__(Map_size)
 
-  @liftable
-  def keys[K, V](map: Map[K, V]): List[K] = __builtin__(Map_keys)
+  liftable def keys[K, V](map: Map[K, V]): List[K] = __builtin__(Map_keys)
 
-  @liftable
-  def fold[K, V, R](map: Map[K, V], start: R, f: (R, K, V) => R): R = __builtin__(Map_fold)
+  liftable def fold[K, V, R](map: Map[K, V], start: R, f: (R, K, V) => R): R = __builtin__(Map_fold)
 
-  @liftable
-  def getOrElse[K,V](map: Map[K, V], key: K, default: V): V =
+  liftable def getOrElse[K,V](map: Map[K, V], key: K, default: V): V =
     if contains(map, key)
     then get(map, key)
     else default
 
-  @liftable
-  def inc[K](counts: Map[K, Int], key: K): Map[K, Int] =
+  liftable def inc[K](counts: Map[K, Int], key: K): Map[K, Int] =
     add(counts, key, getOrElse(counts, key, 0) + 1)
 
   def collectCount[T](events: Events[T]): Events[Map[T, Int]] =

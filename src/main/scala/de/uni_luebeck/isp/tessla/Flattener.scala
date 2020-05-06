@@ -175,12 +175,9 @@ class Flattener(spec: Tessla.Specification)
       case Tessla.ExpressionBody(block: Tessla.Block) => (block.definitions, Tessla.ExpressionBody(block.expression))
       case b => (Seq(), b)
     }
-    val annotations = definition.annotations.map(translateAnnotation)
-    val liftableAnnotation = definition.annotations.find(_.name == "liftable")
     if (definition.parameters.isEmpty && definition.typeParameters.isEmpty) {
-      liftableAnnotation.foreach { annotation =>
-        throw MacroAnnotationOnNonMacro(annotation.id, definition.id.name)
-      }
+      if (definition.isLiftable) throw LiftableOnNonMacro(definition.loc, definition.id.name)
+
       // For parameterless definitions, inner definitions become part of the global defs in flat tessla.
       // Flat tessla only has distinct defs for macros with parameters (as those need to be instantiated
       // multiple times)
@@ -197,7 +194,7 @@ class Flattener(spec: Tessla.Specification)
           }
           FlatTessla.BuiltInOperator(b.id.name, Seq(), Seq(), referenceImplementation, b.id.loc)
       }
-      defs.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), exp, typ, annotations, definition.headerLoc))
+      defs.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), exp, typ, Seq(), definition.headerLoc))
     } else {
       val innerDefs = new FlatTessla.Definitions(Some(defs))
       val paramIdMap = createIdMap(definition.parameters.map(_.id.name))
@@ -227,19 +224,19 @@ class Flattener(spec: Tessla.Specification)
         val expId = expToId(exp, innerDefs, returnTypeOpt)
         val mac = FlatTessla.Macro(
           typeParameters, parameters, innerDefs, returnTypeOpt, definition.headerLoc, FlatTessla.IdLoc(expId, exp.loc),
-          definition.loc, isLiftable = liftableAnnotation.isDefined
+          definition.loc, isLiftable = definition.isLiftable
         )
         val typ = returnTypeOpt.map { returnType =>
           FlatTessla.FunctionType(typeParameters, parameters.map(_.parameterType), returnType, mac.isLiftable)
         }
-        defs.addVariable(FlatTessla.VariableEntry(id, mac, typ, annotations, definition.headerLoc))
+        defs.addVariable(FlatTessla.VariableEntry(id, mac, typ, Seq(), definition.headerLoc))
       }
       defBody match {
         case b: Tessla.ExpressionBody =>
           expBody(b.exp, env.variables(definition.id.name))
         case b: Tessla.BuiltInBody =>
           val typ = returnTypeOpt.map { returnType =>
-            FlatTessla.FunctionType(typeParameters, parameters.map(_.parameterType), returnType, liftableAnnotation.isDefined)
+            FlatTessla.FunctionType(typeParameters, parameters.map(_.parameterType), returnType, definition.isLiftable)
           }
           val referenceImplementation = b.referenceImplementation.map { exp =>
             val id = makeIdentifier()
@@ -247,7 +244,7 @@ class Flattener(spec: Tessla.Specification)
             id
           }
           val builtIn = FlatTessla.BuiltInOperator(b.id.name, typeParameters, parameters, referenceImplementation, b.loc)
-          defs.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), builtIn, typ, annotations, definition.headerLoc))
+          defs.addVariable(FlatTessla.VariableEntry(env.variables(definition.id.name), builtIn, typ, Seq(), definition.headerLoc))
       }
     }
   }

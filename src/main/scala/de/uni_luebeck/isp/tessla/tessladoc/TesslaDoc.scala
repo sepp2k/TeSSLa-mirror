@@ -10,12 +10,15 @@ import scala.jdk.CollectionConverters._
 
 sealed abstract class TesslaDoc extends TesslaDoc.DocElement {
   def isGlobal: Boolean
+
   def doc: String
 }
 
 object TesslaDoc {
+
   trait DocElement {
     def toJSON: String
+
     override def toString = toJSON
   }
 
@@ -83,7 +86,7 @@ object TesslaDoc {
   }
 
   case class ObjectType(members: Map[String, Type]) extends Type {
-    override def toString = members.map{case (name, typ) => s"$name: $typ"}.mkString("{", ", ", "}")
+    override def toString = members.map { case (name, typ) => s"$name: $typ" }.mkString("{", ", ", "}")
   }
 
   case class TupleType(members: Seq[Type]) extends Type {
@@ -100,14 +103,14 @@ object TesslaDoc {
     override def toJSON = scopeLocation.toJSON
   }
 
-  case class DefDoc( annotations: Seq[String],
-                     name: String,
-                     typeParameters: Seq[String],
-                     parameters: Seq[Param],
-                     returnType: Option[Type],
-                     scope: Scope,
-                     doc: String,
-                     loc: Location) extends TesslaDoc {
+  case class DefDoc(name: String,
+                    typeParameters: Seq[String],
+                    parameters: Seq[Param],
+                    returnType: Option[Type],
+                    scope: Scope,
+                    doc: String,
+                    loc: Location,
+                    isLiftable: Boolean) extends TesslaDoc {
     override def toJSON = {
       var str =
         s"""{
@@ -164,7 +167,7 @@ object TesslaDoc {
         TupleType(members = tupleType.elementTypes.asScala.map(visit).toSeq)
 
       override def visitObjectType(objectType: TesslaSyntax.ObjectTypeContext) =
-        ObjectType(members = objectType.memberSigs.asScala.map{ memberSig =>
+        ObjectType(members = objectType.memberSigs.asScala.map { memberSig =>
           memberSig.name.getText -> visit(memberSig.`type`())
         }.toMap)
 
@@ -181,21 +184,21 @@ object TesslaDoc {
       override def visitDef(definition: TesslaSyntax.DefContext) = {
         val header = definition.header
         val doc = DefDoc(
-          annotations = header.annotations.asScala.map(_.ID().getText).toSeq,
           name = header.name.getText,
           typeParameters = header.typeParameters.asScala.map(_.getText).toSeq,
           parameters = header.parameters.asScala.map(p => Param(p.ID.getText, TypeVisitor.visit(p.parameterType))).toSeq,
           returnType = Option(header.resultType).map(TypeVisitor.visit),
           scope = scope,
           doc = getDoc(header.tessladoc.asScala.toSeq),
-          loc = Location.fromNode(definition)
+          loc = Location.fromNode(definition),
+          isLiftable = definition.header.liftable != null,
         )
         val body = definition.body
         body match {
           case body: TesslaSyntax.ExpressionBodyContext =>
             val whereLoc = Option(body.LBRACE).map(lb => Location.fromToken(lb).merge(Location.fromToken(body.RBRACE)))
             val whereDefs = whereLoc.map(loc => body.defs.asScala.flatMap(new StatementVisitor(Local(loc))))
-            doc +: (this(body.expression) ++ whereDefs.getOrElse(Seq()))
+            doc +: (this (body.expression) ++ whereDefs.getOrElse(Seq()))
           case _ =>
             Seq(doc)
         }
@@ -245,7 +248,7 @@ object TesslaDoc {
         }
       results.andThen(new Extractor(_).translate())
     }.andThen { docsForFiles =>
-      if(includeStdlib) {
+      if (includeStdlib) {
         forStdlib.map { docsForStdlib =>
           docsForStdlib +: docsForFiles
         }

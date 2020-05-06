@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors.ParserError
 
 object Tessla {
+
   case class Specification(statements: Seq[Statement]) {
     override def toString = statements.mkString("\n")
   }
@@ -15,18 +16,18 @@ object Tessla {
     def loc: Location
   }
 
-  case class Definition( annotations: Seq[Annotation],
-                         id: Identifier,
-                         typeParameters: Seq[Identifier],
-                         parameters: Seq[Parameter],
-                         returnType: Option[Type],
-                         headerLoc: Location,
-                         body: Body,
-                         loc: Location) extends Statement {
+  case class Definition(id: Identifier,
+                        typeParameters: Seq[Identifier],
+                        parameters: Seq[Parameter],
+                        returnType: Option[Type],
+                        headerLoc: Location,
+                        body: Body,
+                        loc: Location,
+                        isLiftable: Boolean) extends Statement {
     override def toString = toString(objectNotation = false)
 
     def toString(objectNotation: Boolean) = {
-      val annotationList = annotations.map("@" + _ + "\n").mkString
+      val liftable = if (isLiftable) "liftable " else ""
       val typeParameterList =
         if (typeParameters.isEmpty) ""
         else typeParameters.mkString("[", ", ", "]")
@@ -35,7 +36,7 @@ object Tessla {
         else parameters.mkString("(", ", ", ")")
       val defString = if (objectNotation) "" else "def "
       val assign = if (objectNotation) "=" else ":="
-      s"$annotationList$defString$id$typeParameterList$parameterList $assign $body"
+      s"$liftable$defString$id$typeParameterList$parameterList $assign $body"
     }
   }
 
@@ -127,12 +128,15 @@ object Tessla {
 
   sealed abstract class Expression extends Location.HasLoc {
     def loc: Location
+
     def toString(inner: Boolean): String
+
     override def toString: String = toString(false)
   }
 
   case class Variable(id: Identifier) extends Expression {
     def loc = id.loc
+
     override def toString(inner: Boolean) = id.name
   }
 
@@ -206,6 +210,7 @@ object Tessla {
 
   sealed abstract class LiteralValue {
     def value: Any
+
     override def toString = value.toString
   }
 
@@ -234,6 +239,7 @@ object Tessla {
   sealed abstract class ConstantExpression extends Location.HasLoc
 
   object ConstantExpression {
+
     case class Literal(value: LiteralValue, loc: Location) extends ConstantExpression {
       override def toString = value.toString
     }
@@ -245,6 +251,7 @@ object Tessla {
         }.mkString("{", ", ", "}")
       }
     }
+
   }
 
   abstract class Argument[T <: Location.HasLoc] extends Location.HasLoc {
@@ -253,12 +260,15 @@ object Tessla {
 
   case class PositionalArgument[T <: Location.HasLoc](expr: T) extends Argument[T] {
     override def toString = expr.toString
+
     def loc = expr.loc
   }
 
   case class NamedArgument[T <: Location.HasLoc](id: Identifier, expr: T) extends Argument[T] {
     override def toString = s"$id = $expr"
+
     def name = id.name
+
     def loc = id.loc.merge(expr.loc)
   }
 
@@ -268,6 +278,7 @@ object Tessla {
 
   case class SimpleType(id: Identifier) extends Type {
     def loc = id.loc
+
     override def toString = id.name
   }
 
@@ -281,7 +292,7 @@ object Tessla {
 
   case class ObjectType(memberTypes: Map[Identifier, Type], isOpen: Boolean, loc: Location) extends Type {
     override def toString = {
-      var members = memberTypes.toSeq.map {case (name, t) => s"$name : $t"}
+      var members = memberTypes.toSeq.map { case (name, t) => s"$name : $t" }
       if (isOpen) {
         members :+= ".."
       }

@@ -1,11 +1,9 @@
 in x: Events[Int]
 in y: Events[Int]
 
-@liftable
-def second[T, U](x: T, y: U): U := y
+liftable def second[T, U](x: T, y: U): U := y
 
-@liftable
-def add(x: Int, y: Int): Int := x+y
+liftable def add(x: Int, y: Int): Int := x+y
 
 out second(x, y)
 out add(x, y)
