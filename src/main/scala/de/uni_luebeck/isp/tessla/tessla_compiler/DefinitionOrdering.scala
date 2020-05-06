@@ -18,7 +18,7 @@ object DefinitionOrdering {
         case ExpressionRef(id, _, _) if input.contains(id) => calcMissingDependencies(id, input(id))
         case TypeApplicationExpression(e, _, _) => calcExpressionDependencies(e)
         case RecordConstructorExpression(entries, _) => entries.foreach{case (_,(exp,_)) => calcExpressionDependencies(exp)}
-        case RecordAccesorExpression(_, target, _, _) => calcExpressionDependencies(target)
+        case RecordAccessorExpression(_, target, _, _) => calcExpressionDependencies(target)
         case _ => ()
       }
     }

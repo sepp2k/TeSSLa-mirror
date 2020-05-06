@@ -101,17 +101,17 @@ object IntermediateCodeUtils {
 
   implicit def typeConversion(t: Type): ImpLanType = {
     t match {
-      case InstatiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Unclean solution but not easy to surpass because of implicit
+      case InstantiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Unclean solution but not easy to surpass because of implicit
       case RecordType(entries, _) if entries.isEmpty => UnitType
       case RecordType(entries, _) if entries.size == 1 => typeConversion(entries.toSeq.head._2._1)
-      case InstatiatedType("Bool", Seq(), _) => BoolType
-      case InstatiatedType("Int", Seq(), _) => LongType
-      case InstatiatedType("Float", Seq(), _) => DoubleType
-      case InstatiatedType("String", Seq(), _) => StringType
-      case InstatiatedType("Option", Seq(t), _) => OptionType(t)
-      case InstatiatedType("Set", Seq(t), _) => ImmutableSetType(t)
-      case InstatiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
-      case InstatiatedType("List", Seq(t), _) => ImmutableListType(t)
+      case InstantiatedType("Bool", Seq(), _) => BoolType
+      case InstantiatedType("Int", Seq(), _) => LongType
+      case InstantiatedType("Float", Seq(), _) => DoubleType
+      case InstantiatedType("String", Seq(), _) => StringType
+      case InstantiatedType("Option", Seq(t), _) => OptionType(t)
+      case InstantiatedType("Set", Seq(t), _) => ImmutableSetType(t)
+      case InstantiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
+      case InstantiatedType("List", Seq(t), _) => ImmutableListType(t)
       case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) => IntermediateCode.FunctionType(paramTypes.map{case (_,t) => typeConversion(t)}, typeConversion(resultType)) //TODO: Type params
       case RecordType(entries, _) => {
         val sortedEntries = entries.toSeq.sortWith{case ((n1, _), (n2, _)) => n1.name < n2.name}
@@ -120,7 +120,7 @@ object IntermediateCodeUtils {
         StructType(types, names)
       }
       case TypeParam(_, _) => GeneralType //TODO: Resolve type params if possible //TODO: Introduce GenericType in Intermediate Code for Rust translation
-      case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $i not supported")
+      case i: InstantiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $i not supported")
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
   }
@@ -129,17 +129,17 @@ object IntermediateCodeUtils {
     t match {
       case RecordType(entries, _) if entries.isEmpty => UnitValue
       case RecordType(entries, _) if entries.size == 1 => defaultValueForType(entries.toSeq.head._2._1)
-      case InstatiatedType("Bool", Seq(), _) => BoolValue(false)
-      case InstatiatedType("Int", Seq(), _) => LongValue(0)
-      case InstatiatedType("Float", Seq(), _) => DoubleValue(0)
-      case InstatiatedType("String", Seq(), _) => StringValue("")
-      case InstatiatedType("Option", Seq(t), _) => None(t)
-      case InstatiatedType("Set", Seq(t), _) => EmptyImmutableSet(t)
-      case InstatiatedType("Map", Seq(t1, t2), _) => EmptyImmutableMap(t1, t2)
-      case InstatiatedType("List", Seq(t), _) => EmptyImmutableList(t)
+      case InstantiatedType("Bool", Seq(), _) => BoolValue(false)
+      case InstantiatedType("Int", Seq(), _) => LongValue(0)
+      case InstantiatedType("Float", Seq(), _) => DoubleValue(0)
+      case InstantiatedType("String", Seq(), _) => StringValue("")
+      case InstantiatedType("Option", Seq(t), _) => None(t)
+      case InstantiatedType("Set", Seq(t), _) => EmptyImmutableSet(t)
+      case InstantiatedType("Map", Seq(t1, t2), _) => EmptyImmutableMap(t1, t2)
+      case InstantiatedType("List", Seq(t), _) => EmptyImmutableList(t)
       case TesslaAST.Core.FunctionType(_, _, _, _) => EmptyFunction(t)
       case TypeParam(_, _) => GeneralValue //TODO: Introduce GenericType in Intermediate Code for Rust translation
-      case i: InstatiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
+      case i: InstantiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
       case RecordType(entries, _) => StructValue(entries.map{case (n,t) => (n.name, defaultValueForType(t._1))})
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $t not supported")
     }
@@ -147,7 +147,7 @@ object IntermediateCodeUtils {
 
   def defaultValueForStreamType(t: Type): ImpLanVal = {
     t match {
-      case InstatiatedType("Events", Seq(t), _) => defaultValueForType(t)
+      case InstantiatedType("Events", Seq(t), _) => defaultValueForType(t)
       case _ => throw tessla_compiler.Errors.CoreASTError(s"Stream type required but non-stream type $t passed.")
     }
   }

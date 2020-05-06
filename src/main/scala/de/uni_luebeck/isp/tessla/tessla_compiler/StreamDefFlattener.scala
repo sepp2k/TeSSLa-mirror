@@ -43,7 +43,7 @@ class StreamDefFlattener extends TranslationPhase[Core.Specification, Core.Speci
 
     definitions.foreach { case (id, definition) => {
       definition.tpe match {
-        case InstatiatedType("Events", _, _) => flatten(Some(id), definition)
+        case InstantiatedType("Events", _, _) => flatten(Some(id), definition)
         case _ => newDef += (id -> definition)
       }
     }

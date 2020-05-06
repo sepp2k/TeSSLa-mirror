@@ -17,7 +17,7 @@ object NonStreamCodeGenerator {
       case TypeApplicationExpression(app, types, _) => translateFunctionCall(app, args, typeArgs ++ types, defContext)
       case ExternExpression(_, _, _, "true", _) => BoolValue(true)
       case ExternExpression(_, _, _, "false", _) => BoolValue(false)
-      case ExternExpression(tps, _, InstatiatedType("Option", Seq(t), _), "None", _) => None(t.resolve(tps.zip(typeArgs).toMap))
+      case ExternExpression(tps, _, InstantiatedType("Option", Seq(t), _), "None", _) => None(t.resolve(tps.zip(typeArgs).toMap))
       case ExternExpression(typeParams, params, resultType, name, _) => {
         val typeParamMap = typeParams.zip(typeArgs).toMap
         FunctionCall(s"__${name}__", args, FunctionType(params.map{case (_,t) => IntermediateCodeUtils.typeConversion(t.resolve(typeParamMap))}, IntermediateCodeUtils.typeConversion(resultType.resolve(typeParamMap))))
@@ -66,7 +66,7 @@ object NonStreamCodeGenerator {
       case ExternExpression(typeParams, params, resultType, name, location) => ???
       case RecordConstructorExpression(entries, _) if entries.isEmpty => UnitValue
       case RecordConstructorExpression(entries, _) => MkStruct(entries.toSeq.map{case (n, (ea, _)) => (n.name, translateExpressionArg(ea, defContext))}, e.tpe)
-      case RecordAccesorExpression(name, target, _, _) => GetStruct(translateExpressionArg(target), name.name, target.tpe)
+      case RecordAccessorExpression(name, target, _, _) => GetStruct(translateExpressionArg(target), name.name, target.tpe)
       case _ => ???
     }
   }
@@ -87,7 +87,7 @@ object NonStreamCodeGenerator {
         case ApplicationExpression(applicable, args, location) => ApplicationExpression(reInlineTempVars(applicable, defContext), args.map{a => reInlineTempVars(a, defContext)}, location)
         case TypeApplicationExpression(applicable, typeArgs, location) => TypeApplicationExpression(reInlineTempVars(applicable, defContext), typeArgs, location)
         case RecordConstructorExpression(entries, location) => RecordConstructorExpression(entries.map{case (n,(e,l)) => (n, (reInlineTempVars(e, defContext), l))}, location)
-        case RecordAccesorExpression(name, target, nameLoc, location) => RecordAccesorExpression(name, reInlineTempVars(target, defContext), nameLoc, location)
+        case RecordAccessorExpression(name, target, nameLoc, location) => RecordAccessorExpression(name, reInlineTempVars(target, defContext), nameLoc, location)
         case _ => e
       }
       case _ => e

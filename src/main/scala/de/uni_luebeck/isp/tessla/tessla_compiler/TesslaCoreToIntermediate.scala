@@ -39,7 +39,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
 
     DefinitionOrdering.order(definitions).foreach { case (id, definition) => {
       currSource = definition.tpe match {
-        case InstatiatedType("Events", _, _) => definition match {
+        case InstantiatedType("Events", _, _) => definition match {
           case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, typeArgs, _), args, _) => translateExternSignalExpression(id, e, args, typeArgs, currSource)
           case ApplicationExpression(e: ExternExpression, args, _) => translateExternSignalExpression(id, e, args, Seq(), currSource) //TODO: Does this exist?
           case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
