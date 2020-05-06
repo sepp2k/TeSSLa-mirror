@@ -126,7 +126,11 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
     maxIdentifier: Long
   ) {
     def print(options: PrintOptions) = {
-      val i = in.map(s => withTypeAnnotation(_ => s"in ${s._1}", s._2._1, types = true, mayNeedBraces = false)).mkString("\n")
+      val i = in.map { s =>
+        val as = printAnnotations(s._2._2, options)
+        (if (as.nonEmpty) as.mkString("", "\n", "\n") else "") +
+          withTypeAnnotation(_ => s"in ${s._1}", s._2._1, types = true, mayNeedBraces = false)
+      }.mkString("\n")
       val o = out.map { x =>
         val as = printAnnotations(x._2, options)
         (if (as.nonEmpty) as.mkString("", "\n", "\n") else "") + "out " + x._1
