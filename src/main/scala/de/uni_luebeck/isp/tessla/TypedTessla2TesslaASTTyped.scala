@@ -111,7 +111,8 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
     val outs = spec.outStreams.map { out =>
       val annotations = translateAnnotations(out.annotations)
       val name = Map("name" -> ArraySeq(Typed.StringLiteralExpression(out.name)))
-      (toIdentifier(out.id, out.loc), annotations ++ name)
+      (Typed.ExpressionRef(toIdentifier(out.id, lookup(spec.globalDefs, out.id).loc),
+        lookupType(out.id, spec.globalDefs), out.loc), annotations ++ name)
     }.toList
     val defs: Map[Typed.Identifier, Typed.ExpressionArg] = translateEnv(spec.globalDefs)
 

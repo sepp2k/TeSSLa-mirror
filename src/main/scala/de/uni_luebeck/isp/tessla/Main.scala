@@ -165,7 +165,7 @@ object Main {
       }
 
       if (config.listOutStreams) {
-        core.out.foreach { os => println(os._1.idOrName) }
+        core.out.foreach { os => println(os._1.id.idOrName) }
         return
       }
 

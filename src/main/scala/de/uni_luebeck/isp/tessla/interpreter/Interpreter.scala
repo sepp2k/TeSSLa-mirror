@@ -44,7 +44,7 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
   lazy val definitions: RuntimeEvaluator.Env = inStreams.view.mapValues(x => Lazy(x._1)).toMap ++ spec.definitions.map(d => (d._1.fullName, runtimeEvaluator.evalExpressionArg(d._2, definitions)))
 
   lazy val outStreams: Seq[(Option[String], Stream, Core.Type)] = spec.out.map { os =>
-    val definition = definitions(os._1.fullName).get
+    val definition = definitions(os._1.id.fullName).get
     val isRaw = os._2.contains("raw")
     val nameOpt = Core.getOutputName(os._2).filterNot(_ => isRaw)
     (nameOpt, definition.asInstanceOf[Stream], null) // TODO find type of output stream

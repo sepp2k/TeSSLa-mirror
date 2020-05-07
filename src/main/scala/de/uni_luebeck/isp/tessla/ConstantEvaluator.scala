@@ -201,17 +201,18 @@ class ConstantEvaluatorWorker(spec: Typed.Specification)
 
     val outputs = spec.out.map { x =>
       val annotations = x._2.view.mapValues(_.map(a => getExpressionArgStrict(translateExpressionArg(a, env, Map(), None).translate(translatedExpressions)).get(Nil))).toMap
-      (env(x._1).expression.get(List(x._1.location)).get match {
+      (env(x._1.id).expression.get(List(x._1.location)).get match {
         case Left(expression) =>
-          val id = translateIdentifier(x._1)
+          val id = translateIdentifier(x._1.id)
           translatedExpressions.expressions += id -> expression.get(List(x._1.location))
-          id
+          Core.ExpressionRef(id, expression.get(List(x._1.location)).tpe, x._1.location)
         case Right(ref) => ref.translateStrict.get(List(x._1.location)) match {
-          case Core.ExpressionRef(id, _, _) => id
+          case Core.ExpressionRef(id, tpe, _) =>
+            Core.ExpressionRef(id, tpe, x._1.location)
           case expression: Core.Expression =>
-            val id = translateIdentifier(x._1)
+            val id = translateIdentifier(x._1.id)
             translatedExpressions.expressions += id -> expression
-            id
+            Core.ExpressionRef(id, expression.tpe, x._1.location)
         }
       }, annotations)
     }

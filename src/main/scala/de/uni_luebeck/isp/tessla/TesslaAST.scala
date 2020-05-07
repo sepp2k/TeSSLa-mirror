@@ -122,7 +122,7 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
 
   case class Specification(in: Map[Identifier, (TypeAnnotation[Type], Annotations)],
     definitions: Map[Identifier, DefinitionExpression],
-    out: List[(Identifier, Annotations)],
+    out: List[(ExpressionRef, Annotations)],
     maxIdentifier: Long
   ) {
     def print(options: PrintOptions) = {
@@ -134,7 +134,8 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       }.mkString("\n")
       val o = out.map { x =>
         val as = printAnnotations(x._2, options)
-        (if (as.nonEmpty) as.mkString("", "\n", "\n") else "") + "out " + x._1
+        (if (as.nonEmpty) as.mkString("", "\n", "\n") else "") + "out " + x._1 +
+          (if (options.locations && x._1.location != Location.unknown) " @ " + x._1.location else "")
       }.mkString("\n")
       val d = definitions.map { x =>
         val tpeString = if (options.defTypes) s": ${x._2.tpe}" else ""
