@@ -6,6 +6,7 @@ import sexyopt.SexyOpt
 import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{ASTPreprocessor, ASTRemoveUnused, StreamDefFlattener}
 import org.antlr.v4.runtime.CharStreams
 
 /**
@@ -22,12 +23,10 @@ object Main extends SexyOpt {
   val debug = flag("debug", "Print stack traces for runtime errors")
   val noDiagnostics = flag("no-diagnostics", "Don't print error messages and warnings")
   val noOptimization = flag("no-optimization", "Produce non-optimized output code")
-  val noMutability = flag("no-mutability", "Produce code with exclusively immutable datastructures")
   val outputPath = option("output-file", 'o', "Location of the output (including filename)")
   val verbose = flag("verbose", 'v', "Produce a lot of output")
 
   def diagnostics = !noDiagnostics.value
-  def mutability = !noOptimization.value && !noMutability.value
 
   def main(args: Array[String]): Unit = {
 
@@ -65,7 +64,7 @@ object Main extends SexyOpt {
         }
 
         val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
-        val core = unwrapResult((new StreamDefFlattener).translate(unflatCore))
+        val core = unwrapResult((new StreamDefFlattener).translate(unflatCore).andThen(new ASTPreprocessor).andThen(new ASTRemoveUnused))
 
         if (verbose.value) {
           println("###############################")

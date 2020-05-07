@@ -1,11 +1,10 @@
-package de.uni_luebeck.isp.tessla.tessla_compiler
+package de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing
 
 import cats.data.Ior
 import de.uni_luebeck.isp.tessla.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.TranslationPhase
+import de.uni_luebeck.isp.tessla.{Location, TranslationPhase}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
-import de.uni_luebeck.isp.tessla.Location
 
 import scala.collection.mutable
 
