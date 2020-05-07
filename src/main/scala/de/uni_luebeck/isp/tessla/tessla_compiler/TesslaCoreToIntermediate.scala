@@ -4,7 +4,6 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.SourceListing
 import de.uni_luebeck.isp.tessla.TranslationPhase
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.TesslaCoreWithMutabilityInfo
 
 import scala.collection.immutable.ArraySeq
 
@@ -13,13 +12,10 @@ import scala.collection.immutable.ArraySeq
   * abstract imperative code
   */
 class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
-        TranslationPhase[TesslaCoreWithMutabilityInfo, SourceListing] {
+        TranslationPhase[Specification, SourceListing] {
 
 
-  override def translate(tcMut: TesslaCoreWithMutabilityInfo): Result[SourceListing] = {
-
-    val spec = tcMut.spec
-
+  override def translate(spec: Specification): Result[SourceListing] = {
     val in = spec.in
     val definitions = spec.definitions
     val out = spec.out
