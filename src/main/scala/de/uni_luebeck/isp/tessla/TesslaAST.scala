@@ -129,7 +129,8 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       val i = in.map { s =>
         val as = printAnnotations(s._2._2, options)
         (if (as.nonEmpty) as.mkString("", "\n", "\n") else "") +
-          s._1.withLocation(b => withTypeAnnotation(_ => s"in ${s._1}", s._2._1, types = true, b), options, mayNeedBraces = false)
+          withTypeAnnotation(_ => s"in ${s._1}", s._2._1, types = true, mayNeedBraces = false) +
+          (if (options.locations && s._1.location != Location.unknown) " @ " + s._1.location else "")
       }.mkString("\n")
       val o = out.map { x =>
         val as = printAnnotations(x._2, options)
@@ -137,7 +138,8 @@ abstract class TesslaAST[TypeAnnotation[_] : CommutativeApplicative] {
       }.mkString("\n")
       val d = definitions.map { x =>
         val tpeString = if (options.defTypes) s": ${x._2.tpe}" else ""
-        s"def ${x._1}$tpeString = ${x._2.print(options, mayNeedBraces = false)}"
+        val locString = if (options.locations && x._1.location != Location.unknown) " @ " + x._1.location else ""
+        s"def ${x._1}$tpeString$locString = ${x._2.print(options, mayNeedBraces = false)}"
       }.mkString("\n")
       s"$i\n\n$o\n\n$d"
     }
