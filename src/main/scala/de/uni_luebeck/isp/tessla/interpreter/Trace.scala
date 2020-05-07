@@ -20,9 +20,9 @@ object Trace {
       case None => value.toString
       }
 
-    def stream = streamOpt match {
+    def stream: Identifier = streamOpt match {
       case Some(stream) => stream
-      case None => throw InternalError("Requested name of print stream")
+      case None => throw InternalError("Requested name of raw stream")
     }
   }
 

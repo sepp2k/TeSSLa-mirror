@@ -20,7 +20,6 @@ statement
     | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement
     | annotations+=annotation* 'in' NL* ID NL* ':' NL* type #In
     | annotations+=annotation* 'out' NL* (expression ('as' NL* ID)? | star='*') #Out
-    | 'print' NL* expression #Print
     ;
 
 def: header=definitionHeader (':='|'=') NL* body;

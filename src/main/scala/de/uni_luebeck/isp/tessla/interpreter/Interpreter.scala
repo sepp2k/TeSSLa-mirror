@@ -45,7 +45,8 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
 
   lazy val outStreams: Seq[(Option[String], Stream, Core.Type)] = spec.out.map { os =>
     val definition = definitions(os._1.fullName).get
-    val nameOpt = Try(os._2("name")(0).asInstanceOf[Core.StringLiteralExpression].value).toOption
+    val isRaw = os._2.contains("raw")
+    val nameOpt = Core.getOutputName(os._2).filterNot(_ => isRaw)
     (nameOpt, definition.asInstanceOf[Stream], null) // TODO find type of output stream
   }
 
@@ -54,7 +55,7 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
-  case class InterperterError()
+  case class InterpreterError()
 
   def run(spec: Core.Specification, input: Trace, stopOn: Option[String]): Trace = {
     val interpreter = new Interpreter(spec)

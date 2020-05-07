@@ -218,14 +218,6 @@ object Errors {
     override def loc = annotationID.loc
   }
 
-  case class RawOutAll(loc: Location) extends TesslaError {
-    override def message = s"The @raw annotation can not be used with 'out *'"
-  }
-
-  case class AsOnRawOut(loc: Location) extends TesslaError {
-    override def message = s"@raw out statements can not have an 'as' clause"
-  }
-
   case class LiftableOnNonMacro(loc: Location, defName: String) extends TesslaError {
     override def message = s"Non-macro $defName can not be liftable"
   }

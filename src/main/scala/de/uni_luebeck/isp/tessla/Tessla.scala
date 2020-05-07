@@ -91,18 +91,14 @@ object Tessla {
     override def toString = s"in $id: $streamType"
   }
 
-  case class Out(expr: Expression, id: Identifier, loc: Location) extends Statement {
+  case class Out(expr: Expression, id: Identifier, annotations: Seq[Annotation], loc: Location) extends Statement {
     def name = id.name
 
     override def toString = s"out $expr as $name"
   }
 
-  case class OutAll(loc: Location) extends Statement {
+  case class OutAll(annotations: Seq[Annotation], loc: Location) extends Statement {
     override def toString = "out *"
-  }
-
-  case class Print(expr: Expression, loc: Location) extends Statement {
-    override def toString = s"print $expr"
   }
 
   def getId(statement: Tessla.Statement): Option[Tessla.Identifier] = statement match {

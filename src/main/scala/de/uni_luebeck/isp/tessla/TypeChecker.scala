@@ -2,6 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Errors._
 import util.mapValues
+
 import scala.collection.mutable
 
 class TypeChecker(spec: FlatTessla.Specification)
@@ -12,25 +13,27 @@ class TypeChecker(spec: FlatTessla.Specification)
   override def translateSpec(): TypedTessla.TypedSpecification = {
     val (defs, env) = translateDefsWithParents(spec.globalDefs)
     var outputStreams = spec.outStreams.map(translateOutStream(_, defs, env))
-    if (spec.outAll) {
+    if (spec.hasOutAll) {
+      val annotations = spec.outAll.get.annotations.map(translateAnnotation)
       val streams = defs.variables.values.filter(entry => entry.typeInfo.isStreamType)
       outputStreams ++= streams.flatMap { entry =>
-        entry.id.nameOpt.map(name => TypedTessla.OutStream(entry.id, Some(name), entry.loc))
+        entry.id.nameOpt.map(name => TypedTessla.OutStream(entry.id, name, annotations, entry.loc))
       }
     }
-    TypedTessla.TypedSpecification(defs, outputStreams, spec.outAllLocation)
+    TypedTessla.TypedSpecification(defs, outputStreams, spec.outAll.map(_.loc))
   }
 
   def translateOutStream(stream: FlatTessla.OutStream, defs: TypedTessla.Definitions, env: Env): TypedTessla.OutStream = {
+    val annotations = stream.annotations.map(translateAnnotation)
     val id = env(stream.id)
     typeMap(id) match {
       case b: TypedTessla.BuiltInType if b.isStreamType =>
-        TypedTessla.OutStream(id, stream.nameOpt, stream.loc)
+        TypedTessla.OutStream(id, stream.name, annotations, stream.loc)
       case t if t.isValueType =>
-        TypedTessla.OutStream(liftConstant(id, defs, env, stream.loc), stream.nameOpt, stream.loc)
+        TypedTessla.OutStream(liftConstant(id, defs, env, stream.loc), stream.name, annotations, stream.loc)
       case other =>
         error(TypeMismatch(expected = "stream or value type", other, stream.loc))
-        TypedTessla.OutStream(id, Some("<error>"), stream.loc)
+        TypedTessla.OutStream(id, "<error>", annotations, stream.loc)
     }
   }
 
@@ -159,10 +162,12 @@ class TypeChecker(spec: FlatTessla.Specification)
     val id = env(entry.id)
     val (exp, typ) = translateExpression(entry.expression, typeMap.get(id), Some(id), defs, env)
     insertInferredType(id, typ, exp.loc)
-    val annotations = entry.annotations.map { annotation =>
-      TypedTessla.Annotation(annotation.name, annotation.arguments, annotation.loc)
-    }
+    val annotations = entry.annotations.map(translateAnnotation)
     TypedTessla.VariableEntry(id, exp, typ, annotations, entry.loc)
+  }
+
+  def translateAnnotation(annotation: FlatTessla.Annotation): TypedTessla.Annotation = {
+    TypedTessla.Annotation(annotation.name, annotation.arguments, annotation.loc)
   }
 
   def typeSubst(expected: TypedTessla.Type, actual: TypedTessla.Type, typeParams: Set[TypedTessla.Identifier],

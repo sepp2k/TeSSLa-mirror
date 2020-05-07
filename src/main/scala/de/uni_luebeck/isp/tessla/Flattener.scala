@@ -36,7 +36,7 @@ class Flattener(spec: Tessla.Specification)
 
 
   override def translateSpec() = {
-    val emptySpec = FlatTessla.Specification(globalDefs, Seq(), outAllLocation = None, globalVariableIdMap)
+    val emptySpec = FlatTessla.Specification(globalDefs, Seq(), outAll = None, globalVariableIdMap)
     // Process type definitions before anything else, so that types can be used before they're defined
     spec.statements.foreach {
       case typeDef: Tessla.TypeDefinition =>
@@ -45,22 +45,17 @@ class Flattener(spec: Tessla.Specification)
     }
     spec.statements.foldLeft(emptySpec) {
       case (result, outAll : Tessla.OutAll) =>
-        if(result.outAll) warn(ConflictingOut(outAll.loc, previous = result.outAllLocation.get))
-        result.copy(outAllLocation = Some(outAll.loc))
+        if (result.hasOutAll) warn(ConflictingOut(outAll.loc, previous = result.outAll.get.loc))
+        result.copy(outAll = Some(FlatTessla.OutAll(outAll.annotations.map(translateAnnotation), outAll.loc)))
 
       case (result, out: Tessla.Out) =>
-        result.outStreams.find(_.nameOpt.contains(out.name)).foreach {
+        result.outStreams.find(_.name == out.name).foreach {
           previous =>
             warn(ConflictingOut(out.loc, previous = previous.loc))
         }
         val id = expToId(translateExpression(out.expr, globalDefs, globalEnv), globalDefs)
-        val newOut = FlatTessla.OutStream(id, Some(out.name), out.loc)
+        val newOut = FlatTessla.OutStream(id, out.name, out.annotations.map(translateAnnotation), out.loc)
         result.copy(outStreams = result.outStreams :+ newOut)
-
-      case (result, print: Tessla.Print) =>
-        val id = expToId(translateExpression(print.expr, globalDefs, globalEnv), globalDefs)
-        val newPrint = FlatTessla.OutStream(id, None, print.loc)
-        result.copy(outStreams = result.outStreams :+ newPrint)
 
       case (result, definition: Tessla.Definition) =>
         addDefinition(definition, globalDefs, globalEnv)
@@ -107,7 +102,7 @@ class Flattener(spec: Tessla.Specification)
       case module: Tessla.Module =>
         addModule(module, defs, env)
 
-      case inout@(_: Tessla.Out | _: Tessla.OutAll | _: Tessla.Print | _: Tessla.In) =>
+      case inout@(_: Tessla.Out | _: Tessla.OutAll | _: Tessla.In) =>
         error(InOutStatementInModule(inout.loc))
 
       case annoDef: Tessla.AnnotationDefinition =>

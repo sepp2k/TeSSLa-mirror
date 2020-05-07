@@ -1,6 +1,10 @@
 ## Fundamental types and primitive constants
 module Types {}
 
+## An annotation used to specify that an output stream should be printed in a raw format, only
+## containing the event value without timestamp or stream name
+def @raw
+
 ## A Boolean can be either [`true`](#true) or [`false`](#false)
 type Bool = __builtin__(Bool)
 

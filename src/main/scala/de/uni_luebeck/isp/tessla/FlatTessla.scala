@@ -5,14 +5,14 @@ import de.uni_luebeck.isp.tessla.util.mapValues
 import scala.collection.mutable
 
 abstract class FlatTessla extends HasUniqueIdentifiers {
-  case class Specification(globalDefs: Definitions, outStreams: Seq[OutStream], outAllLocation: Option[Location],
+  case class Specification(globalDefs: Definitions, outStreams: Seq[OutStream], outAll: Option[OutAll],
                            globalNames: Map[String, Identifier]) {
     override def toString = {
-      val outAllString = if (outAll) "\nout *" else ""
+      val outAllString = outAll.map(_.toString).getOrElse("")
       s"$globalDefs\n${outStreams.mkString("\n")}$outAllString"
     }
 
-    def outAll = outAllLocation.isDefined
+    def hasOutAll = outAll.isDefined
   }
 
   type TypeAnnotation
@@ -187,11 +187,12 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def hashCode() = id.hashCode()
   }
 
-  case class OutStream(id: Identifier, nameOpt: Option[String], loc: Location) {
-    override def toString = nameOpt match {
-      case Some(name) => s"out $id as $name"
-      case None => s"print $id"
-    }
+  case class OutStream(id: Identifier, name: String, annotations: Seq[Annotation], loc: Location) {
+    override def toString = s"out $id as $name"
+  }
+
+  case class OutAll(annotations: Seq[Annotation], loc: Location){
+    override def toString = "out *"
   }
 
   sealed abstract class Argument {

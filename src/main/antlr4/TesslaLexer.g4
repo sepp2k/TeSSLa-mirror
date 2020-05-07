@@ -15,7 +15,6 @@ BUILTIN: '__builtin__';
 ROOT: '__root__';
 IN: 'in';
 OUT: 'out';
-PRINT: 'print';
 AS: 'as';
 STATIC: 'static';
 IF: 'if';
