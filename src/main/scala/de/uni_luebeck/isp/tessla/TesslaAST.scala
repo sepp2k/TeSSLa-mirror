@@ -79,7 +79,7 @@ object TesslaAST {
 
     override type Annotations = Map[String, ArraySeq[ExpressionArg]]
 
-    override def getOutputName(annotations: Annotations) = Try(annotations("name")(0).asInstanceOf[Core.StringLiteralExpression].value).toOption
+    override def getOutputName(annotations: Annotations) = Try(annotations("$name")(0).asInstanceOf[Core.StringLiteralExpression].value).toOption
 
     override def printAnnotations(annotations: Annotations, options: PrintOptions) = annotations.toList.sortBy(_._1).map { case (name, exp) =>
       s"@$name(${exp.map(_.print(options, mayNeedBraces = false)).mkString(", ")})"
