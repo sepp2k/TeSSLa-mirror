@@ -53,7 +53,8 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
         }
         case None => None
       }
-      currSource = StreamCodeGenerator.produceOutputCode(o._1, getInStreamDefStreamType(o._1), name, currSource)
+
+      currSource = StreamCodeGenerator.produceOutputCode(o._1.id, getInStreamDefStreamType(o._1.id), name, currSource)
     }
 
     in.foreach {i =>

@@ -18,6 +18,7 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
+  "de.uni_luebeck.isp" %% "sexyopt" % "0.1.1",
   "de.uni_luebeck.isp" %% "tessla" % "1.2.0-SNAPSHOT"
 )
 

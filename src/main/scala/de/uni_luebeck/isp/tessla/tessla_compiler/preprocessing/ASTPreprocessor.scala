@@ -191,7 +191,7 @@ class ASTPreprocessor extends TranslationPhase[Core.Specification, Core.Specific
 
     Success(Core.Specification(spec.in.map{case (id, v) => (getActID(id, None), v)},
                                dupInlines,
-                               spec.out.map{case (id, a) => (getActID(id, None), a)},
+                               spec.out.map{case (e, a) => (ExpressionRef(getActID(e.id, None), e.tpe, e.location), a)},
                                maxId),
             warnings)
   }
