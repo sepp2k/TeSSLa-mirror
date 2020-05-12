@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla
 
 import java.io.{File, IOException}
 
-import de.uni_luebeck.isp.tessla.Errors.{RuntimeError, TesslaError}
+import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.analyses.Observations
 import de.uni_luebeck.isp.tessla.interpreter._
@@ -15,6 +15,7 @@ object Main {
   val programName = BuildInfo.name
   val programVersion = BuildInfo.version
   val programDescription = "Evaluate the given Tessla specification on the input streams provided by the given trace file."
+  val licenseLocation = "de/uni_luebeck/isp/tessla/License"
 
   case class Config(
                      specSource: CharStream = null,
@@ -113,6 +114,12 @@ object Main {
       .text("Prints this help message and exit.")
     version("version")
       .text("Print the version and exit.")
+    opt[Unit]("license")
+      .action((_, _) => {
+        println(scala.io.Source.fromResource(licenseLocation).mkString)
+        sys.exit(0)
+      })
+      .text("Print the legal information for this software and exit.")
     // Final validation
     checkConfig(c =>
       if (c.specSource == null) failure("No Tessla specification provided.")
@@ -137,6 +144,12 @@ object Main {
           System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors")
         }
         sys.exit(1)
+    }
+
+    //TODO: Use better CL-Parser, which enables ignoring positional arguments when certain flags are set
+    if (args.contains("--license")) {
+      println(scala.io.Source.fromResource(licenseLocation).mkString)
+      sys.exit(0)
     }
 
     val compiler = new Compiler
