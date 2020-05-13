@@ -10,18 +10,15 @@ import de.uni_luebeck.isp.tessla.util._
 import scopt.OptionParser
 
 object Main {
-  def programName = "tessladoc"
-
+  val programName = "tessladoc"
   val programVersion = BuildInfo.version
   val programDescription = "Generate documentation for TeSSLa code"
 
-  case class Config(
-                     stdLib: Boolean = false,
-                     includes: Boolean = false,
-                     globalsOnly: Boolean = false,
-                     markdown: Boolean = false,
-                     outfile: Option[File] = None,
-                     sources: Seq[CharStream] = Seq()
+  case class Config(stdLib: Boolean = false,
+                    includes: Boolean = false,
+                    globalsOnly: Boolean = false,
+                    outfile: Option[File] = None,
+                    sources: Seq[CharStream] = Seq()
                    )
 
   val parser: OptionParser[Config] = new OptionParser[Config](programName) {
@@ -36,9 +33,6 @@ object Main {
     opt[Unit]('g', "globals-only")
       .action((_, c) => c.copy(globalsOnly = true))
       .text("Do not show information for local definitions")
-    opt[Unit]('m', "markdown")
-      .action((_, c) => c.copy(markdown = true))
-      .text("Generate documentation as markdown")
     opt[File]('o', "outfile")
       .action((s, c) => c.copy(outfile = Some(s)))
       .text("Write the generated docs to the given file instead of stdout")
@@ -61,12 +55,7 @@ object Main {
       case Success(tesslaDocs, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         val relevantDocs = if (config.globalsOnly) tesslaDocs.globalsOnly else tesslaDocs
-        if (config.markdown) {
-          val generator = new MarkdownGenerator(relevantDocs)
-          generator.generateMarkdown
-        } else {
-          relevantDocs.toString
-        }
+        relevantDocs.toString
       case Failure(errors, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         errors.foreach(e => System.err.println(s"Error: $e"))

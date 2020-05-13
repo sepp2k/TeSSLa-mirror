@@ -116,7 +116,7 @@ object Main {
       .text("Print the version and exit.")
     opt[Unit]("license")
       .action((_, _) => {
-        println(scala.io.Source.fromResource(licenseLocation).mkString)
+        println(Source.fromResource(licenseLocation).mkString)
         sys.exit(0)
       })
       .text("Print the legal information for this software and exit.")
