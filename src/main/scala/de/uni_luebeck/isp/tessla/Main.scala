@@ -146,12 +146,6 @@ object Main {
         sys.exit(1)
     }
 
-    //TODO: Use better CL-Parser, which enables ignoring positional arguments when certain flags are set
-    if (args.contains("--license")) {
-      println(scala.io.Source.fromResource(licenseLocation).mkString)
-      sys.exit(0)
-    }
-
     val compiler = new Compiler
     try {
       val result = unwrapResult(compiler.compile(config.specSource, config.compilerOptions))
