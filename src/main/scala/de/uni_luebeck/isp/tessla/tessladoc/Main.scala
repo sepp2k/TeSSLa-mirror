@@ -6,6 +6,7 @@ import java.nio.file.{Files, Paths}
 import org.antlr.v4.runtime.{CharStream, CharStreams}
 import de.uni_luebeck.isp.tessla.{BuildInfo, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
+import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc.DefDoc
 import de.uni_luebeck.isp.tessla.util._
 import scopt.OptionParser
 
@@ -30,9 +31,6 @@ object Main {
     opt[Unit]('i', "includes")
       .action((_, c) => c.copy(includes = true))
       .text("Include documentation from included files")
-    opt[Unit]('g', "globals-only")
-      .action((_, c) => c.copy(globalsOnly = true))
-      .text("Do not show information for local definitions")
     opt[File]('o', "outfile")
       .action((s, c) => c.copy(outfile = Some(s)))
       .text("Write the generated docs to the given file instead of stdout")
@@ -54,8 +52,7 @@ object Main {
     val output = TesslaDoc.extract(config.sources, includeResolver, includeStdlib = config.stdLib) match {
       case Success(tesslaDocs, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
-        val relevantDocs = if (config.globalsOnly) tesslaDocs.globalsOnly else tesslaDocs
-        relevantDocs.toString
+        tesslaDocs.globalsOnly.toString
       case Failure(errors, warnings) =>
         warnings.foreach(w => System.err.println(s"Warning: $w"))
         errors.foreach(e => System.err.println(s"Error: $e"))

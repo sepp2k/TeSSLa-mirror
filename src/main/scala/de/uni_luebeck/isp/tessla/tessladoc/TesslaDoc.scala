@@ -16,6 +16,8 @@ sealed trait TesslaDoc {
   def doc: String
 
   final def isGlobal: Boolean = scope == TesslaDoc.Global
+
+  def globalsOnly: Option[TesslaDoc] = if (isGlobal) Some(this) else None
 }
 
 sealed trait GlobalDoc extends TesslaDoc {
@@ -25,7 +27,7 @@ sealed trait GlobalDoc extends TesslaDoc {
 object TesslaDoc {
 
   case class Docs(items: Seq[TesslaDoc]) {
-    def globalsOnly: Docs = Docs(items.filter(_.isGlobal))
+    def globalsOnly: Docs = Docs(items.flatMap(_.globalsOnly))
 
     override def toString: String = this.toJson.prettyPrint
   }
@@ -52,7 +54,10 @@ object TesslaDoc {
   case class ModuleDoc(name: String,
                        doc: String,
                        members: Seq[TesslaDoc],
-                       loc: Location) extends GlobalDoc
+                       loc: Location) extends GlobalDoc {
+    override def globalsOnly: Option[TesslaDoc] =
+      if (isGlobal) Some(copy(members = members.flatMap(_.globalsOnly))) else None
+  }
 
   case class Param(name: String, typ: Type)
 
