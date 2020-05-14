@@ -1,30 +1,389 @@
 ## Set
 module Set {
+  ## Returns an empty set without any element of type `T`
   def empty[T]: Set[T] = __builtin__(Set_empty)
 
+  ## Creates a `set` with a single element
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] 
+  ## def result = Set.singleton(x)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: events
+  ## stream result: events
+  ## ---
+  ## 2: x = 1
+  ## 2: result = Set(1)
+  ## 4: x = 2
+  ## 4: result = Set(2)
+  ## 6: x = 3
+  ## 6: result = Set(3)
+  ## ~~~
   liftable def singleton[T](value: T): Set[T] = add(empty[T], value)
 
+  ## Add an item to the given `set`, if not already contained
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## out set
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: events
+  ## stream set: events
+  ## ---
+  ## 0: set = Set()
+  ## 2: set = Set(1)
+  ## 2: x = 1
+  ## 4: set = Set(1, 2)
+  ## 4: x = 2
+  ## 6: set = Set(1, 2)
+  ## 6: x = 2
+  ## 8: set = Set(1, 2, -25)
+  ## 8: x = -25
+  ## ~~~
   liftable def add[T](set: Set[T], item: T): Set[T] = __builtin__(Set_add)
 
+  ## Returns [`true`](#true) if the given `set` contains the given item
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] # elements to add
+  ## in y: Events[Int] # items to check
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def contains = Set.contains(set,y)
+  ## out contains
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,6]
+  ## stream x: events
+  ## stream y: events
+  ## stream set: events
+  ## stream contains: bubbles
+  ## ---
+  ## 0: y = 1
+  ## 0: contains = false
+  ## 0: set = Set()
+  ## 2: y = 1
+  ## 2: contains = true
+  ## 2: set = Set(1)
+  ## 2: x = 1
+  ## 4: y = 1
+  ## 4: contains = true
+  ## 4: set = Set(1, 2)
+  ## 4: x = 2
+  ## ~~~
   liftable def contains[T](set: Set[T], item: T): Bool = __builtin__(Set_contains)
 
+  ## Remove an element from the given `set`, if the `set` contains this element
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] # stream of items to remove from set
+  ## def filledSet = Set.add(Set.add(Set.add(Set.empty[Int], 1),2),3)
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.remove(old, x), filledSet)
+  ## out set
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream set: events
+  ## ---
+  ## 0: set = Set(3, 2, 1)
+  ## 2: set = Set(3, 2)
+  ## 2: x = 1
+  ## 4: set = Set(3)
+  ## 4: x = 2
+  ## 6: set = Set(3)
+  ## 6: x = 2
+  ## ~~~
   liftable def remove[T](set: Set[T], item: T): Set[T] = __builtin__(Set_remove)
 
+  ## Returns the number of elements in the given `set`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def size = Set.size(set)
+  ## out size
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: events
+  ## stream set: events
+  ## stream size: events
+  ## ---
+  ## 0: size = 0
+  ## 0: set = Set()
+  ## 2: size = 1
+  ## 2: set = Set(1)
+  ## 2: x = 1
+  ## 4: size = 2
+  ## 4: set = Set(1, 2)
+  ## 4: x = 2
+  ## 6: size = 3
+  ## 6: set = Set(1, 2, 3)
+  ## 6: x = 3
+  ## 8: size = 3
+  ## 8: set = Set(1, 2, 3)
+  ## 8: x = 2
+  ## ~~~
   liftable def size[T](set: Set[T]): Int = __builtin__(Set_size)
 
-  liftable def union[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_union)
 
+  ## Returns the union of the given [`sets`](#set)
+  ##
+  ## **Usage example:**x
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def filledSet = Set.add(Set.add(Set.empty[Int], 1),2)
+  ## def set2 = merge(last(filledSet,x),filledSet)
+  ## def union = Set.union(set,set2)
+  ## out union
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-3,16]
+  ## stream x: events
+  ## stream set: events
+  ## stream set2: events
+  ## stream union: events
+  ## ---
+  ## 0: set2 = Set(2, 1)
+  ## 0: union = Set(2, 1)
+  ## 0: set = Set()
+  ## 5: set2 = Set(2, 1)
+  ## 5: union = Set(2, 1)
+  ## 5: set = Set(2)
+  ## 5: x = 2
+  ## 12: set2 = Set(2, 1)
+  ## 12: union = Set(2, 3, 1)
+  ## 12: set = Set(2, 3)
+  ## 12: x = 3
+  ## ~~~
+  liftable def union[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_union)
+  
+  ## Returns the intersection of the given `sets` as [`set`](#set).
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in y: Events[Int]
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def old2 = last(set2, y)
+  ## def set2: Events[Set[Int]] = merge(Set.add(old2, y), Set.empty[Int])
+  ## def intersection = Set.intersection(set,set2)
+  ## out intersection
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,11]
+  ## stream x: events
+  ## stream set: events
+  ## stream y: events
+  ## stream set2: events
+  ## stream intersection: events
+  ## ---
+  ## 0: set = Set()
+  ## 0: set2 = Set()
+  ## 0: intersection = Set()
+  ## 2: x = 1
+  ## 2: set = Set(1)
+  ## 2: intersection = Set()
+  ## 4: y = 2
+  ## 4: set2 = Set(2)
+  ## 4: intersection = Set()
+  ## 6: x = 2
+  ## 6: set = Set(1, 2)
+  ## 6: intersection = Set(2)
+  ## 9: x = 3
+  ## 9: set = Set(1, 2, 3)
+  ## 9: y = 3
+  ## 9: set2 = Set(2, 3)
+  ## 9: intersection = Set(2, 3)
+  ## ~~~
   liftable def intersection[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_intersection)
 
+  ## Returns a `set` containing the elements of `set1` which aren't part of `set2`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] # events with items to add to set
+  ## in y: Events[Int] # events with items to add to set2
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def old2 = last(set2, y)
+  ## def set2: Events[Set[Int]] = merge(Set.add(old2, y), Set.empty[Int])
+  ## def minus = Set.minus(set,set2)
+  ## out minus
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,11]
+  ## stream x: events
+  ## stream set: events
+  ## stream y: events
+  ## stream set2: events
+  ## stream minus: events
+  ## ---
+  ## 0: set = Set()
+  ## 0: set2 = Set()
+  ## 0: minus = Set()
+  ## 2: x = 1
+  ## 2: set = Set(1)
+  ## 2: minus = Set(1)
+  ## 4: y = 2
+  ## 4: set2 = Set(2)
+  ## 4: minus = Set(1)
+  ## 6: x = 2
+  ## 6: set = Set(1, 2)
+  ## 6: minus = Set(1)
+  ## 9: x = 3
+  ## 9: set = Set(1, 2, 3)
+  ## 9: y = 3
+  ## 9: set2 = Set(2, 3)
+  ## 9: minus = Set(1)
+  ## ~~~
   liftable def minus[T](set1: Set[T], set2: Set[T]): Set[T] = __builtin__(Set_minus)
 
+  ## Fold a function f on all values of the `set`.
+  ## Starting with the initial value start the function f is called for every element of the `set` with the
+  ## last result and the current elements’s value as arguments.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(set, x)
+  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def result = Set.fold(set,0,(a:Int,b:Int) => a + b)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream set: events
+  ## stream result: events
+  ## ---
+  ## 0: result = 0
+  ## 0: set = Set()
+  ## 2: result = 1
+  ## 2: set = Set(1)
+  ## 2: x = 1
+  ## 4: result = 3
+  ## 4: set = Set(1, 2)
+  ## 4: x = 2
+  ## 6: result = 6
+  ## 6: set = Set(1, 2, 3)
+  ## 6: x = 3
+  ## ~~~
   liftable def fold[T, U](set: Set[T], start: U, f: (U, T) => U): U = __builtin__(Set_fold)
 
+  ## Collect the event values of the given stream in a set.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def result = Set.collect(x)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: events
+  ## stream result: events
+  ## ---
+  ## 0: result = Set()
+  ## 2: x = 1
+  ## 2: result = Set(1)
+  ## 4: x = 2
+  ## 4: result = Set(1, 2)
+  ## 6: x = 3
+  ## 6: result = Set(1, 2, 3)
+  ## ~~~
   def collect[T](value: Events[T]) = {
     def set: Events[Set[T]] = default(add(last(set, value), value), empty[T])
     set
   }
 
+  ## Creates a `set` by collecting the elements from `value` and removing the ones from `removeValue`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] # events with items to add to set
+  ## in y: Events[Int] # events with items to remove from the set 
+  ## def result = Set.collectWithRemove(x,y)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: events
+  ## stream y: events
+  ## stream result: events
+  ## ---
+  ## 0: result = Set()
+  ## 2: y = 1
+  ## 2: result = Set()
+  ## 4: x = 2
+  ## 4: y = 2
+  ## 4: result = Set()
+  ## 6: x = 3
+  ## 6: result = Set(3)
+  ## 8: y = 3
+  ## 8: result = Set()
+  ## ~~~
   def collectWithRemove[T](value: Events[T], removeValue: Events[T]) = {
     def old = last(set, merge(value, removeValue))
     def operation: Events[Set[T]] = lift3(old, value, removeValue, (o: Option[Set[T]], v: Option[T], r: Option[T]) =>
@@ -36,4 +395,5 @@ module Set {
 
 # Define the type outside of the module
 # so one can write `Set[Int]` instead of `Set.Set[Int]`.
+## Type Set
 type Set[T] = __builtin__(Set)
