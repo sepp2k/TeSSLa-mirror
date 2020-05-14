@@ -2,12 +2,13 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import java.io.{File, PrintWriter}
 
-import sexyopt.SexyOpt
 import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaBackend
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{ASTPreprocessor, ASTRemoveUnused, StreamDefFlattener}
 import org.antlr.v4.runtime.CharStreams
+import sexyopt.SexyOpt
 
 /**
  * Main class of the project launching the translation and parsing command line
@@ -56,7 +57,7 @@ object Main extends SexyOpt {
           stdlibPath = "stdlib.tessla"
         )
         val (backend, stdinRead) : (backends.BackendInterface, Boolean) = target.value match {
-          case "java" => (new backends.ScalaBackend, true)
+          case "java" => (new ScalaBackend, true)
           case "javascript" => throw new Errors.NotYetImplementedError("Javascript translation not implemented yet")
           case "rust" => throw new Errors.NotYetImplementedError("Rust translation not implemented yet")
           case "rust-bare" => throw new Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
@@ -100,4 +101,6 @@ object Main extends SexyOpt {
         if (debug) ex.printStackTrace()
     }
   }
+
+
 }
