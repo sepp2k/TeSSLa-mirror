@@ -1,18 +1,18 @@
 in x: Events[Int]
 
-@liftable
+liftable
 def getCount(counts: Map[Int, Int], key: Int) =
     if Map.contains(counts, key)
     then Map.get(counts, key)
     else 0
 
-@liftable
+liftable
 def incCount(counts: Map[Int, Int], key: Int) =
     if key < 0
     then Map.remove(counts, -key)
     else Map.add(counts, key, getCount(counts, key) + 1)
 
-@liftable
+liftable
 def add(set: Set[Int], key: Int) =
     if key < 0
     then Set.remove(set, -key)

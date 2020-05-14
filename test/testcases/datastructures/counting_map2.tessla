@@ -4,7 +4,7 @@ in x: Events[Int]
 -- nested directly in Map_add (and the getCount macro is inlined)
 -- In previous versions this nesting caused an error value-related bug to surface.
 -- So this is the regression test for that bug.
-@liftable
+liftable
 def inc_count(counts: Map[Int, Int], key: Int) =
     if Map.contains(counts, key)
     then Map.add(counts, key, Map.get(counts, key) + 1)

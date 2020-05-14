@@ -1,4 +1,4 @@
-@liftable
+liftable
 def f[T](x: T) := String.concat("<", String.concat(toString(x), ">"))
 
 in x: Events[String]

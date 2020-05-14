@@ -2,13 +2,13 @@ in keys: Events[String]
 
 def map := Map.add(Map.empty[String, String], "foo", "zweiundvierzig")
 
-@liftable
+liftable
 def safeGet[K,V](map: Map[K, V], key: K): Option[V] :=
   if Map.contains(map, key)
   then Some(Map.get(map, key))
   else None[V]
 
-@liftable
+liftable
 def prettyPrint(opt: Option[String]): String :=
   if isNone(opt)
   then "IsNix"

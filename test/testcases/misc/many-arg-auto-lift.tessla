@@ -4,7 +4,7 @@ in c: Events[Unit]
 in d: Events[Unit]
 in e: Events[Unit]
 
-@liftable
+liftable
 def f(i: Int, u1: Unit, u2: Unit, u3: Unit, u4: Unit) = i
 
 out f(a, b, c, d, e) as x
