@@ -3,69 +3,69 @@ module Map {
   ## Returns an empty `map` without any element of type `T`
   def empty[K, V]: Map[K, V] = __builtin__(Map_empty)
 
-  ## Add an item to the given `map`. An item consists of a `key` and the assosicated `value`
+  ## Associate a `key` to a `value` in this map, overriding the previous mapping for `key`
+  ## if existent.
   ##
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[(Int,Int)] # input stream with key value pairs as tupel (key,value)
+  ## in x: Events[(String, Int)]
   ## def old = last(map, x)
-  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
+  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
   ## out map
   ## ~~~
   ##
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-2,29.9]
+  ## option timeDomain: [-1, 10]
   ## stream x: events
-  ## stream map: events
+  ## stream map: signal
   ## ---
-  ## 0: map = Map()
-  ## 1: x = (1, 16)
-  ## 1: map = Map(1 -> 16)
-  ## 10: x = (2, 32)
-  ## 10: map = Map(1 -> 16, 2 -> 32)
-  ## 23: x = (2, 64)
-  ## 23: map = Map(1 -> 16, 2 -> 64)
+  ## 0: map = —
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 4: x = (B, 4)
+  ## 4: map = A → 2, B → 4
+  ## 7: x = (B, 8)
+  ## 7: map = A → 2, B → 8
   ## ~~~
   liftable def add[K, V](map: Map[K, V], key: K, value: V): Map[K, V] = __builtin__(Map_add)
 
-  ## Returns true if the given `map` has a `key` matching the given `key`
+  ## Returns true if the given `map` contains a mapping for the specified `key`
   ##
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[(Int,Int)]
-  ## in y: Events[Int]
+  ## in x: Events[(String, Int)]
+  ## in y: Events[String]
   ## def old = last(map, x)
-  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
-  ## def contains = Map.contains(map,y)
+  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def contains = Map.contains(map, y)
   ## out contains
   ## ~~~
   ##
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-2,29.9]
+  ## option timeDomain: [-1, 10]
   ## stream x: events
-  ## stream map: events
-  ## stream y: events
-  ## stream contains: bubbles
+  ## stream map: signal
+  ## stream y: signal
+  ## stream contains: signal
   ## ---
-  ## 0: map = Map()
-  ## 1: x = (1, 16)
-  ## 1: map = Map(1 -> 16)
-  ## 1: y = 2
+  ## 0: map = —
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 1: y = B
   ## 1: contains = false
-  ## 11: x = (2, 32)
-  ## 11: map = Map(1 -> 16, 2 -> 32)
-  ## 11: y = 2
-  ## 11: contains = true
-  ## 24: x = (2, 64)
-  ## 24: map = Map(1 -> 16, 2 -> 64)
-  ## 24: y = 16
-  ## 24: contains = false
+  ## 3: x = (B, 4)
+  ## 3: map = A → 2, B → 4
+  ## 3: contains = true
+  ## 7: x = (B, 8)
+  ## 7: map = A → 2, B → 8
+  ## 7: y = C
+  ## 7: contains = false
   ## ~~~
   liftable def contains[K, V](map: Map[K, V], key: K): Bool = __builtin__(Map_contains)
 
@@ -74,32 +74,35 @@ module Map {
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[(Int,Int)]
-  ## in y: Events[Int]
+  ## in x: Events[(String, Int)]
+  ## in y: Events[String]
   ## def old = last(map, x)
-  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
-  ## def contains = Map.contains(map,y)
-  ## out contains
+  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def value = Map.get(map, y)
+  ## out value
   ## ~~~
   ##
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-2,29.9]
+  ## option timeDomain: [-1, 10]
   ## stream x: events
-  ## stream map: events
-  ## stream y: events
-  ## stream ele: events
+  ## stream map: signal
+  ## stream y: signal
+  ## stream value: signal
   ## ---
-  ## 0: map = Map()
-  ## 10: x = (2, 32)
-  ## 10: map = Map(2 -> 32)
-  ## 10: y = 2
-  ## 10: ele = 32
-  ## 23: x = (2, 64)
-  ## 23: map = Map(2 -> 64)
-  ## 23: y = 2
-  ## 23: ele = 64
+  ## 0: map = —
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 2: y = A
+  ## 2: value = 2
+  ## 3: x = (B, 4)
+  ## 3: map = A → 2, B → 4
+  ## 3: y = B
+  ## 3: value = 4
+  ## 7: x = (B, 8)
+  ## 7: map = A → 2, B → 8
+  ## 7: value = 8
   ## ~~~
   liftable def get[K, V](map: Map[K, V], key: K): V = __builtin__(Map_get)
 
@@ -108,25 +111,25 @@ module Map {
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[Int] # stream of keys to remove from map
-  ## def filledMap = Map.add(Map.add(Map.empty[Int,Int], 1,16),2,32)
+  ## in x: Events[String]
+  ## def filledMap = Map.add(Map.add(Map.empty[String, Int], "A", 2), "B", 4)
   ## def old = last(map, x)
-  ## def map: Events[Map[Int,Int]] = merge(Map.remove(old, x), filledMap)
+  ## def map: Events[Map[String, Int]] = merge(Map.remove(old, x), filledMap)
   ## out map
   ## ~~~
   ##
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-6,25]
+  ## option timeDomain: [-1, 10]
   ## stream x: events
-  ## stream map: events
+  ## stream map: signal
   ## ---
-  ## 0: map = Map(2 -> 32, 1 -> 16)
-  ## 11: x = 1
-  ## 11: map = Map(2 -> 32)
-  ## 19: x = 3
-  ## 19: map = Map(2 -> 32)
+  ## 0: map = A → 2, B → 4 
+  ## 4: x = A
+  ## 4: map = B → 4
+  ## 7: x = C
+  ## 7: map = B → 4
   ## ~~~
   liftable def remove[K, V](map: Map[K, V], key: K): Map[K, V] = __builtin__(Map_remove)
 
@@ -135,9 +138,9 @@ module Map {
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[(Int,Int)] # input stream with key value pairs as tupel (key,value)
+  ## in x: Events[(String, Int)]
   ## def old = last(map, x)
-  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
+  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
   ## def size = Map.size(map)
   ## out size
   ## ~~~
@@ -145,21 +148,22 @@ module Map {
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-1,29.9]
+  ## option timeDomain: [-1, 10]
   ## stream x: events
-  ## stream map: events
+  ## stream map: signal
+  ## stream size: signal
   ## ---
+  ## 0: map = —
   ## 0: size = 0
-  ## 0: map = Map()
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
   ## 1: size = 1
-  ## 1: map = Map(1 -> 16)
-  ## 1: x = (1, 16)
-  ## 10: size = 2
-  ## 10: map = Map(1 -> 16, 2 -> 32)
-  ## 10: x = (2, 32)
-  ## 24: size = 2
-  ## 24: map = Map(1 -> 16, 2 -> 64)
-  ## 24: x = (2, 64)
+  ## 4: x = B → 4
+  ## 4: map = A → 2, B → 4 
+  ## 4: size = 2
+  ## 7: x = (B, 8)
+  ## 7: map = A → 2, B → 8
+  ## 7: size = 2
   ## ~~~
   liftable def size[K, V](map: Map[K, V]): Int = __builtin__(Map_size)
 
@@ -168,9 +172,9 @@ module Map {
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[(Int,Int)] # input stream with key value pairs as tupel (key,value)
+  ## in x: Events[(String, Int)]
   ## def old = last(map, x)
-  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
+  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
   ## def keys = Map.keys(map)
   ## out keys
   ## ~~~
@@ -178,132 +182,127 @@ module Map {
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-2,29.9]
+  ## option timeDomain: [-1, 10]
   ## stream x: events
-  ## stream map: events
+  ## stream map: signal
+  ## stream keys: signal
   ## ---
-  ## 0: keys = List()
-  ## 0: map = Map()
-  ## 10: keys = List(1)
-  ## 10: map = Map(1 -> 16)
-  ## 10: x = (1, 16)
-  ## 20: keys = List(1, 2)
-  ## 20: map = Map(1 -> 16, 2 -> 32)
-  ## 20: x = (2, 32)
+  ## 0: map = —
+  ## 0: keys = —
+  ## 3: x = (A, 2)
+  ## 3: map = A → 2
+  ## 3: keys = A
+  ## 7: x = (B, 4)
+  ## 7: map = A → 2, B → 4 
+  ## 7: keys = A, B
   ## ~~~
   liftable def keys[K, V](map: Map[K, V]): List[K] = __builtin__(Map_keys)
 
   ## Applies a function `f` on all values of the `map`.
   ## Starting with the initial value `start` the function `f` is called for every pair of the `map` with the
-  ## last result and the current elements’s value as arguments.
+  ## last result and the current element value as arguments.
   ##
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[(Int,Int)] # input stream with key value pairs as tupel (key,value)
+  ## in x: Events[(String, Int)]
   ## def old = last(map, x)
-  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
-  ## def result = Map.fold(map,0,(r:Int,k:Int, v:Int) => r + v)
-  ## out result
+  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def sum = Map.fold(map, 0, (r: Int, k: String, v: Int) => r + v)
+  ## out sum
   ## ~~~
   ##
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-1,29.9]
+  ## option timeDomain: [-1, 10]
   ## stream x: events
-  ## stream map: events
-  ## stream result: events
+  ## stream map: signal
+  ## stream sum: signal
   ## ---
-  ## 0: map = Map()
-  ## 0: result = 0
-  ## 1: x = (1, 16)
-  ## 1: map = Map(1 -> 16)
-  ## 1: result = 16
-  ## 11: x = (2, 32)
-  ## 11: map = Map(1 -> 16, 2 -> 32)
-  ## 11: result = 48
-  ## 24: x = (2, 64)
-  ## 24: map = Map(1 -> 16, 2 -> 64)
-  ## 24: result = 80
+  ## 0: map = —
+  ## 0: sum = 0
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 1: sum = 2
+  ## 3: x = (B, 4)
+  ## 3: map = A → 2, B → 4
+  ## 3: sum = 6
+  ## 7: x = (B, 8)
+  ## 7: map = A → 2, B → 8
+  ## 7: sum = 10
   ## ~~~
   liftable def fold[K, V, R](map: Map[K, V], start: R, f: (R, K, V) => R): R = __builtin__(Map_fold)
 
-  ## Get the `value` to the `key` if a matching `key` exsits and the default value otherwise.
+  ## Get the `value` associated with the `key` if it exists in the map,
+  ## and the default value otherwise.
   ##
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[(Int,Int)] # input stream with key value pairs as tupel (key,value)
-  ## in k: Events[Int] # requested key
+  ## in x: Events[(String, Int)]
+  ## in y: Events[String] 
   ## def old = last(map, x)
-  ## def map: Events[Map[Int,Int]] = merge(Map.add(old, x._1,x._2), Map.empty[Int,Int])
-  ## def result = Map.getOrElse(map,k,42)
+  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def result = Map.getOrElse(map, y, 42)
   ## out result
   ## ~~~
   ##
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-1,29.9]
+  ## option timeDomain: [-1, 10]
   ## stream x: events
-  ## stream k: events
-  ## stream map: events
-  ## stream result: events
+  ## stream map: signal
+  ## stream y: signal
+  ## stream result: signal
   ## ---
-  ## 0: map = Map()
-  ## 1: x = (1, 16)
-  ## 1: map = Map(1 -> 16)
-  ## 1: k = 1
-  ## 1: result = 16
-  ## 5: k = 2
-  ## 5: result = 42
-  ## 11: x = (2, 32)
-  ## 11: map = Map(1 -> 16, 2 -> 32)
-  ## 11: k = 2
-  ## 11: result = 32
-  ## 16: k = 3
-  ## 16: result = 42
-  ## 24: x = (2, 64)
-  ## 24: map = Map(1 -> 16, 2 -> 64)
-  ## 24: result = 42
+  ## 0: map = —
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 1: y = A
+  ## 1: result = 2
+  ## 3: y = B
+  ## 3: result = 42
+  ## 5: x = (B, 4)
+  ## 5: map = A → 2, B → 4
+  ## 5: result = 4
   ## ~~~
-  
-  liftable def getOrElse[K,V](map: Map[K, V], key: K, default: V): V =
+  liftable def getOrElse[K, V](map: Map[K, V], key: K, default: V): V =
     if contains(map, key)
     then get(map, key)
     else default
 
-  ## Increments the `value` of the given `key` if the key exsists and create a new entry with this `key` and the `value=1` otherwise.
+  ## Increments the `value` of the given `key` by one, or add a new entry `key → 1` if the `key` does not exist.
   ##
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in k: Events[Int]
-  ## def old = last(map, k)
-  ## def map: Events[Map[Int,Int]] = merge(Map.inc(old, k), Map.empty[Int,Int])
+  ## in x: Events[Int]
+  ## def old = last(map, x)
+  ## def map: Events[Map[String, Int]] = merge(Map.inc(old, x), Map.empty[String, Int])
   ## out map
   ## ~~~
   ##
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-2,29.9]
-  ## stream k: events
-  ## stream map: events
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
   ## ---
-  ## 0: map = Map()
-  ## 6: k = Apple
-  ## 6: map = Map(Apple -> 1)
-  ## 15: k = Apple
-  ## 15: map = Map(Apple -> 2)
-  ## 27: k = Carrot
-  ## 27: map = Map(Apple -> 2, Carrot -> 1)
+  ## 0: map = —
+  ## 1: x = A
+  ## 1: map = A → 1
+  ## 3: x = A
+  ## 3: map = A → 2
+  ## 6: x = C
+  ## 6: map = A → 2, C → 1 
   ## ~~~
   liftable def inc[K](counts: Map[K, Int], key: K): Map[K, Int] =
     add(counts, key, getOrElse(counts, key, 0) + 1)
 
-  ## Counts how often an element appears in the input `events` and creates an entry with the element as key and its count as mapped value.
+  ## Counts the occurrences of each value in `events` and returns a mapping of each value to its count.
   ##
   ## **Usage example:**
   ##
@@ -316,21 +315,50 @@ module Map {
   ## **Trace example:**
   ##
   ## ~~~trace
-  ## option timeDomain: [-2,29.9]
+  ## option timeDomain: [-1, 10]
   ## stream x: events
-  ## stream map: events
+  ## stream map: signal
   ## ---
-  ## 0: map = Map()
-  ## 6: x = A
-  ## 6: map = Map(A -> 1)
-  ## 15: x = A
-  ## 15: map = Map(A -> 2)
-  ## 24: x = C
-  ## 24: map = Map(A -> 2, C -> 1)
+  ## 0: map = —
+  ## 1: x = A
+  ## 1: map = A → 1
+  ## 3: x = A
+  ## 3: map = A → 2
+  ## 6: x = C
+  ## 6: map = A → 2, C → 1
   ## ~~~
   def collectCount[T](events: Events[T]): Events[Map[T, Int]] =
-    __root__.fold(events, empty[T,Int], inc)
+    __root__.fold(events, empty[T, Int], inc)
 
+  ## Get the maximum of `value`, grouped by `key`. 
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[String]
+  ## in y: Events[Int]
+  ## def map = Map.collectMax(x, y)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream y: events
+  ## stream map: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = A
+  ## 1: y = 5
+  ## 1: map = A → 5
+  ## 3: y = 2
+  ## 3: map = A → 5
+  ## 4: x = C
+  ## 5: y = 7
+  ## 5: map = A → 5, C → 7
+  ## ~~~
   def collectMax[K](key: Events[K], value: Events[Int]): Events[Map[K, Int]] = {
     def oldMap = last(map, value)
     def maxValue: Events[Int] = max(getOrElse(oldMap, on(value, key), value), value)
@@ -338,27 +366,80 @@ module Map {
     map
   }
 
+  ## Get the minimum of `value`, grouped by `key`. 
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[String]
+  ## in y: Events[Int]
+  ## def map = Map.collectMin(x, y)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: signal
+  ## stream y: events
+  ## stream map: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = A
+  ## 1: y = 5
+  ## 1: map = A → 5
+  ## 3: y = 2
+  ## 3: map = A → 2
+  ## 4: x = C
+  ## 5: y = 7
+  ## 5: map = A → 2, C → 7
+  ## ~~~
   def collectMin[A](key: Events[A], value: Events[Int]) = {
     def oldMap = last(map, value)
     def minValue: Events[Int] = min(getOrElse(oldMap, on(value, key), value), value)
-    def map: Events[Map[A,Int]] = default(add(oldMap, on(value, key), minValue), empty[A, Int])
+    def map: Events[Map[A, Int]] = default(add(oldMap, on(value, key), minValue), empty[A, Int])
     map
   }
 
-  ## Map every new key to a unique integer ID
-  def counting[A](x: Events[A]) = {
+  ## Map every new value of `events` to a unique integer ID
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[String]
+  ## def map = Map.counting(x)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = A
+  ## 1: map = A → 1
+  ## 3: x = C
+  ## 3: map = A → 1, C → 2
+  ## 6: x = A
+  ## 6: map = A → 1, C → 2
+  ## ~~~
+  def counting[A](events: Events[A]) = {
     def counter: Events[Int] =
       default(
-        if !contains(last(map, x), x)
-        then last(counter, x) + 1
-        else last(counter, x),
+        if !contains(last(map, events), events)
+        then last(counter, events) + 1
+        else last(counter, events),
         0)
 
     def map: Events[Map[A, Int]] =
       default(
-        if !contains(last(map, x), x)
-        then add(last(map, x), x, counter)
-        else last(map, x),
+        if !contains(last(map, events), events)
+        then add(last(map, events), events, counter)
+        else last(map, events),
         empty[A, Int])
     map
   }
