@@ -1,0 +1,11 @@
+in a: Events[Int]
+in b: Events[Float]
+in c: Events[String]
+in d: Events[Bool]
+in e: Events[(Bool, Int)]
+in f: Events[Set[Int]]
+in g: Events[Map[Int, Int]]
+in h: Events[List[String]]
+in i: Events[{a: Bool, b: String}]
+
+out *
