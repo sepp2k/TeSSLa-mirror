@@ -84,7 +84,7 @@ Note:
 - The output contains spaces in front and after the following terminal symbols: `':', '=', '->'` and after
 the `','` of enumerations (e.g. in `SET`).
 
-- Tuples and records with field names \_1, \_2... are exclusively handled as tuples (also in the output)
+- Tuples and records with field names \_1, \_2... are exclusively handled as tuples (also in the input)
 
 Notation
 ----------------------------------
