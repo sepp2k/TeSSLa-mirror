@@ -4,11 +4,8 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCodeUtils}
 
 /*
- * NOTE: This way of input parsing shows advantages, when complex input parsing (Sets, records ...) is used rarely.
- * We assume that since we think the standard input will be plain numbers
- * Another way of handling the inputs would be a method in the scala skeleton parsing all inputs and returning type
- * Any. In cases of extensive input parsing it would make the generated code shorter and a lot cleaner.
- * However we will stay with this version for now.
+ * NOTE: A general parsing method which can be executed at runtime is not possible since tuples of various type
+ * cannot be generated. Replacing tuples internally by Seq[Any] would be a solution but isn't nice at all
  */
 
 object ScalaIOHandling {
@@ -18,7 +15,7 @@ object ScalaIOHandling {
       case LongType => getInputParseExpressionForLong(exp)
       case DoubleType => getInputParseExpressionForDouble(exp)
       case BoolType => getInputParseExpressionForBoolean(exp)
-      case UnitType => getInputParseExpressionForUnit()
+      case UnitType => getInputParseExpressionForUnit(exp)
       case StringType => getInputParseExpressionForString(exp)
       case _ =>
         val s = to match {
@@ -35,19 +32,19 @@ object ScalaIOHandling {
   }
 
   def getInputParseExpressionForLong(exp: String) : String = {
-    s"java.lang.Long.parseLong($exp)"
+    "{try {java.lang.Long.parseLong(" + exp + ")} catch {case t : Throwable =>  throw InputError(s\"Long input has invalid format\", t.getMessage)}}"
   }
 
   def getInputParseExpressionForDouble(exp: String) : String = {
-    s"java.lang.Double.parseDouble($exp)"
+    "{try {java.lang.Double.parseDouble(" + exp + ")} catch {case t : Throwable =>  throw InputError(s\"Double input has invalid format\", t.getMessage)}}"
   }
 
   def getInputParseExpressionForBoolean(exp: String) : String = {
-    s"java.lang.Boolean.parseBoolean($exp)"
+    "{val b = " + exp + "; if (b == \"true\") {true} else if (b == \"false\") {false} else {throw InputError(s\"Boolean input has invalid format\", b)}}"
   }
 
-  def getInputParseExpressionForUnit() : String = {
-    "true"
+  def getInputParseExpressionForUnit(exp: String) : String = {
+    "{val u = " + exp + "; if (u == \"()\") true else throw InputError(\"Unit input has invalid format\", u)}"
   }
 
   def getInputParseExpressionForString(exp: String) : String = {
@@ -56,13 +53,19 @@ object ScalaIOHandling {
 
   def getInputParseExpressionForOption(subType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
     val expName = s"exp$freshVarCount"
-    s"""{val $expName = $exp;
+    s"""{
+       |val $expName = $exp;
+       |try {
        |if ($expName == "None") {
         |None
        |} else if ($expName.startsWith("Some(") && $expName.endsWith(")")) {
         |Some(${getInputParseExpression(subType, s"""$expName.stripPrefix("Some(").stripSuffix(")").strip""", freshVarCount + 1)})
        |} else {
-        |throw new java.lang.Exception("Option input has invalid format")
+        |throw new java.lang.Exception()
+       |}
+       |} catch {
+        |case i : InputError => throw i;
+        |case _ : Throwable => throw InputError("Option input has invalid format", $expName)
        |}
        |}
      |""".stripMargin.replaceAll("\n", " ")
@@ -71,6 +74,7 @@ object ScalaIOHandling {
   def getInputParseExpressionForImmutableSet(subType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
     val expName = s"exp$freshVarCount"
     s"""{val out = $exp;
+       |try {
        |if (out.startsWith("Set(") && out.endsWith(")")) {
         |val out_str = out.stripPrefix("Set(").stripSuffix(")").strip;
         |if (out_str == "") {
@@ -79,15 +83,20 @@ object ScalaIOHandling {
          |splitString(out_str, ",").map{$expName => ${getInputParseExpression(subType, s"$expName.strip", freshVarCount + 1)} }.toSet
         |}
         |} else {
-         |throw new java.lang.Exception("Set input has invalid format")
+         |throw new java.lang.Exception()
         |}
-        |}
+       |} catch {
+        |case i : InputError => throw i;
+        |case _ : Throwable => throw InputError("Set input has invalid format", out)
+       |}
+       |}
     |""".stripMargin.replaceAll("\n", " ")
   }
 
   def getInputParseExpressionForImmutableMap(keyType: ImpLanType, valType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
     val expName = s"exp$freshVarCount"
     s"""{val out = $exp;
+       |try {
        |if (out.startsWith("Map(") && out.endsWith(")")) {
         |val out_str = out.stripPrefix("Map(").stripSuffix(")").strip;
         |if (out_str == "") {
@@ -100,12 +109,16 @@ object ScalaIOHandling {
            |->
            |(${getInputParseExpression(valType, s"""$expName(1).strip""", freshVarCount + 1)}))
           |} else {
-           |throw new java.lang.Exception("Map input has invalid format")
+           |throw new java.lang.Exception()
           |}
         |}.toMap
        |}
        |} else {
-         |throw new java.lang.Exception("Map input has invalid format")
+         |throw new java.lang.Exception()
+       |}
+       |} catch {
+        |case i : InputError => throw i;
+        |case _ : Throwable => throw InputError("Map input has invalid format", out)
        |}
        |}
     |""".stripMargin.replaceAll("\n", " ")
@@ -114,6 +127,7 @@ object ScalaIOHandling {
   def getInputParseExpressionForImmutableList(subType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
     val expName = s"exp$freshVarCount"
     s"""{val out = $exp;
+       |try {
        |if (out.startsWith("List(") && out.endsWith(")")) {
         |val out_str = out.stripPrefix("List(").stripSuffix(")").strip;
         |if (out_str == "") {
@@ -122,7 +136,11 @@ object ScalaIOHandling {
          |splitString(out_str, ",").map{$expName => ${getInputParseExpression(subType, s"$expName.strip", freshVarCount + 1)} }.toList
         |}
         |} else {
-         |throw new java.lang.Exception("List input has invalid format")
+         |throw new java.lang.Exception()
+        |}
+        |} catch {
+         |case i : InputError => throw i;
+         |case _ : Throwable => throw InputError("List input has invalid format", out)
         |}
         |}
     |""".stripMargin.replaceAll("\n", " ")
@@ -130,15 +148,21 @@ object ScalaIOHandling {
 
   def getInputParseExpressionForTuple(subTypes: Seq[ImpLanType], exp: String, freshVarCount : Int = 0) : String = {
     val expName = s"exp$freshVarCount"
-    s"""{val s = $exp;
+    s"""{
+       |val s = $exp;
+       |try {
        |if (s.startsWith("(") && s.endsWith(")")) {
         |val $expName = splitString(s.substring(1, s.length - 1).strip, ",");
         |if ($expName.size != ${subTypes.length}) {
-         |throw new java.lang.Exception("Tuple input has invalid format")
+         |throw new java.lang.Exception()
         |};
         |(${subTypes.indices.map(i => getInputParseExpression(subTypes(i), s"$expName($i).strip", freshVarCount + 1)).mkString(", ")})
        |} else {
-        |throw new java.lang.Exception("Tuple input has invalid format")
+        |throw new java.lang.Exception()
+       |}
+       |} catch {
+        |case i : InputError => throw i;
+        |case _ : Throwable => throw InputError("Tuple input has invalid format", s)
        |}
        |}
     |""".stripMargin.replaceAll("\n", " ")
@@ -146,17 +170,23 @@ object ScalaIOHandling {
 
   def getInputParseExpressionForStruct(fieldNames: Seq[String], subTypes: Seq[ImpLanType], exp: String, freshVarCount : Int = 0) : String = {
     val expName = s"exp$freshVarCount"
-    s"""{val s = $exp;
+    s"""{
+       |val s = $exp;
+       |try {
        |if (s.startsWith("{") && s.endsWith("}")) {
         |val cont = splitString(s.substring(1, s.length - 1).strip, ",").map(splitString(_, "=").map(_.strip));
          |if (cont.size != ${fieldNames.size} || cont.exists(_.size != 2)) {
-           |throw new java.lang.Exception("Record input has invalid format")
+           |throw new java.lang.Exception()
          |};
         |val $expName = cont.map(s => (s(0), s(1))).toMap;
          |(${subTypes.indices.map(i => getInputParseExpression(subTypes(i), s"$expName(" + "\"" + fieldNames(i) + "\").strip", freshVarCount + 1)).mkString(", ")})
         |} else {
-         |throw new java.lang.Exception("Record input has invalid format")
+         |throw new java.lang.Exception()
         |}
+       |} catch {
+        |case i : InputError => throw i;
+        |case _ : Throwable => throw InputError("Struct input has invalid format", s)
+       |}
        |}
     |""".stripMargin.replaceAll("\n", " ")
   }

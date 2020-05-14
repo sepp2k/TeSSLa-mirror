@@ -6,6 +6,10 @@ import java.io.InputStreamReader
 
 object Main {
 
+    case class InputError(m: String, s: String) extends java.lang.Exception {
+        override def toString: String = s"$m: $s"
+    }
+
     def findEnd(s: String, delim: String, start: Int): Int = {
         if (start + delim.length <= s.length && s.substring(start, start + delim.length) == delim ) {
             start
@@ -45,9 +49,7 @@ object Main {
               .replaceAll("\\\\\\\\", "\\")
               .replaceAll("\\\\t", "\t");
         } else {
-            System.err.println("FATAL: String input has incorrect format: \n" + s)
-            System.exit(129)
-            ""
+            throw InputError("No valid string input", s)
         }
     }
 
@@ -135,7 +137,7 @@ object Main {
             }
         } catch {
             case e: Exception => {
-                System.err.println("ERROR parsing the input Stream\n\n" + e)
+                System.err.println("ERROR parsing the input Stream\n" + e)
                 System.exit(129)
             }
         }
