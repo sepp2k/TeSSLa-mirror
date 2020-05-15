@@ -1,5 +1,34 @@
 ## Strings
 module String {
+  ## Concatenates the [`String`](#string)s `str1` and `str2`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[String]
+  ## in y: Events[String]
+  ## def result := String.concat(x, y)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## stream result: signal
+  ## ---
+  ## 1: x = X
+  ## 2: y = A
+  ## 2: result = XA
+  ## 4: y = B
+  ## 4: result = XB
+  ## 6: x = Y
+  ## 6: result = YB
+  ## 8: x = Z
+  ## 8: result = ZB
+  ## ~~~
   liftable def concat(str1: String, str2: String): String = __builtin__(String_concat)
 
   liftable def format[T](formatString: String, value: T): String = __builtin__(String_format)
