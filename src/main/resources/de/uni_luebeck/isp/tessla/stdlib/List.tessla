@@ -4,6 +4,131 @@ module List {
   ## Returns an empty list without any element of type `T`
   def empty[T]: List[T] = __builtin__(List_empty)
 
+  ## Appends the given `element` to the end of the given `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## out list
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## ---
+  ## 0: list = []
+  ## 2: list = [2]
+  ## 2: x = 2
+  ## 4: list = [2, 1]
+  ## 4: x = 1
+  ## 6: list = [2, 1, 2]
+  ## 6: x = 2
+  ## ~~~
+  liftable def append[T](list: List[T], element: T): List[T] = __builtin__(List_append)
+
+  ## Prepends the given `element` to the begining of the given `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List.prepend(x, old), List.empty[Int])
+  ## out list
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## ---
+  ## 0: list = []
+  ## 2: list = [1]
+  ## 2: x = 1
+  ## 4: list = [2, 1]
+  ## 4: x = 2
+  ## 6: list = [3, 2, 1]
+  ## 6: x = 3
+  ## ~~~
+  liftable def prepend[T](element: T, list: List[T]): List[T] = __builtin__(List_prepend)
+
+  ## Gets the element at the requested `index`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int] # elements to preprend
+  ## in y: Events[Int] # index of the requested element
+  ## def old = last(list, x)
+  ## def list: Events[List[Int]] = merge(List.prepend(x, old), List.empty[Int])
+  ## def element = List.get(list, y)
+  ## out list
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: bubbles
+  ## stream y: signal
+  ## stream list: signal
+  ## stream element: signal
+  ## ---
+  ## 0: list = []
+  ## 1: x = 1
+  ## 1: list = [1]
+  ## 3: element = 1
+  ## 3: y = 0
+  ## 5: x = 3
+  ## 5: list = [3, 1]
+  ## 5: element = 3
+  ## 8: x = 2
+  ## 8: list = [2, 3, 1]
+  ## 8: element = 1
+  ## 8: y = 2
+  ## ~~~
+  liftable def get[T](list: List[T], index: Int): T = __builtin__(List_get)
+
+  ## Sets the value at the given `index`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[String] # element to set
+  ## in y: Events[Int] # index in the list
+  ## def init = List.append(List.append(List.empty[String], "A"), "B")
+  ## def old = last(list, mergeUnit(x, y))
+  ## def list: Events[List[String]] = merge(List.set(old, y, x), init)
+  ## out list
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: signal
+  ## stream y: signal
+  ## stream list: signal
+  ## ---
+  ## 0: list = [A, B]
+  ## 1: x = C
+  ## 3: y = 0
+  ## 3: list = [C, B]
+  ## 5: x = D
+  ## 5: list = [D, B]
+  ## 8: y = 1
+  ## 8: list = [D, D]
+  ## ~~~
+  liftable def set[T](list: List[T], index: Int, value: T): List[T] = __builtin__(List_set)
+
   ## Returns the number of elements in the given `list`
   ##
   ## **Usage example:**
@@ -20,20 +145,20 @@ module List {
   ##
   ## ~~~trace
   ## option timeDomain: [-1,8]
-  ## stream x: events
-  ## stream list: events
-  ## stream size: events
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream size: signal
   ## ---
   ## 0: size = 0
-  ## 0: list = List()
+  ## 0: list = []
   ## 2: size = 1
-  ## 2: list = List(1)
+  ## 2: list = [1]
   ## 2: x = 1
   ## 4: size = 2
-  ## 4: list = List(1, 2)
+  ## 4: list = [1, 2]
   ## 4: x = 2
   ## 6: size = 3
-  ## 6: list = List(1, 2, 3)
+  ## 6: list = [1, 2, 3]
   ## 6: x = 3
   ## ~~~
   liftable def size[T](list: List[T]): Int = __builtin__(List_size)
@@ -54,79 +179,23 @@ module List {
   ##
   ## ~~~trace
   ## option timeDomain: [-1,8]
-  ## stream x: events
-  ## stream list: events
-  ## stream empty: bubbles
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream empty: signal
   ## ---
   ## 0: empty = true
-  ## 0: list = List()
+  ## 0: list = []
   ## 2: empty = false
-  ## 2: list = List(1)
+  ## 2: list = [1]
   ## 2: x = 1
   ## 4: empty = false
-  ## 4: list = List(1, 2)
+  ## 4: list = [1, 2]
   ## 4: x = 2
   ## 6: empty = false
-  ## 6: list = List(1, 2, 3)
+  ## 6: list = [1, 2, 3]
   ## 6: x = 3
   ## ~~~
   liftable def isEmpty[T](list: List[T]): Bool = size(list) == 0
-
-  ## Appends the given `element` to the end of the given `list`
-  ##
-  ## **Usage example:**
-  ##
-  ## ~~~ruby
-  ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
-  ## out list
-  ## ~~~
-  ##
-  ## **Trace example:**
-  ##
-  ## ~~~trace
-  ## option timeDomain: [-1,8]
-  ## stream x: events
-  ## stream list: events
-  ## ---
-  ## 0: list = List()
-  ## 2: list = List(1)
-  ## 2: x = 1
-  ## 4: list = List(1, 2)
-  ## 4: x = 2
-  ## 6: list = List(1, 2, 3)
-  ## 6: x = 3
-  ## ~~~
-  liftable def append[T](list: List[T], element: T): List[T] = __builtin__(List_append)
-
-  ## Prepends the given `element` to the begining of the given `list`
-  ##
-  ## **Usage example:**
-  ##
-  ## ~~~ruby
-  ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.prepend( x, old), List.empty[Int])
-  ## out list
-  ## ~~~
-  ##
-  ## **Trace example:**
-  ##
-  ## ~~~trace
-  ## option timeDomain: [-1,8]
-  ## stream x: events
-  ## stream list: events
-  ## ---
-  ## 0: list = List()
-  ## 2: list = List(1)
-  ## 2: x = 1
-  ## 4: list = List(2, 1)
-  ## 4: x = 2
-  ## 6: list = List(3, 2, 1)
-  ## 6: x = 3
-  ## ~~~
-  liftable def prepend[T](element: T, list: List[T]): List[T] = __builtin__(List_prepend)
 
   ## Selects all elements except the first
   ##
@@ -144,19 +213,19 @@ module List {
   ##
   ## ~~~trace
   ## option timeDomain: [-1,8]
-  ## stream x: events
-  ## stream list: events
-  ## stream tail: events
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream tail: signal
   ## ---
-  ## 0: list = List()
-  ## 2: tail = List()
-  ## 2: list = List(1)
+  ## 0: list = []
+  ## 2: tail = []
+  ## 2: list = [1]
   ## 2: x = 1
-  ## 4: tail = List(2)
-  ## 4: list = List(1, 2)
+  ## 4: tail = [2]
+  ## 4: list = [1, 2]
   ## 4: x = 2
-  ## 6: tail = List(2, 3)
-  ## 6: list = List(1, 2, 3)
+  ## 6: tail = [2, 3]
+  ## 6: list = [1, 2, 3]
   ## 6: x = 3
   ## ~~~
   liftable def tail[T](list: List[T]): List[T] = __builtin__(List_tail)
@@ -177,29 +246,23 @@ module List {
   ##
   ## ~~~trace
   ## option timeDomain: [-1,8]
-  ## stream x: events
-  ## stream list: events
-  ## stream init: events
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream init: signal
   ## ---
-  ## 0: init = List()
-  ## 0: list = List()
-  ## 2: init = List()
-  ## 2: list = List(1)
+  ## 0: init = []
+  ## 0: list = []
+  ## 2: init = []
+  ## 2: list = [1]
   ## 2: x = 1
-  ## 4: init = List(1)
-  ## 4: list = List(1, 2)
+  ## 4: init = [1]
+  ## 4: list = [1, 2]
   ## 4: x = 2
-  ## 6: init = List(1, 2)
-  ## 6: list = List(1, 2, 3)
+  ## 6: init = [1, 2]
+  ## 6: list = [1, 2, 3]
   ## 6: x = 3
   ## ~~~
   liftable def init[T](list: List[T]): List[T] = __builtin__(List_init)
-
-  ## Gets the element at the requested `index`
-  liftable def get[T](list: List[T], index: Int): T = __builtin__(List_get)
-
-  ## Sets the value at the given `index`
-  liftable def set[T](list: List[T], index: Int, value: T): List[T] = __builtin__(List_set)
 
   ## Selects the first element of the `list`
   ##
@@ -217,19 +280,19 @@ module List {
   ##
   ## ~~~trace
   ## option timeDomain: [-1,8]
-  ## stream x: events
-  ## stream list: events
-  ## stream head: events
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream head: signal
   ## ---
-  ## 0: list = List()
+  ## 0: list = []
   ## 2: x = 1
-  ## 2: list = List(1)
+  ## 2: list = [1]
   ## 2: head = 1
   ## 4: x = 2
-  ## 4: list = List(1, 2)
+  ## 4: list = [1, 2]
   ## 4: head = 1
   ## 6: x = 3
-  ## 6: list = List(1, 2, 3)
+  ## 6: list = [1, 2, 3]
   ## 6: head = 1
   ## ~~~
   liftable def head[T](list: List[T]): T = get(list, 0)
@@ -250,19 +313,19 @@ module List {
   ##
   ## ~~~trace
   ## option timeDomain: [-1,8]
-  ## stream x: events
-  ## stream list: events
-  ## stream l: events
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream l: signal
   ## ---
-  ## 0: list = List()
+  ## 0: list = []
   ## 2: x = 1
-  ## 2: list = List(1)
+  ## 2: list = [1]
   ## 2: l = 1
   ## 4: x = 2
-  ## 4: list = List(1, 2)
+  ## 4: list = [1, 2]
   ## 4: l = 2
   ## 6: x = 3
-  ## 6: list = List(1, 2, 3)
+  ## 6: list = [1, 2, 3]
   ## 6: l = 3
   ## ~~~
   liftable def last[T](list: List[T]): T = get(list, size(list)-1)
@@ -284,20 +347,20 @@ module List {
   ##
   ## ~~~trace
   ## option timeDomain: [-1,8]
-  ## stream x: events
-  ## stream list: events
-  ## stream s: events
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream s: signal
   ## ---
   ## 0: s = 0
-  ## 0: list = List()
+  ## 0: list = []
   ## 2: s = 1
-  ## 2: list = List(1)
+  ## 2: list = [1]
   ## 2: x = 1
   ## 4: s = 3
-  ## 4: list = List(1, 2)
+  ## 4: list = [1, 2]
   ## 4: x = 2
   ## 6: s = 6
-  ## 6: list = List(1, 2, 3)
+  ## 6: list = [1, 2, 3]
   ## 6: x = 3
   ## ~~~
   liftable def fold[T, U](list: List[T], start: U, f: (U, T) => U): U = __builtin__(List_fold)
