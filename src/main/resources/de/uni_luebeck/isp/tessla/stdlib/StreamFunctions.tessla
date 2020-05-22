@@ -2,7 +2,7 @@
 module StreamFunctions {}
 
 ## Returns an empty stream without any event of type `T`
-def nil[T]: Events[T] = __builtin__(nil)
+def nil[T]: Events[T] = extern(nil)
 
 ## Returns a stream which contains all the events of the given `stream`. If `stream` has no event at
 ## timestamp 0, then an additional event with value `value` is added at timestamp 0.
@@ -44,7 +44,7 @@ def nil[T]: Events[T] = __builtin__(nil)
 ## 5: d = 23
 ## ~~~
 ##
-def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)
+def default[T](stream: Events[T], value: T): Events[T] = extern(default)
 
 ## Similar to [`default`](#default), this operation returns a stream which contains
 ## all the events of the given `valueStream`. If the first event on `defaultStream` happens
@@ -94,7 +94,7 @@ def default[T](stream: Events[T], value: T): Events[T] = __builtin__(default)
 ## 6: d = 4
 ## 6: v = 4
 ## ~~~
-def defaultFrom[T](valueStream: Events[T], defaultStream: Events[T]): Events[T] = __builtin__(defaultFrom)
+def defaultFrom[T](valueStream: Events[T], defaultStream: Events[T]): Events[T] = extern(defaultFrom)
 
 ## Lifts a unary function `f` which is defined on values to a function on a stream and applies it to the
 ## given stream. The function `f` is called for every event on the streams. Because there is no
@@ -137,7 +137,7 @@ def defaultFrom[T](valueStream: Events[T], defaultStream: Events[T]): Events[T] 
 ## 5: b = 9
 ## 5: a = 9
 ## ~~~
-def lift1[T, U](stream: Events[T], f: (Option[T]) => Option[U]): Events[U] = __builtin__(lift)
+def lift1[T, U](stream: Events[T], f: (Option[T]) => Option[U]): Events[U] = extern(lift)
 
 ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
 ## given streams. The function `f` is called for every event on any of the streams. If there is a
@@ -175,7 +175,7 @@ def lift1[T, U](stream: Events[T], f: (Option[T]) => Option[U]): Events[U] = __b
 ## 5: c = 9
 ## 5: a = 9
 ## ~~~
-def lift2[T, U, V](stream1: Events[T], stream2: Events[U], f: (Option[T], Option[U]) => Option[V]): Events[V] = __builtin__(lift)
+def lift2[T, U, V](stream1: Events[T], stream2: Events[U], f: (Option[T], Option[U]) => Option[V]): Events[V] = extern(lift)
 
 ## `lift` is an alias for [`lift2`](#lift2).
 def lift = lift2
@@ -224,7 +224,7 @@ def lift = lift2
 ## 6: a = 9
 ## ~~~
 def lift3[T1, T2, T3, T4](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3],
-                          f: (Option[T1], Option[T2], Option[T3]) => Option[T4]): Events[T4] = __builtin__(lift)
+                          f: (Option[T1], Option[T2], Option[T3]) => Option[T4]): Events[T4] = extern(lift)
 
 ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
 ## given streams. The function `f` is called for every event on any of the streams. If there is a
@@ -276,7 +276,7 @@ def lift3[T1, T2, T3, T4](stream1: Events[T1], stream2: Events[T2], stream3: Eve
 ## 7: c = 3
 ## ~~~
 def lift4[T1, T2, T3, T4, T5](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3], stream4: Events[T4],
-                              f: (Option[T1], Option[T2], Option[T3], Option[T4]) => Option[T5]): Events[T5] = __builtin__(lift)
+                              f: (Option[T1], Option[T2], Option[T3], Option[T4]) => Option[T5]): Events[T5] = extern(lift)
 
 ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
 ## given streams. The function `f` is called for every event on any of the streams. If there is a
@@ -286,7 +286,7 @@ def lift4[T1, T2, T3, T4, T5](stream1: Events[T1], stream2: Events[T2], stream3:
 ##
 ## See [`lift4`](#lift4) for a usage example.
 def lift5[T1, T2, T3, T4, T5, U](stream1: Events[T1], stream2: Events[T2], stream3: Events[T3], stream4: Events[T4], stream5: Events[T5],
-                              f: (Option[T1], Option[T2], Option[T3], Option[T4], Option[T5]) => Option[U]): Events[U] = __builtin__(lift)
+                              f: (Option[T1], Option[T2], Option[T3], Option[T4], Option[T5]) => Option[U]): Events[U] = extern(lift)
 
 ## The last operator takes two streams and returns the previous
 ## value of the first stream at the timestamps of the second.
@@ -324,7 +324,7 @@ def lift5[T1, T2, T3, T4, T5, U](stream1: Events[T1], stream2: Events[T2], strea
 ## 6: trigger = ()
 ## ~~~
 ##
-def last[T, U](stream: Events[T], trigger: Events[U]): Events[T] = __builtin__(last)
+def last[T, U](stream: Events[T], trigger: Events[U]): Events[T] = extern(last)
 
 ## Return the previous event of `a`, when the current event occurs. Does not work in recursive equations.
 ## Use [`last`](#last) with an explicit external trigger in recursive equations
@@ -381,7 +381,7 @@ def prev[A](a: Events[A]): Events[A] = last(a,a)
 ## 10: y = 10
 ## ~~~
 ##
-def time[T](stream: Events[T]): Events[Int] = __builtin__(time)
+def time[T](stream: Events[T]): Events[Int] = extern(time)
 
 ## The delay operator takes delays as its first argument. After a
 ## delay has passed, a unit event is emitted. A delay can only be set if a reset event
@@ -419,7 +419,7 @@ def time[T](stream: Events[T]): Events[Int] = __builtin__(time)
 ## 13: resets = ()
 ## ~~~
 ##
-def delay[T](delays: Events[Int], resets: Events[T]): Events[Unit] = __builtin__(delay)
+def delay[T](delays: Events[Int], resets: Events[T]): Events[Unit] = extern(delay)
 
 # More stream functions
 
@@ -513,7 +513,7 @@ def first[T, U](stream1: Events[T], stream2: Events[U]): Events[T] = slift(strea
 ## 7: b = 4
 ## 7: a = 3
 ## ~~~
-def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] = __builtin__(slift)
+def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] = extern(slift)
 
 ## Takes a function `f` on values and lifts it to a function on streams
 ## using signal semantics. The function is then applied to the given streams.
@@ -554,7 +554,7 @@ def slift1[T, U](stream: Events[T], f: (T) => U): Events[U] = __builtin__(slift)
 ## 12: a = 6
 ## 12: z = 6
 ## ~~~
-def slift2[T,U,V](a: Events[T], b: Events[U], f: (T,U) => V): Events[V] = __builtin__(slift)
+def slift2[T,U,V](a: Events[T], b: Events[U], f: (T,U) => V): Events[V] = extern(slift)
 
 ## `slift` is an alias for [`slift2`](#slift2)
 def slift = slift2
@@ -603,7 +603,7 @@ def slift = slift2
 ## 12: a = 6
 ## 12: z = 8
 ## ~~~
-def slift3[T1, T2, T3, T4](a: Events[T1], b: Events[T2], c: Events[T3], f: (T1, T2, T3) => T4): Events[T4] = __builtin__(slift)
+def slift3[T1, T2, T3, T4](a: Events[T1], b: Events[T2], c: Events[T3], f: (T1, T2, T3) => T4): Events[T4] = extern(slift)
 
 ## Takes a function `f` on values and lifts it to a function on streams
 ## using signal semantics. The function is then applied to the given streams.
@@ -654,7 +654,7 @@ def slift3[T1, T2, T3, T4](a: Events[T1], b: Events[T2], c: Events[T3], f: (T1, 
 ## 12: z = 9
 ## 12: c = 10
 ## ~~~
-def slift4[T1, T2, T3, T4, T5](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], f: (T1, T2, T3, T4) => T5): Events[T5] = __builtin__(slift)
+def slift4[T1, T2, T3, T4, T5](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], f: (T1, T2, T3, T4) => T5): Events[T5] = extern(slift)
 
 ## Takes a function `f` on values and lifts it to a function on streams
 ## using signal semantics. The function is then applied to the given streams.
@@ -668,7 +668,7 @@ def slift4[T1, T2, T3, T4, T5](s1: Events[T1], s2: Events[T2], s3: Events[T3], s
 ## of the lifted function `f`.
 ##
 ## See [`slift4`](#slift4) for a usage example.
-def slift5[T1, T2, T3, T4, T5, U](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], s5: Events[T5], f: (T1, T2, T3, T4, T5) => U): Events[U] = __builtin__(slift)
+def slift5[T1, T2, T3, T4, T5, U](s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], s5: Events[T5], f: (T1, T2, T3, T4, T5) => U): Events[U] = extern(slift)
 
 ## nodoc
 def slift1_curried[T, U](f: (T) => U) =
@@ -721,7 +721,7 @@ def slift5_curried[T1, T2, T3, T4, T5, U](f: (T1, T2, T3, T4, T5) => U) =
 ## 8: a = 5
 ## 8: z = 5
 ## ~~~
-def merge2[T](stream1: Events[T], stream2: Events[T]): Events[T] = __builtin__(merge)
+def merge2[T](stream1: Events[T], stream2: Events[T]): Events[T] = extern(merge)
 
 ## `merge` is an alias for [`merge2`](#merge2)
 def merge = merge2
@@ -765,41 +765,41 @@ def merge = merge2
 ## 10: z = 6
 ## 10: c = 9
 ## ~~~
-def merge3[T](a: Events[T], b: Events[T], c: Events[T]): Events[T] = __builtin__(merge)
+def merge3[T](a: Events[T], b: Events[T], c: Events[T]): Events[T] = extern(merge)
 
 ## Merges the given event streams. Prioritizing the event streams
 ## from the left to the right in case of simultaneous events.
 ##
 ## See [`merge`](#merge) for a usage example.
-def merge4[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T]): Events[T] = __builtin__(merge)
+def merge4[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T]): Events[T] = extern(merge)
 
 ## Merges the given event streams. Prioritizing the event streams
 ## from the left to the right in case of simultaneous events.
 ##
 ## See [`merge`](#merge) for a usage example.
 def merge5[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T], e: Events[T]): Events[T] =
-  __builtin__(merge)
+  extern(merge)
 
 ## Merges the given event streams. Prioritizing the event streams
 ## from the left to the right in case of simultaneous events.
 ##
 ## See [`merge`](#merge) for a usage example.
 def merge6[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T], e: Events[T], f: Events[T]): Events[T] =
-  __builtin__(merge)
+  extern(merge)
 
 ## Merges the given event streams. Prioritizing the event streams
 ## from the left to the right in case of simultaneous events.
 ##
 ## See [`merge`](#merge) for a usage example.
 def merge7[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T], e: Events[T], f: Events[T], g: Events[T]): Events[T] =
-  __builtin__(merge)
+  extern(merge)
 
 ## Merges the given event streams. Prioritizing the event streams
 ## from the left to the right in case of simultaneous events.
 ##
 ## See [`merge`](#merge) for a usage example.
 def merge8[T](a: Events[T], b: Events[T], c: Events[T], d: Events[T], e: Events[T], f: Events[T], g: Events[T], h: Events[T]): Events[T] =
-  __builtin__(merge)
+  extern(merge)
 
 ## Merges streams of different types, resulting in a stream that contains a unit
 ## event whenever any of the input streams produces an event.

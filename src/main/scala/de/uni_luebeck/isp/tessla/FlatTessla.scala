@@ -79,7 +79,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
                              parameters: Seq[Parameter],
                              referenceImplementation: Option[Identifier],
                              loc: Location) extends Expression {
-    override def toString = s"__builtin__($name)"
+    override def toString = s"extern($name)"
   }
 
   case class InputStream(name: String, streamType: Type, typeLoc: Location, loc: Location) extends Expression {

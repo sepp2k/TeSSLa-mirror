@@ -55,7 +55,7 @@ object Tessla {
   }
 
   case class BuiltInBody(id: Identifier, referenceImplementation: Option[Expression]) extends Body {
-    override def toString = s"__builtin__($id)"
+    override def toString = s"extern($id)"
 
     override def loc = id.loc
   }
@@ -84,7 +84,7 @@ object Tessla {
   }
 
   case class BuiltInType(id: Identifier) extends TypeBody {
-    override def toString = s"__builtin__($id)"
+    override def toString = s"extern($id)"
   }
 
   case class In(id: Identifier, streamType: Type, annotations: Seq[Annotation], loc: Location) extends Statement {
