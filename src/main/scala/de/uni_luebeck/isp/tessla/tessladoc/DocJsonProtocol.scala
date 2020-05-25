@@ -13,68 +13,74 @@ object DocJsonProtocol extends DefaultJsonProtocol {
   }
 
   implicit val typeDocFormat: JsonFormat[TypeDoc] = lazyFormat(jsonFormat4(TypeDoc))
-  implicit val annotationDocFormat: JsonFormat[AnnotationDoc] = lazyFormat(jsonFormat4(AnnotationDoc))
+  implicit val annotationDocFormat: JsonFormat[AnnotationDoc] = lazyFormat(
+    jsonFormat4(AnnotationDoc)
+  )
   implicit val moduleDocFormat: JsonFormat[ModuleDoc] = lazyFormat(jsonFormat4(ModuleDoc))
   implicit val defDocFormat: JsonFormat[DefDoc] = lazyFormat(jsonFormat8(DefDoc))
 
   implicit val paramFormat: JsonFormat[Param] = lazyFormat(jsonFormat2(Param))
 
   implicit val simpleTypeFormat: JsonFormat[SimpleType] = jsonFormat1(SimpleType)
-  implicit val typeApplicationFormat: JsonFormat[TypeApplication] = lazyFormat(jsonFormat2(TypeApplication))
+  implicit val typeApplicationFormat: JsonFormat[TypeApplication] = lazyFormat(
+    jsonFormat2(TypeApplication)
+  )
   implicit val functionTypeFormat: JsonFormat[FunctionType] = lazyFormat(jsonFormat2(FunctionType))
   implicit val objectTypeFormat: JsonFormat[ObjectType] = lazyFormat(jsonFormat1(ObjectType))
   implicit val tupleTypeFormat: JsonFormat[TupleType] = lazyFormat(jsonFormat1(TupleType))
 
   // Enrich Json Values by a 'kind' field to distinguish different case classes
-  implicit class RichJsValue(json: JsValue){
-    def withKind(kind: String): JsObject = JsObject(json.asJsObject.fields + ("kind" -> JsString(kind)))
+  implicit class RichJsValue(json: JsValue) {
+    def withKind(kind: String): JsObject = JsObject(
+      json.asJsObject.fields + ("kind" -> JsString(kind))
+    )
     def kind: String = json.asJsObject.fields("kind").asInstanceOf[JsString].value
   }
 
   // Formats for traits, delegating to the different formats for the respective case-classes
   implicit val tesslaDocFormat: JsonFormat[TesslaDoc] = new JsonFormat[TesslaDoc] {
     override def write(doc: TesslaDoc): JsValue = doc match {
-        case d: AnnotationDoc => d.toJson.withKind("AnnotationDoc")
-        case d: TypeDoc => d.toJson.withKind("TypeDoc")
-        case d: ModuleDoc => d.toJson.withKind("ModuleDoc")
-        case d: DefDoc => d.toJson.withKind("DefDoc")
-      }
+      case d: AnnotationDoc => d.toJson.withKind("AnnotationDoc")
+      case d: TypeDoc       => d.toJson.withKind("TypeDoc")
+      case d: ModuleDoc     => d.toJson.withKind("ModuleDoc")
+      case d: DefDoc        => d.toJson.withKind("DefDoc")
+    }
 
     override def read(json: JsValue): TesslaDoc = json.kind match {
-        case "AnnotationDoc" => json.convertTo[AnnotationDoc]
-        case "TypeDoc" => json.convertTo[TypeDoc]
-        case "ModuleDoc" => json.convertTo[ModuleDoc]
-        case "DefDoc" => json.convertTo[DefDoc]
-      }
+      case "AnnotationDoc" => json.convertTo[AnnotationDoc]
+      case "TypeDoc"       => json.convertTo[TypeDoc]
+      case "ModuleDoc"     => json.convertTo[ModuleDoc]
+      case "DefDoc"        => json.convertTo[DefDoc]
+    }
   }
 
   implicit val typeFormat: JsonFormat[Type] = new JsonFormat[Type] {
     override def write(tpe: Type): JsValue = tpe match {
-        case t: SimpleType => t.toJson.withKind("SimpleType")
-        case t: TypeApplication => t.toJson.withKind("TypeApplication")
-        case t: FunctionType => t.toJson.withKind("FunctionType")
-        case t: ObjectType => t.toJson.withKind("ObjectType")
-        case t: TupleType => t.toJson.withKind("TupleType")
-      }
+      case t: SimpleType      => t.toJson.withKind("SimpleType")
+      case t: TypeApplication => t.toJson.withKind("TypeApplication")
+      case t: FunctionType    => t.toJson.withKind("FunctionType")
+      case t: ObjectType      => t.toJson.withKind("ObjectType")
+      case t: TupleType       => t.toJson.withKind("TupleType")
+    }
 
     override def read(json: JsValue): Type = json.kind match {
-      case "SimpleType" => json.convertTo[SimpleType]
+      case "SimpleType"      => json.convertTo[SimpleType]
       case "TypeApplication" => json.convertTo[TypeApplication]
-      case "FunctionType" => json.convertTo[FunctionType]
-      case "ObjectType" => json.convertTo[ObjectType]
-      case "TupleType" => json.convertTo[TupleType]
+      case "FunctionType"    => json.convertTo[FunctionType]
+      case "ObjectType"      => json.convertTo[ObjectType]
+      case "TupleType"       => json.convertTo[TupleType]
     }
   }
 
   implicit val scopeFormat: JsonFormat[Scope] = new JsonFormat[Scope] {
     override def write(scope: Scope): JsValue = scope match {
-      case Global => JsString("global")
+      case Global               => JsString("global")
       case Local(scopeLocation) => scopeLocation.toJson
     }
 
     override def read(json: JsValue): Scope = json match {
       case JsString("global") => Global
-      case _ => Local(json.convertTo[Location])
+      case _                  => Local(json.convertTo[Location])
     }
   }
 
@@ -91,7 +97,7 @@ object DocJsonProtocol extends DefaultJsonProtocol {
       loc.path match {
         case p if p == Location.builtIn.path => Location.builtIn
         case p if p == Location.unknown.path => Location.unknown
-        case Opt(p) => Location.option(p)
+        case Opt(p)                          => Location.option(p)
         case _ =>
           val r = loc.range.get
           Location(r.fromLine, r.fromColumn, r.toLine, r.toColumn, loc.path)

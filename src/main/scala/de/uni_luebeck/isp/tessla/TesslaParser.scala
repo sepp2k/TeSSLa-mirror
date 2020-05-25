@@ -11,7 +11,11 @@ import scala.jdk.CollectionConverters._
 import scala.collection.mutable
 
 object TesslaParser {
-  case class ParseResult(fileName: String, tokens: CommonTokenStream, tree: TesslaSyntax.SpecContext)
+  case class ParseResult(
+    fileName: String,
+    tokens: CommonTokenStream,
+    tree: TesslaSyntax.SpecContext
+  )
 
   private def parse(src: CharStream): (ParseResult, Seq[TesslaError]) = {
     val lexer = new TesslaLexer(src)
@@ -20,7 +24,14 @@ object TesslaParser {
     val errors = mutable.ArrayBuffer[TesslaError]()
     parser.removeErrorListeners()
     parser.addErrorListener(new BaseErrorListener {
-      override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException) = {
+      override def syntaxError(
+        r: Recognizer[_, _],
+        offendingToken: Any,
+        l: Int,
+        c: Int,
+        msg: String,
+        e: RecognitionException
+      ) = {
         errors += ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token]))
       }
     })
@@ -41,26 +52,31 @@ object TesslaParser {
   }
 
   class WithIncludesTranslator(src: CharStream, resolveInclude: String => Option[CharStream])
-      extends TranslationPhase.Translator[IndexedSeq[ParseResult]] with CanParseConstantString {
+      extends TranslationPhase.Translator[IndexedSeq[ParseResult]]
+      with CanParseConstantString {
     override def translateSpec(): IndexedSeq[ParseResult] = {
       parseWithIncludes(src)
     }
 
     private def parseWithIncludes(src: CharStream): IndexedSeq[ParseResult] = {
       val (mainResult, mainErrors) = parse(src)
-      val includes = mainResult.tree.includes.asScala.toVector.flatMap {include =>
+      val includes = mainResult.tree.includes.asScala.toVector.flatMap { include =>
         val fileName = getConstantString(include.file)
         val loc = Location.fromNode(include.file)
         lookupInclude(fileName, mainResult.fileName, loc).map(parseWithIncludes).getOrElse {
-            error(FileNotFound(fileName, Location.fromNode(include.file)))
-            Seq()
+          error(FileNotFound(fileName, Location.fromNode(include.file)))
+          Seq()
         }
       }
       mainErrors.foreach(error)
       includes :+ mainResult
     }
 
-    private def lookupInclude(includee: String, includer: String, loc: Location): Option[CharStream] = {
+    private def lookupInclude(
+      includee: String,
+      includer: String,
+      loc: Location
+    ): Option[CharStream] = {
       val includePath = Paths.get(includee)
       if (includePath.isAbsolute) {
         error(AbsoluteIncludePath(loc))
@@ -91,22 +107,23 @@ object TesslaParser {
     }
   }
 
-  class WithIncludes(resolveInclude: String => Option[CharStream]) extends TranslationPhase[CharStream, IndexedSeq[ParseResult]] {
+  class WithIncludes(resolveInclude: String => Option[CharStream])
+      extends TranslationPhase[CharStream, IndexedSeq[ParseResult]] {
     override def translate(src: CharStream) = {
       new WithIncludesTranslator(src, resolveInclude).translate()
     }
   }
 
   def parseEscapeSequence(sequence: String): Option[String] = sequence match {
-    case "\\r" => Some("\r")
-    case "\\n" => Some("\n")
-    case "\\t" => Some("\t")
-    case "\\a" => Some("\u0007")
+    case "\\r"  => Some("\r")
+    case "\\n"  => Some("\n")
+    case "\\t"  => Some("\t")
+    case "\\a"  => Some("\u0007")
     case "\\\\" => Some("\\")
     case "\\\"" => Some("\"")
-    case "\\$" => Some("$")
-    case "\\%" => Some("%")
-    case _ => None
+    case "\\$"  => Some("$")
+    case "\\%"  => Some("%")
+    case _      => None
   }
 
   sealed abstract class FormatSpecifierInfo
@@ -124,10 +141,10 @@ object TesslaParser {
         // If a MissingFormatArgumentException is thrown that means that the format string was syntactically correct
         // and takes one argument
         format.last match {
-          case 'h' | 'H' | 's' | 'S' => SingleArgFormat("format")
-          case 'd' | 'o' | 'x' | 'X' => SingleArgFormat("formatInt")
+          case 'h' | 'H' | 's' | 'S'                   => SingleArgFormat("format")
+          case 'd' | 'o' | 'x' | 'X'                   => SingleArgFormat("formatInt")
           case 'e' | 'E' | 'f' | 'g' | 'G' | 'a' | 'A' => SingleArgFormat("formatFloat")
-          case _ => InvalidFormat(UnsupportedConversion(format.last, loc))
+          case _                                       => InvalidFormat(UnsupportedConversion(format.last, loc))
         }
       case err: IllegalFormatException =>
         InvalidFormat(StringFormatError(err, loc))

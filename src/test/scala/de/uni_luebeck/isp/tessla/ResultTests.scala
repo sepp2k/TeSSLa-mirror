@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla
 
 import org.scalatest.funsuite.AnyFunSuite
-import TranslationPhase.{Result, Success, Failure, SimpleWarning}
+import TranslationPhase.{Failure, Result, SimpleWarning, Success}
 import Errors.{DivideByZero, IndexOutOfRange}
 
 class ResultTests extends AnyFunSuite {
@@ -10,26 +10,32 @@ class ResultTests extends AnyFunSuite {
   val ioor = IndexOutOfRange(42, IndexedSeq(), Location.unknown)
 
   test("combineAll") {
-    val result1 = Result.combineAll(Seq(
-      Success(1, w("a", "b")),
-      Success(2, w()),
-      Success(3, w("c"))
-    ))
-    assert(result1 == Success(Seq(1,2,3), w("a", "b", "c")))
+    val result1 = Result.combineAll(
+      Seq(
+        Success(1, w("a", "b")),
+        Success(2, w()),
+        Success(3, w("c"))
+      )
+    )
+    assert(result1 == Success(Seq(1, 2, 3), w("a", "b", "c")))
 
-    val result2 = Result.combineAll(Seq(
-      Success(1, w("a")),
-      Failure(Seq(dbz), w("b")),
-      Success(3, w("c"))
-    ))
+    val result2 = Result.combineAll(
+      Seq(
+        Success(1, w("a")),
+        Failure(Seq(dbz), w("b")),
+        Success(3, w("c"))
+      )
+    )
     // Warnings from third result are also included - it does not stop at the first failure
     assert(result2 == Failure(Seq(dbz), w("a", "b", "c")))
 
-    val result3 = Result.combineAll(Seq(
-      Success(1, w("a")),
-      Failure(Seq(dbz), w("b")),
-      Failure(Seq(ioor), w("c"))
-    ))
+    val result3 = Result.combineAll(
+      Seq(
+        Success(1, w("a")),
+        Failure(Seq(dbz), w("b")),
+        Failure(Seq(ioor), w("c"))
+      )
+    )
     // Warnings and errors from third result are also included - it does not stop at the first failure
     assert(result3 == Failure(Seq(dbz, ioor), w("a", "b", "c")))
   }
@@ -42,7 +48,7 @@ class ResultTests extends AnyFunSuite {
 
   test("runSequentially") {
     val result1 = Result.runSequentially(Seq(1, 2, 3))(f)
-    assert(result1 == Success(Seq(1,2,3), w("item 1", "item 2", "item 3")))
+    assert(result1 == Success(Seq(1, 2, 3), w("item 1", "item 2", "item 3")))
 
     val result2 = Result.runSequentially(Seq(1, 2, 0, 3))(f)
     // Warnings from f(3) are not included because it stops at f(0)

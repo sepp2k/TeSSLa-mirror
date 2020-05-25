@@ -19,7 +19,9 @@ object Location {
     override def toString = s"($fromLine,$fromColumn - $toLine,$toColumn)"
 
     def merge(other: SourceRange): SourceRange = {
-      require(fromLine < other.fromLine || fromLine == other.fromLine && fromColumn <= other.fromColumn)
+      require(
+        fromLine < other.fromLine || fromLine == other.fromLine && fromColumn <= other.fromColumn
+      )
       require(toLine < other.toLine || toLine == other.toLine && toColumn <= other.toColumn)
       SourceRange(fromLine, fromColumn, other.toLine, other.toColumn)
     }
@@ -31,7 +33,7 @@ object Location {
         require(path2 == path)
         SourceLoc(sourceRange.merge(range2), path)
       case Unknown => this
-      case _ => throw new IllegalArgumentException
+      case _       => throw new IllegalArgumentException
     }
 
     override def toString = {

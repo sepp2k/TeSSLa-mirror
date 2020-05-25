@@ -15,12 +15,13 @@ object Main {
   val programVersion = BuildInfo.version
   val programDescription = "Generate documentation for TeSSLa code"
 
-  case class Config(stdLib: Boolean = false,
-                    includes: Boolean = false,
-                    globalsOnly: Boolean = false,
-                    outfile: Option[File] = None,
-                    sources: Seq[CharStream] = Seq()
-                   )
+  case class Config(
+    stdLib: Boolean = false,
+    includes: Boolean = false,
+    globalsOnly: Boolean = false,
+    outfile: Option[File] = None,
+    sources: Seq[CharStream] = Seq()
+  )
 
   val parser: OptionParser[Config] = new OptionParser[Config](programName) {
     head(s"$programName $programVersion")
@@ -49,16 +50,19 @@ object Main {
   def main(args: Array[String]): Unit = {
     val config = parser.parse(args, Config()).getOrElse(sys.exit(1))
     val includeResolver = optionIf(config.includes)(IncludeResolvers.fromFile _)
-    val output = TesslaDoc.extract(config.sources, includeResolver, includeStdlib = config.stdLib) match {
-      case Success(tesslaDocs, warnings) =>
-        warnings.foreach(w => System.err.println(s"Warning: $w"))
-        tesslaDocs.globalsOnly.toString
-      case Failure(errors, warnings) =>
-        warnings.foreach(w => System.err.println(s"Warning: $w"))
-        errors.foreach(e => System.err.println(s"Error: $e"))
-        System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors")
-        sys.exit(1)
-    }
+    val output =
+      TesslaDoc.extract(config.sources, includeResolver, includeStdlib = config.stdLib) match {
+        case Success(tesslaDocs, warnings) =>
+          warnings.foreach(w => System.err.println(s"Warning: $w"))
+          tesslaDocs.globalsOnly.toString
+        case Failure(errors, warnings) =>
+          warnings.foreach(w => System.err.println(s"Warning: $w"))
+          errors.foreach(e => System.err.println(s"Error: $e"))
+          System.err.println(
+            s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors"
+          )
+          sys.exit(1)
+      }
     config.outfile match {
       case Some(file) =>
         try {

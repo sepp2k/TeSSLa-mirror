@@ -21,7 +21,7 @@ object Lazy {
     override def tailRecM[A, B](a: A)(f: A => Lazy[Either[A, B]]): Lazy[B] =
       f(a).get match {
         case Right(b) => Lazy(b)
-        case Left(a) => tailRecM(a)(f)
+        case Left(a)  => tailRecM(a)(f)
       }
   }
 
@@ -30,4 +30,3 @@ object Lazy {
   def apply[A](a: => A): Lazy[A] =
     new Lazy(a)
 }
-

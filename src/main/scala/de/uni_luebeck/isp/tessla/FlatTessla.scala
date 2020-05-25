@@ -5,8 +5,12 @@ import de.uni_luebeck.isp.tessla.util.mapValues
 import scala.collection.mutable
 
 abstract class FlatTessla extends HasUniqueIdentifiers {
-  case class Specification(globalDefs: Definitions, outStreams: Seq[OutStream], outAll: Option[OutAll],
-                           globalNames: Map[String, Identifier]) {
+  case class Specification(
+    globalDefs: Definitions,
+    outStreams: Seq[OutStream],
+    outAll: Option[OutAll],
+    globalNames: Map[String, Identifier]
+  ) {
     override def toString = {
       val outAllString = outAll.map(_.toString).getOrElse("")
       s"$globalDefs\n${outStreams.mkString("\n")}$outAllString"
@@ -18,11 +22,25 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   type TypeAnnotation
   def typeAnnotationToString(typeAnnotation: TypeAnnotation): String
 
-  case class Annotation(name: String, arguments: Map[String, Tessla.ConstantExpression], loc: Location)
+  case class Annotation(
+    name: String,
+    arguments: Map[String, Tessla.ConstantExpression],
+    loc: Location
+  )
 
-  case class VariableEntry(id: Identifier, expression: Expression, typeInfo: TypeAnnotation,
-                           annotations: Seq[Annotation], loc: Location)
-  case class TypeEntry(id: Identifier, arity: Int, typeConstructor: Seq[Type] => Type, loc: Location)
+  case class VariableEntry(
+    id: Identifier,
+    expression: Expression,
+    typeInfo: TypeAnnotation,
+    annotations: Seq[Annotation],
+    loc: Location
+  )
+  case class TypeEntry(
+    id: Identifier,
+    arity: Int,
+    typeConstructor: Seq[Type] => Type,
+    loc: Location
+  )
 
   class Definitions(val parent: Option[Definitions]) {
     val variables = mutable.Map[Identifier, VariableEntry]()
@@ -45,14 +63,20 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     }
 
     override def toString = {
-      s"-- Definitions $hashCode\n" + variables.map {
-        case (id, entry) =>
-          val typeAnnotation = typeAnnotationToString(entry.typeInfo)
-          s"def $id$typeAnnotation = ${entry.expression}"
-      }.mkString("\n") + types.map {
-        case (id, entry) =>
-          s"type $id[${entry.arity}] = ${entry.id}"
-      }.mkString("\n") + parent.map(p => s"\n-- Parent = Definitions ${p.hashCode}\n").getOrElse("") ++ "-- /Definitions"
+      s"-- Definitions $hashCode\n" + variables
+        .map {
+          case (id, entry) =>
+            val typeAnnotation = typeAnnotationToString(entry.typeInfo)
+            s"def $id$typeAnnotation = ${entry.expression}"
+        }
+        .mkString("\n") + types
+        .map {
+          case (id, entry) =>
+            s"type $id[${entry.arity}] = ${entry.id}"
+        }
+        .mkString("\n") + parent
+        .map(p => s"\n-- Parent = Definitions ${p.hashCode}\n")
+        .getOrElse("") ++ "-- /Definitions"
     }
   }
 
@@ -60,33 +84,39 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     def loc: Location
   }
 
-  case class Macro(typeParameters: Seq[Identifier],
-                   parameters: Seq[Parameter],
-                   body: Definitions,
-                   returnType: TypeAnnotation,
-                   headerLoc: Location,
-                   result: IdLoc,
-                   loc: Location,
-                   isLiftable: Boolean) extends Expression {
+  case class Macro(
+    typeParameters: Seq[Identifier],
+    parameters: Seq[Parameter],
+    body: Definitions,
+    returnType: TypeAnnotation,
+    headerLoc: Location,
+    result: IdLoc,
+    loc: Location,
+    isLiftable: Boolean
+  ) extends Expression {
     override def toString = {
       val liftable = if (isLiftable) "liftable " else ""
       s"$liftable[${typeParameters.mkString(", ")}](${parameters.mkString(", ")}) => {\n$body\n$result\n}"
     }
   }
 
-  case class BuiltInOperator(name: String,
-                             typeParameters: Seq[Identifier],
-                             parameters: Seq[Parameter],
-                             referenceImplementation: Option[Identifier],
-                             loc: Location) extends Expression {
+  case class BuiltInOperator(
+    name: String,
+    typeParameters: Seq[Identifier],
+    parameters: Seq[Parameter],
+    referenceImplementation: Option[Identifier],
+    loc: Location
+  ) extends Expression {
     override def toString = s"extern($name)"
   }
 
-  case class InputStream(name: String, streamType: Type, typeLoc: Location, loc: Location) extends Expression {
+  case class InputStream(name: String, streamType: Type, typeLoc: Location, loc: Location)
+      extends Expression {
     override def toString = s"in $name: $streamType"
   }
 
-  case class Parameter(param: Tessla.Parameter, parameterType: Type, id: Identifier) extends Expression {
+  case class Parameter(param: Tessla.Parameter, parameterType: Type, id: Identifier)
+      extends Expression {
     def name = param.id.name
 
     def nameWithLoc = param.id
@@ -102,19 +132,27 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = id.toString
   }
 
-  case class MacroCall(macroID: Identifier, macroLoc: Location, typeArgs: Seq[Type], args: Seq[Argument], loc: Location) extends Expression {
+  case class MacroCall(
+    macroID: Identifier,
+    macroLoc: Location,
+    typeArgs: Seq[Type],
+    args: Seq[Argument],
+    loc: Location
+  ) extends Expression {
     override def toString = args.mkString(s"$macroID(", ", ", ")")
   }
 
   case class IdLoc(id: Identifier, loc: Location)
 
-  case class StaticIfThenElse(condition: IdLoc, thenCase: IdLoc, elseCase: IdLoc, loc: Location) extends Expression {
+  case class StaticIfThenElse(condition: IdLoc, thenCase: IdLoc, elseCase: IdLoc, loc: Location)
+      extends Expression {
     override def toString = s"if $condition then $thenCase else $elseCase"
   }
 
   case class ObjectLiteral(members: Map[String, IdLoc], loc: Location) extends Expression
 
-  case class MemberAccess(receiver: IdLoc, member: String, memberLoc: Location, loc: Location) extends Expression
+  case class MemberAccess(receiver: IdLoc, member: String, memberLoc: Location, loc: Location)
+      extends Expression
 
   case class Literal(value: LiteralValue, loc: Location) extends Expression {
     override def toString = value.toString
@@ -157,15 +195,20 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     }
   }
 
-  case class FunctionType(typeParameters: Seq[Identifier], parameterTypes: Seq[Type], returnType: Type,
-                          isLiftable: Boolean) extends Type {
+  case class FunctionType(
+    typeParameters: Seq[Identifier],
+    parameterTypes: Seq[Type],
+    returnType: Type,
+    isLiftable: Boolean
+  ) extends Type {
     override def isValueType = false
 
     override def isLiftableFunctionType = isLiftable
 
     override def toString = {
       val annotationString = if (isLiftable) "@liftable " else ""
-      val typeParamString = typeParameters.map(id => id.nameOpt.getOrElse(id.toString)).mkString(", ")
+      val typeParamString =
+        typeParameters.map(id => id.nameOpt.getOrElse(id.toString)).mkString(", ")
       s"$annotationString[$typeParamString](${parameterTypes.mkString(",")}) => $returnType"
     }
   }
@@ -181,7 +224,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
     override def equals(other: Any) = other match {
       case tvar: TypeParameter => id == tvar.id
-      case _ => false
+      case _                   => false
     }
 
     override def hashCode() = id.hashCode()
@@ -191,7 +234,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = s"out $id as $name"
   }
 
-  case class OutAll(annotations: Seq[Annotation], loc: Location){
+  case class OutAll(annotations: Seq[Annotation], loc: Location) {
     override def toString = "out *"
   }
 
@@ -215,7 +258,7 @@ object FlatTessla extends FlatTessla {
   type TypeAnnotation = Option[Type]
 
   override def typeAnnotationToString(typeAnnotation: TypeAnnotation) = typeAnnotation match {
-    case None => ""
+    case None    => ""
     case Some(t) => s" : $t"
   }
 

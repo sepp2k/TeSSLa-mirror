@@ -14,13 +14,17 @@ object Errors {
     override def message = msg
   }
 
-  case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends Exception(error) with TesslaError {
+  case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt)
+      extends Exception(error)
+      with TesslaError {
     override def loc: Location = error.loc
 
     override def message: String = s"${error.message} (t = $timestamp)"
   }
 
-  case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location]) extends Exception(inner) with TesslaError {
+  case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location])
+      extends Exception(inner)
+      with TesslaError {
     override def loc = inner.loc
 
     override def message = inner.message
@@ -38,7 +42,8 @@ object Errors {
         " consists of an identifier and nothing else"
   }
 
-  case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location) extends TesslaError {
+  case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location)
+      extends TesslaError {
     override def message = s"Type mismatch: Expected $expected, found $found"
   }
 
@@ -48,20 +53,25 @@ object Errors {
     }
   }
 
-  case class WrongType(expected: String, found: TesslaAST.Core.Type, loc: Location) extends TesslaError {
+  case class WrongType(expected: String, found: TesslaAST.Core.Type, loc: Location)
+      extends TesslaError {
     override def message = s"Type mismatch: Expected $expected, but found $found"
   }
 
-  case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
-    override def message = s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
+  case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location)
+      extends TesslaError {
+    override def message =
+      s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
   }
 
   case class TypeArgumentsNotInferred(name: String, loc: Location) extends TesslaError {
     override def message = s"Explicit type arguments needed for $name"
   }
 
-  case class ArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
-    override def message = s"Wrong number of arguments for $name. Expected: $expected, actual: $actual"
+  case class ArityMismatch(name: String, expected: Int, actual: Int, loc: Location)
+      extends TesslaError {
+    override def message =
+      s"Wrong number of arguments for $name. Expected: $expected, actual: $actual"
   }
 
   case class UndefinedType(name: String, loc: Location) extends TesslaError {
@@ -102,7 +112,8 @@ object Errors {
     override def message = s"Undefined keyword argument $name"
   }
 
-  case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {
+  case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location)
+      extends TesslaError {
     override def loc = id.loc
 
     override def message =
@@ -158,11 +169,13 @@ object Errors {
     override def message: String = s"Input $line is not an event"
   }
 
-  case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location) extends TesslaError {
+  case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location)
+      extends TesslaError {
     override def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
-  case class SameTimeStampError(timestamp: BigInt, eventName: String, loc: Location) extends TesslaError {
+  case class SameTimeStampError(timestamp: BigInt, eventName: String, loc: Location)
+      extends TesslaError {
     override def message: String = s"Multiple events $eventName at timestamp $timestamp"
   }
 
@@ -174,8 +187,15 @@ object Errors {
     override def message: String = s"Non-positive delay $value"
   }
 
-  case class InputTypeMismatch(value: Any, valueType: String, streamName: String, streamType: TesslaAST.Core.Type, loc: Location) extends TesslaError {
-    override def message: String = s"Unexpected value of type $valueType ($value), expected type $streamType, in input stream '$streamName'"
+  case class InputTypeMismatch(
+    value: Any,
+    valueType: String,
+    streamName: String,
+    streamType: TesslaAST.Core.Type,
+    loc: Location
+  ) extends TesslaError {
+    override def message: String =
+      s"Unexpected value of type $valueType ($value), expected type $streamType, in input stream '$streamName'"
   }
 
   case class NonPositiveStepError(value: BigInt, loc: Location) extends TesslaError {
@@ -186,7 +206,8 @@ object Errors {
     override def message: String = s"Key $key was not found in $map"
   }
 
-  case class IndexOutOfRange(index: BigInt, list: IndexedSeq[_], loc: Location) extends TesslaError {
+  case class IndexOutOfRange(index: BigInt, list: IndexedSeq[_], loc: Location)
+      extends TesslaError {
     override def message: String = s"Index $index is out of range for list of size ${list.length}"
   }
 
@@ -223,10 +244,12 @@ object Errors {
   }
 
   case class UnliftableMacroType(loc: Location) extends TesslaError {
-    override def message = "Macro has been defined as liftable, but its type does not allow being lifted"
+    override def message =
+      "Macro has been defined as liftable, but its type does not allow being lifted"
   }
 
-  case class MemberNotDefined(ot: TypedTessla.ObjectType, member: String, loc: Location) extends TesslaError {
+  case class MemberNotDefined(ot: TypedTessla.ObjectType, member: String, loc: Location)
+      extends TesslaError {
     override def message = s"Object of type $ot does not have a member named $member"
   }
 
@@ -235,15 +258,18 @@ object Errors {
   }
 
   case class StringInterpolationOrFormatInConstantString(loc: Location) extends TesslaError {
-    override def message = "String interpolation or format specifiers are not allowed in include statements and annotation arguments"
+    override def message =
+      "String interpolation or format specifiers are not allowed in include statements and annotation arguments"
   }
 
   case class StringFormatError(error: IllegalFormatException, loc: Location) extends TesslaError {
-    override def message = s"Error in format string: '${error.getClass.getSimpleName}: ${error.getMessage}'"
+    override def message =
+      s"Error in format string: '${error.getClass.getSimpleName}: ${error.getMessage}'"
   }
 
   case class FormatNeedsArgument(format: String, loc: Location) extends TesslaError {
-    override def message = s"The format specifier $format requires a value and thus can only be used after a string interpolation"
+    override def message =
+      s"The format specifier $format requires a value and thus can only be used after a string interpolation"
   }
 
   case class UnsupportedConversion(conversion: Char, loc: Location) extends TesslaError {
@@ -267,7 +293,8 @@ object Errors {
   }
 
   case class CtfInvalidPrefix(prefix: String, loc: Location) extends TesslaError {
-    override def message = s"""Unknown prefix "${prefix}". Available prefixes are context, eventcontext, eventheader, packetcontext and fields"""
+    override def message =
+      s"""Unknown prefix "${prefix}". Available prefixes are context, eventcontext, eventheader, packetcontext and fields"""
   }
 
   case class CtfTypeError(key: String, expectedType: String, loc: Location) extends TesslaError {

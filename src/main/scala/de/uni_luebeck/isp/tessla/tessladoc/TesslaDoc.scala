@@ -21,7 +21,7 @@ sealed trait TesslaDoc {
 }
 
 sealed trait GlobalDoc extends TesslaDoc {
-  override final def scope: TesslaDoc.Scope = TesslaDoc.Global
+  final override def scope: TesslaDoc.Scope = TesslaDoc.Global
 }
 
 object TesslaDoc {
@@ -32,29 +32,25 @@ object TesslaDoc {
     override def toString: String = this.toJson.prettyPrint
   }
 
-  case class DefDoc(name: String,
-                    typeParameters: Seq[String],
-                    parameters: Seq[Param],
-                    returnType: Option[Type],
-                    scope: Scope,
-                    doc: String,
-                    loc: Location,
-                    isLiftable: Boolean) extends TesslaDoc
+  case class DefDoc(
+    name: String,
+    typeParameters: Seq[String],
+    parameters: Seq[Param],
+    returnType: Option[Type],
+    scope: Scope,
+    doc: String,
+    loc: Location,
+    isLiftable: Boolean
+  ) extends TesslaDoc
 
-  case class AnnotationDoc(name: String,
-                           parameters: Seq[Param],
-                           doc: String,
-                           loc: Location) extends GlobalDoc
+  case class AnnotationDoc(name: String, parameters: Seq[Param], doc: String, loc: Location)
+      extends GlobalDoc
 
-  case class TypeDoc(name: String,
-                     typeParameters: Seq[String],
-                     doc: String,
-                     loc: Location) extends GlobalDoc
+  case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, loc: Location)
+      extends GlobalDoc
 
-  case class ModuleDoc(name: String,
-                       doc: String,
-                       members: Seq[TesslaDoc],
-                       loc: Location) extends GlobalDoc {
+  case class ModuleDoc(name: String, doc: String, members: Seq[TesslaDoc], loc: Location)
+      extends GlobalDoc {
     override def globalsOnly: Option[TesslaDoc] =
       if (isGlobal) Some(copy(members = members.flatMap(_.globalsOnly))) else None
   }
@@ -79,7 +75,6 @@ object TesslaDoc {
 
   case class Local(scopeLocation: Location) extends Scope
 
-
   class Extractor(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[Docs] {
     override protected def translateSpec(): Docs = {
       Docs(spec.flatMap(_.tree.entries.asScala.map(_.statement).flatMap(translateStatement)))
@@ -94,13 +89,19 @@ object TesslaDoc {
       override def visitSimpleType(simpleType: TesslaSyntax.SimpleTypeContext): SimpleType =
         SimpleType(simpleType.name.getText)
 
-      override def visitTypeApplication(typeApplication: TesslaSyntax.TypeApplicationContext): TypeApplication =
-        TypeApplication(constructor = SimpleType(typeApplication.name.getText),
-          arguments = typeApplication.typeArguments.asScala.map(visit).toSeq)
+      override def visitTypeApplication(
+        typeApplication: TesslaSyntax.TypeApplicationContext
+      ): TypeApplication =
+        TypeApplication(
+          constructor = SimpleType(typeApplication.name.getText),
+          arguments = typeApplication.typeArguments.asScala.map(visit).toSeq
+        )
 
       override def visitFunctionType(functionType: TesslaSyntax.FunctionTypeContext): FunctionType =
-        FunctionType(parameters = functionType.parameterTypes.asScala.map(visit).toSeq,
-          result = visit(functionType.resultType))
+        FunctionType(
+          parameters = functionType.parameterTypes.asScala.map(visit).toSeq,
+          result = visit(functionType.resultType)
+        )
 
       override def visitTupleType(tupleType: TesslaSyntax.TupleTypeContext): TupleType =
         TupleType(members = tupleType.elementTypes.asScala.map(visit).toSeq)
@@ -110,8 +111,11 @@ object TesslaDoc {
           memberSig.name.getText -> visit(memberSig.`type`())
         }.toMap)
 
-      override final def visitChildren(node: RuleNode): Nothing = {
-        throw InternalError("Undefined visitor method", Location.fromNode(node.asInstanceOf[ParserRuleContext]))
+      final override def visitChildren(node: RuleNode): Nothing = {
+        throw InternalError(
+          "Undefined visitor method",
+          Location.fromNode(node.asInstanceOf[ParserRuleContext])
+        )
       }
     }
 
@@ -122,40 +126,55 @@ object TesslaDoc {
         val doc = DefDoc(
           name = header.name.getText,
           typeParameters = header.typeParameters.asScala.map(_.getText).toSeq,
-          parameters = header.parameters.asScala.map(p => Param(p.ID.getText, TypeVisitor.visit(p.parameterType))).toSeq,
+          parameters = header.parameters.asScala
+            .map(p => Param(p.ID.getText, TypeVisitor.visit(p.parameterType)))
+            .toSeq,
           returnType = Option(header.resultType).map(TypeVisitor.visit),
           scope = scope,
           doc = getDoc(header.tessladoc.asScala.toSeq),
           loc = Location.fromNode(definition),
-          isLiftable = definition.header.liftable != null,
+          isLiftable = definition.header.liftable != null
         )
         val body = definition.body
         body match {
           case body: TesslaSyntax.ExpressionBodyContext =>
-            val whereLoc = Option(body.LBRACE).map(lb => Location.fromToken(lb).merge(Location.fromToken(body.RBRACE)))
-            val whereDefs = whereLoc.map(loc => body.defs.asScala.flatMap(new StatementVisitor(Local(loc)).visit))
+            val whereLoc = Option(body.LBRACE).map(lb =>
+              Location.fromToken(lb).merge(Location.fromToken(body.RBRACE))
+            )
+            val whereDefs =
+              whereLoc.map(loc => body.defs.asScala.flatMap(new StatementVisitor(Local(loc)).visit))
             doc +: (visit(body.expression) ++ whereDefs.getOrElse(Seq()))
           case _ =>
             Seq(doc)
         }
       }
 
-      override def visitAnnotationDefinition(annotationDef: TesslaSyntax.AnnotationDefinitionContext): Seq[AnnotationDoc] = {
-        Seq(AnnotationDoc(
-          name = annotationDef.ID().getText,
-          parameters = annotationDef.parameters.asScala.map(p => Param(p.ID.getText, TypeVisitor.visit(p.parameterType))).toSeq,
-          doc = getDoc(annotationDef.tessladoc.asScala.toSeq),
-          loc = Location.fromNode(annotationDef)
-        ))
+      override def visitAnnotationDefinition(
+        annotationDef: TesslaSyntax.AnnotationDefinitionContext
+      ): Seq[AnnotationDoc] = {
+        Seq(
+          AnnotationDoc(
+            name = annotationDef.ID().getText,
+            parameters = annotationDef.parameters.asScala
+              .map(p => Param(p.ID.getText, TypeVisitor.visit(p.parameterType)))
+              .toSeq,
+            doc = getDoc(annotationDef.tessladoc.asScala.toSeq),
+            loc = Location.fromNode(annotationDef)
+          )
+        )
       }
 
-      override def visitTypeDefinition(typeDef: TesslaSyntax.TypeDefinitionContext): Seq[TypeDoc] = {
-        Seq(TypeDoc(
-          name = typeDef.name.getText,
-          typeParameters = typeDef.typeParameters.asScala.map(_.getText).toSeq,
-          doc = getDoc(typeDef.tessladoc.asScala.toSeq),
-          loc = Location.fromNode(typeDef)
-        ))
+      override def visitTypeDefinition(
+        typeDef: TesslaSyntax.TypeDefinitionContext
+      ): Seq[TypeDoc] = {
+        Seq(
+          TypeDoc(
+            name = typeDef.name.getText,
+            typeParameters = typeDef.typeParameters.asScala.map(_.getText).toSeq,
+            doc = getDoc(typeDef.tessladoc.asScala.toSeq),
+            loc = Location.fromNode(typeDef)
+          )
+        )
       }
 
       override def visitBlock(block: TesslaSyntax.BlockContext): Seq[TesslaDoc] = {
@@ -163,9 +182,18 @@ object TesslaDoc {
         visitor(block.expression) ++ block.definitions.asScala.flatMap(visitor)
       }
 
-      override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext): Seq[ModuleDoc] = {
+      override def visitModuleDefinition(
+        module: TesslaSyntax.ModuleDefinitionContext
+      ): Seq[ModuleDoc] = {
         val members = module.contents.asScala.map(_.statement).flatMap(visit)
-        Seq(ModuleDoc(module.name.getText, getDoc(module.tessladoc.asScala.toSeq), members.toSeq, Location.fromNode(module)))
+        Seq(
+          ModuleDoc(
+            module.name.getText,
+            getDoc(module.tessladoc.asScala.toSeq),
+            members.toSeq,
+            Location.fromNode(module)
+          )
+        )
       }
 
       override def defaultResult(): Seq[TesslaDoc] = Seq()
@@ -178,27 +206,35 @@ object TesslaDoc {
     }
   }
 
-  def extract(sources: Seq[CharStream], includeResolver: Option[String => Option[CharStream]], includeStdlib: Boolean): Result[Docs] = {
-    Result.runSequentially(sources) { src =>
-      val results =
-        includeResolver.map(new TesslaParser.WithIncludes(_).translate(src)).getOrElse {
-          TesslaParser.SingleFile.translate(src).map(Seq(_))
-        }
-      results.andThen(new Extractor(_).translate())
-    }.andThen { docsForFiles =>
-      if (includeStdlib) {
-        forStdlib.map(_ +: docsForFiles)
-      } else {
-        Success(docsForFiles, Seq())
+  def extract(
+    sources: Seq[CharStream],
+    includeResolver: Option[String => Option[CharStream]],
+    includeStdlib: Boolean
+  ): Result[Docs] = {
+    Result
+      .runSequentially(sources) { src =>
+        val results =
+          includeResolver.map(new TesslaParser.WithIncludes(_).translate(src)).getOrElse {
+            TesslaParser.SingleFile.translate(src).map(Seq(_))
+          }
+        results.andThen(new Extractor(_).translate())
       }
-    }.map(docs => Docs(docs.flatMap(_.items)))
+      .andThen { docsForFiles =>
+        if (includeStdlib) {
+          forStdlib.map(_ +: docsForFiles)
+        } else {
+          Success(docsForFiles, Seq())
+        }
+      }
+      .map(docs => Docs(docs.flatMap(_.items)))
   }
 
   private def forStdlib: Result[Docs] = {
-    IncludeResolvers.fromStdlibResource("stdlib.tessla").map { predef =>
-      extract(Seq(predef), Some(IncludeResolvers.fromStdlibResource), includeStdlib = false)
-    }.getOrElse {
-      Failure(Seq(InternalError("Could not find standard library")), Seq())
-    }
+    IncludeResolvers
+      .fromStdlibResource("stdlib.tessla")
+      .map { predef =>
+        extract(Seq(predef), Some(IncludeResolvers.fromStdlibResource), includeStdlib = false)
+      }
+      .getOrElse { Failure(Seq(InternalError("Could not find standard library")), Seq()) }
   }
 }

@@ -17,9 +17,9 @@ object ReverseTopologicalSort {
       if (stack.contains(current)) {
         nodesInCycles ++= stack.slice(0, stack.indexOf(current) + 1)
       } else if (!visited.contains(current)) {
-          getChildren(current).foreach(go(_, current :: stack))
-          visited += current
-          nodes = current :: nodes
+        getChildren(current).foreach(go(_, current :: stack))
+        visited += current
+        nodes = current :: nodes
       }
     }
     startNodes.foreach { startNode =>
