@@ -22,13 +22,11 @@ class LazyWithStack[Frame]() {
       }
 
       override def flatMap[A, B](fa: StackLazy[A])(f: A => StackLazy[B]) =
-        StackLazy[B](stack =>
-          f(fa.get(stack)).get(stack)
-        )
+        StackLazy[B](stack => f(fa.get(stack)).get(stack))
 
       override def tailRecM[A, B](a: A)(f: A => StackLazy[Either[A, B]]): StackLazy[B] =
         flatMap(f(a)) {
-          case Right(b) => pure(b)
+          case Right(b)    => pure(b)
           case Left(nextA) => tailRecM(nextA)(f)
         }
     }

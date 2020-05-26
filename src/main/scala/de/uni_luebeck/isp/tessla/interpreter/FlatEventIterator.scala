@@ -12,15 +12,23 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
 // TODO: organise usage of RuntimeEvaluator
-class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
+class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option[BigInt])
+    extends Iterator[Trace.Event] {
 
   val queue: mutable.PriorityQueue[EventRange] =
     new mutable.PriorityQueue[EventRange]()(Ordering.by((ev: EventRange) => ev.from).reverse)
   var nextEvents = new mutable.Queue[Trace.Event]
   var eventCounter = 0
 
-  case class EventRange(from: BigInt, to: Option[BigInt], step: BigInt, t: Trace.Identifier, rangeLoc: Location,
-    streamName: Trace.Identifier, exp: Option[ExpressionContext], loc: Location
+  case class EventRange(
+    from: BigInt,
+    to: Option[BigInt],
+    step: BigInt,
+    t: Trace.Identifier,
+    rangeLoc: Location,
+    streamName: Trace.Identifier,
+    exp: Option[ExpressionContext],
+    loc: Location
   ) {
     def evalValue: Any = {
       exp.map(ExpressionVisitor.visit).getOrElse(RuntimeEvaluator.Record(Map()))
@@ -152,11 +160,16 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
 
       override def visitITE(ite: ITEContext) = {
         val loc = Location.fromNode(ite)
-        externs("ite")(ArraySeq(Lazy(visit(ite.condition)), Lazy(visit(ite.thenCase)), Lazy(visit(ite.elseCase)))).get
+        externs("ite")(
+          ArraySeq(Lazy(visit(ite.condition)), Lazy(visit(ite.thenCase)), Lazy(visit(ite.elseCase)))
+        ).get
       }
 
-      override final def visitChildren(node: RuleNode): Any = {
-        throw InternalError("Undefined visitor method", Location.fromNode(node.asInstanceOf[ParserRuleContext]))
+      final override def visitChildren(node: RuleNode): Any = {
+        throw InternalError(
+          "Undefined visitor method",
+          Location.fromNode(node.asInstanceOf[ParserRuleContext])
+        )
       }
     }
 
@@ -164,7 +177,10 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
 
   object EventRange {
     def apply(parserEventRange: ParserEventRange): EventRange = {
-      val id = Trace.Identifier(parserEventRange.streamName.getText, Location.fromToken(parserEventRange.streamName))
+      val id = Trace.Identifier(
+        parserEventRange.streamName.getText,
+        Location.fromToken(parserEventRange.streamName)
+      )
       val t = Trace.Identifier("t", Location.builtIn)
       val exp = Option(parserEventRange.expression)
       val trLoc = Location.fromNode(parserEventRange.timeRange)
@@ -216,7 +232,11 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
   }
 
   def gatherValues(): Unit = {
-    while (abortAt.forall(eventCounter <= _) && nextEvents.isEmpty && (queue.nonEmpty || eventRanges.hasNext)) {
+    while (
+      abortAt.forall(
+        eventCounter <= _
+      ) && nextEvents.isEmpty && (queue.nonEmpty || eventRanges.hasNext)
+    ) {
       if (eventRanges.hasNext) {
         queue.enqueue(EventRange(eventRanges.next))
       }

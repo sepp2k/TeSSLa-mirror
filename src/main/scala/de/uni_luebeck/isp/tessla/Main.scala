@@ -14,34 +14,35 @@ import scala.io.Source
 object Main {
   val programName = BuildInfo.name
   val programVersion = BuildInfo.version
-  val programDescription = "Evaluate the given Tessla specification on the input streams provided by the given trace file."
+  val programDescription =
+    "Evaluate the given Tessla specification on the input streams provided by the given trace file."
   val licenseLocation = "de/uni_luebeck/isp/tessla/License"
 
   case class Config(
-                     specSource: CharStream = null,
-                     traceFile: Option[File] = None,
-                     verifyOnly: Boolean = false,
-                     diagnostics: Boolean = true,
-                     printCore: Boolean = false,
-                     printTyped: Boolean = false,
-                     printLocations: Boolean = false,
-                     printAllTypes: Boolean = false,
-                     debug: Boolean = false,
-                     stopOn: Option[String] = None,
-                     listOutStreams: Boolean = false,
-                     listInStreams: Boolean = false,
-                     observations: Boolean = false,
-                     abortAt: Option[BigInt] = None,
-                     flattenInput: Boolean = false,
-                     ctfTrace: Boolean = false,
-                     csvTrace: Boolean = false,
-                     compilerOptions: Compiler.Options = Compiler.Options(
-                       baseTimeString = None,
-                       includeResolver = IncludeResolvers.fromFile,
-                       stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-                       stdlibPath = "stdlib.tessla"
-                     )
-                   )
+    specSource: CharStream = null,
+    traceFile: Option[File] = None,
+    verifyOnly: Boolean = false,
+    diagnostics: Boolean = true,
+    printCore: Boolean = false,
+    printTyped: Boolean = false,
+    printLocations: Boolean = false,
+    printAllTypes: Boolean = false,
+    debug: Boolean = false,
+    stopOn: Option[String] = None,
+    listOutStreams: Boolean = false,
+    listInStreams: Boolean = false,
+    observations: Boolean = false,
+    abortAt: Option[BigInt] = None,
+    flattenInput: Boolean = false,
+    ctfTrace: Boolean = false,
+    csvTrace: Boolean = false,
+    compilerOptions: Compiler.Options = Compiler.Options(
+      baseTimeString = None,
+      includeResolver = IncludeResolvers.fromFile,
+      stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
+      stdlibPath = "stdlib.tessla"
+    )
+  )
 
   val parser: OptionParser[Config] = new OptionParser[Config](programName) {
     head(s"$programName $programVersion")
@@ -52,20 +53,29 @@ object Main {
     arg[File]("<trace-file>")
       .optional()
       .action((s, c) => c.copy(traceFile = Some(s)))
-      .text("The file containing the trace data used as input for the specification." +
-        " If this is not provided, input is read from stdin")
+      .text(
+        "The file containing the trace data used as input for the specification." +
+          " If this is not provided, input is read from stdin"
+      )
     opt[String]("stop-on")
       .action((s, c) => c.copy(stopOn = Some(s)))
       .text("Stop when the output stream with the given name generates its first event")
     opt[String]("base-time")
       .action((s, c) => c.copy(compilerOptions = c.compilerOptions.copy(baseTimeString = Some(s))))
-      .text("Use the given time constant (including a unit) as the reference time for timestamps in the input trace")
+      .text(
+        "Use the given time constant (including a unit) as the reference time for timestamps in the input trace"
+      )
     opt[BigInt]("abort-at")
       .action((s, c) => c.copy(abortAt = Some(s)))
       .text("Stop the interpreter after a given amount of events.")
     opt[File]("stdlib")
       .valueName("<file>")
-      .action((f, c) => c.copy(compilerOptions = c.compilerOptions.copy(stdlibPath = f.getPath, stdlibIncludeResolver = IncludeResolvers.fromFile)))
+      .action((f, c) =>
+        c.copy(compilerOptions =
+          c.compilerOptions
+            .copy(stdlibPath = f.getPath, stdlibIncludeResolver = IncludeResolvers.fromFile)
+        )
+      )
       .text("Use the given standard library instead of the default.")
     note("") // Spacer
     opt[Unit]("verify-only")
@@ -104,8 +114,10 @@ object Main {
       .text("Print the input trace in a flattened form.")
     opt[Unit]("ctf")
       .action((_, c) => c.copy(ctfTrace = true))
-      .text("The trace-file with the input data is in CTF format. With this option you must specify " +
-        "a trace-file. stdin is not supported.")
+      .text(
+        "The trace-file with the input data is in CTF format. With this option you must specify " +
+          "a trace-file. stdin is not supported."
+      )
     opt[Unit]("csv")
       .action((_, c) => c.copy(csvTrace = true))
       .text("The trace-file or the input stream is in CSV format.")
@@ -124,7 +136,8 @@ object Main {
     checkConfig(c =>
       if (c.specSource == null) failure("No Tessla specification provided.")
       else if (c.ctfTrace && c.traceFile.isEmpty) failure("No CTF trace input given.")
-      else success)
+      else success
+    )
   }
 
   def main(args: Array[String]): Unit = {
@@ -141,7 +154,9 @@ object Main {
             System.err.println(s"Error: $e")
             if (config.debug) e.printStackTrace()
           }
-          System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors")
+          System.err.println(
+            s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors"
+          )
         }
         sys.exit(1)
     }
@@ -150,7 +165,13 @@ object Main {
     try {
       val result = unwrapResult(compiler.compile(config.specSource, config.compilerOptions))
       val core = unwrapResult(result._2)
-      val printOptions = TesslaAST.PrintOptions(!config.printAllTypes, config.printAllTypes, config.printAllTypes, paramTypes = true, config.printLocations)
+      val printOptions = TesslaAST.PrintOptions(
+        !config.printAllTypes,
+        config.printAllTypes,
+        config.printAllTypes,
+        paramTypes = true,
+        config.printLocations
+      )
 
       if (config.printTyped) {
         println(result._1.print(printOptions))
@@ -188,10 +209,12 @@ object Main {
         output.foreach(println)
       } else {
         val trace = if (config.csvTrace) {
-          config.traceFile.map(traceInstance.fromCsvFile(_, config.abortAt))
+          config.traceFile
+            .map(traceInstance.fromCsvFile(_, config.abortAt))
             .getOrElse(traceInstance.fromCsvSource(Source.stdin, "<stdin>", config.abortAt))
         } else {
-          config.traceFile.map(traceInstance.fromFile(_, config.abortAt))
+          config.traceFile
+            .map(traceInstance.fromFile(_, config.abortAt))
             .getOrElse(traceInstance.fromSource(Source.stdin, "<stdin>", config.abortAt))
         }
         if (config.flattenInput) {

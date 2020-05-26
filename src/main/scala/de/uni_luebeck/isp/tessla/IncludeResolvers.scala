@@ -18,12 +18,19 @@ object IncludeResolvers {
     val fullPath = s"$basePath/$fileName"
     Option(klass.getResourceAsStream(fullPath.toString)).map { stream =>
       val channel = Channels.newChannel(stream)
-      CharStreams.fromChannel(channel, StandardCharsets.UTF_8, 4096, CodingErrorAction.REPLACE, fileName, -1)
+      CharStreams.fromChannel(
+        channel,
+        StandardCharsets.UTF_8,
+        4096,
+        CodingErrorAction.REPLACE,
+        fileName,
+        -1
+      )
     }
   }
 
   def fromStdlibResource =
-    fromResource(this.getClass, "/de/uni_luebeck/isp/tessla/stdlib")_
+    fromResource(this.getClass, "/de/uni_luebeck/isp/tessla/stdlib") _
 
   def empty(fileName: String) = None
 }

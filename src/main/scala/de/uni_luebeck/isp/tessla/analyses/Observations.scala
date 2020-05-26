@@ -1,17 +1,40 @@
 package de.uni_luebeck.isp.tessla.analyses
 
-import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaAST, TranslationPhase}
+import de.uni_luebeck.isp.tessla.{
+  CPatternLexer,
+  CPatternParser,
+  Errors,
+  Location,
+  Tessla,
+  TesslaAST,
+  TranslationPhase
+}
 import TesslaAST.Core
 import Observations._
 import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError, TesslaErrorWithTimestamp}
-import de.uni_luebeck.isp.tessla.CPatternParser.{ArrayContext, DerefContext, MemberContext, PatternContext, RefContext, VariableContext}
-import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
+import de.uni_luebeck.isp.tessla.CPatternParser.{
+  ArrayContext,
+  DerefContext,
+  MemberContext,
+  PatternContext,
+  RefContext,
+  VariableContext
+}
+import org.antlr.v4.runtime.{
+  BaseErrorListener,
+  CharStreams,
+  CommonTokenStream,
+  RecognitionException,
+  Recognizer,
+  Token
+}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
 import scala.collection.immutable.ArraySeq
 
-case class Observations(FunctionCalls: Seq[Function] = Seq(),
+case class Observations(
+  FunctionCalls: Seq[Function] = Seq(),
   FunctionCalled: Seq[Function] = Seq(),
   FunctionReturns: Seq[Function] = Seq(),
   FunctionReturned: Seq[Function] = Seq(),
@@ -32,8 +55,15 @@ case class Observations(FunctionCalls: Seq[Function] = Seq(),
   }
 
   override def hashCode() =
-    (FunctionCalls.sortBy(_.hashCode), FunctionCalled.sortBy(_.hashCode), FunctionReturns.sortBy(_.hashCode),
-      FunctionReturned.sortBy(_.hashCode), Assignments.sortBy(_.hashCode), VarReads.sortBy(_.hashCode), userCbPrefix).hashCode
+    (
+      FunctionCalls.sortBy(_.hashCode),
+      FunctionCalled.sortBy(_.hashCode),
+      FunctionReturns.sortBy(_.hashCode),
+      FunctionReturned.sortBy(_.hashCode),
+      Assignments.sortBy(_.hashCode),
+      VarReads.sortBy(_.hashCode),
+      userCbPrefix
+    ).hashCode
 
   override def toString = this.toJson.prettyPrint
 }
@@ -46,7 +76,14 @@ object Observations {
 
   case class Function(FunctionName: String, code: String)
 
-  case class Pattern(Variable: Option[Variable] = None, ArrayAccess: Option[Pattern] = None, StructUnionAccess: Option[StructUnionAccess] = None, Ref: Option[Pattern] = None, DeRef: Option[Pattern] = None, code: Option[String] = None)
+  case class Pattern(
+    Variable: Option[Variable] = None,
+    ArrayAccess: Option[Pattern] = None,
+    StructUnionAccess: Option[StructUnionAccess] = None,
+    Ref: Option[Pattern] = None,
+    DeRef: Option[Pattern] = None,
+    code: Option[String] = None
+  )
 
   case class Variable(VarName: String, Function: Option[String] = None)
 
@@ -54,11 +91,14 @@ object Observations {
 
   implicit val functionFormat = jsonFormat2(Function)
   implicit val variableFormat = jsonFormat2(Variable)
-  implicit val structUnionAccessFormat: JsonFormat[StructUnionAccess] = lazyFormat(jsonFormat2(StructUnionAccess))
+  implicit val structUnionAccessFormat: JsonFormat[StructUnionAccess] = lazyFormat(
+    jsonFormat2(StructUnionAccess)
+  )
   implicit val patternFormat: JsonFormat[Pattern] = lazyFormat(jsonFormat6(Pattern))
   implicit val observationsFormat: JsonFormat[Observations] = jsonFormat7(Observations.apply)
 
-  class Generator(spec: TesslaAST.Core.Specification) extends TranslationPhase.Translator[Observations] {
+  class Generator(spec: TesslaAST.Core.Specification)
+      extends TranslationPhase.Translator[Observations] {
     def parsePattern(str: String, loc: Location, function: Option[String] = None): Pattern = {
       val src = CharStreams.fromString(str, loc.path)
       val lexer = new CPatternLexer(src)
@@ -68,7 +108,14 @@ object Observations {
       val parser = new CPatternParser(tokens)
       parser.removeErrorListeners()
       parser.addErrorListener(new BaseErrorListener {
-        override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException): Unit = {
+        override def syntaxError(
+          r: Recognizer[_, _],
+          offendingToken: Any,
+          l: Int,
+          c: Int,
+          msg: String,
+          e: RecognitionException
+        ): Unit = {
           error(ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token])))
         }
       })
@@ -81,9 +128,20 @@ object Observations {
 
       def translatePattern(context: PatternContext): Pattern = context match {
         case ctx: ArrayContext => Pattern(ArrayAccess = Some(translatePattern(ctx.pattern())))
-        case ctx: RefContext => Pattern(Ref = Some(translatePattern(ctx.pattern())))
-        case ctx: VariableContext => Pattern(Variable = Some(Variable(VarName = ctx.ID().getSymbol.getText, Function = function)))
-        case ctx: MemberContext => Pattern(StructUnionAccess = Some(StructUnionAccess(Base = translatePattern(ctx.pattern()), Field = ctx.ID().getSymbol.getText)))
+        case ctx: RefContext   => Pattern(Ref = Some(translatePattern(ctx.pattern())))
+        case ctx: VariableContext =>
+          Pattern(Variable =
+            Some(Variable(VarName = ctx.ID().getSymbol.getText, Function = function))
+          )
+        case ctx: MemberContext =>
+          Pattern(StructUnionAccess =
+            Some(
+              StructUnionAccess(
+                Base = translatePattern(ctx.pattern()),
+                Field = ctx.ID().getSymbol.getText
+              )
+            )
+          )
         case ctx: DerefContext => Pattern(DeRef = Some(translatePattern(ctx.pattern())))
       }
 
@@ -94,7 +152,10 @@ object Observations {
       val argument = annotation.entries(name)._1
       argument match {
         case Core.StringLiteralExpression(x, _) => x
-        case _ => throw new Error("Expression must be a string, should have been caught by the (not yet implemented) type checker.")
+        case _ =>
+          throw new Error(
+            "Expression must be a string, should have been caught by the (not yet implemented) type checker."
+          )
       }
     }
 
@@ -102,13 +163,21 @@ object Observations {
       val argument = annotation.entries(name)._1
       argument match {
         case Core.IntLiteralExpression(x, _) => x
-        case _ => throw InternalError("Expression must be an int, should have been caught by the (not yet implemented) type checker.", argument.location)
+        case _ =>
+          throw InternalError(
+            "Expression must be an int, should have been caught by the (not yet implemented) type checker.",
+            argument.location
+          )
       }
     }
 
-    val threadIdInStreams = spec.in.filter { case (name, (tpe, annotations)) =>
-      annotations.contains("ThreadId")
-    }.keys.toList
+    val threadIdInStreams = spec.in
+      .filter {
+        case (name, (tpe, annotations)) =>
+          annotations.contains("ThreadId")
+      }
+      .keys
+      .toList
 
     protected def encloseInstrumentationCode(code: String): String = {
       val lines = code.split("\n") ++
@@ -119,14 +188,24 @@ object Observations {
     }
 
     private def merge(functions: Seq[Function]): Seq[Function] =
-      functions.groupBy(_.FunctionName).values.map { functions =>
-        functions.reduce((a, b) => a.copy(code = a.code + "\n" + b.code))
-      }.toSeq
+      functions
+        .groupBy(_.FunctionName)
+        .values
+        .map { functions =>
+          functions.reduce((a, b) => a.copy(code = a.code + "\n" + b.code))
+        }
+        .toSeq
 
     private def merge(patterns: Seq[Pattern])(implicit d: DummyImplicit): Seq[Pattern] =
-      patterns.groupBy(_.copy(code = None)).values.map { patterns =>
-        patterns.reduce((a, b) => a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr))))
-      }.toSeq
+      patterns
+        .groupBy(_.copy(code = None))
+        .values
+        .map { patterns =>
+          patterns.reduce((a, b) =>
+            a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr)))
+          )
+        }
+        .toSeq
 
     private def enclose(functions: Seq[Function]): Seq[Function] =
       merge(functions).map { function =>
@@ -138,95 +217,120 @@ object Observations {
         pattern.copy(code = pattern.code.map(encloseInstrumentationCode))
       }
 
-    private def createFunctionObservations(annotationName: String, createCode: (Annotation, InStreamDescription) => String): Seq[Function] =
-      spec.in.toList.flatMap { case in@(_, (_, annotations)) =>
-        annotations.get(annotationName).toList.flatten.map { case annotation: Core.RecordConstructorExpression =>
-          val name = argumentAsString(annotation, "name")
-          val code = createCode(annotation, in)
-          Function(FunctionName = name, code = code)
-        }
-      }
-
-    private def createPatternObservations(annotationName: String, createCode: (Annotation, InStreamDescription) => String): Seq[Pattern] =
-      spec.in.toList.flatMap { case in @ (_, (_, annotations)) =>
-        annotations.get(annotationName).toList.flatten.map { case annotation: Core.RecordConstructorExpression =>
-          val function = if (annotationName.startsWith("Local")) {
-            Some(argumentAsString(annotation, "function"))
-          } else {
-            None
+    private def createFunctionObservations(
+      annotationName: String,
+      createCode: (Annotation, InStreamDescription) => String
+    ): Seq[Function] =
+      spec.in.toList.flatMap {
+        case in @ (_, (_, annotations)) =>
+          annotations.get(annotationName).toList.flatten.map {
+            case annotation: Core.RecordConstructorExpression =>
+              val name = argumentAsString(annotation, "name")
+              val code = createCode(annotation, in)
+              Function(FunctionName = name, code = code)
           }
-          val lvalue = argumentAsString(annotation, "lvalue")
-          val pattern = parsePattern(lvalue, annotation.entries("lvalue")._1.location, function)
-          pattern.copy(code = Some(createCode(annotation, in)))
-        }
       }
 
-    protected def printEvent(in: InStreamDescription, value: String): String = in._2._1.asInstanceOf[Core.InstantiatedType].typeArgs.head match {
-      case Core.InstantiatedType("Int", Nil, _) =>
-        s"""trace_push_int(events, "${in._1.fullName}", (int64_t) $value);"""
-      case Core.InstantiatedType("Float", Nil, _)=>
-        s"""trace_push_float(events, "${in._1.fullName}", (double) $value);"""
-      case Core.InstantiatedType("Bool", Nil, _) =>
-        s"""trace_push_bool(events, "${in._1.fullName}", (bool) $value);"""
-      case _ =>
-        error(Errors.WrongType("Events[Int], Events[Float] or Events[Bool]", in._2._1, in._1.location))
-        ""
-    }
+    private def createPatternObservations(
+      annotationName: String,
+      createCode: (Annotation, InStreamDescription) => String
+    ): Seq[Pattern] =
+      spec.in.toList.flatMap {
+        case in @ (_, (_, annotations)) =>
+          annotations.get(annotationName).toList.flatten.map {
+            case annotation: Core.RecordConstructorExpression =>
+              val function = if (annotationName.startsWith("Local")) {
+                Some(argumentAsString(annotation, "function"))
+              } else {
+                None
+              }
+              val lvalue = argumentAsString(annotation, "lvalue")
+              val pattern = parsePattern(lvalue, annotation.entries("lvalue")._1.location, function)
+              pattern.copy(code = Some(createCode(annotation, in)))
+          }
+      }
 
-    protected def printUnitEvent(in: InStreamDescription): String = in._2._1.asInstanceOf[Core.InstantiatedType].typeArgs.head match {
-      case Core.RecordType(entries, _) if entries.isEmpty =>
-        s"""trace_push_unit(events, "${in._1.fullName}");"""
-      case _ =>
-        error(Errors.WrongType("Events[Unit]", in._2._1, in._1.location))
-        ""
-    }
+    protected def printEvent(in: InStreamDescription, value: String): String =
+      in._2._1.asInstanceOf[Core.InstantiatedType].typeArgs.head match {
+        case Core.InstantiatedType("Int", Nil, _) =>
+          s"""trace_push_int(events, "${in._1.fullName}", (int64_t) $value);"""
+        case Core.InstantiatedType("Float", Nil, _) =>
+          s"""trace_push_float(events, "${in._1.fullName}", (double) $value);"""
+        case Core.InstantiatedType("Bool", Nil, _) =>
+          s"""trace_push_bool(events, "${in._1.fullName}", (bool) $value);"""
+        case _ =>
+          error(
+            Errors.WrongType("Events[Int], Events[Float] or Events[Bool]", in._2._1, in._1.location)
+          )
+          ""
+      }
+
+    protected def printUnitEvent(in: InStreamDescription): String =
+      in._2._1.asInstanceOf[Core.InstantiatedType].typeArgs.head match {
+        case Core.RecordType(entries, _) if entries.isEmpty =>
+          s"""trace_push_unit(events, "${in._1.fullName}");"""
+        case _ =>
+          error(Errors.WrongType("Events[Unit]", in._2._1, in._1.location))
+          ""
+      }
 
     protected def printEventValue(in: InStreamDescription): String = printEvent(in, "value")
 
     protected def printEventIndex(in: InStreamDescription): String = printEvent(in, "index")
 
-    protected def printEventArgument(in: InStreamDescription, index: BigInt): String = printEvent(in, s"arg$index")
+    protected def printEventArgument(in: InStreamDescription, index: BigInt): String =
+      printEvent(in, s"arg$index")
 
     protected val setups = Seq()
     protected val teardowns = Seq()
     protected val prefix = "#include \"instrumentation.h\"\n"
 
     override protected def translateSpec() = {
-      val functionCalls = createFunctionObservations("InstFunctionCall",
-        (_, in) => printUnitEvent(in))
+      val functionCalls =
+        createFunctionObservations("InstFunctionCall", (_, in) => printUnitEvent(in))
 
-      val functionCallArgs = createFunctionObservations("InstFunctionCallArg",
-        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
+      val functionCallArgs = createFunctionObservations(
+        "InstFunctionCallArg",
+        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index"))
+      )
 
-      val functionCalled = createFunctionObservations("InstFunctionCalled",
-        (_, in) => printUnitEvent(in))
+      val functionCalled =
+        createFunctionObservations("InstFunctionCalled", (_, in) => printUnitEvent(in))
 
-      val functionCalledArgs = createFunctionObservations("InstFunctionCalledArg",
-        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index")))
+      val functionCalledArgs = createFunctionObservations(
+        "InstFunctionCalledArg",
+        (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index"))
+      )
 
-      val functionReturns = createFunctionObservations("InstFunctionReturn",
-        (_, in) => printUnitEvent(in)) ++ createFunctionObservations("InstFunctionReturnValue",
-        (_, in) => printEventValue(in))
+      val functionReturns = createFunctionObservations(
+        "InstFunctionReturn",
+        (_, in) => printUnitEvent(in)
+      ) ++ createFunctionObservations("InstFunctionReturnValue", (_, in) => printEventValue(in))
 
-      val functionReturned = createFunctionObservations("InstFunctionReturned",
-        (_, in) => printUnitEvent(in)) ++ createFunctionObservations("InstFunctionReturnedValue",
-        (_, in) => printEventValue(in))
+      val functionReturned = createFunctionObservations(
+        "InstFunctionReturned",
+        (_, in) => printUnitEvent(in)
+      ) ++ createFunctionObservations("InstFunctionReturnedValue", (_, in) => printEventValue(in))
 
-      val globalAssignments = createPatternObservations("GlobalWrite",
-        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalWriteIndex",
-        (annotation, in) => printEventIndex(in))
+      val globalAssignments = createPatternObservations(
+        "GlobalWrite",
+        (annotation, in) => printEventValue(in)
+      ) ++ createPatternObservations("GlobalWriteIndex", (annotation, in) => printEventIndex(in))
 
-      val localAssignments = createPatternObservations("LocalWrite",
-        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalWriteIndex",
-        (annotation, in) => printEventIndex(in))
+      val localAssignments = createPatternObservations(
+        "LocalWrite",
+        (annotation, in) => printEventValue(in)
+      ) ++ createPatternObservations("LocalWriteIndex", (annotation, in) => printEventIndex(in))
 
-      val globalReads = createPatternObservations("GlobalRead",
-        (annotation, in) => printEventValue(in)) ++ createPatternObservations("GlobalReadIndex",
-        (annotation, in) => printEventIndex(in))
+      val globalReads = createPatternObservations(
+        "GlobalRead",
+        (annotation, in) => printEventValue(in)
+      ) ++ createPatternObservations("GlobalReadIndex", (annotation, in) => printEventIndex(in))
 
-      val localReads = createPatternObservations("LocalRead",
-        (annotation, in) => printEventValue(in)) ++ createPatternObservations("LocalReadIndex",
-        (annotation, in) => printEventIndex(in))
+      val localReads = createPatternObservations(
+        "LocalRead",
+        (annotation, in) => printEventValue(in)
+      ) ++ createPatternObservations("LocalReadIndex", (annotation, in) => printEventIndex(in))
 
       val observations = Observations(
         FunctionCalls = enclose(functionCalls ++ functionCallArgs),
@@ -235,7 +339,8 @@ object Observations {
         FunctionReturned = enclose(functionReturned),
         Assignments = enclose(globalAssignments ++ localAssignments),
         VarReads = enclose(globalReads ++ localReads),
-        userCbPrefix = prefix)
+        userCbPrefix = prefix
+      )
 
       observations
     }

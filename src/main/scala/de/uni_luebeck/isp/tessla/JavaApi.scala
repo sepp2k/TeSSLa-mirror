@@ -1,7 +1,13 @@
 package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla
-import de.uni_luebeck.isp.tessla.Errors.{DecreasingTimeStampsError, SameTimeStampError, TesslaError, TesslaErrorWithTimestamp, mkTesslaError}
+import de.uni_luebeck.isp.tessla.Errors.{
+  mkTesslaError,
+  DecreasingTimeStampsError,
+  SameTimeStampError,
+  TesslaError,
+  TesslaErrorWithTimestamp
+}
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import de.uni_luebeck.isp.tessla.interpreter._
 import org.antlr.v4.runtime.{CharStream, CharStreams}
@@ -64,7 +70,7 @@ object JavaApi {
     def provide(stream: String): Boolean =
       provide(stream, RuntimeEvaluator.Record(Map()))
 
-    def provide(stream: String, value: Any): Boolean =  {
+    def provide(stream: String, value: Any): Boolean = {
       if (seen.contains(stream)) {
         throw SameTimeStampError(spec.getTime, stream, Location.unknown)
       }
@@ -75,9 +81,9 @@ object JavaApi {
           val tpe = elementType.asInstanceOf[TesslaAST.Core.InstantiatedType]
           assert(tpe.name == "Events")
           assert(tpe.typeArgs.size == 1)
-          RuntimeTypeChecker.check(tpe.typeArgs.head, value).foreach(error =>
-            throw mkTesslaError("input " + stream + ": " + error)
-          )
+          RuntimeTypeChecker
+            .check(tpe.typeArgs.head, value)
+            .foreach(error => throw mkTesslaError("input " + stream + ": " + error))
           inStream.provide(value)
           true
         case None =>
@@ -87,13 +93,13 @@ object JavaApi {
     }
 
     /**
-      * Propagates all inputs and progresses time to the given timestamp.
-      */
+     * Propagates all inputs and progresses time to the given timestamp.
+     */
     def setTime(time: Int): Unit = setTime(BigInt(time))
 
     /**
-      * Propagates all inputs and progresses time to the given timestamp.
-      */
+     * Propagates all inputs and progresses time to the given timestamp.
+     */
     def setTime(time: Specification.Time): Unit = {
       if (time > spec.getTime) {
         try {
@@ -108,10 +114,10 @@ object JavaApi {
     }
 
     /**
-      * Propagates all inputs without progressing time.
-      * Can only be called once per point in time.
-      * No more input values can be provided for the current time afterwards.
-      */
+     * Propagates all inputs without progressing time.
+     * Can only be called once per point in time.
+     * No more input values can be provided for the current time afterwards.
+     */
     def step(): Unit = {
       try {
         spec.step()
@@ -144,11 +150,20 @@ object JavaApi {
   def compile(specSource: CharStream, compilerOptions: Compiler.Options): CompilationResult = {
     new Compiler().compile(specSource, compilerOptions) match {
       case Success((_, Success(spec, warnings)), _) =>
-        CompilationResult(Result(warnings.map(Diagnostic).asJava, List().asJava), Engine(new Interpreter(spec)))
+        CompilationResult(
+          Result(warnings.map(Diagnostic).asJava, List().asJava),
+          Engine(new Interpreter(spec))
+        )
       case Success((_, Failure(errors, warnings)), _) =>
-        CompilationResult(Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava), null)
+        CompilationResult(
+          Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava),
+          null
+        )
       case Failure(errors, warnings) =>
-        CompilationResult(Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava), null)
+        CompilationResult(
+          Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava),
+          null
+        )
     }
   }
 }

@@ -7,10 +7,10 @@ import org.antlr.v4.runtime.CharStream
 object Compiler {
 
   case class Options(
-                      baseTimeString: Option[String],
-                      includeResolver: String => Option[CharStream],
-                      stdlibIncludeResolver: String => Option[CharStream],
-                      stdlibPath: String
+    baseTimeString: Option[String],
+    includeResolver: String => Option[CharStream],
+    stdlibIncludeResolver: String => Option[CharStream],
+    stdlibPath: String
   ) {
     lazy val baseTime = baseTimeString.map(TimeLiteral.fromString(_, Location.option("basetime")))
   }
@@ -19,7 +19,10 @@ object Compiler {
 
 class Compiler {
 
-  def instantiatePipeline(options: Options): TranslationPhase[CharStream, (TesslaAST.Typed.Specification, TranslationPhase.Result[TesslaAST.Core.Specification])] = {
+  def instantiatePipeline(options: Options): TranslationPhase[
+    CharStream,
+    (TesslaAST.Typed.Specification, TranslationPhase.Result[TesslaAST.Core.Specification])
+  ] = {
     new TesslaParser.WithIncludes(options.includeResolver)
       .andThen(new StdlibIncluder(options.stdlibIncludeResolver, options.stdlibPath))
       .andThen(TesslaSyntaxToTessla)
@@ -30,7 +33,9 @@ class Compiler {
     //.andThen(RemoveUnusedDefinitions)
   }
 
-  def compile(src: CharStream, options: Options): TranslationPhase.Result[(TesslaAST.Typed.Specification, TranslationPhase.Result[TesslaAST.Core.Specification])] = {
+  def compile(src: CharStream, options: Options): TranslationPhase.Result[
+    (TesslaAST.Typed.Specification, TranslationPhase.Result[TesslaAST.Core.Specification])
+  ] = {
     instantiatePipeline(options).translate(src)
   }
 
@@ -42,7 +47,8 @@ class Compiler {
     }
   }
 
-  class EnableIf[T](condition: Boolean, phase: TranslationPhase[T, T]) extends TranslationPhase[T, T] {
+  class EnableIf[T](condition: Boolean, phase: TranslationPhase[T, T])
+      extends TranslationPhase[T, T] {
     override def translate(spec: T) = {
       if (condition) {
         phase.translate(spec)

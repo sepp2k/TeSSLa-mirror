@@ -1,14 +1,16 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.{Location, InputTraceLexer, InputTraceParser}
+import de.uni_luebeck.isp.tessla.{InputTraceLexer, InputTraceParser, Location}
 import de.uni_luebeck.isp.tessla.Errors._
 import org.antlr.v4.runtime._
 import scala.jdk.CollectionConverters._
 
-case class ParserEventRange(streamName: Token,
-                            expression: InputTraceParser.ExpressionContext,
-                            timeRange: InputTraceParser.TimeRangeContext,
-                            loc: Location)
+case class ParserEventRange(
+  streamName: Token,
+  expression: InputTraceParser.ExpressionContext,
+  timeRange: InputTraceParser.TimeRangeContext,
+  loc: Location
+)
 
 object TraceParser {
   def createInputTraceParser(line: CharStream, lineNumber: Int): InputTraceParser = {
@@ -18,7 +20,14 @@ object TraceParser {
     val parser = new InputTraceParser(tokens)
     parser.removeErrorListeners()
     parser.addErrorListener(new BaseErrorListener {
-      override def syntaxError(r: Recognizer[_, _], offendingToken: Any, l: Int, c: Int, msg: String, e: RecognitionException) = {
+      override def syntaxError(
+        r: Recognizer[_, _],
+        offendingToken: Any,
+        l: Int,
+        c: Int,
+        msg: String,
+        e: RecognitionException
+      ) = {
         throw ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token]))
       }
     })
@@ -31,7 +40,7 @@ class TraceParser(input: Iterator[String], fileName: String) {
     input.flatMap { line =>
       parseLine(line) match {
         case Some(l) => Iterator(l)
-        case None => Iterator()
+        case None    => Iterator()
       }
     }
   }
@@ -46,7 +55,9 @@ class TraceParser(input: Iterator[String], fileName: String) {
     lineNumber += 1
     val parser = TraceParser.createInputTraceParser(line, lineNumber)
 
-    Option(parser.line().eventRange).map(ctx => ParserEventRange(ctx.streamName, ctx.expression(), ctx.timeRange(), Location.fromNode(ctx)))
+    Option(parser.line().eventRange).map(ctx =>
+      ParserEventRange(ctx.streamName, ctx.expression(), ctx.timeRange(), Location.fromNode(ctx))
+    )
   }
 }
 
@@ -88,9 +99,21 @@ class CsvTraceParser(input: Iterator[String], fileName: String) {
     val parser = TraceParser.createInputTraceParser(line, lineNumber)
     Option(parser.csvLine()) match {
       case Some(lineContext) =>
-        lineContext.commaExpression().asScala.zipWithIndex.filter{ case (ctx, _) => ctx.expression() != null}.map{ case (ctx, index) =>
-          ParserEventRange(streamNames(index), ctx.expression(), lineContext.timeRange(), Location.fromNode(ctx.expression()))
-        }.iterator
+        lineContext
+          .commaExpression()
+          .asScala
+          .zipWithIndex
+          .filter { case (ctx, _) => ctx.expression() != null }
+          .map {
+            case (ctx, index) =>
+              ParserEventRange(
+                streamNames(index),
+                ctx.expression(),
+                lineContext.timeRange(),
+                Location.fromNode(ctx.expression())
+              )
+          }
+          .iterator
       case None => Iterator()
     }
   }

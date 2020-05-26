@@ -6,6 +6,12 @@ before_script:
   # Log the sbt version
   - sbt sbtVersion
 
+check:
+  tags:
+    - docker
+  script:
+    - sbt scalafmtCheckAll scalafmtSbtCheck
+
 test:
   only:
     - master

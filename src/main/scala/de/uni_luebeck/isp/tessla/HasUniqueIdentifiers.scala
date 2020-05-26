@@ -1,10 +1,10 @@
 package de.uni_luebeck.isp.tessla
 
 trait HasUniqueIdentifiers {
-  class Identifier private[HasUniqueIdentifiers](val uid: Long, val nameOpt: Option[String]) {
+  class Identifier private[HasUniqueIdentifiers] (val uid: Long, val nameOpt: Option[String]) {
     override def equals(other: Any) = other match {
       case o: Identifier if o.uid == uid => true
-      case _ => false
+      case _                             => false
     }
 
     override def hashCode() = uid.hashCode()

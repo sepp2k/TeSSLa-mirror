@@ -26,7 +26,7 @@ def: header=definitionHeader (':='|'=') NL* body;
 
 body
     : expression ('where' '{' NL* (defs+=def eos)* '}')? #ExpressionBody
-    | '__builtin__' '(' name=ID (',' expression)? ')' #BuiltInBody
+    | 'extern' '(' name=ID (',' expression)? ')' #BuiltInBody
     ;
 
 definitionHeader:
@@ -54,7 +54,7 @@ param: ID (':' NL* parameterType=type)?;
 
 typeBody
     : type #TypeAliasBody
-    | '__builtin__' '(' name=ID ')' #BuiltInTypeBody
+    | 'extern' '(' name=ID ')' #BuiltInTypeBody
     ;
 
 type

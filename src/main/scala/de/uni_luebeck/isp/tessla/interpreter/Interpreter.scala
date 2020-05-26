@@ -10,14 +10,19 @@ import TesslaAST.Core
 import scala.collection.immutable.ArraySeq
 import scala.util.Try
 
-class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEvaluator.Record(Map())) {
+class Interpreter(val spec: Core.Specification)
+    extends Specification(RuntimeEvaluator.Record(Map())) {
   val inStreams: Map[String, (Input, Core.Type)] = spec.in.map { inStream =>
     inStream._1.idOrName.left.get -> (new Input, inStream._2._1)
   }
 
   val streamExterns: Map[String, ArraySeq[Lazy[Any]] => Lazy[Any]] = Map(
-    "last" -> ((arguments: ArraySeq[Lazy[Any]]) => Lazy(last(arguments(0).get.asInstanceOf[Stream], arguments(1).get.asInstanceOf[Stream]))),
-    "delay" -> ((arguments: ArraySeq[Lazy[Any]]) => Lazy(delay(arguments(0).get.asInstanceOf[Stream], arguments(1).get.asInstanceOf[Stream]))),
+    "last" -> ((arguments: ArraySeq[Lazy[Any]]) =>
+      Lazy(last(arguments(0).get.asInstanceOf[Stream], arguments(1).get.asInstanceOf[Stream]))
+    ),
+    "delay" -> ((arguments: ArraySeq[Lazy[Any]]) =>
+      Lazy(delay(arguments(0).get.asInstanceOf[Stream], arguments(1).get.asInstanceOf[Stream]))
+    ),
     "slift" -> ((arguments: ArraySeq[Lazy[Any]]) => {
       val op = arguments.last.get.asInstanceOf[ArraySeq[Lazy[Any]] => Lazy[Any]]
       Lazy(slift(arguments.init.map(_.get.asInstanceOf[Stream])) { args =>
@@ -30,18 +35,29 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
         op(args.map(a => Lazy(a))).get.asInstanceOf[Option[Any]]
       })
     }),
-    "merge" -> ((arguments: ArraySeq[Lazy[Any]]) => Lazy(merge(arguments.map(_.get.asInstanceOf[Stream])))),
+    "merge" -> ((arguments: ArraySeq[Lazy[Any]]) =>
+      Lazy(merge(arguments.map(_.get.asInstanceOf[Stream])))
+    ),
     "default" -> ((arguments: ArraySeq[Lazy[Any]]) =>
-      Lazy(arguments(0).get.asInstanceOf[Stream].default(arguments(1).get))),
-    "defaultFrom" ->((arguments: ArraySeq[Lazy[Any]]) =>  Lazy(arguments(0).get.asInstanceOf[Stream].default(arguments(1).get.asInstanceOf[Stream]))),
-    "time" -> ((arguments: ArraySeq[Lazy[Any]]) => Lazy(arguments(0).get.asInstanceOf[Stream].time())),
-    "nil" -> ((_: ArraySeq[Lazy[Any]]) => Lazy(nil)),
+      Lazy(arguments(0).get.asInstanceOf[Stream].default(arguments(1).get))
+    ),
+    "defaultFrom" -> ((arguments: ArraySeq[Lazy[Any]]) =>
+      Lazy(arguments(0).get.asInstanceOf[Stream].default(arguments(1).get.asInstanceOf[Stream]))
+    ),
+    "time" -> ((arguments: ArraySeq[Lazy[Any]]) =>
+      Lazy(arguments(0).get.asInstanceOf[Stream].time())
+    ),
+    "nil" -> ((_: ArraySeq[Lazy[Any]]) => Lazy(nil))
   )
 
+  val runtimeEvaluator: RuntimeEvaluator = new RuntimeEvaluator(
+    RuntimeExterns.runtimeCommonExterns ++ streamExterns
+  )
 
-  val runtimeEvaluator: RuntimeEvaluator = new RuntimeEvaluator(RuntimeExterns.runtimeCommonExterns ++ streamExterns)
-
-  lazy val definitions: RuntimeEvaluator.Env = inStreams.view.mapValues(x => Lazy(x._1)).toMap ++ spec.definitions.map(d => (d._1.fullName, runtimeEvaluator.evalExpressionArg(d._2, definitions)))
+  lazy val definitions: RuntimeEvaluator.Env =
+    inStreams.view.mapValues(x => Lazy(x._1)).toMap ++ spec.definitions.map(d =>
+      (d._1.fullName, runtimeEvaluator.evalExpressionArg(d._2, definitions))
+    )
 
   lazy val outStreams: Seq[(Option[String], Stream, Core.Type)] = spec.out.map { os =>
     val definition = definitions(os._1.id.fullName).get
@@ -74,7 +90,7 @@ object Interpreter {
                 val idOpt = nameOpt.map(Trace.Identifier(_, Location.unknown))
                 value match {
                   case RuntimeEvaluator.RuntimeError(msg) => throw Errors.RuntimeError(msg)
-                  case _ => nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value)
+                  case _                                  => nextEvents += Trace.Event(Location.unknown, timeStamp, idOpt, value)
                 }
               }
             case None =>
@@ -101,9 +117,11 @@ object Interpreter {
               val tpe = elementType.asInstanceOf[Core.InstantiatedType]
               assert(tpe.name == "Events")
               assert(tpe.typeArgs.size == 1)
-              RuntimeTypeChecker.check(tpe.typeArgs.head, event.value).foreach(error =>
-                throw mkTesslaError("input " + event.stream.name + ": " + error, event.loc)
-              )
+              RuntimeTypeChecker
+                .check(tpe.typeArgs.head, event.value)
+                .foreach(error =>
+                  throw mkTesslaError("input " + event.stream.name + ": " + error, event.loc)
+                )
               //ValueTypeChecker.check(event.value, elementType, event.stream.name)
               if (seen.contains(event.stream.name)) {
                 throw SameTimeStampError(eventTime, event.stream.name, event.timeStamp.loc)

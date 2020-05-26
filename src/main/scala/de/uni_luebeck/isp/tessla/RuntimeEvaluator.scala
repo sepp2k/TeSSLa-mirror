@@ -18,7 +18,6 @@ object RuntimeEvaluator {
 
   case class RuntimeError(msg: String) // TODO: support location information etc
 
-
 }
 
 // TODO: All arguments are currently wrapped in Lazy, even if they are strictly evaluated
@@ -26,9 +25,10 @@ object RuntimeEvaluator {
 class RuntimeEvaluator(externs: Map[String, Extern[Lazy]]) {
 
   def evalExpressionArg(arg: Core.ExpressionArg, env: => Env): Lazy[Any] = arg match {
-    case Core.ExpressionRef(id, _, _) => Lazy {
-      env(id.fullName).get
-    }
+    case Core.ExpressionRef(id, _, _) =>
+      Lazy {
+        env(id.fullName).get
+      }
     case e: Core.Expression => Lazy(evalExpression(e, env))
   }
 
@@ -41,13 +41,15 @@ class RuntimeEvaluator(externs: Map[String, Extern[Lazy]]) {
         if (params.size != args.size) {
           throw InternalError(s"Called with wrong number of arguments.", location)
         }
-        lazy val newEnv: Env = env ++ params.map(_._1.fullName).zip(args) ++ body.map(e => (e._1.fullName, evalExpressionArg(e._2, newEnv)))
+        lazy val newEnv: Env = env ++ params.map(_._1.fullName).zip(args) ++ body.map(e =>
+          (e._1.fullName, evalExpressionArg(e._2, newEnv))
+        )
         evalExpressionArg(result, newEnv)
       }
     case e: Core.ExternExpression =>
       externs.get(e.name) match {
         case Some(f) => f
-        case None => throw InternalError(s"Extern ${e.name} not defined.", e.location)
+        case None    => throw InternalError(s"Extern ${e.name} not defined.", e.location)
       }
     case Core.ApplicationExpression(applicable, args, location) =>
       val f = evalExpressionArg(applicable, env).get
@@ -66,13 +68,14 @@ class RuntimeEvaluator(externs: Map[String, Extern[Lazy]]) {
     case Core.TypeApplicationExpression(applicable, _, _) =>
       evalExpressionArg(applicable, env).get
     case Core.RecordConstructorExpression(entries, _) =>
-      Record(entries.map(e => (e._1, evalExpressionArg(e._2._1, env).get))) // TODO: entries are now strictly evaluated, should they be lazy?
+      Record(
+        entries.map(e => (e._1, evalExpressionArg(e._2._1, env).get))
+      ) // TODO: entries are now strictly evaluated, should they be lazy?
     case Core.RecordAccessorExpression(name, target, _, _) =>
       propagateInternal(evalExpressionArg(target, env).get)(_.asInstanceOf[Record].entries(name))
     case Core.StringLiteralExpression(value, _) => value
-    case Core.IntLiteralExpression(value, _) => value
-    case Core.FloatLiteralExpression(value, _) => value
+    case Core.IntLiteralExpression(value, _)    => value
+    case Core.FloatLiteralExpression(value, _)  => value
   }
 
 }
-

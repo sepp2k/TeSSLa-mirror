@@ -7,7 +7,6 @@ import de.uni_luebeck.isp.tessla.Location
 
 import scala.annotation.tailrec
 
-
 object Specification {
   type Time = BigInt
 }
@@ -25,10 +24,10 @@ class Specification(unitValue: Any) {
   private var inputs: List[Triggered] = Nil
 
   /**
-    * Propagates all inputs without progressing time.
-    * Can only be called once per point in time.
-    * No more input values can be provided for the current time afterwards.
-    */
+   * Propagates all inputs without progressing time.
+   * Can only be called once per point in time.
+   * No more input values can be provided for the current time afterwards.
+   */
   def step(): Unit = {
     if (acceptInput) {
       acceptInput = false
@@ -41,8 +40,8 @@ class Specification(unitValue: Any) {
   }
 
   /**
-    * Propagates all inputs and progresses time.
-    */
+   * Propagates all inputs and progresses time.
+   */
   def step(timeDelta: Time): Unit = {
     if (timeDelta > 0) {
       if (acceptInput) {
@@ -80,11 +79,13 @@ class Specification(unitValue: Any) {
       }
       val temp: Set[Any] = remaining._2.get(newTime) match {
         case Some(set) => set + stream
-        case None => Set(stream)
+        case None      => Set(stream)
       }
       trigger = (remaining._1 + (stream -> newTime), remaining._2 + (newTime -> temp))
     } else {
-      throw InternalError(s"updateTrigger has been called with newTime ($newTime) <= current time ($getTime)")
+      throw InternalError(
+        s"updateTrigger has been called with newTime ($newTime) <= current time ($getTime)"
+      )
     }
   }
 
@@ -126,7 +127,7 @@ class Specification(unitValue: Any) {
         done = !done
       }
 
-      protected override def init(): Unit = {
+      override protected def init(): Unit = {
         times.addListener {
           case Some(_) =>
             propagate(oldValue)
@@ -166,7 +167,7 @@ class Specification(unitValue: Any) {
 
       override def init(): Unit = {
         delays.addListener(delay => {
-          newDelay = delay.map {d =>
+          newDelay = delay.map { d =>
             val d2 = d.asInstanceOf[BigInt]
             if (d2 <= 0) {
               throw NonPositiveDelayError(d2, Location.unknown)
@@ -206,8 +207,8 @@ class Specification(unitValue: Any) {
     @tailrec
     def firstSome(values: ArraySeq[Option[Any]]): Option[Any] = values match {
       case Some(value1) +: _ => Some(value1)
-      case _ +: tail => firstSome(tail)
-      case ArraySeq() => None
+      case _ +: tail         => firstSome(tail)
+      case ArraySeq()        => None
     }
     lift(streams)(firstSome)
   }
@@ -255,8 +256,8 @@ class Specification(unitValue: Any) {
     def time(): Stream =
       new Stream {
         override protected def init(): Unit = {
-          self.addListener {
-            value => propagate(value.map(_ => getTime))
+          self.addListener { value =>
+            propagate(value.map(_ => getTime))
           }
         }
       }
@@ -266,7 +267,7 @@ class Specification(unitValue: Any) {
         override protected def init(): Unit = {
           self.addListener {
             case Some(v) => propagate(Some(v))
-            case None => propagate(if (getTime == 0) Some(defaultValue) else None)
+            case None    => propagate(if (getTime == 0) Some(defaultValue) else None)
           }
         }
       }
@@ -281,10 +282,14 @@ class Specification(unitValue: Any) {
             other match {
               case Some(otherValue) =>
                 val (newHasValue, result) =
-                  (hasValue, if (flip) otherValue else value, if (flip) value else otherValue) match {
+                  (
+                    hasValue,
+                    if (flip) otherValue else value,
+                    if (flip) value else otherValue
+                  ) match {
                     case (false, Some(v), _) => (true, Some(v))
                     case (false, _, Some(v)) => (true, Some(v))
-                    case (s, v, _) => (s, v)
+                    case (s, v, _)           => (s, v)
                   }
                 hasValue = newHasValue
                 propagate(result)
@@ -327,7 +332,7 @@ class Specification(unitValue: Any) {
   def printStream(stream: Stream, name: String): Unit =
     stream.addListener {
       case Some(value) => println(s"$getTime: $name = $value")
-      case None =>
+      case None        =>
     }
 
 }

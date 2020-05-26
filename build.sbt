@@ -19,9 +19,12 @@ version := versionPattern.findFirstMatchIn(IO.read(versionFile)).get.group(1)
 scalaVersion := "2.13.1"
 
 resolvers ++= Seq(
-  releases, snapshots,
-  playResolver, validatorResolver,
-  efficiosSnapshots, efficiosReleases
+  releases,
+  snapshots,
+  playResolver,
+  validatorResolver,
+  efficiosSnapshots,
+  efficiosReleases
 )
 
 publishTo := {
@@ -31,7 +34,9 @@ publishTo := {
     Some(releases)
 }
 
-credentials += Credentials(Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials")
+credentials += Credentials(
+  Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials"
+)
 
 libraryDependencies ++= Seq(
   "com.github.scopt" %% "scopt" % "4.0.0-RC2",
@@ -69,5 +74,5 @@ scalacOptions += "-target:jvm-1.8"
 
 assemblyMergeStrategy in assembly := {
   case PathList("module-info.class") => MergeStrategy.discard
-  case x => (assemblyMergeStrategy in assembly).value(x)
+  case x                             => (assemblyMergeStrategy in assembly).value(x)
 }
