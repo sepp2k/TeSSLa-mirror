@@ -38,12 +38,16 @@ class TypedTessla2TesslaASTTypedWorker(
   // used to instantiate unsued type variables where actual type cannnot be recovered from TypedTessla
   val unknownType = Typed.InstantiatedType("Unknown", Nil)
 
-  val staticiteExtern = Typed.ExternExpression(List(Identifier("A")), List(
-    (TesslaAST.StrictEvaluation, Typed.BoolType),
-    (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
-    (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
-  ), Typed.TypeParam(Identifier("A")), "staticite")
-
+  val staticiteExtern = Typed.ExternExpression(
+    List(Identifier("A")),
+    List(
+      (TesslaAST.StrictEvaluation, Typed.BoolType),
+      (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
+      (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
+    ),
+    Typed.TypeParam(Identifier("A")),
+    "staticite"
+  )
 
   val knownExterns = Map(
     "true" -> Typed.ApplicationExpression(
@@ -207,7 +211,7 @@ class TypedTessla2TesslaASTTypedWorker(
   def lookupType2(id: TypedTessla.Identifier, env: TypedTessla.Definitions): Typed.Type =
     env.variables.get(id) match {
       case Some(value) => toType(value.typeInfo)
-      case None => lookupType2(id, env.parent.get)
+      case None        => lookupType2(id, env.parent.get)
     }
 
   def translateEnv(env: TypedTessla.Definitions): Map[Typed.Identifier, Typed.ExpressionArg] =
@@ -274,18 +278,31 @@ class TypedTessla2TesslaASTTypedWorker(
 
               Typed.ApplicationExpression(
                 callable,
-                argumentList.zip(callable.tpe.asInstanceOf[Typed.FunctionType].paramTypes).map { case ((id, loc), (_, t)) =>
-                  val tpe = lookupType(id, env)
-                  val ref = Typed.ExpressionRef(toIdentifier(id, lookup(env, id).loc), tpe, loc)
-                  if (t == tpe) ref else {
-                    val typeArgs = determineTypeArguments(t, tpe).withDefaultValue(unknownType)
-                    val typeArgList = tpe.asInstanceOf[Typed.FunctionType].typeParams.map(typeArgs)
-                    Typed.TypeApplicationExpression(ref, typeArgList)
+                argumentList
+                  .zip(callable.tpe.asInstanceOf[Typed.FunctionType].paramTypes)
+                  .map {
+                    case ((id, loc), (_, t)) =>
+                      val tpe = lookupType(id, env)
+                      val ref = Typed.ExpressionRef(toIdentifier(id, lookup(env, id).loc), tpe, loc)
+                      if (t == tpe) ref
+                      else {
+                        val typeArgs = determineTypeArguments(t, tpe).withDefaultValue(unknownType)
+                        val typeArgList =
+                          tpe.asInstanceOf[Typed.FunctionType].typeParams.map(typeArgs)
+                        Typed.TypeApplicationExpression(ref, typeArgList)
+                      }
                   }
-                }.to(ArraySeq),
-                loc)
+                  .to(ArraySeq),
+                loc
+              )
 
-            case BuiltInOperator(name, typeParameters, parameters, referenceImplementation, loc) => // TODO: suport reference implementation
+            case BuiltInOperator(
+                  name,
+                  typeParameters,
+                  parameters,
+                  referenceImplementation,
+                  loc
+                ) => // TODO: suport reference implementation
               knownExterns.getOrElse(
                 name,
                 Typed.ExternExpression(
@@ -366,10 +383,10 @@ class TypedTessla2TesslaASTTypedWorker(
       .toMap
 
   def translateLiteralValue(value: LiteralValue, loc: Location): Typed.ExpressionArg = value match {
-    case IntLiteral(value) => Typed.IntLiteralExpression(value, loc)
-    case FloatLiteral(value) => Typed.FloatLiteralExpression(value, loc)
+    case IntLiteral(value)    => Typed.IntLiteralExpression(value, loc)
+    case FloatLiteral(value)  => Typed.FloatLiteralExpression(value, loc)
     case StringLiteral(value) => Typed.StringLiteralExpression(value, loc)
-    case timeLit@TimeLiteral(x, tu) =>
+    case timeLit @ TimeLiteral(x, tu) =>
       baseTime match {
         case Some(base) =>
           val unitConversionFactor = timeLit.unit.convertTo(base.unit).getOrElse {
@@ -425,21 +442,38 @@ class TypedTessla2TesslaASTTypedWorker(
   def toIdentifier(identifier: TypedTessla.Identifier, location: Location) =
     Typed.Identifier(Ior.fromOptions(identifier.nameOpt, Some(identifier.uid)).get, location)
 
-  def determineTypeArguments(resolved: Typed.Type, resolvable: Typed.Type): Map[Typed.Identifier, Typed.Type] = (resolved, resolvable) match {
+  def determineTypeArguments(
+    resolved: Typed.Type,
+    resolvable: Typed.Type
+  ): Map[Typed.Identifier, Typed.Type] = (resolved, resolvable) match {
     case (tpe, Typed.TypeParam(name, _)) =>
       Map(name -> tpe)
     case (Typed.InstantiatedType(_, typeArgs1, _), Typed.InstantiatedType(_, typeArgs2, _)) =>
-      typeArgs1.zip(typeArgs2).map { case (arg1, arg2) =>
-        determineTypeArguments(arg1, arg2)
-      }.fold(Map())(_ ++ _)
-    case (Typed.FunctionType(typeParams, paramTypes1, resultType1, _), Typed.FunctionType(_, paramTypes2, resultType2, _)) =>
-      (paramTypes1.zip(paramTypes2).map { case ((_, t1), (_, t2)) =>
-        determineTypeArguments(t1, t2)
-      }.fold(Map())(_ ++ _) ++ determineTypeArguments(resultType1, resultType2)) -- typeParams
+      typeArgs1
+        .zip(typeArgs2)
+        .map {
+          case (arg1, arg2) =>
+            determineTypeArguments(arg1, arg2)
+        }
+        .fold(Map())(_ ++ _)
+    case (
+          Typed.FunctionType(typeParams, paramTypes1, resultType1, _),
+          Typed.FunctionType(_, paramTypes2, resultType2, _)
+        ) =>
+      (paramTypes1
+        .zip(paramTypes2)
+        .map {
+          case ((_, t1), (_, t2)) =>
+            determineTypeArguments(t1, t2)
+        }
+        .fold(Map())(_ ++ _) ++ determineTypeArguments(resultType1, resultType2)) -- typeParams
     case (Typed.RecordType(entries1, _), Typed.RecordType(entries2, _)) =>
-      entries1.map { case (name, tpe) =>
-        determineTypeArguments(tpe._1, entries2(name)._1)
-      }.fold(Map())(_ ++ _)
+      entries1
+        .map {
+          case (name, tpe) =>
+            determineTypeArguments(tpe._1, entries2(name)._1)
+        }
+        .fold(Map())(_ ++ _)
     case (t1, t2) => Map()
   }
 
@@ -475,15 +509,15 @@ class TypedTessla2TesslaASTTypedWorker(
   // Therefor, named arguments can only be resolved, if the macro id can be resolved statically.
   def lookupParameterNames(env: TypedTessla.Definitions, macroID: TypedTessla.Identifier) =
     lookup(env, macroID).expression match {
-      case TypedTessla.Macro(_, parameter, _, _, _, _, loc, _) => Some((parameter, loc))
+      case TypedTessla.Macro(_, parameter, _, _, _, _, loc, _)  => Some((parameter, loc))
       case TypedTessla.BuiltInOperator(_, _, parameter, _, loc) => Some((parameter, loc))
       case TypedTessla.MemberAccess(receiver, member, _, _) =>
         lookup(env, receiver.id).expression match {
           case TypedTessla.ObjectLiteral(members, _) =>
             members.getOrElse(member, None) match {
-              case TypedTessla.Macro(_, parameter, _, _, _, _, loc, _) => Some((parameter, loc))
+              case TypedTessla.Macro(_, parameter, _, _, _, _, loc, _)  => Some((parameter, loc))
               case TypedTessla.BuiltInOperator(_, _, parameter, _, loc) => Some((parameter, loc))
-              case _ => None
+              case _                                                    => None
             }
           case _ => None
         }
@@ -492,7 +526,7 @@ class TypedTessla2TesslaASTTypedWorker(
 }
 
 class TypedTessla2TesslaASTCore(baseTime: Option[TimeLiteral])
-  extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {
+    extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {
   override def translate(spec: TypedTessla.TypedSpecification) = {
     new TypedTessla2TesslaASTTypedWorker(spec, baseTime).translate()
   }
