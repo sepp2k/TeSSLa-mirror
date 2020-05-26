@@ -92,15 +92,24 @@ object ScalaConstants {
       case "__leftshift__" => "(" + s"${args(0)} << ${args(1)}" + ")"
       case "__rightshift__" => "(" + s"${args(0)} >> ${args(1)}" + ")"
 
+      case "__pow__" => s"java.lang.Math.pow(${args(0)}, ${args(1)})"
+      case "__log__" => s"java.lang.Math.log(${args(0)}, ${args(1)})"
+      case "__sin__" => s"java.lang.Math.sin(${args(0)})"
+      case "__cos__" => s"java.lang.Math.cos(${args(0)})"
+      case "__tan__" => s"java.lang.Math.tan(${args(0)})"
+      case "__atan__" => s"java.lang.Math.atan(${args(0)})"
+
       case "__intToFloat__" => s"${args(0)}.asInstanceOf[Float]"
       case "__floatToInt__" => s"${args(0)}.asInstanceOf[Long]"
 
       case "__Some__" => s"Option(${args(0)})"
+      case "__None__" => s"None"
       case "__getSome__" => s"${args(0)}.get"
       case "__isSome__" => s"${args(0)}.isDefined"
       case "__isNone__" => s"${args(0)}.isEmpty"
 
-      case "__toString__" => s"${args(0)}.toString"
+      case "__toString__" =>  s"${args(0)}.toString"
+      case "__String_format__" => s"${args(0)}.formatLocal(java.util.Locale.ROOT, ${args(1)})"
 
       //TODO: Handle mutable datastructures
       case "__Map_empty__" => "Map()"
