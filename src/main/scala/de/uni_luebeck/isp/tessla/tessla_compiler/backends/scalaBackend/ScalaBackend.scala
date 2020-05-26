@@ -1,7 +1,8 @@
-package de.uni_luebeck.isp.tessla.tessla_compiler.backends
+package de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference, IntermediateCodeUtils}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.BackendInterface
+import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference, IntermediateCodeUtils}
 
 /**
   * BackendInterface implementation for the translation to Java code

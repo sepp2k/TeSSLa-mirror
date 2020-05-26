@@ -35,7 +35,7 @@ class ASTRemoveUnused() extends TranslationPhase[Core.Specification, Core.Specif
 
     findUsagesInDefs(spec.definitions)
 
-    usages --= spec.out.map(_._1)
+    usages --= spec.out.map(_._1.id)
     var dels : collection.mutable.HashSet[Identifier] = collection.mutable.HashSet()
     var newDels : Set[Identifier] = Set()
 

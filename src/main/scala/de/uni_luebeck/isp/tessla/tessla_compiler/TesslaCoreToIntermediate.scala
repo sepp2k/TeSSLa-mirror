@@ -6,8 +6,6 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.TesslaCoreWithMutabilityInfo
 
-import scala.collection.immutable.ArraySeq
-
 /**
   * Class implementing de.uni_luebeck.isp.tessla.TranslationPhase for the translation from TeSSLa Core to
   * abstract imperative code
@@ -21,7 +19,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
 
     val in = spec.in
     val definitions = spec.definitions
-    val out = spec.out.groupBy(_._1).view.mapValues(e => e.map(x => x._2).toSet).toMap
+    val out = spec.out.groupBy(_._1.id).view.mapValues(e => e.map(x => x._2).toSet).toMap
 
     //TODO: Only create once
     val cfAnalysis = new ControlFlowAnalysis(spec)

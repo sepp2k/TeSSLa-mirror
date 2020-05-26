@@ -197,7 +197,7 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
 
     Success(Core.Specification(spec.in.map{case (id, v) => (getActID(id, None), v)},
                                dupInlines,
-                               spec.out.map{case (id, a) => (getActID(id, None), a)},
+                               spec.out.map{case (e, a) => (ExpressionRef(getActID(e.id, None), e.tpe, e.location), a)},
                                maxId),
             warnings)
   }

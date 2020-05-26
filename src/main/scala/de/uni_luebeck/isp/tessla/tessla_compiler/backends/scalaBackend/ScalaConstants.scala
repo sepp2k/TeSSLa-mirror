@@ -1,7 +1,7 @@
-package de.uni_luebeck.isp.tessla.tessla_compiler.backends
+package de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode, IntermediateCodeUtils}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode, IntermediateCodeUtils}
 
 /**
   * Class containing Java-specific constants for the translation
@@ -54,8 +54,8 @@ object ScalaConstants {
 
   def builtinFunctionCallTranslation(name: String, args: Seq[String], typeHint: FunctionType) : String = {
     name match {
-      case "__[TC]output__" => s"outputVar(${getParseExpressionToString(typeHint.argsTypes(0), args(0))}, ${args(1)}, ${args(2)}, currTs)"
-      case "__[TC]inputParse__" => getStringParseExpression(typeHint.retType, args(0))
+      case "__[TC]output__" => s"outputVar(${ScalaIOHandling.getParseExpressionToString(typeHint.argsTypes(0), args(0))}, ${args(1)}, ${args(2)}, currTs)"
+      case "__[TC]inputParse__" => ScalaIOHandling.getInputParseExpression(typeHint.retType, args(0))
       case "__[TC]getErrorCode__" => s"getErrorCode(${args(0)})"
 
       case "__ite__" |
@@ -92,15 +92,24 @@ object ScalaConstants {
       case "__leftshift__" => "(" + s"${args(0)} << ${args(1)}" + ")"
       case "__rightshift__" => "(" + s"${args(0)} >> ${args(1)}" + ")"
 
+      case "__pow__" => s"java.lang.Math.pow(${args(0)}, ${args(1)})"
+      case "__log__" => s"java.lang.Math.log(${args(0)}, ${args(1)})"
+      case "__sin__" => s"java.lang.Math.sin(${args(0)})"
+      case "__cos__" => s"java.lang.Math.cos(${args(0)})"
+      case "__tan__" => s"java.lang.Math.tan(${args(0)})"
+      case "__atan__" => s"java.lang.Math.atan(${args(0)})"
+
       case "__intToFloat__" => s"${args(0)}.asInstanceOf[Float]"
       case "__floatToInt__" => s"${args(0)}.asInstanceOf[Long]"
 
       case "__Some__" => s"Option(${args(0)})"
+      case "__None__" => s"None"
       case "__getSome__" => s"${args(0)}.get"
       case "__isSome__" => s"${args(0)}.isDefined"
       case "__isNone__" => s"${args(0)}.isEmpty"
 
-      case "__toString__" => s"${args(0)}.toString"
+      case "__toString__" =>  s"${args(0)}.toString"
+      case "__String_format__" => s"${args(0)}.formatLocal(java.util.Locale.ROOT, ${args(1)})"
 
       case "__Map_empty__" if typeHint.retType.isInstanceOf[MutableMapType] => "scala.collection.mutable.HashMap()"
       case "__Map_empty__" => "Map()"
@@ -155,52 +164,5 @@ object ScalaConstants {
       case _ => throw Errors.CommandNotSupportedError(s"Unsupported built-in function for Scala backend: $name")
     }
   }
-
-  def getStringParseExpression(to: ImpLanType, exp: String) : String = {
-    to match {
-      case LongType => s"java.lang.Long.parseLong($exp)"
-      case DoubleType => s"java.lang.Double.parseDouble($exp)"
-      case BoolType => s"java.lang.Boolean.parseBoolean($exp)"
-      case UnitType => "true"
-      case StringType => s"processStringInput($exp)"
-      case StructType(subTypes, fieldNames) if IntermediateCodeUtils.structIsTuple(StructType(subTypes, fieldNames)) =>
-        s"""{val els = ${exp}.strip().substring(1, ${exp}.length - 1).split(",").map(_.strip()); (${fieldNames.indices.map(i => getStringParseExpression(subTypes(i), s"els($i)")).mkString(", ")})}"""
-      case t => throw Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Scala translation")
-    }
-  }
-
-  //TODO: Tuple recognition
-  def getParseExpressionToString(from: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
-    val expName = s"exp$freshVarCount"
-    from match {
-      case LongType |
-           DoubleType |
-           BoolType => s"String.valueOf($exp)"
-      case UnitType => "\"()\""
-      case StringType => exp
-      case OptionType(t) => s"""{val $expName = $exp; if (${expName}.isDefined) "Some(" + ${getParseExpressionToString(t, expName + ".get", freshVarCount + 1)} + ")" else "None"}"""
-      case MutableSetType(valType) => s""""Set(" + ${exp}.toSeq.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
-      case ImmutableSetType(valType) => s""""Set(" + ${exp}.toSeq.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
-      case MutableMapType(keyType, valType) => s""""Map(" + ${exp}.map{case (k,v) => ${getParseExpressionToString(keyType, "k", freshVarCount + 1)} + " -> " + ${getParseExpressionToString(valType, "v", freshVarCount + 1)} }.mkString(", ") + ")""""
-      case ImmutableMapType(keyType, valType) => s""""Map(" + ${exp}.map{case (k,v) => ${getParseExpressionToString(keyType, "k", freshVarCount + 1)} + " -> " + ${getParseExpressionToString(valType, "v", freshVarCount + 1)} }.mkString(", ") + ")""""
-      case MutableListType(valType) => s""""List(" + ${exp}.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
-      case ImmutableListType(valType) => s""""List(" + ${exp}.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
-      case StructType(subTypes, fieldNames) if IntermediateCodeUtils.structIsTuple(StructType(subTypes, fieldNames)) => {
-        val elems = fieldNames.zip(subTypes).zipWithIndex.map { case ((n, t), i) =>
-          s"""${getParseExpressionToString(t, s"$expName._${i+1}", freshVarCount + 1)}"""
-        }.mkString(""" + ", " + """)
-        s"""{val $expName = $exp; "(" + $elems + ")"}"""
-      }
-      case StructType(subTypes, fieldNames) => {
-        val elems = fieldNames.zip(subTypes).zipWithIndex.map { case ((n, t), i) =>
-          s""""$n = " + ${getParseExpressionToString(t, s"$expName._${i+1}", freshVarCount + 1)}"""
-        }.mkString(""" + ", " + """)
-        s"""{val $expName = $exp; "{" + $elems + "}"}"""
-      }
-      case GeneralType => throw Errors.DSLError(s"General type expression $exp cannot be used for printing")
-      case t => s"$exp.toString()"
-    }
-  }
-
 
 }

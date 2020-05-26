@@ -371,15 +371,17 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator) 
 
   def produceInputFromConsoleCode(inStream: Identifier, typ: Type, currSrc: SourceListing) = {
     val s = s"var_${inStream.fullName}"
+    val parseExp = typ match {
+      case InstantiatedType("Events", Seq(RecordType(m, _)), _) if m.isEmpty => UnitValue
+      case _ => FunctionCall("__[TC]inputParse__", Seq("value"), IntermediateCode.FunctionType(Seq(StringType), typ))
+    }
 
     val newInputProcessing = (currSrc.inputProcessing.
       If(Seq(Seq(Equal("inputStream", StringValue(inStream.idOrName.left.get))))).
         Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForStreamType(typ), typ).
         Assignment(s"${s}_lastInit", s"${s}_init", BoolValue(false), BoolType).
         FinalAssignment(s"${s}_lastError", LongValue(0), LongType).
-        Assignment(s"${s}_value", FunctionCall("__[TC]inputParse__", Seq("value"),
-                   IntermediateCode.FunctionType(Seq(StringType), typ)
-                   ), defaultValueForStreamType(typ), typ).
+        Assignment(s"${s}_value", parseExp, defaultValueForStreamType(typ), typ).
         Assignment(s"${s}_init", BoolValue(true), BoolValue(false), BoolType).
         Assignment(s"${s}_ts", "currTs", LongValue(0), LongType).
         FinalAssignment(s"${s}_error", LongValue(0), LongType).
