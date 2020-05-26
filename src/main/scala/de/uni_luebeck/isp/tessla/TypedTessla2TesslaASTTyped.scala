@@ -12,21 +12,14 @@ import scala.collection.mutable
 
 class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, baseTime: Option[TimeLiteral]) extends TranslationPhase.Translator[Typed.Specification] {
 
+  // used to instantiate unsued type variables where actual type cannnot be recovered from TypedTessla
+  val unknownType = Typed.InstantiatedType("Unknown", Nil)
+
   val staticiteExtern = Typed.ExternExpression(List(Identifier("A")), List(
     (TesslaAST.StrictEvaluation, Typed.BoolType),
     (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
     (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
   ), Typed.TypeParam(Identifier("A")), "staticite")
-
-  val annotationExtern = Typed.ExternExpression(
-    List(Identifier("A")),
-    List(
-      (TesslaAST.StrictEvaluation, Typed.InstantiatedType("String", List())),
-      (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A")))
-    ),
-    Typed.InstantiatedType("Annotation", List(Typed.TypeParam(Identifier("A")))),
-    "annotation"
-  )
 
   val knownExterns = Map(
     "true" -> Typed.ApplicationExpression(Typed.TypeApplicationExpression(
@@ -178,9 +171,9 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
             val tpe = lookupType(id, env)
             val ref = Typed.ExpressionRef(toIdentifier(id, lookup(env, id).loc), tpe, loc)
             if (t == tpe) ref else {
-              val typeParams = determineTypeParameters(t, tpe)
-              val typeArgs = tpe.asInstanceOf[Typed.FunctionType].typeParams.map(typeParams)
-              Typed.TypeApplicationExpression(ref, typeArgs)
+              val typeArgs = determineTypeArguments(t, tpe).withDefaultValue(unknownType)
+              val typeArgList = tpe.asInstanceOf[Typed.FunctionType].typeParams.map(typeArgs)
+              Typed.TypeApplicationExpression(ref, typeArgList)
             }
           }.to(ArraySeq),
           loc
@@ -261,20 +254,20 @@ class TypedTessla2TesslaASTTypedWorker(spec: TypedTessla.TypedSpecification, bas
 
   def toIdentifier(identifier: TypedTessla.Identifier, location: Location) = Typed.Identifier(Ior.fromOptions(identifier.nameOpt, Some(identifier.uid)).get, location)
 
-  def determineTypeParameters(resolved: Typed.Type, resolvable: Typed.Type): Map[Typed.Identifier, Typed.Type] = (resolved, resolvable) match {
+  def determineTypeArguments(resolved: Typed.Type, resolvable: Typed.Type): Map[Typed.Identifier, Typed.Type] = (resolved, resolvable) match {
     case (tpe, Typed.TypeParam(name, _)) =>
       Map(name -> tpe)
     case (Typed.InstantiatedType(_, typeArgs1, _), Typed.InstantiatedType(_, typeArgs2, _)) =>
       typeArgs1.zip(typeArgs2).map { case (arg1, arg2) =>
-        determineTypeParameters(arg1, arg2)
+        determineTypeArguments(arg1, arg2)
       }.fold(Map())(_ ++ _)
     case (Typed.FunctionType(typeParams, paramTypes1, resultType1, _), Typed.FunctionType(_, paramTypes2, resultType2, _)) =>
       (paramTypes1.zip(paramTypes2).map { case ((_, t1), (_, t2)) =>
-        determineTypeParameters(t1, t2)
-      }.fold(Map())(_ ++ _) ++ determineTypeParameters(resultType1, resultType2)) -- typeParams
+        determineTypeArguments(t1, t2)
+      }.fold(Map())(_ ++ _) ++ determineTypeArguments(resultType1, resultType2)) -- typeParams
     case (Typed.RecordType(entries1, _), Typed.RecordType(entries2, _)) =>
       entries1.map { case (name, tpe) =>
-        determineTypeParameters(tpe._1, entries2(name)._1)
+        determineTypeArguments(tpe._1, entries2(name)._1)
       }.fold(Map())(_ ++ _)
     case (t1, t2) => Map()
   }
