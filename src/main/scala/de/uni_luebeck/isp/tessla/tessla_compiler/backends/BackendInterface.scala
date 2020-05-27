@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 import de.uni_luebeck.isp.tessla.TranslationPhase
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCodeTypeInference, IntermediateCodeUtils}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference, IntermediateCodeUtils}
 
 /**
   * Abstract base class for the translation from IntermediateCode to real source code

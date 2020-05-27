@@ -5,7 +5,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.backends.BackendInterface
 import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference, IntermediateCodeUtils}
 
 /**
-  * BackendInterface implementation for the translation to Java code
+  * BackendInterface implementation for the translation to Scala code
   */
 class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeleton.scala") {
 
@@ -46,7 +46,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       case lanVal: ImpLanVal => ScalaConstants.valueTranslation(lanVal)
       case FunctionCall(name, params, typeHint) => {
         if (name.startsWith("__")) {
-          ScalaConstants.builtinFunctionCallTranslation(name, params.map(translateExpression), typeHint)
+          ScalaConstants.builtinFunctionCallTranslation(name, params, translateExpression, typeHint)
         } else {
           s"$name(${params.map(translateExpression).mkString(", ")})"
         }

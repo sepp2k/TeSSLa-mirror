@@ -23,10 +23,9 @@ object ScalaConstants {
       case ImmutableMapType(keyType, valType) => s"Map[${typeTranslation(keyType)}, ${typeTranslation(valType)}]"
       case MutableListType(valType) => s"scala.collection.mutable.ArrayBuffer[${typeTranslation(valType)}]"
       case ImmutableListType(valType) => s"List[${typeTranslation(valType)}]"
-      case FunctionType(argsTypes, retType) => {
+      case FunctionType(argsTypes, retType) =>
         val ret = ((if (argsTypes.isEmpty) "" else ", ") + typeTranslation(retType))
         s"scala.Function${argsTypes.size}[${argsTypes.map(typeTranslation).mkString(", ")}${ret}]"
-      }
       case StructType(types, _) => s"(${types.map(typeTranslation).mkString(", ")})"
     }
   }
@@ -35,7 +34,7 @@ object ScalaConstants {
     v match {
       case LongValue(value) => s"${value}L"
       case DoubleValue(value) => s"${value}d"
-      case BoolValue(value) => value.toString()
+      case BoolValue(value) => value.toString
       case UnitValue => "true"
       case StringValue(value) => s""""${value.replaceAllLiterally("\"", "\\\"")}"""" //TODO: Find better solution, re-escaping all special chars
       case GeneralValue => "null"
@@ -52,7 +51,9 @@ object ScalaConstants {
     }
   }
 
-  def builtinFunctionCallTranslation(name: String, args: Seq[String], typeHint: FunctionType) : String = {
+  //Note: Mutable datastructures are not yet handled on this branch since they are not generated
+  def builtinFunctionCallTranslation(name: String, oArgs: Seq[ImpLanExpr], transFunc: ImpLanExpr => String, typeHint: FunctionType) : String = {
+    val args = oArgs.map(transFunc)
     name match {
       case "__[TC]output__" => s"outputVar(${ScalaIOHandling.getParseExpressionToString(typeHint.argsTypes(0), args(0))}, ${args(1)}, ${args(2)}, currTs)"
       case "__[TC]inputParse__" => ScalaIOHandling.getInputParseExpression(typeHint.retType, args(0))
@@ -111,7 +112,6 @@ object ScalaConstants {
       case "__toString__" =>  s"${args(0)}.toString"
       case "__String_format__" => s"${args(0)}.formatLocal(java.util.Locale.ROOT, ${args(1)})"
 
-      //TODO: Handle mutable datastructures
       case "__Map_empty__" => "Map()"
       case "__Map_add__" if typeHint.retType.isInstanceOf[MutableMapType] => s"${args(0)} += ((${args(1)}) -> (${args(2)}))"
       case "__Map_add__" => s"${args(0)} + ((${args(1)}) -> (${args(2)}))"
@@ -146,7 +146,8 @@ object ScalaConstants {
       case "__getStruct__" => {
         typeHint match {
           case FunctionType(Seq(StructType(_, fieldNames), IntermediateCode.StringType), _) => {
-            s"${args(0)}._${fieldNames.indexOf(args(1).replace("\"", "")) + 1}" //TODO: Somehow unclean solution
+            val fieldName = oArgs(1).asInstanceOf[StringValue].value
+            s"${args(0)}._${fieldNames.indexOf(fieldName) + 1}"
           }
           case _ => throw Errors.DSLError(s"__getStruct__ call has wrong type hint $typeHint")
         }
