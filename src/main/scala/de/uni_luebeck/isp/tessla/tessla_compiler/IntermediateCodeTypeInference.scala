@@ -19,8 +19,8 @@ object IntermediateCodeTypeInference {
       case StringValue(_) => StringType
       case GeneralValue => GeneralType
       case StructValue(vals) => {
-        val orderedVals = vals.toSeq.sortWith{case ((n1, _), (n2, _)) => n1 < n2}
-        StructType(orderedVals.map{case (_, v) => typeInference(v, varTypes)}, orderedVals.map(_._1))
+        val orderedVals = vals.toSeq.sortWith { case ((n1, _), (n2, _)) => IntermediateCodeUtils.structComparation(n1, n2) }
+        StructType(orderedVals.map { case (_, v) => typeInference(v, varTypes) }, orderedVals.map(_._1))
       }
       case EmptyFunction(typeHint) => typeHint
       case None(typeHint) => OptionType(typeHint)
@@ -44,7 +44,7 @@ object IntermediateCodeTypeInference {
         }
       }
     }
-      }
+  }
 
       def castingNecessary(e1_type: ImpLanType, e2_type: ImpLanType): Boolean = {
         if (e1_type == e2_type || e1_type == GeneralType) {
@@ -61,11 +61,7 @@ object IntermediateCodeTypeInference {
       }
 
       def generateCodeWithCasts(listing: SourceListing, varTypes: Map[String, ImpLanType]) : SourceListing = {
-        SourceListing(generateCodeWithCasts(listing.stepSource, varTypes),
-                      generateCodeWithCasts(listing.tailSource, varTypes),
-                      generateCodeWithCasts(listing.tsGenSource, varTypes),
-                      generateCodeWithCasts(listing.inputProcessing, varTypes),
-                      generateCodeWithCasts(listing.staticSource, varTypes))
+        listing.mapAll(generateCodeWithCasts(_, varTypes))
       }
 
       def generateCodeWithCasts(stmts: Seq[ImpLanStmt], varTypes: Map[String, ImpLanType], retType: Option[ImpLanType] = scala.None) : Seq[ImpLanStmt] = {
@@ -107,14 +103,13 @@ object IntermediateCodeTypeInference {
 
         target match {
           case scala.None => innerExp
-          case scala.Some(t) => {
+          case scala.Some(t) =>
             val actualType = typeInference(innerExp, varTypes)
             if (!castingNecessary(t, actualType)) {
               innerExp
             } else {
               CastingExpression(innerExp, t)
             }
-          }
         }
       }
 

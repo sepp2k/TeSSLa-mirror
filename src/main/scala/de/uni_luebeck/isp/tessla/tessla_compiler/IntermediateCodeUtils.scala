@@ -5,7 +5,6 @@ import scala.language.postfixOps
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
 import de.uni_luebeck.isp.tessla._
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.tessla_compiler.Errors.CoreASTError
 
 /**
   * Class containing a DSL for easy creation of ImpLanStmt-Blocks
@@ -34,7 +33,7 @@ object IntermediateCodeUtils {
     stmts.foldLeft[A](n) {
       case (currN, stmt) => {
         val subStmts = stmt match {
-          case expr: ImpLanExpr => Seq()
+          case _: ImpLanExpr => Seq()
           case If(guard, stmts, elseStmts) => guard.flatten ++ stmts ++ elseStmts
           case TryCatchBlock(tr, cat) => tr ++ cat
           case Assignment(_, rexpr, defVal, _) => Seq(rexpr) ++ (if (defVal.isDefined) Seq(defVal.get) else Seq())
@@ -99,9 +98,19 @@ object IntermediateCodeUtils {
     varDefs.map{case (name, typ, default) => (name, (typ, default))}.toMap
   }
 
+  def structComparation(s1: String, s2: String) : Boolean = {
+    val n1 = s1.stripPrefix("_").toIntOption
+    val n2 = s2.stripPrefix("_").toIntOption
+    if (n1.isDefined && n2.isDefined && s1.startsWith("_") && s2.startsWith("_")) {
+      n1.get <= n2.get
+    } else {
+      s1 < s2
+    }
+  }
+
   implicit def typeConversion(t: Type): ImpLanType = {
     t match {
-      case InstantiatedType("Events", Seq(t), _) => typeConversion(t) //TODO: Unclean solution but not easy to surpass because of implicit
+      case InstantiatedType("Events", Seq(t), _) => typeConversion(t)
       case RecordType(entries, _) if entries.isEmpty => UnitType
       case RecordType(entries, _) if entries.size == 1 => typeConversion(entries.toSeq.head._2._1)
       case InstantiatedType("Bool", Seq(), _) => BoolType
@@ -112,24 +121,14 @@ object IntermediateCodeUtils {
       case InstantiatedType("Set", Seq(t), _) => ImmutableSetType(t)
       case InstantiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
       case InstantiatedType("List", Seq(t), _) => ImmutableListType(t)
-      case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) => IntermediateCode.FunctionType(paramTypes.map{case (_,t) => typeConversion(t)}, typeConversion(resultType)) //TODO: Type params
+      case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) => IntermediateCode.FunctionType(paramTypes.map{case (_,t) => typeConversion(t)}, typeConversion(resultType))
       case RecordType(entries, _) => {
-        def comp(s1: String, s2: String) : Boolean = {
-          val n1 = s1.stripPrefix("_").toIntOption
-          val n2 = s2.stripPrefix("_").toIntOption
-          if (n1.isDefined && n2.isDefined && s1.startsWith("_") && s2.startsWith("_")) {
-            n1.get <= n2.get
-          } else {
-            s1 < s2
-          }
-        }
-        val sortedEntries = entries.toSeq.sortWith{case ((n1, _), (n2, _)) => comp(n1.name, n2.name)}
+        val sortedEntries = entries.toSeq.sortWith{case ((n1, _), (n2, _)) => structComparation(n1.name, n2.name)}
         val names = sortedEntries.map(_._1.name)
         val types = sortedEntries.map{case (_,t) => typeConversion(t._1)}
         StructType(types, names)
       }
-      case TypeParam(_, _) => GeneralType //TODO: Resolve type params if possible //TODO: Introduce GenericType in Intermediate Code for Rust translation
-      case i: InstantiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $i not supported")
+      case TypeParam(_, _) => GeneralType
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
   }
@@ -147,8 +146,7 @@ object IntermediateCodeUtils {
       case InstantiatedType("Map", Seq(t1, t2), _) => EmptyImmutableMap(t1, t2)
       case InstantiatedType("List", Seq(t), _) => EmptyImmutableList(t)
       case TesslaAST.Core.FunctionType(_, _, _, _) => EmptyFunction(t)
-      case TypeParam(_, _) => GeneralValue //TODO: Introduce GenericType in Intermediate Code for Rust translation
-      case i: InstantiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
+      case TypeParam(_, _) => GeneralValue
       case RecordType(entries, _) => StructValue(entries.map{case (n,t) => (n.name, defaultValueForType(t._1))})
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $t not supported")
     }
@@ -274,7 +272,7 @@ class IntermediateCodeUtils(stmts: Seq[ImpLanStmt], blockState : Seq[BlockState]
 
     def EndIf() : IntermediateCodeUtils = {
       val stmt = blockState.head match {
-        case InIf | InElse =>  IntermediateCode.If(condStack(0), ifTryStack(0), elseCatchStack(0))
+        case InIf | InElse =>  IntermediateCode.If(condStack.head, ifTryStack.head, elseCatchStack.head)
         case _ => throw tessla_compiler.Errors.DSLError("EndIf without previous If")
       }
       val tmpRes = new IntermediateCodeUtils(stmts, blockState.drop(1), ifTryStack.drop(1), elseCatchStack.drop(1), condStack.drop(1))

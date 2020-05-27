@@ -91,7 +91,7 @@ object Main extends SexyOpt {
         if (outputPath.isDefined) {
           val pw = new PrintWriter(new File(outputPath.get))
           pw.write(source)
-          pw.close
+          pw.close()
         } else {
           println(source)
         }

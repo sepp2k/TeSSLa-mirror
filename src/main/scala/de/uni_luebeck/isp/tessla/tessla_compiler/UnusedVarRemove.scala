@@ -4,8 +4,6 @@ import de.uni_luebeck.isp.tessla.TranslationPhase
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 
-//TODO: Watch out, in theory param names may have the same name as internal stream vars
-
 object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
 
   override def translate(listing: SourceListing): Result[SourceListing] = {
@@ -25,12 +23,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
       newDel = usedIn.flatMap{case (k, v) => if (v.isEmpty) scala.Some(k) else scala.None}.toSet - "*"
     }
 
-    Success(SourceListing(removeAssignments(listing.stepSource, deleteVars.toSet),
-                          removeAssignments(listing.tailSource, deleteVars.toSet),
-                          removeAssignments(listing.tsGenSource, deleteVars.toSet),
-                          removeAssignments(listing.inputProcessing, deleteVars.toSet),
-                          removeAssignments(listing.staticSource, deleteVars.toSet),
-    ), Seq())
+    Success(listing.mapAll(removeAssignments(_, deleteVars.toSet)), Seq())
   }
 
   def removeAssignments(stmts: Seq[ImpLanStmt], del: Set[String]) : Seq[ImpLanStmt] = {
