@@ -35,12 +35,12 @@ object IntermediateCodeTypeInference {
       case TernaryExpression(_, e1, e2) => getLeastCommonType(typeInference(e1, varTypes), typeInference(e2, varTypes))
       case Equal(_, _) => BoolType
       case Variable(name) if varTypes.contains(name) => varTypes(name)
-      case Variable(name) => throw Errors.TypeError(s"Type of used variable $name is unknown")
+      case Variable(name) => throw Errors.DSLTypeError(s"Type of used variable $name is unknown")
       case LambdaExpression(_, argsTypes, retType, _) => FunctionType(argsTypes, retType)
       case LambdaApplication(exp, _) => {
         typeInference(exp, varTypes) match {
           case FunctionType(_, r) => r
-          case _ => throw Errors.TypeError(s"Non-Lambda expression is used in application: $exp")
+          case _ => throw Errors.DSLTypeError(s"Non function expression is used in application: $exp")
         }
       }
     }
@@ -86,7 +86,7 @@ object IntermediateCodeTypeInference {
           case FunctionCall(name, params, typeHint) => FunctionCall(name, params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)}, typeHint)
           case LambdaApplication(exp, params) => typeInference(exp, varTypes) match {
             case FunctionType(argsTypes, _) => LambdaApplication(castExpression(exp, scala.None, varTypes), params.zip(argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)})
-            case _ => throw Errors.TypeError(s"Lambda Application to non-function expression $exp")
+            case _ => throw Errors.DSLTypeError(s"Lambda Application to non-function expression $exp")
           }
           case Equal(a, b) => {
             val lct = scala.Some(getLeastCommonType(typeInference(a, varTypes), typeInference(b, varTypes)))

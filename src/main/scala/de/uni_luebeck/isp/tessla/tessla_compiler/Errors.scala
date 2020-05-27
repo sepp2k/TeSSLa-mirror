@@ -8,7 +8,7 @@ import de.uni_luebeck.isp.tessla.Location
 object Errors {
 
   case class CommandNotSupportedError(m: String, loc: Location = Location.unknown) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
-    override def message = s"The translation of the given command is not supported.\nDetails: $m"
+    override def message = s"The translation of the given command is not supported by the compiler backend.\nDetails: $m"
   }
 
   case class NotYetImplementedError(m: String, loc: Location = Location.unknown) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
@@ -16,12 +16,12 @@ object Errors {
   }
 
   case class DSLError(m: String, loc: Location = Location.unknown) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
-    override def message = s"The creation of the abstract imperative code failed [DSLError]: $m"
+    override def message = s"The intermediate code contains an error.\nDetails: $m"
   }
 
-  case class TypeError(m: String) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
+  case class DSLTypeError(m: String) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
     override def message = s"An expression in the intermediate code has invalid type.\nDetails: $m"
-    override def loc = Location.unknown
+    override def loc : Location = Location.unknown
   }
 
   case class CoreASTError(m: String, loc: Location = Location.unknown) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
@@ -30,7 +30,7 @@ object Errors {
 
   case class CLIError(m: String) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
     override def message = s"The compiler received unvalid commandline arguments.\nDetails: $m"
-    override def loc = Location.unknown
+    override def loc : Location = Location.unknown
   }
 
 }

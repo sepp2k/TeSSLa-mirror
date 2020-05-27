@@ -58,10 +58,10 @@ object Main extends SexyOpt {
         )
         val (backend, stdinRead) : (backends.BackendInterface, Boolean) = target.value match {
           case "java" => (new ScalaBackend, true)
-          case "javascript" => throw new Errors.NotYetImplementedError("Javascript translation not implemented yet")
-          case "rust" => throw new Errors.NotYetImplementedError("Rust translation not implemented yet")
-          case "rust-bare" => throw new Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
-          case _=> throw new Errors.CLIError(s"Unvalid option for target: ${target.value}")
+          case "javascript" => throw Errors.NotYetImplementedError("Javascript translation not implemented yet")
+          case "rust" => throw Errors.NotYetImplementedError("Rust translation not implemented yet")
+          case "rust-bare" => throw Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
+          case _=> throw Errors.CLIError(s"Unvalid option for target: ${target.value}")
         }
 
         val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
