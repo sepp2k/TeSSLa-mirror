@@ -50,7 +50,9 @@ constantExpression
 constantMemberDefinition: name=ID ((':'|'=') NL* value=constantExpression)?;
 
 
-param: ID (':' NL* parameterType=type)?;
+param: ID (':' NL* parameterType=evalType)?;
+
+evalType: evaluation=(STRICT | LAZY)? NL* typ=type;
 
 typeBody
     : type #TypeAliasBody
@@ -60,7 +62,7 @@ typeBody
 type
     : name=ID #SimpleType
     | name=ID '[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']' #TypeApplication
-    | '(' NL* parameterTypes+=type (',' NL* parameterTypes+=type)* NL* ')' NL* '=>' NL* resultType=type #FunctionType
+    | '(' NL* parameterTypes+=evalType (',' NL* parameterTypes+=evalType)* NL* ')' NL* '=>' NL* resultType=type #FunctionType
     | ('${' | '{') NL* (memberSigs+=memberSig (',' NL* memberSigs+=memberSig)* (',' '..'?)?)? NL* '}' #ObjectType
     | '(' NL* (elementTypes+=type (',' NL* elementTypes+=type)* NL*)? ')' #TupleType
     ;

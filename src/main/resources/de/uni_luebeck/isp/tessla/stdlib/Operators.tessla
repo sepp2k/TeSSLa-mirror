@@ -5,159 +5,159 @@ module Operators {
   ## **Operator usage:** `!x`
   ##
   ## Boolean complement
-  liftable def not(arg: Bool): Bool = extern(not)
+  liftable def not(arg: strict Bool): Bool = extern(not)
 
   ## **Operator usage:** `if c then a else b`
   ##
   ## If-Then-Else
-  liftable def ite[T](cond: Bool, thenCase: T, elseCase: T): T = extern(ite)
+  liftable def ite[T](cond: strict Bool, thenCase: lazy T, elseCase: lazy T): T = extern(ite)
 
   ## **Operator usage:** `a && b`
   ##
   ## Boolean conjunction
-  liftable def and(lhs: Bool, rhs: Bool): Bool = extern(and)
+  liftable def and(lhs: strict Bool, rhs: strict Bool): Bool = extern(and)
 
   ## **Operator usage:** `a || b`
   ##
   ## Boolean disjunction
-  liftable def or(lhs: Bool, rhs: Bool): Bool = extern(or)
+  liftable def or(lhs: strict Bool, rhs: strict Bool): Bool = extern(or)
 
   ## **Operator usage:** `a == b`
   ##
   ## Equivalence on arbitrary data types. On complex data structures this operator checks the object's identity. Note,
   ## that this operator is defined as `@liftable`, so it does neither check the equivalence nor the identity of streams,
   ## but applies the operator on two streams using the signal semantics.
-  liftable def eq[T](lhs: T, rhs: T): Bool = extern(eq)
+  liftable def eq[T](lhs: strict T, rhs: strict T): Bool = extern(eq)
 
   ## **Operator usage:** `a != b`
   ##
   ## Non-Equivalence on arbitrary data types. On complex data structures this operator checks the object's identity. Note,
   ## that this operator is defined as `@liftable`, so it does neither check the equivalence nor the identity of streams,
   ## but applies the operator on two streams using the signal semantics.
-  liftable def neq[T](lhs: T, rhs: T): Bool = extern(neq)
+  liftable def neq[T](lhs: strict T, rhs: strict T): Bool = extern(neq)
 
   ## **Operator usage:** `a > b`
   ##
   ## Returns [`true`](#true) if `a` is strictly greater than `b`
-  liftable def gt(lhs: Int, rhs: Int): Bool = extern(gt)
+  liftable def gt(lhs: strict Int, rhs: strict Int): Bool = extern(gt)
 
   ## **Operator usage:** `a < b`
   ##
   ## Returns [`true`](#true) if `a` is strictly lower than `b`
-  liftable def lt(lhs: Int, rhs: Int): Bool = extern(lt)
+  liftable def lt(lhs: strict Int, rhs: strict Int): Bool = extern(lt)
 
   ## **Operator usage:** `a >= b`
   ##
   ## Returns [`true`](#true) if `a` is greater than or equal to `b`
-  liftable def geq(lhs: Int, rhs: Int): Bool = extern(geq)
+  liftable def geq(lhs: strict Int, rhs: strict Int): Bool = extern(geq)
 
   ## **Operator usage:** `a <= b`
   ##
   ## Returns [`true`](#true) if `a` is lower than or equal to `b`
-  liftable def leq(lhs: Int, rhs: Int): Bool = extern(leq)
+  liftable def leq(lhs: strict Int, rhs: strict Int): Bool = extern(leq)
 
   ## **Operator usage:** `a >. b`
   ##
   ## Returns [`true`](#true) if `a` is strictly greater than `b`
-  liftable def fgt(lhs: Float, rhs: Float): Bool = extern(fgt)
+  liftable def fgt(lhs: strict Float, rhs: strict Float): Bool = extern(fgt)
 
   ## **Operator usage:** `a <. b`
   ##
   ## Returns [`true`](#true) if `a` is strictly lower than `b`
-  liftable def flt(lhs: Float, rhs: Float): Bool = extern(flt)
+  liftable def flt(lhs: strict Float, rhs: strict Float): Bool = extern(flt)
 
   ## **Operator usage:** `a >=. b`
   ##
   ## Returns [`true`](#true) if `a` is greater than or equal to `b`
-  liftable def fgeq(lhs: Float, rhs: Float): Bool = extern(fgeq)
+  liftable def fgeq(lhs: strict Float, rhs: strict Float): Bool = extern(fgeq)
 
   ## **Operator usage:** `a <=. b`
   ##
   ## Returns [`true`](#true) if `a` is lower than or equal to `b`
-  liftable def fleq(lhs: Float, rhs: Float): Bool = extern(fleq)
+  liftable def fleq(lhs: strict Float, rhs: strict Float): Bool = extern(fleq)
 
   ## **Operator usage:** `a + b`
   ##
   ## Returns the sum of two integers
-  liftable def add(lhs: Int, rhs: Int): Int = extern(add)
+  liftable def add(lhs: strict Int, rhs: strict Int): Int = extern(add)
 
   ## **Operator usage:** `a - b`
   ##
   ## Returns the difference of two integers
-  liftable def sub(lhs: Int, rhs: Int): Int = extern(sub)
+  liftable def sub(lhs: strict Int, rhs: strict Int): Int = extern(sub)
 
   ## **Operator usage:** `a * b`
   ##
   ## Returns the multiplication of two integers
-  liftable def mul(lhs: Int, rhs: Int): Int = extern(mul)
+  liftable def mul(lhs: strict Int, rhs: strict Int): Int = extern(mul)
 
   ## **Operator usage:** `a / b`
   ##
   ## Returns the division of two integers
-  liftable def div(lhs: Int, rhs: Int): Int = extern(div)
+  liftable def div(lhs: strict Int, rhs: strict Int): Int = extern(div)
 
   ## **Operator usage:** `a % b`
   ##
   ## Returns the remainder of two integers
-  liftable def mod(lhs: Int, rhs: Int): Int = extern(mod)
+  liftable def mod(lhs: strict Int, rhs: strict Int): Int = extern(mod)
 
   ## **Operator usage:** `-a`
   ##
   ## Unary minus on integers
-  liftable def negate(arg: Int): Int = extern(negate)
+  liftable def negate(arg: strict Int): Int = extern(negate)
 
   ## **Operator usage:** `a & b`
   ##
   ## Bitwise AND on integers
-  liftable def bitand(lhs: Int, rhs: Int): Int = extern(bitand)
+  liftable def bitand(lhs: strict Int, rhs: strict Int): Int = extern(bitand)
 
   ## **Operator usage:** `a | b`
   ##
   ## Bitwise OR on integers
-  liftable def bitor(lhs: Int, rhs: Int): Int = extern(bitor)
+  liftable def bitor(lhs: strict Int, rhs: strict Int): Int = extern(bitor)
 
   ## **Operator usage:** `a ^ b`
   ##
   ## Bitwise XOR on integers
-  liftable def bitxor(lhs: Int, rhs: Int): Int = extern(bitxor)
+  liftable def bitxor(lhs: strict Int, rhs: strict Int): Int = extern(bitxor)
 
   ## **Operator usage:** `~a`
   ##
   ## Bitflip on integers
-  liftable def bitflip(arg: Int): Int = extern(bitflip)
+  liftable def bitflip(arg: strict Int): Int = extern(bitflip)
 
   ## **Operator usage:** `a << b`
   ##
   ## Arithmetic left shift on integers
-  liftable def leftshift(lhs: Int, rhs: Int): Int = extern(leftshift)
+  liftable def leftshift(lhs: strict Int, rhs: strict Int): Int = extern(leftshift)
 
   ## **Operator usage:** `a >> b`
   ##
   ## Arithmetic right shift on integers
-  liftable def rightshift(lhs: Int, rhs: Int): Int = extern(rightshift)
+  liftable def rightshift(lhs: strict Int, rhs: strict Int): Int = extern(rightshift)
 
   ## **Operator usage:** `a +. b`
   ##
   ## Returns the sum of two floats
-  liftable def fadd(lhs: Float, rhs: Float): Float = extern(fadd)
+  liftable def fadd(lhs: strict Float, rhs: strict Float): Float = extern(fadd)
 
   ## **Operator usage:** `a -. b`
   ##
   ## Returns the difference of two floats
-  liftable def fsub(lhs: Float, rhs: Float): Float = extern(fsub)
+  liftable def fsub(lhs: strict Float, rhs: strict Float): Float = extern(fsub)
 
   ## **Operator usage:** `a *. b`
   ##
   ## Returns the multiplication of two floats
-  liftable def fmul(lhs: Float, rhs: Float): Float = extern(fmul)
+  liftable def fmul(lhs: strict Float, rhs: strict Float): Float = extern(fmul)
 
   ## **Operator usage:** `a /. b`
   ##
   ## Returns the division of two floats
-  liftable def fdiv(lhs: Float, rhs: Float): Float = extern(fdiv)
+  liftable def fdiv(lhs: strict Float, rhs: strict Float): Float = extern(fdiv)
 
   ## **Operator usage:** `-.a`
   ##
   ## Unary minus on floats
-  liftable def fnegate(arg: Float): Float = extern(fnegate)
+  liftable def fnegate(arg: strict Float): Float = extern(fnegate)
 }

@@ -213,7 +213,7 @@ class Flattener(spec: Tessla.Specification)
       )
     } else {
       val innerDefs = new FlatTessla.Definitions(Some(defs))
-      val paramIdMap = createIdMap(definition.parameters.map(_.id.name))
+      val paramIdMap = createIdMap(definition.parameters.map(_._2.id.name))
       val typeParamIdMap = createIdMap(definition.typeParameters.map(_.name))
       // Environment that contains the macro's parameters and type parameters, but not any of its inner definitions
       // This is used to process the type signature as we want to be able to use type arguments there,
@@ -225,9 +225,10 @@ class Flattener(spec: Tessla.Specification)
         val tp = FlatTessla.TypeParameter(typeParamIdMap(typeParameter.name), typeParameter.loc)
         innerDefs.addType(FlatTessla.TypeEntry(tp.id, 0, _ => tp, tp.loc))
       }
-      val parameters =
-        definition.parameters.map(translateParameter(_, paramIdMap, innerDefs, paramEnv))
-      parameters.foreach { param =>
+      val parameters = definition.parameters.map(p =>
+        p._1 -> translateParameter(p._2, paramIdMap, innerDefs, paramEnv)
+      )
+      parameters.map(_._2).foreach { param =>
         val typ = param.parameterType
         innerDefs.addVariable(
           FlatTessla.VariableEntry(paramIdMap(param.name), param, Some(typ), Seq(), param.loc)
@@ -255,7 +256,7 @@ class Flattener(spec: Tessla.Specification)
         val typ = returnTypeOpt.map { returnType =>
           FlatTessla.FunctionType(
             typeParameters,
-            parameters.map(_.parameterType),
+            parameters.map(p => p._1 -> p._2.parameterType),
             returnType,
             mac.isLiftable
           )
@@ -269,7 +270,7 @@ class Flattener(spec: Tessla.Specification)
           val typ = returnTypeOpt.map { returnType =>
             FlatTessla.FunctionType(
               typeParameters,
-              parameters.map(_.parameterType),
+              parameters.map(p => p._1 -> p._2.parameterType),
               returnType,
               definition.isLiftable
             )
@@ -378,7 +379,7 @@ class Flattener(spec: Tessla.Specification)
         FlatTessla.FunctionType(
           // Explicitly written function types never have any type arguments because we don't support higher rank types
           Seq(),
-          parameterTypes.map(translateType(_, defs, env)),
+          parameterTypes.map(t => (t._1, translateType(t._2, defs, env))),
           translateType(returnType, defs, env),
           // Explicitly written function types are never liftable because we have no syntax for that
           isLiftable = false
@@ -476,11 +477,13 @@ class Flattener(spec: Tessla.Specification)
         case e                   => (Seq(), e)
       }
       val innerDefs = new FlatTessla.Definitions(Some(defs))
-      val paramIdMap = createIdMap(lambda.parameters.map(_.id.name))
+      val paramIdMap = createIdMap(lambda.parameters.map(_._2.id.name))
       val innerEnv =
         env ++ Env(variables = paramIdMap ++ createIdMap(blockDefs.map(_.id.name)), types = Map())
-      val parameters = lambda.parameters.map(translateParameter(_, paramIdMap, innerDefs, innerEnv))
-      parameters.foreach { param =>
+      val parameters = lambda.parameters.map(p =>
+        p._1 -> translateParameter(p._2, paramIdMap, innerDefs, innerEnv)
+      )
+      parameters.map(_._2).foreach { param =>
         val typ = param.parameterType
         innerDefs.addVariable(
           FlatTessla.VariableEntry(paramIdMap(param.name), param, Some(typ), Seq(), param.loc)

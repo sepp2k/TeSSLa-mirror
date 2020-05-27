@@ -13,6 +13,8 @@ IMPORT: 'import';
 IMEXPORT: 'imexport';
 EXTERN: 'extern';
 ROOT: '__root__';
+STRICT: 'strict';
+LAZY: 'lazy';
 IN: 'in';
 OUT: 'out';
 AS: 'as';

@@ -19,7 +19,7 @@ object Tessla {
   case class Definition(
     id: Identifier,
     typeParameters: Seq[Identifier],
-    parameters: Seq[Parameter],
+    parameters: Seq[(Option[TesslaAST.RuntimeEvaluation], Parameter)],
     returnType: Option[Type],
     headerLoc: Location,
     body: Body,
@@ -215,7 +215,7 @@ object Tessla {
   }
 
   case class Lambda(
-    parameters: Seq[Parameter],
+    parameters: Seq[(Option[TesslaAST.RuntimeEvaluation], Parameter)],
     headerLoc: Location,
     body: Expression,
     loc: Location
@@ -316,7 +316,11 @@ object Tessla {
     override def toString = s"$id[${args.mkString(", ")}]"
   }
 
-  case class FunctionType(parameterTypes: Seq[Type], returnType: Type, loc: Location) extends Type {
+  case class FunctionType(
+    parameterTypes: Seq[(Option[TesslaAST.RuntimeEvaluation], Type)],
+    returnType: Type,
+    loc: Location
+  ) extends Type {
     override def toString = s"(${parameterTypes.mkString(", ")}) => $returnType]"
   }
 

@@ -110,7 +110,7 @@ module Option {
 
 ## nodoc
 def __private__Option_toSet[T](option: Option[T]): Set[T] =
-  if isSome(option) then Set.singleton( getSome(option)) else Set.empty[T]
+  if isSome(option) then Set.singleton(getSome(option)) else Set.empty[T]
 
 # Note that the core of the option functionality is defined below outside of the module because options are fundamental
 # enough (lift etc. make use of options) that having the functions in __root__ makes sense.
@@ -123,16 +123,16 @@ type Option[T] = extern(Option)
 def None[T]: Option[T] = extern(None)
 
 ## Represents existing values of type `T`
-liftable def Some[T](value: T): Option[T] = extern(Some)
+liftable def Some[T](value: lazy T): Option[T] = extern(Some)
 
 ## Returns [`true`](#true) if the given option is a [`None`](#none) or [`false`](#false) if it is a [`Some`](#some)
-liftable def isNone[T](opt: Option[T]): Bool = extern(isNone)
+liftable def isNone[T](opt: strict Option[T]): Bool = extern(isNone)
 
 ## Returns [`true`](#true) if the given option is a [`Some`](#some) or [`false`](#false) if it is a [`None`](#none)
 liftable def isSome[T](opt: Option[T]): Bool = !isNone(opt)
 
 ## Get the value contained in a [`Some`](#some). If the given option is a [`None`](#none), a run-time error will occur
-liftable def getSome[T](opt: Option[T]): T = extern(getSome)
+liftable def getSome[T](opt: strict Option[T]): T = extern(getSome)
 
 ## Get the value contained in a [`Some`](#some). If the given option is a [`None`](#none), the default value `value` will be returned
 liftable def getSomeOrElse[T](opt: Option[T], value: T): T = if isSome(opt) then getSome(opt) else value

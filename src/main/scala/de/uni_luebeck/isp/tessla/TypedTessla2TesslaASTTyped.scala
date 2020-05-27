@@ -238,16 +238,15 @@ class TypedTessla2TesslaASTTypedWorker(
             case Macro(typeParameters, parameters, body, returnType, headerLoc, result, loc, _) =>
               Typed.FunctionExpression(
                 typeParameters.map(toIdentifier(_, Location.unknown)).toList,
-                parameters
-                  .map(x =>
+                parameters.map {
+                  case (eval /* TODO */, typ) =>
                     (
-                      Typed.Identifier(Ior.Left(x.param.id.name), x.loc),
-                      if (x.parameterType.isStreamType) TesslaAST.LazyEvaluation
+                      Typed.Identifier(Ior.Left(typ.param.id.name), typ.loc),
+                      if (typ.parameterType.isStreamType) TesslaAST.LazyEvaluation
                       else TesslaAST.StrictEvaluation,
-                      toType(x.parameterType)
+                      toType(typ.parameterType)
                     )
-                  )
-                  .toList,
+                }.toList,
                 translateEnv(body),
                 Typed.ExpressionRef(
                   toIdentifier(result.id, Location.unknown),
@@ -268,7 +267,7 @@ class TypedTessla2TesslaASTTypedWorker(
 
               val argumentList = parameterNames match {
                 case Some((parameter, loc)) =>
-                  generateArgumentList(macroID.toString, loc, args, parameter)
+                  generateArgumentList(macroID.toString, loc, args, parameter.map(_._2))
                 case None =>
                   if (args.exists(_.isInstanceOf[TypedTessla.NamedArgument])) {
                     throw Errors.InternalError("Unsupported use of named argument", loc)
@@ -302,12 +301,15 @@ class TypedTessla2TesslaASTTypedWorker(
                   parameters,
                   referenceImplementation,
                   loc
-                ) => // TODO: suport reference implementation
+                ) => // TODO: support reference implementation
               knownExterns.getOrElse(
                 name,
                 Typed.ExternExpression(
                   typeParameters.map(toIdentifier(_, Location.unknown)).toList,
-                  parameters.map(x => (TesslaAST.StrictEvaluation, toType(x.parameterType))).toList,
+                  parameters.map {
+                    case (eval /* TODO */, typ) =>
+                      (TesslaAST.StrictEvaluation, toType(typ.parameterType))
+                  }.toList,
                   toType(definition.typeInfo.asInstanceOf[TypedTessla.FunctionType].returnType),
                   name,
                   loc
@@ -418,14 +420,13 @@ class TypedTessla2TesslaASTTypedWorker(
     case TypedTessla.FunctionType(typeParameters, parameterTypes, returnType, _) =>
       Typed.FunctionType(
         typeParameters.map(toIdentifier(_, Location.unknown)).toList,
-        parameterTypes
-          .map(x =>
+        parameterTypes.map {
+          case (eval /* TODO */, typ) =>
             (
-              if (x.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation,
-              toType(x)
+              if (typ.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation,
+              toType(typ)
             )
-          )
-          .toList,
+        }.toList,
         toType(returnType)
       )
     case TypedTessla.ObjectType(memberTypes, isOpen) =>

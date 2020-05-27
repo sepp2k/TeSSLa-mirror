@@ -58,7 +58,7 @@ class TypeChecker(spec: FlatTessla.Specification)
     case f: FlatTessla.FunctionType =>
       val typeParams = f.typeParameters.map(tvar => makeIdentifier(tvar.nameOpt))
       val innerEnv = env ++ f.typeParameters.zip(typeParams).toMap
-      val paramTypes = f.parameterTypes.map(translateType(_, innerEnv))
+      val paramTypes = f.parameterTypes.map(p => p._1 -> translateType(p._2, innerEnv))
       TypedTessla.FunctionType(
         typeParams,
         paramTypes,
@@ -99,8 +99,10 @@ class TypeChecker(spec: FlatTessla.Specification)
     }
   }
 
-  def parameterTypes(mac: FlatTessla.Macro): Seq[FlatTessla.Type] = {
-    mac.parameters.map(_.parameterType)
+  def parameterTypes(
+    mac: FlatTessla.Macro
+  ): Seq[(Option[TesslaAST.RuntimeEvaluation], FlatTessla.Type)] = {
+    mac.parameters.map(p => p._1 -> p._2.parameterType)
   }
 
   def isLiftableMacro(exp: FlatTessla.Expression): Boolean = exp match {
@@ -237,8 +239,8 @@ class TypeChecker(spec: FlatTessla.Specification)
         // variables.
         val parameterTypes =
           expectedFunctionType.parameterTypes.zip(actualFunctionType.parameterTypes).map {
-            case (expectedParamType, actualParamType) =>
-              typeSubst(expectedParamType, actualParamType, typeParams, substitutions)
+            case ((_, expectedParamType), (eval, actualParamType)) =>
+              eval -> typeSubst(expectedParamType, actualParamType, typeParams, substitutions)
           }
         val returnType = typeSubst(
           expectedFunctionType.returnType,
@@ -325,13 +327,13 @@ class TypeChecker(spec: FlatTessla.Specification)
   }
 
   def checkLiftability(functionType: TypedTessla.FunctionType) = {
-    functionType.parameterTypes.forall(_.isValueType) && functionType.returnType.isValueType
+    functionType.parameterTypes.forall(_._2.isValueType) && functionType.returnType.isValueType
   }
 
   def liftFunctionType(functionType: TypedTessla.FunctionType) = {
     TypedTessla.FunctionType(
       functionType.typeParameters,
-      functionType.parameterTypes.map(streamType),
+      functionType.parameterTypes.map(t => t._1 -> streamType(t._2)),
       streamType(functionType.returnType),
       isLiftable = true
     )
@@ -352,7 +354,7 @@ class TypeChecker(spec: FlatTessla.Specification)
           parent.parameterTypes.length == child.parameterTypes.length &&
             parent.parameterTypes.zip(child.parameterTypes).forall {
               // function parameters are contravariant, so the order of arguments to isSubtypeOrEqual is switched
-              case (parentParamType, childParamType) =>
+              case ((_, parentParamType), (_, childParamType)) =>
                 isSubtypeOrEqual(childParamType, parentParamType)
             }
         compatibleLiftedness && compatibleReturnTypes && compatibleParameterTypes
@@ -461,7 +463,7 @@ class TypeChecker(spec: FlatTessla.Specification)
             val typeSubstitutions = mutable.Map(t.typeParameters.zip(typeArgs): _*)
             val typeParams = t.typeParameters.toSet
             val args = call.args.zip(possiblyLiftedType.parameterTypes).map {
-              case (arg, genericExpected) =>
+              case (arg, (_, genericExpected)) =>
                 val id = env(arg.id)
                 val actual = typeMap(id)
                 val expected = typeSubst(genericExpected, actual, typeParams, typeSubstitutions)
@@ -479,7 +481,7 @@ class TypeChecker(spec: FlatTessla.Specification)
                           ) =>
                         val sliftId =
                           findPredef(s"slift${a.parameterTypes.length}_curried", env, arg.loc)
-                        val typeArgs = a.parameterTypes :+ a.returnType
+                        val typeArgs = a.parameterTypes.map(_._2) :+ a.returnType
                         val sliftArgs = Seq(TypedTessla.PositionalArgument(id, arg.loc))
                         val sliftCall =
                           TypedTessla.MacroCall(sliftId, arg.loc, typeArgs, sliftArgs, arg.loc)
@@ -517,7 +519,7 @@ class TypeChecker(spec: FlatTessla.Specification)
             )
             val newTypeArgs =
               if (t.isLiftable && call.args.exists(arg => typeMap(env(arg.id)).isStreamType)) {
-                t.parameterTypes.map(x => typeSubst(x, x, typeParams, typeSubstitutions)) :+
+                t.parameterTypes.map(p => typeSubst(p._2, p._2, typeParams, typeSubstitutions)) :+
                   typeSubst(t.returnType, t.returnType, typeParams, typeSubstitutions)
               } else {
                 calculatedTypeArgs
@@ -568,7 +570,7 @@ class TypeChecker(spec: FlatTessla.Specification)
             )
             val mac = TypedTessla.Macro(
               Seq(),
-              Seq(param),
+              Seq(None -> param),
               macroDefs,
               memberType,
               acc.loc,
@@ -580,7 +582,7 @@ class TypeChecker(spec: FlatTessla.Specification)
               TypedTessla.VariableEntry(
                 macroId,
                 mac,
-                TypedTessla.FunctionType(Seq(), Seq(ot), memberType, true),
+                TypedTessla.FunctionType(Seq(), Seq(None -> ot), memberType, true),
                 Seq(),
                 acc.loc
               )
@@ -605,13 +607,14 @@ class TypeChecker(spec: FlatTessla.Specification)
           case ft: TypedTessla.FunctionType => ft.typeParameters
           case _                            => Seq()
         }
-        val innerEnv = env ++ b.typeParameters.zip(typeParameters) ++ b.parameters.map(_.id).map {
-          id =>
+        val innerEnv =
+          env ++ b.typeParameters.zip(typeParameters) ++ b.parameters.map(_._2.id).map { id =>
             id -> makeIdentifier(id.nameOpt)
-        }
-        val parameters = b.parameters.map { p =>
-          val t = translateType(p.parameterType, innerEnv)
-          TypedTessla.Parameter(p.param, t, innerEnv(p.id))
+          }
+        val parameters = b.parameters.map {
+          case (eval, p) =>
+            val t = translateType(p.parameterType, innerEnv)
+            eval -> TypedTessla.Parameter(p.param, t, innerEnv(p.id))
         }
         val refImpl = b.referenceImplementation.map(env)
         TypedTessla.BuiltInOperator(b.name, typeParameters, parameters, refImpl, b.loc) -> t
@@ -627,12 +630,13 @@ class TypeChecker(spec: FlatTessla.Specification)
         val (innerDefs, innerEnv) = translateDefs(mac.body, Some(defs), env ++ tvarEnv)
         val result = TypedTessla.IdLoc(innerEnv(mac.result.id), mac.result.loc)
         val returnType = typeMap(result.id)
-        val paramTypes = parameterTypes(mac).map(translateType(_, env ++ tvarEnv))
+        val paramTypes = parameterTypes(mac).map(t => t._1 -> translateType(t._2, env ++ tvarEnv))
         val macroType =
           TypedTessla.FunctionType(tvarIDs, paramTypes, returnType, isLiftable = mac.isLiftable)
-        val parameters = mac.parameters.map { p =>
-          val t = translateType(p.parameterType, innerEnv)
-          TypedTessla.Parameter(p.param, t, innerEnv(p.id))
+        val parameters = mac.parameters.map {
+          case (eval, p) =>
+            val t = translateType(p.parameterType, innerEnv)
+            eval -> TypedTessla.Parameter(p.param, t, innerEnv(p.id))
         }
         if (mac.isLiftable) {
           if (!checkLiftability(macroType)) {

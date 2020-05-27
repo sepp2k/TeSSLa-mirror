@@ -1,8 +1,8 @@
 ## Common Trace Format
 module CTF {
-  liftable def getInt(ctfObject: CTF, member: String): Int = extern(CTF_getInt)
+  liftable def getInt(ctfObject: strict CTF, member: strict String): Int = extern(CTF_getInt)
 
-  liftable def getString(ctfObject: CTF, member: String): String = extern(CTF_getString)
+  liftable def getString(ctfObject: strict CTF, member: strict String): String = extern(CTF_getString)
 }
 
 type CTF = extern(CTF)

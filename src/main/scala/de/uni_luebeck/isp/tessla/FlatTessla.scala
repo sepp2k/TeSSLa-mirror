@@ -86,7 +86,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
   case class Macro(
     typeParameters: Seq[Identifier],
-    parameters: Seq[Parameter],
+    parameters: Seq[(Option[TesslaAST.RuntimeEvaluation], Parameter)],
     body: Definitions,
     returnType: TypeAnnotation,
     headerLoc: Location,
@@ -103,7 +103,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   case class BuiltInOperator(
     name: String,
     typeParameters: Seq[Identifier],
-    parameters: Seq[Parameter],
+    parameters: Seq[(Option[TesslaAST.RuntimeEvaluation], Parameter)],
     referenceImplementation: Option[Identifier],
     loc: Location
   ) extends Expression {
@@ -197,7 +197,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
   case class FunctionType(
     typeParameters: Seq[Identifier],
-    parameterTypes: Seq[Type],
+    parameterTypes: Seq[(Option[TesslaAST.RuntimeEvaluation], Type)],
     returnType: Type,
     isLiftable: Boolean
   ) extends Type {
@@ -206,10 +206,15 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def isLiftableFunctionType = isLiftable
 
     override def toString = {
-      val annotationString = if (isLiftable) "@liftable " else ""
+      val liftableString = if (isLiftable) "liftable " else ""
       val typeParamString =
         typeParameters.map(id => id.nameOpt.getOrElse(id.toString)).mkString(", ")
-      s"$annotationString[$typeParamString](${parameterTypes.mkString(",")}) => $returnType"
+      def paramString = parameterTypes
+        .map {
+          case (e, t) => s"${e.map(_ + " ").getOrElse("")}$t"
+        }
+        .mkString(", ")
+      s"$liftableString[$typeParamString]($paramString) => $returnType"
     }
   }
 
