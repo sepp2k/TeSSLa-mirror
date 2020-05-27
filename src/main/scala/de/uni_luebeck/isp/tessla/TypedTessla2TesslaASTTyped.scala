@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla
 import TesslaAST.Typed
 import Typed.Identifier
 import cats.data.Ior
-import de.uni_luebeck.isp.tessla.Errors.UndefinedBaseTime
+import de.uni_luebeck.isp.tessla.Errors.{InternalError, UndefinedBaseTime}
 import de.uni_luebeck.isp.tessla.Tessla.{
   ConstantExpression,
   FloatLiteral,
@@ -63,116 +63,6 @@ class TypedTessla2TesslaASTTypedWorker(
         Nil
       ),
       ArraySeq()
-    ),
-    "last" -> Typed.ExternExpression(
-      List(Identifier("A"), Identifier("B")),
-      List(
-        (
-          TesslaAST.LazyEvaluation,
-          Typed.InstantiatedType("Events", List(Typed.TypeParam(Identifier("A"))))
-        ),
-        (
-          TesslaAST.StrictEvaluation,
-          Typed.InstantiatedType("Events", List(Typed.TypeParam(Identifier("B"))))
-        )
-      ),
-      Typed.InstantiatedType("Events", List(Typed.TypeParam(Identifier("A")))),
-      "last"
-    ),
-    "delay" -> Typed.ExternExpression(
-      List(Identifier("A")),
-      List(
-        (TesslaAST.LazyEvaluation, Typed.InstantiatedType("Events", List(Typed.IntType))),
-        (
-          TesslaAST.StrictEvaluation,
-          Typed.InstantiatedType("Events", List(Typed.TypeParam(Identifier("A"))))
-        )
-      ),
-      Typed.InstantiatedType("Events", List(Typed.UnitType)),
-      "delay"
-    ),
-    "ite" -> Typed.ExternExpression(
-      List(Identifier("A")),
-      List(
-        (TesslaAST.StrictEvaluation, Typed.BoolType),
-        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
-        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
-      ),
-      Typed.TypeParam(Identifier("A")),
-      "ite"
-    ),
-    "List_fold" -> Typed.ExternExpression(
-      List(Identifier("A"), Identifier("B")),
-      List(
-        (
-          TesslaAST.StrictEvaluation,
-          Typed.InstantiatedType("List", List(Typed.TypeParam(Identifier("A"))))
-        ),
-        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
-        (
-          TesslaAST.StrictEvaluation,
-          Typed.FunctionType(
-            Nil,
-            List(
-              (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("B"))),
-              (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A")))
-            ),
-            Typed.TypeParam(Identifier("B"))
-          )
-        )
-      ),
-      Typed.TypeParam(Identifier("B")),
-      "List_fold"
-    ),
-    "Set_fold" -> Typed.ExternExpression(
-      List(Identifier("A"), Identifier("B")),
-      List(
-        (
-          TesslaAST.StrictEvaluation,
-          Typed.InstantiatedType("Set", List(Typed.TypeParam(Identifier("A"))))
-        ),
-        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("B"))),
-        (
-          TesslaAST.StrictEvaluation,
-          Typed.FunctionType(
-            Nil,
-            List(
-              (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("B"))),
-              (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A")))
-            ),
-            Typed.TypeParam(Identifier("B"))
-          )
-        )
-      ),
-      Typed.TypeParam(Identifier("B")),
-      "Set_fold"
-    ),
-    "Map_fold" -> Typed.ExternExpression(
-      List(Identifier("A"), Identifier("B"), Identifier("C")),
-      List(
-        (
-          TesslaAST.StrictEvaluation,
-          Typed.InstantiatedType(
-            "Map",
-            List(Typed.TypeParam(Identifier("A")), Typed.TypeParam(Identifier("B")))
-          )
-        ),
-        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("C"))),
-        (
-          TesslaAST.StrictEvaluation,
-          Typed.FunctionType(
-            Nil,
-            List(
-              (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("C"))),
-              (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("A"))),
-              (TesslaAST.StrictEvaluation, Typed.TypeParam(Identifier("B")))
-            ),
-            Typed.TypeParam(Identifier("C"))
-          )
-        )
-      ),
-      Typed.TypeParam(Identifier("C")),
-      "Map_fold"
     )
   )
   private val ins = mutable.Map[Typed.Identifier, (Typed.Type, Typed.Annotations)]()
@@ -201,7 +91,7 @@ class TypedTessla2TesslaASTTypedWorker(
       case TypedTessla.MemberAccess(receiver, member, _, _) =>
         lookupType(receiver.id, env).asInstanceOf[Typed.RecordType].entries(member)._1
       case TypedTessla.BuiltInOperator(name, _, _, _, _) =>
-        knownExterns.get(name).map(_.tpe).getOrElse(toType(value.typeInfo))
+        toType(value.typeInfo)
       case TypedTessla.ObjectLiteral(members, _) =>
         Typed.RecordType(members.map(x => (x._1 -> (lookupType(x._2.id, env), Location.unknown))))
       case _ => toType(value.typeInfo)
@@ -239,11 +129,13 @@ class TypedTessla2TesslaASTTypedWorker(
               Typed.FunctionExpression(
                 typeParameters.map(toIdentifier(_, Location.unknown)).toList,
                 parameters.map {
-                  case (eval /* TODO */, typ) =>
+                  case (eval, typ) =>
                     (
                       Typed.Identifier(Ior.Left(typ.param.id.name), typ.loc),
-                      if (typ.parameterType.isStreamType) TesslaAST.LazyEvaluation
-                      else TesslaAST.StrictEvaluation,
+                      eval.getOrElse(
+                        if (typ.parameterType.isStreamType) TesslaAST.LazyEvaluation
+                        else TesslaAST.StrictEvaluation
+                      ),
                       toType(typ.parameterType)
                     )
                 }.toList,
@@ -307,8 +199,16 @@ class TypedTessla2TesslaASTTypedWorker(
                 Typed.ExternExpression(
                   typeParameters.map(toIdentifier(_, Location.unknown)).toList,
                   parameters.map {
-                    case (eval /* TODO */, typ) =>
-                      (TesslaAST.StrictEvaluation, toType(typ.parameterType))
+                    case (eval, typ) =>
+                      (
+                        eval.getOrElse(
+                          throw InternalError(
+                            s"Extern $name needs explicit evaluation specifiers.",
+                            loc
+                          )
+                        ),
+                        toType(typ.parameterType)
+                      )
                   }.toList,
                   toType(definition.typeInfo.asInstanceOf[TypedTessla.FunctionType].returnType),
                   name,
@@ -421,9 +321,11 @@ class TypedTessla2TesslaASTTypedWorker(
       Typed.FunctionType(
         typeParameters.map(toIdentifier(_, Location.unknown)).toList,
         parameterTypes.map {
-          case (eval /* TODO */, typ) =>
+          case (eval, typ) =>
             (
-              if (typ.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation,
+              eval.getOrElse(
+                if (typ.isStreamType) TesslaAST.LazyEvaluation else TesslaAST.StrictEvaluation
+              ),
               toType(typ)
             )
         }.toList,
