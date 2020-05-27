@@ -1,6 +1,5 @@
 //This Scala code was automatically created by tessla-compiler from a TeSSLa Specification
 
-import util.control.Breaks._
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
