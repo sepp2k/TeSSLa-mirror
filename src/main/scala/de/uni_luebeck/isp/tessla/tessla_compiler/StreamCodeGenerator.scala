@@ -7,15 +7,42 @@ import scala.language.postfixOps
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
 import de.uni_luebeck.isp.tessla._
+
 /**
   * Class containing functions for the translation of single TeSSLa expressions to imperative code
   */
+
 object StreamCodeGenerator {
+
+  def translateExternSignalExpression(id: Identifier, e: ExternExpression, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing) : SourceListing = {
+    val typeParamMap = e.typeParams.zip(typeArgs).toMap
+    e.name match {
+      case "nil" =>
+        produceNilStepCode(id, e.resultType.resolve(typeParamMap), e.location, currSource)
+      case "default" =>
+        produceDefaultStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), currSource)
+      case "defaultFrom" =>
+        produceDefaultFromStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), currSource)
+      case "time" =>
+        produceTimeStepCode(id, args(0), currSource)
+      case "last" =>
+        produceLastStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), currSource)
+      case "delay" =>
+        produceDelayStepCode(id, args(0), args(1), currSource)
+      case "lift" =>
+        produceLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
+      case "slift" =>
+        produceSignalLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
+      case "merge" =>
+        produceMergeStepCode(id, e.resultType.resolve(typeParamMap), args, currSource)
+      case _ => throw tessla_compiler.Errors.CommandNotSupportedError(e.toString)
+    }
+  }
 
   def streamNameAndTypeFromExpressionArg(ea : ExpressionArg) : (String, ImpLanType) = {
     ea match {
       case ExpressionRef(id, tpe, _) =>("var_" + id.fullName, tpe)
-      case e: Expression => throw tessla_compiler.Errors.CoreASTError("Required ExpressionRef, but Expression found", e.location)
+      case e: Expression => throw tessla_compiler.Errors.CoreASTError("Required ExpressionRef, but Expression found. Non flat AST.", e.location)
     }
   }
 
@@ -37,10 +64,10 @@ object StreamCodeGenerator {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceDefaultStepCode(id: Identifier, ot: Type, stream : ExpressionArg, value : ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceDefaultStepCode(id: Identifier, ot: Type, stream : ExpressionArg, defVal : ExpressionArg, currSrc: SourceListing): SourceListing = {
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val o = s"var_${id.fullName}"
-    val default = NonStreamCodeGenerator.translateExpressionArg(value)
+    val default = NonStreamCodeGenerator.translateExpressionArg(defVal, NonStreamCodeGenerator.TypeArgManagement.empty)
 
     val newStmt = (currSrc.stepSource.
 
@@ -62,7 +89,7 @@ object StreamCodeGenerator {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceDefaultFromStepCode(id: Identifier, ot: Type, stream : ExpressionArg, default : ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceDefaultFromStepCode(id: Identifier, ot: Type, stream : ExpressionArg, default : ExpressionArg, currSrc: SourceListing): SourceListing = {
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val (d, _) = streamNameAndTypeFromExpressionArg(default)
     val o = s"var_${id.fullName}"
@@ -96,7 +123,7 @@ object StreamCodeGenerator {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceTimeStepCode(id: Identifier, stream: ExpressionArg, loc: Location, currSrc: SourceListing) : SourceListing = {
+  def produceTimeStepCode(id: Identifier, stream: ExpressionArg, currSrc: SourceListing) : SourceListing = {
 
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val o = s"var_${id.fullName}"
@@ -119,7 +146,7 @@ object StreamCodeGenerator {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceLastStepCode(id: Identifier, ot: Type, values: ExpressionArg, clock: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceLastStepCode(id: Identifier, ot: Type, values: ExpressionArg, clock: ExpressionArg, currSrc: SourceListing): SourceListing = {
     val (v, _) = streamNameAndTypeFromExpressionArg(values)
     val (c, _) = streamNameAndTypeFromExpressionArg(clock)
     val o = s"var_${id.fullName}"
@@ -127,28 +154,29 @@ object StreamCodeGenerator {
     val newStmt = (currSrc.stepSource.
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-      If(Seq(Seq(s"${c}_changed", s"${v}_init"))).
+      If(Seq(Seq(s"${c}_changed"))).
+      If(Seq(Seq(Equal(s"${v}_ts", "currTs"), s"${v}_lastInit"), Seq(NotEqual(s"${v}_ts", "currTs"), s"${v}_init"))).
         Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
         Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
         Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
+        Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
         If(Seq(Seq(Equal(s"${v}_ts", "currTs")))).
           Assignment(s"${o}_value", s"${v}_lastValue", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_error", s"${v}_lastError", LongValue(0), LongType).
-          Assignment(s"${o}_init", s"${v}_lastInit", BoolValue(false), BoolType).
         Else().
           Assignment(s"${o}_value", s"${v}_value", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_error", s"${v}_error", LongValue(0), LongType).
-          Assignment(s"${o}_init", s"${v}_init", BoolValue(false), BoolType).
         EndIf().
+      EndIf().
       EndIf()
 
       )
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceDelayStepCode(id: Identifier, delay: ExpressionArg, reset: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceDelayStepCode(id: Identifier, delay: ExpressionArg, reset: ExpressionArg, currSrc: SourceListing): SourceListing = {
     val (d, _) = streamNameAndTypeFromExpressionArg(delay)
     val (r, _) = streamNameAndTypeFromExpressionArg(reset)
     val o = s"var_${id.fullName}"
@@ -170,7 +198,7 @@ object StreamCodeGenerator {
 
     val newTsGen = (currSrc.tsGenSource.
 
-      If(Seq(Seq(Greater(s"${o}_nextTs", "lastProcessedTs"), Greater("currTs", s"${o}_nextTs"), Greater("newInputTs", s"${o}_nextTs")))).
+      If(Seq(Seq(Greater(s"${o}_nextTs", "lastProcessedTs"), Greater("currTs", s"${o}_nextTs")))).
         Assignment("currTs", s"${o}_nextTs", LongValue(0), LongType).
       EndIf()
 
@@ -198,6 +226,9 @@ object StreamCodeGenerator {
     SourceListing(newStmt, newTail, newTsGen, currSrc.inputProcessing, currSrc.staticSource)
   }
 
+
+  //FIXME: AND, OR missing
+  //FIXME: Handle lazyness in general
   @scala.annotation.tailrec
   def getErrorExpressionsforLiftSLift(args: Seq[ExpressionArg], f: ExpressionArg): (ImpLanExpr, ImpLanExpr) = {
     f match {
@@ -221,10 +252,11 @@ object StreamCodeGenerator {
     }
   }
 
-  def produceLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  //FIXME: Handle lazyness in general
+  def produceLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
-    val params = args.map{sr => { val (sName, sType) = streamNameAndTypeFromExpressionArg(sr) //TODO: Sufficient???
+    val params = args.map{sr => { val (sName, sType) = streamNameAndTypeFromExpressionArg(sr)
                                   TernaryExpression(Seq(Seq(s"${sName}_changed")),
                                                   FunctionCall("__Some__", Seq(s"${sName}_value"), IntermediateCode.FunctionType(Seq(sType), OptionType(sType))),
                                                   None(sType))
@@ -242,7 +274,7 @@ object StreamCodeGenerator {
         Assignment(s"${o}_errval", inputError, LongValue(0), LongType).
         If(Seq(Seq(Equal(s"${o}_errval", LongValue(0))))).
           Try().
-            Assignment(s"${o}_fval", NonStreamCodeGenerator.translateFunctionCall(function, params, Seq()), scala.None, OptionType(ot)).
+            Assignment(s"${o}_fval", NonStreamCodeGenerator.translateFunctionCall(function, params, NonStreamCodeGenerator.TypeArgManagement.empty), scala.None, OptionType(ot)).
             If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
               Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
               Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
@@ -272,14 +304,15 @@ object StreamCodeGenerator {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceSignalLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  //FIXME: Handle lazyness in general
+  def produceSignalLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
     val guard1 : Seq[Seq[ImpLanExpr]] = Seq(args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_init")})
     val guard2 : Seq[Seq[ImpLanExpr]] = args.map{arg => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_changed"))}
-    val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}//TODO: Sufficient?
+    val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}
 
-    val fcall = NonStreamCodeGenerator.translateFunctionCall(function, fargs, Seq())
+    val fcall = NonStreamCodeGenerator.translateFunctionCall(function, fargs, NonStreamCodeGenerator.TypeArgManagement.empty)
 
     val (inputError, outputError) = getErrorExpressionsforLiftSLift(args, function)
 
@@ -309,13 +342,10 @@ object StreamCodeGenerator {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceMergeStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceMergeStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
-    val guard : Seq[Seq[ImpLanExpr]] = args.map{arg =>
-      val n = streamNameAndTypeFromExpressionArg(arg)._1
-      Seq(Variable(s"${n}_init"), Variable(s"${n}_changed"))
-    }
+    val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))}
 
     var newStmt = (currSrc.stepSource.
 
@@ -332,7 +362,7 @@ object StreamCodeGenerator {
     args.foreach{arg =>
       val (sn, _) = streamNameAndTypeFromExpressionArg(arg)
       newStmt = (newStmt.
-        If(Seq(Seq(s"${sn}_init",s"${sn}_changed"))).
+        If(Seq(Seq(s"${sn}_changed"))).
           Assignment(s"${o}_value", s"${sn}_value", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_error", s"${sn}_error", LongValue(0), LongType).
         Else()
@@ -349,7 +379,7 @@ object StreamCodeGenerator {
     val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
 
     val newTail = (currSrc.tailSource.
-      If(Seq(Seq(s"${s}_changed", s"${s}_init"))).
+      If(Seq(Seq(s"${s}_changed"))).
         FunctionCall("__[TC]output__", Seq(s"${s}_value", StringValue(name), s"${s}_error"),
                       IntermediateCode.FunctionType(Seq(t, StringType, LongType), UnitType)).
       EndIf()
@@ -358,7 +388,7 @@ object StreamCodeGenerator {
     SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing) = {
+  def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing) : SourceListing = {
     val s = s"var_${inStream.fullName}"
 
     val newTail = (
@@ -369,7 +399,7 @@ object StreamCodeGenerator {
     SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceInputFromConsoleCode(inStream: Identifier, typ: Type, currSrc: SourceListing) = {
+  def produceInputFromConsoleCode(inStream: Identifier, typ: Type, currSrc: SourceListing) : SourceListing = {
     val s = s"var_${inStream.fullName}"
     val parseExp = typ match {
       case InstantiatedType("Events", Seq(RecordType(m, _)), _) if m.isEmpty => UnitValue
