@@ -6,7 +6,7 @@ import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaBackend
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{ASTPreprocessor, ASTRemoveUnused, StreamDefFlattener}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{ASTRemoveUnused, Flattening, UniqueRenaming}
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
 
@@ -65,7 +65,7 @@ object Main extends SexyOpt {
         }
 
         val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
-        val core = unwrapResult((new StreamDefFlattener).translate(unflatCore).andThen(new ASTPreprocessor).andThen(new ASTRemoveUnused))
+        val core = unwrapResult((new Flattening).translate(unflatCore).andThen(new UniqueRenaming))
 
         if (verbose.value) {
           println("###############################")

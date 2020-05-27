@@ -5,12 +5,12 @@ import de.uni_luebeck.isp.tessla.TesslaAST.Core.{DefinitionExpression, _}
 import de.uni_luebeck.isp.tessla.TranslationPhase
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 
+//Note: Currently not in use
 class ASTRemoveUnused() extends TranslationPhase[Core.Specification, Core.Specification] {
 
   override def translate(spec: Core.Specification): Result[Core.Specification] = {
 
     var usages : collection.mutable.HashMap[Identifier, Set[Identifier]] = collection.mutable.HashMap()
-    var warnings = Seq()
 
     def findUsages(ea: ExpressionArg, usedIn: Identifier): Unit = {
       ea match {
@@ -72,7 +72,7 @@ class ASTRemoveUnused() extends TranslationPhase[Core.Specification, Core.Specif
       (defs -- dels).map{case (id, d) => (id, mapDefExp(d))}
     }
 
-    Success(Core.Specification(spec.in, mapDefs(spec.definitions), spec.out, spec.maxIdentifier), warnings)
+    Success(Core.Specification(spec.in, mapDefs(spec.definitions), spec.out, spec.maxIdentifier), Seq())
   }
 
 }
