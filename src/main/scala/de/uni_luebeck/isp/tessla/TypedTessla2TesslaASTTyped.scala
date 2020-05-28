@@ -39,32 +39,18 @@ class TypedTessla2TesslaASTTypedWorker(
   val unknownType = Typed.InstantiatedType("Unknown", Nil)
 
   val staticiteExtern = Typed.ExternExpression(
-    List(Identifier("A")),
-    List(
-      (TesslaAST.StrictEvaluation, Typed.BoolType),
-      (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
-      (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
-    ),
-    Typed.TypeParam(Identifier("A")),
-    "staticite"
-  )
-
-  val knownExterns = Map(
-    "true" -> Typed.ApplicationExpression(
-      Typed.TypeApplicationExpression(
-        Typed.ExternExpression(Nil, Nil, Typed.InstantiatedType("Bool", Nil), "true"),
-        Nil
+    "staticite",
+    Typed.FunctionType(
+      List(Identifier("A")),
+      List(
+        (TesslaAST.StrictEvaluation, Typed.BoolType),
+        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
+        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
       ),
-      ArraySeq()
-    ),
-    "false" -> Typed.ApplicationExpression(
-      Typed.TypeApplicationExpression(
-        Typed.ExternExpression(Nil, Nil, Typed.InstantiatedType("Bool", Nil), "false"),
-        Nil
-      ),
-      ArraySeq()
+      Typed.TypeParam(Identifier("A"))
     )
   )
+
   private val ins = mutable.Map[Typed.Identifier, (Typed.Type, Typed.Annotations)]()
 
   override protected def translateSpec() = {
@@ -194,26 +180,10 @@ class TypedTessla2TesslaASTTypedWorker(
                   referenceImplementation,
                   loc
                 ) => // TODO: support reference implementation
-              knownExterns.getOrElse(
+              Typed.ExternExpression(
                 name,
-                Typed.ExternExpression(
-                  typeParameters.map(toIdentifier(_, Location.unknown)).toList,
-                  parameters.map {
-                    case (eval, typ) =>
-                      (
-                        eval.getOrElse(
-                          throw InternalError(
-                            s"Extern $name needs explicit evaluation specifiers.",
-                            loc
-                          )
-                        ),
-                        toType(typ.parameterType)
-                      )
-                  }.toList,
-                  toType(definition.typeInfo.asInstanceOf[TypedTessla.FunctionType].returnType),
-                  name,
-                  loc
-                )
+                toType(definition.typeInfo),
+                loc
               )
             case StaticIfThenElse(condition, thenCase, elseCase, loc) =>
               Typed.ApplicationExpression(

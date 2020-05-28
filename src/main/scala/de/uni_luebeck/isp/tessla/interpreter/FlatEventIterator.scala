@@ -147,7 +147,7 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
       override def visitUnaryExpression(exp: UnaryExpressionContext) = {
         val operatorName = Tessla.unaryOperators(exp.op.getText)
         val args = ArraySeq(Lazy(visit(exp.expression())))
-        externs(operatorName)(args).get
+        externs(operatorName).asInstanceOf[RuntimeExterns.RuntimeExtern](args).get
       }
 
       override def visitInfixExpression(exp: InfixExpressionContext) = {
@@ -155,14 +155,20 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         val args = ArraySeq(Lazy(visit(exp.lhs)), Lazy(visit(exp.rhs)))
         val loc = Location.fromNode(exp)
         val opLoc = Location.fromToken(exp.op)
-        externs(operatorName)(args).get
+        externs(operatorName).asInstanceOf[RuntimeExterns.RuntimeExtern](args).get
       }
 
       override def visitITE(ite: ITEContext) = {
         val loc = Location.fromNode(ite)
-        externs("ite")(
-          ArraySeq(Lazy(visit(ite.condition)), Lazy(visit(ite.thenCase)), Lazy(visit(ite.elseCase)))
-        ).get
+        externs("ite")
+          .asInstanceOf[RuntimeExterns.RuntimeExtern](
+            ArraySeq(
+              Lazy(visit(ite.condition)),
+              Lazy(visit(ite.thenCase)),
+              Lazy(visit(ite.elseCase))
+            )
+          )
+          .get
       }
 
       final override def visitChildren(node: RuleNode): Any = {

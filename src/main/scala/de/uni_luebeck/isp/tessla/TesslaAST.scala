@@ -328,17 +328,10 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
   }
 
   case class ExternExpression(
-    typeParams: List[Identifier],
-    params: List[(Evaluation, TypeAnnotation[Type])],
-    resultType: TypeAnnotation[Type],
     name: String,
+    tpe: TypeAnnotation[Type],
     location: Location = Location.unknown
   ) extends Expression {
-    override def tpe = Applicative[TypeAnnotation]
-      .map2(params.map(x => x._2.map(y => (x._1, y))).sequence, resultType) { (m, r) =>
-        FunctionType(typeParams, m, r)
-      }
-
     override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
       withTypeAndLocation(_ => s"extern_$name", options, mayNeedBraces)
   }

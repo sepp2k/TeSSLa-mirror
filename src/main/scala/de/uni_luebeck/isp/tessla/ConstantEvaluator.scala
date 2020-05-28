@@ -147,10 +147,12 @@ object ConstantEvaluator {
   // TODO: shoud be declared in standard library
   val errorExternA = Core.Identifier(Ior.Left("A"))
   val errorExtern = Core.ExternExpression(
-    List(errorExternA),
-    List((TesslaAST.LazyEvaluation, Core.StringType)),
-    Core.TypeParam(errorExternA),
-    "error"
+    "error",
+    Core.FunctionType(
+      List(errorExternA),
+      List((TesslaAST.LazyEvaluation, Core.StringType)),
+      Core.TypeParam(errorExternA)
+    )
   )
 
   def mkErrorResult(error: RuntimeEvaluator.RuntimeError, tpe: Core.Type) = {
@@ -191,10 +193,13 @@ object ConstantEvaluator {
       Translatable(_ => TranslationResult[A, Option](Lazy(Some(x)), Lazy(None)))
   }
 
-  val valueExterns: Map[String, TypeExtern] = RuntimeExterns
+  val valueExterns: Map[String, Any] = RuntimeExterns
     .commonExterns[TranslatableMonad]
     .view
-    .mapValues(f => (_: List[Typed.Type]) => f)
+    .mapValues {
+      case f: Extern => (_: List[Typed.Type]) => f
+      case v         => v
+    }
     .toMap
 
   val externs = valueExterns.withDefaultValue(noExtern)
@@ -351,53 +356,55 @@ class ConstantEvaluatorWorker(spec: Typed.Specification)
         mkLiteralResult(Some(value), Core.FloatLiteralExpression(value, location))
       case Typed.StringLiteralExpression(value, location) =>
         mkLiteralResult(Some(value), Core.StringLiteralExpression(value, location))
-      case Typed.ExternExpression(typeParams, params, resultType, name, location) =>
+      case Typed.ExternExpression(name, tpe, location) =>
         val expression = Core.ExternExpression(
-          typeParams.map(translateIdentifier),
-          params.map(x => (translateEvaluation(x._1), translateType(x._2, typeEnv))),
-          translateType(resultType, typeEnv),
           name,
+          translateType(tpe, typeEnv),
           location
         )
-        val value: StackLazy[Option[Any]] = Lazy {
-          val f: TypeApplicable = typeArgs => {
-            val innerTypeEnv = typeEnv ++ typeParams.zip(typeArgs)
-            args =>
-              Translatable { translatedExpressions =>
-                val extern = externs(name)
-                val result = tryReified(
-                  extern(typeArgs)(args).translate(translatedExpressions),
-                  translateType(resultType, innerTypeEnv)
-                )
-                TranslationResult[Any, Some](
-                  result.value,
-                  result.expression.map(e =>
-                    Some(e.getOrElse(Left(StackLazy { stack =>
-                      mkApplicationExpression(
-                        Core.TypeApplicationExpression(
-                          expression,
-                          typeArgs.map(translateType(_, innerTypeEnv))
-                        ),
-                        params,
-                        args
-                          .zip(params)
-                          .map(a =>
-                            reified(
-                              a._1.translate(translatedExpressions),
-                              translateType(a._2._2, innerTypeEnv)
-                            )
-                          ),
-                        innerTypeEnv,
-                        stack,
-                        translatedExpressions,
-                        location
+        val value = tpe match {
+          case Typed.FunctionType(typeParams, params, resultType, _) =>
+            Lazy {
+              val f: TypeApplicable = typeArgs => {
+                val innerTypeEnv = typeEnv ++ typeParams.zip(typeArgs)
+                args =>
+                  Translatable { translatedExpressions =>
+                    val extern = externs(name).asInstanceOf[TypeExtern]
+                    val result = tryReified(
+                      extern(typeArgs)(args).translate(translatedExpressions),
+                      translateType(resultType, innerTypeEnv)
+                    )
+                    TranslationResult[Any, Some](
+                      result.value,
+                      result.expression.map(e =>
+                        Some(e.getOrElse(Left(StackLazy { stack =>
+                          mkApplicationExpression(
+                            Core.TypeApplicationExpression(
+                              expression,
+                              typeArgs.map(translateType(_, innerTypeEnv))
+                            ),
+                            params,
+                            args
+                              .zip(params)
+                              .map(a =>
+                                reified(
+                                  a._1.translate(translatedExpressions),
+                                  translateType(a._2._2, innerTypeEnv)
+                                )
+                              ),
+                            innerTypeEnv,
+                            stack,
+                            translatedExpressions,
+                            location
+                          )
+                        })))
                       )
-                    })))
-                  )
-                )
+                    )
+                  }
               }
-          }
-          Some(if (typeParams.isEmpty) f(Nil) else f)
+              Some(if (typeParams.isEmpty) f(Nil) else f)
+            }: StackLazy[Option[Any]]
+          case _ => Lazy(Some(externs(name)))
         }
         TranslationResult[Any, Some](
           value,

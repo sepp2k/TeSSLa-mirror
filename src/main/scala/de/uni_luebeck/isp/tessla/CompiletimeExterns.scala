@@ -1,7 +1,8 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.TesslaAST.{Core, StrictEvaluation}
+import de.uni_luebeck.isp.tessla.TesslaAST.{Core, LazyEvaluation, StrictEvaluation}
 import Core.Identifier
+
 import scala.collection.immutable.ArraySeq
 import cats._
 import cats.implicits._
@@ -45,86 +46,102 @@ object CompiletimeExterns {
     case _ => Lazy(Left(InternalError(s"Could not reify value for type $tpe.")))
   }
 
-  val true_extern = Core.ExternExpression(Nil, Nil, Core.BoolType, "true")
+  val true_extern = Core.ExternExpression("true", Core.BoolType)
 
-  val false_extern = Core.ExternExpression(Nil, Nil, Core.BoolType, "false")
+  val false_extern = Core.ExternExpression("false", Core.BoolType)
 
   val option_some_extern = Core.ExternExpression(
-    List(Identifier("A")),
-    List((StrictEvaluation, Core.TypeParam(Identifier("A")))),
-    Core.InstantiatedType("Option", List(Core.TypeParam(Identifier("A")))),
-    "Some"
+    "Some",
+    Core.FunctionType(
+      List(Identifier("A")),
+      List((LazyEvaluation, Core.TypeParam(Identifier("A")))),
+      Core.InstantiatedType("Option", List(Core.TypeParam(Identifier("A"))))
+    )
   )
 
   val option_none_extern = Core.ExternExpression(
-    List(Identifier("A")),
-    Nil,
-    Core.InstantiatedType("Option", List(Core.TypeParam(Identifier("A")))),
-    "None"
+    "None",
+    Core.FunctionType(
+      List(Identifier("A")),
+      Nil,
+      Core.InstantiatedType("Option", List(Core.TypeParam(Identifier("A"))))
+    )
   )
 
   val list_prepend_extern = Core.ExternExpression(
-    List(Identifier("A")),
-    List(
-      (StrictEvaluation, Core.TypeParam(Identifier("A"))),
-      (StrictEvaluation, Core.InstantiatedType("List", List(Core.TypeParam(Identifier("A")))))
-    ),
-    Core.InstantiatedType("List", List(Core.TypeParam(Identifier("A")))),
-    "List_prepend"
+    "List_prepend",
+    Core.FunctionType(
+      List(Identifier("A")),
+      List(
+        (StrictEvaluation, Core.TypeParam(Identifier("A"))),
+        (StrictEvaluation, Core.InstantiatedType("List", List(Core.TypeParam(Identifier("A")))))
+      ),
+      Core.InstantiatedType("List", List(Core.TypeParam(Identifier("A"))))
+    )
   )
 
   val list_empty_extern = Core.ExternExpression(
-    List(Identifier("A")),
-    Nil,
-    Core.InstantiatedType("List", List(Core.TypeParam(Identifier("A")))),
-    "List_empty"
+    "List_empty",
+    Core.FunctionType(
+      List(Identifier("A")),
+      Nil,
+      Core.InstantiatedType("List", List(Core.TypeParam(Identifier("A"))))
+    )
   )
 
   val set_add_extern = Core.ExternExpression(
-    List(Identifier("A")),
-    List(
-      (StrictEvaluation, Core.InstantiatedType("Set", List(Core.TypeParam(Identifier("A"))))),
-      (StrictEvaluation, Core.TypeParam(Identifier("A")))
-    ),
-    Core.InstantiatedType("Set", List(Core.TypeParam(Identifier("A")))),
-    "Set_add"
+    "Set_add",
+    Core.FunctionType(
+      List(Identifier("A")),
+      List(
+        (StrictEvaluation, Core.InstantiatedType("Set", List(Core.TypeParam(Identifier("A"))))),
+        (StrictEvaluation, Core.TypeParam(Identifier("A")))
+      ),
+      Core.InstantiatedType("Set", List(Core.TypeParam(Identifier("A"))))
+    )
   )
 
   val set_empty_extern = Core.ExternExpression(
-    List(Identifier("A")),
-    Nil,
-    Core.InstantiatedType("Set", List(Core.TypeParam(Identifier("A")))),
-    "Set_empty"
+    "Set_empty",
+    Core.FunctionType(
+      List(Identifier("A")),
+      Nil,
+      Core.InstantiatedType("Set", List(Core.TypeParam(Identifier("A"))))
+    )
   )
 
   val map_add_extern = Core.ExternExpression(
-    List(Identifier("A"), Identifier("B")),
-    List(
-      (
-        StrictEvaluation,
-        Core.InstantiatedType(
-          "Map",
-          List(Core.TypeParam(Identifier("A")), Core.TypeParam(Identifier("B")))
-        )
+    "Map_add",
+    Core.FunctionType(
+      List(Identifier("A"), Identifier("B")),
+      List(
+        (
+          StrictEvaluation,
+          Core.InstantiatedType(
+            "Map",
+            List(Core.TypeParam(Identifier("A")), Core.TypeParam(Identifier("B")))
+          )
+        ),
+        (StrictEvaluation, Core.TypeParam(Identifier("A"))),
+        (StrictEvaluation, Core.TypeParam(Identifier("B")))
       ),
-      (StrictEvaluation, Core.TypeParam(Identifier("A"))),
-      (StrictEvaluation, Core.TypeParam(Identifier("B")))
-    ),
-    Core.InstantiatedType(
-      "Map",
-      List(Core.TypeParam(Identifier("A")), Core.TypeParam(Identifier("B")))
-    ),
-    "Map_add"
+      Core.InstantiatedType(
+        "Map",
+        List(Core.TypeParam(Identifier("A")), Core.TypeParam(Identifier("B")))
+      )
+    )
   )
 
   val map_empty_extern = Core.ExternExpression(
-    List(Identifier("A"), Identifier("B")),
-    Nil,
-    Core.InstantiatedType(
-      "Map",
-      List(Core.TypeParam(Identifier("A")), Core.TypeParam(Identifier("B")))
-    ),
-    "Map_empty"
+    "Map_empty",
+    Core.FunctionType(
+      List(Identifier("A"), Identifier("B")),
+      Nil,
+      Core.InstantiatedType(
+        "Map",
+        List(Core.TypeParam(Identifier("A")), Core.TypeParam(Identifier("B")))
+      )
+    )
   )
 
   def app(extern: Core.ExternExpression, typeArgs: List[Core.Type])(
@@ -185,7 +202,7 @@ object CompiletimeExterns {
     "Bool" -> ((value, _) =>
       (
         ArraySeq(),
-        if (value.asInstanceOf[Boolean]) app(true_extern, Nil) else app(false_extern, Nil)
+        _ => if (value.asInstanceOf[Boolean]) true_extern else false_extern
       )
     )
   )

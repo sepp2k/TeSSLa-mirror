@@ -22,7 +22,7 @@ object RuntimeEvaluator {
 
 // TODO: All arguments are currently wrapped in Lazy, even if they are strictly evaluated
 // TODO: Replace argument lists by tuples?
-class RuntimeEvaluator(externs: Map[String, Extern[Lazy]]) {
+class RuntimeEvaluator(externs: Map[String, Any]) {
 
   def evalExpressionArg(arg: Core.ExpressionArg, env: => Env): Lazy[Any] = arg match {
     case Core.ExpressionRef(id, _, _) =>
