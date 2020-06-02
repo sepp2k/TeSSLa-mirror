@@ -8,7 +8,7 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 
 import scala.collection.mutable
 
-class Flattening extends TranslationPhase[Core.Specification, Core.Specification] {
+class Flattening(flattenOutFuncExterns: Boolean) extends TranslationPhase[Core.Specification, Core.Specification] {
 
   override def translate(spec: Core.Specification): Result[Core.Specification] = {
 
@@ -18,14 +18,23 @@ class Flattening extends TranslationPhase[Core.Specification, Core.Specification
       new Identifier(Ior.right({maxId += 1; maxId}))
     }
 
+    def externExpNeedsFlattening(e: ExternExpression): Boolean = {
+      e match {
+        case ExternExpression(_, _, _, "true", _) |
+             ExternExpression(_, _, _, "false", _) => false
+        case _ => flattenOutFuncExterns
+      }
+    }
+
     def flattenExpressionArg(e: ExpressionArg, addDefs: mutable.Map[Identifier, DefinitionExpression]): ExpressionArg = {
       e match {
         case r: ExpressionRef => r
         case _: IntLiteralExpression |
              _: StringLiteralExpression |
              _: FloatLiteralExpression |
-             _: ExternExpression |
              _: TypeApplicationExpression =>
+          flattenExpression(e.asInstanceOf[DefinitionExpression], addDefs)
+        case e: ExternExpression if !externExpNeedsFlattening(e) =>
           flattenExpression(e.asInstanceOf[DefinitionExpression], addDefs)
         case RecordConstructorExpression(m, _) if m.isEmpty =>
           flattenExpression(e.asInstanceOf[DefinitionExpression], addDefs)

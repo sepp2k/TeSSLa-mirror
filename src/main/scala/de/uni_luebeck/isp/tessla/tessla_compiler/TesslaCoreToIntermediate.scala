@@ -13,11 +13,19 @@ import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
         TranslationPhase[Specification, SourceListing] {
 
-
   override def translate(spec: Specification): Result[SourceListing] = {
     val in = spec.in
     val definitions = spec.definitions
     val out = spec.out
+
+    @scala.annotation.tailrec
+    def externResolution(e: ExpressionArg): ExternExpression = {
+      e match {
+        case e: ExternExpression => e
+        case ExpressionRef(id, _, _) if definitions.contains(id) => externResolution(definitions(id))
+        case _ => throw Errors.CoreASTError("No extern or reference to extern in function application with stream result", e.location)
+      }
+    }
 
     def getStreamType(id: Identifier) : Type = {
       if (definitions.contains(id)) {
@@ -34,8 +42,8 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     DefinitionOrdering.order(definitions).foreach{ case (id, definition) =>
       currSrc = definition.tpe match {
         case InstantiatedType("Events", _, _) => definition match {
-          case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, typeArgs, _), args, _) => StreamCodeGenerator.translateExternSignalExpression(id, e, args, typeArgs, currSrc)
-          case ApplicationExpression(e: ExternExpression, args, _) => StreamCodeGenerator.translateExternSignalExpression(id, e, args, Seq(), currSrc) //TODO: Does this exist?
+          case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) => StreamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, typeArgs, currSrc)
+          case ApplicationExpression(e, args, _) => StreamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, Seq(), currSrc) //TODO: Does this exist?
           case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
         }
         case _ => SourceListing(currSrc.stepSource, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource :+ NonStreamCodeGenerator.translateDefinition(id, definition, NonStreamCodeGenerator.TypeArgManagement.empty, definitions))

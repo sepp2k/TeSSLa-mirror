@@ -65,7 +65,7 @@ object Main extends SexyOpt {
         }
 
         val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
-        val core = unwrapResult((new Flattening).translate(unflatCore).andThen(new UniqueRenaming))
+        val core = unwrapResult((new Flattening(false)).translate(unflatCore).andThen(new UniqueRenaming))
 
         if (verbose.value) {
           println("###############################")
