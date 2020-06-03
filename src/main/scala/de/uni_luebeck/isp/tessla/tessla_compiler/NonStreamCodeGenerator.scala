@@ -64,7 +64,10 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
   def translateFunction(e: FunctionExpression, tm: TypeArgManagement, defContext: Map[Identifier, DefinitionExpression]) : ImpLanExpr = {
       val newTm = tm.parsKnown(e.typeParams)
       LambdaExpression(e.params.map{case (id,_,_) => if (id.fullName == "_")  "_" else s"var_$id"},
-                       e.params.map(_._3.resolve(newTm.resMap)),
+                       e.params.map{
+                         case (_, StrictEvaluation, tpe) => tpe.resolve(newTm.resMap)
+                         case (_, LazyEvaluation, tpe) => LazyContainer(tpe.resolve(newTm.resMap))
+                       },
                        e.result.tpe.resolve(newTm.resMap),
                        translateBody(e.body, e.result, newTm, defContext))
   }
@@ -81,7 +84,10 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
   def translateExternToLambda(e: ExternExpression, tm: TypeArgManagement, defContext: Map[Identifier, DefinitionExpression]) : ImpLanExpr = {
       val newTm = tm.parsKnown(e.typeParams)
       val argNames = e.params.indices.map(i => s"tLPar_$i")
-      val argTypes = e.params.map(_._2.resolve(newTm.resMap)).map(IntermediateCodeUtils.typeConversion)
+      val argTypes = e.params.map(_._2.resolve(newTm.resMap)).map(IntermediateCodeUtils.typeConversion).zip(e.params.map(_._1)).map{
+        case (t, StrictEvaluation) => t
+        case (t, LazyEvaluation) => LazyContainer(t)
+      }
       val ret = translateFunctionCall(e, argNames.map(Variable), newTm, defContext)
       LambdaExpression(argNames, argTypes, e.resultType.resolve(newTm.resMap), Seq(ReturnStatement(ret)))
   }

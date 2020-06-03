@@ -11,7 +11,7 @@ object IntermediateCodeTypeInference {
   //Note: Does no type checking
   def typeInference(impLanExpr: ImpLanExpr, varTypes: Map[String, ImpLanType]): ImpLanType = {
     impLanExpr match {
-      case CastingExpression(_, targetType) => targetType
+      case CastingExpression(_, _, targetType) => targetType
       case LongValue(_) => LongType
       case DoubleValue(_) => DoubleType
       case BoolValue(_) => BoolType
@@ -47,7 +47,9 @@ object IntermediateCodeTypeInference {
   }
 
       def castingNecessary(e1_type: ImpLanType, e2_type: ImpLanType): Boolean = {
-        if (e1_type == e2_type || e1_type == GeneralType) {
+        if (e1_type.isInstanceOf[LazyContainer] ^ e2_type.isInstanceOf[LazyContainer]) {
+          true
+        } else if (e1_type == e2_type || e1_type == GeneralType) {
           false
         } else {
           e1_type match {
@@ -78,8 +80,10 @@ object IntermediateCodeTypeInference {
 
       def castExpression(exp: ImpLanExpr, target: Option[ImpLanType], varTypes: Map[String, ImpLanType]) : ImpLanExpr = {
         val innerExp : ImpLanExpr = exp match {
-          case CastingExpression(e, target) => CastingExpression(castExpression(e, scala.None, varTypes), target)
-          case FunctionCall(name, params, typeHint) => FunctionCall(name, params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)}, typeHint)
+          case CastingExpression(e, from, target) => CastingExpression(castExpression(e, scala.Some(from), varTypes), from, target)
+          case FunctionCall(name, params, typeHint) =>
+            val np = params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)}
+            FunctionCall(name, params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)}, typeHint)
           case LambdaApplication(exp, params) => typeInference(exp, varTypes) match {
             case FunctionType(argsTypes, _) => LambdaApplication(castExpression(exp, scala.None, varTypes), params.zip(argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)})
             case _ => throw Errors.DSLTypeError(s"Lambda Application to non-function expression $exp")
@@ -108,7 +112,7 @@ object IntermediateCodeTypeInference {
             if (!castingNecessary(t, actualType)) {
               innerExp
             } else {
-              CastingExpression(innerExp, t)
+              CastingExpression(innerExp, actualType, t)
             }
         }
       }

@@ -27,6 +27,7 @@ object ScalaConstants {
         val ret = ((if (argsTypes.isEmpty) "" else ", ") + typeTranslation(retType))
         s"scala.Function${argsTypes.size}[${argsTypes.map(typeTranslation).mkString(", ")}${ret}]"
       case StructType(types, _) => s"(${types.map(typeTranslation).mkString(", ")})"
+      case LazyContainer(typ) => s"Function0[${typeTranslation(typ)}]"
     }
   }
 

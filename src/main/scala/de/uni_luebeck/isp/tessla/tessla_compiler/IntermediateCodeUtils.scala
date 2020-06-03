@@ -5,6 +5,7 @@ import scala.language.postfixOps
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
 import de.uni_luebeck.isp.tessla._
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.TesslaAST.{LazyEvaluation, StrictEvaluation}
 
 /**
   * Class containing a DSL for easy creation of ImpLanStmt-Blocks
@@ -17,7 +18,7 @@ object IntermediateCodeUtils {
         case Some(content) => Seq(content)
         case _ => Seq()
       }
-      case CastingExpression(e, _) =>  Seq(e)
+      case CastingExpression(e, _, _) =>  Seq(e)
       case FunctionCall(_, params, _) => params
       case LambdaApplication(exp, params) => params :+ exp
       case TernaryExpression(guard, e1, e2) => guard.flatten :+ e1 :+ e2
@@ -67,7 +68,7 @@ object IntermediateCodeUtils {
   def mapAST(exp: ImpLanExpr, f: ImpLanExpr => ImpLanExpr, g: ImpLanStmt => Option[ImpLanStmt]): ImpLanExpr = {
     val mappedExp = exp match {
       case lanVal: ImpLanVal => lanVal
-      case CastingExpression(e, target) => CastingExpression(mapAST(e, f, g), target)
+      case CastingExpression(e, from, target) => CastingExpression(mapAST(e, f, g), from, target)
       case FunctionCall(name, params, typeHint) => FunctionCall(name, params.map(mapAST(_, f, g)), typeHint)
       case LambdaApplication(exp, params) => LambdaApplication(mapAST(exp, f, g), params.map(mapAST(_, f, g)))
       case TernaryExpression(guard, e1, e2) => TernaryExpression(guard.map(_.map(mapAST(_, f, g))), mapAST(e1, f, g), mapAST(e2, f, g))
@@ -121,7 +122,11 @@ object IntermediateCodeUtils {
       case InstantiatedType("Set", Seq(t), _) => ImmutableSetType(t)
       case InstantiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
       case InstantiatedType("List", Seq(t), _) => ImmutableListType(t)
-      case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) => IntermediateCode.FunctionType(paramTypes.map{case (_,t) => typeConversion(t)}, typeConversion(resultType))
+      case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) =>
+        IntermediateCode.FunctionType(paramTypes.map{
+          case (LazyEvaluation,t) => LazyContainer(typeConversion(t))
+          case (StrictEvaluation, t) => typeConversion(t)
+        }, typeConversion(resultType))
       case RecordType(entries, _) => {
         val sortedEntries = entries.toSeq.sortWith{case ((n1, _), (n2, _)) => structComparation(n1.name, n2.name)}
         val names = sortedEntries.map(_._1.name)

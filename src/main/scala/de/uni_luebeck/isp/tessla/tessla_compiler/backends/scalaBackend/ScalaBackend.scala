@@ -67,7 +67,10 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
         s"(($args) => {\n${generateVariableDeclarations(IntermediateCodeUtils.getVariableMap(body)).mkString("\n")}\n${generateCode(body)}\n})"
       }
       case Variable(name) => name
-      case CastingExpression(e, t) => s"(${translateExpression(e)}).asInstanceOf[${ScalaConstants.typeTranslation(t)}]"
+
+      case CastingExpression(e, LazyContainer(_), _) => s"${translateExpression(e)}()"
+      case CastingExpression(e, _, LazyContainer(_)) => s"() => {${translateExpression(e)}}"
+      case CastingExpression(e, _, t) => s"(${translateExpression(e)}).asInstanceOf[${ScalaConstants.typeTranslation(t)}]"
     }
 
   def isObjectType(t: ImpLanType) : Boolean = {

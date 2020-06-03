@@ -113,6 +113,10 @@ object IntermediateCode {
     override def toString : String = s"${argsTypes.mkString(" x ")} -> $retType"
   }
 
+  final case class LazyContainer(subType: ImpLanType) extends GenericImpLanType(Seq(subType)) {
+    override def toString : String = s"Lazy[${subType}]"
+  }
+
   /* Values */
 
   final case class LongValue(value: Long) extends ImpLanVal {
@@ -205,8 +209,8 @@ object IntermediateCode {
 
   /* Expressions */
 
-  final case class CastingExpression(e: ImpLanExpr, target: ImpLanType) extends ImpLanExpr {
-    override def toString : String = s"($target)$e"
+  final case class CastingExpression(e: ImpLanExpr, from: ImpLanType, target: ImpLanType) extends ImpLanExpr {
+    override def toString : String = s"($from -> $target)$e"
   }
 
   final case class FunctionCall(name: String, params: Seq[ImpLanExpr], typeHint: FunctionType) extends ImpLanExpr {
