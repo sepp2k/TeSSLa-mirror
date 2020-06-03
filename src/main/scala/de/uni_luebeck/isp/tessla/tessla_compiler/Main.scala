@@ -6,7 +6,7 @@ import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaBackend
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{ASTRemoveUnused, Flattening, UniqueRenaming}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{ASTRemoveUnused, Flattening, LazynessAnalysis, UniqueRenaming, UsageAnalysis}
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
 
@@ -65,13 +65,16 @@ object Main extends SexyOpt {
         }
 
         val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
-        val core = unwrapResult((new Flattening(false)).translate(unflatCore).andThen(new UniqueRenaming))
+        val core = unwrapResult((new Flattening(false)).translate(unflatCore).
+          andThen(new UniqueRenaming).
+          andThen(new UsageAnalysis).
+          andThen(new LazynessAnalysis))
 
         if (verbose.value) {
           println("###############################")
           println("#        TeSSLa Core          #")
           println("###############################")
-          println(core)
+          println(core.spec)
           println("###############################")
         }
 

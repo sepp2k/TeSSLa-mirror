@@ -11,9 +11,10 @@ import de.uni_luebeck.isp.tessla.TesslaAST.Core._
   */
 
 class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
-        TranslationPhase[Specification, SourceListing] {
+        TranslationPhase[ExtendedSpecification, SourceListing] {
 
-  override def translate(spec: Specification): Result[SourceListing] = {
+  override def translate(extSpec: ExtendedSpecification): Result[SourceListing] = {
+    val spec = extSpec.spec
     val in = spec.in
     val definitions = spec.definitions
     val out = spec.out
