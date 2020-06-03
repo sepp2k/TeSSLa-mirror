@@ -9,11 +9,13 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference,
   */
 class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeleton.scala") {
 
-  def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr])]): Seq[String] = {
-    vars.map {
-      case (name, (typ, scala.Some(default))) => s"var $name : ${ScalaConstants.typeTranslation(typ)} = ${translateExpression(default)}"
-      case (name, (typ, scala.None)) => s"var $name : ${ScalaConstants.typeTranslation(typ)} = null"
-    }.toSeq
+  def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)]): Seq[String] = {
+    def prefix(lazyDef: Boolean) = if (lazyDef) "lazy val" else "var"
+
+    vars.toSeq.sortWith{case (_, b) => b._2._3}.map {
+      case (name, (typ, scala.Some(default), lazyDef)) => s"${prefix(lazyDef)} $name : ${ScalaConstants.typeTranslation(typ)} = ${translateExpression(default)}"
+      case (name, (typ, scala.None, lazyDef)) => s"${prefix(lazyDef)} $name : ${ScalaConstants.typeTranslation(typ)} = null"
+    }
   }
 
   def foldGuard(guard: Seq[Seq[ImpLanExpr]]): String = {
@@ -34,9 +36,9 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       case TryCatchBlock(tr, cat) =>
         s"try {\n${generateCode(tr)}\n} catch {\ncase var_err : Throwable => {\n${generateCode(cat)}\n}\n}"
 
-      case Assignment(lhs, rexpr, _, t) => s"$lhs = " +
-        s"${translateExpression(rexpr)}"
-      case FinalAssignment(_, _, _) => ""
+      case Assignment(lhs, rexpr, _, _) =>
+        s"$lhs = " +  s"${translateExpression(rexpr)}"
+      case FinalAssignment(_, _, _, _) => ""
 
       case ReturnStatement(expr) => translateExpression(expr)
     }.filter(_ != "").mkString("\n")
@@ -54,7 +56,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       case LambdaApplication(exp, params) => s"${translateExpression(exp)}.apply(${params.map(translateExpression).mkString(", ")})"
       case TernaryExpression(guard, e1, e2) => s"if(${foldGuard(guard)}) {${translateExpression(e1)}} else {${translateExpression(e2)}}"
       case Equal(a, b) => {
-        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _) => typ }.toMap))) {
+        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _, _) => typ }.toMap))) {
           s"${translateExpression(a)}.equals(${translateExpression(b)})"
         } else {
           s"${translateExpression(a)} == ${translateExpression(b)}"

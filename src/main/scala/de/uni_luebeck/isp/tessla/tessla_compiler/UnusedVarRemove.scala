@@ -31,7 +31,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
     val f = (stmt: ImpLanStmt) => {
       stmt match {
         case Assignment(lhs, _, _, _) if del.contains(lhs.name) => scala.None
-        case FinalAssignment(lhs, _, _) if del.contains(lhs.name) => scala.None
+        case FinalAssignment(lhs, _, _, _) if del.contains(lhs.name) => scala.None
         case _ => scala.Some(stmt)
       }
     }
@@ -48,14 +48,14 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
       case If(guard, stmts, elseStmts) => getUsageMap(stmts, getUsageMap(elseStmts, getUsageMap(guard.flatten, currMap)))
       case TryCatchBlock(tr, cat) => getUsageMap(tr, getUsageMap(cat, currMap))
       case Assignment(lhs, rexpr, defExpr, _) => currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(rexpr)).union(if (defExpr.isDefined) getUsagesInExpr(defExpr.get) else Set()))
-      case FinalAssignment(lhs, defExp, _) => currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(defExp)))
+      case FinalAssignment(lhs, defExp, _, _) => currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(defExp)))
       case e: ImpLanExpr => currMap + (scopeVar -> currMap.getOrElse(scopeVar, Set()).union(getUsagesInExpr(e)))
       case ReturnStatement(e) => currMap + (scopeVar -> currMap.getOrElse(scopeVar, Set()).union(getUsagesInExpr(e)))
     }
 
     val subScopeVar = stmt match {
       case Assignment(lhs, _, _, _) => lhs.name
-      case FinalAssignment(lhs, _, _) => lhs.name
+      case FinalAssignment(lhs, _, _, _) => lhs.name
       case _ => scopeVar
     }
 
@@ -79,7 +79,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
         case If(_, stmts, elseStmts) => getDefines(stmts) ++ getDefines(elseStmts)
         case TryCatchBlock(tr, cat) => getDefines(tr) ++ getDefines(cat)
         case Assignment(lhs, _, _, _) => Set(lhs.name)
-        case FinalAssignment(lhs, _, _) => Set(lhs.name)
+        case FinalAssignment(lhs, _, _, _) => Set(lhs.name)
         case _ => Set()
     }.reduce(_ ++ _)
   }

@@ -12,7 +12,7 @@ import de.uni_luebeck.isp.tessla._
   * Class containing functions for the translation of single TeSSLa expressions to imperative code
   */
 
-object StreamCodeGenerator {
+class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
 
   def translateExternSignalExpression(id: Identifier, e: ExternExpression, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing) : SourceListing = {
     val typeParamMap = e.typeParams.zip(typeArgs).toMap
@@ -67,7 +67,7 @@ object StreamCodeGenerator {
   def produceDefaultStepCode(id: Identifier, ot: Type, stream : ExpressionArg, defVal : ExpressionArg, currSrc: SourceListing): SourceListing = {
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val o = s"var_${id.fullName}"
-    val default = NonStreamCodeGenerator.translateExpressionArg(defVal, NonStreamCodeGenerator.TypeArgManagement.empty)
+    val default = nonStreamCodeGenerator.translateExpressionArg(defVal, nonStreamCodeGenerator.TypeArgManagement.empty)
 
     val newStmt = (currSrc.stepSource.
 
@@ -229,7 +229,6 @@ object StreamCodeGenerator {
 
   //FIXME: AND, OR missing
   //FIXME: Handle lazyness in general
-  @scala.annotation.tailrec
   def getErrorExpressionsforLiftSLift(args: Seq[ExpressionArg], f: ExpressionArg): (ImpLanExpr, ImpLanExpr) = {
     f match {
       case TypeApplicationExpression(exp, _, _) => getErrorExpressionsforLiftSLift(args, exp)
@@ -274,7 +273,7 @@ object StreamCodeGenerator {
         Assignment(s"${o}_errval", inputError, LongValue(0), LongType).
         If(Seq(Seq(Equal(s"${o}_errval", LongValue(0))))).
           Try().
-            Assignment(s"${o}_fval", NonStreamCodeGenerator.translateFunctionCall(function, params, NonStreamCodeGenerator.TypeArgManagement.empty), scala.None, OptionType(ot)).
+            Assignment(s"${o}_fval", nonStreamCodeGenerator.translateFunctionCall(function, params, nonStreamCodeGenerator.TypeArgManagement.empty), scala.None, OptionType(ot)).
             If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
               Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
               Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
@@ -312,7 +311,7 @@ object StreamCodeGenerator {
     val guard2 : Seq[Seq[ImpLanExpr]] = args.map{arg => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_changed"))}
     val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}
 
-    val fcall = NonStreamCodeGenerator.translateFunctionCall(function, fargs, NonStreamCodeGenerator.TypeArgManagement.empty)
+    val fcall = nonStreamCodeGenerator.translateFunctionCall(function, fargs, nonStreamCodeGenerator.TypeArgManagement.empty)
 
     val (inputError, outputError) = getErrorExpressionsforLiftSLift(args, function)
 

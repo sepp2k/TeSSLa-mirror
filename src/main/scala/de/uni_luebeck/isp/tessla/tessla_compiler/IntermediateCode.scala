@@ -192,11 +192,11 @@ object IntermediateCode {
 
   final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: Option[ImpLanExpr], typ: ImpLanType)
     extends ImpLanStmt {
-    override def toString : String = s"$lhs = ${rexpr} (default: ${defVal})"
+    override def toString : String = s"$lhs = $rexpr (default: $defVal)"
   }
 
-  final case class FinalAssignment(lhs: Variable, defVal: ImpLanExpr, typ: ImpLanType) extends ImpLanStmt {
-    override def toString : String = s"$lhs = ${defVal} (final)"
+  final case class FinalAssignment(lhs: Variable, defVal: ImpLanExpr, typ: ImpLanType, lazyVar: Boolean) extends ImpLanStmt {
+    override def toString : String = (if (lazyVar) "lazy " else "") + s"$lhs = $defVal (final)"
   }
 
   final case class ReturnStatement(expr: ImpLanExpr) extends ImpLanStmt {

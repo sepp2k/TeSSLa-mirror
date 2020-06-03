@@ -37,7 +37,7 @@ object IntermediateCodeUtils {
           case If(guard, stmts, elseStmts) => guard.flatten ++ stmts ++ elseStmts
           case TryCatchBlock(tr, cat) => tr ++ cat
           case Assignment(_, rexpr, defVal, _) => Seq(rexpr) ++ (if (defVal.isDefined) Seq(defVal.get) else Seq())
-          case FinalAssignment(_, defVal, _) => Seq(defVal)
+          case FinalAssignment(_, defVal, _, _) => Seq(defVal)
           case ReturnStatement(expr) => Seq(expr)
         }
 
@@ -57,7 +57,7 @@ object IntermediateCodeUtils {
           case If(guard, stmts, elseStmts) => If(guard.map(_.map(mapAST(_, f, g))), mapAST(stmts, f, g), mapAST(elseStmts, f, g))
           case TryCatchBlock(tr, cat) => TryCatchBlock(mapAST(tr, f, g), mapAST(cat, f, g))
           case Assignment(lhs, rexpr, defVal, typ) => Assignment(lhs, mapAST(rexpr, f, g), if (defVal.isDefined) scala.Some(mapAST(defVal.get, f, g)) else scala.None, typ)
-          case FinalAssignment(lhs, defVal, typ) => FinalAssignment(lhs, mapAST(defVal, f, g), typ)
+          case FinalAssignment(lhs, defVal, typ, ld) => FinalAssignment(lhs, mapAST(defVal, f, g), typ, ld)
           case ReturnStatement(expr) => ReturnStatement(mapAST(expr, f, g))
         }
         g(mappedStmt)
@@ -78,24 +78,24 @@ object IntermediateCodeUtils {
     f(mappedExp)
   }
 
-  def getVariableMap(stmts: Seq[ImpLanStmt], baseMap: Map[String, (ImpLanType, Option[ImpLanExpr])] = Map()) : Map[String, (ImpLanType, Option[ImpLanExpr])] = {
+  def getVariableMap(stmts: Seq[ImpLanStmt], baseMap: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map()) : Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = {
 
-    def extractAssignments(stmt: ImpLanStmt) : Seq[(String, ImpLanType, Option[ImpLanExpr])] = stmt match {
-      case Assignment(lhs, _, defVal, typ) => Seq((lhs.name, typ, defVal))
-      case FinalAssignment(lhs, defVal, typ) => Seq((lhs.name, typ, scala.Some(defVal)))
+    def extractAssignments(stmt: ImpLanStmt) : Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = stmt match {
+      case Assignment(lhs, _, defVal, typ) => Seq((lhs.name, typ, defVal, false))
+      case FinalAssignment(lhs, defVal, typ, ld) => Seq((lhs.name, typ, scala.Some(defVal), ld))
       case If(_, stmts, elseStmts) => stmts.concat(elseStmts).flatMap(extractAssignments)
       case TryCatchBlock(tr, cat) => tr.concat(cat).flatMap(extractAssignments)
       case _ => Seq()
     }
 
-    val varDefs : Seq[(String, ImpLanType, Option[ImpLanExpr])] = baseMap.toSeq.map{case (a, (b,c)) => (a,b,c)} ++ stmts.flatMap(extractAssignments).distinct
-    val duplicates = varDefs.groupBy{case (n, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
+    val varDefs : Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = baseMap.toSeq.map{case (a, (b,c,d)) => (a,b,c,d)} ++ stmts.flatMap(extractAssignments).distinct
+    val duplicates = varDefs.groupBy{case (n, _, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
 
     if (duplicates.nonEmpty) {
       throw tessla_compiler.Errors.DSLError(s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}")
     }
 
-    varDefs.map{case (name, typ, default) => (name, (typ, default))}.toMap
+    varDefs.map{case (name, typ, default, lazyDef) => (name, (typ, default, lazyDef))}.toMap
   }
 
   def structComparation(s1: String, s2: String) : Boolean = {
@@ -254,8 +254,8 @@ class IntermediateCodeUtils(stmts: Seq[ImpLanStmt], blockState : Seq[BlockState]
       new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
     }
 
-    def FinalAssignment(lhs: Variable, default: ImpLanVal, typ: ImpLanType) : IntermediateCodeUtils = {
-      val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FinalAssignment(lhs, default, typ))
+    def FinalAssignment(lhs: Variable, default: ImpLanVal, typ: ImpLanType, lazyDef: Boolean = false) : IntermediateCodeUtils = {
+      val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FinalAssignment(lhs, default, typ, lazyDef))
       new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
     }
 

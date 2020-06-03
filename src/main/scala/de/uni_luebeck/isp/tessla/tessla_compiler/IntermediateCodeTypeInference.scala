@@ -70,7 +70,7 @@ object IntermediateCodeTypeInference {
             case If(guard, stmts, elseStmts) => If (guard.map{_.map(e => castExpression(e, scala.Some(BoolType), varTypes))}, generateCodeWithCasts(stmts, varTypes, retType), generateCodeWithCasts(elseStmts, varTypes, retType))
             case TryCatchBlock(tr, cat) => TryCatchBlock(generateCodeWithCasts(tr, varTypes, retType), generateCodeWithCasts(cat, varTypes + ("var_err" -> GeneralType), retType))
             case Assignment(lhs, rexpr, defVal, typ) => Assignment(lhs, castExpression(rexpr, scala.Some(typ), varTypes), defVal, typ)
-            case FinalAssignment(lhs, defVal, typ) => FinalAssignment(lhs, castExpression(defVal, scala.Some(typ), varTypes), typ)
+            case FinalAssignment(lhs, defVal, typ, ld) => FinalAssignment(lhs, castExpression(defVal, scala.Some(typ), varTypes), typ, ld)
             case ReturnStatement(expr) if retType.isDefined => ReturnStatement(castExpression(expr, scala.Some(retType.get), varTypes))
             case ReturnStatement(expr) => ReturnStatement(expr)
           }
@@ -95,7 +95,7 @@ object IntermediateCodeTypeInference {
           case LambdaExpression(argNames, argsTypes, retType, body) => LambdaExpression(argNames, argsTypes, retType,
               generateCodeWithCasts(
                 body,
-                IntermediateCodeUtils.getVariableMap(body, varTypes.view.mapValues{a => (a, scala.None)}.toMap ++ argNames.zip(argsTypes).map{case (a,b) => (a,(b, scala.None))}.toMap).view.mapValues{case (a,_) => a}.toMap,
+                IntermediateCodeUtils.getVariableMap(body, varTypes.view.mapValues{a => (a, scala.None, false)}.toMap ++ argNames.zip(argsTypes).map{case (a,b) => (a,(b, scala.None, false))}.toMap).view.mapValues{case (a,_, _) => a}.toMap,
                 scala.Some(retType)
               ))
           case _ => exp

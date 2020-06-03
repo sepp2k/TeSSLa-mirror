@@ -14,6 +14,9 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
         TranslationPhase[ExtendedSpecification, SourceListing] {
 
   override def translate(extSpec: ExtendedSpecification): Result[SourceListing] = {
+    val nonStreamCodeGenerator = new NonStreamCodeGenerator(extSpec)
+    val streamCodeGenerator = new StreamCodeGenerator(nonStreamCodeGenerator)
+
     val spec = extSpec.spec
     val in = spec.in
     val definitions = spec.definitions
@@ -43,11 +46,11 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     DefinitionOrdering.order(definitions).foreach{ case (id, definition) =>
       currSrc = definition.tpe match {
         case InstantiatedType("Events", _, _) => definition match {
-          case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) => StreamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, typeArgs, currSrc)
-          case ApplicationExpression(e, args, _) => StreamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, Seq(), currSrc) //TODO: Does this exist?
+          case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) => streamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, typeArgs, currSrc)
+          case ApplicationExpression(e, args, _) => streamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, Seq(), currSrc) //TODO: Does this exist?
           case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
         }
-        case _ => SourceListing(currSrc.stepSource, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource :+ NonStreamCodeGenerator.translateDefinition(id, definition, NonStreamCodeGenerator.TypeArgManagement.empty, definitions))
+        case _ => SourceListing(currSrc.stepSource, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource :+ nonStreamCodeGenerator.translateDefinition(id, definition, nonStreamCodeGenerator.TypeArgManagement.empty, definitions))
       }
     }
 
@@ -61,7 +64,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
       }
 
       if (consoleInterface) {
-        currSrc = StreamCodeGenerator.produceOutputCode(o._1.id, getStreamType(o._1.id), name, currSrc)
+        currSrc = streamCodeGenerator.produceOutputCode(o._1.id, getStreamType(o._1.id), name, currSrc)
       } else {
         throw Errors.NotYetImplementedError("Translation without value output to stdout is not implemented yet")
       }
@@ -69,11 +72,11 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
 
     in.foreach {i =>
       if (consoleInterface) {
-        currSrc = StreamCodeGenerator.produceInputFromConsoleCode(i._1, i._2._1, currSrc)
+        currSrc = streamCodeGenerator.produceInputFromConsoleCode(i._1, i._2._1, currSrc)
       } else {
         throw Errors.NotYetImplementedError("Translation without value consumption from stdin is not implemented yet")
       }
-      currSrc = StreamCodeGenerator.produceInputUnchangeCode(i._1, currSrc)
+      currSrc = streamCodeGenerator.produceInputUnchangeCode(i._1, currSrc)
     }
 
     Success(currSrc, Seq())

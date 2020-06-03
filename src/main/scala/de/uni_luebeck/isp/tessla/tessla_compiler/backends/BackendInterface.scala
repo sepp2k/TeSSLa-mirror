@@ -11,23 +11,23 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference,
   */
 abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase[SourceListing, String] {
 
-  var variables : Map[String, (ImpLanType, Option[ImpLanExpr])] = Map()
+  var variables : Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map()
 
   def translate(orgListing: SourceListing) : Result[String] = {
     var warnings = Seq()
 
     val nonStaticVars = IntermediateCodeUtils.getVariableMap(orgListing.tsGenSource.concat(orgListing.stepSource).concat(orgListing.inputProcessing).concat(orgListing.tailSource)) ++
-      Map("inputStream" -> (StringType, scala.Some(StringValue(""))),
-      "value" -> (StringType, scala.Some(StringValue(""))),
-      "currTs" -> (LongType, scala.Some(LongValue(0))),
-      "lastProcessedTs" -> (LongType, scala.Some(LongValue(0))),
-      "newInputTs" -> (LongType, scala.Some(LongValue(0))))
+      Map("inputStream" -> (StringType, scala.Some(StringValue("")), false),
+        "value" -> (StringType, scala.Some(StringValue("")), false),
+        "currTs" -> (LongType, scala.Some(LongValue(0)), false),
+        "lastProcessedTs" -> (LongType, scala.Some(LongValue(0)), false),
+        "newInputTs" -> (LongType, scala.Some(LongValue(0)), false))
 
     val staticVars = IntermediateCodeUtils.getVariableMap(orgListing.staticSource)
 
     variables = nonStaticVars ++ staticVars
 
-    val listing = IntermediateCodeTypeInference.generateCodeWithCasts(orgListing, variables.map{case (n, (t, _)) => (n, t)})
+    val listing = IntermediateCodeTypeInference.generateCodeWithCasts(orgListing, variables.map{case (n, (t, _, _)) => (n, t)})
 
     val source =  scala.io.Source.fromResource(sourceTemplate).mkString
     val rewrittenSource = source.replaceAllLiterally("//VARDEF", generateVariableDeclarations(nonStaticVars).mkString("\n"))
@@ -40,7 +40,7 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
     Success(rewrittenSource, warnings)
   }
 
-  def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr])]) : Seq[String]
+  def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)]) : Seq[String]
 
   def generateCode(stmts: Seq[ImpLanStmt]) : String
 }
