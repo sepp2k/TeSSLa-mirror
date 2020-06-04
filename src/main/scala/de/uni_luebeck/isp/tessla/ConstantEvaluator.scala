@@ -212,8 +212,7 @@ class ConstantEvaluator extends TranslationPhase[Typed.Specification, Core.Speci
   }
 }
 
-class ConstantEvaluatorWorker(spec: Typed.Specification)
-    extends TranslationPhase.Translator[Core.Specification] {
+class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhase.Translator[Core.Specification] {
 
   import ConstantEvaluator._
 
@@ -549,9 +548,8 @@ class ConstantEvaluatorWorker(spec: Typed.Specification)
         if (paramTypes.size != args.size) {
           throw InternalError(s"Wrong number of arguments.", location)
         }
-        lazy val translatedArgs = args.map(x =>
-          translateExpressionArg(x, env, typeEnv, nameOpt).translate(translatedExpressions)
-        )
+        lazy val translatedArgs =
+          args.map(x => translateExpressionArg(x, env, typeEnv, nameOpt).translate(translatedExpressions))
 
         val value = StackLazy { stack =>
           if (

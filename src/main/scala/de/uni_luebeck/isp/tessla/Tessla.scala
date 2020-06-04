@@ -42,11 +42,7 @@ object Tessla {
     }
   }
 
-  case class Annotation(
-    id: Identifier,
-    arguments: Seq[Argument[ConstantExpression]],
-    loc: Location
-  ) {
+  case class Annotation(id: Identifier, arguments: Seq[Argument[ConstantExpression]], loc: Location) {
     def name: String = id.name
   }
 
@@ -72,8 +68,7 @@ object Tessla {
     def name: String = id.name
   }
 
-  case class AnnotationDefinition(id: Identifier, parameters: Seq[Parameter], loc: Location)
-      extends Statement
+  case class AnnotationDefinition(id: Identifier, parameters: Seq[Parameter], loc: Location) extends Statement
 
   case class TypeDefinition(
     id: Identifier,
@@ -99,13 +94,11 @@ object Tessla {
     override def toString = s"extern($id)"
   }
 
-  case class In(id: Identifier, streamType: Type, annotations: Seq[Annotation], loc: Location)
-      extends Statement {
+  case class In(id: Identifier, streamType: Type, annotations: Seq[Annotation], loc: Location) extends Statement {
     override def toString = s"in $id: $streamType"
   }
 
-  case class Out(expr: Expression, id: Identifier, annotations: Seq[Annotation], loc: Location)
-      extends Statement {
+  case class Out(expr: Expression, id: Identifier, annotations: Seq[Annotation], loc: Location) extends Statement {
     def name = id.name
 
     override def toString = s"out $expr as $name"
@@ -156,12 +149,8 @@ object Tessla {
 
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
-  case class MacroCall(
-    mac: Expression,
-    typeArgs: Seq[Type],
-    args: Seq[Argument[Expression]],
-    loc: Location
-  ) extends Expression {
+  case class MacroCall(mac: Expression, typeArgs: Seq[Type], args: Seq[Argument[Expression]], loc: Location)
+      extends Expression {
     override def toString(inner: Boolean) = {
       val typeArgList =
         if (typeArgs.isEmpty) ""
@@ -171,40 +160,31 @@ object Tessla {
       val str = mac match {
         case Variable(id) =>
           (id.name, args) match {
-            case (ID_PATTERN(), _) | (_, Seq()) =>
-              s"$mac$typeArgList(${args.mkString(", ")})"
+            case (ID_PATTERN(), _) | (_, Seq()) => s"$mac$typeArgList(${args.mkString(", ")})"
             case ("if then", Seq(cond, thenCase)) =>
               atomic = false
               s"if $cond then $thenCase"
-            case (name, Seq(PositionalArgument(arg))) =>
-              s"$name${arg.toString(inner = true)}"
+            case (name, Seq(PositionalArgument(arg))) => s"$name${arg.toString(inner = true)}"
             case (name, Seq(PositionalArgument(lhs), PositionalArgument(rhs))) =>
               atomic = false
               s"${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)}"
-            case (name, _) =>
-              s"$name$typeArgList(${args.mkString(", ")})"
+            case (name, _) => s"$name$typeArgList(${args.mkString(", ")})"
           }
-        case _ =>
-          s"${mac.toString(inner = true)}$typeArgList(${args.mkString(", ")})"
+        case _ => s"${mac.toString(inner = true)}$typeArgList(${args.mkString(", ")})"
       }
       if (inner && !atomic) s"($str)" else str
     }
   }
 
-  case class StaticIfThenElse(
-    condition: Expression,
-    thenCase: Expression,
-    elseCase: Expression,
-    loc: Location
-  ) extends Expression {
+  case class StaticIfThenElse(condition: Expression, thenCase: Expression, elseCase: Expression, loc: Location)
+      extends Expression {
     override def toString(inner: Boolean) = {
       val str = s"if $condition then $thenCase else $elseCase"
       if (inner) s"($str)" else str
     }
   }
 
-  case class Block(definitions: Seq[Definition], expression: Expression, loc: Location)
-      extends Expression {
+  case class Block(definitions: Seq[Definition], expression: Expression, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
   }
 
@@ -226,8 +206,7 @@ object Tessla {
     }
   }
 
-  case class MemberAccess(receiver: Expression, member: Identifier, loc: Location)
-      extends Expression {
+  case class MemberAccess(receiver: Expression, member: Identifier, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"${receiver.toString(inner = true)}.$member"
   }
 
@@ -271,8 +250,7 @@ object Tessla {
       override def toString = value.toString
     }
 
-    case class Object(members: Map[Identifier, ConstantExpression], loc: Location)
-        extends ConstantExpression {
+    case class Object(members: Map[Identifier, ConstantExpression], loc: Location) extends ConstantExpression {
       override def toString = {
         members
           .map {
@@ -324,8 +302,7 @@ object Tessla {
     override def toString = s"(${parameterTypes.mkString(", ")}) => $returnType]"
   }
 
-  case class ObjectType(memberTypes: Map[Identifier, Type], isOpen: Boolean, loc: Location)
-      extends Type {
+  case class ObjectType(memberTypes: Map[Identifier, Type], isOpen: Boolean, loc: Location) extends Type {
     override def toString = {
       var members = memberTypes.toSeq.map { case (name, t) => s"$name : $t" }
       if (isOpen) {

@@ -14,9 +14,8 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     extends TranslationPhase.Translator[Tessla.Specification]
     with TesslaParser.CanParseConstantString {
   override def translateSpec() = {
-    val statements = spec.flatMap(res =>
-      res.tree.entries.asScala.map(_.statement).map(translateStatement(_, res.tokens))
-    )
+    val statements =
+      spec.flatMap(res => res.tree.entries.asScala.map(_.statement).map(translateStatement(_, res.tokens)))
     checkForDuplicates(statements.flatMap(Tessla.getId))
     checkForDuplicates(statements.flatMap(getTypeDefID))
     Tessla.Specification(statements)
@@ -530,8 +529,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
 
 }
 
-object TesslaSyntaxToTessla
-    extends TranslationPhase[Seq[TesslaParser.ParseResult], Tessla.Specification] {
+object TesslaSyntaxToTessla extends TranslationPhase[Seq[TesslaParser.ParseResult], Tessla.Specification] {
   override def translate(spec: Seq[TesslaParser.ParseResult]) = {
     new TesslaSyntaxToTessla(spec).translate()
   }

@@ -47,9 +47,8 @@ class TypeChecker(spec: FlatTessla.Specification)
     }
   }
 
-  def processTypeAnnotation(entry: FlatTessla.VariableEntry, env: Env) = entry.typeInfo.foreach {
-    typ =>
-      typeMap(env(entry.id)) = translateType(typ, env)
+  def processTypeAnnotation(entry: FlatTessla.VariableEntry, env: Env) = entry.typeInfo.foreach { typ =>
+    typeMap(env(entry.id)) = translateType(typ, env)
   }
 
   def translateType(typ: FlatTessla.Type, env: Env): TypedTessla.Type = typ match {
@@ -657,8 +656,7 @@ class TypeChecker(spec: FlatTessla.Specification)
   }
 }
 
-object TypeChecker
-    extends TranslationPhase[FlatTessla.Specification, TypedTessla.TypedSpecification] {
+object TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla.TypedSpecification] {
   override def translate(spec: FlatTessla.Specification) = {
     new TypeChecker(spec).translate()
   }

@@ -46,9 +46,7 @@ class Flattener(spec: Tessla.Specification)
     spec.statements.foldLeft(emptySpec) {
       case (result, outAll: Tessla.OutAll) =>
         if (result.hasOutAll) warn(ConflictingOut(outAll.loc, previous = result.outAll.get.loc))
-        result.copy(outAll =
-          Some(FlatTessla.OutAll(outAll.annotations.map(translateAnnotation), outAll.loc))
-        )
+        result.copy(outAll = Some(FlatTessla.OutAll(outAll.annotations.map(translateAnnotation), outAll.loc)))
 
       case (result, out: Tessla.Out) =>
         result.outStreams.find(_.name == out.name).foreach { previous =>
@@ -225,9 +223,7 @@ class Flattener(spec: Tessla.Specification)
         val tp = FlatTessla.TypeParameter(typeParamIdMap(typeParameter.name), typeParameter.loc)
         innerDefs.addType(FlatTessla.TypeEntry(tp.id, 0, _ => tp, tp.loc))
       }
-      val parameters = definition.parameters.map(p =>
-        p._1 -> translateParameter(p._2, paramIdMap, innerDefs, paramEnv)
-      )
+      val parameters = definition.parameters.map(p => p._1 -> translateParameter(p._2, paramIdMap, innerDefs, paramEnv))
       parameters.map(_._2).foreach { param =>
         val typ = param.parameterType
         innerDefs.addVariable(
@@ -480,9 +476,7 @@ class Flattener(spec: Tessla.Specification)
       val paramIdMap = createIdMap(lambda.parameters.map(_._2.id.name))
       val innerEnv =
         env ++ Env(variables = paramIdMap ++ createIdMap(blockDefs.map(_.id.name)), types = Map())
-      val parameters = lambda.parameters.map(p =>
-        p._1 -> translateParameter(p._2, paramIdMap, innerDefs, innerEnv)
-      )
+      val parameters = lambda.parameters.map(p => p._1 -> translateParameter(p._2, paramIdMap, innerDefs, innerEnv))
       parameters.map(_._2).foreach { param =>
         val typ = param.parameterType
         innerDefs.addVariable(

@@ -34,11 +34,10 @@ object TranslationPhase {
     }
   }
 
-  class BypassPhase[A, B](phase: TranslationPhase[A, B])
-      extends TranslationPhase[A, (A, Result[B])] {
+  class BypassPhase[A, B](phase: TranslationPhase[A, B]) extends TranslationPhase[A, (A, B)] {
     override def translate(spec: A) = {
       val result = phase.translate(spec)
-      Success((spec, result), Seq())
+      result.map((spec, _))
     }
   }
 
