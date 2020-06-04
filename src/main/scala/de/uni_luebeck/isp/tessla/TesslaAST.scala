@@ -360,7 +360,6 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
     }
   }
 
-  // TODO: use print record
   case class RecordConstructorExpression(
     entries: Map[String, (ExpressionArg, Location)],
     location: Location = Location.unknown
