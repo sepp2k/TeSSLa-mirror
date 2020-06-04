@@ -111,11 +111,24 @@ object IntermediateCodeTypeInference {
             val actualType = typeInference(innerExp, varTypes)
             if (!castingNecessary(t, actualType)) {
               innerExp
-            } else {
-              CastingExpression(innerExp, actualType, t)
+            } else t match {
+              case functionType: FunctionType =>
+                generateFunctionCast(innerExp, actualType.asInstanceOf[FunctionType], functionType, varTypes)
+              case _ =>
+                CastingExpression(innerExp, actualType, t)
             }
         }
       }
+
+  def generateFunctionCast(innerExp: ImpLanExpr, from: FunctionType, to: FunctionType, varTypes: Map[String, ImpLanType]): ImpLanExpr = {
+    val newVarTypes = varTypes ++ to.argsTypes.zipWithIndex.map{case (t, i) => (s"tP$i" -> t)}
+    val argNames = to.argsTypes.indices.map(i => s"tP$i")
+    val args = from.argsTypes.indices.zip(from.argsTypes).map{
+      case (i, f) => castExpression(Variable(s"tP$i"), scala.Some(f), newVarTypes)
+    }
+    val ret = castExpression(LambdaApplication(innerExp, args), scala.Some(to.retType), newVarTypes)
+    LambdaExpression(argNames, to.argsTypes, to.retType, Seq(ReturnStatement(ret)))
+  }
 
     def getLeastCommonType(t1: ImpLanType, t2: ImpLanType) : ImpLanType = {
       if (t1 == t2 || castingNecessary(t1, t2)) {
