@@ -416,7 +416,8 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
                   )
                   .mkString("\n", ",\n", "\n")
               )
-          s"{$entriesString}"
+          //s"{$entriesString}"
+          printRecord(entries, ": ", (x: (ExpressionArg, Location)) => x._1.print(options, mayNeedBraces = false), "()")
         },
         options,
         mayNeedBraces
