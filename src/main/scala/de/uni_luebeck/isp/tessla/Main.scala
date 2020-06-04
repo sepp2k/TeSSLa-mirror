@@ -24,6 +24,7 @@ object Main {
     verifyOnly: Boolean = false,
     diagnostics: Boolean = true,
     printCore: Boolean = false,
+    printCoreLanSpec: Boolean = false,
     printTyped: Boolean = false,
     printLocations: Boolean = false,
     printAllTypes: Boolean = false,
@@ -87,6 +88,9 @@ object Main {
     opt[Unit]("print-core")
       .action((_, c) => c.copy(printCore = true))
       .text("Print the Tessla Core representation generated from the Tessla specification")
+    opt[Unit]("print-core-lanspec")
+      .action((_, c) => c.copy(printCoreLanSpec = true))
+      .text("Print the Tessla Core representation conform to the language specification.")
     opt[Unit]("print-typed")
       .action((_, c) => c.copy(printTyped = true))
       .text("Print the typed Tessla representation generated from the Tessla specification")
@@ -102,10 +106,10 @@ object Main {
       .text("Print stack traces for runtime errors")
     opt[Unit]("list-out-streams")
       .action((_, c) => c.copy(listOutStreams = true))
-      .text("Print a list of the output streams defined in the given tessla spec and then exit")
+      .text("Print a list of the output streams defined in the given Tessla specification and then exit")
     opt[Unit]("list-in-streams")
       .action((_, c) => c.copy(listInStreams = true))
-      .text("Print a list of the input streams defined in the given tessla spec and then exit")
+      .text("Print a list of the input streams defined in the given Tessla specification and then exit")
     opt[Unit]("observations")
       .action((_, c) => c.copy(observations = true))
       .text("Generate observation specification file from the corresponding annotations")
@@ -163,7 +167,9 @@ object Main {
 
     val compiler = new Compiler
     try {
-      val (typed, core) = unwrapResult(compiler.compile(config.specSource, config.compilerOptions))
+      val typed = unwrapResult(compiler.tesslaToTyped(config.compilerOptions)(config.specSource))
+      val core = unwrapResult(compiler.typedToCore(config.compilerOptions)(typed))
+      val flatCore = unwrapResult(compiler.coreToFlatCore(config.compilerOptions)(core))
       val printOptions = TesslaAST.PrintOptions(
         !config.printAllTypes,
         config.printAllTypes,
@@ -174,6 +180,11 @@ object Main {
 
       if (config.printTyped) {
         println(typed.print(printOptions))
+      }
+
+      if (config.printCoreLanSpec) {
+        println(flatCore.print(printOptions))
+        return
       }
 
       if (config.printCore) {

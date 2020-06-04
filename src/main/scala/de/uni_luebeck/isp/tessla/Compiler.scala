@@ -21,22 +21,26 @@ object Compiler {
 
 class Compiler {
 
-  def instantiatePipeline(options: Options): TranslationPhase[CharStream, (Typed.Specification, Core.Specification)] = {
+  def instantiatePipeline(options: Options): TranslationPhase[CharStream, Core.Specification] = {
+    tesslaToTyped(options)
+      .andThen(typedToCore(options))
+      .andThen(coreToFlatCore(options))
+  }
+
+  def tesslaToTyped(options: Options): TranslationPhase[CharStream, TesslaAST.Typed.Specification] = {
     new TesslaParser.WithIncludes(options.includeResolver)
       .andThen(new StdlibIncluder(options.stdlibIncludeResolver, options.stdlibPath))
       .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
       .andThen(new TypedTessla2TesslaASTCore(options.baseTime))
-      .andThen(
-        new BypassPhase(
-          new ConstantEvaluator()
-            .andThen(FlattenCore)
-        )
-      )
   }
 
-  def compile(src: CharStream, options: Options): Result[(Typed.Specification, Core.Specification)] = {
+  def typedToCore(options: Options): TranslationPhase[Typed.Specification, Core.Specification] = new ConstantEvaluator
+
+  def coreToFlatCore(options: Options): TranslationPhase[Core.Specification, Core.Specification] = FlattenCore
+
+  def compile(src: CharStream, options: Options): Result[Core.Specification] = {
     instantiatePipeline(options).translate(src)
   }
 

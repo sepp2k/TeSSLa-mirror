@@ -23,7 +23,7 @@ object FlattenCore extends TranslationPhase[Core.Specification, Core.Specificati
       def count: Long = _id
     }
 
-    def addDefinition(e: Core.Expression, defs: Definitions): Core.ExpressionRef ={
+    def addDefinition(e: Core.Expression, defs: Definitions): Core.ExpressionRef = {
       val newID = IdentifierFactory.next
       val flattenedExp = flattenExpression(e, defs)
       defs += newID -> flattenedExp
@@ -40,9 +40,11 @@ object FlattenCore extends TranslationPhase[Core.Specification, Core.Specificati
           flattenExpression(rec, defs)
         case typeApp: Core.TypeApplicationExpression => flattenExpression(typeApp, defs)
         case ext: Core.ExternExpression =>
-          defs.collectFirst{
-            case (id, ext2: Core.ExternExpression) if ext.name == ext2.name => Core.ExpressionRef(id, ext.tpe)
-          }.getOrElse(addDefinition(ext, defs))
+          defs
+            .collectFirst {
+              case (id, ext2: Core.ExternExpression) if ext.name == ext2.name => Core.ExpressionRef(id, ext.tpe)
+            }
+            .getOrElse(addDefinition(ext, defs))
         case e: Core.Expression => addDefinition(e, defs)
       }
 

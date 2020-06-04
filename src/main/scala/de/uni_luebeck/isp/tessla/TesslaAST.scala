@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla
 import cats._
 import cats.data.Ior
 import cats.implicits._
+import de.uni_luebeck.isp.tessla.TesslaAST.PrintOptions
 
 import scala.collection.immutable.ArraySeq
 import scala.util.Try
@@ -24,12 +25,7 @@ object TesslaAST {
       printWithLocation(s, options, mayNeedBraces, location)
   }
 
-  def printWithLocation(
-    s: Boolean => String,
-    options: PrintOptions,
-    mayNeedBraces: Boolean,
-    location: Location
-  ) =
+  def printWithLocation(s: Boolean => String, options: PrintOptions, mayNeedBraces: Boolean, location: Location) =
     withBraces(
       if (options.locations && location != Location.unknown) s"${s(true)} @ $location"
       else s(mayNeedBraces),
@@ -52,7 +48,7 @@ object TesslaAST {
     override def toString = "expand"
   }
 
-  object Untyped extends TesslaAST[Option] {
+  object Untyped extends WithAnnotations[Option] {
     override type DefinitionExpression = ExpressionArg
 
     override type Evaluation = CompiletimeEvaluation
@@ -62,68 +58,55 @@ object TesslaAST {
       tpe: Option[Type],
       types: Boolean,
       mayNeedBraces: Boolean
-    ) =
+    ): String =
       tpe.filter(_ => types).map(tpe => s"${s(true)}").getOrElse(s(mayNeedBraces))
 
-    override type Annotations = Map[String, ArraySeq[ExpressionArg]]
-
-    override def printAnnotations(annotations: Annotations, options: PrintOptions) =
-      annotations.toList.sortBy(_._1).map {
-        case (name, exp) =>
-          s"@$name(${exp.map(_.print(options, mayNeedBraces = false)).mkString(", ")})"
-      }
   }
 
-  object Typed extends TesslaAST[Id] {
+  object Typed extends WithAnnotations[Id] {
     override type DefinitionExpression = ExpressionArg
 
     override type Evaluation = CompiletimeEvaluation
 
-    override def withTypeAnnotation(
-      s: Boolean => String,
-      tpe: Type,
-      types: Boolean,
-      mayNeedBraces: Boolean
-    ) =
+    override def withTypeAnnotation(s: Boolean => String, tpe: Type, types: Boolean, mayNeedBraces: Boolean): String =
       if (types) s"${s(true)}: $tpe" else s(mayNeedBraces)
 
-    override type Annotations = Map[String, ArraySeq[ExpressionArg]]
-
-    override def printAnnotations(annotations: Annotations, options: PrintOptions) =
-      annotations.toList.sortBy(_._1).map {
-        case (name, exp) =>
-          s"@$name(${exp.map(_.print(options, mayNeedBraces = false)).mkString(", ")})"
-      }
   }
 
-  object Core extends TesslaAST[Id] {
+  object Core extends WithAnnotations[Id] {
     override type DefinitionExpression = Expression
 
     override type Evaluation = RuntimeEvaluation
 
-    override def withTypeAnnotation(
-      s: Boolean => String,
-      tpe: Type,
-      types: Boolean,
-      mayNeedBraces: Boolean
-    ) =
+    override def withTypeAnnotation(s: Boolean => String, tpe: Type, types: Boolean, mayNeedBraces: Boolean): String =
       withBraces(if (types) s"${s(true)}: $tpe" else s(mayNeedBraces), types && mayNeedBraces)
 
-    override type Annotations = Map[String, ArraySeq[ExpressionArg]]
-
-    override def getOutputName(annotations: Annotations) = Try(
+    override def getOutputName(annotations: Annotations): Option[String] = Try(
       annotations("$name")(0).asInstanceOf[Core.StringLiteralExpression].value
     ).toOption
 
-    override def printAnnotations(annotations: Annotations, options: PrintOptions) =
-      annotations.toList.sortBy(_._1).map {
-        case (name, exp) =>
-          s"@$name(${exp.map(_.print(options, mayNeedBraces = false)).mkString(", ")})"
-      }
-
   }
 
-  def withBraces(s: String, addBraces: Boolean) = if (addBraces) s"(${s})" else s
+  abstract class WithAnnotations[T[_]: CommutativeApplicative] extends TesslaAST[T] {
+    override type Annotations = Map[String, ArraySeq[ExpressionArg]]
+
+    override def printAnnotations(annotations: Annotations, options: PrintOptions): List[String] =
+      annotations.toList
+        .sortBy(_._1)
+        .flatMap {
+          case (name, argslists) => argslists.map((name, _))
+        }
+        .map {
+          case (name, exp) =>
+            val expStr = exp match {
+              case rec: RecordConstructorExpression if rec.entries.isEmpty => ""
+              case e                                                       => e.print(options, mayNeedBraces = false)
+            }
+            s"@$name($expStr)"
+        }
+  }
+
+  def withBraces(s: String, addBraces: Boolean): String = if (addBraces) s"(${s})" else s
 
   def printRecord[A](
     entries: Map[String, A],
@@ -132,7 +115,7 @@ object TesslaAST {
     unit: String,
     options: PrintOptions = PrintOptions(),
     strName: (String, A) => String = (s: String, _: A) => s
-  ) = if (entries.isEmpty) unit
+  ): String = if (entries.isEmpty) unit
   else {
     val tuplified = entries.flatMap {
       case (key, value) =>
@@ -217,10 +200,8 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
   // Identifiers can either have a globally unique id or locally unique name or both.
   // For TeSSLa Core only external names, i.e. input streams do not carry a id.
   // TODO: currently also generated type parameters may not carry an id, this should be fixed once all externs are declared in the standard library.
-  final class Identifier(
-    val idOrName: Ior[String, Long],
-    override val location: Location = Location.unknown
-  ) extends Locatable {
+  final class Identifier(val idOrName: Ior[String, Long], override val location: Location = Location.unknown)
+      extends Locatable {
     override def hashCode = idOrName.hashCode
 
     override def equals(o: Any) =
@@ -256,12 +237,7 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
     override def toString = print(PrintOptions(), mayNeedBraces = false)
 
-    def withTypeAndLocation2(
-      s: Boolean => String,
-      options: PrintOptions,
-      types: Boolean,
-      mayNeedBraces: Boolean
-    ) =
+    def withTypeAndLocation2(s: Boolean => String, options: PrintOptions, types: Boolean, mayNeedBraces: Boolean) =
       withLocation(
         b => withTypeAnnotation(s, tpe, types, b && mayNeedBraces),
         options,
@@ -274,18 +250,16 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       withLocation(b => withTypeAnnotation(s, tpe, options.expTypes, b), options, mayNeedBraces)
   }
 
-  case class ExpressionRef(
-    id: Identifier,
-    tpe: TypeAnnotation[Type],
-    location: Location = Location.unknown
-  ) extends ExpressionArg {
+  case class ExpressionRef(id: Identifier, tpe: TypeAnnotation[Type], location: Location = Location.unknown)
+      extends ExpressionArg {
 
     override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
       withTypeAndLocation2(b => id.print(options, b), options, options.refTypes, mayNeedBraces)
 
   }
 
-  def indent(s: String) = s.linesIterator.map(s => "  " + s).mkString("\n")
+  def indent(s: String): String = s.linesIterator.map(s => "  " + s).mkString("\n") +
+    (if (s.endsWith("\n")) "\n" else "")
 
   case class FunctionExpression(
     typeParams: List[Identifier],
@@ -399,21 +373,16 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
     override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
       withTypeAndLocation(
         _ => {
+          val formatted = entries.map {
+            case (name, (arg, loc)) =>
+              printWithLocation(_ => name, options, mayNeedBraces = false, loc) +
+                ": " +
+                arg.print(options, mayNeedBraces = false)
+          }
           val entriesString =
-            if (entries.isEmpty) ""
-            else
-              indent(
-                entries
-                  .map(x =>
-                    printWithLocation(
-                      _ => x._1,
-                      options,
-                      mayNeedBraces = false,
-                      x._2._2
-                    ) + ": " + x._2._1.print(options, mayNeedBraces = false)
-                  )
-                  .mkString("\n", ",\n", "\n")
-              )
+            if (formatted.isEmpty) ""
+            else if (formatted.size == 1) formatted.head
+            else indent(formatted.mkString("\n", ",\n", "\n"))
           s"{$entriesString}"
         },
         options,

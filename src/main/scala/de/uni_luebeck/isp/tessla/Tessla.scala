@@ -42,11 +42,7 @@ object Tessla {
     }
   }
 
-  case class Annotation(
-    id: Identifier,
-    arguments: Seq[Argument[ConstantExpression]],
-    loc: Location
-  ) {
+  case class Annotation(id: Identifier, arguments: Seq[Argument[ConstantExpression]], loc: Location) {
     def name: String = id.name
   }
 
@@ -153,12 +149,8 @@ object Tessla {
 
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
-  case class MacroCall(
-    mac: Expression,
-    typeArgs: Seq[Type],
-    args: Seq[Argument[Expression]],
-    loc: Location
-  ) extends Expression {
+  case class MacroCall(mac: Expression, typeArgs: Seq[Type], args: Seq[Argument[Expression]], loc: Location)
+      extends Expression {
     override def toString(inner: Boolean) = {
       val typeArgList =
         if (typeArgs.isEmpty) ""
@@ -168,32 +160,24 @@ object Tessla {
       val str = mac match {
         case Variable(id) =>
           (id.name, args) match {
-            case (ID_PATTERN(), _) | (_, Seq()) =>
-              s"$mac$typeArgList(${args.mkString(", ")})"
+            case (ID_PATTERN(), _) | (_, Seq()) => s"$mac$typeArgList(${args.mkString(", ")})"
             case ("if then", Seq(cond, thenCase)) =>
               atomic = false
               s"if $cond then $thenCase"
-            case (name, Seq(PositionalArgument(arg))) =>
-              s"$name${arg.toString(inner = true)}"
+            case (name, Seq(PositionalArgument(arg))) => s"$name${arg.toString(inner = true)}"
             case (name, Seq(PositionalArgument(lhs), PositionalArgument(rhs))) =>
               atomic = false
               s"${lhs.toString(inner = true)} $name ${rhs.toString(inner = true)}"
-            case (name, _) =>
-              s"$name$typeArgList(${args.mkString(", ")})"
+            case (name, _) => s"$name$typeArgList(${args.mkString(", ")})"
           }
-        case _ =>
-          s"${mac.toString(inner = true)}$typeArgList(${args.mkString(", ")})"
+        case _ => s"${mac.toString(inner = true)}$typeArgList(${args.mkString(", ")})"
       }
       if (inner && !atomic) s"($str)" else str
     }
   }
 
-  case class StaticIfThenElse(
-    condition: Expression,
-    thenCase: Expression,
-    elseCase: Expression,
-    loc: Location
-  ) extends Expression {
+  case class StaticIfThenElse(condition: Expression, thenCase: Expression, elseCase: Expression, loc: Location)
+      extends Expression {
     override def toString(inner: Boolean) = {
       val str = s"if $condition then $thenCase else $elseCase"
       if (inner) s"($str)" else str

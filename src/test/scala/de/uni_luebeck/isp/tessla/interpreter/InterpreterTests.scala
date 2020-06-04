@@ -195,7 +195,7 @@ class InterpreterTests extends AnyFunSuite {
               .mkString
           ).convertTo[Observations]
           handleResult(
-            compiler.compile(src, options).map(_._2).andThen(Observations.Generator),
+            compiler.compile(src, options).andThen(Observations.Generator),
             testCase.expectedErrors,
             testCase.expectedWarnings
           ) { actualObservation =>
@@ -204,7 +204,7 @@ class InterpreterTests extends AnyFunSuite {
         }
         testCase.expectedObservationErrors.foreach { _ =>
           handleResult(
-            compiler.compile(src, options).map(_._2).andThen(Observations.Generator),
+            compiler.compile(src, options).andThen(Observations.Generator),
             testCase.expectedObservationErrors,
             testCase.expectedWarnings
           )(_ => ())
@@ -216,7 +216,6 @@ class InterpreterTests extends AnyFunSuite {
                 .fromSource(testSource(input), s"$path$input", testCase.abortAt.map(BigInt(_)))
               val result = compiler
                 .compile(src, options)
-                .map(_._2)
                 .map(spec => Interpreter.run(spec, trace, None))
 
               handleResult(result, testCase.expectedErrors, testCase.expectedWarnings) { output =>
@@ -249,7 +248,7 @@ class InterpreterTests extends AnyFunSuite {
             }
           case None =>
             handleResult(
-              compiler.compile(src, options).map(_._2),
+              compiler.compile(src, options),
               testCase.expectedErrors,
               testCase.expectedWarnings
             )(_ => ())
