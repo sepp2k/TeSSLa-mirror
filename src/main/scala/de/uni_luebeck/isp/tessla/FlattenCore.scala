@@ -8,6 +8,8 @@ import scala.collection.mutable
 
 object FlattenCore extends TranslationPhase[Core.Specification, Core.Specification] {
 
+  type Definitions = mutable.Map[Core.Identifier, Core.Expression]
+
   override def translate(spec: Core.Specification): Result[Core.Specification] = {
 
     object IdentifierFactory {
@@ -21,7 +23,14 @@ object FlattenCore extends TranslationPhase[Core.Specification, Core.Specificati
       def count: Long = _id
     }
 
-    def flattenArg(e: Core.ExpressionArg, defs: mutable.Map[Core.Identifier, Core.Expression]): Core.ExpressionArg =
+    def addDefinition(e: Core.Expression, defs: Definitions): Core.ExpressionRef ={
+      val newID = IdentifierFactory.next
+      val flattenedExp = flattenExpression(e, defs)
+      defs += newID -> flattenedExp
+      Core.ExpressionRef(newID, e.tpe)
+    }
+
+    def flattenArg(e: Core.ExpressionArg, defs: Definitions): Core.ExpressionArg =
       e match {
         case r: Core.ExpressionRef => r
         case lit @ (_: Core.IntLiteralExpression | _: Core.StringLiteralExpression | _: Core.FloatLiteralExpression |
@@ -30,20 +39,20 @@ object FlattenCore extends TranslationPhase[Core.Specification, Core.Specificati
         case rec @ Core.RecordConstructorExpression(m, _) if m.isEmpty =>
           flattenExpression(rec, defs)
         case typeApp: Core.TypeApplicationExpression => flattenExpression(typeApp, defs)
-        case e: Core.Expression =>
-          val newID = IdentifierFactory.next
-          val flattenedExp = flattenExpression(e, defs)
-          defs.addOne(newID -> flattenedExp)
-          Core.ExpressionRef(newID, e.tpe)
+        case ext: Core.ExternExpression =>
+          defs.collectFirst{
+            case (id, ext2: Core.ExternExpression) if ext.name == ext2.name => Core.ExpressionRef(id, ext.tpe)
+          }.getOrElse(addDefinition(ext, defs))
+        case e: Core.Expression => addDefinition(e, defs)
       }
 
-    def flattenExpression(e: Core.Expression, defs: mutable.Map[Core.Identifier, Core.Expression]): Core.Expression =
+    def flattenExpression(e: Core.Expression, defs: Definitions): Core.Expression =
       e match {
         case fun: Core.FunctionExpression =>
           val funDefs: mutable.Map[Core.Identifier, Core.Expression] = mutable.Map()
           val result = flattenArg(fun.result, funDefs)
           val body = flattenDefinitions(fun.body ++ funDefs)
-          fun.copy(body = body, result = result)
+          fun.copy(body = body.toMap, result = result)
         case app: Core.ApplicationExpression =>
           app.copy(flattenArg(app.applicable, defs), app.args.map(flattenArg(_, defs)))
         case typeApp: Core.TypeApplicationExpression =>
@@ -55,13 +64,14 @@ object FlattenCore extends TranslationPhase[Core.Specification, Core.Specificati
         case _ => e
       }
 
-    def flattenDefinitions(defs: Map[Core.Identifier, Core.Expression]): Map[Core.Identifier, Core.Expression] = {
+    def flattenDefinitions(defs: Map[Core.Identifier, Core.Expression]): Definitions = {
       val addDefs = mutable.Map[Core.Identifier, Core.Expression]()
-      defs.view.mapValues(flattenExpression(_, addDefs)).toMap ++ addDefs.toMap
+      val flattened = defs.view.mapValues(flattenExpression(_, addDefs)).toMap
+      addDefs ++ flattened
     }
 
     Success(
-      Core.Specification(spec.in, flattenDefinitions(spec.definitions), spec.out, IdentifierFactory.count),
+      Core.Specification(spec.in, flattenDefinitions(spec.definitions).toMap, spec.out, IdentifierFactory.count),
       Seq()
     )
   }
