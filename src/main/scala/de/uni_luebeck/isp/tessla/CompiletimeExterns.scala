@@ -150,15 +150,9 @@ object CompiletimeExterns {
     Core.ApplicationExpression(Core.TypeApplicationExpression(extern, typeArgs), args)
 
   val reifiers = Map[String, Reifier](
-    "Int" -> ((value, _) =>
-      (ArraySeq(), _ => Core.IntLiteralExpression(value.asInstanceOf[BigInt]))
-    ),
-    "String" -> ((value, _) =>
-      (ArraySeq(), _ => Core.StringLiteralExpression(value.asInstanceOf[String]))
-    ),
-    "Float" -> ((value, _) =>
-      (ArraySeq(), _ => Core.FloatLiteralExpression(value.asInstanceOf[Double]))
-    ),
+    "Int" -> ((value, _) => (ArraySeq(), _ => Core.IntLiteralExpression(value.asInstanceOf[BigInt]))),
+    "String" -> ((value, _) => (ArraySeq(), _ => Core.StringLiteralExpression(value.asInstanceOf[String]))),
+    "Float" -> ((value, _) => (ArraySeq(), _ => Core.FloatLiteralExpression(value.asInstanceOf[Double]))),
     "Option" -> ((value, typeArgs) =>
       value.asInstanceOf[Option[Any]] match {
         case Some(a) => (ArraySeq((a, typeArgs.head)), app(option_some_extern, typeArgs))

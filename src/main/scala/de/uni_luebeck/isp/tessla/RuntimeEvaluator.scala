@@ -41,9 +41,8 @@ class RuntimeEvaluator(externs: Map[String, Any]) {
         if (params.size != args.size) {
           throw InternalError(s"Called with wrong number of arguments.", location)
         }
-        lazy val newEnv: Env = env ++ params.map(_._1.fullName).zip(args) ++ body.map(e =>
-          (e._1.fullName, evalExpressionArg(e._2, newEnv))
-        )
+        lazy val newEnv: Env =
+          env ++ params.map(_._1.fullName).zip(args) ++ body.map(e => (e._1.fullName, evalExpressionArg(e._2, newEnv)))
         evalExpressionArg(result, newEnv)
       }
     case e: Core.ExternExpression =>

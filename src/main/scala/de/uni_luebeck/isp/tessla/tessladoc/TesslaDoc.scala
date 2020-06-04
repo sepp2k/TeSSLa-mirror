@@ -43,14 +43,11 @@ object TesslaDoc {
     isLiftable: Boolean
   ) extends TesslaDoc
 
-  case class AnnotationDoc(name: String, parameters: Seq[Param], doc: String, loc: Location)
-      extends GlobalDoc
+  case class AnnotationDoc(name: String, parameters: Seq[Param], doc: String, loc: Location) extends GlobalDoc
 
-  case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, loc: Location)
-      extends GlobalDoc
+  case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, loc: Location) extends GlobalDoc
 
-  case class ModuleDoc(name: String, doc: String, members: Seq[TesslaDoc], loc: Location)
-      extends GlobalDoc {
+  case class ModuleDoc(name: String, doc: String, members: Seq[TesslaDoc], loc: Location) extends GlobalDoc {
     override def globalsOnly: Option[TesslaDoc] =
       if (isGlobal) Some(copy(members = members.flatMap(_.globalsOnly))) else None
   }
@@ -138,9 +135,7 @@ object TesslaDoc {
         val body = definition.body
         body match {
           case body: TesslaSyntax.ExpressionBodyContext =>
-            val whereLoc = Option(body.LBRACE).map(lb =>
-              Location.fromToken(lb).merge(Location.fromToken(body.RBRACE))
-            )
+            val whereLoc = Option(body.LBRACE).map(lb => Location.fromToken(lb).merge(Location.fromToken(body.RBRACE)))
             val whereDefs =
               whereLoc.map(loc => body.defs.asScala.flatMap(new StatementVisitor(Local(loc)).visit))
             doc +: (visit(body.expression) ++ whereDefs.getOrElse(Seq()))

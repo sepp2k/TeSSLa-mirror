@@ -163,8 +163,7 @@ object Main {
 
     val compiler = new Compiler
     try {
-      val result = unwrapResult(compiler.compile(config.specSource, config.compilerOptions))
-      val core = unwrapResult(result._2)
+      val (typed, core) = unwrapResult(compiler.compile(config.specSource, config.compilerOptions))
       val printOptions = TesslaAST.PrintOptions(
         !config.printAllTypes,
         config.printAllTypes,
@@ -174,7 +173,7 @@ object Main {
       )
 
       if (config.printTyped) {
-        println(result._1.print(printOptions))
+        println(typed.print(printOptions))
       }
 
       if (config.printCore) {

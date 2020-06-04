@@ -14,17 +14,13 @@ object Errors {
     override def message = msg
   }
 
-  case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt)
-      extends Exception(error)
-      with TesslaError {
+  case class TesslaErrorWithTimestamp(error: TesslaError, timestamp: BigInt) extends Exception(error) with TesslaError {
     override def loc: Location = error.loc
 
     override def message: String = s"${error.message} (t = $timestamp)"
   }
 
-  case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location])
-      extends Exception(inner)
-      with TesslaError {
+  case class WithStackTrace(inner: TesslaError, stackTrace: Seq[Location]) extends Exception(inner) with TesslaError {
     override def loc = inner.loc
 
     override def message = inner.message
@@ -42,8 +38,7 @@ object Errors {
         " consists of an identifier and nothing else"
   }
 
-  case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location)
-      extends TesslaError {
+  case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location) extends TesslaError {
     override def message = s"Type mismatch: Expected $expected, found $found"
   }
 
@@ -53,13 +48,11 @@ object Errors {
     }
   }
 
-  case class WrongType(expected: String, found: TesslaAST.Core.Type, loc: Location)
-      extends TesslaError {
+  case class WrongType(expected: String, found: TesslaAST.Core.Type, loc: Location) extends TesslaError {
     override def message = s"Type mismatch: Expected $expected, but found $found"
   }
 
-  case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location)
-      extends TesslaError {
+  case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
     override def message =
       s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
   }
@@ -68,8 +61,7 @@ object Errors {
     override def message = s"Explicit type arguments needed for $name"
   }
 
-  case class ArityMismatch(name: String, expected: Int, actual: Int, loc: Location)
-      extends TesslaError {
+  case class ArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
     override def message =
       s"Wrong number of arguments for $name. Expected: $expected, actual: $actual"
   }
@@ -112,8 +104,7 @@ object Errors {
     override def message = s"Undefined keyword argument $name"
   }
 
-  case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location)
-      extends TesslaError {
+  case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {
     override def loc = id.loc
 
     override def message =
@@ -169,13 +160,11 @@ object Errors {
     override def message: String = s"Input $line is not an event"
   }
 
-  case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location)
-      extends TesslaError {
+  case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location) extends TesslaError {
     override def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
-  case class SameTimeStampError(timestamp: BigInt, eventName: String, loc: Location)
-      extends TesslaError {
+  case class SameTimeStampError(timestamp: BigInt, eventName: String, loc: Location) extends TesslaError {
     override def message: String = s"Multiple events $eventName at timestamp $timestamp"
   }
 
@@ -206,8 +195,7 @@ object Errors {
     override def message: String = s"Key $key was not found in $map"
   }
 
-  case class IndexOutOfRange(index: BigInt, list: IndexedSeq[_], loc: Location)
-      extends TesslaError {
+  case class IndexOutOfRange(index: BigInt, list: IndexedSeq[_], loc: Location) extends TesslaError {
     override def message: String = s"Index $index is out of range for list of size ${list.length}"
   }
 
@@ -248,8 +236,7 @@ object Errors {
       "Macro has been defined as liftable, but its type does not allow being lifted"
   }
 
-  case class MemberNotDefined(ot: TypedTessla.ObjectType, member: String, loc: Location)
-      extends TesslaError {
+  case class MemberNotDefined(ot: TypedTessla.ObjectType, member: String, loc: Location) extends TesslaError {
     override def message = s"Object of type $ot does not have a member named $member"
   }
 

@@ -110,13 +110,11 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = s"extern($name)"
   }
 
-  case class InputStream(name: String, streamType: Type, typeLoc: Location, loc: Location)
-      extends Expression {
+  case class InputStream(name: String, streamType: Type, typeLoc: Location, loc: Location) extends Expression {
     override def toString = s"in $name: $streamType"
   }
 
-  case class Parameter(param: Tessla.Parameter, parameterType: Type, id: Identifier)
-      extends Expression {
+  case class Parameter(param: Tessla.Parameter, parameterType: Type, id: Identifier) extends Expression {
     def name = param.id.name
 
     def nameWithLoc = param.id
@@ -144,15 +142,13 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
   case class IdLoc(id: Identifier, loc: Location)
 
-  case class StaticIfThenElse(condition: IdLoc, thenCase: IdLoc, elseCase: IdLoc, loc: Location)
-      extends Expression {
+  case class StaticIfThenElse(condition: IdLoc, thenCase: IdLoc, elseCase: IdLoc, loc: Location) extends Expression {
     override def toString = s"if $condition then $thenCase else $elseCase"
   }
 
   case class ObjectLiteral(members: Map[String, IdLoc], loc: Location) extends Expression
 
-  case class MemberAccess(receiver: IdLoc, member: String, memberLoc: Location, loc: Location)
-      extends Expression
+  case class MemberAccess(receiver: IdLoc, member: String, memberLoc: Location, loc: Location) extends Expression
 
   case class Literal(value: LiteralValue, loc: Location) extends Expression {
     override def toString = value.toString

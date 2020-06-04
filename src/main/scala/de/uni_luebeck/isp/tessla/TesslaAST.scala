@@ -140,9 +140,7 @@ object TesslaAST {
           Some(key.substring(1).toInt -> value)
         } else None
     }
-    if (
-      tuplified.size == entries.size && tuplified.keys.min == 1 && tuplified.keys.max == entries.size
-    ) {
+    if (tuplified.size == entries.size && tuplified.keys.min == 1 && tuplified.keys.max == entries.size) {
       val sorted = tuplified.toList.sortBy(_._1).map(x => str(x._2))
       s"(${sorted.mkString(", ")})"
     } else {
@@ -216,7 +214,7 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   def printAnnotations(annotations: Annotations, options: PrintOptions): List[String] = Nil
 
-  // Identifiers can either have a globaly unique id or locally unique name or both.
+  // Identifiers can either have a globally unique id or locally unique name or both.
   // For TeSSLa Core only external names, i.e. input streams do not carry a id.
   // TODO: currently also generated type parameters may not carry an id, this should be fixed once all externs are declared in the standard library.
   final class Identifier(
@@ -442,24 +440,21 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       )
   }
 
-  case class StringLiteralExpression(value: String, location: Location = Location.unknown)
-      extends Expression {
+  case class StringLiteralExpression(value: String, location: Location = Location.unknown) extends Expression {
     override def tpe = Applicative[TypeAnnotation].pure(StringType)
 
     override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
       withTypeAndLocation(_ => s""""$value"""", options, mayNeedBraces)
   }
 
-  case class IntLiteralExpression(value: BigInt, location: Location = Location.unknown)
-      extends Expression {
+  case class IntLiteralExpression(value: BigInt, location: Location = Location.unknown) extends Expression {
     override def tpe = Applicative[TypeAnnotation].pure(IntType)
 
     override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
       withTypeAndLocation(_ => value.toString, options, mayNeedBraces)
   }
 
-  case class FloatLiteralExpression(value: Double, location: Location = Location.unknown)
-      extends Expression {
+  case class FloatLiteralExpression(value: Double, location: Location = Location.unknown) extends Expression {
     override def tpe = Applicative[TypeAnnotation].pure(FloatType)
 
     override def print(options: PrintOptions, mayNeedBraces: Boolean): String =

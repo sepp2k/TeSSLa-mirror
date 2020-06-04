@@ -10,8 +10,7 @@ import TesslaAST.Core
 import scala.collection.immutable.ArraySeq
 import scala.util.Try
 
-class Interpreter(val spec: Core.Specification)
-    extends Specification(RuntimeEvaluator.Record(Map())) {
+class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEvaluator.Record(Map())) {
   val inStreams: Map[String, (Input, Core.Type)] = spec.in.map { inStream =>
     inStream._1.idOrName.left.get -> (new Input, inStream._2._1)
   }
@@ -35,18 +34,14 @@ class Interpreter(val spec: Core.Specification)
         op(args.map(a => Lazy(a))).get.asInstanceOf[Option[Any]]
       })
     }),
-    "merge" -> ((arguments: ArraySeq[Lazy[Any]]) =>
-      Lazy(merge(arguments.map(_.get.asInstanceOf[Stream])))
-    ),
+    "merge" -> ((arguments: ArraySeq[Lazy[Any]]) => Lazy(merge(arguments.map(_.get.asInstanceOf[Stream])))),
     "default" -> ((arguments: ArraySeq[Lazy[Any]]) =>
       Lazy(arguments(0).get.asInstanceOf[Stream].default(arguments(1).get))
     ),
     "defaultFrom" -> ((arguments: ArraySeq[Lazy[Any]]) =>
       Lazy(arguments(0).get.asInstanceOf[Stream].default(arguments(1).get.asInstanceOf[Stream]))
     ),
-    "time" -> ((arguments: ArraySeq[Lazy[Any]]) =>
-      Lazy(arguments(0).get.asInstanceOf[Stream].time())
-    ),
+    "time" -> ((arguments: ArraySeq[Lazy[Any]]) => Lazy(arguments(0).get.asInstanceOf[Stream].time())),
     "nil" -> ((_: ArraySeq[Lazy[Any]]) => Lazy(nil))
   )
 
@@ -119,9 +114,7 @@ object Interpreter {
               assert(tpe.typeArgs.size == 1)
               RuntimeTypeChecker
                 .check(tpe.typeArgs.head, event.value)
-                .foreach(error =>
-                  throw mkTesslaError("input " + event.stream.name + ": " + error, event.loc)
-                )
+                .foreach(error => throw mkTesslaError("input " + event.stream.name + ": " + error, event.loc))
               //ValueTypeChecker.check(event.value, elementType, event.stream.name)
               if (seen.contains(event.stream.name)) {
                 throw SameTimeStampError(eventTime, event.stream.name, event.timeStamp.loc)

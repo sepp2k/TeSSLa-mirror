@@ -123,9 +123,7 @@ object RuntimeExterns {
     ),
     "None" -> ((_: ArraySeq[A[Any]]) => None.pure[A]),
     "Some" -> strict(arguments => Some(arguments(0)).pure[A]),
-    "isNone" -> strict(arguments =>
-      propagateSingle(arguments(0))(_.asInstanceOf[Option[Any]].isEmpty.pure[A])
-    ),
+    "isNone" -> strict(arguments => propagateSingle(arguments(0))(_.asInstanceOf[Option[Any]].isEmpty.pure[A])),
     "getSome" -> strict(arguments =>
       propagateSingle(arguments(0))(
         _.asInstanceOf[Option[Any]].getOrElse(RuntimeError("Tried get on None.")).pure[A]

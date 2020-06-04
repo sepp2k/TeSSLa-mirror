@@ -1,14 +1,6 @@
 package de.uni_luebeck.isp.tessla.analyses
 
-import de.uni_luebeck.isp.tessla.{
-  CPatternLexer,
-  CPatternParser,
-  Errors,
-  Location,
-  Tessla,
-  TesslaAST,
-  TranslationPhase
-}
+import de.uni_luebeck.isp.tessla.{CPatternLexer, CPatternParser, Errors, Location, Tessla, TesslaAST, TranslationPhase}
 import TesslaAST.Core
 import Observations._
 import de.uni_luebeck.isp.tessla.Errors.{InternalError, ParserError, TesslaErrorWithTimestamp}
@@ -20,14 +12,7 @@ import de.uni_luebeck.isp.tessla.CPatternParser.{
   RefContext,
   VariableContext
 }
-import org.antlr.v4.runtime.{
-  BaseErrorListener,
-  CharStreams,
-  CommonTokenStream,
-  RecognitionException,
-  Recognizer,
-  Token
-}
+import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
@@ -97,8 +82,7 @@ object Observations {
   implicit val patternFormat: JsonFormat[Pattern] = lazyFormat(jsonFormat6(Pattern))
   implicit val observationsFormat: JsonFormat[Observations] = jsonFormat7(Observations.apply)
 
-  class Generator(spec: TesslaAST.Core.Specification)
-      extends TranslationPhase.Translator[Observations] {
+  class Generator(spec: TesslaAST.Core.Specification) extends TranslationPhase.Translator[Observations] {
     def parsePattern(str: String, loc: Location, function: Option[String] = None): Pattern = {
       val src = CharStreams.fromString(str, loc.path)
       val lexer = new CPatternLexer(src)
@@ -130,9 +114,7 @@ object Observations {
         case ctx: ArrayContext => Pattern(ArrayAccess = Some(translatePattern(ctx.pattern())))
         case ctx: RefContext   => Pattern(Ref = Some(translatePattern(ctx.pattern())))
         case ctx: VariableContext =>
-          Pattern(Variable =
-            Some(Variable(VarName = ctx.ID().getSymbol.getText, Function = function))
-          )
+          Pattern(Variable = Some(Variable(VarName = ctx.ID().getSymbol.getText, Function = function)))
         case ctx: MemberContext =>
           Pattern(StructUnionAccess =
             Some(
@@ -173,8 +155,7 @@ object Observations {
 
     val threadIdInStreams = spec.in
       .filter {
-        case (name, (tpe, annotations)) =>
-          annotations.contains("ThreadId")
+        case (name, (tpe, annotations)) => annotations.contains("ThreadId")
       }
       .keys
       .toList
@@ -201,9 +182,7 @@ object Observations {
         .groupBy(_.copy(code = None))
         .values
         .map { patterns =>
-          patterns.reduce((a, b) =>
-            a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr)))
-          )
+          patterns.reduce((a, b) => a.copy(code = a.code.flatMap(aStr => b.code.map(bStr => aStr + "\n" + bStr))))
         }
         .toSeq
 

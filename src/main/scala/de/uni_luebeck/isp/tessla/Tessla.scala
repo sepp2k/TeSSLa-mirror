@@ -72,8 +72,7 @@ object Tessla {
     def name: String = id.name
   }
 
-  case class AnnotationDefinition(id: Identifier, parameters: Seq[Parameter], loc: Location)
-      extends Statement
+  case class AnnotationDefinition(id: Identifier, parameters: Seq[Parameter], loc: Location) extends Statement
 
   case class TypeDefinition(
     id: Identifier,
@@ -99,13 +98,11 @@ object Tessla {
     override def toString = s"extern($id)"
   }
 
-  case class In(id: Identifier, streamType: Type, annotations: Seq[Annotation], loc: Location)
-      extends Statement {
+  case class In(id: Identifier, streamType: Type, annotations: Seq[Annotation], loc: Location) extends Statement {
     override def toString = s"in $id: $streamType"
   }
 
-  case class Out(expr: Expression, id: Identifier, annotations: Seq[Annotation], loc: Location)
-      extends Statement {
+  case class Out(expr: Expression, id: Identifier, annotations: Seq[Annotation], loc: Location) extends Statement {
     def name = id.name
 
     override def toString = s"out $expr as $name"
@@ -203,8 +200,7 @@ object Tessla {
     }
   }
 
-  case class Block(definitions: Seq[Definition], expression: Expression, loc: Location)
-      extends Expression {
+  case class Block(definitions: Seq[Definition], expression: Expression, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
   }
 
@@ -226,8 +222,7 @@ object Tessla {
     }
   }
 
-  case class MemberAccess(receiver: Expression, member: Identifier, loc: Location)
-      extends Expression {
+  case class MemberAccess(receiver: Expression, member: Identifier, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"${receiver.toString(inner = true)}.$member"
   }
 
@@ -271,8 +266,7 @@ object Tessla {
       override def toString = value.toString
     }
 
-    case class Object(members: Map[Identifier, ConstantExpression], loc: Location)
-        extends ConstantExpression {
+    case class Object(members: Map[Identifier, ConstantExpression], loc: Location) extends ConstantExpression {
       override def toString = {
         members
           .map {
@@ -324,8 +318,7 @@ object Tessla {
     override def toString = s"(${parameterTypes.mkString(", ")}) => $returnType]"
   }
 
-  case class ObjectType(memberTypes: Map[Identifier, Type], isOpen: Boolean, loc: Location)
-      extends Type {
+  case class ObjectType(memberTypes: Map[Identifier, Type], isOpen: Boolean, loc: Location) extends Type {
     override def toString = {
       var members = memberTypes.toSeq.map { case (name, t) => s"$name : $t" }
       if (isOpen) {

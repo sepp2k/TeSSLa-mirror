@@ -2,6 +2,8 @@ package de.uni_luebeck.isp.tessla
 
 import de.uni_luebeck.isp.tessla.Compiler.Options
 import de.uni_luebeck.isp.tessla.Tessla.TimeLiteral
+import de.uni_luebeck.isp.tessla.TesslaAST._
+import de.uni_luebeck.isp.tessla.TranslationPhase._
 import org.antlr.v4.runtime.CharStream
 
 object Compiler {
@@ -19,23 +21,22 @@ object Compiler {
 
 class Compiler {
 
-  def instantiatePipeline(options: Options): TranslationPhase[
-    CharStream,
-    (TesslaAST.Typed.Specification, TranslationPhase.Result[TesslaAST.Core.Specification])
-  ] = {
+  def instantiatePipeline(options: Options): TranslationPhase[CharStream, (Typed.Specification, Core.Specification)] = {
     new TesslaParser.WithIncludes(options.includeResolver)
       .andThen(new StdlibIncluder(options.stdlibIncludeResolver, options.stdlibPath))
       .andThen(TesslaSyntaxToTessla)
       .andThen(Flattener)
       .andThen(TypeChecker)
       .andThen(new TypedTessla2TesslaASTCore(options.baseTime))
-      .andThen(new TranslationPhase.BypassPhase(new ConstantEvaluator))
-    //.andThen(RemoveUnusedDefinitions)
+      .andThen(
+        new BypassPhase(
+          new ConstantEvaluator()
+            .andThen(FlattenCore)
+        )
+      )
   }
 
-  def compile(src: CharStream, options: Options): TranslationPhase.Result[
-    (TesslaAST.Typed.Specification, TranslationPhase.Result[TesslaAST.Core.Specification])
-  ] = {
+  def compile(src: CharStream, options: Options): Result[(Typed.Specification, Core.Specification)] = {
     instantiatePipeline(options).translate(src)
   }
 
@@ -47,8 +48,7 @@ class Compiler {
     }
   }
 
-  class EnableIf[T](condition: Boolean, phase: TranslationPhase[T, T])
-      extends TranslationPhase[T, T] {
+  class EnableIf[T](condition: Boolean, phase: TranslationPhase[T, T]) extends TranslationPhase[T, T] {
     override def translate(spec: T) = {
       if (condition) {
         phase.translate(spec)
