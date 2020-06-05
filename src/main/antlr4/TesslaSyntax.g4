@@ -14,11 +14,11 @@ entry: statement eos;
 
 statement
     : def #Definition
-    | tessladoc+=DOCLINE* NL* 'def' '@' ID ( '(' parameters+=param (',' parameters+=param)* ')' )? #AnnotationDefinition
-    | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' typeParameters+=ID (',' typeParameters+=ID)* ']')? (':='|'=') NL* typeBody #TypeDefinition
-    | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=entry* '}' #ModuleDefinition
+    | tessladoc+=DOCLINE* NL* 'def' NL* '@' ID ( '(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')' )? #AnnotationDefinition
+    | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' NL* typeParameters+=ID (',' NL* typeParameters+=ID)* NL* ']')? (':='|'=') NL* typeBody #TypeDefinition
+    | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=entry* NL* '}' #ModuleDefinition
     | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement
-    | annotations+=annotation* 'in' NL* ID NL* ':' NL* type #In
+    | annotations+=annotation* 'in' NL* ID ':' NL* type #In
     | annotations+=annotation* 'out' NL* (expression ('as' NL* ID)? | star='*') #Out
     ;
 
@@ -26,7 +26,7 @@ def: header=definitionHeader (':='|'=') NL* body;
 
 body
     : expression ('where' '{' NL* (defs+=def eos)* '}')? #ExpressionBody
-    | 'extern' '(' name=ID (',' expression)? ')' #BuiltInBody
+    | 'extern' '(' NL* name=ID (',' NL* expression)? NL* ')' #BuiltInBody
     ;
 
 definitionHeader:
@@ -37,7 +37,7 @@ definitionHeader:
     ('(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')')?
     (':' NL* resultType=type)?;
 
-annotation: '@' ID ( '(' arguments+=annotationArg (',' arguments+=annotationArg)* ')' )? NL*;
+annotation: '@' ID ( '(' NL* arguments+=annotationArg (',' NL* arguments+=annotationArg)* NL* ')' )? NL*;
 
 annotationArg: (name=ID '=' NL*)? constantExpression;
 
@@ -52,22 +52,22 @@ constantMemberDefinition: name=ID ((':'|'=') NL* value=constantExpression)?;
 
 param: ID (':' NL* parameterType=evalType)?;
 
-evalType: evaluation=(STRICT | LAZY)? NL* typ=type;
+evalType: evaluation=(STRICT | LAZY)? typ=type;
 
 typeBody
     : type #TypeAliasBody
-    | 'extern' '(' name=ID ')' #BuiltInTypeBody
+    | 'extern' '(' NL* name=ID NL* ')' #BuiltInTypeBody
     ;
 
 type
     : name=ID #SimpleType
     | name=ID '[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']' #TypeApplication
-    | '(' NL* parameterTypes+=evalType (',' NL* parameterTypes+=evalType)* NL* ')' NL* '=>' NL* resultType=type #FunctionType
+    | '(' NL* parameterTypes+=evalType (',' NL* parameterTypes+=evalType)* NL* ')' '=>' NL* resultType=type #FunctionType
     | ('${' | '{') NL* (memberSigs+=memberSig (',' NL* memberSigs+=memberSig)* (',' '..'?)?)? NL* '}' #ObjectType
-    | '(' NL* (elementTypes+=type (',' NL* elementTypes+=type)* NL*)? ')' #TupleType
+    | '(' NL* (elementTypes+=type (',' NL* elementTypes+=type)* )? NL* ')' #TupleType
     ;
 
-memberSig: name=ID ':' type;
+memberSig: name=ID ':' NL* type;
 
 expression
     : ID #Variable
