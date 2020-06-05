@@ -29,9 +29,9 @@ module String {
   ## 8: x = Z
   ## 8: result = ZB
   ## ~~~
-  liftable def concat(str1: strict String, str2: strict String): String = extern(String_concat)
+  liftable def concat(str1: strict String, str2: strict String): String = extern("String_concat")
 
-  liftable def format[T](formatString: strict String, value: strict T): String = extern(String_format)
+  liftable def format[T](formatString: strict String, value: strict T): String = extern("String_format")
 
   liftable def formatInt(formatString: String, value: Int): String = format(formatString, value)
 

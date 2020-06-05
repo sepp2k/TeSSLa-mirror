@@ -26,7 +26,7 @@ def: header=definitionHeader (':='|'=') NL* body;
 
 body
     : expression ('where' '{' NL* (defs+=def eos)* '}')? #ExpressionBody
-    | 'extern' '(' NL* name=ID (',' NL* expression)? NL* ')' #BuiltInBody
+    | 'extern' '(' NL* name=externID (',' NL* expression)? NL* ')' #BuiltInBody
     ;
 
 definitionHeader:
@@ -56,7 +56,7 @@ evalType: evaluation=(STRICT | LAZY)? typ=type;
 
 typeBody
     : type #TypeAliasBody
-    | 'extern' '(' NL* name=ID NL* ')' #BuiltInTypeBody
+    | 'extern' '(' NL* name=externID NL* ')' #BuiltInTypeBody
     ;
 
 type
@@ -102,6 +102,8 @@ memberDefinition: name=ID ((':'|'=') NL* value=expression)?;
 arg: (name=ID '=' NL*)? expression;
 
 stringLit: openingQuote=(DQUOTE | 'f"') stringContents* closingQuote=DQUOTE;
+
+externID: DQUOTE content=TEXT DQUOTE;
 
 stringContents
     : TEXT #Text

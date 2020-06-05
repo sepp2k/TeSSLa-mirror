@@ -117,22 +117,22 @@ def __private__Option_toSet[T](option: Option[T]): Set[T] =
 # Further functionality (such as map etc.) is defined in the Option module.
 
 ## Represents optional values. Instances of `Option` are either an instance of [`Some`](#some) or [`None`](#none)
-type Option[T] = extern(Option)
+type Option[T] = extern("Option")
 
 ## Represents non-existent values of type `T`
-def None[T]: Option[T] = extern(None)
+def None[T]: Option[T] = extern("None")
 
 ## Represents existing values of type `T`
-liftable def Some[T](value: lazy T): Option[T] = extern(Some)
+liftable def Some[T](value: lazy T): Option[T] = extern("Some")
 
 ## Returns [`true`](#true) if the given option is a [`None`](#none) or [`false`](#false) if it is a [`Some`](#some)
-liftable def isNone[T](opt: strict Option[T]): Bool = extern(isNone)
+liftable def isNone[T](opt: strict Option[T]): Bool = extern("isNone")
 
 ## Returns [`true`](#true) if the given option is a [`Some`](#some) or [`false`](#false) if it is a [`None`](#none)
 liftable def isSome[T](opt: Option[T]): Bool = !isNone(opt)
 
 ## Get the value contained in a [`Some`](#some). If the given option is a [`None`](#none), a run-time error will occur
-liftable def getSome[T](opt: strict Option[T]): T = extern(getSome)
+liftable def getSome[T](opt: strict Option[T]): T = extern("getSome")
 
 ## Get the value contained in a [`Some`](#some). If the given option is a [`None`](#none), the default value `value` will be returned
 liftable def getSomeOrElse[T](opt: Option[T], value: T): T = if isSome(opt) then getSome(opt) else value

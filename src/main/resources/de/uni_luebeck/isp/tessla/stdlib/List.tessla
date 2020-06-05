@@ -2,7 +2,7 @@
 module List {
 
   ## Returns an empty list without any element of type `T`
-  def empty[T]: List[T] = extern(List_empty)
+  def empty[T]: List[T] = extern("List_empty")
 
   ## Appends the given `element` to the end of the given `list`
   ##
@@ -30,7 +30,7 @@ module List {
   ## 6: list = [2, 1, 2]
   ## 6: x = 2
   ## ~~~
-  liftable def append[T](list: strict List[T], element: strict T): List[T] = extern(List_append)
+  liftable def append[T](list: strict List[T], element: strict T): List[T] = extern("List_append")
 
   ## Prepends the given `element` to the begining of the given `list`
   ##
@@ -58,7 +58,7 @@ module List {
   ## 6: list = [3, 2, 1]
   ## 6: x = 3
   ## ~~~
-  liftable def prepend[T](element: strict T, list: strict List[T]): List[T] = extern(List_prepend)
+  liftable def prepend[T](element: strict T, list: strict List[T]): List[T] = extern("List_prepend")
 
   ## Gets the element at the requested `index`
   ##
@@ -95,7 +95,7 @@ module List {
   ## 8: element = 1
   ## 8: y = 2
   ## ~~~
-  liftable def get[T](list: strict List[T], index: strict Int): T = extern(List_get)
+  liftable def get[T](list: strict List[T], index: strict Int): T = extern("List_get")
 
   ## Sets the value at the given `index`
   ##
@@ -127,7 +127,7 @@ module List {
   ## 8: y = 1
   ## 8: list = [D, D]
   ## ~~~
-  liftable def set[T](list: strict List[T], index: strict Int, value: strict T): List[T] = extern(List_set)
+  liftable def set[T](list: strict List[T], index: strict Int, value: strict T): List[T] = extern("List_set")
 
   ## Returns the number of elements in the given `list`
   ##
@@ -161,7 +161,7 @@ module List {
   ## 6: list = [1, 2, 3]
   ## 6: x = 3
   ## ~~~
-  liftable def size[T](list: strict List[T]): Int = extern(List_size)
+  liftable def size[T](list: strict List[T]): Int = extern("List_size")
 
   ## Returns [`true`](#true) if the given `list` has a size of zero
   ##
@@ -228,7 +228,7 @@ module List {
   ## 6: list = [1, 2, 3]
   ## 6: x = 3
   ## ~~~
-  liftable def tail[T](list: strict List[T]): List[T] = extern(List_tail)
+  liftable def tail[T](list: strict List[T]): List[T] = extern("List_tail")
 
   ## Selects all elements except the last
   ##
@@ -262,7 +262,7 @@ module List {
   ## 6: list = [1, 2, 3]
   ## 6: x = 3
   ## ~~~
-  liftable def init[T](list: strict List[T]): List[T] = extern(List_init)
+  liftable def init[T](list: strict List[T]): List[T] = extern("List_init")
 
   ## Selects the first element of the `list`
   ##
@@ -363,10 +363,10 @@ module List {
   ## 6: list = [1, 2, 3]
   ## 6: x = 3
   ## ~~~
-  liftable def fold[T, U](list: strict List[T], start: lazy U, f: strict (strict U, strict T) => U): U = extern(List_fold)
+  liftable def fold[T, U](list: strict List[T], start: lazy U, f: strict (strict U, strict T) => U): U = extern("List_fold")
 }
 
 # Define the type outside of the module
 # so one can write `List[Int]` instead of `List.List[Int]`.
 ## Type List
-type List[T] = extern(List)
+type List[T] = extern("List")

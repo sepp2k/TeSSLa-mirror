@@ -1,7 +1,7 @@
 ## Maps
 module Map {
   ## Returns an empty `map` without any element of type `T`
-  def empty[K, V]: Map[K, V] = extern(Map_empty)
+  def empty[K, V]: Map[K, V] = extern("Map_empty")
 
   ## Associate a `key` to a `value` in this map, overriding the previous mapping for `key`
   ## if existent.
@@ -30,7 +30,7 @@ module Map {
   ## 7: x = (B, 8)
   ## 7: map = A → 2, B → 8
   ## ~~~
-  liftable def add[K, V](map: strict Map[K, V], key: strict K, value: strict V): Map[K, V] = extern(Map_add)
+  liftable def add[K, V](map: strict Map[K, V], key: strict K, value: strict V): Map[K, V] = extern("Map_add")
 
   ## Returns true if the given `map` contains a mapping for the specified `key`
   ##
@@ -67,7 +67,7 @@ module Map {
   ## 7: y = C
   ## 7: contains = false
   ## ~~~
-  liftable def contains[K, V](map: strict Map[K, V], key: strict K): Bool = extern(Map_contains)
+  liftable def contains[K, V](map: strict Map[K, V], key: strict K): Bool = extern("Map_contains")
 
   ## Get the corresponding `value` for the given `key`
   ##
@@ -104,7 +104,7 @@ module Map {
   ## 7: map = A → 2, B → 8
   ## 7: value = 8
   ## ~~~
-  liftable def get[K, V](map: strict Map[K, V], key: strict K): V = extern(Map_get)
+  liftable def get[K, V](map: strict Map[K, V], key: strict K): V = extern("Map_get")
 
   ## Removes the entry matching the given `key`
   ##
@@ -125,13 +125,13 @@ module Map {
   ## stream x: events
   ## stream map: signal
   ## ---
-  ## 0: map = A → 2, B → 4 
+  ## 0: map = A → 2, B → 4
   ## 4: x = A
   ## 4: map = B → 4
   ## 7: x = C
   ## 7: map = B → 4
   ## ~~~
-  liftable def remove[K, V](map: strict Map[K, V], key: strict K): Map[K, V] = extern(Map_remove)
+  liftable def remove[K, V](map: strict Map[K, V], key: strict K): Map[K, V] = extern("Map_remove")
 
   ## Returns the number of elements in the given `map`
   ##
@@ -159,13 +159,13 @@ module Map {
   ## 1: map = A → 2
   ## 1: size = 1
   ## 4: x = B → 4
-  ## 4: map = A → 2, B → 4 
+  ## 4: map = A → 2, B → 4
   ## 4: size = 2
   ## 7: x = (B, 8)
   ## 7: map = A → 2, B → 8
   ## 7: size = 2
   ## ~~~
-  liftable def size[K, V](map: strict Map[K, V]): Int = extern(Map_size)
+  liftable def size[K, V](map: strict Map[K, V]): Int = extern("Map_size")
 
   ## Returns the `keys` of the elements in the given `map` as `list`
   ##
@@ -193,10 +193,10 @@ module Map {
   ## 3: map = A → 2
   ## 3: keys = A
   ## 7: x = (B, 4)
-  ## 7: map = A → 2, B → 4 
+  ## 7: map = A → 2, B → 4
   ## 7: keys = A, B
   ## ~~~
-  liftable def keys[K, V](map: strict Map[K, V]): List[K] = extern(Map_keys)
+  liftable def keys[K, V](map: strict Map[K, V]): List[K] = extern("Map_keys")
 
   ## Applies a function `f` on all values of the `map`.
   ## Starting with the initial value `start` the function `f` is called for every pair of the `map` with the
@@ -232,7 +232,7 @@ module Map {
   ## 7: map = A → 2, B → 8
   ## 7: sum = 10
   ## ~~~
-  liftable def fold[K, V, R](map: strict Map[K, V], start: lazy R, f: strict (strict R, strict K, strict V) => R): R = extern(Map_fold)
+  liftable def fold[K, V, R](map: strict Map[K, V], start: lazy R, f: strict (strict R, strict K, strict V) => R): R = extern("Map_fold")
 
   ## Get the `value` associated with the `key` if it exists in the map,
   ## and the default value otherwise.
@@ -241,7 +241,7 @@ module Map {
   ##
   ## ~~~ruby
   ## in x: Events[(String, Int)]
-  ## in y: Events[String] 
+  ## in y: Events[String]
   ## def old = last(map, x)
   ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
   ## def result = Map.getOrElse(map, y, 42)
@@ -297,7 +297,7 @@ module Map {
   ## 3: x = A
   ## 3: map = A → 2
   ## 6: x = C
-  ## 6: map = A → 2, C → 1 
+  ## 6: map = A → 2, C → 1
   ## ~~~
   liftable def inc[K](counts: Map[K, Int], key: K): Map[K, Int] =
     add(counts, key, getOrElse(counts, key, 0) + 1)
@@ -330,7 +330,7 @@ module Map {
   def collectCount[T](events: Events[T]): Events[Map[T, Int]] =
     __root__.fold(events, empty[T, Int], inc)
 
-  ## Get the maximum of `value`, grouped by `key`. 
+  ## Get the maximum of `value`, grouped by `key`.
   ##
   ## **Usage example:**
   ##
@@ -366,7 +366,7 @@ module Map {
     map
   }
 
-  ## Get the minimum of `value`, grouped by `key`. 
+  ## Get the minimum of `value`, grouped by `key`.
   ##
   ## **Usage example:**
   ##
@@ -447,4 +447,4 @@ module Map {
 
 # Define the type outside of the module
 # so one can write `Map[Int]` instead of `Map.Map[Int]`.
-type Map[K, V] = extern(Map)
+type Map[K, V] = extern("Map")

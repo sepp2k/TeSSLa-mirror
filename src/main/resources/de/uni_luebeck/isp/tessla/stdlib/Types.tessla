@@ -6,27 +6,27 @@ module Types {}
 def @raw
 
 ## A Boolean can be either [`true`](#true) or [`false`](#false)
-type Bool = extern(Bool)
+type Bool = extern("Bool")
 
 ## Integer. The maximal and minimal values depend on the TeSSLa engine. The TeSSLa software backend uses
 ## [BigInt](https://www.scala-lang.org/api/2.12.7/scala/math/BigInt$.html), i.e. every integer can be represented
-type Int = extern(Int)
+type Int = extern("Int")
 
 ## Float. The data range depends on the TeSSLa engine. The TeSSLa software backend uses a 64-bit IEEE-754 floating
 ## point number
-type Float = extern(Float)
+type Float = extern("Float")
 
 ## String can store arbitrary long character sequences
-type String = extern(String)
+type String = extern("String")
 
 ## `()` is the only value of type `Unit`, i.e. this type can be used to represent events without values.
 type Unit = ()
 
 ## Basic type for streams
-type Events[T] = extern(Events)
+type Events[T] = extern("Events")
 
 ## A Boolean value representing that a given proposition is true
-def true: Bool = extern(true)
+def true: Bool = extern("true")
 
 ## A Boolean value representing that a given proposition is false
-def false: Bool = extern(false)
+def false: Bool = extern("false")

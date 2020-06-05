@@ -138,7 +138,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         )
       }
     case builtIn: TesslaSyntax.BuiltInBodyContext =>
-      Tessla.BuiltInBody(mkID(builtIn.name), Option(builtIn.expression).map(translateExpression))
+      Tessla.BuiltInBody(mkID(builtIn.name.content), Option(builtIn.expression).map(translateExpression))
   }
 
   class StatementVisitor(tokens: CommonTokenStream) extends TesslaVisitor[Tessla.Statement] {
@@ -181,7 +181,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         case typ: TesslaSyntax.TypeAliasBodyContext =>
           Tessla.TypeAlias(translateType(typ.`type`))
         case builtIn: TesslaSyntax.BuiltInTypeBodyContext =>
-          Tessla.BuiltInType(mkID(builtIn.name))
+          Tessla.BuiltInType(mkID(builtIn.name.content))
       }
       checkForDuplicates(typeParams.toSeq)
       Tessla.TypeDefinition(mkID(typeDef.name), typeParams.toSeq, body, loc)

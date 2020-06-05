@@ -8,13 +8,13 @@ liftable def max(a: Int, b: Int): Int = if a > b then a else b
 liftable def min(a: Int, b: Int): Int = if a < b then a else b
 
 ## Converts any type into its typical string representation
-liftable def toString[T](arg: strict T): String = extern(toString)
+liftable def toString[T](arg: strict T): String = extern("toString")
 
 ## Returns the value of the first argument raised to the power of the second argument.
-liftable def pow(base: strict Float, exponent: strict Float): Float = extern(pow)
+liftable def pow(base: strict Float, exponent: strict Float): Float = extern("pow")
 
 ## Returns the logarithm to base `base` of `x`
-liftable def log(x: strict Float, base: strict Float): Float = extern(log)
+liftable def log(x: strict Float, base: strict Float): Float = extern("log")
 
 ## Returns the trigonometric sine of an angle `x` in radians.
 ##
@@ -22,33 +22,33 @@ liftable def log(x: strict Float, base: strict Float): Float = extern(log)
 ##
 ## * If the argument is NaN or an infinity, then the result is NaN.
 ## * If the argument is zero, then the result is a zero with the same sign as the argument.
-liftable def sin(x: strict Float): Float = extern(sin)
+liftable def sin(x: strict Float): Float = extern("sin")
 
 ## Returns the trigonometric cosine of an angle in radians.
 ##
 ## Special cases:
 ##
 ## * If the argument is NaN or an infinity, then the result is NaN.
-liftable def cos(x: strict Float): Float = extern(cos)
+liftable def cos(x: strict Float): Float = extern("cos")
 
 ## Returns the trigonometric tangent of an angle in radians.
-## 
+##
 ## Special cases:
 ##
 ## * If the argument is NaN or an infinity, then the result is NaN.
 ## * If the argument is zero, then the result is a zero with the same sign as the argument.
-liftable def tan(x: strict Float): Float = extern(tan)
+liftable def tan(x: strict Float): Float = extern("tan")
 
 ## Returns the arc tangent of a value; the returned angle is in the range _-π/2_ through _π/2_.
-## 
+##
 ## Special cases:
 ##
 ## * If the argument is NaN, then the result is NaN.
 ## * If the argument is zero, then the result is a zero with the same sign as the argument.
-liftable def atan(x: strict Float): Float = extern(atan)
+liftable def atan(x: strict Float): Float = extern("atan")
 
 ## Converts the given integer to a float.
-liftable def intToFloat(x: strict Int): Float = extern(intToFloat)
+liftable def intToFloat(x: strict Int): Float = extern("intToFloat")
 
 ## Converts the given float to an integer removing the decimal part
-liftable def floatToInt(x: strict Float): Int = extern(floatToInt)
+liftable def floatToInt(x: strict Float): Int = extern("floatToInt")
