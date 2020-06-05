@@ -117,7 +117,7 @@ object IntermediateCode {
   }
 
   final case class LazyContainer(subType: ImpLanType) extends GenericImpLanType(Seq(subType)) {
-    override def toString : String = s"Lazy[${subType}]"
+    override def toString : String = s"Lazy<${subType}>"
   }
 
   /* Values */

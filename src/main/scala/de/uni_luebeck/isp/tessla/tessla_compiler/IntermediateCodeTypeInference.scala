@@ -82,7 +82,6 @@ object IntermediateCodeTypeInference {
         val innerExp : ImpLanExpr = exp match {
           case CastingExpression(e, from, target) => CastingExpression(castExpression(e, scala.Some(from), varTypes), from, target)
           case FunctionCall(name, params, typeHint) =>
-            val np = params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)}
             FunctionCall(name, params.zip(typeHint.argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)}, typeHint)
           case LambdaApplication(exp, params) => typeInference(exp, varTypes) match {
             case FunctionType(argsTypes, _) => LambdaApplication(castExpression(exp, scala.None, varTypes), params.zip(argsTypes).map{case (e,t) => castExpression(e, scala.Some(t), varTypes)})
