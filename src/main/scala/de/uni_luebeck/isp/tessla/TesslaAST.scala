@@ -18,20 +18,6 @@ object TesslaAST {
     locations: Boolean = false
   )
 
-  trait Locatable {
-    def location: Location
-
-    def withLocation(s: Boolean => String, options: PrintOptions, mayNeedBraces: Boolean) =
-      printWithLocation(s, options, mayNeedBraces, location)
-  }
-
-  def printWithLocation(s: Boolean => String, options: PrintOptions, mayNeedBraces: Boolean, location: Location) =
-    withBraces(
-      if (options.locations && location != Location.unknown) s"${s(true)} @ $location"
-      else s(mayNeedBraces),
-      mayNeedBraces && options.locations
-    )
-
   sealed trait CompiletimeEvaluation
 
   sealed trait RuntimeEvaluation extends CompiletimeEvaluation
@@ -48,18 +34,21 @@ object TesslaAST {
     override def toString = "expand"
   }
 
+  trait Locatable {
+    def location: Location
+
+    def withLocation(s: Boolean => String, options: PrintOptions, mayNeedParens: Boolean) =
+      printWithLocation(s, options, mayNeedParens, location)
+  }
+
   object Untyped extends WithAnnotations[Option] {
     override type DefinitionExpression = ExpressionArg
 
     override type Evaluation = CompiletimeEvaluation
 
-    override def withTypeAnnotation(
-      s: Boolean => String,
-      tpe: Option[Type],
-      types: Boolean,
-      mayNeedBraces: Boolean
-    ): String =
-      tpe.filter(_ => types).map(tpe => s"${s(true)}").getOrElse(s(mayNeedBraces))
+    override def withTypeAnnotation(s: Boolean => String, tpe: Option[Type],
+                                    types: Boolean, mayNeedParens: Boolean): String =
+      tpe.filter(_ => types).map(_ => s"${s(true)}").getOrElse(s(mayNeedParens))
 
   }
 
@@ -68,8 +57,8 @@ object TesslaAST {
 
     override type Evaluation = CompiletimeEvaluation
 
-    override def withTypeAnnotation(s: Boolean => String, tpe: Type, types: Boolean, mayNeedBraces: Boolean): String =
-      if (types) s"${s(true)}: $tpe" else s(mayNeedBraces)
+    override def withTypeAnnotation(s: Boolean => String, tpe: Type, types: Boolean, mayNeedParens: Boolean): String =
+      if (types) s"${s(true)}: $tpe" else s(mayNeedParens)
 
   }
 
@@ -78,8 +67,8 @@ object TesslaAST {
 
     override type Evaluation = RuntimeEvaluation
 
-    override def withTypeAnnotation(s: Boolean => String, tpe: Type, types: Boolean, mayNeedBraces: Boolean): String =
-      withBraces(if (types) s"${s(true)}: $tpe" else s(mayNeedBraces), types && mayNeedBraces)
+    override def withTypeAnnotation(s: Boolean => String, tpe: Type, types: Boolean, mayNeedParens: Boolean): String =
+      withParens(if (types) s"${s(true)}: $tpe" else s(mayNeedParens), types && mayNeedParens)
 
     override def getOutputName(annotations: Annotations): Option[String] = Try(
       annotations("$name")(0).asInstanceOf[Core.StringLiteralExpression].value
@@ -100,13 +89,20 @@ object TesslaAST {
           case (name, exp) =>
             val expStr = exp match {
               case rec: RecordConstructorExpression if rec.entries.isEmpty => ""
-              case e                                                       => e.print(options, mayNeedBraces = false)
+              case e                                                       => e.print(options, mayNeedParens = false)
             }
             s"@$name($expStr)"
         }
   }
 
-  def withBraces(s: String, addBraces: Boolean): String = if (addBraces) s"(${s})" else s
+  def printWithLocation(s: Boolean => String, options: PrintOptions, mayNeedParens: Boolean, location: Location) =
+    withParens(
+      if (options.locations && location != Location.unknown) s"${s(true)} @ $location"
+      else s(mayNeedParens),
+      mayNeedParens && options.locations
+    )
+
+  def withParens(s: String, addParens: Boolean): String = if (addParens) s"(${s})" else s
 
   def printRecord[A](
     entries: Map[String, A],
@@ -141,12 +137,8 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   import TesslaAST._
 
-  def withTypeAnnotation(
-    s: Boolean => String,
-    tpe: TypeAnnotation[Type],
-    types: Boolean,
-    mayNeedBraces: Boolean
-  ): String
+  def withTypeAnnotation(s: Boolean => String, tpe: TypeAnnotation[Type],
+                         types: Boolean, mayNeedParens: Boolean): String
 
   type DefinitionExpression <: ExpressionArg
 
@@ -154,69 +146,89 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   type Annotations
 
+  def getOutputName(annotations: Annotations): Option[String] = None
+
+  def printAnnotationString(annotations: Annotations, options: PrintOptions): String = {
+      val as = printAnnotations(annotations, options)
+      if (as.nonEmpty) as.mkString("", "\n", "\n") else ""
+  }
+
+  def printAnnotations(annotations: Annotations, options: PrintOptions): List[String] = Nil
+
+  def printWithTypeAndLocation(s: Boolean => String,
+                               tpe: TypeAnnotation[Type],
+                               location: Location,
+                               options: PrintOptions,
+                               types: Boolean,
+                               mayNeedTypeParens: Boolean,
+                               mayNeedLocationParens: Boolean): String =
+    printWithLocation(b =>
+      withTypeAnnotation(s, tpe, types, b && mayNeedTypeParens), options, mayNeedLocationParens, location
+    )
+
+  def indent(s: String): String = s.linesIterator.map(s => "  " + s).mkString("\n") +
+    (if (s.endsWith("\n")) "\n" else "")
+
   case class Specification(
     in: Map[Identifier, (TypeAnnotation[Type], Annotations)],
     definitions: Map[Identifier, DefinitionExpression],
     out: List[(ExpressionRef, Annotations)],
     maxIdentifier: Long
   ) {
-    def print(options: PrintOptions) = {
-      val i = in
-        .map { s =>
-          val as = printAnnotations(s._2._2, options)
-          (if (as.nonEmpty) as.mkString("", "\n", "\n") else "") +
-            withTypeAnnotation(_ => s"in ${s._1}", s._2._1, types = true, mayNeedBraces = false) +
-            (if (options.locations && s._1.location != Location.unknown) " @ " + s._1.location
-             else "")
-        }
-        .mkString("\n")
-      val o = out
-        .map { x =>
-          val as = printAnnotations(x._2, options)
-          (if (as.nonEmpty) as.mkString("", "\n", "\n") else "") + "out " + x._1 +
-            (if (options.locations && x._1.location != Location.unknown) " @ " + x._1.location
-             else "")
-        }
-        .mkString("\n")
-      val d = definitions
-        .map { x =>
-          val tpeString = if (options.defTypes) s": ${x._2.tpe}" else ""
-          val locString =
-            if (options.locations && x._1.location != Location.unknown) " @ " + x._1.location
-            else ""
-          s"def ${x._1}$tpeString$locString = ${x._2.print(options, mayNeedBraces = false)}"
-        }
-        .mkString("\n")
+
+    def print(options: PrintOptions): String = {
+      val i = in.map {
+          case (id, (typ, ann)) =>
+            val annotations = printAnnotationString(ann, options)
+            val inStr = printWithTypeAndLocation(_ => s"in $id", typ, id.location, options,
+              types = true, mayNeedLocationParens = false, mayNeedTypeParens = false)
+
+            annotations + inStr
+        }.mkString("\n")
+
+      val o = out.map {
+        case (ref, ann) =>
+          val annotations = printAnnotationString(ann, options)
+          val outStr = printWithLocation(_ => s"out $ref", options, mayNeedParens = false, ref.location)
+
+          annotations + outStr
+        }.mkString("\n")
+
+      val d = definitions.map {
+        case (id, definition) =>
+          val idStr = printWithTypeAndLocation(_ => id.toString, definition.tpe, id.location, options,
+            options.defTypes, mayNeedTypeParens = false, mayNeedLocationParens = false)
+          val defStr = definition.print(options, mayNeedParens = false)
+
+          s"def $idStr = $defStr"
+        }.mkString("\n")
+
       s"$i\n\n$o\n\n$d"
     }
 
-    override def toString = print(PrintOptions())
+    override def toString: String = print(PrintOptions())
   }
-
-  def getOutputName(annotations: Annotations): Option[String] = None
-
-  def printAnnotations(annotations: Annotations, options: PrintOptions): List[String] = Nil
 
   // Identifiers can either have a globally unique id or locally unique name or both.
   // For TeSSLa Core only external names, i.e. input streams do not carry a id.
   // TODO: currently also generated type parameters may not carry an id, this should be fixed once all externs are declared in the standard library.
   final class Identifier(val idOrName: Ior[String, Long], override val location: Location = Location.unknown)
       extends Locatable {
-    override def hashCode = idOrName.hashCode
+    override def hashCode: Int = idOrName.hashCode
 
-    override def equals(o: Any) =
+    override def equals(o: Any): Boolean =
       o.isInstanceOf[Identifier] && o.asInstanceOf[Identifier].idOrName.equals(idOrName)
 
-    val fullName = idOrName match {
+    val fullName: String = idOrName match {
       case Ior.Left(a)    => a
       case Ior.Right(b)   => "$" + b
       case Ior.Both(a, b) => a + "$" + b
     }
 
-    def print(options: PrintOptions, mayNeedBraces: Boolean) =
-      withLocation(_ => fullName, options, mayNeedBraces)
+    def print(options: PrintOptions, mayNeedParens: Boolean): String =
+      withLocation(_ => fullName, options, mayNeedParens)
 
-    override def toString = print(PrintOptions(), mayNeedBraces = false)
+    override def toString: String = print(PrintOptions(), mayNeedParens = false)
   }
 
   object Identifier {
@@ -233,109 +245,102 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
   sealed trait ExpressionArg extends Locatable {
     def tpe: TypeAnnotation[Type]
 
-    def print(options: PrintOptions, mayNeedBraces: Boolean): String
+    def print(options: PrintOptions, mayNeedParens: Boolean): String
 
-    override def toString = print(PrintOptions(), mayNeedBraces = false)
+    override def toString: String = print(PrintOptions(), mayNeedParens = false)
 
-    def withTypeAndLocation2(s: Boolean => String, options: PrintOptions, types: Boolean, mayNeedBraces: Boolean) =
-      withLocation(
-        b => withTypeAnnotation(s, tpe, types, b && mayNeedBraces),
-        options,
-        mayNeedBraces
-      )
+    def withTypeAndLocation(s: Boolean => String, options: PrintOptions, types: Boolean, mayNeedParens: Boolean): String =
+      printWithTypeAndLocation(s, tpe, location, options, types,
+        mayNeedTypeParens = true, mayNeedLocationParens = mayNeedParens)
   }
 
   sealed trait Expression extends ExpressionArg {
-    def withTypeAndLocation(s: Boolean => String, options: PrintOptions, mayNeedBraces: Boolean) =
-      withLocation(b => withTypeAnnotation(s, tpe, options.expTypes, b), options, mayNeedBraces)
+    def withTypeAndLocation(s: Boolean => String, options: PrintOptions, mayNeedParens: Boolean): String =
+      printWithTypeAndLocation(s, tpe, location, options, options.expTypes,
+        mayNeedTypeParens = true, mayNeedLocationParens = mayNeedParens)
   }
 
   case class ExpressionRef(id: Identifier, tpe: TypeAnnotation[Type], location: Location = Location.unknown)
       extends ExpressionArg {
 
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation2(b => id.print(options, b), options, options.refTypes, mayNeedBraces)
+    override def print(options: PrintOptions, mayNeedParens: Boolean): String =
+      withTypeAndLocation(b => id.print(options, b), options, options.refTypes, mayNeedParens)
 
   }
 
-  def indent(s: String): String = s.linesIterator.map(s => "  " + s).mkString("\n") +
-    (if (s.endsWith("\n")) "\n" else "")
-
-  case class FunctionExpression(
-    typeParams: List[Identifier],
-    params: List[(Identifier, Evaluation, TypeAnnotation[Type])],
-    body: Map[Identifier, DefinitionExpression],
-    result: ExpressionArg,
-    location: Location = Location.unknown
-  ) extends Expression {
-    override def tpe = Applicative[TypeAnnotation]
+  case class FunctionExpression(typeParams: List[Identifier],
+                                params: List[(Identifier, Evaluation, TypeAnnotation[Type])],
+                                body: Map[Identifier, DefinitionExpression],
+                                result: ExpressionArg,
+                                location: Location = Location.unknown) extends Expression {
+    override def tpe: TypeAnnotation[Type] = Applicative[TypeAnnotation]
       .map2(params.map(x => x._3.map(y => (x._2, y))).sequence, result.tpe) { (m, r) =>
         FunctionType(typeParams, m, r)
       }
 
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String = {
+    override def print(options: PrintOptions, mayNeedParens: Boolean): String = {
+      val resultStr = result.print(options, mayNeedParens = false)
+
       val bodyString = indent(
-        body
-          .map { x =>
-            val defType = if (options.defTypes) s": ${x._2.tpe}" else ""
-            s"def ${x._1}$defType = ${x._2.print(options, mayNeedBraces = false)}"
-          }
-          .mkString("", "\n", "\n") + result.print(options, mayNeedBraces = false)
+        body.map {
+          case (id, defn) =>
+            val defType = withTypeAnnotation(_ => id.toString, defn.tpe, options.defTypes, mayNeedParens = false)
+            val defStr = defn.print(options, mayNeedParens = false)
+
+            s"def $defType = $defStr"
+          }.mkString("", "\n", "\n") + resultStr
       )
-      val paramsString = params
-        .map { x =>
-          x._1.print(options, mayNeedBraces = false) + (if (options.paramTypes)
-                                                          ": " + x._2.toString + " " + x._3
-                                                        else "")
-        }
-        .mkString(", ")
+
+      val paramsString = params.map {
+          case (id, eval, tpe) =>
+            val idStr = id.print(options, mayNeedParens = false)
+            val tpeStr = if (options.paramTypes) ": " + eval.toString + " " + tpe else ""
+            idStr + tpeStr
+        }.mkString(", ")
+
       val typeParamsString = if (typeParams.isEmpty) "" else s"[${typeParams.mkString(", ")}]"
       withTypeAndLocation(
-        b => withBraces(s"$typeParamsString($paramsString) => {\n$bodyString\n}", b),
+        b => withParens(s"$typeParamsString($paramsString) => {\n$bodyString\n}", b),
         options,
-        mayNeedBraces
+        mayNeedParens
       )
     }
 
   }
 
-  case class ExternExpression(
-    name: String,
-    tpe: TypeAnnotation[Type],
-    location: Location = Location.unknown
-  ) extends Expression {
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation(_ => s"extern_$name", options, mayNeedBraces)
+  case class ExternExpression(name: String, tpe: TypeAnnotation[Type],
+                              location: Location = Location.unknown) extends Expression {
+
+    override def print(options: PrintOptions, mayNeedParens: Boolean): String = name match {
+      case "true" | "false" => withTypeAndLocation(_ => name, options, mayNeedParens)
+      case _ => withTypeAndLocation(_ => s"""extern("$name")""", options, mayNeedParens)
+    }
+
   }
 
-  case class ApplicationExpression(
-    applicable: ExpressionArg,
-    args: ArraySeq[ExpressionArg],
-    location: Location = Location.unknown
-  ) extends Expression {
-    override def tpe = {
+  case class ApplicationExpression(applicable: ExpressionArg, args: ArraySeq[ExpressionArg],
+                                   location: Location = Location.unknown) extends Expression {
+
+    override def tpe: TypeAnnotation[Type] = {
       applicable.tpe.map { r =>
         val ft = r.asInstanceOf[FunctionType] // TODO: Make typesafe?
         if (ft.typeParams.nonEmpty) throw new IllegalArgumentException("Unresolved type parameters")
         ft.resultType
       }
+
     }
 
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation(
-        _ =>
-          s"${applicable.print(options, mayNeedBraces = true)}(${args.map(_.print(options, mayNeedBraces = false)).mkString(", ")})",
+    override def print(options: PrintOptions, mayNeedParens: Boolean): String =
+      withTypeAndLocation(_ =>
+          s"${applicable.print(options, mayNeedParens = true)}(${args.map(_.print(options, mayNeedParens = false)).mkString(", ")})",
         options,
-        mayNeedBraces
+        mayNeedParens
       )
   }
 
-  case class TypeApplicationExpression(
-    applicable: ExpressionArg,
-    typeArgs: List[Type],
-    location: Location = Location.unknown
-  ) extends Expression {
-    override def tpe = {
+  case class TypeApplicationExpression(applicable: ExpressionArg, typeArgs: List[Type],
+                                       location: Location = Location.unknown) extends Expression {
+    override def tpe: TypeAnnotation[Type] = {
       applicable.tpe.map { r =>
         val ft = r.asInstanceOf[FunctionType]
         val map = ft.typeParams.zip(typeArgs).toMap
@@ -347,89 +352,77 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       }
     }
 
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String = {
-      if (typeArgs.isEmpty) applicable.print(options, mayNeedBraces)
+    override def print(options: PrintOptions, mayNeedParens: Boolean): String = {
+      if (typeArgs.isEmpty) applicable.print(options, mayNeedParens)
       else {
         val typeArgsString = s"[${typeArgs.mkString(", ")}]"
         withTypeAndLocation(
-          _ => s"${applicable.print(options, mayNeedBraces = typeArgs.nonEmpty)}$typeArgsString",
+          _ => s"${applicable.print(options, mayNeedParens = typeArgs.nonEmpty)}$typeArgsString",
           options,
-          mayNeedBraces
+          mayNeedParens
         )
       }
     }
   }
 
-  case class RecordConstructorExpression(
-    entries: Map[String, (ExpressionArg, Location)],
-    location: Location = Location.unknown
-  ) extends Expression {
-    override def tpe =
+  case class RecordConstructorExpression(entries: Map[String, (ExpressionArg, Location)],
+                                         location: Location = Location.unknown) extends Expression {
+    override def tpe: TypeAnnotation[Type] =
       entries.view.mapValues(x => x._1.tpe.map(t => (t, x._2))).toMap.unorderedSequence.map { m =>
         RecordType(m)
       }
 
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation(
-        _ => {
-          printRecord(entries, ": ", (x: (ExpressionArg, Location)) => x._1.print(options, mayNeedBraces = false), "()")
+    override def print(options: PrintOptions, mayNeedParens: Boolean): String =
+      withTypeAndLocation(_ => {
+          printRecord(entries, ": ", (x: (ExpressionArg, Location)) => x._1.print(options, mayNeedParens = false), "()")
         },
         options,
-        mayNeedBraces
+        mayNeedParens
       )
   }
 
-  case class RecordAccessorExpression(
-    name: String,
-    target: ExpressionArg,
-    nameLocation: Location = Location.unknown,
-    location: Location = Location.unknown
-  ) extends Expression {
-    override def tpe = target.tpe.map { t =>
+  case class RecordAccessorExpression(name: String, target: ExpressionArg, nameLocation: Location = Location.unknown,
+                                      location: Location = Location.unknown) extends Expression {
+    override def tpe: TypeAnnotation[Type] = target.tpe.map { t =>
       t.asInstanceOf[RecordType].entries(name)._1
     }
 
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation(
-        _ =>
-          s"${target.print(options, mayNeedBraces = true)}.${printWithLocation(_ => name, options, mayNeedBraces = false, nameLocation)}",
+    override def print(options: PrintOptions, mayNeedParens: Boolean): String =
+      withTypeAndLocation(_ =>
+          s"${target.print(options, mayNeedParens = true)}.${printWithLocation(_ => name, options, mayNeedParens = false, nameLocation)}",
         options,
-        mayNeedBraces
+        mayNeedParens
       )
   }
 
   case class StringLiteralExpression(value: String, location: Location = Location.unknown) extends Expression {
-    override def tpe = Applicative[TypeAnnotation].pure(StringType)
+    override def tpe: TypeAnnotation[Type] = Applicative[TypeAnnotation].pure(StringType)
 
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation(_ => s""""$value"""", options, mayNeedBraces)
+    override def print(options: PrintOptions, mayNeedParens: Boolean): String =
+      withTypeAndLocation(_ => s""""$value"""", options, mayNeedParens)
   }
 
   case class IntLiteralExpression(value: BigInt, location: Location = Location.unknown) extends Expression {
-    override def tpe = Applicative[TypeAnnotation].pure(IntType)
+    override def tpe: TypeAnnotation[Type] = Applicative[TypeAnnotation].pure(IntType)
 
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation(_ => value.toString, options, mayNeedBraces)
+    override def print(options: PrintOptions, mayNeedParens: Boolean): String =
+      withTypeAndLocation(_ => value.toString, options, mayNeedParens)
   }
 
   case class FloatLiteralExpression(value: Double, location: Location = Location.unknown) extends Expression {
-    override def tpe = Applicative[TypeAnnotation].pure(FloatType)
+    override def tpe: TypeAnnotation[Type] = Applicative[TypeAnnotation].pure(FloatType)
 
-    override def print(options: PrintOptions, mayNeedBraces: Boolean): String =
-      withTypeAndLocation(_ => value.toString, options, mayNeedBraces)
+    override def print(options: PrintOptions, mayNeedParens: Boolean): String =
+      withTypeAndLocation(_ => value.toString, options, mayNeedParens)
   }
 
   sealed trait Type extends Locatable {
     def resolve(args: Map[Identifier, Type]): Type
   }
 
-  case class FunctionType(
-    typeParams: List[Identifier],
-    paramTypes: List[(Evaluation, Type)],
-    resultType: Type,
-    location: Location = Location.unknown
-  ) extends Type {
-    override def resolve(args: Map[Identifier, Type]) = {
+  case class FunctionType(typeParams: List[Identifier], paramTypes: List[(Evaluation, Type)], resultType: Type,
+                          location: Location = Location.unknown) extends Type {
+    override def resolve(args: Map[Identifier, Type]): Type = {
       val tmp = args -- typeParams
       FunctionType(
         typeParams,
@@ -438,43 +431,36 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       )
     }
 
-    override def toString = {
+    override def toString: String = {
       val typeParamsString = if (typeParams.isEmpty) "" else s"[${typeParams.mkString(", ")}]"
       s"$typeParamsString(${paramTypes.map(x => "" + x._1 + " " + x._2).mkString(", ")}) => $resultType"
     }
   }
 
-  case class InstantiatedType(
-    name: String,
-    typeArgs: List[Type],
-    location: Location = Location.unknown
-  ) extends Type {
-    override def resolve(args: Map[Identifier, Type]) =
+  case class InstantiatedType(name: String, typeArgs: List[Type], location: Location = Location.unknown) extends Type {
+    override def resolve(args: Map[Identifier, Type]): Type =
       InstantiatedType(name, typeArgs.map(_.resolve(args)))
 
-    override def toString =
+    override def toString: String =
       name + (if (typeArgs.nonEmpty) "[" + typeArgs.mkString(", ") + "]" else "")
   }
 
-  case class RecordType(
-    entries: Map[String, (Type, Location)],
-    location: Location = Location.unknown
-  ) extends Type {
-    override def resolve(args: Map[Identifier, Type]) = RecordType(
+  case class RecordType(entries: Map[String, (Type, Location)], location: Location = Location.unknown) extends Type {
+    override def resolve(args: Map[Identifier, Type]): Type = RecordType(
       entries.view.mapValues(x => (x._1.resolve(args), x._2)).toMap
     )
 
-    override def toString =
+    override def toString: String =
       printRecord(entries, ": ", (x: (Type, Location)) => x._1.toString, "Unit")
   }
 
-  val UnitType = RecordType(Map(), Location.builtIn)
-
   case class TypeParam(name: Identifier, location: Location = Location.unknown) extends Type {
-    override def resolve(args: Map[Identifier, Type]) = args.getOrElse(name, this)
+    override def resolve(args: Map[Identifier, Type]): Type = args.getOrElse(name, this)
 
-    override def toString = name.toString
+    override def toString: String = name.toString
   }
+
+  val UnitType = RecordType(Map(), Location.builtIn)
 
   val FloatType = InstantiatedType("Float", Nil, Location.builtIn)
   val IntType = InstantiatedType("Int", Nil, Location.builtIn)

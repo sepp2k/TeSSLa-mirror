@@ -180,7 +180,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     override def toString = {
       val tupleKeys = (1 to memberTypes.keys.size).map(i => s"_$i")
       if (memberTypes.keys.toSet == tupleKeys.toSet && !isOpen) {
-        memberTypes.mkString("(", ", ", ")")
+        memberTypes.toList.sortBy(_._1).map(_._2).mkString("(", ", ", ")")
       } else {
         var members = memberTypes.map { case (name, t) => s"$name: $t" }.toSeq
         if (isOpen) {
