@@ -144,7 +144,7 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
   def inlineVars(e: ExpressionArg, defContext: Map[Identifier, DefinitionExpression]) : ExpressionArg = {
     e match {
       case e: Expression => inlineVars(e, defContext)
-      case ExpressionRef(id, tpe, _) if defContext.contains(id) && !tpe.isInstanceOf[Core.FunctionType] => inlineVars(defContext(id), defContext)
+      case ExpressionRef(id, tpe, _) if defContext.contains(id) && !tpe.isInstanceOf[Core.FunctionType] && extSpec.inlining.get.contains(id) => inlineVars(defContext(id), defContext)
       case _ => e
     }
   }
