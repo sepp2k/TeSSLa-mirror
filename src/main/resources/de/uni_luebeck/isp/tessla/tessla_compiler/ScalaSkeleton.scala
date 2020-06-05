@@ -8,6 +8,7 @@ object Main {
     case class InputError(m: String, s: String) extends java.lang.Exception {
         override def toString: String = s"$m: $s"
     }
+    case class ErrorContainer(errCode: Long) extends  java.lang.Exception
 
     def findEnd(s: String, delim: String, start: Int): Int = {
         if (start + delim.length <= s.length && s.substring(start, start + delim.length) == delim ) {
@@ -54,6 +55,7 @@ object Main {
 
     def getErrorCode(err: Throwable) : Long = {
         err match {
+            case ErrorContainer(errCode) => errCode
             case err: java.lang.ArithmeticException if err.getMessage == "/ by zero" => 1
             case _: java.util.NoSuchElementException => 2
             case _ => 2048

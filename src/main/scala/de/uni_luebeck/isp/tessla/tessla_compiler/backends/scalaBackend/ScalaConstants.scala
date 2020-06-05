@@ -59,6 +59,8 @@ object ScalaConstants {
       case "__[TC]output__" => s"outputVar(${ScalaIOHandling.getParseExpressionToString(typeHint.argsTypes(0), args(0))}, ${args(1)}, ${args(2)}, currTs)"
       case "__[TC]inputParse__" => ScalaIOHandling.getInputParseExpression(typeHint.retType, args(0))
       case "__[TC]getErrorCode__" => s"getErrorCode(${args(0)})"
+      case "__[TC]throw__" => s"throw ${args(0)}"
+      case "__[TC]Error__" => s"ErrorContainer(${args(0)})"
 
       case "__ite__" |
            "__staticite__" => s"(if (${args(0)}) ${args(1)} else ${args(2)})"

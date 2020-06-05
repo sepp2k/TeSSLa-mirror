@@ -118,7 +118,7 @@ object IntermediateCodeUtils {
       case InstantiatedType("Int", Seq(), _) => LongType
       case InstantiatedType("Float", Seq(), _) => DoubleType
       case InstantiatedType("String", Seq(), _) => StringType
-      case InstantiatedType("Option", Seq(t), _) => OptionType(t)
+      case InstantiatedType("Option", Seq(t), _) => OptionType(LazyContainer(t))
       case InstantiatedType("Set", Seq(t), _) => ImmutableSetType(t)
       case InstantiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
       case InstantiatedType("List", Seq(t), _) => ImmutableListType(t)
@@ -146,7 +146,7 @@ object IntermediateCodeUtils {
       case InstantiatedType("Int", Seq(), _) => LongValue(0)
       case InstantiatedType("Float", Seq(), _) => DoubleValue(0)
       case InstantiatedType("String", Seq(), _) => StringValue("")
-      case InstantiatedType("Option", Seq(t), _) => None(t)
+      case InstantiatedType("Option", Seq(t), _) => None(LazyContainer(t))
       case InstantiatedType("Set", Seq(t), _) => EmptyImmutableSet(t)
       case InstantiatedType("Map", Seq(t1, t2), _) => EmptyImmutableMap(t1, t2)
       case InstantiatedType("List", Seq(t), _) => EmptyImmutableList(t)
@@ -200,6 +200,12 @@ object IntermediateCodeUtils {
 
   implicit def  Negation(a: ImpLanExpr) : ImpLanExpr =
     FunctionCall("__not__", Seq(a), IntermediateCode.FunctionType(Seq(BoolType), BoolType))
+
+  implicit def Throw(e: ImpLanExpr, forType: ImpLanType) : ImpLanExpr =
+    FunctionCall("__[TC]throw__", Seq(e), IntermediateCode.FunctionType(Seq(IntermediateCode.ErrorType), forType))
+
+  implicit def ErrorContainer(errCodeExp: ImpLanExpr) : ImpLanExpr =
+    FunctionCall("__[TC]Error__", Seq(errCodeExp), IntermediateCode.FunctionType(Seq(IntermediateCode.LongType), IntermediateCode.ErrorType))
 
   implicit def MkStruct(content: Seq[(String, ImpLanExpr)], targetType: ImpLanType) : ImpLanExpr = {
     targetType match {

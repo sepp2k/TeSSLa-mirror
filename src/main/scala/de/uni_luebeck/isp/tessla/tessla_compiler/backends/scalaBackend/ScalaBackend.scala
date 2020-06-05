@@ -54,7 +54,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
         }
       }
       case LambdaApplication(exp, params) => s"${translateExpression(exp)}.apply(${params.map(translateExpression).mkString(", ")})"
-      case TernaryExpression(guard, e1, e2) => s"if(${foldGuard(guard)}) {${translateExpression(e1)}} else {${translateExpression(e2)}}"
+      case TernaryExpression(guard, e1, e2) => s"(if(${foldGuard(guard)}) {${translateExpression(e1)}} else {${translateExpression(e2)}})"
       case Equal(a, b) => {
         if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _, _) => typ }.toMap))) {
           s"${translateExpression(a)}.equals(${translateExpression(b)})"
@@ -68,7 +68,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       }
       case Variable(name) => name
 
-      case CastingExpression(e, LazyContainer(_), _) => s"${translateExpression(e)}()"
+      case CastingExpression(e, LazyContainer(_), _) => s"(${translateExpression(e)})()"
       case CastingExpression(e, _, LazyContainer(_)) => s"() => {${translateExpression(e)}}"
       case CastingExpression(e, _, t) => s"(${translateExpression(e)}).asInstanceOf[${ScalaConstants.typeTranslation(t)}]"
     }

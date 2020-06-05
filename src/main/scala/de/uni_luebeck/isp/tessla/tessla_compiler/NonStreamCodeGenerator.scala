@@ -39,10 +39,20 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
         None(t.resolve(tm.parsKnown(tPars).resMap))
       case ExternExpression(tPars, params, resultType, name, _) =>
         val newTm = tm.parsKnown(tPars)
+        val ftype = name match {
+          case "Some" =>
+            FunctionType(Seq(LazyContainer(IntermediateCodeUtils.typeConversion(params.head._2.resolve(newTm.resMap)))),
+              IntermediateCodeUtils.typeConversion(resultType.resolve(newTm.resMap)))
+          case "getSome" =>
+            FunctionType(Seq(IntermediateCodeUtils.typeConversion(params.head._2.resolve(newTm.resMap))),
+              LazyContainer(IntermediateCodeUtils.typeConversion(resultType.resolve(newTm.resMap))))
+          case _ =>
+            FunctionType(params.map{case (_,t) => IntermediateCodeUtils.typeConversion(t.resolve(newTm.resMap))},
+            IntermediateCodeUtils.typeConversion(resultType.resolve(newTm.resMap)))
+        }
         FunctionCall(s"__${name}__",
                      args,
-                     FunctionType(params.map{case (_,t) => IntermediateCodeUtils.typeConversion(t.resolve(newTm.resMap))},
-                                  IntermediateCodeUtils.typeConversion(resultType.resolve(newTm.resMap))))
+                     ftype)
       case _: FunctionExpression |
            _: ExpressionRef |
            _: ApplicationExpression |

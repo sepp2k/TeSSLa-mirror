@@ -1,5 +1,6 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
+import de.uni_luebeck.isp.tessla.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 
 import scala.language.implicitConversions
@@ -226,43 +227,20 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, newTail, newTsGen, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-
-  //FIXME: AND, OR missing
-  //FIXME: Handle lazyness in general
-  def getErrorExpressionsforLiftSLift(args: Seq[ExpressionArg], f: ExpressionArg): (ImpLanExpr, ImpLanExpr) = {
-    f match {
-      case TypeApplicationExpression(exp, _, _) => getErrorExpressionsforLiftSLift(args, exp)
-      case _ => {
-        val inputError = f match {
-          case ExternExpression(_, _, _, "ite", _) |
-               ExternExpression(_, _, _, "staticite", _) => Variable(streamNameAndTypeFromExpressionArg(args.head)._1 + "_error")
-          case _ => BitwiseOr(args.map(streamNameAndTypeFromExpressionArg(_)._1 + "_error"))
-        }
-        val outputError = f match {
-          case ExternExpression(_, _, _, "ite", _) |
-               ExternExpression(_, _, _, "staticite", _) => TernaryExpression(Seq(Seq(streamNameAndTypeFromExpressionArg(args.head)._1 + "_value")),
-            streamNameAndTypeFromExpressionArg(args(1))._1 + "_error",
-            streamNameAndTypeFromExpressionArg(args(2))._1 + "_error")
-          case _ => LongValue(0)
-        }
-
-        (inputError, outputError)
-      }
-    }
-  }
-
-  //FIXME: Handle lazyness in general
   def produceLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
-    val params = args.map{sr => { val (sName, sType) = streamNameAndTypeFromExpressionArg(sr)
+    val coreExp = args.map{arg =>
+      val argName = streamNameAndTypeFromExpressionArg(arg)._1
+      TernaryExpression(Seq(Seq(Equal(s"${argName}_error", LongValue(0)))), s"${argName}_value", Throw(ErrorContainer(Variable(s"${argName}_error")), arg.tpe))
+    }
+    val params = args.zip(coreExp).map{case (sr, exp) => {
+                                  val (sName, sType) = streamNameAndTypeFromExpressionArg(sr)
                                   TernaryExpression(Seq(Seq(s"${sName}_changed")),
-                                                  FunctionCall("__Some__", Seq(s"${sName}_value"), IntermediateCode.FunctionType(Seq(sType), OptionType(sType))),
-                                                  None(sType))
+                                                  FunctionCall("__Some__", Seq(exp), IntermediateCode.FunctionType(Seq(LazyContainer(sType)), OptionType(LazyContainer(sType)))),
+                                                  None(LazyContainer(sType)))
                                 }
                          }
-
-    val (inputError, outputError) = getErrorExpressionsforLiftSLift(args, function)
 
     val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))}
 
@@ -270,50 +248,42 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
 
       Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
       If(guard).
-        Assignment(s"${o}_errval", inputError, LongValue(0), LongType).
-        If(Seq(Seq(Equal(s"${o}_errval", LongValue(0))))).
+          Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType).
           Try().
-            Assignment(s"${o}_fval", nonStreamCodeGenerator.translateFunctionCall(function, params, nonStreamCodeGenerator.TypeArgManagement.empty), scala.None, OptionType(ot)).
-            If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
-              Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
-              Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-              Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-              Assignment(s"${o}_value", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForStreamType(ot), ot).
-              Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-              Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-              Assignment(s"${o}_error", outputError, LongValue(0), LongType).
+            Assignment(s"${o}_fval", nonStreamCodeGenerator.translateFunctionCall(function, params, nonStreamCodeGenerator.TypeArgManagement.empty), scala.None, OptionType(LazyContainer(ot))).
+            If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(LazyContainer(ot))), BoolType))))).
               Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
+              Assignment(s"${o}_newValue", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(LazyContainer(ot))), LazyContainer(ot))), defaultValueForStreamType(ot), ot).
             EndIf().
           Catch().
-            Assignment(s"${o}_errval", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
+            Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
+            Assignment(s"${o}_error", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
           EndTry().
-        EndIf().
-        If(Seq(Seq(NotEqual(s"${o}_errval", LongValue(0))))).
-          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
-          Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-          Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-          Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-          Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-          Assignment(s"${o}_error", s"${o}_errval", LongValue(0), LongType).
-          Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
-        EndIf().
+          If(Seq(Seq(s"${o}_changed"))).
+            Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
+            Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
+            Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
+            Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
+            Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
+            Assignment(s"${o}_value", s"${o}_newValue", defaultValueForStreamType(ot), ot).
+          EndIf().
       EndIf()
-
       )
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  //FIXME: Handle lazyness in general
   def produceSignalLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
     val guard1 : Seq[Seq[ImpLanExpr]] = Seq(args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_init")})
     val guard2 : Seq[Seq[ImpLanExpr]] = args.map{arg => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_changed"))}
-    val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}
+
+    val fargs = args.map{arg =>
+      val argName = streamNameAndTypeFromExpressionArg(arg)._1
+      TernaryExpression(Seq(Seq(Equal(s"${argName}_error", LongValue(0)))), s"${argName}_value", Throw(ErrorContainer(Variable(s"${argName}_error")), arg.tpe))
+    }
 
     val fcall = nonStreamCodeGenerator.translateFunctionCall(function, fargs, nonStreamCodeGenerator.TypeArgManagement.empty)
-
-    val (inputError, outputError) = getErrorExpressionsforLiftSLift(args, function)
 
     val newStmt = (currSrc.stepSource.
 
@@ -323,15 +293,12 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
           Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-          Assignment(s"${o}_error", inputError, LongValue(0), LongType).
-          If(Seq(Seq(Equal(s"${o}_error", LongValue(0))))).
-            Try().
-                Assignment(s"${o}_value", fcall, defaultValueForStreamType(ot), ot).
-                Assignment(s"${o}_error", outputError, LongValue(0), LongType).
-              Catch().
-                Assignment(s"${o}_error", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
-              EndTry().
-          EndIf().
+          Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType).
+          Try().
+            Assignment(s"${o}_value", fcall, defaultValueForStreamType(ot), ot).
+          Catch().
+            Assignment(s"${o}_error", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
+          EndTry().
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).

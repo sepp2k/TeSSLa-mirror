@@ -75,6 +75,9 @@ object IntermediateCode {
     override def toString : String = "String"
   }
 
+  final case object ErrorType extends ImpLanType {
+    override def toString : String = "Error"
+  }
 
   final case class StructType(subTypes : Seq[ImpLanType], fieldNames: Seq[String]) extends ImpLanType {
     override def toString : String = s"(${fieldNames.zip(subTypes).map{case (n,t) => s"$n : $t"}.mkString(", ")})"
