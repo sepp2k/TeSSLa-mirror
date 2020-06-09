@@ -46,8 +46,12 @@ object TesslaAST {
 
     override type Evaluation = CompiletimeEvaluation
 
-    override def withTypeAnnotation(s: Boolean => String, tpe: Option[Type],
-                                    types: Boolean, mayNeedParens: Boolean): String =
+    override def withTypeAnnotation(
+      s: Boolean => String,
+      tpe: Option[Type],
+      types: Boolean,
+      mayNeedParens: Boolean
+    ): String =
       tpe.filter(_ => types).map(_ => s"${s(true)}").getOrElse(s(mayNeedParens))
 
   }
@@ -137,8 +141,12 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   import TesslaAST._
 
-  def withTypeAnnotation(s: Boolean => String, tpe: TypeAnnotation[Type],
-                         types: Boolean, mayNeedParens: Boolean): String
+  def withTypeAnnotation(
+    s: Boolean => String,
+    tpe: TypeAnnotation[Type],
+    types: Boolean,
+    mayNeedParens: Boolean
+  ): String
 
   type DefinitionExpression <: ExpressionArg
 
@@ -149,21 +157,26 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
   def getOutputName(annotations: Annotations): Option[String] = None
 
   def printAnnotationString(annotations: Annotations, options: PrintOptions): String = {
-      val as = printAnnotations(annotations, options)
-      if (as.nonEmpty) as.mkString("", "\n", "\n") else ""
+    val as = printAnnotations(annotations, options)
+    if (as.nonEmpty) as.mkString("", "\n", "\n") else ""
   }
 
   def printAnnotations(annotations: Annotations, options: PrintOptions): List[String] = Nil
 
-  def printWithTypeAndLocation(s: Boolean => String,
-                               tpe: TypeAnnotation[Type],
-                               location: Location,
-                               options: PrintOptions,
-                               types: Boolean,
-                               mayNeedTypeParens: Boolean,
-                               mayNeedLocationParens: Boolean): String =
-    printWithLocation(b =>
-      withTypeAnnotation(s, tpe, types, b && mayNeedTypeParens), options, mayNeedLocationParens, location
+  def printWithTypeAndLocation(
+    s: Boolean => String,
+    tpe: TypeAnnotation[Type],
+    location: Location,
+    options: PrintOptions,
+    types: Boolean,
+    mayNeedTypeParens: Boolean,
+    mayNeedLocationParens: Boolean
+  ): String =
+    printWithLocation(
+      b => withTypeAnnotation(s, tpe, types, b && mayNeedTypeParens),
+      options,
+      mayNeedLocationParens,
+      location
     )
 
   def indent(s: String): String = s.linesIterator.map(s => "  " + s).mkString("\n") +
@@ -177,31 +190,51 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
   ) {
 
     def print(options: PrintOptions): String = {
-      val i = in.map {
+      val i = in
+        .map {
           case (id, (typ, ann)) =>
             val annotations = printAnnotationString(ann, options)
-            val inStr = printWithTypeAndLocation(_ => s"in $id", typ, id.location, options,
-              types = true, mayNeedLocationParens = false, mayNeedTypeParens = false)
+            val inStr = printWithTypeAndLocation(
+              _ => s"in $id",
+              typ,
+              id.location,
+              options,
+              types = true,
+              mayNeedLocationParens = false,
+              mayNeedTypeParens = false
+            )
 
             annotations + inStr
-        }.mkString("\n")
+        }
+        .mkString("\n")
 
-      val o = out.map {
-        case (ref, ann) =>
-          val annotations = printAnnotationString(ann, options)
-          val outStr = printWithLocation(_ => s"out $ref", options, mayNeedParens = false, ref.location)
+      val o = out
+        .map {
+          case (ref, ann) =>
+            val annotations = printAnnotationString(ann, options)
+            val outStr = printWithLocation(_ => s"out $ref", options, mayNeedParens = false, ref.location)
 
-          annotations + outStr
-        }.mkString("\n")
+            annotations + outStr
+        }
+        .mkString("\n")
 
-      val d = definitions.map {
-        case (id, definition) =>
-          val idStr = printWithTypeAndLocation(_ => id.toString, definition.tpe, id.location, options,
-            options.defTypes, mayNeedTypeParens = false, mayNeedLocationParens = false)
-          val defStr = definition.print(options, mayNeedParens = false)
+      val d = definitions
+        .map {
+          case (id, definition) =>
+            val idStr = printWithTypeAndLocation(
+              _ => id.toString,
+              definition.tpe,
+              id.location,
+              options,
+              options.defTypes,
+              mayNeedTypeParens = false,
+              mayNeedLocationParens = false
+            )
+            val defStr = definition.print(options, mayNeedParens = false)
 
-          s"def $idStr = $defStr"
-        }.mkString("\n")
+            s"def $idStr = $defStr"
+        }
+        .mkString("\n")
 
       s"$i\n\n$o\n\n$d"
     }
@@ -249,15 +282,34 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
     override def toString: String = print(PrintOptions(), mayNeedParens = false)
 
-    def withTypeAndLocation(s: Boolean => String, options: PrintOptions, types: Boolean, mayNeedParens: Boolean): String =
-      printWithTypeAndLocation(s, tpe, location, options, types,
-        mayNeedTypeParens = true, mayNeedLocationParens = mayNeedParens)
+    def withTypeAndLocation(
+      s: Boolean => String,
+      options: PrintOptions,
+      types: Boolean,
+      mayNeedParens: Boolean
+    ): String =
+      printWithTypeAndLocation(
+        s,
+        tpe,
+        location,
+        options,
+        types,
+        mayNeedTypeParens = true,
+        mayNeedLocationParens = mayNeedParens
+      )
   }
 
   sealed trait Expression extends ExpressionArg {
     def withTypeAndLocation(s: Boolean => String, options: PrintOptions, mayNeedParens: Boolean): String =
-      printWithTypeAndLocation(s, tpe, location, options, options.expTypes,
-        mayNeedTypeParens = true, mayNeedLocationParens = mayNeedParens)
+      printWithTypeAndLocation(
+        s,
+        tpe,
+        location,
+        options,
+        options.expTypes,
+        mayNeedTypeParens = true,
+        mayNeedLocationParens = mayNeedParens
+      )
   }
 
   case class ExpressionRef(id: Identifier, tpe: TypeAnnotation[Type], location: Location = Location.unknown)
@@ -268,11 +320,13 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   }
 
-  case class FunctionExpression(typeParams: List[Identifier],
-                                params: List[(Identifier, Evaluation, TypeAnnotation[Type])],
-                                body: Map[Identifier, DefinitionExpression],
-                                result: ExpressionArg,
-                                location: Location = Location.unknown) extends Expression {
+  case class FunctionExpression(
+    typeParams: List[Identifier],
+    params: List[(Identifier, Evaluation, TypeAnnotation[Type])],
+    body: Map[Identifier, DefinitionExpression],
+    result: ExpressionArg,
+    location: Location = Location.unknown
+  ) extends Expression {
     override def tpe: TypeAnnotation[Type] = Applicative[TypeAnnotation]
       .map2(params.map(x => x._3.map(y => (x._2, y))).sequence, result.tpe) { (m, r) =>
         FunctionType(typeParams, m, r)
@@ -282,21 +336,25 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       val resultStr = result.print(options, mayNeedParens = false)
 
       val bodyString = indent(
-        body.map {
-          case (id, defn) =>
-            val defType = withTypeAnnotation(_ => id.toString, defn.tpe, options.defTypes, mayNeedParens = false)
-            val defStr = defn.print(options, mayNeedParens = false)
+        body
+          .map {
+            case (id, defn) =>
+              val defType = withTypeAnnotation(_ => id.toString, defn.tpe, options.defTypes, mayNeedParens = false)
+              val defStr = defn.print(options, mayNeedParens = false)
 
-            s"def $defType = $defStr"
-          }.mkString("", "\n", "\n") + resultStr
+              s"def $defType = $defStr"
+          }
+          .mkString("", "\n", "\n") + resultStr
       )
 
-      val paramsString = params.map {
+      val paramsString = params
+        .map {
           case (id, eval, tpe) =>
             val idStr = id.print(options, mayNeedParens = false)
             val tpeStr = if (options.paramTypes) ": " + eval.toString + " " + tpe else ""
             idStr + tpeStr
-        }.mkString(", ")
+        }
+        .mkString(", ")
 
       val typeParamsString = if (typeParams.isEmpty) "" else s"[${typeParams.mkString(", ")}]"
       withTypeAndLocation(
@@ -308,18 +366,21 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   }
 
-  case class ExternExpression(name: String, tpe: TypeAnnotation[Type],
-                              location: Location = Location.unknown) extends Expression {
+  case class ExternExpression(name: String, tpe: TypeAnnotation[Type], location: Location = Location.unknown)
+      extends Expression {
 
     override def print(options: PrintOptions, mayNeedParens: Boolean): String = name match {
       case "true" | "false" => withTypeAndLocation(_ => name, options, mayNeedParens)
-      case _ => withTypeAndLocation(_ => s"""extern("$name")""", options, mayNeedParens)
+      case _                => withTypeAndLocation(_ => s"""extern("$name")""", options, mayNeedParens)
     }
 
   }
 
-  case class ApplicationExpression(applicable: ExpressionArg, args: ArraySeq[ExpressionArg],
-                                   location: Location = Location.unknown) extends Expression {
+  case class ApplicationExpression(
+    applicable: ExpressionArg,
+    args: ArraySeq[ExpressionArg],
+    location: Location = Location.unknown
+  ) extends Expression {
 
     override def tpe: TypeAnnotation[Type] = {
       applicable.tpe.map { r =>
@@ -331,15 +392,19 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
     }
 
     override def print(options: PrintOptions, mayNeedParens: Boolean): String =
-      withTypeAndLocation(_ =>
+      withTypeAndLocation(
+        _ =>
           s"${applicable.print(options, mayNeedParens = true)}(${args.map(_.print(options, mayNeedParens = false)).mkString(", ")})",
         options,
         mayNeedParens
       )
   }
 
-  case class TypeApplicationExpression(applicable: ExpressionArg, typeArgs: List[Type],
-                                       location: Location = Location.unknown) extends Expression {
+  case class TypeApplicationExpression(
+    applicable: ExpressionArg,
+    typeArgs: List[Type],
+    location: Location = Location.unknown
+  ) extends Expression {
     override def tpe: TypeAnnotation[Type] = {
       applicable.tpe.map { r =>
         val ft = r.asInstanceOf[FunctionType]
@@ -365,15 +430,18 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
     }
   }
 
-  case class RecordConstructorExpression(entries: Map[String, (ExpressionArg, Location)],
-                                         location: Location = Location.unknown) extends Expression {
+  case class RecordConstructorExpression(
+    entries: Map[String, (ExpressionArg, Location)],
+    location: Location = Location.unknown
+  ) extends Expression {
     override def tpe: TypeAnnotation[Type] =
       entries.view.mapValues(x => x._1.tpe.map(t => (t, x._2))).toMap.unorderedSequence.map { m =>
         RecordType(m)
       }
 
     override def print(options: PrintOptions, mayNeedParens: Boolean): String =
-      withTypeAndLocation(_ => {
+      withTypeAndLocation(
+        _ => {
           printRecord(entries, ": ", (x: (ExpressionArg, Location)) => x._1.print(options, mayNeedParens = false), "()")
         },
         options,
@@ -381,14 +449,19 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       )
   }
 
-  case class RecordAccessorExpression(name: String, target: ExpressionArg, nameLocation: Location = Location.unknown,
-                                      location: Location = Location.unknown) extends Expression {
+  case class RecordAccessorExpression(
+    name: String,
+    target: ExpressionArg,
+    nameLocation: Location = Location.unknown,
+    location: Location = Location.unknown
+  ) extends Expression {
     override def tpe: TypeAnnotation[Type] = target.tpe.map { t =>
       t.asInstanceOf[RecordType].entries(name)._1
     }
 
     override def print(options: PrintOptions, mayNeedParens: Boolean): String =
-      withTypeAndLocation(_ =>
+      withTypeAndLocation(
+        _ =>
           s"${target.print(options, mayNeedParens = true)}.${printWithLocation(_ => name, options, mayNeedParens = false, nameLocation)}",
         options,
         mayNeedParens
@@ -420,8 +493,12 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
     def resolve(args: Map[Identifier, Type]): Type
   }
 
-  case class FunctionType(typeParams: List[Identifier], paramTypes: List[(Evaluation, Type)], resultType: Type,
-                          location: Location = Location.unknown) extends Type {
+  case class FunctionType(
+    typeParams: List[Identifier],
+    paramTypes: List[(Evaluation, Type)],
+    resultType: Type,
+    location: Location = Location.unknown
+  ) extends Type {
     override def resolve(args: Map[Identifier, Type]): Type = {
       val tmp = args -- typeParams
       FunctionType(
