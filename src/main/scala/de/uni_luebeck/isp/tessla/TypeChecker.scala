@@ -228,13 +228,10 @@ class TypeChecker(spec: FlatTessla.Specification)
         } else {
           tparam
         }
-      case (
-            expectedFunctionType: TypedTessla.FunctionType,
-            actualFunctionType: TypedTessla.FunctionType
-          ) =>
+      case (expectedFunctionType: TypedTessla.FunctionType, actualFunctionType: TypedTessla.FunctionType) =>
         // Since we don't support higher-order types, i.e. function types that appear as a subtype can't be generic
         // themselves, we know that none of the function types, except the initial one that was used to generated the
-        // type environment, will have type parameters, so we don't need to update the type envrionment with new type
+        // type environment, will have type parameters, so we don't need to update the type environment with new type
         // variables.
         val parameterTypes =
           expectedFunctionType.parameterTypes.zip(actualFunctionType.parameterTypes).map {
@@ -344,18 +341,18 @@ class TypeChecker(spec: FlatTessla.Specification)
         // TODO: This ignores type parameters of the expected type because functions with type parameters can't
         //       currently be passed around anyway. Once that is possible, this code needs to be adjusted.
         val typeSubstitutions = mutable.Map[TypedTessla.Identifier, TypedTessla.Type]()
+        val compatibleParameterLength = parent.parameterTypes.length == genericChild.parameterTypes.length
         val child =
           typeSubst(genericChild, parent, genericChild.typeParameters.toSet, typeSubstitutions)
             .asInstanceOf[TypedTessla.FunctionType]
         val compatibleLiftedness = !parent.isLiftable || child.isLiftable
         val compatibleReturnTypes = isSubtypeOrEqual(parent.returnType, child.returnType)
-        val compatibleParameterTypes =
-          parent.parameterTypes.length == child.parameterTypes.length &&
-            parent.parameterTypes.zip(child.parameterTypes).forall {
-              // function parameters are contravariant, so the order of arguments to isSubtypeOrEqual is switched
-              case ((_, parentParamType), (_, childParamType)) =>
-                isSubtypeOrEqual(childParamType, parentParamType)
-            }
+        val compatibleParameterTypes = compatibleParameterLength &&
+          parent.parameterTypes.zip(child.parameterTypes).forall {
+            // function parameters are contravariant, so the order of arguments to isSubtypeOrEqual is switched
+            case ((_, parentParamType), (_, childParamType)) =>
+              isSubtypeOrEqual(childParamType, parentParamType)
+          }
         compatibleLiftedness && compatibleReturnTypes && compatibleParameterTypes
       case (parent: TypedTessla.ObjectType, child: TypedTessla.ObjectType) =>
         parent.memberTypes.forall {
