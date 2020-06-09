@@ -15,12 +15,12 @@ module Operators {
   ## **Operator usage:** `a && b`
   ##
   ## Boolean conjunction
-  liftable def and(lhs: strict Bool, rhs: strict Bool): Bool = extern("and")
+  liftable def and(lhs: lazy Bool, rhs: lazy Bool): Bool = extern("and")
 
   ## **Operator usage:** `a || b`
   ##
   ## Boolean disjunction
-  liftable def or(lhs: strict Bool, rhs: strict Bool): Bool = extern("or")
+  liftable def or(lhs: lazy Bool, rhs: lazy Bool): Bool = extern("or")
 
   ## **Operator usage:** `a == b`
   ##
