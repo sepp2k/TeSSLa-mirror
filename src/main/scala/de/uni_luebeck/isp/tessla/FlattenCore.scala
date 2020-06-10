@@ -42,7 +42,8 @@ object FlattenCore extends TranslationPhase[Core.Specification, Core.Specificati
         case ext: Core.ExternExpression =>
           defs
             .collectFirst {
-              case (id, ext2: Core.ExternExpression) if ext.name == ext2.name => Core.ExpressionRef(id, ext.tpe)
+              case (id, ext2: Core.ExternExpression) if ext.name == ext2.name && ext.tpe == ext2.tpe =>
+                Core.ExpressionRef(id, ext.tpe)
             }
             .getOrElse(addDefinition(ext, defs))
         case e: Core.Expression => addDefinition(e, defs)
