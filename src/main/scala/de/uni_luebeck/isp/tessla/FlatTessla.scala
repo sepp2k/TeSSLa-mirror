@@ -207,7 +207,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
         typeParameters.map(id => id.nameOpt.getOrElse(id.toString)).mkString(", ")
       def paramString = parameterTypes
         .map {
-          case (e, t) => s"${e.map(_ + " ").getOrElse("")}$t"
+          case (e, t) => s"${e.map(_.toString + " ").getOrElse("")}$t"
         }
         .mkString(", ")
       s"$liftableString[$typeParamString]($paramString) => $returnType"

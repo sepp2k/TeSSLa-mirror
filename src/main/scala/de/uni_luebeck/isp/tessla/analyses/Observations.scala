@@ -155,7 +155,7 @@ object Observations {
 
     val threadIdInStreams = spec.in
       .filter {
-        case (name, (tpe, annotations)) => annotations.contains("ThreadId")
+        case (_, (_, annotations)) => annotations.contains("ThreadId")
       }
       .keys
       .toList
@@ -207,6 +207,7 @@ object Observations {
               val name = argumentAsString(annotation, "name")
               val code = createCode(annotation, in)
               Function(FunctionName = name, code = code)
+            case _ => ???
           }
       }
 
@@ -226,6 +227,7 @@ object Observations {
               val lvalue = argumentAsString(annotation, "lvalue")
               val pattern = parsePattern(lvalue, annotation.entries("lvalue")._1.location, function)
               pattern.copy(code = Some(createCode(annotation, in)))
+            case _ => ???
           }
       }
 
