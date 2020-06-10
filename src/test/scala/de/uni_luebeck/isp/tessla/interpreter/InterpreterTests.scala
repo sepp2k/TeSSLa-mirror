@@ -184,10 +184,11 @@ class InterpreterTests extends AnyFunSuite {
           baseTimeString = testCase.baseTime,
           includeResolver = IncludeResolvers.fromResource(getClass, root),
           stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-          stdlibPath = "stdlib.tessla"
+          stdlibPath = "stdlib.tessla",
+          flattenCore = false
         )
         val src = testStream(testCase.spec)
-        val compiler = new Compiler()
+        val compiler = new Compiler(options)
         testCase.expectedObservations.foreach { observationFile =>
           val expectedObservation = JsonParser(
             Source
@@ -195,7 +196,7 @@ class InterpreterTests extends AnyFunSuite {
               .mkString
           ).convertTo[Observations]
           handleResult(
-            compiler.compile(src, options).andThen(Observations.Generator),
+            compiler.compile(src).andThen(Observations.Generator),
             testCase.expectedErrors,
             testCase.expectedWarnings
           ) { actualObservation =>
@@ -204,7 +205,7 @@ class InterpreterTests extends AnyFunSuite {
         }
         testCase.expectedObservationErrors.foreach { _ =>
           handleResult(
-            compiler.compile(src, options).andThen(Observations.Generator),
+            compiler.compile(src).andThen(Observations.Generator),
             testCase.expectedObservationErrors,
             testCase.expectedWarnings
           )(_ => ())
@@ -215,7 +216,7 @@ class InterpreterTests extends AnyFunSuite {
               val trace = new Trace()
                 .fromSource(testSource(input), s"$path$input", testCase.abortAt.map(BigInt(_)))
               val result = compiler
-                .compile(src, options)
+                .compile(src)
                 .map(spec => Interpreter.run(spec, trace, None))
 
               handleResult(result, testCase.expectedErrors, testCase.expectedWarnings) { output =>
@@ -248,7 +249,7 @@ class InterpreterTests extends AnyFunSuite {
             }
           case None =>
             handleResult(
-              compiler.compile(src, options),
+              compiler.compile(src),
               testCase.expectedErrors,
               testCase.expectedWarnings
             )(_ => ())

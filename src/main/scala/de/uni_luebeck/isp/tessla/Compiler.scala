@@ -12,22 +12,24 @@ object Compiler {
     baseTimeString: Option[String],
     includeResolver: String => Option[CharStream],
     stdlibIncludeResolver: String => Option[CharStream],
-    stdlibPath: String
+    stdlibPath: String,
+    flattenCore: Boolean
   ) {
     lazy val baseTime = baseTimeString.map(TimeLiteral.fromString(_, Location.option("basetime")))
   }
 
+  def compile(src: CharStream, options: Options): Result[Core.Specification] = new Compiler(options).compile(src)
 }
 
-class Compiler {
+class Compiler(options: Options) {
 
-  def instantiatePipeline(options: Options): TranslationPhase[CharStream, Core.Specification] = {
-    tesslaToTyped(options)
-      .andThen(typedToCore(options))
-      .andThen(coreToFlatCore(options))
+  def instantiatePipeline: TranslationPhase[CharStream, Core.Specification] = {
+    tesslaToTyped
+      .andThen(typedToCore)
+      .andThen(TranslationPhase.EnableIf(options.flattenCore, coreToFlatCore))
   }
 
-  def tesslaToTyped(options: Options): TranslationPhase[CharStream, TesslaAST.Typed.Specification] = {
+  def tesslaToTyped: TranslationPhase[CharStream, TesslaAST.Typed.Specification] = {
     new TesslaParser.WithIncludes(options.includeResolver)
       .andThen(new StdlibIncluder(options.stdlibIncludeResolver, options.stdlibPath))
       .andThen(TesslaSyntaxToTessla)
@@ -36,30 +38,10 @@ class Compiler {
       .andThen(new TypedTessla2TesslaASTCore(options.baseTime))
   }
 
-  def typedToCore(options: Options): TranslationPhase[Typed.Specification, Core.Specification] = new ConstantEvaluator
+  def typedToCore: TranslationPhase[Typed.Specification, Core.Specification] = new ConstantEvaluator
 
-  def coreToFlatCore(options: Options): TranslationPhase[Core.Specification, Core.Specification] = FlattenCore
+  def coreToFlatCore: TranslationPhase[Core.Specification, Core.Specification] = FlattenCore
 
-  def compile(src: CharStream, options: Options): Result[Core.Specification] = {
-    instantiatePipeline(options).translate(src)
-  }
-
-  class Printer[T] extends TranslationPhase[T, T] {
-    override def translate(spec: T) = {
-      println(s"=== ${spec.getClass.toString} ===")
-      println(spec)
-      TranslationPhase.Success(spec, Seq())
-    }
-  }
-
-  class EnableIf[T](condition: Boolean, phase: TranslationPhase[T, T]) extends TranslationPhase[T, T] {
-    override def translate(spec: T) = {
-      if (condition) {
-        phase.translate(spec)
-      } else {
-        TranslationPhase.Success(spec, Seq())
-      }
-    }
-  }
+  def compile(src: CharStream): Result[Core.Specification] = instantiatePipeline.translate(src)
 
 }

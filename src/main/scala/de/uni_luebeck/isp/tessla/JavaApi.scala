@@ -142,13 +142,14 @@ object JavaApi {
       baseTimeString = Option(baseTime),
       includeResolver = IncludeResolvers.empty,
       stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-      stdlibPath = "stdlib.tessla"
+      stdlibPath = "stdlib.tessla",
+      flattenCore = false
     )
     compile(specSource, compilerOptions)
   }
 
   def compile(specSource: CharStream, compilerOptions: Compiler.Options): CompilationResult = {
-    new Compiler().compile(specSource, compilerOptions) match {
+    Compiler.compile(specSource, compilerOptions) match {
       case Success(spec, warnings) =>
         CompilationResult(
           Result(warnings.map(Diagnostic).asJava, List().asJava),

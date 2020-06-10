@@ -25,7 +25,7 @@ trait TranslationPhase[-T, +U] extends (T => Result[U]) {
 }
 
 object TranslationPhase {
-  class ParallelPhase[A, B, C](phase1: TranslationPhase[A, B], phase2: TranslationPhase[A, C])
+  case class ParallelPhase[A, B, C](phase1: TranslationPhase[A, B], phase2: TranslationPhase[A, C])
       extends TranslationPhase[A, (B, C)] {
     override def translate(spec: A) = {
       val result1 = phase1.translate(spec)
@@ -34,15 +34,20 @@ object TranslationPhase {
     }
   }
 
-  class BypassPhase[A, B](phase: TranslationPhase[A, B]) extends TranslationPhase[A, (A, B)] {
+  case class BypassPhase[A, B](phase: TranslationPhase[A, B]) extends TranslationPhase[A, (A, B)] {
     override def translate(spec: A) = {
       val result = phase.translate(spec)
       result.map((spec, _))
     }
   }
 
-  class IdentityPhase[A] extends TranslationPhase[A, A] {
+  case class IdentityPhase[A]() extends TranslationPhase[A, A] {
     override def translate(spec: A) = Success(spec, Nil)
+  }
+
+  case class EnableIf[A](cond: Boolean, phase: TranslationPhase[A, A]) extends TranslationPhase[A, A]{
+    override def translate(spec: A) =
+      if (cond) phase.translate(spec) else Success(spec, Nil)
   }
 
   trait Translator[U] {

@@ -41,7 +41,8 @@ object Main {
       baseTimeString = None,
       includeResolver = IncludeResolvers.fromFile,
       stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-      stdlibPath = "stdlib.tessla"
+      stdlibPath = "stdlib.tessla",
+      flattenCore = false
     )
   )
 
@@ -89,7 +90,10 @@ object Main {
       .action((_, c) => c.copy(printCore = true))
       .text("Print the Tessla Core representation generated from the Tessla specification")
     opt[Unit]("print-core-lanspec")
-      .action((_, c) => c.copy(printCoreLanSpec = true))
+      .action((_, c) => c.copy(
+        printCoreLanSpec = true,
+        compilerOptions = c.compilerOptions.copy(flattenCore = true)
+      ))
       .text("Print the Tessla Core representation conform to the language specification.")
     opt[Unit]("print-typed")
       .action((_, c) => c.copy(printTyped = true))
@@ -165,11 +169,11 @@ object Main {
         sys.exit(1)
     }
 
-    val compiler = new Compiler
+    val compiler = new Compiler(config.compilerOptions)
     try {
-      val typed = unwrapResult(compiler.tesslaToTyped(config.compilerOptions)(config.specSource))
-      val core = unwrapResult(compiler.typedToCore(config.compilerOptions)(typed))
-      val flatCore = unwrapResult(compiler.coreToFlatCore(config.compilerOptions)(core))
+      val typed = unwrapResult(compiler.tesslaToTyped(config.specSource))
+      val core = unwrapResult(compiler.typedToCore(typed))
+      lazy val flatCore = unwrapResult(compiler.coreToFlatCore(core))
       val printOptions = TesslaAST.PrintOptions(
         !config.printAllTypes,
         config.printAllTypes,
