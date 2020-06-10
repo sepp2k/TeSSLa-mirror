@@ -45,7 +45,7 @@ object TranslationPhase {
     override def translate(spec: A) = Success(spec, Nil)
   }
 
-  case class EnableIf[A](cond: Boolean, phase: TranslationPhase[A, A]) extends TranslationPhase[A, A]{
+  case class EnableIf[A](cond: Boolean, phase: TranslationPhase[A, A]) extends TranslationPhase[A, A] {
     override def translate(spec: A) =
       if (cond) phase.translate(spec) else Success(spec, Nil)
   }

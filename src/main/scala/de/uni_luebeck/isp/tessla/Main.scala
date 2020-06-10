@@ -90,10 +90,12 @@ object Main {
       .action((_, c) => c.copy(printCore = true))
       .text("Print the Tessla Core representation generated from the Tessla specification")
     opt[Unit]("print-core-lanspec")
-      .action((_, c) => c.copy(
-        printCoreLanSpec = true,
-        compilerOptions = c.compilerOptions.copy(flattenCore = true)
-      ))
+      .action((_, c) =>
+        c.copy(
+          printCoreLanSpec = true,
+          compilerOptions = c.compilerOptions.copy(flattenCore = true)
+        )
+      )
       .text("Print the Tessla Core representation conform to the language specification.")
     opt[Unit]("print-typed")
       .action((_, c) => c.copy(printTyped = true))
