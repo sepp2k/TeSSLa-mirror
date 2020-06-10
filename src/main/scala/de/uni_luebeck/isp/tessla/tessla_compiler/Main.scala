@@ -2,11 +2,12 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import java.io.{File, PrintWriter}
 
-import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers}
+import de.uni_luebeck.isp.tessla.IncludeResolvers
+import de.uni_luebeck.isp.tessla.Compiler
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaBackend
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{ASTRemoveUnused, Flattening, LazynessAnalysis, UniqueRenaming, UsageAnalysis}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Flattening, LazynessAnalysis, UniqueRenaming, UsageAnalysis}
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
 
@@ -54,7 +55,8 @@ object Main extends SexyOpt {
           baseTimeString = None,
           includeResolver = IncludeResolvers.fromFile,
           stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-          stdlibPath = "stdlib.tessla"
+          stdlibPath = "stdlib.tessla",
+          flattenCore = false
         )
         val (backend, stdinRead) : (backends.BackendInterface, Boolean) = target.value match {
           case "java" => (new ScalaBackend, true)
@@ -64,7 +66,9 @@ object Main extends SexyOpt {
           case _=> throw Errors.CLIError(s"Unvalid option for target: ${target.value}")
         }
 
-        val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
+        val compiler = new Compiler(compilerOptions)
+        val unflatCore = unwrapResult(compiler.tesslaToTyped(specSource).andThen(compiler.typedToCore))
+        //val unflatCore = unwrapResult((new Compiler).compile(specSource, compilerOptions))
         val core = unwrapResult((new Flattening(false)).translate(unflatCore).
           andThen(new UniqueRenaming).
           andThen(new UsageAnalysis).

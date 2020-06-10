@@ -12,8 +12,8 @@ object DefinitionOrdering {
 
     def calcExpressionDependencies(exp: ExpressionArg, ignore: Set[Identifier]) : Unit = {
       exp match {
-        case ApplicationExpression(TypeApplicationExpression(ExternExpression(_,_,_,"last",_), _, _), args, _) => calcExpressionDependencies(args(1), ignore)
-        case ApplicationExpression(TypeApplicationExpression(ExternExpression(_,_,_,"delay",_), _, _), args, _) => calcExpressionDependencies(args(1), ignore)
+        case ApplicationExpression(TypeApplicationExpression(ExternExpression("last",_, _), _, _), args, _) => calcExpressionDependencies(args(1), ignore)
+        case ApplicationExpression(TypeApplicationExpression(ExternExpression("delay", _, _), _, _), args, _) => calcExpressionDependencies(args(1), ignore)
         case ApplicationExpression(app, args, _) => args.appended(app).foreach(exp => calcExpressionDependencies(exp, ignore))
         case ExpressionRef(id, _, _) if input.contains(id) => calcMissingDependencies(id, input(id), ignore)
         case TypeApplicationExpression(e, _, _) => calcExpressionDependencies(e, ignore)

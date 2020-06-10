@@ -20,8 +20,8 @@ class Flattening(flattenOutFuncExterns: Boolean) extends TranslationPhase[Core.S
 
     def externExpNeedsFlattening(e: ExternExpression): Boolean = {
       e match {
-        case ExternExpression(_, _, _, "true", _) |
-             ExternExpression(_, _, _, "false", _) => false
+        case ExternExpression("true", _, _) |
+             ExternExpression("false", _, _) => false
         case _ => flattenOutFuncExterns
       }
     }

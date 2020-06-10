@@ -55,7 +55,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
     }
 
     out.foreach {o =>
-      val name = o._2.get("name") match {
+      val name = o._2.get("$name") match {
         case Some(s) => s(0) match {
           case StringLiteralExpression(n, _) => Some(n)
           case _ => None

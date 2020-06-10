@@ -31,28 +31,16 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
     e match {
       case TypeApplicationExpression(app, types, _) =>
         translateFunctionCall(app, args, tm.typeApp(types), defContext)
-      case ExternExpression(_, _, _, "true", _) =>
-        BoolValue(true)
-      case ExternExpression(_, _, _, "false", _) =>
-        BoolValue(false)
-      case ExternExpression(tPars, _, InstantiatedType("Option", Seq(t), _), "None", _) =>
-        None(t.resolve(tm.parsKnown(tPars).resMap))
-      case ExternExpression(tPars, params, resultType, name, _) =>
-        val newTm = tm.parsKnown(tPars)
-        val ftype = name match {
-          case "Some" =>
-            FunctionType(Seq(LazyContainer(IntermediateCodeUtils.typeConversion(params.head._2.resolve(newTm.resMap)))),
-              IntermediateCodeUtils.typeConversion(resultType.resolve(newTm.resMap)))
-          case "getSome" =>
-            FunctionType(Seq(IntermediateCodeUtils.typeConversion(params.head._2.resolve(newTm.resMap))),
-              LazyContainer(IntermediateCodeUtils.typeConversion(resultType.resolve(newTm.resMap))))
-          case _ =>
-            FunctionType(params.map{case (_,t) => IntermediateCodeUtils.typeConversion(t.resolve(newTm.resMap))},
+      case ExternExpression(name, typ : Core.FunctionType, _) =>
+        val resultType = typ.resultType
+        val params = typ.paramTypes
+        val newTm = tm.parsKnown(typ.typeParams)
+        val ftype =  FunctionType(params.map{case (_,t) => IntermediateCodeUtils.typeConversion(t.resolve(newTm.resMap))},
             IntermediateCodeUtils.typeConversion(resultType.resolve(newTm.resMap)))
-        }
         FunctionCall(s"__${name}__",
                      args,
                      ftype)
+      case e: ExternExpression => translateExtern(e, tm, defContext)
       case _: FunctionExpression |
            _: ExpressionRef |
            _: ApplicationExpression |
@@ -91,15 +79,24 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
     translatedBody :+ ReturnStatement(translateExpressionArg(ret, tm, newDefContext))
   }
 
-  def translateExternToLambda(e: ExternExpression, tm: TypeArgManagement, defContext: Map[Identifier, DefinitionExpression]) : ImpLanExpr = {
-      val newTm = tm.parsKnown(e.typeParams)
-      val argNames = e.params.indices.map(i => s"tLPar_$i")
-      val argTypes = e.params.map(_._2.resolve(newTm.resMap)).map(IntermediateCodeUtils.typeConversion).zip(e.params.map(_._1)).map{
-        case (t, StrictEvaluation) => t
-        case (t, LazyEvaluation) => LazyContainer(t)
-      }
-      val ret = translateFunctionCall(e, argNames.map(Variable), newTm, defContext)
-      LambdaExpression(argNames, argTypes, e.resultType.resolve(newTm.resMap), Seq(ReturnStatement(ret)))
+  def translateExtern(e: ExternExpression, tm: TypeArgManagement, defContext: Map[Identifier, DefinitionExpression]) : ImpLanExpr = {
+    e match {
+      case ExternExpression("true", _, _) =>
+        BoolValue(true)
+      case ExternExpression("false", _, _) =>
+        BoolValue(false)
+      case ExternExpression("None", InstantiatedType("Option", Seq(t), _), _) =>
+        None(t.resolve(tm.resMap))
+      case ExternExpression(_, typ : Core.FunctionType, _) =>
+        val newTm = tm.parsKnown(typ.typeParams)
+        val argNames = typ.paramTypes.indices.map(i => s"tLPar_$i")
+        val argTypes = typ.paramTypes.map(_._2.resolve(newTm.resMap)).map(IntermediateCodeUtils.typeConversion).zip(typ.paramTypes.map(_._1)).map{
+          case (t, StrictEvaluation) => t
+          case (t, LazyEvaluation) => LazyContainer(t)
+        }
+        val ret = translateFunctionCall(e, argNames.map(Variable), newTm, defContext)
+        LambdaExpression(argNames, argTypes, typ.resultType.resolve(newTm.resMap), Seq(ReturnStatement(ret)))
+    }
   }
 
   def translateExpressionArg(e: ExpressionArg, tm: TypeArgManagement, defContext: Map[Identifier, DefinitionExpression] = Map()): ImpLanExpr = {
@@ -119,7 +116,7 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
       case ExpressionRef(id, _, _) =>
         s"var_${id.fullName}"
       case x: ExternExpression =>
-        translateExternToLambda(x, tm, defContext)
+        translateExtern(x, tm, defContext)
       case RecordConstructorExpression(entries, _) if entries.isEmpty =>
         UnitValue
       case RecordConstructorExpression(entries, _) =>
