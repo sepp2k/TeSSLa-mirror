@@ -118,7 +118,7 @@ object IntermediateCodeUtils {
       case InstantiatedType("Int", Seq(), _) => LongType
       case InstantiatedType("Float", Seq(), _) => DoubleType
       case InstantiatedType("String", Seq(), _) => StringType
-      case InstantiatedType("Option", Seq(t), _) => OptionType(LazyContainer(t))
+      case InstantiatedType("Option", Seq(t), _) => OptionType(t)
       case InstantiatedType("Set", Seq(t), _) => ImmutableSetType(t)
       case InstantiatedType("Map", Seq(t1, t2), _) => ImmutableMapType(t1, t2)
       case InstantiatedType("List", Seq(t), _) => ImmutableListType(t)
@@ -146,7 +146,7 @@ object IntermediateCodeUtils {
       case InstantiatedType("Int", Seq(), _) => LongValue(0)
       case InstantiatedType("Float", Seq(), _) => DoubleValue(0)
       case InstantiatedType("String", Seq(), _) => StringValue("")
-      case InstantiatedType("Option", Seq(t), _) => None(LazyContainer(t))
+      case InstantiatedType("Option", Seq(t), _) => None(t)
       case InstantiatedType("Set", Seq(t), _) => EmptyImmutableSet(t)
       case InstantiatedType("Map", Seq(t1, t2), _) => EmptyImmutableMap(t1, t2)
       case InstantiatedType("List", Seq(t), _) => EmptyImmutableList(t)

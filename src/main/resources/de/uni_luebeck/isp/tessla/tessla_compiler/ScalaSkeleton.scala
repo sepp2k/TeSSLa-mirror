@@ -10,6 +10,28 @@ object Main {
     }
     case class ErrorContainer(errCode: Long) extends  java.lang.Exception
 
+    object EOSome {
+        def apply[A](value: => A): ErrorOption[A] = {
+            try {
+                ErrorOption[A](Some(value), None)
+            } catch {
+                case t: Throwable => ErrorOption[A](None, Some(t))
+            }
+        }
+    }
+
+    object EONone {
+        def apply[A](): ErrorOption[A] = ErrorOption[A](None, None)
+    }
+
+    case class ErrorOption[A](value: Option[A], error: Option[Throwable]) {
+        def get() : A = if (value.isDefined) value.get else throw error.get
+
+        def isDefined : Boolean = value.isDefined || error.isDefined
+
+        def isEmpty : Boolean = value.isEmpty && error.isEmpty
+    }
+
     def findEnd(s: String, delim: String, start: Int): Int = {
         if (start + delim.length <= s.length && s.substring(start, start + delim.length) == delim ) {
             start

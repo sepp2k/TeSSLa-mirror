@@ -16,26 +16,27 @@ import de.uni_luebeck.isp.tessla._
 class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
 
   def translateExternSignalExpression(id: Identifier, e: ExternExpression, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing) : SourceListing = {
-    val typeParamMap = e.typeParams.zip(typeArgs).toMap
+    val typ = e.tpe.asInstanceOf[Core.FunctionType]
+    val typeParamMap = typ.typeParams.zip(typeArgs).toMap
     e.name match {
       case "nil" =>
-        produceNilStepCode(id, e.resultType.resolve(typeParamMap), e.location, currSource)
+        produceNilStepCode(id, typ.resultType.resolve(typeParamMap), e.location, currSource)
       case "default" =>
-        produceDefaultStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), currSource)
+        produceDefaultStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
       case "defaultFrom" =>
-        produceDefaultFromStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), currSource)
+        produceDefaultFromStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
       case "time" =>
         produceTimeStepCode(id, args(0), currSource)
       case "last" =>
-        produceLastStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), currSource)
+        produceLastStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
       case "delay" =>
         produceDelayStepCode(id, args(0), args(1), currSource)
       case "lift" =>
-        produceLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
+        produceLiftStepCode(id, typ.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
       case "slift" =>
-        produceSignalLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
+        produceSignalLiftStepCode(id, typ.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
       case "merge" =>
-        produceMergeStepCode(id, e.resultType.resolve(typeParamMap), args, currSource)
+        produceMergeStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
       case _ => throw tessla_compiler.Errors.CommandNotSupportedError(e.toString)
     }
   }
@@ -237,8 +238,8 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     val params = args.zip(coreExp).map{case (sr, exp) => {
                                   val (sName, sType) = streamNameAndTypeFromExpressionArg(sr)
                                   TernaryExpression(Seq(Seq(s"${sName}_changed")),
-                                                  FunctionCall("__Some__", Seq(exp), IntermediateCode.FunctionType(Seq(LazyContainer(sType)), OptionType(LazyContainer(sType)))),
-                                                  None(LazyContainer(sType)))
+                                                  FunctionCall("__Some__", Seq(exp), IntermediateCode.FunctionType(Seq(sType), OptionType(sType))),
+                                                  None(sType))
                                 }
                          }
 
@@ -250,10 +251,10 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       If(guard).
           Assignment(s"${o}_error", LongValue(0), LongValue(0), LongType).
           Try().
-            Assignment(s"${o}_fval", nonStreamCodeGenerator.translateFunctionCall(function, params, nonStreamCodeGenerator.TypeArgManagement.empty), scala.None, OptionType(LazyContainer(ot))).
-            If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(LazyContainer(ot))), BoolType))))).
+            Assignment(s"${o}_fval", nonStreamCodeGenerator.translateFunctionCall(function, params, nonStreamCodeGenerator.TypeArgManagement.empty), scala.None, OptionType(ot)).
+            If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
               Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
-              Assignment(s"${o}_newValue", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(LazyContainer(ot))), LazyContainer(ot))), defaultValueForStreamType(ot), ot).
+              Assignment(s"${o}_newValue", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForStreamType(ot), ot).
             EndIf().
           Catch().
             Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
