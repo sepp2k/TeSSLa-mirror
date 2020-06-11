@@ -142,6 +142,10 @@ object IntermediateCode {
     override def toString : String = "GeneralValue"
   }
 
+  final case object NoError extends  ImpLanVal {
+    override def toString : String = "NoError"
+  }
+
   final case class StructValue(values: Map[String, ImpLanVal]) extends  ImpLanVal {
     override def toString : String = s"{${values.map{case (k,v) => s"$k: $v)"}.mkString(", ")}}"
   }

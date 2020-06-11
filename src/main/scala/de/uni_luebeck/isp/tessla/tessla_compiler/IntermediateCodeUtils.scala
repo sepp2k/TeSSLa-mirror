@@ -204,9 +204,6 @@ object IntermediateCodeUtils {
   implicit def Throw(e: ImpLanExpr, forType: ImpLanType) : ImpLanExpr =
     FunctionCall("__[TC]throw__", Seq(e), IntermediateCode.FunctionType(Seq(IntermediateCode.ErrorType), forType))
 
-  implicit def ErrorContainer(errCodeExp: ImpLanExpr) : ImpLanExpr =
-    FunctionCall("__[TC]Error__", Seq(errCodeExp), IntermediateCode.FunctionType(Seq(IntermediateCode.LongType), IntermediateCode.ErrorType))
-
   implicit def MkStruct(content: Seq[(String, ImpLanExpr)], targetType: ImpLanType) : ImpLanExpr = {
     targetType match {
       case castedTargetType: StructType => {

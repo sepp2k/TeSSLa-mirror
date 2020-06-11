@@ -16,6 +16,7 @@ object ScalaConstants {
       case UnitType => "Boolean"
       case StringType => "String"
       case GeneralType => "Any"
+      case ErrorType => "Throwable"
       case OptionType(valType) => s"ErrorOption[${typeTranslation(valType)}]"
       case MutableSetType(valType) => s"scala.collection.mutable.HashSet[${typeTranslation(valType)}]"
       case ImmutableSetType(valType) => s"Set[${typeTranslation(valType)}]"
@@ -40,6 +41,7 @@ object ScalaConstants {
       case StringValue(value) => s""""${value.replaceAllLiterally("\"", "\\\"")}"""" //TODO: Find better solution, re-escaping all special chars
       case GeneralValue => "null"
       case EmptyFunction(_) => "null"
+      case NoError => "null"
       case None(_) => "EONone()"
       case Some(content) => s"EOSome(${valueTranslation(content)})"
       case EmptyMutableSet(_) => s"scala.collection.mutable.HashSet()"
@@ -60,7 +62,6 @@ object ScalaConstants {
       case "__[TC]inputParse__" => ScalaIOHandling.getInputParseExpression(typeHint.retType, args(0))
       case "__[TC]getErrorCode__" => s"getErrorCode(${args(0)})"
       case "__[TC]throw__" => s"throw ${args(0)}"
-      case "__[TC]Error__" => s"ErrorContainer(${args(0)})"
 
       case "__ite__" |
            "__staticite__" => s"(if (${args(0)}) ${args(1)} else ${args(2)})"

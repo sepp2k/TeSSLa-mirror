@@ -8,7 +8,6 @@ object Main {
     case class InputError(m: String, s: String) extends java.lang.Exception {
         override def toString: String = s"$m: $s"
     }
-    case class ErrorContainer(errCode: Long) extends  java.lang.Exception
 
     object EOSome {
         def apply[A](value: => A): ErrorOption[A] = {
@@ -75,26 +74,13 @@ object Main {
         }
     }
 
-    def getErrorCode(err: Throwable) : Long = {
-        err match {
-            case ErrorContainer(errCode) => errCode
-            case err: java.lang.ArithmeticException if err.getMessage == "/ by zero" => 1
-            case _: java.util.NoSuchElementException => 2
-            case _ => 2048
+    def outputVar(output: String, trueName: String, error: Throwable, ts: Long) : Unit = {
+        if (error != null) {
+            System.err.println(s"$ts: FATAL: $trueName evaluation encountered an Error: ${error.getMessage}")
+            System.exit(1)
+        } else {
+            println(s"$ts: $trueName = $output")
         }
-    }
-
-    def outputVar(output: String, trueName: String, errorCode: Long, ts: Long) : Unit = {
-        var outputWithError: String = if (errorCode != 0)  "FATAL: " + trueName + " evaluation encountered an Error: " else ""
-
-        errorCode match {
-            case 0 =>  outputWithError = trueName + " = " + output
-            case 1 => outputWithError += "Division by zero"
-            case 2 => outputWithError += "Map access to non existing key"
-            case _  => outputWithError += "Unknown error code " + errorCode
-        }
-        println(s"$ts: $outputWithError")
-        if (errorCode != 0) System.exit(errorCode.toInt)
     }
 
     def main(args: Array[String]) : Unit = {

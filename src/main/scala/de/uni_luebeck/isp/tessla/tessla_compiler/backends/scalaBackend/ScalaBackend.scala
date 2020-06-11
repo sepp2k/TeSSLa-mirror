@@ -56,7 +56,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       case LambdaApplication(exp, params) => s"${translateExpression(exp)}.apply(${params.map(translateExpression).mkString(", ")})"
       case TernaryExpression(guard, e1, e2) => s"(if(${foldGuard(guard)}) {${translateExpression(e1)}} else {${translateExpression(e2)}})"
       case Equal(a, b) => {
-        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _, _) => typ }.toMap))) {
+        if (needsObjectCompare(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _, _) => typ }.toMap))) {
           s"${translateExpression(a)}.equals(${translateExpression(b)})"
         } else {
           s"${translateExpression(a)} == ${translateExpression(b)}"
@@ -73,12 +73,13 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       case CastingExpression(e, _, t) => s"(${translateExpression(e)}).asInstanceOf[${ScalaConstants.typeTranslation(t)}]"
     }
 
-  def isObjectType(t: ImpLanType) : Boolean = {
+  def needsObjectCompare(t: ImpLanType) : Boolean = {
     t match {
       case LongType |
            DoubleType |
            BoolType |
-           UnitType => false
+           UnitType |
+           ErrorType => false
       case _ => true
     }
   }
