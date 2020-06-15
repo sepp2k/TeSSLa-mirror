@@ -13,11 +13,12 @@ class Flattener(spec: Tessla.Specification)
     with TranslationPhase.Translator[FlatTessla.Specification] {
   type IdMap = Map[String, FlatTessla.Identifier]
 
-  implicit val ordering: Ordering[Tessla.Statement] = (a: Tessla.Statement, b: Tessla.Statement) => (a, b) match {
-    case (_: Tessla.TypeDefinition, _) => -1
-    case (_, _: Tessla.TypeDefinition) => 1
-    case _ => 0
-  }
+  implicit val ordering: Ordering[Tessla.Statement] = (a: Tessla.Statement, b: Tessla.Statement) =>
+    (a, b) match {
+      case (_: Tessla.TypeDefinition, _) => -1
+      case (_, _: Tessla.TypeDefinition) => 1
+      case _                             => 0
+    }
 
   case class Env(variables: IdMap, types: IdMap) {
     def ++(other: Env) = Env(variables ++ other.variables, types ++ other.types)
@@ -148,9 +149,11 @@ class Flattener(spec: Tessla.Specification)
       case Nil => Env(Map(), Map())
       case id :: tail =>
         val resolved = outerEnv.variables.getOrElse(id.name, throw UndefinedVariable(id))
-        val entry = defs.resolveVariable(resolved).getOrElse(
-          throw InternalError(s"Unable to find definition for $resolved.")
-        )
+        val entry = defs
+          .resolveVariable(resolved)
+          .getOrElse(
+            throw InternalError(s"Unable to find definition for $resolved.")
+          )
 
         val env = entry.expression match {
           case tessla.FlatTessla.ObjectLiteral(members, _) =>
@@ -161,7 +164,7 @@ class Flattener(spec: Tessla.Specification)
 
         tail match {
           case Nil => env
-          case _ => unrollPath(tail, outerEnv ++ env)
+          case _   => unrollPath(tail, outerEnv ++ env)
         }
     }
 
@@ -230,7 +233,7 @@ class Flattener(spec: Tessla.Specification)
 
     env.variables.get(definition.id.name).flatMap(defs.resolveVariable) match {
       case Some(previous) => error(MultipleDefinitionsError(definition.id, previous.loc))
-      case None =>
+      case None           =>
     }
 
     if (definition.parameters.isEmpty && definition.typeParameters.isEmpty) {
