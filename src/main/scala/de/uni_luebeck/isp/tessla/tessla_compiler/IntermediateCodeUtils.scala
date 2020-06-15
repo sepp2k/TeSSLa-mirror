@@ -189,6 +189,9 @@ object IntermediateCodeUtils {
   implicit def  BitwiseOr(ops: Seq[ImpLanExpr]) : ImpLanExpr =
     FunctionCall("__bitor__", ops, IntermediateCode.FunctionType(ops.map{_ => LongType}, LongType))
 
+  implicit def  And(ops: Seq[ImpLanExpr]) : ImpLanExpr =
+    FunctionCall("__and__", ops, IntermediateCode.FunctionType(ops.map{_ => BoolType}, BoolType))
+
   implicit def  NotEqual(a: ImpLanExpr, b: ImpLanExpr) : ImpLanExpr =
     Negation(Equal(a, b))
 

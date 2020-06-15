@@ -60,7 +60,8 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       FinalAssignment(s"${o}_init", BoolValue(false), BoolType).
       FinalAssignment(s"${o}_ts", LongValue(0), LongType).
       FinalAssignment(s"${o}_error", NoError, ErrorType).
-      FinalAssignment(s"${o}_changed", BoolValue(false), BoolType)
+      FinalAssignment(s"${o}_changed", BoolValue(false), BoolType).
+      FinalAssignment(s"${o}_unknown", BoolValue(false), BoolType)
       )
 
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
@@ -85,6 +86,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
         Assignment(s"${o}_error", s"${s}_error", NoError, ErrorType).
         Assignment(s"${o}_changed", BoolValue(true), BoolValue(true), BoolType).
+        Assignment(s"${o}_unknown", s"${s}_unknown", BoolValue(false), BoolType).
       EndIf()
 
       )
@@ -104,6 +106,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
         Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
         Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType).
         Assignment(s"${o}_value", s"${s}_value", defaultValueForStreamType(ot), ot).
+        Assignment(s"${o}_unknown", s"${s}_unknown", BoolValue(false), BoolType).
         Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
         Assignment(s"${o}_error", s"${s}_error", NoError, ErrorType).
@@ -114,6 +117,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
           Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType).
           Assignment(s"${o}_value", s"${d}_value", defaultValueForStreamType(ot), ot).
+          Assignment(s"${o}_unknown", s"${d}_unknown", BoolValue(false), BoolType).
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
           Assignment(s"${o}_error", s"${d}_error", NoError, ErrorType).
@@ -132,15 +136,20 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
 
     val newStmt = (currSrc.stepSource.
 
-    Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-    If(Seq(Seq(s"${s}_changed"))).
+      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
+      If(Seq(Seq(s"${s}_changed"))).
       Assignment(s"${o}_lastValue", s"${o}_value", LongValue(0), LongType).
       Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
       Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType).
       Assignment(s"${o}_value", s"${s}_ts", LongValue(0), LongType).
       Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
       Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-      Assignment(s"${o}_error", s"${s}_error", NoError, ErrorType).
+      Assignment(s"${o}_unknown", s"${s}_unknown", BoolValue(false), BoolType).
+      If(Seq(Seq(s"${o}_unknown"))).
+        Assignment(s"${o}_error", s"${s}_error", NoError, ErrorType).
+      Else().
+        Assignment(s"${o}_error", NoError, NoError, ErrorType).
+      EndIf().
       Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
     EndIf()
 
@@ -164,12 +173,17 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
         Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
         Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-        If(Seq(Seq(Equal(s"${v}_ts", "currTs")))).
-          Assignment(s"${o}_value", s"${v}_lastValue", defaultValueForStreamType(ot), ot).
-          Assignment(s"${o}_error", s"${v}_lastError", NoError, ErrorType).
+        Assignment(s"${o}_unknown", s"${c}_unknown", BoolValue(false), BoolType).
+        If(Seq(Seq(s"${o}_unknown"))).
+          Assignment(s"${o}_error", s"${c}_error", NoError, ErrorType).
         Else().
-          Assignment(s"${o}_value", s"${v}_value", defaultValueForStreamType(ot), ot).
-          Assignment(s"${o}_error", s"${v}_error", NoError, ErrorType).
+          If(Seq(Seq(Equal(s"${v}_ts", "currTs")))).
+            Assignment(s"${o}_value", s"${v}_lastValue", defaultValueForStreamType(ot), ot).
+            Assignment(s"${o}_error", s"${v}_lastError", NoError, ErrorType).
+          Else().
+            Assignment(s"${o}_value", s"${v}_value", defaultValueForStreamType(ot), ot).
+            Assignment(s"${o}_error", s"${v}_error", NoError, ErrorType).
+          EndIf().
         EndIf().
       EndIf().
       EndIf()
@@ -194,6 +208,8 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
         Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
         Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
+        FinalAssignment(s"${o}_error", NoError, ErrorType).
+        Assignment(s"${o}_unknown", BoolValue(false), BoolValue(false), BoolType).
       EndIf()
 
       )
@@ -208,19 +224,17 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
 
     val newTail = (currSrc.tailSource.
 
-      If(Seq(Seq(s"${d}_changed"))).
-        If(Seq(Seq(s"${o}_changed"), Seq(s"${r}_changed"))).
-          If(Seq(Seq(NotEqual(s"${o}_error", NoError)), Seq(NotEqual(s"${d}_error", NoError)), Seq(NotEqual(s"${r}_error", NoError)))).
-            Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType).
-            Assignment(s"${o}_error", BitwiseOr(Seq(s"${o}_error", s"${d}_error", s"${r}_error")), NoError, ErrorType). //TODO !!!
-          Else().
-            Assignment(s"${o}_nextTs", Addition("currTs", s"${d}_value"), LongValue(-1), LongType).
-          EndIf().
-        EndIf().
+      If(Seq(Seq(s"${r}_unknown"), Seq(NotEqual(s"${d}_error", NoError)), Seq(s"${d}_changed", GreaterEqual(LongValue(0), s"${d}_value")))).
+        FunctionCall("__[TC]delayPanic__", Seq(), IntermediateCode.FunctionType(Seq(), UnitType)).
       Else().
-        If(Seq(Seq(s"${r}_changed"))).
-          Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType).
-          Assignment(s"${o}_error", s"${r}_error", NoError, ErrorType).
+        If(Seq(Seq(s"${d}_changed"))).
+          If(Seq(Seq(s"${o}_changed"), Seq(s"${r}_changed"))).
+              Assignment(s"${o}_nextTs", Addition("currTs", s"${d}_value"), LongValue(-1), LongType).
+          EndIf().
+        Else().
+          If(Seq(Seq(s"${r}_changed"))).
+            Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType).
+          EndIf().
         EndIf().
       EndIf()
       )
@@ -251,7 +265,9 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       If(guard).
           Assignment(s"${o}_error", NoError, NoError, ErrorType).
           Try().
+            Assignment(s"${o}_unknown", BoolValue(true), BoolValue(false), BoolType).
             Assignment(s"${o}_fval", nonStreamCodeGenerator.translateFunctionCall(function, params, nonStreamCodeGenerator.TypeArgManagement.empty), scala.None, OptionType(ot)).
+            Assignment(s"${o}_unknown", BoolValue(false), BoolValue(false), BoolType).
             If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
               Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
               Assignment(s"${o}_newValue", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForStreamType(ot), ot).
@@ -260,6 +276,11 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
             Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
             Assignment(s"${o}_error", s"var_err", NoError, ErrorType).
           EndTry().
+          If(Seq(Seq(s"${o}_unknown"), args.map{sr => Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_unknown")})).
+            Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
+            Assignment(s"${o}_unknown", BoolValue(true), BoolValue(false), BoolType).
+            Assignment(s"${o}_error", FunctionCall("__[TC]UnknownEventError__", Seq(s"${o}_error"), IntermediateCode.FunctionType(Seq(ErrorType), ErrorType)), NoError, ErrorType).
+          EndIf().
           If(Seq(Seq(s"${o}_changed"))).
             Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
             Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
@@ -285,6 +306,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     }
 
     val fcall = nonStreamCodeGenerator.translateFunctionCall(function, fargs, nonStreamCodeGenerator.TypeArgManagement.empty)
+    val unknown : ImpLanExpr = And(args.map{sr => Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_unknown")})
 
     val newStmt = (currSrc.stepSource.
 
@@ -294,12 +316,17 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
           Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
           Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
           Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType).
-          Assignment(s"${o}_error", NoError, NoError, ErrorType).
-          Try().
-            Assignment(s"${o}_value", fcall, defaultValueForStreamType(ot), ot).
-          Catch().
-            Assignment(s"${o}_error", s"var_err", NoError, ErrorType).
-          EndTry().
+          Assignment(s"${o}_unknown", unknown, BoolValue(false), BoolType).
+          If(Seq(Seq(s"${o}_unknown"))).
+            Assignment(s"${o}_error", FunctionCall("__[TC]UnknownEventError__", Seq(NoError), IntermediateCode.FunctionType(Seq(ErrorType), ErrorType)), NoError, ErrorType).
+          Else().
+            Assignment(s"${o}_error", NoError, NoError, ErrorType).
+            Try().
+              Assignment(s"${o}_value", fcall, defaultValueForStreamType(ot), ot).
+            Catch().
+              Assignment(s"${o}_error", s"var_err", NoError, ErrorType).
+            EndTry().
+          EndIf().
           Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
           Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
           Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
@@ -313,6 +340,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     val o = s"var_${id.fullName}"
 
     val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))}
+    val unknown : ImpLanExpr = And(args.map{sr => Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_unknown")})
 
     var newStmt = (currSrc.stepSource.
 
@@ -323,7 +351,8 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
         Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType).
         Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
         Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
+        Assignment(s"${o}_unknown", unknown, BoolValue(false), BoolType)
       )
 
     args.foreach{arg =>
@@ -383,6 +412,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
         Assignment(s"${s}_ts", "currTs", LongValue(0), LongType).
         FinalAssignment(s"${s}_error", NoError, ErrorType).
         Assignment(s"${s}_changed", BoolValue(true), BoolValue(false), BoolType).
+        FinalAssignment(s"${s}_unknown", BoolValue(false), BoolType).
       EndIf()
     )
 

@@ -62,6 +62,8 @@ object ScalaConstants {
       case "__[TC]inputParse__" => ScalaIOHandling.getInputParseExpression(typeHint.retType, args(0))
       case "__[TC]getErrorCode__" => s"getErrorCode(${args(0)})"
       case "__[TC]throw__" => s"throw ${args(0)}"
+      case "__[TC]delayPanic__" => "{System.err.println(s\"FATAL: Due to previous errors a delay could not be evaluated.\"); System.exit(1);}"
+      case "__[TC]UnknownEventError__" => s"UnknownEventError(${args(0)})"
 
       case "__ite__" |
            "__staticite__" => s"(if (${args(0)}) ${args(1)} else ${args(2)})"

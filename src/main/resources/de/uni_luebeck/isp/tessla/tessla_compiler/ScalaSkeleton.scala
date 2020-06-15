@@ -6,7 +6,18 @@ import java.io.InputStreamReader
 object Main {
 
     case class InputError(m: String, s: String) extends java.lang.Exception {
-        override def toString: String = s"$m: $s"
+        override def getMessage: String = s"$m: $s"
+    }
+
+    case class UnknownEventError(base: Throwable) extends java.lang.Exception {
+        override def getMessage: String =
+            "Uncertainty concerning the existence of an event" +
+              (if (base != null)
+                  s" due to the follwing base error:\n ${base.getMessage}"
+                else
+                  "."
+                )
+
     }
 
     object EOSome {
@@ -76,7 +87,7 @@ object Main {
 
     def outputVar(output: String, trueName: String, error: Throwable, ts: Long) : Unit = {
         if (error != null) {
-            System.err.println(s"$ts: FATAL: $trueName evaluation encountered an Error: ${error.getMessage}")
+            System.err.println(s"$ts: FATAL: $trueName evaluation encountered an Error:\n ${error.getMessage}")
             System.exit(1)
         } else {
             println(s"$ts: $trueName = $output")
