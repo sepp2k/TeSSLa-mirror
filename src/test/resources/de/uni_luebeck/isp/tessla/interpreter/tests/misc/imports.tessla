@@ -1,0 +1,17 @@
+in x: Events[Int]
+
+module Foo{
+    module Bar{
+        module Baz{
+            liftable def foo(a: Int) := a + 42
+        }
+        import Baz
+    }
+}
+
+import Foo
+import Foo.Bar.Baz
+
+out foo(x) as foo1
+out Foo.Bar.foo(x) as foo2
+out Bar.foo(x) as foo3

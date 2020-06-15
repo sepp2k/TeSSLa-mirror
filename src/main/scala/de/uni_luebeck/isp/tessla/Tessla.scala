@@ -68,6 +68,10 @@ object Tessla {
     def name: String = id.name
   }
 
+  case class Import(path: List[Identifier], loc: Location) extends Statement {
+    override def toString = s"import ${path.mkString(".")}"
+  }
+
   case class AnnotationDefinition(id: Identifier, parameters: Seq[Parameter], loc: Location) extends Statement
 
   case class TypeDefinition(

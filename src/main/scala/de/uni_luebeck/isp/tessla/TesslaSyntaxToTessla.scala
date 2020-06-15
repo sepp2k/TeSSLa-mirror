@@ -191,6 +191,10 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       val contents = module.contents.asScala.map(_.statement).map(visit)
       Tessla.Module(mkID(module.name), contents.toSeq, Location.fromNode(module))
     }
+
+    override def visitImportStatement(imprt: TesslaSyntax.ImportStatementContext): Tessla.Statement = {
+      Tessla.Import(imprt.path.asScala.map(mkID).toList, Location.fromNode(imprt))
+    }
   }
 
   def translateParameter(

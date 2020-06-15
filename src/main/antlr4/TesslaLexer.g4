@@ -10,7 +10,6 @@ INCLUDE: 'include';
 TYPE: 'type';
 MODULE: 'module';
 IMPORT: 'import';
-IMEXPORT: 'imexport';
 EXTERN: 'extern';
 ROOT: '__root__';
 STRICT: 'strict';

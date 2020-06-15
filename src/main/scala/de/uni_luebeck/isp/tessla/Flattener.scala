@@ -1,12 +1,23 @@
 package de.uni_luebeck.isp.tessla
 
+import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
+import cats.implicits._
+
+import scala.annotation.tailrec
+import scala.collection.mutable
 
 class Flattener(spec: Tessla.Specification)
     extends FlatTessla.IdentifierFactory
     with TranslationPhase.Translator[FlatTessla.Specification] {
   type IdMap = Map[String, FlatTessla.Identifier]
+
+  implicit val ordering: Ordering[Tessla.Statement] = (a: Tessla.Statement, b: Tessla.Statement) => (a, b) match {
+    case (_: Tessla.TypeDefinition, _) => -1
+    case (_, _: Tessla.TypeDefinition) => 1
+    case _ => 0
+  }
 
   case class Env(variables: IdMap, types: IdMap) {
     def ++(other: Env) = Env(variables ++ other.variables, types ++ other.types)
@@ -28,22 +39,17 @@ class Flattener(spec: Tessla.Specification)
       annotationDef.id.name -> annotationDef
   }.toMap
 
-  val globalDefs = new FlatTessla.Definitions(None)
-  val globalVariableIdMap = createIdMap(spec.statements.flatMap(getName))
-  val globalTypeIdMap = createIdMap(spec.statements.collect {
+  private val globalDefs = new FlatTessla.Definitions(None)
+  private val globalVariableIdMap = createIdMap(spec.statements.flatMap(getName))
+  private val globalTypeIdMap = createIdMap(spec.statements.collect {
     case typeDef: Tessla.TypeDefinition => typeDef.id.name
   })
-  val globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
+  private var globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
 
   override def translateSpec() = {
     val emptySpec = FlatTessla.Specification(globalDefs, Seq(), outAll = None, globalVariableIdMap)
-    // Process type definitions before anything else, so that types can be used before they're defined
-    spec.statements.foreach {
-      case typeDef: Tessla.TypeDefinition =>
-        addTypeDefinition(typeDef, globalDefs, globalEnv)
-      case _ => // do nothing
-    }
-    spec.statements.foldLeft(emptySpec) {
+
+    spec.statements.sorted.foldLeft(emptySpec) {
       case (result, outAll: Tessla.OutAll) =>
         if (result.hasOutAll) warn(ConflictingOut(outAll.loc, previous = result.outAll.get.loc))
         result.copy(outAll = Some(FlatTessla.OutAll(outAll.annotations.map(translateAnnotation), outAll.loc)))
@@ -61,7 +67,11 @@ class Flattener(spec: Tessla.Specification)
         addDefinition(definition, globalDefs, globalEnv)
         result
 
-      case (result, _: Tessla.TypeDefinition | _: Tessla.AnnotationDefinition) =>
+      case (result, typeDef: Tessla.TypeDefinition) =>
+        addTypeDefinition(typeDef, globalDefs, globalEnv)
+        result
+
+      case (result, _: Tessla.AnnotationDefinition) =>
         result
 
       case (result, in: Tessla.In) =>
@@ -70,6 +80,10 @@ class Flattener(spec: Tessla.Specification)
 
       case (result, module: Tessla.Module) =>
         addModule(module, globalDefs, globalEnv)
+        result
+
+      case (result, imprt: Tessla.Import) =>
+        globalEnv ++= translateImport(imprt, globalDefs, globalEnv)
         result
     }
   }
@@ -93,15 +107,10 @@ class Flattener(spec: Tessla.Specification)
     val typeIdMap = createIdMap(module.contents.collect {
       case typeDef: Tessla.TypeDefinition => typeDef.id.name
     })
-    val env = outerEnv ++ Env(variableIdMap, typeIdMap)
-    // Process type definitions before anything else, so that types can be used before they're defined
-    module.contents.foreach {
-      case typeDef: Tessla.TypeDefinition =>
-        addTypeDefinition(typeDef, defs, env)
-      case _ => // do nothing
-    }
-    // TODO: Handle annotation definitions in modules
-    module.contents.foreach {
+    var env = outerEnv ++ Env(variableIdMap, typeIdMap)
+    var importMembers = mutable.Map[String, FlatTessla.IdLoc]()
+
+    module.contents.sorted.foreach {
       case definition: Tessla.Definition =>
         addDefinition(definition, defs, env)
 
@@ -114,17 +123,49 @@ class Flattener(spec: Tessla.Specification)
       case annoDef: Tessla.AnnotationDefinition =>
         error(AnnotationDefInModule(annoDef.loc))
 
-      case _: Tessla.TypeDefinition => // Do nothing because types have already been handled
+      case imprt: Tessla.Import =>
+        val importEnv = translateImport(imprt, defs, env)
+        importMembers ++= importEnv.variables.view.mapValues(FlatTessla.IdLoc(_, imprt.loc)).toMap
+        env ++= importEnv
+
+      case typeDef: Tessla.TypeDefinition =>
+        addTypeDefinition(typeDef, defs, env)
     }
     val valueMembers = module.contents.flatMap { stat =>
       getName(stat).map { name =>
         name -> FlatTessla.IdLoc(variableIdMap(name), stat.loc)
       }
-    }.toMap
+    }.toMap ++ importMembers
     val obj = FlatTessla.ObjectLiteral(valueMembers, module.loc)
     defs.addVariable(
       FlatTessla.VariableEntry(outerEnv.variables(module.name), obj, None, Seq(), module.loc)
     )
+  }
+
+  def translateImport(imprt: Tessla.Import, defs: FlatTessla.Definitions, outerEnv: Env): Env = {
+    @tailrec
+    def unrollPath(path: List[Tessla.Identifier], outerEnv: Env): Env = path match {
+      case Nil => Env(Map(), Map())
+      case id :: tail =>
+        val resolved = outerEnv.variables.getOrElse(id.name, throw UndefinedVariable(id))
+        val entry = defs.resolveVariable(resolved).getOrElse(
+          throw InternalError(s"Unable to find definition for $resolved.")
+        )
+
+        val env = entry.expression match {
+          case tessla.FlatTessla.ObjectLiteral(members, _) =>
+            Env(members.view.mapValues(_.id).toMap, Map())
+          case _ =>
+            Env(Map(id.name -> resolved), Map())
+        }
+
+        tail match {
+          case Nil => env
+          case _ => unrollPath(tail, outerEnv ++ env)
+        }
+    }
+
+    unrollPath(imprt.path, outerEnv)
   }
 
   def translateParameter(
@@ -186,6 +227,12 @@ class Flattener(spec: Tessla.Specification)
         (block.definitions, Tessla.ExpressionBody(block.expression))
       case b => (Seq(), b)
     }
+
+    env.variables.get(definition.id.name).flatMap(defs.resolveVariable) match {
+      case Some(previous) => error(MultipleDefinitionsError(definition.id, previous.loc))
+      case None =>
+    }
+
     if (definition.parameters.isEmpty && definition.typeParameters.isEmpty) {
       if (definition.isLiftable) throw LiftableOnNonMacro(definition.loc, definition.id.name)
 

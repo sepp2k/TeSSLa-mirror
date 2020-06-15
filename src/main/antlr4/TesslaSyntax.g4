@@ -17,7 +17,7 @@ statement
     | tessladoc+=DOCLINE* NL* 'def' NL* '@' ID ( '(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')' )? #AnnotationDefinition
     | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' NL* typeParameters+=ID (',' NL* typeParameters+=ID)* NL* ']')? (':='|'=') NL* typeBody #TypeDefinition
     | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=entry* NL* '}' #ModuleDefinition
-    | keyword=('import'|'imexport') path+=ID ('.' path+=ID)* ('.' wildcard='*')? #ImportStatement
+    | 'import' path+=ID ('.' path+=ID)* #ImportStatement
     | annotations+=annotation* 'in' NL* ID ':' NL* type #In
     | annotations+=annotation* 'out' NL* (expression ('as' NL* ID)? | star='*') #Out
     ;
