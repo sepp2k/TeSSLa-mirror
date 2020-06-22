@@ -1,0 +1,6 @@
+{
+  "input": "hexliterals.input",
+  "expectedOutput": "hexliterals.output",
+  "spec": "hexliterals.tessla",
+  "excludeForCompiler": true
+}

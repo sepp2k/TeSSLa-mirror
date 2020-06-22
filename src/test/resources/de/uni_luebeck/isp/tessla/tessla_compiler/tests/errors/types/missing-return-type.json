@@ -1,0 +1,4 @@
+{
+  "spec": "missing-return-type.tessla",
+  "expectedErrors": "missing-return-type.errors"
+}

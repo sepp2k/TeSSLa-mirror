@@ -1,0 +1,5 @@
+{
+  "input": "list.input",
+  "expectedOutput": "list.output",
+  "spec": "list.tessla"
+}

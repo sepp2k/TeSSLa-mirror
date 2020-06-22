@@ -1,0 +1,5 @@
+{
+  "input": "obscure-option-bug.input",
+  "expectedOutput": "obscure-option-bug.output",
+  "spec": "obscure-option-bug.tessla"
+}

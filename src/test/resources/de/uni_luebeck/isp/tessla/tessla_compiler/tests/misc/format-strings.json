@@ -1,0 +1,5 @@
+{
+  "input": "format-strings.input",
+  "expectedOutput": "format-strings.output",
+  "spec": "format-strings.tessla"
+}

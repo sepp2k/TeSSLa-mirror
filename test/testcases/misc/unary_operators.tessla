@@ -1,7 +1,0 @@
-out !!true as a
-out !!!true as b
-out -~0 as c
-out ~~0 as d
--- We need spaces between the -s here because -- starts comments
-out - - 42 as e
-out - - - 23 as f

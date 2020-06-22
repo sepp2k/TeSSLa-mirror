@@ -1,0 +1,5 @@
+{
+  "input": "version.input",
+  "expectedOutput": "version.output",
+  "spec": "version.tessla"
+}

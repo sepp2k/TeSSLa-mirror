@@ -1,0 +1,8 @@
+@InstFunctionCalledArg("add", 0)
+in addX: Events[Unit]
+
+@InstFunctionCalled("add")
+in addCalled: Events[Int]
+
+out addX
+out addCalled

@@ -1,3 +1,0 @@
-in a: Events[(Map[Int, Map[Int, Set[Bool]]], Set[{a: List[String], b: List[Set[Int]]}])]
-
-out a

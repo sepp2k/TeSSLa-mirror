@@ -1,0 +1,7 @@
+@InstFunctionCalled("add")
+in add: Events[Unit]
+
+@InstFunctionCalledArg("check", 0)
+in sub: Events[Bool]
+
+out *

@@ -1,0 +1,5 @@
+errors/infinite/mutual-infinite-recursion.tessla(2,23 - 2,24): Infinite recursion detected
+    called from errors/infinite/mutual-infinite-recursion.tessla(2,1 - 2,19)
+    called from errors/infinite/mutual-infinite-recursion.tessla(1,23 - 1,24)
+    called from errors/infinite/mutual-infinite-recursion.tessla(1,1 - 1,19)
+    called from errors/infinite/mutual-infinite-recursion.tessla(3,5 - 3,6)

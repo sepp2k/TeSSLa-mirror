@@ -1,0 +1,5 @@
+{
+  "spec": "imports.tessla",
+  "input": "imports.input",
+  "expectedOutput": "imports.output"
+}
