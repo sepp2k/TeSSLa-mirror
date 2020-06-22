@@ -100,7 +100,7 @@ object ScalaConstants {
       case "__rightshift__" => "(" + s"${args(0)} >> ${args(1)}" + ")"
 
       case "__pow__" => s"java.lang.Math.pow(${args(0)}, ${args(1)})"
-      case "__log__" => s"java.lang.Math.log(${args(0)}, ${args(1)})"
+      case "__log__" => s"(java.lang.Math.log(${args(0)}) / java.lang.Math.log(${args(1)}))"
       case "__sin__" => s"java.lang.Math.sin(${args(0)})"
       case "__cos__" => s"java.lang.Math.cos(${args(0)})"
       case "__tan__" => s"java.lang.Math.tan(${args(0)})"

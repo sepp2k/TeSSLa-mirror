@@ -57,9 +57,9 @@ object ScalaIOHandling {
        |val $expName = $exp;
        |try {
        |if ($expName == "None") {
-        |None
+        |EONone()
        |} else if ($expName.startsWith("Some(") && $expName.endsWith(")")) {
-        |Some(${getInputParseExpression(subType, s"""$expName.stripPrefix("Some(").stripSuffix(")").strip""", freshVarCount + 1)})
+        |EOSome(${getInputParseExpression(subType, s"""$expName.stripPrefix("Some(").stripSuffix(")").strip""", freshVarCount + 1)})
        |} else {
         |throw new java.lang.Exception()
        |}
