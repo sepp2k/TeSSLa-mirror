@@ -1,0 +1,2 @@
+in x: Events[Unit]
+out count(x) as c

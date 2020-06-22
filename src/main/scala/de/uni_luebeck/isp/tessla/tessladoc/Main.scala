@@ -19,6 +19,7 @@ object Main {
     stdLib: Boolean = false,
     includes: Boolean = false,
     globalsOnly: Boolean = false,
+    debug: Boolean = false,
     outfile: Option[File] = None,
     sources: Seq[CharStream] = Seq()
   )
@@ -41,6 +42,10 @@ object Main {
       .action((s, c) => c.copy(sources = c.sources :+ CharStreams.fromFileName(s.getPath)))
       .text("The TeSSLa files for which to generate documentation")
     note("") // Spacer
+    opt[Unit]("debug")
+      .hidden()
+      .action((_, c) => c.copy(debug = true))
+      .text("Enable debug mode")
     help("help")
       .text("Prints this help message and exit.")
     version("version")
@@ -57,10 +62,8 @@ object Main {
           tesslaDocs.globalsOnly.toString
         case Failure(errors, warnings) =>
           warnings.foreach(w => System.err.println(s"Warning: $w"))
-          errors.foreach(e => System.err.println(s"Error: $e"))
-          System.err.println(
-            s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors"
-          )
+          errors.foreach(e => if (config.debug) e.printStackTrace() else System.err.println(s"Error: $e"))
+          System.err.println(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors")
           sys.exit(1)
       }
     config.outfile match {

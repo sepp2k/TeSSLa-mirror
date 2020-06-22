@@ -206,9 +206,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
 
   def translateType(typ: TesslaSyntax.TypeContext): Tessla.Type = TypeVisitor.visit(typ)
 
-  def translateEvalType(
-    evTyp: TesslaSyntax.EvalTypeContext
-  ): (Option[TesslaAST.RuntimeEvaluation], Tessla.Type) = {
+  def translateEvalType(evTyp: TesslaSyntax.EvalTypeContext): (Option[TesslaAST.RuntimeEvaluation], Tessla.Type) = {
     val typ = TypeVisitor.visit(evTyp.typ)
     val evaluation = Option(evTyp.evaluation).map(e =>
       List(
