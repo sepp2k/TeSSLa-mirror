@@ -112,6 +112,10 @@ object Errors {
         s"    Previous definition at: $previousLoc"
   }
 
+  case class ImportAmbiguousDefinitionError(name: String, definition: String, loc: Location) extends TesslaError {
+    override def message = s"Failed to import $definition from $name: $definition is already defined."
+  }
+
   case class InternalError(m: String, loc: Location = Location.unknown) extends TesslaError {
     override def message = s"Internal error: $m"
   }

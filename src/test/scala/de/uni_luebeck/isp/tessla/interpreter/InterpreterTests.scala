@@ -162,6 +162,7 @@ class InterpreterTests extends AnyFunSuite {
                 // and still part of the same error message (e.g. a stack trace)
                 val expectedErrors =
                   testSource(expectedErrorsFile).getLines.mkString("\n").split("\n(?! )").toSet
+
                 assertEqualSets(errors.map(_.toString).toSet, expectedErrors, "errors")
             }
         }

@@ -1,0 +1,4 @@
+{
+  "spec": "imports-ambiguous.tessla",
+  "expectedErrors": "imports-ambiguous.errors"
+}

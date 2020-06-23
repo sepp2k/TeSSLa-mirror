@@ -1,0 +1,18 @@
+module Foo{
+
+    module Bar{
+        import Baz
+        def bar = "Bar"
+    }
+
+    module Baz{
+        import Bar
+        def baz = "Baz"
+    }
+
+}
+
+out Foo.Bar.baz
+out Foo.Baz.bar
+out Foo.Bar.bar
+out Foo.Baz.baz
