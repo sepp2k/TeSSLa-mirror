@@ -238,6 +238,28 @@ object TesslaDoc {
         }
       }
       .map(docs => Docs(docs.flatMap(_.items), docs.flatMap(_.imports)))
+      .map(docs => (Docs.apply _).tupled(qualifyImports(docs.items, docs.imports, Map(), Nil)))
+  }
+
+  private def qualifyImports(
+    items: Seq[TesslaDoc],
+    imports: Seq[Import],
+    outerEnv: Map[String, List[String]],
+    path: List[String]
+  ): (Seq[TesslaDoc], Seq[Import]) = {
+    val modules = items.collect {
+      case module: ModuleDoc => module
+    }
+    val env = outerEnv ++ modules.map(m => m.name -> (path :+ m.name)).toMap
+
+    val newImports = imports.map(imprt => Import(env(imprt.path.head) ++ imprt.path.tail))
+    val newItems = items.map {
+      case module: ModuleDoc =>
+        val (members, imps) = qualifyImports(module.members, module.imports, env, path :+ module.name)
+        module.copy(members = members, imports = imps)
+      case item => item
+    }
+    (newItems, newImports)
   }
 
   private def forStdlib: Result[Docs] = {

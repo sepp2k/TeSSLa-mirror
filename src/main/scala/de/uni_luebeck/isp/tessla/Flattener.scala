@@ -1,23 +1,14 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
 
-import scala.annotation.tailrec
 import scala.collection.mutable
 
 class Flattener(spec: Tessla.Specification)
     extends FlatTessla.IdentifierFactory
     with TranslationPhase.Translator[FlatTessla.Specification] {
   type IdMap = Map[String, FlatTessla.Identifier]
-
-  implicit val ordering: Ordering[Tessla.Statement] = (a: Tessla.Statement, b: Tessla.Statement) =>
-    (a, b) match {
-      case (_: Tessla.TypeDefinition, _) => -1
-      case (_, _: Tessla.TypeDefinition) => 1
-      case _                             => 0
-    }
 
   case class Env(variables: IdMap, types: IdMap) {
     def ++(other: Env) = Env(variables ++ other.variables, types ++ other.types)
@@ -54,7 +45,7 @@ class Flattener(spec: Tessla.Specification)
       case module: Tessla.Module => addModuleEnv(module, globalEnv)
     }
 
-    spec.statements.sorted.foldLeft(emptySpec) {
+    sort(spec.statements).foldLeft(emptySpec) {
       case (result, outAll: Tessla.OutAll) =>
         if (result.hasOutAll) warn(ConflictingOut(outAll.loc, previous = result.outAll.get.loc))
         result.copy(outAll = Some(FlatTessla.OutAll(outAll.annotations.map(translateAnnotation), outAll.loc)))
@@ -88,8 +79,11 @@ class Flattener(spec: Tessla.Specification)
         result
 
       case (result, imprt: Tessla.Import) =>
-        globalEnv ++= translateImport(imprt, moduleEnvs, globalEnv)
-        result
+        val importEnv = translateImport(imprt, moduleEnvs, globalEnv)
+        val intersectEnv = importEnv.variables.keySet.intersect(globalEnv.variables.keySet)
+        intersectEnv.foreach(name => error(ImportAmbiguousDefinitionError(imprt.path.mkString("."), name, imprt.loc)))
+        globalEnv ++= importEnv
+        result.copy(globalNames = result.globalNames ++ importEnv.variables)
     }
   }
 
@@ -107,27 +101,26 @@ class Flattener(spec: Tessla.Specification)
     defs.addVariable(entry)
   }
 
-  def addModuleEnv(module: Tessla.Module, outerEnv: Env): Env = {
+  def addModuleEnv(module: Tessla.Module, outerEnv: Env): Unit = {
     val variableIdMap = createIdMap(module.contents.flatMap(getName))
     val typeIdMap = createIdMap(module.contents.collect {
       case typeDef: Tessla.TypeDefinition => typeDef.id.name
     })
     val env = Env(variableIdMap, typeIdMap)
     moduleEnvs += outerEnv.variables(module.name) -> env
-    env
-  }
-
-  def addModule(module: Tessla.Module, defs: FlatTessla.Definitions, outerEnv: Env): Unit = {
-    var env = outerEnv ++ moduleEnvs(outerEnv.variables(module.name))
-    val variableIdMap = env.variables
-
     module.contents.collect {
       case module: Tessla.Module => addModuleEnv(module, env)
     }
+  }
+
+  def addModule(module: Tessla.Module, defs: FlatTessla.Definitions, outerEnv: Env): Unit = {
+    val innerEnv = moduleEnvs(outerEnv.variables(module.name))
+    var env = outerEnv ++ innerEnv
+    val variableIdMap = env.variables
 
     var importMembers = mutable.Map[String, FlatTessla.IdLoc]()
 
-    module.contents.sorted.foreach {
+    sort(module.contents).foreach {
       case definition: Tessla.Definition =>
         addDefinition(definition, defs, env)
 
@@ -142,8 +135,7 @@ class Flattener(spec: Tessla.Specification)
 
       case imprt: Tessla.Import =>
         val importEnv = translateImport(imprt, moduleEnvs, env)
-        val intersectEnv = env.variables.keySet.intersect(importEnv.variables.keySet) ++
-          env.types.keySet.intersect(importEnv.types.keySet)
+        val intersectEnv = importEnv.variables.keySet.intersect(importMembers.keySet ++ innerEnv.variables.keySet)
         intersectEnv.foreach(name => error(ImportAmbiguousDefinitionError(imprt.path.mkString("."), name, imprt.loc)))
         importMembers ++= importEnv.variables.view.mapValues(FlatTessla.IdLoc(_, imprt.loc)).toMap
         env ++= importEnv
@@ -542,6 +534,22 @@ class Flattener(spec: Tessla.Specification)
         lambda.loc,
         isLiftable = false
       )
+  }
+
+  def sort(items: Seq[Tessla.Statement]): Seq[Tessla.Statement] = {
+    val imports = mutable.ArrayBuffer[Tessla.Import]()
+    val typeDefs = mutable.ArrayBuffer[Tessla.TypeDefinition]()
+    val modules = mutable.ArrayBuffer[Tessla.Module]()
+    val rest = mutable.ArrayBuffer[Tessla.Statement]()
+
+    items.collect {
+      case imprt: Tessla.Import           => imports += imprt
+      case typeDef: Tessla.TypeDefinition => typeDefs += typeDef
+      case module: Tessla.Module          => modules += module
+      case s: Tessla.Statement            => rest += s
+    }
+
+    (imports ++ typeDefs ++ modules ++ rest).toSeq
   }
 }
 

@@ -11,3 +11,5 @@ include "LTL"
 include "InstrumentationAnnotations"
 include "Tessla"
 include "CTF"
+
+import StreamFunctions
