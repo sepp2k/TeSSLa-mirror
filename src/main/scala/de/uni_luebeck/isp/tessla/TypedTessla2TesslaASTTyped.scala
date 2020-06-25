@@ -135,7 +135,7 @@ class TypedTessla2TesslaASTTypedWorker(
               )
             case Variable(id, loc) =>
               Typed.ExpressionRef(toIdentifier(id, lookup(env, id).loc), lookupType(id, env), loc)
-            case MacroCall(macroID, macroLoc, typeArgs, args, loc) =>
+            case m @ MacroCall(macroID, macroLoc, typeArgs, args, loc) =>
               val callable = Typed.TypeApplicationExpression(
                 Typed.ExpressionRef(toIdentifier(macroID, macroLoc), lookupType(macroID, env)),
                 typeArgs.map(x => toType(x)).toList
@@ -379,19 +379,18 @@ class TypedTessla2TesslaASTTypedWorker(
   }
 
   // Note: the current type checker does not treat parameter names as part of signatures.
-  // Therefor, named arguments can only be resolved, if the macro id can be resolved statically.
-  def lookupParameterNames(env: TypedTessla.Definitions, macroID: TypedTessla.Identifier) =
+  // Therefore, named arguments can only be resolved, if the macro id can be resolved statically.
+  def lookupParameterNames(
+    env: TypedTessla.Definitions,
+    macroID: TypedTessla.Identifier
+  ): Option[(Seq[(Option[TesslaAST.RuntimeEvaluation], TypedTessla.Parameter)], Location)] =
     lookup(env, macroID).expression match {
       case TypedTessla.Macro(_, parameter, _, _, _, _, loc, _)  => Some((parameter, loc))
       case TypedTessla.BuiltInOperator(_, _, parameter, _, loc) => Some((parameter, loc))
       case TypedTessla.MemberAccess(receiver, member, _, _) =>
         lookup(env, receiver.id).expression match {
           case TypedTessla.ObjectLiteral(members, _) =>
-            members.getOrElse(member, None) match {
-              case TypedTessla.Macro(_, parameter, _, _, _, _, loc, _)  => Some((parameter, loc))
-              case TypedTessla.BuiltInOperator(_, _, parameter, _, loc) => Some((parameter, loc))
-              case _                                                    => None
-            }
+            members.get(member).map(_.id).flatMap(lookupParameterNames(env, _))
           case _ => None
         }
       case _ => None

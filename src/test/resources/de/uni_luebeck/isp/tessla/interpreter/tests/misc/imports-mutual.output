@@ -1,4 +1,0 @@
-0: Foo.Baz.baz = Baz
-0: Foo.Bar.bar = Bar
-0: Foo.Baz.bar = Bar
-0: Foo.Bar.baz = Baz
