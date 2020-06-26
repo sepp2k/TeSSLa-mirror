@@ -47,7 +47,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
       currSrc = definition.tpe match {
         case InstantiatedType("Events", _, _) => definition match {
           case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) => streamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, typeArgs, currSrc)
-          case ApplicationExpression(e, args, _) => streamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, Seq(), currSrc) //TODO: Does this exist?
+          case ApplicationExpression(e, args, _) => streamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, Seq(), currSrc)
           case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
         }
         case _ => SourceListing(currSrc.stepSource, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource :+ nonStreamCodeGenerator.translateDefinition(id, definition, nonStreamCodeGenerator.TypeArgManagement.empty, definitions))
