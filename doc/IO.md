@@ -19,7 +19,7 @@ Input Syntax
     LIST      ::= 'List(' VALUE*, ')'
     MAP       ::= 'Map(' (VALUE '->' VALUE)*, ')'
     TUPLE     ::= '(' VALUE*, ')'
-    RECORD    ::= '{' (FIELD_ID '=' VALUE)*, '}'
+    RECORD    ::= '{' (FIELD_ID '=' VALUE)+, '}'
 
     TIMESTAMP ::= INT
 ```
@@ -28,6 +28,7 @@ Note:
 
  - STREAM_ID, FIELD_ID are defined by the IDs used in the TeSSLa specification
  - Tuples and records with field names \_1, \_2... are exclusively handled as tuples (also in the output)
+ - Tuples and records with no fields are handled as empty tuples (also in the output)
  - `\\`, `\n`, `\r`, `\t`, `\"` can be used for escaping special signs inside the string in the usual way
  - Strings may not contain the `"`-character unless it is used as escape sequence `\"`
  - Between two terminal symbols there may be arbitrarily many whitespaces, except inside `FLOAT` and `INT`
@@ -68,7 +69,7 @@ Output Syntax
     LIST      ::= 'List(' VALUE*, ')'
     MAP       ::= 'Map(' (VALUE '->' VALUE)*, ')'
     TUPLE     ::= '(' VALUE*, ')'
-    RECORD    ::= '{' (FIELD_ID '=' VALUE)*, '}'
+    RECORD    ::= '{' (FIELD_ID '=' VALUE)+, '}'
 
     TIMESTAMP ::= INT
 ```
@@ -85,6 +86,7 @@ Note:
 the `','` of enumerations (e.g. in `SET`).
 
 - Tuples and records with field names \_1, \_2... are exclusively handled as tuples (also in the input)
+- Tuples and records with no fields are handled as empty tuples (also in the input)
 
 Notation
 ----------------------------------
