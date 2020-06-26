@@ -4,8 +4,6 @@ import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
 
-import scala.collection.mutable
-
 class Flattener(spec: Tessla.Specification)
     extends FlatTessla.IdentifierFactory
     with TranslationPhase.Translator[FlatTessla.Specification] {
@@ -49,7 +47,7 @@ class Flattener(spec: Tessla.Specification)
 
     var imports = Map[String, FlatTessla.Identifier]()
 
-    sort(spec.statements).foldLeft(emptySpec) {
+    spec.statements.sorted.foldLeft(emptySpec) {
       case (result, outAll: Tessla.OutAll) =>
         if (result.hasOutAll) warn(ConflictingOut(outAll.loc, previous = result.outAll.get.loc))
         result.copy(outAll = Some(FlatTessla.OutAll(outAll.annotations.map(translateAnnotation), outAll.loc)))
@@ -123,7 +121,7 @@ class Flattener(spec: Tessla.Specification)
     var innerImports = Map[String, FlatTessla.Identifier]()
     var imports = outerImports
 
-    sort(module.contents).foreach {
+    module.contents.sorted.foreach {
       case definition: Tessla.Definition =>
         addDefinition(definition, defs, env, imports)
 
@@ -562,20 +560,11 @@ class Flattener(spec: Tessla.Specification)
       )
   }
 
-  def sort(items: Seq[Tessla.Statement]): Seq[Tessla.Statement] = {
-    val imports = mutable.ArrayBuffer[Tessla.Import]()
-    val typeDefs = mutable.ArrayBuffer[Tessla.TypeDefinition]()
-    val modules = mutable.ArrayBuffer[Tessla.Module]()
-    val rest = mutable.ArrayBuffer[Tessla.Statement]()
-
-    items.collect {
-      case imprt: Tessla.Import           => imports += imprt
-      case typeDef: Tessla.TypeDefinition => typeDefs += typeDef
-      case module: Tessla.Module          => modules += module
-      case s: Tessla.Statement            => rest += s
-    }
-
-    (imports ++ typeDefs ++ modules ++ rest).toSeq
+  implicit val ordering: Ordering[Tessla.Statement] = Ordering.by {
+    case _: Tessla.Import         => 0
+    case _: Tessla.TypeDefinition => 1
+    case _: Tessla.Module         => 2
+    case _                        => 3
   }
 }
 

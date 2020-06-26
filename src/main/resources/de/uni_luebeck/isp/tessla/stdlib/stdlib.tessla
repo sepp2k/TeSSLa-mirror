@@ -15,3 +15,4 @@ include "CTF"
 import StreamFunctions
 import Option
 import PrimitiveFunctions
+import Types
