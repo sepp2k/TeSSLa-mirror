@@ -1,17 +1,28 @@
 in x: Events[Int]
 
+module Baz{
+    def foo := "Baz.foo"
+}
+
 module Foo{
     module Bar{
         module Baz{
-            liftable def foo(a: Int) := a + 42
+            def foo := "Foo.Bar.Baz.foo"
         }
+
         import Baz
+        def foo := "Foo.Bar.foo" -- override imported member
     }
 }
 
-import Foo
-import Foo.Bar.Baz
+module A{
+    import Foo.Bar.Baz
+    def bar := foo
+}
 
-out foo(x) as foo1
-out Foo.Bar.foo(x) as foo2
-out Bar.foo(x) as foo3
+import Baz
+import A
+
+out foo                     -- "Baz.foo"
+out Foo.Bar.foo as foo2     -- "Foo.Bar.foo"
+out bar                     -- "Foo.Bar.Baz.foo"
