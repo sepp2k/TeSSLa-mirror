@@ -1,0 +1,6 @@
+{
+  "expectedRuntimeErrors": "stringErr.errors",
+  "spec": "io.tessla",
+  "input": "stringErr.input",
+  "expectedOutput": "empty.output"
+}
