@@ -45,9 +45,11 @@ object TesslaDoc {
     isLiftable: Boolean
   ) extends TesslaDoc
 
-  case class AnnotationDoc(name: String, parameters: Seq[Param], doc: String, loc: Location) extends GlobalDoc
+  case class AnnotationDoc(name: String, parameters: Seq[Param], doc: String, inModule: Option[String], loc: Location)
+      extends GlobalDoc
 
-  case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, loc: Location) extends GlobalDoc
+  case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, inModule: Option[String], loc: Location)
+      extends GlobalDoc
 
   case class ModuleDoc(name: String, doc: String, members: Seq[TesslaDoc], imports: Seq[Import], loc: Location)
       extends GlobalDoc {
@@ -158,24 +160,28 @@ object TesslaDoc {
       override def visitAnnotationDefinition(
         annotationDef: TesslaSyntax.AnnotationDefinitionContext
       ): Seq[AnnotationDoc] = {
+        val (inModule, doc) = getInModule(getDoc(annotationDef.tessladoc.asScala.toSeq))
         Seq(
           AnnotationDoc(
             name = annotationDef.ID().getText,
             parameters = annotationDef.parameters.asScala
               .map(p => Param(p.ID.getText, translateEvalType(p.parameterType)))
               .toSeq,
-            doc = getDoc(annotationDef.tessladoc.asScala.toSeq),
+            doc = doc,
+            inModule = inModule,
             loc = Location.fromNode(annotationDef)
           )
         )
       }
 
       override def visitTypeDefinition(typeDef: TesslaSyntax.TypeDefinitionContext): Seq[TypeDoc] = {
+        val (inModule, doc) = getInModule(getDoc(typeDef.tessladoc.asScala.toSeq))
         Seq(
           TypeDoc(
             name = typeDef.name.getText,
             typeParameters = typeDef.typeParameters.asScala.map(_.getText).toSeq,
-            doc = getDoc(typeDef.tessladoc.asScala.toSeq),
+            doc = doc,
+            inModule = inModule,
             loc = Location.fromNode(typeDef)
           )
         )
@@ -214,6 +220,14 @@ object TesslaDoc {
       // Filter out the empty lines and only keep the ones with tessladoc comments
       val docLines = lines.filter(_.getType == TesslaLexer.DOCLINE)
       docLines.map(_.getText.replaceAll("^--- ?|^## ?", "")).mkString.trim
+    }
+
+    private def getInModule(doc: String): (Option[String], String) = {
+      val InModule = """^inmodule\s+(.+)\r?\n?(?s:(.*))$""".r
+      doc match {
+        case InModule(name, rest) => (Some(name), rest)
+        case s                    => (None, s)
+      }
     }
   }
 

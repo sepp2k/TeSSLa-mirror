@@ -8,8 +8,8 @@ import spray.json._
 object DocJsonProtocol extends DefaultJsonProtocol {
   implicit val docsFormat: JsonFormat[Docs] = lazyFormat(jsonFormat2(Docs))
 
-  implicit val typeDocFormat: JsonFormat[TypeDoc] = lazyFormat(jsonFormat4(TypeDoc))
-  implicit val annotationDocFormat: JsonFormat[AnnotationDoc] = lazyFormat(jsonFormat4(AnnotationDoc))
+  implicit val typeDocFormat: JsonFormat[TypeDoc] = lazyFormat(jsonFormat5(TypeDoc))
+  implicit val annotationDocFormat: JsonFormat[AnnotationDoc] = lazyFormat(jsonFormat5(AnnotationDoc))
   implicit val moduleDocFormat: JsonFormat[ModuleDoc] = lazyFormat(jsonFormat5(ModuleDoc))
   implicit val defDocFormat: JsonFormat[DefDoc] = lazyFormat(jsonFormat8(DefDoc))
 

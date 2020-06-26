@@ -401,13 +401,12 @@ module Set {
   def collectWithRemove[T](value: Events[T], removeValue: Events[T]) = {
     def old = last(set, merge(value, removeValue))
     def operation: Events[Set[T]] = lift3(old, value, removeValue, (o: Option[Set[T]], v: Option[T], r: Option[T]) =>
-      Some(minus(union(getSome(o), Option.toSet(v)), Option.toSet(r))))
+      Some(minus(union(getSome(o), OptionUtils.toSet(v)), OptionUtils.toSet(r))))
     def set = default(operation, empty[T])
     set
   }
 }
 
-# Define the type outside of the module
-# so one can write `Set[Int]` instead of `Set.Set[Int]`.
+## inmodule Set
 ## Type Set
 type Set[T] = extern("Set")

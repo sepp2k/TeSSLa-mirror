@@ -445,6 +445,5 @@ module Map {
   }
 }
 
-# Define the type outside of the module
-# so one can write `Map[Int]` instead of `Map.Map[Int]`.
+## inmodule Map
 type Map[K, V] = extern("Map")

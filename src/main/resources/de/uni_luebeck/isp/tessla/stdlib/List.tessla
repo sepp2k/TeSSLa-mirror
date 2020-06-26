@@ -366,7 +366,6 @@ module List {
   liftable def fold[T, U](list: strict List[T], start: lazy U, f: strict (strict U, strict T) => U): U = extern("List_fold")
 }
 
-# Define the type outside of the module
-# so one can write `List[Int]` instead of `List.List[Int]`.
+## inmodule List
 ## Type List
 type List[T] = extern("List")
