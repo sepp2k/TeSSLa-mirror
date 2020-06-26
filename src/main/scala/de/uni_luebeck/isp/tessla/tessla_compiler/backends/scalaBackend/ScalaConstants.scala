@@ -125,8 +125,8 @@ object ScalaConstants {
       case "__Map_get__" => s"${args(0)}(${args(1)})"
       case "__Map_remove__" => s"${args(0)} - ${args(1)}"
       case "__Map_size__" => s"${args(0)}.size"
-      case "__Map_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
-      case "__Map_keys__" => s"${args(0)}.keys"
+      case "__Map_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)}){case (c, (k, v)) => val f = ${args(2)}; f(c, k, v)}"
+      case "__Map_keys__" => s"${args(0)}.keys.toList"
 
       case "__Set_empty__" => "Set()"
       case "__Set_add__" => s"${args(0)} + (${args(1)})"
