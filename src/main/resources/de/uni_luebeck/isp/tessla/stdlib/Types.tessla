@@ -1,5 +1,13 @@
 ## Fundamental types and primitive constants
-module Types {}
+module Types {
+
+  ## A Boolean value representing that a given proposition is true
+  def true: Bool = extern("true")
+
+  ## A Boolean value representing that a given proposition is false
+  def false: Bool = extern("false")
+
+}
 
 ## inmodule Types
 ## An annotation used to specify that an output stream should be printed in a raw format, only
@@ -31,11 +39,3 @@ type Unit = ()
 ## inmodule Types
 ## Basic type for streams
 type Events[T] = extern("Events")
-
-## inmodule Types
-## A Boolean value representing that a given proposition is true
-def true: Bool = extern("true")
-
-## inmodule Types
-## A Boolean value representing that a given proposition is false
-def false: Bool = extern("false")

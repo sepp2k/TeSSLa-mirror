@@ -5,4 +5,5 @@ module CTF {
   liftable def getString(ctfObject: strict CTF, member: strict String): String = extern("CTF_getString")
 }
 
+## inmodule CTF
 type CTF = extern("CTF")
