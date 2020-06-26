@@ -370,14 +370,14 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceOutputCode(id: Identifier, t: Type, nameOpt: Option[String], currSrc: SourceListing) : SourceListing = {
+  def produceOutputCode(id: Identifier, t: Type, nameOpt: Option[String], currSrc: SourceListing, raw: Boolean) : SourceListing = {
     val s = s"var_${id.fullName}"
     val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
 
     val newTail = (currSrc.tailSource.
       If(Seq(Seq(s"${s}_changed"))).
-        FunctionCall("__[TC]output__", Seq(s"${s}_value", StringValue(name), s"${s}_error", "currTs"),
-                      IntermediateCode.FunctionType(Seq(t, StringType, ErrorType, LongType), UnitType)).
+        FunctionCall("__[TC]output__", Seq(s"${s}_value", StringValue(name), s"${s}_error", "currTs", BoolValue(raw)),
+                      IntermediateCode.FunctionType(Seq(t, StringType, ErrorType, LongType, BoolType), UnitType)).
       EndIf()
     )
 

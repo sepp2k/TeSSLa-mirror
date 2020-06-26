@@ -85,12 +85,13 @@ object Main {
         }
     }
 
-    def outputVar(output: String, trueName: String, error: Throwable, ts: Long) : Unit = {
+    def outputVar(output: String, trueName: String, error: Throwable, ts: Long, raw: Boolean) : Unit = {
         if (error != null) {
             System.err.println(s"$ts: FATAL: $trueName evaluation encountered an Error:\n ${error.getMessage}")
             System.exit(1)
         } else {
-            println(s"$ts: $trueName = $output")
+            val prefix = if (raw) "" else s"$ts: $trueName = "
+            println(s"$prefix$output")
         }
     }
 

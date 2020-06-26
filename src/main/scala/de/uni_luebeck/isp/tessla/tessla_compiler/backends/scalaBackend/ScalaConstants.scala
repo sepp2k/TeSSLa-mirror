@@ -58,7 +58,7 @@ object ScalaConstants {
   def builtinFunctionCallTranslation(name: String, oArgs: Seq[ImpLanExpr], transFunc: ImpLanExpr => String, typeHint: FunctionType) : String = {
     val args = oArgs.map(transFunc)
     name match {
-      case "__[TC]output__" => s"outputVar(${ScalaIOHandling.getParseExpressionToString(typeHint.argsTypes(0), args(0))}, ${args(1)}, ${args(2)}, currTs)"
+      case "__[TC]output__" => s"outputVar(${ScalaIOHandling.getParseExpressionToString(typeHint.argsTypes(0), args(0))}, ${args(1)}, ${args(2)}, ${args(3)}, ${args(4)})"
       case "__[TC]inputParse__" => ScalaIOHandling.getInputParseExpression(typeHint.retType, args(0))
       case "__[TC]getErrorCode__" => s"getErrorCode(${args(0)})"
       case "__[TC]throw__" => s"throw ${args(0)}"

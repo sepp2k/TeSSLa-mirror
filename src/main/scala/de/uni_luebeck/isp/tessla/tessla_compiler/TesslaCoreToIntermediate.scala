@@ -64,7 +64,7 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
       }
 
       if (consoleInterface) {
-        currSrc = streamCodeGenerator.produceOutputCode(o._1.id, getStreamType(o._1.id), name, currSrc)
+        currSrc = streamCodeGenerator.produceOutputCode(o._1.id, getStreamType(o._1.id), name, currSrc, o._2.contains("raw"))
       } else {
         throw Errors.NotYetImplementedError("Translation without value output to stdout is not implemented yet")
       }
