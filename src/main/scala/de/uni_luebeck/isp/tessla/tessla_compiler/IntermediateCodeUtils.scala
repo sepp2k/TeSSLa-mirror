@@ -113,7 +113,6 @@ object IntermediateCodeUtils {
     t match {
       case InstantiatedType("Events", Seq(t), _) => typeConversion(t)
       case RecordType(entries, _) if entries.isEmpty => UnitType
-      case RecordType(entries, _) if entries.size == 1 => typeConversion(entries.toSeq.head._2._1)
       case InstantiatedType("Bool", Seq(), _) => BoolType
       case InstantiatedType("Int", Seq(), _) => LongType
       case InstantiatedType("Float", Seq(), _) => DoubleType
@@ -141,7 +140,6 @@ object IntermediateCodeUtils {
   def defaultValueForType(t: Type): ImpLanVal = {
     t match {
       case RecordType(entries, _) if entries.isEmpty => UnitValue
-      case RecordType(entries, _) if entries.size == 1 => defaultValueForType(entries.toSeq.head._2._1)
       case InstantiatedType("Bool", Seq(), _) => BoolValue(false)
       case InstantiatedType("Int", Seq(), _) => LongValue(0)
       case InstantiatedType("Float", Seq(), _) => DoubleValue(0)

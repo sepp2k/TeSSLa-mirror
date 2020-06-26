@@ -232,7 +232,8 @@ object ScalaIOHandling {
   def getParseExpressionToStringForRecord(fieldNames: Seq[String], subTypes: Seq[ImpLanType], exp: String, freshVarCount : Int = 0) : String = {
     val expName = s"exp$freshVarCount"
         val elems = fieldNames.zip(subTypes).zipWithIndex.map { case ((n, t), i) =>
-          s""""$n = " + ${getParseExpressionToString(t, s"$expName._${i+1}", freshVarCount + 1)}"""
+          val add = if (fieldNames.size == 1) "" else s"._${i+1}"
+          s""""$n = " + ${getParseExpressionToString(t, s"$expName$add", freshVarCount + 1)}"""
         }.mkString(""" + ", " + """)
         s"""{val $expName = $exp; "{" + $elems + "}"}"""
   }

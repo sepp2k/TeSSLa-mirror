@@ -153,7 +153,8 @@ object ScalaConstants {
         typeHint match {
           case FunctionType(Seq(StructType(_, fieldNames), IntermediateCode.StringType), _) => {
             val fieldName = oArgs(1).asInstanceOf[StringValue].value
-            s"${args(0)}._${fieldNames.indexOf(fieldName) + 1}"
+            val add = if (fieldNames.size == 1) "" else s"._${fieldNames.indexOf(fieldName) + 1}"
+            s"${args(0)}$add"
           }
           case _ => throw Errors.DSLError(s"__getStruct__ call has wrong type hint $typeHint")
         }
