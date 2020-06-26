@@ -21,11 +21,13 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Flattening, Lazy
 import org.antlr.v4.runtime.CharStream
 import spray.json.JsonParser
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend._
+import org.scalatest.BeforeAndAfterAll
 
 import sys.process._
 import scala.io.Source
+import scala.reflect.io.Directory
 
-class CompilerTests extends AnyFunSuite {
+class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
 
   object JSON {
 
@@ -141,8 +143,12 @@ class CompilerTests extends AnyFunSuite {
 
   val fsPath: Path = Files.createTempDirectory("TesslaCompilerTests")
 
-  testCases.foreach {
-    case (path, name) =>
+  override def afterAll(): Unit = {
+    Directory(fsPath.toFile).deleteRecursively()
+  }
+
+  testCases.zipWithIndex.foreach {
+    case ((path, name), idx) =>
 
       def testStream(file: String): CharStream = {
         IncludeResolvers.fromResource(getClass, root)(s"$path$file").get
@@ -207,7 +213,7 @@ class CompilerTests extends AnyFunSuite {
         expectedWarnings: Option[String],
         inputTracePath: String
       )(onSuccess: (Seq[String], Boolean) => Unit): Unit = {
-        println(s"Evalutate testcase $name ($path)...")
+        println(s"Evaluate testcase ${idx + 1} / ${testCases.size}: $name ($path)...")
         result match {
           case Success(output, _) =>
             val compilation = compileAndExecute(output, inputTracePath)
@@ -252,7 +258,7 @@ class CompilerTests extends AnyFunSuite {
           test(s"$path$name (Compiler, Scala)") {
             val options = Compiler.Options(
               baseTimeString = testCase.baseTime,
-              includeResolver = IncludeResolvers.fromFile,
+              includeResolver = IncludeResolvers.fromResource(getClass, root),
               stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
               stdlibPath = "stdlib.tessla",
               flattenCore = false
