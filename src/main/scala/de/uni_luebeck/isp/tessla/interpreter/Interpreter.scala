@@ -66,8 +66,6 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
-  case class InterpreterError()
-
   def run(spec: Core.Specification, input: Trace, stopOn: Option[String]): Trace = {
     val interpreter = new Interpreter(spec)
     new Iterator[Trace.Event] {
@@ -136,12 +134,12 @@ object Interpreter {
         }
       }
 
-      override def hasNext = {
+      override def hasNext: Boolean = {
         if (!stopped) gatherValues()
         nextEvents.nonEmpty
       }
 
-      override def next = {
+      override def next: Trace.Event = {
         if (!stopped) gatherValues()
         nextEvents.dequeue
       }

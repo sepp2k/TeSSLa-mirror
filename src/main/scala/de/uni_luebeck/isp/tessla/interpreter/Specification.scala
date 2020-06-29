@@ -329,10 +329,4 @@ class Specification(unitValue: Any) {
     }
   }
 
-  def printStream(stream: Stream, name: String): Unit =
-    stream.addListener {
-      case Some(value) => println(s"$getTime: $name = $value")
-      case None        =>
-    }
-
 }

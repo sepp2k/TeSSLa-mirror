@@ -47,8 +47,7 @@ class Trace() {
         try {
           reader.advance
         } catch {
-          case e: CTFException =>
-            throw new RuntimeException(e)
+          case e: CTFException => throw new RuntimeException(e)
         }
         val ts = TimeStamp(Location.unknown, BigInt(event.getTimestamp))
         val stream = Trace.Identifier(event.getDeclaration.getName, Location.unknown)
@@ -58,20 +57,12 @@ class Trace() {
     }
   }
 
-  def fromLineIterator(
-    lineIterator: Iterator[String],
-    fileName: String,
-    abortAt: Option[Specification.Time] = None
-  ) = {
+  def fromLineIterator(lineIterator: Iterator[String], fileName: String, abortAt: Option[Specification.Time] = None) = {
     val rawTrace = new TraceParser(lineIterator, fileName).parseTrace()
     new FlatEventIterator(rawTrace, abortAt)
   }
 
-  def fromSource(
-    traceSource: Source,
-    fileName: String,
-    abortAt: Option[Specification.Time] = None
-  ) = {
+  def fromSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {
     fromLineIterator(traceSource.getLines, fileName, abortAt)
   }
 
@@ -90,11 +81,7 @@ class Trace() {
     new FlatEventIterator(rawTrace, abortAt)
   }
 
-  def fromCsvSource(
-    traceSource: Source,
-    fileName: String,
-    abortAt: Option[Specification.Time] = None
-  ) = {
+  def fromCsvSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {
     fromCsvLineIterator(traceSource.getLines, fileName, abortAt)
   }
 

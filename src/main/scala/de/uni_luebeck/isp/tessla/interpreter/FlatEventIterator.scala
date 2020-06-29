@@ -138,10 +138,6 @@ class FlatEventIterator(eventRanges: Iterator[ParserEventRange], abortAt: Option
         RuntimeEvaluator.Record(members)
       }
 
-      def getOperator(name: String, loc: Location): TesslaCoreLegacy.BuiltInOperator = {
-        TesslaCoreLegacy.BuiltInOperator(name, loc)
-      }
-
       val externs = RuntimeExterns.runtimeCommonExterns
 
       override def visitUnaryExpression(exp: UnaryExpressionContext) = {
