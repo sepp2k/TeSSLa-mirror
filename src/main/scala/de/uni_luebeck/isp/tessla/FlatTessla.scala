@@ -100,7 +100,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     }
   }
 
-  case class BuiltInOperator(
+  case class Extern(
     name: String,
     typeParameters: Seq[Identifier],
     parameters: Seq[(Option[TesslaAST.RuntimeEvaluation], Parameter)],

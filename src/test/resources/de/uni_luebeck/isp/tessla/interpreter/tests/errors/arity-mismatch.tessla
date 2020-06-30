@@ -1,0 +1,3 @@
+def foo(a: Int) := a + 5
+
+out foo(5, 2)

@@ -16,18 +16,37 @@ sealed abstract class TimeUnit {
 }
 
 object TimeUnit {
-  def fromString(str: String, loc: Location): TimeUnit = str.replaceAll("\"", "") match {
-    case "fs"  => Femtos(loc)
-    case "ps"  => Picos(loc)
-    case "ns"  => Nanos(loc)
-    case "µs"  => Micros(loc)
-    case "us"  => Micros(loc)
-    case "ms"  => Millis(loc)
-    case "s"   => Seconds(loc)
-    case "min" => Minutes(loc)
-    case "h"   => Hours(loc)
-    case "d"   => Days(loc)
-    case _     => throw UnknownTimeUnit(str, loc)
+
+  def fromString(str: String, loc: Location): TimeUnit = {
+    str.replaceAll("\"", "") match {
+      case "fs"  => Femtos(loc)
+      case "ps"  => Picos(loc)
+      case "ns"  => Nanos(loc)
+      case "µs"  => Micros(loc)
+      case "us"  => Micros(loc)
+      case "ms"  => Millis(loc)
+      case "s"   => Seconds(loc)
+      case "min" => Minutes(loc)
+      case "h"   => Hours(loc)
+      case "d"   => Days(loc)
+      case _ =>
+        throw UnknownTimeUnit(
+          str,
+          loc,
+          List(
+            "fs",
+            "ps",
+            "ns",
+            "µs",
+            "us",
+            "ms",
+            "s",
+            "min",
+            "h",
+            "d"
+          )
+        )
+    }
   }
 
   case class Femtos(loc: Location) extends TimeUnit {

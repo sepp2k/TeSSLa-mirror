@@ -217,21 +217,19 @@ object Main {
         return
       }
 
-      val traceInstance = new Trace()
-
       if (config.ctfTrace) {
-        val trace = traceInstance.fromCtfFile(config.traceFile.get, config.abortAt)
+        val trace = Trace.fromCtfFile(config.traceFile.get, config.abortAt)
         val output = Interpreter.run(core, trace, config.stopOn)
         output.foreach(println)
       } else {
         val trace = if (config.csvTrace) {
           config.traceFile
-            .map(traceInstance.fromCsvFile(_, config.abortAt))
-            .getOrElse(traceInstance.fromCsvSource(Source.stdin, "<stdin>", config.abortAt))
+            .map(Trace.fromCsvFile(_, config.abortAt))
+            .getOrElse(Trace.fromCsvSource(Source.stdin, "<stdin>", config.abortAt))
         } else {
           config.traceFile
-            .map(traceInstance.fromFile(_, config.abortAt))
-            .getOrElse(traceInstance.fromSource(Source.stdin, "<stdin>", config.abortAt))
+            .map(Trace.fromFile(_, config.abortAt))
+            .getOrElse(Trace.fromSource(Source.stdin, "<stdin>", config.abortAt))
         }
         if (config.flattenInput) {
           trace.foreach(println)

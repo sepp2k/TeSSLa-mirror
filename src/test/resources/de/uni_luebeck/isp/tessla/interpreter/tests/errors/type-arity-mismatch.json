@@ -1,0 +1,4 @@
+{
+  "spec": "type-arity-mismatch.tessla",
+  "expectedErrors": "type-arity-mismatch.errors"
+}

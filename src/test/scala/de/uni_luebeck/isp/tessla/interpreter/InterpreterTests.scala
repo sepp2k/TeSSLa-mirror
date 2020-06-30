@@ -130,11 +130,14 @@ class InterpreterTests extends AnyFunSuite {
 
   testCases.foreach {
     case (path, name) =>
+      def resolve(file: String): String = {
+        path + (if (file.startsWith("_")) file.replaceFirst("_", name) else file)
+      }
       def testStream(file: String): CharStream = {
-        IncludeResolvers.fromResource(getClass, root)(s"$path$file").get
+        IncludeResolvers.fromResource(getClass, root)(resolve(file)).get
       }
       def testSource(file: String): Source = {
-        Source.fromInputStream(getClass.getResourceAsStream(s"$root$path$file"))(
+        Source.fromInputStream(getClass.getResourceAsStream(s"$root${resolve(file)}"))(
           StandardCharsets.UTF_8
         )
       }
@@ -214,8 +217,7 @@ class InterpreterTests extends AnyFunSuite {
         testCase.input match {
           case Some(input) =>
             try {
-              val trace = new Trace()
-                .fromSource(testSource(input), s"$path$input", testCase.abortAt.map(BigInt(_)))
+              val trace = Trace.fromSource(testSource(input), s"$path$input", testCase.abortAt.map(BigInt(_)))
               val result = compiler
                 .compile(src)
                 .map(spec => Interpreter.run(spec, trace, None))

@@ -1,0 +1,1 @@
+errors/missing-type-extern.tessla(1,20 - 1,23): Extern definition foo needs a type annotation

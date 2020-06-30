@@ -56,7 +56,7 @@ object Tessla {
     override def loc = exp.loc
   }
 
-  case class BuiltInBody(id: Identifier, referenceImplementation: Option[Expression]) extends Body {
+  case class Extern(id: Identifier, referenceImplementation: Option[Expression]) extends Body {
     override def toString = s"extern($id)"
 
     override def loc = id.loc
@@ -94,7 +94,7 @@ object Tessla {
     override def toString = typ.toString
   }
 
-  case class BuiltInType(id: Identifier) extends TypeBody {
+  case class ExternType(id: Identifier) extends TypeBody {
     override def toString = s"extern($id)"
   }
 

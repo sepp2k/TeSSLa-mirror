@@ -1,0 +1,1 @@
+errors/type-arity-mismatch.tessla(1,5 - 1,18): Wrong number of type arguments for <macro>. Expected: 1, actual: 2

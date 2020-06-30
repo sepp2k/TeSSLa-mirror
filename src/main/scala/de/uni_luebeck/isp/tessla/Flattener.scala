@@ -256,11 +256,11 @@ class Flattener(spec: Tessla.Specification)
       val typ = definition.returnType.map(translateType(_, defs, innerEnv))
       val exp = defBody match {
         case b: Tessla.ExpressionBody => translateExpression(b.exp, defs, innerEnv, imports)
-        case b: Tessla.BuiltInBody =>
+        case b: Tessla.Extern =>
           val referenceImplementation = b.referenceImplementation.map { exp =>
             expToId(translateExpression(exp, defs, env, imports), defs, typ)
           }
-          FlatTessla.BuiltInOperator(b.id.name, Seq(), Seq(), referenceImplementation, b.id.loc)
+          FlatTessla.Extern(b.id.name, Seq(), Seq(), referenceImplementation, b.id.loc)
       }
       defs.addVariable(
         FlatTessla
@@ -319,7 +319,7 @@ class Flattener(spec: Tessla.Specification)
       defBody match {
         case b: Tessla.ExpressionBody =>
           expBody(b.exp, env.variables(definition.id.name))
-        case b: Tessla.BuiltInBody =>
+        case b: Tessla.Extern =>
           val typ = returnTypeOpt.map { returnType =>
             FlatTessla.FunctionType(
               typeParameters,
@@ -333,7 +333,7 @@ class Flattener(spec: Tessla.Specification)
             expBody(exp, id)
             id
           }
-          val builtIn = FlatTessla.BuiltInOperator(
+          val builtIn = FlatTessla.Extern(
             b.id.name,
             typeParameters,
             parameters,
@@ -369,8 +369,8 @@ class Flattener(spec: Tessla.Specification)
           innerDefs.addType(FlatTessla.TypeEntry(id, 0, _ => typeArg, typeParameter.loc))
       }
       definition.body match {
-        case Tessla.TypeAlias(typ)  => translateType(typ, innerDefs, innerEnv)
-        case Tessla.BuiltInType(id) => FlatTessla.BuiltInType(id.name, typeArgs)
+        case Tessla.TypeAlias(typ) => translateType(typ, innerDefs, innerEnv)
+        case Tessla.ExternType(id) => FlatTessla.BuiltInType(id.name, typeArgs)
       }
     }
     defs.addType(

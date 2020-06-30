@@ -8,7 +8,7 @@ object Errors {
 
   trait TesslaError extends Exception with Diagnostic
 
-  def mkTesslaError(msg: String, location: Location = Location.unknown) = new TesslaError {
+  def mkTesslaError(msg: String, location: Location = Location.unknown): TesslaError = new TesslaError {
     override def loc = location
 
     override def message = msg
@@ -28,14 +28,6 @@ object Errors {
     def stackTraceString = stackTrace.map(loc => s"\n    called from $loc").mkString("")
 
     override def toString = super.toString() + stackTraceString
-  }
-
-  case class MissingBody(id: Tessla.Identifier) extends TesslaError {
-    override def loc = id.loc
-
-    override def message =
-      s"Member definition $id needs a body. Eliding the body is only allowed if the definition" +
-        " consists of an identifier and nothing else"
   }
 
   case class TypeMismatch(expected: String, found: TypedTessla.Type, loc: Location) extends TesslaError {
@@ -78,12 +70,8 @@ object Errors {
     override def message = s"Parameter $name needs a type annotation"
   }
 
-  case class MissingTypeAnnotationBuiltIn(name: String, loc: Location) extends TesslaError {
-    override def message = s"Built-in definition $name needs a type annotation"
-  }
-
-  case class StreamOfNonValueType(loc: Location) extends TesslaError {
-    override def message = "Streams may only contain value types; not other streams or functions"
+  case class MissingTypeAnnotationExtern(name: String, loc: Location) extends TesslaError {
+    override def message = s"Extern definition $name needs a type annotation"
   }
 
   case class InputStreamMustHaveStreamType(loc: Location) extends TesslaError {
@@ -124,9 +112,9 @@ object Errors {
     override def message = s"Runtime error: $m"
   }
 
-  case class UnknownTimeUnit(name: String, loc: Location) extends TesslaError {
+  case class UnknownTimeUnit(name: String, loc: Location, options: List[String]) extends TesslaError {
     override def message = s"Unknown time unit: $name. " +
-      "Allowed time units: fs, ps, ns, us, ms, s, m, h, d"
+      s"Allowed time units are: ${options.mkString(", ")}"
   }
 
   case class UndefinedBaseTime(loc: Location) extends TesslaError {
@@ -152,16 +140,8 @@ object Errors {
     override def message = "Division by zero"
   }
 
-  case class FloatConversionError(value: Double, loc: Location) extends TesslaError {
-    override def message = s"The floating point value $value cannot be converted to an integer"
-  }
-
   case class ParserError(m: String, loc: Location) extends TesslaError {
     override def message = s"Invalid syntax: $m"
-  }
-
-  case class NotAnEventError(line: String, loc: Location) extends TesslaError {
-    override def message: String = s"Input $line is not an event"
   }
 
   case class DecreasingTimeStampsError(first: BigInt, second: BigInt, loc: Location) extends TesslaError {
@@ -180,17 +160,6 @@ object Errors {
     override def message: String = s"Non-positive delay $value"
   }
 
-  case class InputTypeMismatch(
-    value: Any,
-    valueType: String,
-    streamName: String,
-    streamType: TesslaAST.Core.Type,
-    loc: Location
-  ) extends TesslaError {
-    override def message: String =
-      s"Unexpected value of type $valueType ($value), expected type $streamType, in input stream '$streamName'"
-  }
-
   case class NonPositiveStepError(value: BigInt, loc: Location) extends TesslaError {
     override def message: String = s"Non-positive step in time stamp range: $value"
   }
@@ -203,18 +172,6 @@ object Errors {
     override def message: String = s"Index $index is out of range for list of size ${list.length}"
   }
 
-  case class HeadOfEmptyList(loc: Location) extends TesslaError {
-    override def message: String = "Head of empty list"
-  }
-
-  case class LastOfEmptyList(loc: Location) extends TesslaError {
-    override def message: String = "Last of empty list"
-  }
-
-  case class CannotGetValueOfNone(loc: Location) extends TesslaError {
-    override def message: String = s"Cannot get value of None"
-  }
-
   case class StackOverflow(loc: Location) extends TesslaError {
     override def message = "Stack overflow"
   }
@@ -223,12 +180,6 @@ object Errors {
     override def message = s"Undefined annotation $id"
 
     override def loc = id.loc
-  }
-
-  case class WrongAnnotationOnOut(annotationID: Tessla.Identifier) extends TesslaError {
-    override def message = s"The annotation $annotationID can not be used on out statements"
-
-    override def loc = annotationID.loc
   }
 
   case class LiftableOnNonMacro(loc: Location, defName: String) extends TesslaError {

@@ -12,9 +12,10 @@ import de.uni_luebeck.isp.tessla.Tessla.{
   StringLiteral,
   TimeLiteral
 }
+import de.uni_luebeck.isp.tessla.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.TypedTessla.{
   Annotation,
-  BuiltInOperator,
+  Extern,
   InputStream,
   Literal,
   Macro,
@@ -76,7 +77,7 @@ class TypedTessla2TesslaASTTypedWorker(
     value.expression match {
       case TypedTessla.MemberAccess(receiver, member, _, _) =>
         lookupType(receiver.id, env).asInstanceOf[Typed.RecordType].entries(member)._1
-      case TypedTessla.BuiltInOperator(name, _, _, _, _) =>
+      case TypedTessla.Extern(name, _, _, _, _) =>
         toType(value.typeInfo)
       case TypedTessla.ObjectLiteral(members, _) =>
         Typed.RecordType(members.map(x => (x._1 -> (lookupType(x._2.id, env), Location.unknown))))
@@ -173,7 +174,7 @@ class TypedTessla2TesslaASTTypedWorker(
                 loc
               )
 
-            case BuiltInOperator(
+            case Extern(
                   name,
                   typeParameters,
                   parameters,
@@ -385,8 +386,8 @@ class TypedTessla2TesslaASTTypedWorker(
     macroID: TypedTessla.Identifier
   ): Option[(Seq[(Option[TesslaAST.RuntimeEvaluation], TypedTessla.Parameter)], Location)] =
     lookup(env, macroID).expression match {
-      case TypedTessla.Macro(_, parameter, _, _, _, _, loc, _)  => Some((parameter, loc))
-      case TypedTessla.BuiltInOperator(_, _, parameter, _, loc) => Some((parameter, loc))
+      case TypedTessla.Macro(_, parameter, _, _, _, _, loc, _) => Some((parameter, loc))
+      case TypedTessla.Extern(_, _, parameter, _, loc)         => Some((parameter, loc))
       case TypedTessla.MemberAccess(receiver, member, _, _) =>
         lookup(env, receiver.id).expression match {
           case TypedTessla.ObjectLiteral(members, _) =>
@@ -399,7 +400,7 @@ class TypedTessla2TesslaASTTypedWorker(
 
 class TypedTessla2TesslaASTCore(baseTime: Option[TimeLiteral])
     extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {
-  override def translate(spec: TypedTessla.TypedSpecification) = {
+  override def translate(spec: TypedTessla.TypedSpecification): Result[TesslaAST.Typed.Specification] = {
     new TypedTessla2TesslaASTTypedWorker(spec, baseTime).translate()
   }
 }

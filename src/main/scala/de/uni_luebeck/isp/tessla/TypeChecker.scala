@@ -109,7 +109,7 @@ class TypeChecker(spec: FlatTessla.Specification)
     case _                   => false
   }
 
-  def isBuiltIn(exp: FlatTessla.Expression): Boolean = exp.isInstanceOf[FlatTessla.BuiltInOperator]
+  def isBuiltIn(exp: FlatTessla.Expression): Boolean = exp.isInstanceOf[FlatTessla.Extern]
 
   /**
    * Return all the entries that need to be type inferred before the current entry, i.e.
@@ -139,7 +139,7 @@ class TypeChecker(spec: FlatTessla.Specification)
       case _: FlatTessla.Literal | _: FlatTessla.InputStream | _: FlatTessla.Parameter =>
         Seq()
 
-      case builtIn: FlatTessla.BuiltInOperator =>
+      case builtIn: FlatTessla.Extern =>
         builtIn.referenceImplementation.toSeq.flatMap(resolve)
 
       case ite: FlatTessla.StaticIfThenElse =>
@@ -597,8 +597,8 @@ class TypeChecker(spec: FlatTessla.Specification)
             throw TypeMismatch("object", other, acc.receiver.loc)
         }
 
-      case b: FlatTessla.BuiltInOperator =>
-        val t = declaredType.getOrElse(throw MissingTypeAnnotationBuiltIn(b.name, b.loc))
+      case b: FlatTessla.Extern =>
+        val t = declaredType.getOrElse(throw MissingTypeAnnotationExtern(b.name, b.loc))
         val typeParameters = t match {
           case ft: TypedTessla.FunctionType => ft.typeParameters
           case _                            => Seq()
@@ -613,7 +613,7 @@ class TypeChecker(spec: FlatTessla.Specification)
             eval -> TypedTessla.Parameter(p.param, t, innerEnv(p.id))
         }
         val refImpl = b.referenceImplementation.map(env)
-        TypedTessla.BuiltInOperator(b.name, typeParameters, parameters, refImpl, b.loc) -> t
+        TypedTessla.Extern(b.name, typeParameters, parameters, refImpl, b.loc) -> t
 
       case mac: FlatTessla.Macro =>
         val tvarIDs = declaredType match {

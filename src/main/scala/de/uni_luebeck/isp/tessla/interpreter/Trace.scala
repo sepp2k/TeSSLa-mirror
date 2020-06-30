@@ -30,10 +30,6 @@ object Trace {
     override def toString = time.toString
   }
 
-}
-
-class Trace() {
-
   def fromCtfFile(ctfFile: File, abortAt: Option[BigInt]): Interpreter.Trace = {
     val reader = new CTFTraceReader(new CTFTrace(ctfFile))
 
