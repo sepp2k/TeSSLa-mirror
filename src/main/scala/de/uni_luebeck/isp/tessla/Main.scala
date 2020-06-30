@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-import java.io.{File, IOException}
+import java.io.{File, IOException, PrintStream}
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
@@ -155,16 +155,16 @@ object Main {
 
     def unwrapResult[T](result: Result[T]): T = result match {
       case Success(res, warnings) =>
-        if (config.diagnostics) warnings.foreach(w => System.err.println(s"Warning: $w"))
+        if (config.diagnostics) warnings.foreach(w => printErr(s"Warning: $w"))
         res
       case Failure(errors, warnings) =>
         if (config.diagnostics) {
-          warnings.foreach(w => System.err.println(s"Warning: $w"))
+          warnings.foreach(w => printErr(s"Warning: $w"))
           errors.foreach { e =>
-            System.err.println(s"Error: $e")
+            printErr(s"Error: $e")
             if (config.debug) e.printStackTrace()
           }
-          System.err.println(
+          printErr(
             s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors"
           )
         }
@@ -240,11 +240,21 @@ object Main {
       }
     } catch {
       case ex: TesslaError =>
-        System.err.println(s"Runtime error: $ex")
+        printErr(s"Runtime error: $ex")
         if (config.debug) ex.printStackTrace()
       case ex: IOException =>
-        System.err.println(s"IO Error: ${ex.getMessage}")
+        printErr(s"IO Error: ${ex.getMessage}")
         if (config.debug) ex.printStackTrace()
     }
+  }
+
+  def println(a: Any): Unit = {
+    if (System.out.checkError()) System.exit(141)
+    System.out.println(a)
+  }
+
+  def printErr(a: Any): Unit = {
+    if (System.err.checkError()) System.exit(141)
+    System.err.println(a)
   }
 }
