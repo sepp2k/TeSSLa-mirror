@@ -2,12 +2,17 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import java.io.{File, PrintWriter}
 
-import de.uni_luebeck.isp.tessla.IncludeResolvers
-import de.uni_luebeck.isp.tessla.Compiler
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.IncludeResolvers
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaBackend
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Flattening, LazynessAnalysis, UniqueRenaming, UsageAnalysis}
+import de.uni_luebeck.isp.tessla.Compiler
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{
+  Flattening,
+  LazynessAnalysis,
+  UniqueRenaming,
+  UsageAnalysis
+}
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
 
@@ -27,8 +32,6 @@ object Main extends SexyOpt {
   val noOptimization = flag("no-optimization", "Produce non-optimized output code")
   val outputPath = option("output-file", 'o', "Location of the output (including filename)")
   val verbose = flag("verbose", 'v', "Produce a lot of output")
-
-  def diagnostics = !noDiagnostics.value
 
   def main(args: Array[String]): Unit = {
 
@@ -50,58 +53,61 @@ object Main extends SexyOpt {
 
     parse(args)
     try {
-        val specSource = CharStreams.fromFileName(tesslaFile)
-        val compilerOptions = Compiler.Options(
-          baseTimeString = None,
-          includeResolver = IncludeResolvers.fromFile,
-          stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-          stdlibPath = "stdlib.tessla",
-          flattenCore = false
-        )
-        val (backend, stdinRead) : (backends.BackendInterface, Boolean) = target.value match {
-          case "java" => (new ScalaBackend, true)
-          case "javascript" => throw Errors.NotYetImplementedError("Javascript translation not implemented yet")
-          case "rust" => throw Errors.NotYetImplementedError("Rust translation not implemented yet")
-          case "rust-bare" => throw Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
-          case _=> throw Errors.CLIError(s"Unvalid option for target: ${target.value}")
-        }
+      val specSource = CharStreams.fromFileName(tesslaFile)
+      val compilerOptions = Compiler.Options(
+        baseTimeString = None,
+        includeResolver = IncludeResolvers.fromFile,
+        stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
+        stdlibPath = "stdlib.tessla",
+        flattenCore = false
+      )
+      val (backend, stdinRead): (backends.BackendInterface, Boolean) = target.value match {
+        case "java"       => (new ScalaBackend, true)
+        case "javascript" => throw Errors.NotYetImplementedError("Javascript translation not implemented yet")
+        case "rust"       => throw Errors.NotYetImplementedError("Rust translation not implemented yet")
+        case "rust-bare"  => throw Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
+        case _            => throw Errors.CLIError(s"Unvalid option for target: ${target.value}")
+      }
 
-        val compiler = new Compiler(compilerOptions)
-        val unflatCore = unwrapResult(compiler.tesslaToTyped(specSource).andThen(compiler.typedToCore))
-        //val unflatCore = unwrapResult((new Compiler).compile(specSource, compilerOptions))
-        val core = unwrapResult((new Flattening(false)).translate(unflatCore).
-          andThen(new UniqueRenaming).
-          andThen(new UsageAnalysis).
-          andThen(new LazynessAnalysis))
+      val compiler = new Compiler(compilerOptions)
+      val unflatCore = unwrapResult(compiler.tesslaToTyped(specSource).andThen(compiler.typedToCore))
+      //val unflatCore = unwrapResult((new Compiler).compile(specSource, compilerOptions))
+      val core = unwrapResult(
+        (new Flattening(false))
+          .translate(unflatCore)
+          .andThen(new UniqueRenaming)
+          .andThen(new UsageAnalysis)
+          .andThen(new LazynessAnalysis)
+      )
 
-        if (verbose.value) {
-          println("###############################")
-          println("#        TeSSLa Core          #")
-          println("###############################")
-          println(core.spec)
-          println("###############################")
-        }
+      if (verbose.value) {
+        println("###############################")
+        println("#        TeSSLa Core          #")
+        println("###############################")
+        println(core.spec)
+        println("###############################")
+      }
 
-        val intermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(core))
-        val optIntermediateCode = unwrapResult(UnusedVarRemove.translate(intermediateCode))
+      val intermediateCode = unwrapResult((new TesslaCoreToIntermediate(stdinRead)).translate(core))
+      val optIntermediateCode = unwrapResult(UnusedVarRemove.translate(intermediateCode))
 
-        if (verbose.value) {
-          println("###############################")
-          println("#      Intermediate Code      #")
-          println("###############################")
-          println(optIntermediateCode)
-          println("###############################")
-        }
+      if (verbose.value) {
+        println("###############################")
+        println("#      Intermediate Code      #")
+        println("###############################")
+        println(optIntermediateCode)
+        println("###############################")
+      }
 
-        val source = unwrapResult(backend.translate(optIntermediateCode))
+      val source = unwrapResult(backend.translate(optIntermediateCode))
 
-        if (outputPath.isDefined) {
-          val pw = new PrintWriter(new File(outputPath.get))
-          pw.write(source)
-          pw.close()
-        } else {
-          println(source)
-        }
+      if (outputPath.isDefined) {
+        val pw = new PrintWriter(new File(outputPath.get))
+        pw.write(source)
+        pw.close()
+      } else {
+        println(source)
+      }
     } catch {
       case ex: TesslaError =>
         System.err.println(s"Compilation error: $ex")
@@ -109,5 +115,6 @@ object Main extends SexyOpt {
     }
   }
 
+  def diagnostics = !noDiagnostics.value
 
 }

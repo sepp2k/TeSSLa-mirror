@@ -10,48 +10,53 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCodeUtils}
 
 object ScalaIOHandling {
 
-  def getInputParseExpression(to: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
+  def getInputParseExpression(to: ImpLanType, exp: String, freshVarCount: Int = 0): String = {
     to match {
-      case LongType => getInputParseExpressionForLong(exp)
+      case LongType   => getInputParseExpressionForLong(exp)
       case DoubleType => getInputParseExpressionForDouble(exp)
-      case BoolType => getInputParseExpressionForBoolean(exp)
-      case UnitType => getInputParseExpressionForUnit(exp)
+      case BoolType   => getInputParseExpressionForBoolean(exp)
+      case UnitType   => getInputParseExpressionForUnit(exp)
       case StringType => getInputParseExpressionForString(exp)
       case _ =>
         val s = to match {
-        case OptionType(t) => getInputParseExpressionForOption(t, exp, freshVarCount)
-        case ImmutableSetType(valType) => getInputParseExpressionForImmutableSet(valType, exp, freshVarCount)
-        case ImmutableMapType(keyType, valType) => getInputParseExpressionForImmutableMap(keyType, valType, exp, freshVarCount)
-        case ImmutableListType(valType) => getInputParseExpressionForImmutableList(valType, exp, freshVarCount)
-        case StructType(subTypes, fieldNames) if IntermediateCodeUtils.structIsTuple(StructType(subTypes, fieldNames)) => getInputParseExpressionForTuple(subTypes, exp, freshVarCount)
-        case StructType(subTypes, fieldNames) => getInputParseExpressionForStruct(fieldNames, subTypes, exp, freshVarCount)
-        case t => throw Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Scala translation")
+          case OptionType(t)             => getInputParseExpressionForOption(t, exp, freshVarCount)
+          case ImmutableSetType(valType) => getInputParseExpressionForImmutableSet(valType, exp, freshVarCount)
+          case ImmutableMapType(keyType, valType) =>
+            getInputParseExpressionForImmutableMap(keyType, valType, exp, freshVarCount)
+          case ImmutableListType(valType) => getInputParseExpressionForImmutableList(valType, exp, freshVarCount)
+          case StructType(subTypes, fieldNames)
+              if IntermediateCodeUtils.structIsTuple(StructType(subTypes, fieldNames)) =>
+            getInputParseExpressionForTuple(subTypes, exp, freshVarCount)
+          case StructType(subTypes, fieldNames) =>
+            getInputParseExpressionForStruct(fieldNames, subTypes, exp, freshVarCount)
+          case t =>
+            throw Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Scala translation")
         }
         s + s".asInstanceOf[${ScalaConstants.typeTranslation(to)}]"
     }
   }
 
-  def getInputParseExpressionForLong(exp: String) : String = {
+  def getInputParseExpressionForLong(exp: String): String = {
     "{try {java.lang.Long.parseLong(" + exp + ")} catch {case t : Throwable =>  throw InputError(s\"Long input has invalid format\", t.getMessage)}}"
   }
 
-  def getInputParseExpressionForDouble(exp: String) : String = {
+  def getInputParseExpressionForDouble(exp: String): String = {
     "{try {java.lang.Double.parseDouble(" + exp + ")} catch {case t : Throwable =>  throw InputError(s\"Double input has invalid format\", t.getMessage)}}"
   }
 
-  def getInputParseExpressionForBoolean(exp: String) : String = {
+  def getInputParseExpressionForBoolean(exp: String): String = {
     "{val b = " + exp + "; if (b == \"true\") {true} else if (b == \"false\") {false} else {throw InputError(s\"Boolean input has invalid format\", b)}}"
   }
 
-  def getInputParseExpressionForUnit(exp: String) : String = {
+  def getInputParseExpressionForUnit(exp: String): String = {
     "{val u = " + exp + "; if (u == \"()\") true else throw InputError(\"Unit input has invalid format\", u)}"
   }
 
-  def getInputParseExpressionForString(exp: String) : String = {
+  def getInputParseExpressionForString(exp: String): String = {
     s"processStringInput($exp)"
   }
 
-  def getInputParseExpressionForOption(subType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
+  def getInputParseExpressionForOption(subType: ImpLanType, exp: String, freshVarCount: Int = 0): String = {
     val expName = s"exp$freshVarCount"
     s"""{
        |val $expName = $exp;
@@ -59,7 +64,11 @@ object ScalaIOHandling {
        |if ($expName == "None") {
         |EONone()
        |} else if ($expName.startsWith("Some(") && $expName.endsWith(")")) {
-        |EOSome(${getInputParseExpression(subType, s"""$expName.stripPrefix("Some(").stripSuffix(")").strip""", freshVarCount + 1)})
+        |EOSome(${getInputParseExpression(
+      subType,
+      s"""$expName.stripPrefix("Some(").stripSuffix(")").strip""",
+      freshVarCount + 1
+    )})
        |} else {
         |throw new java.lang.Exception()
        |}
@@ -71,7 +80,7 @@ object ScalaIOHandling {
      |""".stripMargin.replaceAll("\n", " ")
   }
 
-  def getInputParseExpressionForImmutableSet(subType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
+  def getInputParseExpressionForImmutableSet(subType: ImpLanType, exp: String, freshVarCount: Int = 0): String = {
     val expName = s"exp$freshVarCount"
     s"""{val out = $exp;
        |try {
@@ -80,7 +89,11 @@ object ScalaIOHandling {
         |if (out_str == "") {
          |Set()
         |} else {
-         |splitString(out_str, ",").map{$expName => ${getInputParseExpression(subType, s"$expName.strip", freshVarCount + 1)} }.toSet
+         |splitString(out_str, ",").map{$expName => ${getInputParseExpression(
+      subType,
+      s"$expName.strip",
+      freshVarCount + 1
+    )} }.toSet
         |}
         |} else {
          |throw new java.lang.Exception()
@@ -93,7 +106,12 @@ object ScalaIOHandling {
     |""".stripMargin.replaceAll("\n", " ")
   }
 
-  def getInputParseExpressionForImmutableMap(keyType: ImpLanType, valType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
+  def getInputParseExpressionForImmutableMap(
+    keyType: ImpLanType,
+    valType: ImpLanType,
+    exp: String,
+    freshVarCount: Int = 0
+  ): String = {
     val expName = s"exp$freshVarCount"
     s"""{val out = $exp;
        |try {
@@ -124,7 +142,7 @@ object ScalaIOHandling {
     |""".stripMargin.replaceAll("\n", " ")
   }
 
-  def getInputParseExpressionForImmutableList(subType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
+  def getInputParseExpressionForImmutableList(subType: ImpLanType, exp: String, freshVarCount: Int = 0): String = {
     val expName = s"exp$freshVarCount"
     s"""{val out = $exp;
        |try {
@@ -133,7 +151,11 @@ object ScalaIOHandling {
         |if (out_str == "") {
          |List()
         |} else {
-         |splitString(out_str, ",").map{$expName => ${getInputParseExpression(subType, s"$expName.strip", freshVarCount + 1)} }.toList
+         |splitString(out_str, ",").map{$expName => ${getInputParseExpression(
+      subType,
+      s"$expName.strip",
+      freshVarCount + 1
+    )} }.toList
         |}
         |} else {
          |throw new java.lang.Exception()
@@ -146,7 +168,7 @@ object ScalaIOHandling {
     |""".stripMargin.replaceAll("\n", " ")
   }
 
-  def getInputParseExpressionForTuple(subTypes: Seq[ImpLanType], exp: String, freshVarCount : Int = 0) : String = {
+  def getInputParseExpressionForTuple(subTypes: Seq[ImpLanType], exp: String, freshVarCount: Int = 0): String = {
     val expName = s"exp$freshVarCount"
     s"""{
        |val s = $exp;
@@ -156,7 +178,9 @@ object ScalaIOHandling {
         |if ($expName.size != ${subTypes.length}) {
          |throw new java.lang.Exception()
         |};
-        |(${subTypes.indices.map(i => getInputParseExpression(subTypes(i), s"$expName($i).strip", freshVarCount + 1)).mkString(", ")})
+        |(${subTypes.indices
+      .map(i => getInputParseExpression(subTypes(i), s"$expName($i).strip", freshVarCount + 1))
+      .mkString(", ")})
        |} else {
         |throw new java.lang.Exception()
        |}
@@ -168,7 +192,12 @@ object ScalaIOHandling {
     |""".stripMargin.replaceAll("\n", " ")
   }
 
-  def getInputParseExpressionForStruct(fieldNames: Seq[String], subTypes: Seq[ImpLanType], exp: String, freshVarCount : Int = 0) : String = {
+  def getInputParseExpressionForStruct(
+    fieldNames: Seq[String],
+    subTypes: Seq[ImpLanType],
+    exp: String,
+    freshVarCount: Int = 0
+  ): String = {
     val expName = s"exp$freshVarCount"
     s"""{
        |val s = $exp;
@@ -179,7 +208,11 @@ object ScalaIOHandling {
            |throw new java.lang.Exception()
          |};
         |val $expName = cont.map(s => (s(0), s(1))).toMap;
-         |(${subTypes.indices.map(i => getInputParseExpression(subTypes(i), s"$expName(" + "\"" + fieldNames(i) + "\").strip", freshVarCount + 1)).mkString(", ")})
+         |(${subTypes.indices
+      .map(i =>
+        getInputParseExpression(subTypes(i), s"$expName(" + "\"" + fieldNames(i) + "\").strip", freshVarCount + 1)
+      )
+      .mkString(", ")})
         |} else {
          |throw new java.lang.Exception()
         |}
@@ -191,59 +224,88 @@ object ScalaIOHandling {
     |""".stripMargin.replaceAll("\n", " ")
   }
 
-  def getParseExpressionToString(from: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
+  def getParseExpressionToString(from: ImpLanType, exp: String, freshVarCount: Int = 0): String = {
     from match {
-      case LongType |
-           DoubleType |
-           BoolType => s"String.valueOf($exp)"
-      case UnitType => "\"()\""
-      case StringType => exp
-      case OptionType(t) => getParseExpressionToStringForOption(t, exp, freshVarCount)
-      case ImmutableSetType(valType) => getParseExpressionToStringForSet(valType, exp, freshVarCount)
+      case LongType | DoubleType | BoolType   => s"String.valueOf($exp)"
+      case UnitType                           => "\"()\""
+      case StringType                         => exp
+      case OptionType(t)                      => getParseExpressionToStringForOption(t, exp, freshVarCount)
+      case ImmutableSetType(valType)          => getParseExpressionToStringForSet(valType, exp, freshVarCount)
       case ImmutableMapType(keyType, valType) => getParseExpressionToStringForMap(keyType, valType, exp, freshVarCount)
-      case ImmutableListType(valType) => getParseExpressionToStringForList(valType, exp, freshVarCount)
+      case ImmutableListType(valType)         => getParseExpressionToStringForList(valType, exp, freshVarCount)
       case StructType(subTypes, fieldNames) if IntermediateCodeUtils.structIsTuple(StructType(subTypes, fieldNames)) =>
         getParseExpressionToStringForTuple(subTypes, exp, freshVarCount)
-      case StructType(subTypes, fieldNames) => getParseExpressionToStringForRecord(fieldNames, subTypes, exp, freshVarCount)
+      case StructType(subTypes, fieldNames) =>
+        getParseExpressionToStringForRecord(fieldNames, subTypes, exp, freshVarCount)
       case GeneralType => throw Errors.DSLError(s"General type expression $exp cannot be used for printing")
-      case _ => s"$exp.toString()"
+      case _           => s"$exp.toString()"
     }
   }
 
-  def getParseExpressionToStringForOption(subType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
+  def getParseExpressionToStringForOption(subType: ImpLanType, exp: String, freshVarCount: Int = 0): String = {
     val expName = s"exp$freshVarCount"
-    s"""{val $expName = $exp; if (${expName}.isDefined) "Some(" + ${getParseExpressionToString(subType, expName + ".get", freshVarCount + 1)} + ")" else "None"}"""
+    s"""{val $expName = $exp; if (${expName}.isDefined) "Some(" + ${getParseExpressionToString(
+      subType,
+      expName + ".get",
+      freshVarCount + 1
+    )} + ")" else "None"}"""
   }
 
-  def getParseExpressionToStringForSet(valType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
-    s""""Set(" + ${exp}.toSeq.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
+  def getParseExpressionToStringForSet(valType: ImpLanType, exp: String, freshVarCount: Int = 0): String = {
+    s""""Set(" + ${exp}.toSeq.map{e => ${getParseExpressionToString(
+      valType,
+      "e",
+      freshVarCount + 1
+    )}}.mkString(", ") + ")""""
   }
 
-  def getParseExpressionToStringForMap(keyType: ImpLanType, valType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
+  def getParseExpressionToStringForMap(
+    keyType: ImpLanType,
+    valType: ImpLanType,
+    exp: String,
+    freshVarCount: Int = 0
+  ): String = {
     s""""Map(" + ${exp}.map{case (k,v) => ${getParseExpressionToString(keyType, "k", freshVarCount + 1)} + " -> " +
        |${getParseExpressionToString(valType, "v", freshVarCount + 1)} }.mkString(", ") + ")"
     """.stripMargin.replaceAll("\n", " ")
   }
 
-  def getParseExpressionToStringForList(valType: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {
-    s""""List(" + ${exp}.map{e => ${getParseExpressionToString(valType, "e", freshVarCount + 1)}}.mkString(", ") + ")""""
+  def getParseExpressionToStringForList(valType: ImpLanType, exp: String, freshVarCount: Int = 0): String = {
+    s""""List(" + ${exp}.map{e => ${getParseExpressionToString(
+      valType,
+      "e",
+      freshVarCount + 1
+    )}}.mkString(", ") + ")""""
   }
 
-  def getParseExpressionToStringForRecord(fieldNames: Seq[String], subTypes: Seq[ImpLanType], exp: String, freshVarCount : Int = 0) : String = {
+  def getParseExpressionToStringForRecord(
+    fieldNames: Seq[String],
+    subTypes: Seq[ImpLanType],
+    exp: String,
+    freshVarCount: Int = 0
+  ): String = {
     val expName = s"exp$freshVarCount"
-        val elems = fieldNames.zip(subTypes).zipWithIndex.map { case ((n, t), i) =>
-          val add = if (fieldNames.size == 1) "" else s"._${i+1}"
+    val elems = fieldNames
+      .zip(subTypes)
+      .zipWithIndex
+      .map {
+        case ((n, t), i) =>
+          val add = if (fieldNames.size == 1) "" else s"._${i + 1}"
           s""""$n = " + ${getParseExpressionToString(t, s"$expName$add", freshVarCount + 1)}"""
-        }.mkString(""" + ", " + """)
-        s"""{val $expName = $exp; "{" + $elems + "}"}"""
+      }
+      .mkString(""" + ", " + """)
+    s"""{val $expName = $exp; "{" + $elems + "}"}"""
   }
 
-  def getParseExpressionToStringForTuple(subTypes: Seq[ImpLanType], exp: String, freshVarCount : Int = 0) : String = {
+  def getParseExpressionToStringForTuple(subTypes: Seq[ImpLanType], exp: String, freshVarCount: Int = 0): String = {
     val expName = s"exp$freshVarCount"
-        val elems = subTypes.zipWithIndex.map { case (t, i) =>
-          s"""${getParseExpressionToString(t, s"$expName._${i+1}", freshVarCount + 1)}"""
-        }.mkString(""" + ", " + """)
-        s"""{val $expName = $exp; "(" + $elems + ")"}"""
+    val elems = subTypes.zipWithIndex
+      .map {
+        case (t, i) =>
+          s"""${getParseExpressionToString(t, s"$expName._${i + 1}", freshVarCount + 1)}"""
+      }
+      .mkString(""" + ", " + """)
+    s"""{val $expName = $exp; "(" + $elems + ")"}"""
   }
 
 }

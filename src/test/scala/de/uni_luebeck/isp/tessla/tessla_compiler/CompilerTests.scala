@@ -3,75 +3,29 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 import java.io.{File, PrintWriter}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
-import java.nio.file.attribute.FileAttribute
 
-import com.eclipsesource.schema.drafts.Version4._
-import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers, TranslationPhase}
-import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
-import org.scalatest.funsuite.AnyFunSuite
-import play.api.libs.json._
-import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
-import de.uni_luebeck.isp.tessla.TesslaAST.PrintOptions
-import de.uni_luebeck.isp.tessla.analyses.Observations
-import de.uni_luebeck.isp.tessla.interpreter.{FlatEventIterator, Interpreter, Trace}
-import de.uni_luebeck.isp.tessla.tessla_compiler.Main.verbose
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Flattening, LazynessAnalysis, UniqueRenaming, UsageAnalysis}
-import org.antlr.v4.runtime.CharStream
-import spray.json.JsonParser
+import com.eclipsesource.schema.drafts.Version4._
+import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend._
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{
+  Flattening,
+  LazynessAnalysis,
+  UniqueRenaming,
+  UsageAnalysis
+}
+import de.uni_luebeck.isp.tessla.{IncludeResolvers, TranslationPhase}
+import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.funsuite.AnyFunSuite
+import play.api.libs.json.Reads.verifying
+import play.api.libs.json._
 
-import sys.process._
 import scala.io.Source
 import scala.reflect.io.Directory
+import scala.sys.process._
 
 class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
-
-  object JSON {
-
-    case class TestCase(
-      spec: String,
-      input: Option[String],
-      expectedOutput: Option[String],
-      expectedErrors: Option[String],
-      expectedWarnings: Option[String],
-      expectedObservationErrors: Option[String],
-      expectedRuntimeErrors: Option[String],
-      expectedObservations: Option[String],
-      abortAt: Option[Int],
-      baseTime: Option[String],
-      excludeForCompiler: Option[Boolean]
-    )
-
-    implicit val timeUnitReads: Reads[Option[String]] = (__ \ "timeunit")
-      .readNullable[String](verifying(List("ns", "us", "ms", "s", "min", "h", "d").contains))
-    implicit val interpreterTestReads: Reads[TestCase] = Json.reads[TestCase]
-
-    /*Validates a test of a given type using its json instance and a schema for that test type
-    (Schema for type X must be named XSchema.json and located in the root directory).
-    Returns the test if successful, throws an Exception otherwise.*/
-    def validate(testjson: JsValue): JsResult[JsValue] = {
-      val fileName = "TestCaseSchema.json"
-      val schema =
-        Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root$fileName"))).get
-      SchemaValidator().validate(schema, testjson)
-    }
-
-    def jsErrorToString(jsError: JsError): String = {
-      jsError.errors
-        .map {
-          case (_, errors) =>
-            errors
-              .map {
-                case JsonValidationError(messages, _) => messages.mkString("\n")
-              }
-              .mkString("\n")
-        }
-        .mkString("\n")
-    }
-  }
 
   val root = "tests/"
   val testCases: LazyList[(String, String)] = getFilesRecursively()
@@ -81,6 +35,10 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
     .map {
       case (path, file) => (path, stripExtension(file))
     }
+
+  /*************************************************Testing************************************************************/
+
+  val fsPath: Path = Files.createTempDirectory("TesslaCompilerTests")
 
   def stripExtension(fileName: String): String = fileName.replaceFirst("""\.[^.]+$""", "")
 
@@ -97,12 +55,12 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
       .to(LazyList)
   }
 
-  def assert(condition: Boolean, message: String): Unit = {
-    if (!condition) fail(message)
-  }
-
   def assertEquals[T](actual: T, expected: T, name: String): Unit = {
     assert(actual == expected, s"$actual\ndid not equal\n$expected")
+  }
+
+  def assert(condition: Boolean, message: String): Unit = {
+    if (!condition) fail(message)
   }
 
   def assertEqualSets[T: Ordering](
@@ -126,6 +84,11 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
 
   def unsplitOutput(pair: (BigInt, String)): String = s"${pair._1}:${pair._2}"
 
+  /*Parse the given file specified by the given relative path as json file, and convert it to a 'Tests' instance.*/
+  def parseTestCase(path: String): JSON.TestCase = {
+    parseJson[JSON.TestCase](s"$path.json", JSON.validate)
+  }
+
   def parseJson[T: Reads](path: String, validate: JsValue => JsResult[_] = x => JsSuccess(x)): T = {
     val json = Json.parse(getClass.getResourceAsStream(s"$root$path"))
     validate(json).flatMap(_ => Json.fromJson[T](json)) match {
@@ -134,22 +97,56 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
-  /*Parse the given file specified by the given relative path as json file, and convert it to a 'Tests' instance.*/
-  def parseTestCase(path: String): JSON.TestCase = {
-    parseJson[JSON.TestCase](s"$path.json", JSON.validate)
-  }
-
-  /*************************************************Testing************************************************************/
-
-  val fsPath: Path = Files.createTempDirectory("TesslaCompilerTests")
-
   override def afterAll(): Unit = {
     Directory(fsPath.toFile).deleteRecursively()
   }
 
+  object JSON {
+
+    /*Validates a test of a given type using its json instance and a schema for that test type
+    (Schema for type X must be named XSchema.json and located in the root directory).
+    Returns the test if successful, throws an Exception otherwise.*/
+    def validate(testjson: JsValue): JsResult[JsValue] = {
+      val fileName = "TestCaseSchema.json"
+      val schema =
+        Json.fromJson[SchemaType](Json.parse(getClass.getResourceAsStream(s"$root$fileName"))).get
+      SchemaValidator().validate(schema, testjson)
+    }
+
+    implicit val timeUnitReads: Reads[Option[String]] = (__ \ "timeunit")
+      .readNullable[String](verifying(List("ns", "us", "ms", "s", "min", "h", "d").contains))
+    implicit val interpreterTestReads: Reads[TestCase] = Json.reads[TestCase]
+
+    def jsErrorToString(jsError: JsError): String = {
+      jsError.errors
+        .map {
+          case (_, errors) =>
+            errors
+              .map {
+                case JsonValidationError(messages, _) => messages.mkString("\n")
+              }
+              .mkString("\n")
+        }
+        .mkString("\n")
+    }
+
+    case class TestCase(
+      spec: String,
+      input: Option[String],
+      expectedOutput: Option[String],
+      expectedErrors: Option[String],
+      expectedWarnings: Option[String],
+      expectedObservationErrors: Option[String],
+      expectedRuntimeErrors: Option[String],
+      expectedObservations: Option[String],
+      abortAt: Option[Int],
+      baseTime: Option[String],
+      excludeForCompiler: Option[Boolean]
+    )
+  }
+
   testCases.zipWithIndex.foreach {
     case ((path, name), idx) =>
-
       def testStream(file: String): CharStream = {
         IncludeResolvers.fromResource(getClass, root)(s"$path$file").get
       }
@@ -158,7 +155,6 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
           StandardCharsets.UTF_8
         )
       }
-
 
       def compileAndExecute(sourceCode: String, inputTracePath: String): (Seq[String], Boolean) = {
 
@@ -189,7 +185,7 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
         }
 
         val run = Process("cat input", new File(fsPath.toAbsolutePath.toString)) #|
-                  Process(s"scala Main < input", new File(fsPath.toAbsolutePath.toString))
+          Process(s"scala Main < input", new File(fsPath.toAbsolutePath.toString))
         val rc = run.!(executionLogger)
 
         (executionLogger.output, rc != 0)
@@ -197,14 +193,16 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
       }
 
       def compileChain(src: CharStream, compiler: Compiler): TranslationPhase.Result[String] = {
-        compiler.tesslaToTyped(src).andThen(compiler.typedToCore).
-          andThen(new Flattening(false)).
-          andThen(new UniqueRenaming).
-          andThen(new UsageAnalysis).
-          andThen(new LazynessAnalysis).
-          andThen(new TesslaCoreToIntermediate(true)).
-          andThen(UnusedVarRemove).
-          andThen(new ScalaBackend)
+        compiler
+          .tesslaToTyped(src)
+          .andThen(compiler.typedToCore)
+          .andThen(new Flattening(false))
+          .andThen(new UniqueRenaming)
+          .andThen(new UsageAnalysis)
+          .andThen(new LazynessAnalysis)
+          .andThen(new TesslaCoreToIntermediate(true))
+          .andThen(UnusedVarRemove)
+          .andThen(new ScalaBackend)
       }
 
       def handleResult(
@@ -273,28 +271,29 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
               case Some(input) =>
                 val code = compileChain(src, compiler)
 
-                handleResult(code, testCase.expectedErrors, testCase.expectedWarnings, input) { (output: Seq[String], runtimeError: Boolean) =>
-                  val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
-                  val actualOutput = output.toSet
+                handleResult(code, testCase.expectedErrors, testCase.expectedWarnings, input) {
+                  (output: Seq[String], runtimeError: Boolean) =>
+                    val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
+                    val actualOutput = output.toSet
 
-                  if (runtimeError) {
-                    assert(
-                      testCase.expectedRuntimeErrors.isDefined,
-                      s"Expected: success. Actual: Runtime error\n${output.mkString("\n")}"
-                    )
-                  } else {
-                    assert(
-                      testCase.expectedRuntimeErrors.isEmpty,
-                      s"Expected: Runtime error. Actual: success\n${testCase.expectedRuntimeErrors}"
-                    )
+                    if (runtimeError) {
+                      assert(
+                        testCase.expectedRuntimeErrors.isDefined,
+                        s"Expected: success. Actual: Runtime error\n${output.mkString("\n")}"
+                      )
+                    } else {
+                      assert(
+                        testCase.expectedRuntimeErrors.isEmpty,
+                        s"Expected: Runtime error. Actual: success\n${testCase.expectedRuntimeErrors}"
+                      )
 
-                    assertEqualSets(
-                      actualOutput.map(splitOutput),
-                      expectedOutput.map(splitOutput),
-                      "output",
-                      unsplitOutput
-                    )
-                  }
+                      assertEqualSets(
+                        actualOutput.map(splitOutput),
+                        expectedOutput.map(splitOutput),
+                        "output",
+                        unsplitOutput
+                      )
+                    }
                 }
               case None =>
                 handleResult(

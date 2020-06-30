@@ -15,30 +15,33 @@ class Flattening(flattenOutFuncExterns: Boolean) extends TranslationPhase[Core.S
     var maxId: Long = spec.maxIdentifier
 
     def freshID(): Identifier = {
-      new Identifier(Ior.right({maxId += 1; maxId}))
+      new Identifier(Ior.right {
+        maxId += 1;
+        maxId
+      })
     }
 
     def externExpNeedsFlattening(e: ExternExpression): Boolean = {
       e match {
-        case ExternExpression("true", _, _) |
-             ExternExpression("false", _, _) => false
-        case _ => flattenOutFuncExterns
+        case ExternExpression("true", _, _) | ExternExpression("false", _, _) => false
+        case _                                                                => flattenOutFuncExterns
       }
     }
 
-    def flattenExpressionArg(e: ExpressionArg, addDefs: mutable.Map[Identifier, DefinitionExpression]): ExpressionArg = {
+    def flattenExpressionArg(
+      e: ExpressionArg,
+      addDefs: mutable.Map[Identifier, DefinitionExpression]
+    ): ExpressionArg = {
       e match {
         case r: ExpressionRef => r
-        case _: IntLiteralExpression |
-             _: StringLiteralExpression |
-             _: FloatLiteralExpression |
-             _: TypeApplicationExpression =>
+        case _: IntLiteralExpression | _: StringLiteralExpression | _: FloatLiteralExpression |
+            _: TypeApplicationExpression =>
           flattenExpression(e.asInstanceOf[DefinitionExpression], addDefs)
         case e: ExternExpression if !externExpNeedsFlattening(e) =>
           flattenExpression(e.asInstanceOf[DefinitionExpression], addDefs)
         case RecordConstructorExpression(m, _) if m.isEmpty =>
           flattenExpression(e.asInstanceOf[DefinitionExpression], addDefs)
-        case e:  Expression =>
+        case e: Expression =>
           val newID = freshID()
           val flattenedExp = flattenExpression(e, addDefs)
           addDefs.addOne(newID -> flattenedExp)
@@ -46,29 +49,40 @@ class Flattening(flattenOutFuncExterns: Boolean) extends TranslationPhase[Core.S
       }
     }
 
-    def flattenExpression(e: DefinitionExpression, addDefs: mutable.Map[Identifier, DefinitionExpression]): DefinitionExpression = {
+    def flattenExpression(
+      e: DefinitionExpression,
+      addDefs: mutable.Map[Identifier, DefinitionExpression]
+    ): DefinitionExpression = {
       e match {
         case FunctionExpression(typeParams, params, body, result, location) =>
-          val resDef : mutable.Map[Identifier, DefinitionExpression] = mutable.Map()
+          val resDef: mutable.Map[Identifier, DefinitionExpression] = mutable.Map()
           val newRes = flattenExpressionArg(result, resDef)
           val newBody = flattenDefinitions(body ++ resDef)
           FunctionExpression(typeParams, params, newBody, newRes, location)
         case ApplicationExpression(applicable, args, location) =>
-          ApplicationExpression(flattenExpressionArg(applicable, addDefs), args.map(flattenExpressionArg(_, addDefs)), location)
+          ApplicationExpression(
+            flattenExpressionArg(applicable, addDefs),
+            args.map(flattenExpressionArg(_, addDefs)),
+            location
+          )
         case TypeApplicationExpression(applicable, typeArgs, location) =>
           TypeApplicationExpression(flattenExpressionArg(applicable, addDefs), typeArgs, location)
         case RecordConstructorExpression(entries, location) =>
-          RecordConstructorExpression(entries.map{case (n, (e, loc)) => (n, (flattenExpressionArg(e, addDefs), loc))}, location)
+          RecordConstructorExpression(
+            entries.map { case (n, (e, loc)) => (n, (flattenExpressionArg(e, addDefs), loc)) },
+            location
+          )
         case RecordAccessorExpression(name, target, nameLocation, location) =>
           RecordAccessorExpression(name, flattenExpressionArg(target, addDefs), nameLocation, location)
         case _ => e
       }
     }
 
-    def flattenDefinitions(defs: Map[Identifier, DefinitionExpression]) : Map[Identifier, DefinitionExpression] = {
-      val addDefs : mutable.Map[Identifier, DefinitionExpression] = mutable.Map()
-      defs.map{case (id, exp) =>
-        (id, flattenExpression(exp, addDefs))
+    def flattenDefinitions(defs: Map[Identifier, DefinitionExpression]): Map[Identifier, DefinitionExpression] = {
+      val addDefs: mutable.Map[Identifier, DefinitionExpression] = mutable.Map()
+      defs.map {
+        case (id, exp) =>
+          (id, flattenExpression(exp, addDefs))
       } ++ addDefs.toMap
     }
 
