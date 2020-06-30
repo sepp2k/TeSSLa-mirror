@@ -1,1 +1,1 @@
-errors/type-arg-not-inferred.tessla(3,5 - 3,8): Explicit type arguments needed for foo
+errors/type-arg-not-inferred.tessla(3,5 - 3,8): Explicit type arguments needed for "foo"

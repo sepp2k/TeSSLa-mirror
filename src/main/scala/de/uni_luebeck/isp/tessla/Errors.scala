@@ -46,16 +46,16 @@ object Errors {
 
   case class TypeArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
     override def message =
-      s"Wrong number of type arguments for $name. Expected: $expected, actual: $actual"
+      s"""Wrong number of type arguments for $name. Expected: $expected, actual: $actual"""
   }
 
   case class TypeArgumentsNotInferred(name: String, loc: Location) extends TesslaError {
-    override def message = s"Explicit type arguments needed for $name"
+    override def message = s"""Explicit type arguments needed for "$name""""
   }
 
   case class ArityMismatch(name: String, expected: Int, actual: Int, loc: Location) extends TesslaError {
     override def message =
-      s"Wrong number of arguments for $name. Expected: $expected, actual: $actual"
+      s"""Wrong number of arguments for $name. Expected: $expected, actual: $actual"""
   }
 
   case class UndefinedType(name: String, loc: Location) extends TesslaError {
@@ -63,15 +63,15 @@ object Errors {
   }
 
   case class MissingTypeAnnotationRec(name: String, loc: Location) extends TesslaError {
-    override def message = s"Recursive definition $name needs a type annotation"
+    override def message = s"""Recursive definition "$name" needs a type annotation"""
   }
 
   case class MissingTypeAnnotationParam(name: String, loc: Location) extends TesslaError {
-    override def message = s"Parameter $name needs a type annotation"
+    override def message = s"""Parameter $name needs a type annotation"""
   }
 
   case class MissingTypeAnnotationExtern(name: String, loc: Location) extends TesslaError {
-    override def message = s"Extern definition $name needs a type annotation"
+    override def message = s"""Extern definition "$name" needs a type annotation"""
   }
 
   case class InputStreamMustHaveStreamType(loc: Location) extends TesslaError {
@@ -85,23 +85,23 @@ object Errors {
   case class UndefinedVariable(id: Tessla.Identifier) extends TesslaError {
     override def loc = id.loc
 
-    override def message = s"Undefined variable ${id.name}"
+    override def message = s"""Undefined variable: ${id.name}"""
   }
 
   case class UndefinedNamedArg(name: String, loc: Location) extends TesslaError {
-    override def message = s"Undefined keyword argument $name"
+    override def message = s"""Undefined keyword argument: $name"""
   }
 
   case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {
     override def loc = id.loc
 
     override def message =
-      s"Multiple definitions of ${id.name} in same scope\n" +
+      s"""Multiple definitions of "${id.name}" in same scope\n""" +
         s"    Previous definition at: $previousLoc"
   }
 
   case class ImportAmbiguousDefinitionError(name: String, definition: String, loc: Location) extends TesslaError {
-    override def message = s"Failed to import $definition from $name: $definition is already defined."
+    override def message = s"""Failed to import "$definition" from "$name": "$definition" is already defined."""
   }
 
   case class InternalError(m: String, loc: Location = Location.unknown) extends TesslaError {
@@ -149,7 +149,7 @@ object Errors {
   }
 
   case class SameTimeStampError(timestamp: BigInt, eventName: String, loc: Location) extends TesslaError {
-    override def message: String = s"Multiple events $eventName at timestamp $timestamp"
+    override def message: String = s"""Multiple events "$eventName" at timestamp $timestamp"""
   }
 
   def ProvideAfterPropagationError(time: BigInt, loc: Location = Location.unknown) = {
@@ -177,13 +177,13 @@ object Errors {
   }
 
   case class UndefinedAnnotation(id: Tessla.Identifier) extends TesslaError {
-    override def message = s"Undefined annotation $id"
+    override def message = s"Undefined annotation: $id"
 
     override def loc = id.loc
   }
 
   case class LiftableOnNonMacro(loc: Location, defName: String) extends TesslaError {
-    override def message = s"Non-macro $defName can not be liftable"
+    override def message = s"""Non-macro "$defName" can not be liftable"""
   }
 
   case class UnliftableMacroType(loc: Location) extends TesslaError {
@@ -192,7 +192,7 @@ object Errors {
   }
 
   case class MemberNotDefined(ot: TypedTessla.ObjectType, member: String, loc: Location) extends TesslaError {
-    override def message = s"Object of type $ot does not have a member named $member"
+    override def message = s"""Object of type $ot does not have a member named "$member""""
   }
 
   case class InvalidEscapeSequence(sequence: String, loc: Location) extends TesslaError {
