@@ -15,7 +15,7 @@ module Types {
 def @raw
 
 ## inmodule Types
-## A Boolean can be either [`true`](#true) or [`false`](#false)
+## A Boolean can be either @[Types#true] or @[Types#false]
 type Bool = extern("Bool")
 
 ## inmodule Types

@@ -163,7 +163,7 @@ module List {
   ## ~~~
   liftable def size[T](list: strict List[T]): Int = extern("List_size")
 
-  ## Returns [`true`](#true) if the given `list` has a size of zero
+  ## Returns @[Types#true] if the given `list` has a size of zero
   ##
   ## **Usage example:**
   ##

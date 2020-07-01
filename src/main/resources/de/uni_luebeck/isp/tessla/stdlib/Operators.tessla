@@ -25,55 +25,55 @@ module Operators {
   ## **Operator usage:** `a == b`
   ##
   ## Equivalence on arbitrary data types. On complex data structures this operator checks the object's identity. Note,
-  ## that this operator is defined as `@liftable`, so it does neither check the equivalence nor the identity of streams,
+  ## that this operator is defined as `liftable`, so it does neither check the equivalence nor the identity of streams,
   ## but applies the operator on two streams using the signal semantics.
   liftable def eq[T](lhs: strict T, rhs: strict T): Bool = extern("eq")
 
   ## **Operator usage:** `a != b`
   ##
   ## Non-Equivalence on arbitrary data types. On complex data structures this operator checks the object's identity. Note,
-  ## that this operator is defined as `@liftable`, so it does neither check the equivalence nor the identity of streams,
+  ## that this operator is defined as `liftable`, so it does neither check the equivalence nor the identity of streams,
   ## but applies the operator on two streams using the signal semantics.
   liftable def neq[T](lhs: strict T, rhs: strict T): Bool = extern("neq")
 
   ## **Operator usage:** `a > b`
   ##
-  ## Returns [`true`](#true) if `a` is strictly greater than `b`
+  ## Returns @[Types#true] if `a` is strictly greater than `b`
   liftable def gt(lhs: strict Int, rhs: strict Int): Bool = extern("gt")
 
   ## **Operator usage:** `a < b`
   ##
-  ## Returns [`true`](#true) if `a` is strictly lower than `b`
+  ## Returns @[Types#true] if `a` is strictly lower than `b`
   liftable def lt(lhs: strict Int, rhs: strict Int): Bool = extern("lt")
 
   ## **Operator usage:** `a >= b`
   ##
-  ## Returns [`true`](#true) if `a` is greater than or equal to `b`
+  ## Returns @[Types#true] if `a` is greater than or equal to `b`
   liftable def geq(lhs: strict Int, rhs: strict Int): Bool = extern("geq")
 
   ## **Operator usage:** `a <= b`
   ##
-  ## Returns [`true`](#true) if `a` is lower than or equal to `b`
+  ## Returns @[Types#true] if `a` is lower than or equal to `b`
   liftable def leq(lhs: strict Int, rhs: strict Int): Bool = extern("leq")
 
   ## **Operator usage:** `a >. b`
   ##
-  ## Returns [`true`](#true) if `a` is strictly greater than `b`
+  ## Returns @[Types#true] if `a` is strictly greater than `b`
   liftable def fgt(lhs: strict Float, rhs: strict Float): Bool = extern("fgt")
 
   ## **Operator usage:** `a <. b`
   ##
-  ## Returns [`true`](#true) if `a` is strictly lower than `b`
+  ## Returns @[Types#true] if `a` is strictly lower than `b`
   liftable def flt(lhs: strict Float, rhs: strict Float): Bool = extern("flt")
 
   ## **Operator usage:** `a >=. b`
   ##
-  ## Returns [`true`](#true) if `a` is greater than or equal to `b`
+  ## Returns @[Types#true] if `a` is greater than or equal to `b`
   liftable def fgeq(lhs: strict Float, rhs: strict Float): Bool = extern("fgeq")
 
   ## **Operator usage:** `a <=. b`
   ##
-  ## Returns [`true`](#true) if `a` is lower than or equal to `b`
+  ## Returns @[Types#true] if `a` is lower than or equal to `b`
   liftable def fleq(lhs: strict Float, rhs: strict Float): Bool = extern("fleq")
 
   ## **Operator usage:** `a + b`

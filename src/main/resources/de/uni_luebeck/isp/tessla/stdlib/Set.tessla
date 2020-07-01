@@ -59,7 +59,7 @@ module Set {
   ## ~~~
   liftable def add[T](set: strict Set[T], item: strict T): Set[T] = extern("Set_add")
 
-  ## Returns [`true`](#true) if the given `set` contains the given item
+  ## Returns @[Types#true] if the given `set` contains the given item
   ##
   ## **Usage example:**
   ##
@@ -161,7 +161,7 @@ module Set {
   liftable def size[T](set: strict Set[T]): Int = extern("Set_size")
 
 
-  ## Returns the union of the given [`sets`](#set)
+  ## Returns the union of the given @[Set]
   ##
   ## **Usage example:**x
   ##
@@ -207,7 +207,7 @@ module Set {
   ## ~~~
   liftable def union[T](set1: strict Set[T], set2: strict Set[T]): Set[T] = extern("Set_union")
 
-  ## Returns the intersection of the given `sets` as [`set`](#set).
+  ## Returns the intersection of the given `sets` as @[Set].
   ##
   ## **Usage example:**
   ##
