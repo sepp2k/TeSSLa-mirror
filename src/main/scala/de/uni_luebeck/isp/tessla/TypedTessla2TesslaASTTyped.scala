@@ -74,22 +74,8 @@ class TypedTessla2TesslaASTTypedWorker(
 
   def lookupType(id: TypedTessla.Identifier, env: TypedTessla.Definitions): Typed.Type = {
     val value = lookup(env, id)
-    value.expression match {
-      case TypedTessla.MemberAccess(receiver, member, _, _) =>
-        lookupType(receiver.id, env).asInstanceOf[Typed.RecordType].entries(member)._1
-      case TypedTessla.Extern(name, _, _, _, _) =>
-        toType(value.typeInfo)
-      case TypedTessla.ObjectLiteral(members, _) =>
-        Typed.RecordType(members.map(x => (x._1 -> (lookupType(x._2.id, env), Location.unknown))))
-      case _ => toType(value.typeInfo)
-    }
+    toType(value.typeInfo)
   }
-
-  def lookupType2(id: TypedTessla.Identifier, env: TypedTessla.Definitions): Typed.Type =
-    env.variables.get(id) match {
-      case Some(value) => toType(value.typeInfo)
-      case None        => lookupType2(id, env.parent.get)
-    }
 
   def translateEnv(env: TypedTessla.Definitions): Map[Typed.Identifier, Typed.ExpressionArg] =
     env.variables.toMap.map {
