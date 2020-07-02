@@ -10,14 +10,17 @@ name := "tessla-compiler"
 
 organization := "de.uni_luebeck.isp"
 
-version := s"0.1.0-SNAPSHOT"
+version := s"1.0.0-SNAPSHOT"
 
 scalaVersion := "2.13.1"
 
 resolvers ++= Seq(
-  releases, snapshots,
-  playResolver, validatorResolver,
-  efficiosSnapshots, efficiosReleases
+  releases,
+  snapshots,
+  playResolver,
+  validatorResolver,
+  efficiosSnapshots,
+  efficiosReleases
 )
 
 libraryDependencies ++= Seq(
@@ -34,6 +37,6 @@ scalacOptions += "-deprecation"
 cancelable in Global := true
 
 assemblyMergeStrategy in assembly := {
- case PathList("META-INF", xs @ _*) => MergeStrategy.discard
- case x => MergeStrategy.first
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x                             => MergeStrategy.first
 }

@@ -17,7 +17,7 @@ import sexyopt.SexyOpt
 
 object Main extends SexyOpt {
   override val programName = "tessla-compiler"
-  override val version = Some("0.0.1")
+  override val version = Some("1.0.0")
   override val programDescription = "Generate Java/Rust code from a TeSSLa specification"
 
   val tesslaFile = posArg("tessla-file", "The file containing the Tessla specification")
