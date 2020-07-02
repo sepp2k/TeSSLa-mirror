@@ -8,10 +8,21 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, Str
 import scala.language.{implicitConversions, postfixOps}
 
 /**
- * Class containing a DSL for easy creation of ImpLanStmt-Blocks
+ * Class containing a DSL for easy creation of ImpLanStmt-Blocks and other useful static methods for dealing
+ * ImpLan and the translation from TeSSLa
  */
 object IntermediateCodeUtils {
 
+  /**
+   * Folds an [[ImpLanExpr]] including all sub-expressions and sub-statements.
+   * Sub-statements/sub-expressions are traversed prior their parent expressions
+   * @param exp The sequence of statements to be folded
+   * @param n The start value
+   * @param f Function executed on every expression
+   * @param g Function executed on every statement
+   * @tparam A The result type of the folding operation
+   * @return The result of the folding
+   */
   def foldAST[A](exp: ImpLanExpr, n: A, f: (A, ImpLanExpr) => A, g: (A, ImpLanStmt) => A): A = {
     val subStmts: Seq[ImpLanStmt] = exp match {
       case v: ImpLanVal =>
@@ -31,6 +42,16 @@ object IntermediateCodeUtils {
     f(foldAST(subStmts, n, f, g), exp)
   }
 
+  /**
+   * Folds a sequence of statements including all sub-expressions and sub-statements.
+   * Sub-statements/sub-expressions are traversed prior their parent expressions
+   * @param stmts The sequence of statements to be folded
+   * @param n The start value
+   * @param f Function executed on every expression
+   * @param g Function executed on every statement
+   * @tparam A The result type of the folding operation
+   * @return The result of the folding
+   */
   def foldAST[A](stmts: Seq[ImpLanStmt], n: A, f: (A, ImpLanExpr) => A, g: (A, ImpLanStmt) => A): A = {
     stmts.foldLeft[A](n) {
       case (currN, stmt) => {
@@ -51,6 +72,13 @@ object IntermediateCodeUtils {
     }
   }
 
+  /**
+   * Maps f on all subexpressions and g on all sub-statements of a sequence of statements
+   * @param stmts The sequence of statements to be mapped
+   * @param f Function to map expressions
+   * @param g Function to map statements
+   * @return Mapped sequence of statements
+   */
   def mapAST(
     stmts: Seq[ImpLanStmt],
     f: ImpLanExpr => ImpLanExpr,
@@ -78,6 +106,13 @@ object IntermediateCodeUtils {
     }
   }
 
+  /**
+   * Maps f on all subexpressions and g on all sub-statements of an [[ImpLanExpr]]
+   * @param exp The expression to be mapped
+   * @param f Function to map expressions
+   * @param g Function to map statements
+   * @return Mapped expression
+   */
   def mapAST(exp: ImpLanExpr, f: ImpLanExpr => ImpLanExpr, g: ImpLanStmt => Option[ImpLanStmt]): ImpLanExpr = {
     val mappedExp = exp match {
       case lanVal: ImpLanVal                    => lanVal
@@ -94,6 +129,13 @@ object IntermediateCodeUtils {
     f(mappedExp)
   }
 
+  /**
+   * Builds map containing type/default/lazyness information for all variables defined in stmts.
+   * If unsound information (e.g. multiple declarations) are found an error is thrown.
+   * @param stmts The sequence of statements to be examined
+   * @param baseMap The base map to be extended
+   * @return Map containing variable information.
+   */
   def getVariableMap(
     stmts: Seq[ImpLanStmt],
     baseMap: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map()
@@ -121,16 +163,11 @@ object IntermediateCodeUtils {
     varDefs.map { case (name, typ, default, lazyDef) => (name, (typ, default, lazyDef)) }.toMap
   }
 
-  def structComparation(s1: String, s2: String): Boolean = {
-    val n1 = s1.stripPrefix("_").toIntOption
-    val n2 = s2.stripPrefix("_").toIntOption
-    if (n1.isDefined && n2.isDefined && s1.startsWith("_") && s2.startsWith("_")) {
-      n1.get <= n2.get
-    } else {
-      s1 < s2
-    }
-  }
-
+  /**
+   * Converts TeSSLa type to corresponding [[ImpLanType]]
+   * @param t Type to be converted. If type is Events[t] the result is equal to calling the function with t.
+   * @return The converted type
+   */
   implicit def typeConversion(t: Type): ImpLanType = {
     t match {
       case InstantiatedType("Events", Seq(t), _)     => typeConversion(t)
@@ -152,7 +189,7 @@ object IntermediateCodeUtils {
           typeConversion(resultType)
         )
       case RecordType(entries, _) => {
-        val sortedEntries = entries.toSeq.sortWith { case ((n1, _), (n2, _)) => structComparation(n1.name, n2.name) }
+        val sortedEntries = entries.toSeq.sortWith { case ((n1, _), (n2, _)) => structComparison(n1.name, n2.name) }
         val names = sortedEntries.map(_._1.name)
         val types = sortedEntries.map { case (_, t) => typeConversion(t._1) }
         StructType(types, names)
@@ -162,6 +199,11 @@ object IntermediateCodeUtils {
     }
   }
 
+  /**
+   * Calculates a static default value for a non-stream type.
+   * @param t Type whose default value shall be determined. May not be Events[...]
+   * @return Default value for given type
+   */
   def defaultValueForType(t: Type): ImpLanVal = {
     t match {
       case RecordType(entries, _) if entries.isEmpty => UnitValue
@@ -180,6 +222,11 @@ object IntermediateCodeUtils {
     }
   }
 
+  /**
+   * Calculates a static default value for a stream type. For Events[t] it is the default value of t.
+   * @param t Type whose default value shall be determined. Must be Events[...]
+   * @return Default value for given type
+   */
   def defaultValueForStreamType(t: Type): ImpLanVal = {
     t match {
       case InstantiatedType("Events", Seq(t), _) => defaultValueForType(t)
@@ -187,6 +234,11 @@ object IntermediateCodeUtils {
     }
   }
 
+  /**
+   * Figures out if a struct is a tuple. i.e. has field names _1,_2 ...
+   * @param structType The struct to be examined
+   * @return Whether given struct is tuple
+   */
   def structIsTuple(structType: StructType): Boolean = {
     structType.fieldNames.indices.forall(i => structType.fieldNames.contains(s"_${i + 1}"))
   }
@@ -203,33 +255,106 @@ object IntermediateCodeUtils {
     dsl.generateStatements
   }
 
+  /**
+   * Sorting function for structs taking care of the right sorting of tuple fild names
+   * @param s1 First param for comparison
+   * @param s2 Second param for comparison
+   * @return true if s1 <= s2 with respect to the special sorting rules
+   */
+  def structComparison(s1: String, s2: String): Boolean = {
+    val n1 = s1.stripPrefix("_").toIntOption
+    val n2 = s2.stripPrefix("_").toIntOption
+    if (n1.isDefined && n2.isDefined && s1.startsWith("_") && s2.startsWith("_")) {
+      n1.get <= n2.get
+    } else {
+      s1 <= s2
+    }
+  }
+
+  /**
+   * Generates an addition expression
+   * @param op1 First parameter sub-expression, must be of [[IntermediateCode.LongType]]
+   * @param op2 Second parameter sub-expression, must be of [[IntermediateCode.LongType]]
+   * @return Addition expression
+   */
   implicit def Addition(op1: ImpLanExpr, op2: ImpLanExpr): ImpLanExpr =
     FunctionCall("__add__", Seq(op1, op2), IntermediateCode.FunctionType(Seq(LongType, LongType), LongType))
 
+  /**
+   * Generates a subtraction expression
+   * @param op1 First parameter sub-expression, must be of [[IntermediateCode.LongType]]
+   * @param op2 Second parameter sub-expression, must be of [[IntermediateCode.LongType]]
+   * @return Subtraction expression
+   */
   implicit def Subtraction(op1: ImpLanExpr, op2: ImpLanExpr): ImpLanExpr =
     FunctionCall("__sub__", Seq(op1, op2), IntermediateCode.FunctionType(Seq(LongType, LongType), LongType))
 
+  /**
+   * Generates an or (||) expression
+   * @param ops parameter sub-expressions, must be of type [[BoolType]]
+   * @return Or expression
+   */
   implicit def BitwiseOr(ops: Seq[ImpLanExpr]): ImpLanExpr =
     FunctionCall("__bitor__", ops, IntermediateCode.FunctionType(ops.map { _ => LongType }, LongType))
 
+  /**
+   * Generates an and (&&) expression
+   * @param ops parameter sub-expressions, must be of type [[BoolType]]
+   * @return And expression
+   */
   implicit def And(ops: Seq[ImpLanExpr]): ImpLanExpr =
     FunctionCall("__and__", ops, IntermediateCode.FunctionType(ops.map { _ => BoolType }, BoolType))
 
+  /**
+   * Generates a not equal expression
+   * @param a First parameter sub-expression
+   * @param b Second parameter sub-expression
+   * @return Not equal expression
+   */
   implicit def NotEqual(a: ImpLanExpr, b: ImpLanExpr): ImpLanExpr =
     Negation(Equal(a, b))
 
+  /**
+   * Generates a greater expression
+   * @param a First parameter sub-expression, must be of [[IntermediateCode.LongType]]
+   * @param b Second parameter sub-expression, must be of [[IntermediateCode.LongType]]
+   * @return Greater expression
+   */
   implicit def Greater(a: ImpLanExpr, b: ImpLanExpr): ImpLanExpr =
     FunctionCall("__gt__", Seq(a, b), IntermediateCode.FunctionType(Seq(LongType, LongType), BoolType))
 
+  /**
+   * Generates a greater equal expression
+   * @param a First parameter sub-expression, must be of [[IntermediateCode.LongType]]
+   * @param b Second parameter sub-expression, must be of [[IntermediateCode.LongType]]
+   * @return Greater equal expression
+   */
   implicit def GreaterEqual(a: ImpLanExpr, b: ImpLanExpr): ImpLanExpr =
     FunctionCall("__geq__", Seq(a, b), IntermediateCode.FunctionType(Seq(LongType, LongType), BoolType))
 
+  /**
+   * Generates a negate expression
+   * @param a Sub-expression to be negated
+   * @return Negate expression
+   */
   implicit def Negation(a: ImpLanExpr): ImpLanExpr =
     FunctionCall("__not__", Seq(a), IntermediateCode.FunctionType(Seq(BoolType), BoolType))
 
+  /**
+   * Generates a throw expression
+   * @param e sub expression of the error to be thrown, must be of [[IntermediateCode.ErrorType]]
+   * @param forType Type which should be returned inst
+   * @return Expression throwing an error
+   */
   implicit def Throw(e: ImpLanExpr, forType: ImpLanType): ImpLanExpr =
     FunctionCall("__[TC]throw__", Seq(e), IntermediateCode.FunctionType(Seq(IntermediateCode.ErrorType), forType))
 
+  /**
+   * Produces an expression building a struct
+   * @param content Sub expressions with field names
+   * @param targetType The type of the struct to be generated
+   * @return Expression building a struct
+   */
   implicit def MkStruct(content: Seq[(String, ImpLanExpr)], targetType: ImpLanType): ImpLanExpr = {
     targetType match {
       case castedTargetType: StructType => {
@@ -244,6 +369,13 @@ object IntermediateCodeUtils {
     }
   }
 
+  /**
+   * Produces an expression for accessing a structure field
+   * @param struct Expression which evaluates to a struct
+   * @param fieldName The accessed field name
+   * @param structType The type of the struct
+   * @return Expression accessing the struct
+   */
   implicit def GetStruct(struct: ImpLanExpr, fieldName: String, structType: ImpLanType): ImpLanExpr = {
     structType match {
       case castedStructType: StructType => {
@@ -262,6 +394,9 @@ object IntermediateCodeUtils {
 
 }
 
+/**
+ * Trait representing the internal states of [[IntermediateCodeUtils]]
+ */
 sealed trait BlockState
 case object InIf extends BlockState
 case object InElse extends BlockState
@@ -269,6 +404,15 @@ case object InTry extends BlockState
 case object InCatch extends BlockState
 case object Out extends BlockState
 
+/**
+ * DSL-Style state class for easy generation of ImpLan code.
+ * Functions of this class can be called iteratively to produce ImpLan step by step.
+ * @param stmts Sequence of already generated statements
+ * @param blockState Stack keeping track of unclosed ifs/try-catchs
+ * @param ifTryStack Stack of statements in If/Try blocks which are not closed yet
+ * @param elseCatchStack Stack of statements in Else/Catch blocks which are not closed yet
+ * @param condStack Stack of conditions of if blocks which are not closed yet
+ */
 class IntermediateCodeUtils(
   stmts: Seq[ImpLanStmt],
   blockState: Seq[BlockState] = Seq(Out),
@@ -277,6 +421,10 @@ class IntermediateCodeUtils(
   condStack: Seq[Seq[Seq[ImpLanExpr]]] = Seq()
 ) {
 
+  /**
+   * Returns current statements. Checks if all if/trys are closed.
+   * @return  Sequence of statements from the current state
+   */
   def generateStatements: Seq[ImpLanStmt] = {
     if (blockState.head != Out) {
       throw tessla_compiler.Errors.DSLError("At least one unclosed If")
@@ -288,10 +436,31 @@ class IntermediateCodeUtils(
     stmts
   }
 
+  /**
+   * Add assignment to the code
+   * @param lhs The left hand side of the assignment
+   * @param rhs The right hand side of the assignment
+   * @param default The default value the variable has until the assignment .
+   *                Must match the default value from other assignments to this variable.
+   * @param typ The type of the assigned identifier.
+   *            Must match the type from other assignments to this variable.
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
   def Assignment(lhs: Variable, rhs: ImpLanExpr, default: ImpLanExpr, typ: ImpLanType): IntermediateCodeUtils = {
     Assignment(lhs, rhs, scala.Some(default), typ)
   }
 
+  /**
+   * Add assignment to the code
+   * @param lhs The left hand side of the assignment
+   * @param rhs The right hand side of the assignment
+   * @param default The default value the variable has until the assignment .
+   *                Must match the default value from other assignments to this variable.
+   *                Optional.
+   * @param typ The type of the assigned identifier.
+   *            Must match the type from other assignments to this variable.
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
   def Assignment(
     lhs: Variable,
     rhs: ImpLanExpr,
@@ -302,6 +471,14 @@ class IntermediateCodeUtils(
     new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
   }
 
+  /**
+   * Add a final assignment to the code. May be called twice for the same lhs but only with exactly the same params.
+   * @param lhs The left hand side of the assignment
+   * @param default The value the variable has.
+   * @param typ The type of the assigned identifier.
+   * @param lazyDef Flag indicating if the variable is of type lazy
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
   def FinalAssignment(
     lhs: Variable,
     default: ImpLanVal,
@@ -312,6 +489,12 @@ class IntermediateCodeUtils(
     new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
   }
 
+  /**
+   * Adds an If statement to the code. Has to be closed with [[EndIf]].
+   * Further generated statements are added inside the if.
+   * @param cond The Ifs condition in DNF
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
   def If(cond: Seq[Seq[ImpLanExpr]]): IntermediateCodeUtils = {
     new IntermediateCodeUtils(
       stmts,
@@ -322,12 +505,21 @@ class IntermediateCodeUtils(
     )
   }
 
+  /**
+   * Closes the innermost if and starts its else block.
+   * Fails if there was no previous unclosed if block.
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
   def Else(): IntermediateCodeUtils = blockState.head match {
     case InIf   => new IntermediateCodeUtils(stmts, blockState.updated(0, InElse), ifTryStack, elseCatchStack, condStack)
     case InElse => throw tessla_compiler.Errors.DSLError("Two subseqeuent Else blocks")
     case _      => throw tessla_compiler.Errors.DSLError("Else without previous If")
   }
 
+  /**
+   * Closes the innermost if. Fails if there is none.
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
   def EndIf(): IntermediateCodeUtils = {
     val stmt = blockState.head match {
       case InIf | InElse => IntermediateCode.If(condStack.head, ifTryStack.head, elseCatchStack.head)
@@ -344,12 +536,11 @@ class IntermediateCodeUtils(
     new IntermediateCodeUtils(newStmts, blockState.drop(1), newIfStack, newElseStack, condStack.drop(1))
   }
 
-  def addStmt(stmt: ImpLanStmt): (Seq[ImpLanStmt], Seq[Seq[ImpLanStmt]], Seq[Seq[ImpLanStmt]]) = blockState.head match {
-    case InIf | InTry     => (stmts, ifTryStack.updated(0, ifTryStack.head :+ stmt), elseCatchStack)
-    case InElse | InCatch => (stmts, ifTryStack, elseCatchStack.updated(0, elseCatchStack.head :+ stmt))
-    case Out              => (stmts :+ stmt, ifTryStack, elseCatchStack)
-  }
-
+  /**
+   * Adds a Try statement to the code. Has to be followed by [[Catch]] and closed with [[EndTry]].
+   * Further generated statements are added inside the try.
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
   def Try(): IntermediateCodeUtils = {
     new IntermediateCodeUtils(
       stmts,
@@ -360,6 +551,12 @@ class IntermediateCodeUtils(
     )
   }
 
+  /**
+   * Closes the innermost try and starts its catch block.
+   * In the scope of the catch block a variable var_err exists which holds the thrown error.
+   * Fails if there was no previous unclosed try block.
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
   def Catch(): IntermediateCodeUtils = blockState.head match {
     case InTry =>
       new IntermediateCodeUtils(stmts, blockState.updated(0, InCatch), ifTryStack, elseCatchStack, condStack)
@@ -367,6 +564,10 @@ class IntermediateCodeUtils(
     case _       => throw tessla_compiler.Errors.DSLError("Catch without previous Try")
   }
 
+  /**
+   * Closes the innermost try. Fails if there is none.
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
   def EndTry(): IntermediateCodeUtils = {
     val stmt = blockState.head match {
       case InTry | InCatch => IntermediateCode.TryCatchBlock(ifTryStack.head, elseCatchStack.head)
@@ -378,6 +579,13 @@ class IntermediateCodeUtils(
     new IntermediateCodeUtils(newStmts, blockState.drop(1), newIfStack, newElseStack, condStack)
   }
 
+  /**
+   * Add a function call to the generated code.
+   * @param name The name of the function to be called
+   * @param params The param expressions of the call
+   * @param typeHint The type of the called function
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
   def FunctionCall(
     name: String,
     params: Seq[ImpLanExpr],
@@ -387,9 +595,27 @@ class IntermediateCodeUtils(
     new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
   }
 
-  def LambdaApllication(exp: ImpLanExpr, params: Seq[ImpLanExpr]): IntermediateCodeUtils = {
+  /**
+   * Add a lambda call to the generated code.
+   * @param exp The expression to be called
+   * @param params The param expressions of the call
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
+  def LambdaApplication(exp: ImpLanExpr, params: Seq[ImpLanExpr]): IntermediateCodeUtils = {
     val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.LambdaApplication(exp, params))
     new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
   }
+
+  /**
+   * Adds a statement to the right internal stack.
+   * @param stmt The statement to be added
+   * @return The modified stacks
+   */
+  private def addStmt(stmt: ImpLanStmt): (Seq[ImpLanStmt], Seq[Seq[ImpLanStmt]], Seq[Seq[ImpLanStmt]]) =
+    blockState.head match {
+      case InIf | InTry     => (stmts, ifTryStack.updated(0, ifTryStack.head :+ stmt), elseCatchStack)
+      case InElse | InCatch => (stmts, ifTryStack, elseCatchStack.updated(0, elseCatchStack.head :+ stmt))
+      case Out              => (stmts :+ stmt, ifTryStack, elseCatchStack)
+    }
 
 }

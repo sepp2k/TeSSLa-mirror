@@ -7,26 +7,21 @@ import de.uni_luebeck.isp.tessla.IncludeResolvers
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaBackend
 import de.uni_luebeck.isp.tessla.Compiler
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{
-  Flattening,
-  LazynessAnalysis,
-  UniqueRenaming,
-  UsageAnalysis
-}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{LazynessAnalysis, UsageAnalysis}
 import org.antlr.v4.runtime.CharStreams
 import sexyopt.SexyOpt
 
 /**
- * Main class of the project launching the translation and parsing command line
- * options
+ * Main class of the project launching the translation and parsing command line options
  */
+
 object Main extends SexyOpt {
   override val programName = "tessla-compiler"
   override val version = Some("0.0.1")
   override val programDescription = "Generate Java/Rust code from a TeSSLa specification"
 
   val tesslaFile = posArg("tessla-file", "The file containing the Tessla specification")
-  val target = option("target", 't', "Target language: java (default), javascript, rust or rust-bare", "java")
+  val target = option("target", 't', "Target language: scala (default), javascript, rust or rust-bare", "scala")
   val debug = flag("debug", "Print stack traces for runtime errors")
   val noDiagnostics = flag("no-diagnostics", "Don't print error messages and warnings")
   val noOptimization = flag("no-optimization", "Produce non-optimized output code")
@@ -62,7 +57,7 @@ object Main extends SexyOpt {
         flattenCore = false
       )
       val (backend, stdinRead): (backends.BackendInterface, Boolean) = target.value match {
-        case "java"       => (new ScalaBackend, true)
+        case "scala"      => (new ScalaBackend, true)
         case "javascript" => throw Errors.NotYetImplementedError("Javascript translation not implemented yet")
         case "rust"       => throw Errors.NotYetImplementedError("Rust translation not implemented yet")
         case "rust-bare"  => throw Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
@@ -73,10 +68,8 @@ object Main extends SexyOpt {
       val unflatCore = unwrapResult(compiler.tesslaToTyped(specSource).andThen(compiler.typedToCore))
       //val unflatCore = unwrapResult((new Compiler).compile(specSource, compilerOptions))
       val core = unwrapResult(
-        (new Flattening(false))
+        (new UsageAnalysis)
           .translate(unflatCore)
-          .andThen(new UniqueRenaming)
-          .andThen(new UsageAnalysis)
           .andThen(new LazynessAnalysis)
       )
 

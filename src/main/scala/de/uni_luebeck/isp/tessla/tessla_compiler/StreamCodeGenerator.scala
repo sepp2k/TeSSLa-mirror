@@ -9,11 +9,23 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
 import scala.language.{implicitConversions, postfixOps}
 
 /**
- * Class containing functions for the translation of single TeSSLa expressions to imperative code
+ * Class containing functions for the translation of single TeSSLa stream expressions to imperative code
  */
 
 class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
 
+  /**
+   * Translates an assignment to a stream variable to the corresponding ImpLan Code and attaches it in a given
+   * source listing. The assigned expression has to be (and is always in TeSSLa Core) an application.
+   *
+   * @param id The id which is assigned (must be of stream type)
+   * @param e The expression which is applicated with args and typeArgs and then assigned
+   * @param args The arguments passed to e
+   * @param typeArgs The type arguments passed to e
+   * @param currSource The source listing where the generated code is attached to. It is attached to the
+   *                   stepSource section of the source listing.
+   * @return The modified source listing
+   */
   def translateExternSignalExpression(
     id: Identifier,
     e: ExternExpression,
@@ -25,7 +37,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     val typeParamMap = typ.typeParams.zip(typeArgs).toMap
     e.name match {
       case "nil" =>
-        produceNilStepCode(id, typ.resultType.resolve(typeParamMap), e.location, currSource)
+        produceNilStepCode(id, typ.resultType.resolve(typeParamMap), currSource)
       case "default" =>
         produceDefaultStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
       case "defaultFrom" =>
@@ -46,7 +58,30 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     }
   }
 
-  def produceNilStepCode(id: Identifier, ot: Type, loc: Location, currSrc: SourceListing): SourceListing = {
+  /**
+   * Returns name and type if ea is an ExpressionRef otherwise an exception is thrown
+   * @param ea The expression to be examined
+   * @return Name and type of ea if it is an ExpressionRef
+   */
+  private def streamNameAndTypeFromExpressionArg(ea: ExpressionArg): (String, ImpLanType) = {
+    ea match {
+      case ExpressionRef(id, tpe, _) => ("var_" + id.fullName, tpe)
+      case e: Expression =>
+        throw tessla_compiler.Errors
+          .CoreASTError("Required ExpressionRef, but Expression found. Non flat AST.", e.location)
+    }
+  }
+
+  /**
+   * Produces ImpLan code for a x = nil expression
+   *
+   * @param id The id nil is assigned to
+   * @param ot The type of id. Must be Events[...]
+   * @param currSrc The source listing the generated block is added to. It is attached to the
+   *               stepSource section of the source listing
+   * @return The modified source listing
+   */
+  private def produceNilStepCode(id: Identifier, ot: Type, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
     val newStmt = currSrc.stepSource
@@ -63,7 +98,18 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceDefaultStepCode(
+  /**
+   * Produces ImpLan code for a x = default(...) expression
+   *
+   * @param id The id default is assigned to
+   * @param ot The type of id. Must be Events[...]
+   * @param stream The stream parameter of the default
+   * @param defVal The default parameter of the default
+   * @param currSrc The source listing the generated block is added to. It is attached to the
+   *               stepSource section of the source listing
+   * @return The modified source listing
+   */
+  private def produceDefaultStepCode(
     id: Identifier,
     ot: Type,
     stream: ExpressionArg,
@@ -93,7 +139,18 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceDefaultFromStepCode(
+  /**
+   * Produces ImpLan code for a x = defaultFrom(...) expression
+   *
+   * @param id The id defaultFrom is assigned to
+   * @param ot The type of id. Must be Events[...]
+   * @param stream The stream parameter of the defaultFrom
+   * @param default The stream parameter of the defaultFrom
+   * @param currSrc The source listing the generated block is added to. It is attached to the
+   *               stepSource section of the source listing
+   * @return The modified source listing
+   */
+  private def produceDefaultFromStepCode(
     id: Identifier,
     ot: Type,
     stream: ExpressionArg,
@@ -133,7 +190,16 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceTimeStepCode(id: Identifier, stream: ExpressionArg, currSrc: SourceListing): SourceListing = {
+  /**
+   * Produces ImpLan code for a x = time(...) expression
+   *
+   * @param id The id time is assigned to
+   * @param stream The base-stream parameter of the time
+   * @param currSrc The source listing the generated block is added to. It is attached to the
+   *               stepSource section of the source listing
+   * @return The modified source listing
+   */
+  private def produceTimeStepCode(id: Identifier, stream: ExpressionArg, currSrc: SourceListing): SourceListing = {
 
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val o = s"var_${id.fullName}"
@@ -159,7 +225,18 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceLastStepCode(
+  /**
+   * Produces ImpLan code for a x = last(...) expression
+   *
+   * @param id The id last is assigned to
+   * @param ot The type of id. Must be Events[...]
+   * @param values The value-stream parameter of the last
+   * @param clock The trigger/clock-stream parameter of the last
+   * @param currSrc The source listing the generated block is added to. It is attached to the
+   *               stepSource section of the source listing
+   * @return The modified source listing
+   */
+  private def produceLastStepCode(
     id: Identifier,
     ot: Type,
     values: ExpressionArg,
@@ -198,7 +275,17 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceDelayStepCode(
+  /**
+   * Produces ImpLan code for a x = delay(...) expression
+   *
+   * @param id The id delay is assigned to
+   * @param delay The delay-stream parameter of the delay
+   * @param reset The reset-stream parameter of the delay
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the tsGenSource and stepSource section.
+   * @return The modified source listing
+   */
+  private def produceDelayStepCode(
     id: Identifier,
     delay: ExpressionArg,
     reset: ExpressionArg,
@@ -251,7 +338,18 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, newTail, newTsGen, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceLiftStepCode(
+  /**
+   * Produces ImpLan code for a x = lift(...) expression
+   *
+   * @param id The id lift is assigned to
+   * @param ot The type of id. Must be Events[...]
+   * @param args The arguments of the lift except the last one (function)
+   * @param function The lifted function
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the stepSource section.
+   * @return The modified source listing
+   */
+  private def produceLiftStepCode(
     id: Identifier,
     ot: Type,
     args: Seq[ExpressionArg],
@@ -343,7 +441,18 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def produceSignalLiftStepCode(
+  /**
+   * Produces ImpLan code for a x = slift(...) expression
+   *
+   * @param id The id slift is assigned to
+   * @param ot The type of id. Must be Events[...]
+   * @param args The arguments of the lift except the last one (function)
+   * @param function The lifted function
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the stepSource section.
+   * @return The modified source listing
+   */
+  private def produceSignalLiftStepCode(
     id: Identifier,
     ot: Type,
     args: Seq[ExpressionArg],
@@ -407,15 +516,16 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
-  def streamNameAndTypeFromExpressionArg(ea: ExpressionArg): (String, ImpLanType) = {
-    ea match {
-      case ExpressionRef(id, tpe, _) => ("var_" + id.fullName, tpe)
-      case e: Expression =>
-        throw tessla_compiler.Errors
-          .CoreASTError("Required ExpressionRef, but Expression found. Non flat AST.", e.location)
-    }
-  }
-
+  /**
+   * Produces ImpLan code for a x = merge(...) expression
+   *
+   * @param id The id merge is assigned to
+   * @param ot The type of id. Must be Events[...]
+   * @param args The stream expressions to be merged
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the stepSource section.
+   * @return The modified source listing
+   */
   def produceMergeStepCode(
     id: Identifier,
     ot: Type,
@@ -461,6 +571,19 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
+  /**
+   * Add code for output generation (calling of __[TC]output__) to the source listing.
+   * __[TC]output__ gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
+   * current timestamp) and has to be translated accordingly in the final code generation
+   *
+    * @param id The id of the stream to be printed
+   * @param t id's type. Must be Events[...]
+   * @param nameOpt The alias name of id for printing. Optional.
+   * @param raw If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the tailSource section.
+   * @return The modified source listing
+   */
   def produceOutputCode(
     id: Identifier,
     t: Type,
@@ -483,6 +606,14 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
+  /**
+   * Produces code resetting the changed flags of input variables.
+   *
+    * @param inStream The inStream to be reseted.
+   * @param currSrc  The source listing the generated block is added to.
+   *                 There is code attached to the tailSource section.
+   * @return The modified source listing
+   */
   def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing): SourceListing = {
     val s = s"var_${inStream.fullName}"
 
@@ -492,6 +623,17 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }
 
+  /**
+   * Produces code reading the std input (variable inputStream and value) and passes it to the _value variable
+   * of an input stream. For parsing the input string to an exact value a function __[TC]inputParse__ is called
+   * which has to be translated in the following phases.
+   *
+   * @param inStream The input stream to be handled
+   * @param typ      The input stream's type. Must be Events[...].
+   * @param currSrc  The source listing the generated block is added to.
+   *                 There is code attached to the inputProcessing section.
+   * @return The modified source listing
+   */
   def produceInputFromConsoleCode(inStream: Identifier, typ: Type, currSrc: SourceListing): SourceListing = {
     val s = s"var_${inStream.fullName}"
     val parseExp = typ match {

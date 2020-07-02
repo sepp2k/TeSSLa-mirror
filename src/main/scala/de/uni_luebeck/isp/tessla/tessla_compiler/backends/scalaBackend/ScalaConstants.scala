@@ -4,10 +4,21 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode}
 
 /**
- * Class containing Java-specific constants for the translation
+ * Class containing Scala-specific constants for the translation
  */
 object ScalaConstants {
 
+  /**
+   * Translates an [[ImpLanType]] to its corresponding Scala type.
+   *
+   * - The Lazy container type is translated as Function0
+   * - The generic type is translated as Any
+   * - The error type is translated as Throwable
+   * - Options are translated to an own type ErrorOption which is able to capture an error
+   *
+   * @param t Type to be translated
+   * @return Corresponding Scala type
+   */
   def typeTranslation(t: ImpLanType): String = {
     t match {
       case LongType                  => "Long"
@@ -33,6 +44,14 @@ object ScalaConstants {
     }
   }
 
+  /**
+   * Translates an [[ImpLanVal]] to its corresponding Scala value.
+   *
+   * - None/Some are translated to special values EONone/EOSome to be able to capture errors in Somes
+   *
+   * @param v The value to be translated
+   * @return The corresponding value in Scala
+   */
   def valueTranslation(v: ImpLanVal): String = {
     v match {
       case LongValue(value)   => s"${value}L"
@@ -57,7 +76,16 @@ object ScalaConstants {
     }
   }
 
-  //Note: Mutable datastructures are not yet handled on this branch since they are not generated
+  /**
+   * Performs the translation of functions in ImpLan to functions in Scala
+   * Only functions starting and ending with two underscores (_) are translated.
+   * Note: Mutable datastructures are not yet handled on this branch since they are not generated
+   * @param name Name of the function which is called
+   * @param oArgs Argument expressions of the function call
+   * @param transFunc Function used to translate the arguments
+   * @param typeHint The type signature of the called function.
+   * @return The translated function call in Scala
+   */
   def builtinFunctionCallTranslation(
     name: String,
     oArgs: Seq[ImpLanExpr],

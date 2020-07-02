@@ -5,10 +5,17 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.backends.BackendInterface
 import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference, IntermediateCodeUtils}
 
 /**
- * BackendInterface implementation for the translation to Scala code
+ * [[BackendInterface]] implementation for the translation to Scala code
  */
 class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeleton.scala") {
 
+  /**
+   * Translates a map of variables with base information (type, default value, lazy assignment) to corresponding
+   * variable declarations in Scala.
+   *
+   * @param vars Map of variables to be translated: Name -> (Type x Default value x Lazy assignment)
+   * @return Sequence of variable definitions in Scala
+   */
   def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)]): Seq[String] = {
     def prefix(lazyDef: Boolean) = if (lazyDef) "lazy val" else "var"
 
@@ -20,10 +27,21 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
     }
   }
 
-  def foldGuard(guard: Seq[Seq[ImpLanExpr]]): String = {
+  /**
+   * Translate guard given as DNF of expressions to equivalent Scala expression
+   * @param guard The guard in DNF
+   * @return Translation of the guard in Scala
+   */
+  private def foldGuard(guard: Seq[Seq[ImpLanExpr]]): String = {
     guard.map { c => ("(" + c.map(translateExpression).mkString(" && ") + ")") }.mkString(" || ")
   }
 
+  /**
+   * Translates a sequence of [[ImpLanStmt]] to the corresponding code in Scala.
+   *
+   * @param stmts The sequence of statements to be translated.
+   * @return The generated code in Scala
+   */
   override def generateCode(stmts: Seq[ImpLanStmt]): String = {
     stmts
       .map {
@@ -49,7 +67,13 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       .mkString("\n")
   }
 
-  def translateExpression(e: ImpLanExpr): String = e match {
+  /**
+   * Translates an [[ImpLanExpr]] to the corresponding code in Scala.
+   *
+    * @param e The expression of statements to be translated.
+   * @return The generated code in Scala
+   */
+  private def translateExpression(e: ImpLanExpr): String = e match {
     case lanVal: ImpLanVal => ScalaConstants.valueTranslation(lanVal)
     case FunctionCall(name, params, typeHint) => {
       if (name.startsWith("__")) {
@@ -85,7 +109,12 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
     case CastingExpression(e, _, t)                => s"(${translateExpression(e)}).asInstanceOf[${ScalaConstants.typeTranslation(t)}]"
   }
 
-  def needsObjectCompare(t: ImpLanType): Boolean = {
+  /**
+   * Decides whether .equals or == is used for comparison
+   * @param t Type of objects which are compared
+   * @return true if .equals is needed for comparison
+   */
+  private def needsObjectCompare(t: ImpLanType): Boolean = {
     t match {
       case LongType | DoubleType | BoolType | UnitType | ErrorType => false
       case _                                                       => true

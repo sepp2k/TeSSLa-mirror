@@ -5,8 +5,17 @@ import de.uni_luebeck.isp.tessla.TranslationPhase
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.ExtendedSpecification
 
+/**
+ * Translates a TeSSLa Core AST to an [[ExtendedSpecification]] (AST + usage information)
+ */
 class UsageAnalysis extends TranslationPhase[Specification, ExtendedSpecification] {
 
+  /**
+   * Function triggering the translation from a simple TeSSLa Core Specification to an [[ExtendedSpecification]]
+   * with usage information (i.e. which variable is used in which definitions)
+   * @param spec The TeSSLa Core specification to be examined
+   * @return Core AST plus usage information
+   */
   override def translate(spec: Specification): Result[ExtendedSpecification] = {
 
     var usages: collection.mutable.HashMap[Identifier, Set[Identifier]] = collection.mutable.HashMap()

@@ -8,13 +8,9 @@ import com.eclipsesource.schema._
 import com.eclipsesource.schema.drafts.Version4._
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend._
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{
-  Flattening,
-  LazynessAnalysis,
-  UniqueRenaming,
-  UsageAnalysis
-}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{LazynessAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.{IncludeResolvers, TranslationPhase}
+import de.uni_luebeck.isp.tessla.Compiler
 import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
@@ -196,8 +192,6 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
         compiler
           .tesslaToTyped(src)
           .andThen(compiler.typedToCore)
-          .andThen(new Flattening(false))
-          .andThen(new UniqueRenaming)
           .andThen(new UsageAnalysis)
           .andThen(new LazynessAnalysis)
           .andThen(new TesslaCoreToIntermediate(true))

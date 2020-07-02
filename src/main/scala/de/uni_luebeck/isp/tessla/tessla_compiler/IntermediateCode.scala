@@ -2,7 +2,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 
 /**
  * Class containing subclasses for the representation of abstract imperative code which can afterwards be
- * transduced into Java/Rust/... code
+ * transduced into Scala/Java/Rust/... code
  */
 
 object IntermediateCode {
@@ -22,8 +22,11 @@ object IntermediateCode {
   /**
    * Container class for the translated abstract imperative code
    * @param stepSource Imperative statements executed when a new timestamp arrives
+   * @param tailSource  Imperative statements executed when a calculation has just been performed
+   * @param tsGenSource Imperative statements executed to negotiate the next active timestamp
+   * @param inputProcessing Imperative statements executed to process the input
+   * @param staticSource Imperative statements executed prior monitor execution
    */
-
   case class SourceListing(
     stepSource: Seq[ImpLanStmt],
     tailSource: Seq[ImpLanStmt],
@@ -93,7 +96,7 @@ object IntermediateCode {
   }
 
   final case class LazyContainer(subType: ImpLanType) extends GenericImpLanType(Seq(subType)) {
-    override def toString: String = s"Lazy<${subType}>"
+    override def toString: String = s"Lazy[${subType}]"
   }
 
   final case class LongValue(value: Long) extends ImpLanVal {

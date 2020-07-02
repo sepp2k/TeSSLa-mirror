@@ -6,13 +6,21 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.SourceListing
 
 /**
- * Class implementing de.uni_luebeck.isp.tessla.TranslationPhase for the translation from TeSSLa Core to
+ * Class implementing [[de.uni_luebeck.isp.tessla.TranslationPhase]] for the translation from TeSSLa Core to
  * abstract imperative code
+ * The translation of stream functions is performed in StreamCodeGenerator
+ * The translation of other expressions in NonStreamCodeGenerator
  */
 
 class TesslaCoreToIntermediate(consoleInterface: Boolean)
     extends TranslationPhase[ExtendedSpecification, SourceListing] {
 
+  /**
+   * Function triggering the translation from a TeSSLa AST to a SourceListing of ImpLan statements
+   * @param extSpec The TeSSLa Core AST to be translated
+   * @return A SourceListing containing imperative code to be translated into concrete syntax and included in a source
+   *         skeleton
+   */
   override def translate(extSpec: ExtendedSpecification): Result[SourceListing] = {
     val nonStreamCodeGenerator = new NonStreamCodeGenerator(extSpec)
     val streamCodeGenerator = new StreamCodeGenerator(nonStreamCodeGenerator)
@@ -47,6 +55,7 @@ class TesslaCoreToIntermediate(consoleInterface: Boolean)
 
     var currSrc = SourceListing(Seq(), Seq(), Seq(), Seq(), Seq())
 
+    //Produce calculation section
     DefinitionOrdering.order(definitions).foreach {
       case (id, definition) =>
         currSrc = definition.tpe match {
@@ -66,11 +75,12 @@ class TesslaCoreToIntermediate(consoleInterface: Boolean)
               currSrc.tsGenSource,
               currSrc.inputProcessing,
               currSrc.staticSource :+ nonStreamCodeGenerator
-                .translateDefinition(id, definition, nonStreamCodeGenerator.TypeArgManagement.empty, definitions)
+                .translateAssignment(id, definition, nonStreamCodeGenerator.TypeArgManagement.empty, definitions)
             )
         }
     }
 
+    //Produce output generation
     out.foreach { o =>
       val name = o._2.get("$name") match {
         case Some(s) =>
@@ -89,6 +99,7 @@ class TesslaCoreToIntermediate(consoleInterface: Boolean)
       }
     }
 
+    //Produce input consumption
     in.foreach { i =>
       if (consoleInterface) {
         currSrc = streamCodeGenerator.produceInputFromConsoleCode(i._1, i._2._1, currSrc)

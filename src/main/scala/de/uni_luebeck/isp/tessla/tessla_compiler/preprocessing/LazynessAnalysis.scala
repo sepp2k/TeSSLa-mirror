@@ -6,8 +6,21 @@ import de.uni_luebeck.isp.tessla.TranslationPhase
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.ExtendedSpecification
 
+/**
+ * Adds lazyness information to an [[ExtendedSpecification]], i.e. which variables have to be assigned in a
+ * lazy manner and which variables are inlined.
+ * A variable is defined lazy if it is used as sub-expression of a lazy argument in a function call and not inlined.
+ * It is inlined if there is no other usage.
+ */
 class LazynessAnalysis extends TranslationPhase[ExtendedSpecification, ExtendedSpecification] {
 
+  /**
+   * Function triggering the translation from a [[ExtendedSpecification]] to another one
+   * with lazyness information i.e. which variables have to be assigned in a lazy manner and which variables
+   * are inlined
+   * @param extSpec The extended specification to be examined
+   * @return extSpec plus lazyness information
+   */
   override def translate(extSpec: ExtendedSpecification): Result[ExtendedSpecification] = {
 
     val lazyIds: collection.mutable.Set[Identifier] = collection.mutable.HashSet()

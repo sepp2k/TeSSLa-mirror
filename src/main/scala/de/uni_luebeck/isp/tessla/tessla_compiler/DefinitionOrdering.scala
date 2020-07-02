@@ -4,8 +4,18 @@ import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 
 import scala.collection.mutable
 
+/**
+ * Class for calculating a topological sorting on the assignments inside functions and specifications so they
+ * can be translated to imperative code
+ */
 object DefinitionOrdering {
 
+  /**
+   * Orders a Map Identifier -> Defining expression to a sequence s.t. every variable is assigned before it is used
+   * Exceptions exist for identifiers which have last/delay expressions assigned since they may cause recursions
+   * @param input The map Identifier -> Defining to be sorted
+   * @return The Identifier -> Defining mappings in an ordered sequence
+   */
   def order(input: Map[Identifier, DefinitionExpression]): Seq[(Identifier, DefinitionExpression)] = {
 
     val ordered: mutable.ArrayBuffer[(Identifier, DefinitionExpression)] = mutable.ArrayBuffer()
