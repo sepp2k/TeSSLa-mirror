@@ -25,25 +25,24 @@ The compiler's jar archive can be found under `target/scala-2.13/tessla-compiler
 
 Once the project is built, the compiler can be used from the command line with the following command:
 
-`java -jar target/scala-2.13/tessla-compiler-assembly-x.x.x-SNAPSHOT.jar input.tessla > Main.scala`
+`java -jar target/scala-2.13/tessla-compiler-assembly-x.x.x-SNAPSHOT.jar input.tessla -o Main.scala`
 
 Further additional options are:
 
 ```
-  -h, --help                Display help message and exit
-      --debug               Print stack traces for runtime errors
-      --no-diagnostics      Don't print error messages and warnings
-      --no-mutability       Produce code with exclusively immutable datastructures
-      --no-optimization     Produce non-optimized output code
-  -o, --output-file         Location of the output (including filename)
-      --version             Display version information and exit
-  -t, --target              Target language: java (default), javascript, rust or
-                            rust-bare
-  -v, --verbose             Produce a lot of output
+  -h, --help             Display this help message and exit
+      --debug            Print stack traces for runtime errors
+      --no-diagnostics   Don't print error messages and warnings
+      --no-optimization  Produce non-optimized output code
+  -o, --output-file      Location of the output (including filename)
+      --version          Display version information and exit
+  -t, --target           Target language: scala (default), javascript, rust or
+                         rust-bare
+  -v, --verbose          Produce a lot of output
 
 ```
 
-After that the Scala code can be compiled and the TeSSLa Monitor can be launched:
+After that the Scala code can be compiled and the TeSSLa monitor can be launched:
 
 ```
 scalac Main.scala
@@ -62,18 +61,21 @@ timestamp: streamname
 ```
 
 The timestamps have to arrive in an ordered way. Events for passed timestamps will be printed in the same format, the first time a greater timestamp arrives or when the input ends (Ctrl+D/EOF).
+Additional infos on the input/output format can be found in [the I/O documentation](doc/IO.md)
 
-##  Code  structure
+## Architecture
 
-`IntermediateCode.scala` contains definitions for an imperative intermediate language to which TeSSLa is translated prior the translation to a concrete imperative language. `IntermediateCodeUtils.scala` and `IntermediateCodeTypeInference.scala` contain basic operations to deal with this intermediate language, including a DSL to easily create program fragments of this intermediate code. The translation of TeSSLa Core to Intermediate Code is launched in `TeSSLaCoreToIntermediate.scala`, which contains a `TranslationPhase` (inherited from the tessla project) from a `TeSSLaCoreSpecification` to a `SourceListing` (defined in `IntermediateCode.scala`). The main translation logic can be found in `StreamCodeGenerator.scala` (for the translation of Stream variable definitions) and `NonStreamCodeGenerator.scala` (for the further translation of expressions).
+The project is a beckend to the [TeSSLa compiler frontend](https://gitlab.isp.uni-luebeck.de/tessla/tessla) project.
 
-In the package `backends` the logic for the translation from intermediate code to the target languages is located. `BackendInterface.scala` contains the central interface all translation backends have to implement. The translation to Scala code is split in the files `ScalaBackend.scala` for translating the basic control structures and `ScalaConstants.scala` for further translation details.
+It consists of `TranslationPhases` which are run sequentially.
+The TeSSLa Core AST received from the frontend is preprocessed, translated to a common intermediate language and then translated to the target language.
+
+Details on the architecture can be found in the architecture [documentation](doc/Architecture.md) or in the Scaladoc contained in the source code.
 
 ## ToDo
 
-+ Implement Mutability/Immutablity detection
++ Include Mutability/Immutablity detection in master branch
 + Rust translation
 + Java-Script translation
-+ Script performing compilation to bytecode/binary code
-+ Fix TODOs in code
-+ For further bugfixes see issue section in the gitlab
++ (Script) performing compilation to bytecode/binary code
++ For further bugfixes see issue section in the gitLab
