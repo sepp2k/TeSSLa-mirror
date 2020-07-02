@@ -3,12 +3,16 @@ package de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors._
 import util.mapValues
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 class TypeChecker(spec: FlatTessla.Specification)
     extends TypedTessla.IdentifierFactory
     with TranslationPhase.Translator[TypedTessla.TypedSpecification] {
+
   private val typeMap = mutable.Map[TypedTessla.Identifier, TypedTessla.Type]()
+  private val resolvedMemberAccesses = mutable.HashMap[(FlatTessla.Identifier, String), FlatTessla.Identifier]()
+
   type Env = Map[FlatTessla.Identifier, TypedTessla.Identifier]
 
   override def translateSpec(): TypedTessla.TypedSpecification = {
@@ -111,7 +115,7 @@ class TypeChecker(spec: FlatTessla.Specification)
 
   def isBuiltIn(exp: FlatTessla.Expression): Boolean = exp.isInstanceOf[FlatTessla.Extern]
 
-  /**
+  /*
    * Return all the entries that need to be type inferred before the current entry, i.e.
    * all the entries that are used by this entry and do not have an explicit type annotation.
    */
@@ -119,21 +123,14 @@ class TypeChecker(spec: FlatTessla.Specification)
     defs: FlatTessla.Definitions,
     entry: FlatTessla.VariableEntry
   ): Seq[FlatTessla.VariableEntry] = {
-    requiredEntries(defs, entry.expression)
-  }
-
-  def requiredEntries(
-    defs: FlatTessla.Definitions,
-    expression: FlatTessla.Expression
-  ): Seq[FlatTessla.VariableEntry] = {
-    def resolve(id: FlatTessla.Identifier) = {
+    def resolve(id: FlatTessla.Identifier): List[FlatTessla.VariableEntry] = {
       // An entry needs to be processed before this one iff this one uses it and it either has no type annotation or
       // it is a liftable macro (in which case the lifting needs to happen before it is used)
       defs.resolveVariable(id).toList.filter { arg =>
         arg.typeInfo.isEmpty || isLiftableMacro(arg.expression) || isBuiltIn(arg.expression)
       }
     }
-    expression match {
+    entry.expression match {
       case v: FlatTessla.Variable =>
         resolve(v.id)
       case _: FlatTessla.Literal | _: FlatTessla.InputStream | _: FlatTessla.Parameter =>
@@ -168,7 +165,37 @@ class TypeChecker(spec: FlatTessla.Specification)
         obj.members.values.flatMap(member => resolve(member.id)).toSeq
 
       case acc: FlatTessla.MemberAccess =>
-        resolve(acc.receiver.id)
+        @tailrec
+        def resolveMA(id: FlatTessla.Identifier, accs: List[String]): List[FlatTessla.VariableEntry] = {
+          defs.resolveVariable(id) match {
+            case None => Nil
+            case Some(arg) =>
+              val required = arg.typeInfo.isEmpty || isLiftableMacro(arg.expression) || isBuiltIn(arg.expression)
+
+              arg.expression match {
+                case obj: FlatTessla.ObjectLiteral if accs.size == 1 && obj.members.contains(accs.head) =>
+                  resolvedMemberAccesses.update((acc.receiver.id, acc.member), obj.members(accs.head).id)
+                case _ if accs.isEmpty =>
+                  resolvedMemberAccesses.update((acc.receiver.id, acc.member), arg.id)
+                case _ => resolvedMemberAccesses.remove((acc.receiver.id, acc.member))
+              }
+
+              if (required) {
+                arg.expression match {
+                  case obj: FlatTessla.ObjectLiteral if accs.nonEmpty && obj.members.contains(accs.head) =>
+                    resolveMA(obj.members(accs.head).id, accs.tail)
+                  case acc: FlatTessla.MemberAccess =>
+                    resolveMA(acc.receiver.id, acc.member +: accs)
+                  case _ if accs.isEmpty => List(arg)
+                  case _                 => resolve(acc.receiver.id)
+                }
+              } else {
+                Nil
+              }
+          }
+        }
+
+        resolveMA(acc.receiver.id, acc.member :: Nil)
     }
   }
 
@@ -189,7 +216,7 @@ class TypeChecker(spec: FlatTessla.Specification)
         abort()
       case ReverseTopologicalSort.Sorted(sorted) =>
         sorted.filter(defs.variables.values.toSeq.contains(_)).foreach { entry =>
-          resultingDefs.addVariable(translateEntry(entry, resultingDefs, env))
+          resultingDefs.addVariable(translateEntry(entry, resultingDefs, defs, env))
         }
     }
     (resultingDefs, env)
@@ -198,10 +225,11 @@ class TypeChecker(spec: FlatTessla.Specification)
   def translateEntry(
     entry: FlatTessla.VariableEntry,
     defs: TypedTessla.Definitions,
+    flatDefs: FlatTessla.Definitions,
     env: Env
   ): TypedTessla.VariableEntry = {
     val id = env(entry.id)
-    val (exp, typ) = translateExpression(entry.expression, typeMap.get(id), Some(id), defs, env)
+    val (exp, typ) = translateExpression(entry.expression, typeMap.get(id), defs, flatDefs, env)
     insertInferredType(id, typ, exp.loc)
     val annotations = entry.annotations.map(translateAnnotation)
     TypedTessla.VariableEntry(id, exp, typ, annotations, entry.loc)
@@ -375,8 +403,8 @@ class TypeChecker(spec: FlatTessla.Specification)
   def translateExpression(
     expression: FlatTessla.Expression,
     declaredType: Option[TypedTessla.Type],
-    id: Option[TypedTessla.Identifier],
     defs: TypedTessla.Definitions,
+    flatDefs: FlatTessla.Definitions,
     env: Env
   ): (TypedTessla.Expression, TypedTessla.Type) = {
     expression match {
@@ -530,6 +558,18 @@ class TypeChecker(spec: FlatTessla.Specification)
         val memberTypes = mapValues(members)(member => typeMap(member.id))
         TypedTessla
           .ObjectLiteral(members, o.loc) -> TypedTessla.ObjectType(memberTypes, isOpen = false)
+
+      case acc: FlatTessla.MemberAccess if resolvedMemberAccesses.contains((acc.receiver.id, acc.member)) =>
+        val receiver = env(acc.receiver.id)
+        val resolved = env(resolvedMemberAccesses((acc.receiver.id, acc.member)))
+        val t = typeMap(resolved)
+        val ma = TypedTessla.MemberAccess(
+          TypedTessla.IdLoc(receiver, acc.receiver.loc),
+          acc.member,
+          acc.memberLoc,
+          acc.loc
+        )
+        ma -> t
 
       case acc: FlatTessla.MemberAccess =>
         val receiver = env(acc.receiver.id)

@@ -1,0 +1,10 @@
+module A {
+    def foo := B.foo
+    def bar := 1
+}
+
+module B {
+    def foo := A.bar
+}
+
+out A.foo

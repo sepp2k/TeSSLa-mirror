@@ -1,0 +1,5 @@
+{
+  "input": "cyclic.input",
+  "expectedOutput": "cyclic.output",
+  "spec": "cyclic.tessla"
+}
