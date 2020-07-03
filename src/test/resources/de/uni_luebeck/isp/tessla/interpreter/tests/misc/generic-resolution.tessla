@@ -1,0 +1,8 @@
+in c: Events[Bool]
+in t: Events[String]
+in e: Events[String]
+
+def ifThenElse[T](condition: Bool, thenCase: T, elseCase: T): T = if condition then thenCase else elseCase
+
+-- resolution of return type T to String has to follow from the previous substitutions during resolution of slift
+out slift3(c, t, e, ifThenElse) as ite

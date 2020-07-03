@@ -82,7 +82,7 @@ class TypeChecker(spec: FlatTessla.Specification)
     id: TypedTessla.Identifier,
     inferredType: TypedTessla.Type,
     loc: Location
-  ) = {
+  ): Unit = {
     typeMap.get(id) match {
       case None =>
         typeMap(id) = inferredType
@@ -239,22 +239,48 @@ class TypeChecker(spec: FlatTessla.Specification)
     TypedTessla.Annotation(annotation.name, annotation.arguments, annotation.loc)
   }
 
+  def condense(substitutions: mutable.Map[TypedTessla.Identifier, TypedTessla.Type]): Unit = {
+    def substitute(t: TypedTessla.Type): TypedTessla.Type = t match {
+      case ext: TypedTessla.BuiltInType => ext.copy(typeArgs = ext.typeArgs.map(substitute))
+      case o: TypedTessla.ObjectType    => o.copy(memberTypes = o.memberTypes.view.mapValues(substitute).toMap)
+      case f: TypedTessla.FunctionType =>
+        val parameterTypes = f.parameterTypes.map { case (eval, p) => eval -> substitute(p) }
+        val returnType = substitute(f.returnType)
+        TypedTessla.FunctionType(Seq(), parameterTypes, returnType, f.isLiftable)
+      case TypedTessla.TypeParameter(id, _) => substitutions.getOrElse(id, t)
+    }
+    substitutions.keySet.foreach(k => substitutions.update(k, substitute(substitutions(k))))
+  }
+
   def typeSubst(
     expected: TypedTessla.Type,
     actual: TypedTessla.Type,
-    typeParams: Set[TypedTessla.Identifier],
     substitutions: mutable.Map[TypedTessla.Identifier, TypedTessla.Type]
   ): TypedTessla.Type = {
+    condense(substitutions)
     (expected, actual) match {
+      case (expt: TypedTessla.TypeParameter, act: TypedTessla.TypeParameter) =>
+        substitutions.get(expt.id) match {
+          case Some(t) if expt != t =>
+            if (act != t) substitutions.update(act.id, t)
+            typeSubst(t, t, substitutions)
+          case None if expt != act =>
+            substitutions.update(expt.id, act)
+            typeSubst(act, act, substitutions)
+          case Some(t) => t
+          case _ =>
+            substitutions.update(expt.id, act)
+            act
+        }
+
       case (tparam: TypedTessla.TypeParameter, _) =>
         if (!actual.isValueType) {
           // Ugly hack: By returning an unexpanded type variable named "value type", the error message will say
           // "Expected value type"
           TypedTessla.TypeParameter(makeIdentifier("value type"), tparam.loc)
-        } else if (typeParams.contains(tparam.id)) {
-          substitutions.getOrElseUpdate(tparam.id, actual)
         } else {
-          tparam
+          val t = substitutions.getOrElseUpdate(tparam.id, actual)
+          typeSubst(t, t, substitutions)
         }
       case (expectedFunctionType: TypedTessla.FunctionType, actualFunctionType: TypedTessla.FunctionType) =>
         // Since we don't support higher-order types, i.e. function types that appear as a subtype can't be generic
@@ -270,20 +296,21 @@ class TypeChecker(spec: FlatTessla.Specification)
         val parameterTypes =
           expT.zip(actualTPadded).map {
             case ((_, expectedParamType), (eval, actualParamType)) =>
-              eval -> typeSubst(expectedParamType, actualParamType, typeParams, substitutions)
+              eval -> typeSubst(expectedParamType, actualParamType, substitutions)
           }
+
         val returnType = typeSubst(
           expectedFunctionType.returnType,
           actualFunctionType.returnType,
-          typeParams,
           substitutions
         )
+
         TypedTessla.FunctionType(Seq(), parameterTypes, returnType, expectedFunctionType.isLiftable)
       case (expectedType: TypedTessla.BuiltInType, actualType: TypedTessla.BuiltInType)
           if expectedType.name == actualType.name =>
         val typeArgs = expectedType.typeArgs.zip(actualType.typeArgs).map {
           case (expectedElementType, actualElementType) =>
-            typeSubst(expectedElementType, actualElementType, typeParams, substitutions)
+            typeSubst(expectedElementType, actualElementType, substitutions)
         }
         TypedTessla.BuiltInType(expectedType.name, typeArgs)
       // Allow for auto-lifting of values
@@ -294,7 +321,6 @@ class TypeChecker(spec: FlatTessla.Specification)
           typeSubst(
             expectedElementType,
             actualElementType,
-            typeParams,
             substitutions
           ) +: b.typeArgs.tail
         )
@@ -303,9 +329,7 @@ class TypeChecker(spec: FlatTessla.Specification)
           case (name, expectedMemberType) =>
             name -> actual.memberTypes
               .get(name)
-              .map { actualMemberType =>
-                typeSubst(expectedMemberType, actualMemberType, typeParams, substitutions)
-              }
+              .map(typeSubst(expectedMemberType, _, substitutions))
               .getOrElse(expectedMemberType)
         }
         TypedTessla.ObjectType(members, expected.isOpen)
@@ -377,7 +401,7 @@ class TypeChecker(spec: FlatTessla.Specification)
         val typeSubstitutions = mutable.Map[TypedTessla.Identifier, TypedTessla.Type]()
         val compatibleParameterLength = parent.parameterTypes.length == genericChild.parameterTypes.length
         val child =
-          typeSubst(genericChild, parent, genericChild.typeParameters.toSet, typeSubstitutions)
+          typeSubst(genericChild, parent, typeSubstitutions)
             .asInstanceOf[TypedTessla.FunctionType]
         val compatibleLiftedness = !parent.isLiftable || child.isLiftable
         val compatibleReturnTypes = isSubtypeOrEqual(parent.returnType, child.returnType)
@@ -496,7 +520,7 @@ class TypeChecker(spec: FlatTessla.Specification)
               case (arg, (_, genericExpected)) =>
                 val id = env(arg.id)
                 val actual = typeMap(id)
-                val expected = typeSubst(genericExpected, actual, typeParams, typeSubstitutions)
+                val expected = typeSubst(genericExpected, actual, typeSubstitutions)
                 val possiblyLifted =
                   if (isSubtypeOrEqual(parent = expected, child = actual)) {
                     id
@@ -544,13 +568,12 @@ class TypeChecker(spec: FlatTessla.Specification)
             val returnType = typeSubst(
               possiblyLiftedType.returnType,
               possiblyLiftedType.returnType,
-              typeParams,
               typeSubstitutions
             )
             val newTypeArgs =
               if (t.isLiftable && call.args.exists(arg => typeMap(env(arg.id)).isStreamType)) {
-                t.parameterTypes.map(p => typeSubst(p._2, p._2, typeParams, typeSubstitutions)) :+
-                  typeSubst(t.returnType, t.returnType, typeParams, typeSubstitutions)
+                t.parameterTypes.map(p => typeSubst(p._2, p._2, typeSubstitutions)) :+
+                  typeSubst(t.returnType, t.returnType, typeSubstitutions)
               } else {
                 calculatedTypeArgs
               }
