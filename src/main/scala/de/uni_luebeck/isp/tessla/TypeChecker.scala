@@ -124,10 +124,8 @@ class TypeChecker(spec: FlatTessla.Specification)
     entry: FlatTessla.VariableEntry
   ): Seq[FlatTessla.VariableEntry] = {
     def resolve(id: FlatTessla.Identifier): List[FlatTessla.VariableEntry] = {
-      // An entry needs to be processed before this one iff this one uses it and it either has no type annotation or
-      // it is a liftable macro (in which case the lifting needs to happen before it is used)
       defs.resolveVariable(id).toList.filter { arg =>
-        arg.typeInfo.isEmpty || isLiftableMacro(arg.expression) || isBuiltIn(arg.expression)
+        arg.typeInfo.isEmpty || isBuiltIn(arg.expression)
       }
     }
     entry.expression match {
