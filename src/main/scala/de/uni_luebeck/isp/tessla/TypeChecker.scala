@@ -261,8 +261,14 @@ class TypeChecker(spec: FlatTessla.Specification)
         // themselves, we know that none of the function types, except the initial one that was used to generated the
         // type environment, will have type parameters, so we don't need to update the type environment with new type
         // variables.
+
+        // Pad actual type parameters to have at least the size of the expected type parameters
+        // to prevent the type substitution from dropping parameters
+        val expT = expectedFunctionType.parameterTypes
+        val actualT = actualFunctionType.parameterTypes
+        val actualTPadded = actualT ++ expT.drop(actualT.length)
         val parameterTypes =
-          expectedFunctionType.parameterTypes.zip(actualFunctionType.parameterTypes).map {
+          expT.zip(actualTPadded).map {
             case ((_, expectedParamType), (eval, actualParamType)) =>
               eval -> typeSubst(expectedParamType, actualParamType, typeParams, substitutions)
           }

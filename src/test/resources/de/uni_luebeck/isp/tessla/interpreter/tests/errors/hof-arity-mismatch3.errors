@@ -1,0 +1,1 @@
+errors/hof-arity-mismatch3.tessla(3,9 - 3,13): Type mismatch: Expected [](Int) => Int, found [](Int, Int) => Int

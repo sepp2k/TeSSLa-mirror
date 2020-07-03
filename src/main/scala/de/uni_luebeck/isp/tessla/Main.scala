@@ -186,6 +186,7 @@ object Main {
 
       if (config.printTyped) {
         println(typed.print(printOptions))
+        return
       }
 
       if (config.printCoreLanSpec) {
