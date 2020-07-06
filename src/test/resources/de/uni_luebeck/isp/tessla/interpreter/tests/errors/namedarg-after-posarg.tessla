@@ -1,0 +1,4 @@
+in x: Events[Int]
+def div(a: Events[Int], b: Events[Int]) = a / b
+
+out div(b = 10, x) as r

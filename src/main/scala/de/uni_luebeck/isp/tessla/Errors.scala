@@ -92,6 +92,10 @@ object Errors {
     override def message = s"""Undefined keyword argument: $name"""
   }
 
+  case class PosArgAfterNamedArg(loc: Location) extends TesslaError {
+    override def message = s"""Unsupported use of positional argument: Cannot occur after named argument."""
+  }
+
   case class MultipleDefinitionsError(id: Tessla.Identifier, previousLoc: Location) extends TesslaError {
     override def loc = id.loc
 

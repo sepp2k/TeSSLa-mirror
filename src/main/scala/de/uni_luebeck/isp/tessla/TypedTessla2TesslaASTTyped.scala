@@ -92,13 +92,13 @@ class TypedTessla2TesslaASTTypedWorker(
                 toType(streamType, typeLoc),
                 loc
               )
-            case Parameter(param, parameterType, id) =>
+            case Parameter(param, parameterType, _) =>
               Typed.ExpressionRef(
                 Typed.Identifier(Ior.Left(param.id.name), param.id.loc),
                 toType(parameterType),
                 param.loc
               )
-            case Macro(typeParameters, parameters, body, returnType, headerLoc, result, loc, _) =>
+            case Macro(typeParameters, parameters, body, _, _, result, loc, _) =>
               Typed.FunctionExpression(
                 typeParameters.map(toIdentifier(_, Location.unknown)).toList,
                 parameters.map {
@@ -122,32 +122,20 @@ class TypedTessla2TesslaASTTypedWorker(
               )
             case Variable(id, loc) =>
               Typed.ExpressionRef(toIdentifier(id, lookup(env, id).loc), lookupType(id, env), loc)
-            case m @ MacroCall(macroID, macroLoc, typeArgs, args, loc) =>
+            case MacroCall(macroID, macroLoc, typeArgs, args, loc) =>
               val callable = Typed.TypeApplicationExpression(
                 Typed.ExpressionRef(toIdentifier(macroID, macroLoc), lookupType(macroID, env)),
                 typeArgs.map(x => toType(x)).toList
               )
 
-              val parameterNames = lookupParameterNames(env, macroID)
-
-              val argumentList = parameterNames match {
-                case Some((parameter, loc)) =>
-                  generateArgumentList(macroID.toString, loc, args, parameter.map(_._2))
-                case None =>
-                  if (args.exists(_.isInstanceOf[TypedTessla.NamedArgument])) {
-                    throw Errors.InternalError("Unsupported use of named argument", loc)
-                  }
-                  args.map(a => (a.id, a.loc))
-              }
-
               Typed.ApplicationExpression(
                 callable,
-                argumentList
+                args
                   .zip(callable.tpe.asInstanceOf[Typed.FunctionType].paramTypes)
                   .map {
-                    case ((id, loc), (_, t)) =>
-                      val tpe = lookupType(id, env)
-                      val ref = Typed.ExpressionRef(toIdentifier(id, lookup(env, id).loc), tpe, loc)
+                    case (arg, (_, t)) =>
+                      val tpe = lookupType(arg.id, env)
+                      val ref = Typed.ExpressionRef(toIdentifier(arg.id, lookup(env, arg.id).loc), tpe, arg.loc)
                       if (t == tpe) ref
                       else {
                         val typeArgs = determineTypeArguments(t, tpe).withDefaultValue(unknownType)
@@ -160,13 +148,7 @@ class TypedTessla2TesslaASTTypedWorker(
                 loc
               )
 
-            case Extern(
-                  name,
-                  typeParameters,
-                  parameters,
-                  referenceImplementation,
-                  loc
-                ) => // TODO: support reference implementation
+            case Extern(name, _, _, _, loc) => // TODO: support reference implementation
               Typed.ExternExpression(
                 name,
                 toType(definition.typeInfo),
@@ -334,54 +316,9 @@ class TypedTessla2TesslaASTTypedWorker(
             determineTypeArguments(tpe._1, entries2(name)._1)
         }
         .fold(Map())(_ ++ _)
-    case (t1, t2) => Map()
+    case (_, _) => Map()
   }
 
-  def generateArgumentList(
-    macroName: String,
-    loc: Location,
-    args: Seq[TypedTessla.Argument],
-    parameter: Seq[TypedTessla.Parameter]
-  ): Seq[(TypedTessla.Identifier, Location)] = {
-    val name2pos = parameter.map(p => p.name).zipWithIndex.toMap
-    val pos2id = args.zipWithIndex
-      .map {
-        case (TypedTessla.PositionalArgument(id, loc), i) => (i, (id, loc))
-        case (TypedTessla.NamedArgument(name, idLoc, _), _) =>
-          (
-            name2pos.getOrElse(name, throw Errors.UndefinedNamedArg(name, idLoc.loc)),
-            (idLoc.id, loc)
-          )
-      }
-      .sortBy(_._1)
-    if (pos2id.map(_._1) != (0 until parameter.size)) {
-      throw Errors.ArityMismatch(
-        macroName,
-        parameter.size,
-        pos2id.size,
-        loc
-      ) // TODO: better error message for same number of arguments but missmatched arguments
-    }
-    pos2id.map(_._2)
-  }
-
-  // Note: the current type checker does not treat parameter names as part of signatures.
-  // Therefore, named arguments can only be resolved, if the macro id can be resolved statically.
-  def lookupParameterNames(
-    env: TypedTessla.Definitions,
-    macroID: TypedTessla.Identifier
-  ): Option[(Seq[(Option[TesslaAST.RuntimeEvaluation], TypedTessla.Parameter)], Location)] =
-    lookup(env, macroID).expression match {
-      case TypedTessla.Macro(_, parameter, _, _, _, _, loc, _) => Some((parameter, loc))
-      case TypedTessla.Extern(_, _, parameter, _, loc)         => Some((parameter, loc))
-      case TypedTessla.MemberAccess(receiver, member, _, _) =>
-        lookup(env, receiver.id).expression match {
-          case TypedTessla.ObjectLiteral(members, _) =>
-            members.get(member).map(_.id).flatMap(lookupParameterNames(env, _))
-          case _ => None
-        }
-      case _ => None
-    }
 }
 
 class TypedTessla2TesslaASTCore(baseTime: Option[TimeLiteral])
