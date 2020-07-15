@@ -1,6 +1,44 @@
 ## MITL[S_{0,∞}]
 module MITL {
-  ## a S[0, x] b, x > 0
+
+  # a S[0, x] b, x > 0
+  ## Returns a stream which has a rising flank (an event with `true`) every time Since would be `true` at most `x` time units in the past from that point on, therefore, both input streams have an event with `true` at most `x` time units ago. The output stream has a falling flank (an event with `false`) every time Since does not hold any more, which means that the first input stream has an event with `false` or that the point where one of the streams gets `false` is more than `x` time units in the past.
+  ##
+  ## **Usage example:**
+  ## 
+  ## ~~~ruby
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## def d = since0(3, a, b)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,10]
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 1: a = true
+  ## 1: b = true
+  ## 1: d = true
+  ## 2: b = false
+  ## 3: a = true
+  ## 4: a = false
+  ## 4: d = false
+  ## 5: a = true
+  ## 5: b = true
+  ## 5: d = true
+  ## 6: a = true
+  ## 7: a = true
+  ## 8: a = true
+  ## 9: a = true
+  ## 9: d = false
+  ## ~~~
+  ##
+  ##
   def since0(x: Int, a: Events[Bool], b: Events[Bool]): Events[Bool] =
     merge3(
       constIf(true, a&&b),
@@ -24,7 +62,35 @@ module MITL {
       )
     }
 
-  ## O[0, x] a
+  # O[0, x] a
+  ## Returns a stream which has a rising flank (an event with `true`) every time the input stream has an event with `true`. It outputs a falling flank (an event with `false`) if the input stream is `false` for `x` seconds.
+  ##
+  ## **Usage example:**
+  ## 
+  ## ~~~ruby
+  ## in a: Events[Int]
+  ## def d = once(3,a)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,8]
+  ## stream a: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 1: a = false
+  ## 2: a = true
+  ## 2: d = true
+  ## 3: a = true
+  ## 3: d = true
+  ## 4: a = false
+  ## 5: a = false
+  ## 7: d = false
+  ## ~~~
+  ##
+  ##
   def once0(x: Int, a: Events[Bool]) = since0(x, true, a)
 
   ## O[x, ∞] a
@@ -39,12 +105,96 @@ module MITL {
 
 ## past-time LTL
 module LTL {
-  ## a S b
-  def since(a: Events[Bool], b: Events[Bool]): Events[Bool] = MITL.sinceInfinity(0, a, b)
 
-  ## O a
+  # a S b
+  ## Returns a stream which has a rising flank (an event with `true`) every time Since would be `true` from that point on, therefore, both input streams have an event with `true`. The output stream has a falling flank (an event with `false`) every time Since does not hold any more, which means that the first input stream has an event with `false`.
+  ##
+  ## **Usage example:**
+  ## 
+  ## ~~~ruby
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## def d = since(a, b)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,8]
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 1: a = true
+  ## 2: a = true
+  ## 2: b = true
+  ## 2: d = true
+  ## 3: b = false
+  ## 4: a = true
+  ## 5: a = false
+  ## 5: d = false
+  ## 6: b = true
+  ## 7: a = true
+  ## ~~~
+  ##
+  ##
+  def since(a: Events[Bool], b: Events[Bool]): Events[Bool] = MITL.sinceInfinity(0, a, b)
+  
+
+  # O a
+  ## Returns a stream which has a rising flank (an event with `true`) every time the input stream has an event with `true`.
+  ##
+  ## **Usage example:**
+  ## 
+  ## ~~~ruby
+  ## in a: Events[Int]
+  ## def d = once(a)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,6]
+  ## stream a: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 1: a = false
+  ## 2: a = true
+  ## 2: d = true
+  ## 3: a = false
+  ## 5: a = false
+  ## ~~~
+  ##
+  ##
   def once(a: Events[Bool]): Events[Bool] = since(true, a)
 
-  ## H a
+  # H a
+  ## Returns a stream which has a falling flank (an event with `false`) every time the input stream has an event with `false`.
+  ##
+  ## **Usage example:**
+  ## 
+  ## ~~~ruby
+  ## in a: Events[Int]
+  ## def d = historically(a)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,6]
+  ## stream a: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 1: a = true
+  ## 2: a = false
+  ## 2: d = false
+  ## 3: a = true
+  ## 5: a = true
+  ## ~~~
+  ##
+  ##
   def historically(a: Events[Bool]): Events[Bool] = !once(!a)
 }
