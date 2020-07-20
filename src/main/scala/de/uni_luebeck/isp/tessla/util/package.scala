@@ -1,6 +1,5 @@
 package de.uni_luebeck.isp.tessla
 
-import language.higherKinds
 import scala.collection.mutable.{Map => MMap}
 
 package object util {

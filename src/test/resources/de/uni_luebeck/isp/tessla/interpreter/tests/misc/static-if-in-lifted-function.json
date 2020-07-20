@@ -1,5 +1,0 @@
-{
-  "input": "static-if-in-lifted-function.input",
-  "expectedOutput": "static-if-in-lifted-function.output",
-  "spec": "static-if-in-lifted-function.tessla"
-}
