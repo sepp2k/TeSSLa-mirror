@@ -180,14 +180,6 @@ object Tessla {
     }
   }
 
-  case class StaticIfThenElse(condition: Expression, thenCase: Expression, elseCase: Expression, loc: Location)
-      extends Expression {
-    override def toString(inner: Boolean) = {
-      val str = s"if $condition then $thenCase else $elseCase"
-      if (inner) s"($str)" else str
-    }
-  }
-
   case class Block(definitions: Seq[Definition], expression: Expression, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
   }

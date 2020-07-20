@@ -142,10 +142,6 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
   case class IdLoc(id: Identifier, loc: Location)
 
-  case class StaticIfThenElse(condition: IdLoc, thenCase: IdLoc, elseCase: IdLoc, loc: Location) extends Expression {
-    override def toString = s"if $condition then $thenCase else $elseCase"
-  }
-
   case class ObjectLiteral(members: Map[String, IdLoc], loc: Location) extends Expression
 
   case class MemberAccess(receiver: IdLoc, member: String, memberLoc: Location, loc: Location) extends Expression

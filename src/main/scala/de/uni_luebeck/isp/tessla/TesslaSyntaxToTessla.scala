@@ -383,20 +383,14 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       val thenCase = translateExpression(ite.thenCase)
       val loc = Location.fromNode(ite)
       val elseCase = translateExpression(ite.elseCase)
-      if (ite.STATIC != null) {
-        Tessla.StaticIfThenElse(cond, thenCase, elseCase, loc)
-      } else {
-        Tessla.MacroCall(
-          translateOperator(ite.ifToken, Map("if" -> "ite")),
-          Seq(),
-          Seq(
-            Tessla.PositionalArgument(cond),
-            Tessla.PositionalArgument(thenCase),
-            Tessla.PositionalArgument(elseCase)
-          ),
-          loc
-        )
-      }
+      val extern = if (ite.STATIC != null) "staticite" else "ite"
+      val op = translateOperator(ite.IF().getSymbol, Map("if" -> extern))
+      val args = Seq(
+        Tessla.PositionalArgument(cond),
+        Tessla.PositionalArgument(thenCase),
+        Tessla.PositionalArgument(elseCase)
+      )
+      Tessla.MacroCall(op, Seq(), args, loc)
     }
 
     override def visitRootMemberAccess(root: TesslaSyntax.RootMemberAccessContext) = {

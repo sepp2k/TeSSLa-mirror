@@ -137,9 +137,6 @@ class TypeChecker(spec: FlatTessla.Specification)
       case builtIn: FlatTessla.Extern =>
         builtIn.referenceImplementation.toSeq.flatMap(resolve)
 
-      case ite: FlatTessla.StaticIfThenElse =>
-        resolve(ite.condition.id) ++ resolve(ite.thenCase.id) ++ resolve(ite.elseCase.id)
-
       case call: FlatTessla.MacroCall =>
         // Since we invoke requiredEntries* with an outer defs in the macro case (see below), we might encounter
         // identifiers that aren't defined in the defs we see, so we use flatMap to discard the Nones.
@@ -459,40 +456,6 @@ class TypeChecker(spec: FlatTessla.Specification)
         val id = env(param.id)
         val t = typeMap(id)
         TypedTessla.Parameter(param.param, t, id) -> t
-      case ite: FlatTessla.StaticIfThenElse =>
-        val cond = TypedTessla.IdLoc(env(ite.condition.id), ite.condition.loc)
-        val thenCase = TypedTessla.IdLoc(env(ite.thenCase.id), ite.thenCase.loc)
-        val elseCase = TypedTessla.IdLoc(env(ite.elseCase.id), ite.elseCase.loc)
-        val condType = typeMap(cond.id)
-        if (condType != boolType) {
-          error(TypeMismatch(boolType, condType, cond.loc))
-        }
-        (typeMap(thenCase.id), typeMap(elseCase.id)) match {
-          case (s1, s2) if s1.isStreamType && s2.isStreamType =>
-            if (s1 != s2) {
-              error(TypeMismatch(s1, s2, elseCase.loc))
-            }
-            TypedTessla.StaticIfThenElse(cond, thenCase, elseCase, ite.loc) -> s1
-          case (s: TypedTessla.BuiltInType, v) if s.isStreamType =>
-            if (s.typeArgs.head != v) {
-              error(TypeMismatch(s.typeArgs.head, v, elseCase.loc))
-            }
-            val liftedElseCase =
-              elseCase.copy(id = liftConstant(elseCase.id, defs, env, elseCase.loc))
-            TypedTessla.StaticIfThenElse(cond, thenCase, liftedElseCase, ite.loc) -> s
-          case (v, s: TypedTessla.BuiltInType) if s.isStreamType =>
-            if (s.typeArgs.head != v) {
-              error(TypeMismatch(v, s.typeArgs.head, elseCase.loc))
-            }
-            val liftedThenCase =
-              thenCase.copy(id = liftConstant(thenCase.id, defs, env, thenCase.loc))
-            TypedTessla.StaticIfThenElse(cond, liftedThenCase, elseCase, ite.loc) -> s
-          case (v1, v2) =>
-            if (v1 != v2) {
-              error(TypeMismatch(v1, v2, elseCase.loc))
-            }
-            TypedTessla.StaticIfThenElse(cond, thenCase, elseCase, ite.loc) -> v1
-        }
       case call: FlatTessla.MacroCall =>
         typeMap(env(call.macroID)) match {
           case t: TypedTessla.FunctionType =>

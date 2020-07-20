@@ -478,17 +478,6 @@ class Flattener(spec: Tessla.Specification)
         call.loc
       )
 
-    case ite: Tessla.StaticIfThenElse =>
-      FlatTessla.StaticIfThenElse(
-        FlatTessla
-          .IdLoc(expToId(translateExpression(ite.condition, defs, env, imports), defs), ite.condition.loc),
-        FlatTessla
-          .IdLoc(expToId(translateExpression(ite.thenCase, defs, env, imports), defs), ite.thenCase.loc),
-        FlatTessla
-          .IdLoc(expToId(translateExpression(ite.elseCase, defs, env, imports), defs), ite.elseCase.loc),
-        ite.loc
-      )
-
     case block: Tessla.Block =>
       val innerEnv =
         env ++ Env(variables = createIdMap(block.definitions.map(_.id.name)), types = Map())

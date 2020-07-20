@@ -1,6 +1,6 @@
 in x: Events[Int]
 
 def f(x: Int): Int =
-  static if x < 5 then 0 else f(3)
+  if x < 5 then 0 else f(3)
 
 out slift1(x, f) as y

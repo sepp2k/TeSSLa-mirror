@@ -12,6 +12,11 @@ module Operators {
   ## If-Then-Else
   liftable def ite[T](cond: strict Bool, thenCase: lazy T, elseCase: lazy T): T = extern("ite")
 
+  ## **Operator usage:** `static if c then a else b`
+  ##
+  ## static If-Then-Else
+  def staticite[T](cond: strict Bool, thenCase: lazy Events[T], elseCase: lazy Events[T]): Events[T] = extern("staticite")
+
   ## **Operator usage:** `a && b`
   ##
   ## Boolean conjunction

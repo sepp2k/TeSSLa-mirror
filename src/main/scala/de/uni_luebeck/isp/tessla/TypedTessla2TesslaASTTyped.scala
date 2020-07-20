@@ -23,7 +23,6 @@ import de.uni_luebeck.isp.tessla.TypedTessla.{
   MemberAccess,
   ObjectLiteral,
   Parameter,
-  StaticIfThenElse,
   Variable,
   VariableEntry
 }
@@ -36,21 +35,8 @@ class TypedTessla2TesslaASTTypedWorker(
   baseTime: Option[TimeLiteral]
 ) extends TranslationPhase.Translator[Typed.Specification] {
 
-  // used to instantiate unsued type variables where actual type cannnot be recovered from TypedTessla
+  // used to instantiate unused type variables where actual type cannot be recovered from TypedTessla
   val unknownType = Typed.InstantiatedType("Unknown", Nil)
-
-  val staticiteExtern = Typed.ExternExpression(
-    "staticite",
-    Typed.FunctionType(
-      List(Identifier("A")),
-      List(
-        (TesslaAST.StrictEvaluation, Typed.BoolType),
-        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A"))),
-        (TesslaAST.LazyEvaluation, Typed.TypeParam(Identifier("A")))
-      ),
-      Typed.TypeParam(Identifier("A"))
-    )
-  )
 
   private val ins = mutable.Map[Typed.Identifier, (Typed.Type, Typed.Annotations)]()
 
@@ -152,33 +138,6 @@ class TypedTessla2TesslaASTTypedWorker(
               Typed.ExternExpression(
                 name,
                 toType(definition.typeInfo),
-                loc
-              )
-            case StaticIfThenElse(condition, thenCase, elseCase, loc) =>
-              Typed.ApplicationExpression(
-                Typed.TypeApplicationExpression(
-                  staticiteExtern,
-                  List(
-                    lookupType(thenCase.id, env)
-                  )
-                ),
-                ArraySeq(
-                  Typed.ExpressionRef(
-                    toIdentifier(condition.id, loc),
-                    lookupType(condition.id, env),
-                    loc
-                  ),
-                  Typed.ExpressionRef(
-                    toIdentifier(thenCase.id, loc),
-                    lookupType(thenCase.id, env),
-                    loc
-                  ),
-                  Typed.ExpressionRef(
-                    toIdentifier(elseCase.id, loc),
-                    lookupType(elseCase.id, env),
-                    loc
-                  )
-                ),
                 loc
               )
             case MemberAccess(receiver, member, memberLoc, loc) =>
