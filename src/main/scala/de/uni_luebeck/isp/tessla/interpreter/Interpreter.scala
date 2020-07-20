@@ -66,7 +66,7 @@ class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEva
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
-  def run(spec: Core.Specification, input: Trace, stopOn: Option[String]): Trace = {
+  def run(spec: Core.Specification, input: Trace, stopOn: Option[String], rejectUndeclaredInputs: Boolean): Trace = {
     val interpreter = new Interpreter(spec)
     new Iterator[Trace.Event] {
       private var nextEvents = new mutable.Queue[Trace.Event]
@@ -120,8 +120,9 @@ object Interpreter {
               inStream.provide(event.value)
               seen += event.stream.name
               if (stopped) return
-            case None =>
-            // ignore undeclared input streams
+            case None if rejectUndeclaredInputs =>
+              throw UndeclaredInputStream(event.stream.name, event.loc)
+            case None => // ignore undeclared input streams
           }
         }
         if (nextEvents.isEmpty) {

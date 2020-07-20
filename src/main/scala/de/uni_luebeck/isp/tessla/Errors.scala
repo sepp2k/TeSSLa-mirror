@@ -152,6 +152,10 @@ object Errors {
     override def message: String = s"Decreasing time stamps: first = $first, second = $second"
   }
 
+  case class UndeclaredInputStream(name: String, loc: Location) extends TesslaError {
+    override def message: String = s"Undeclared input stream $name"
+  }
+
   case class SameTimeStampError(timestamp: BigInt, eventName: String, loc: Location) extends TesslaError {
     override def message: String = s"""Multiple events "$eventName" at timestamp $timestamp"""
   }

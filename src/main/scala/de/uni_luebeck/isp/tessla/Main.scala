@@ -30,6 +30,7 @@ object Main {
     printAllTypes: Boolean = false,
     debug: Boolean = false,
     stopOn: Option[String] = None,
+    rejectUndeclaredInputs: Boolean = false,
     listOutStreams: Boolean = false,
     listInStreams: Boolean = false,
     observations: Boolean = false,
@@ -59,18 +60,21 @@ object Main {
         "The file containing the trace data used as input for the specification." +
           " If this is not provided, input is read from stdin"
       )
-    opt[String]("stop-on")
+    opt[String]('S', "stop-on")
       .action((s, c) => c.copy(stopOn = Some(s)))
       .text("Stop when the output stream with the given name generates its first event")
-    opt[String]("base-time")
+    opt[Unit]('r', "reject-undeclared-inputs")
+      .action((_, c) => c.copy(rejectUndeclaredInputs = true))
+      .text("Throw an error if an undeclared input stream occurs in the trace data")
+    opt[String]('t', "base-time")
       .action((s, c) => c.copy(compilerOptions = c.compilerOptions.copy(baseTimeString = Some(s))))
       .text(
         "Use the given time constant (including a unit) as the reference time for timestamps in the input trace"
       )
-    opt[BigInt]("abort-at")
+    opt[BigInt]('a', "abort-at")
       .action((s, c) => c.copy(abortAt = Some(s)))
       .text("Stop the interpreter after a given amount of events.")
-    opt[File]("stdlib")
+    opt[File]('s', "stdlib")
       .valueName("<file>")
       .action((f, c) =>
         c.copy(compilerOptions =
@@ -86,7 +90,7 @@ object Main {
     opt[Unit]("no-diagnostics")
       .action((_, c) => c.copy(diagnostics = false))
       .text("Don't print error messages and warnings")
-    opt[Unit]("print-core")
+    opt[Unit]('c', "print-core")
       .action((_, c) => c.copy(printCore = true))
       .text("Print the Tessla Core representation generated from the Tessla specification")
     opt[Unit]("print-core-lanspec")
@@ -136,7 +140,7 @@ object Main {
       .text("Prints this help message and exit.")
     version("version")
       .text("Print the version and exit.")
-    opt[Unit]("license")
+    opt[Unit]('l', "license")
       .action((_, _) => {
         println(Source.fromResource(licenseLocation).mkString)
         sys.exit(0)
@@ -220,7 +224,7 @@ object Main {
 
       if (config.ctfTrace) {
         val trace = Trace.fromCtfFile(config.traceFile.get, config.abortAt)
-        val output = Interpreter.run(core, trace, config.stopOn)
+        val output = Interpreter.run(core, trace, config.stopOn, config.rejectUndeclaredInputs)
         output.foreach(println)
       } else {
         val trace = if (config.csvTrace) {
@@ -235,7 +239,7 @@ object Main {
         if (config.flattenInput) {
           trace.foreach(println)
         } else {
-          val output = Interpreter.run(core, trace, config.stopOn)
+          val output = Interpreter.run(core, trace, config.stopOn, config.rejectUndeclaredInputs)
           output.foreach(println)
         }
       }

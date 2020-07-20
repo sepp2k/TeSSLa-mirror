@@ -10,7 +10,6 @@ import org.scalatest.funsuite.AnyFunSuite
 import play.api.libs.json._
 import play.api.libs.json.Reads.verifying
 import com.eclipsesource.schema._
-import de.uni_luebeck.isp.tessla.TesslaAST.PrintOptions
 import de.uni_luebeck.isp.tessla.analyses.Observations
 import org.antlr.v4.runtime.CharStream
 import spray.json.JsonParser
@@ -217,10 +216,10 @@ class InterpreterTests extends AnyFunSuite {
         testCase.input match {
           case Some(input) =>
             try {
-              val trace = Trace.fromSource(testSource(input), s"$path$input", testCase.abortAt.map(BigInt(_)))
+              val trace = Trace.fromSource(testSource(input), resolve(input), testCase.abortAt.map(BigInt(_)))
               val result = compiler
                 .compile(src)
-                .map(spec => Interpreter.run(spec, trace, None))
+                .map(spec => Interpreter.run(spec, trace, None, true))
 
               handleResult(result, testCase.expectedErrors, testCase.expectedWarnings) { output =>
                 val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
