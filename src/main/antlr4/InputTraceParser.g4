@@ -34,7 +34,7 @@ expression
     | 'List' '(' (elems+=expression (',' elems+=expression)*)? ','? ')' #ListExpression
     | 'Set' '(' (elems+=expression (',' elems+=expression)*)? ','? ')' #SetExpression
     | 'Map' '(' (elems+=keyVal (',' elems+=keyVal)*)? ','? ')' #MapExpression
-    | op=('!' | '~' | '-') expression #UnaryExpression
+    | op=('!' | '~' | '-' | '-.' ) expression #UnaryExpression
     | lhs=expression op=('*' | '/' | '%') rhs=expression #InfixExpression
     | lhs=expression op=('+' | '-') rhs=expression #InfixExpression
     | lhs=expression op=('<<' | '>>') rhs=expression #InfixExpression
