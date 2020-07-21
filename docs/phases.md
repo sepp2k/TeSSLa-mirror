@@ -1,13 +1,49 @@
-Source code  
-———TesslaParser—>  
-Tessla  
-———Flattener—> (turns nested expressions into a flat, three-address-code-like structure; also removes and replaces alpha-numeric identifiers with numeric IDs that are unique across the whole program; original names are kept around for error messages and debugging purposes; adds scope objects to the global and macro scopes, which map identifiers to their associated expressions (replacing the list of statements), and produces errors for conflicting definitions in the same scope; block expressions are removed and hoisted into the surrounding macro scope or the global scope)  
-FlatTessla  
-———TypeChecker—> (finds type errors, annotates every sub-expression with its type and auto-converts constant expressions to `default(nil, value)`-streams where needed)  
-TypedTessla  
-———ConstantEvaluator—> (evaluates constant expressions, expands macros and turns objects into separate streams)  
-TesslaCore  
-———Cycle detection—> (produces error for recursive streams without last, delay or delayedLast)  
-TesslaCore
+## Translation Phases (v1.2.0)
+The pipeline of translation phases looks as follows:
 
-Additional optimizations (such as common subexpression elimination and dead code elimination) will be added as a TesslaCore->TesslaCore phase after cycle detection.
+TesslaParser → TesslaSyntaxToTessla → Flattener → TypeChecker → TypedTessla2TesslaASTCore → ConstantEvaluator
+
+### TesslaParser
+* Parses given TeSSLa code by using ANTLR4
+* Is invoked twice: First to parse the given source code and its `includes`, and afterwards to parse the contents of the standard library.
+
+→ TesslaParser.ParseResult
+
+### TesslaSyntaxToTessla
+
+* Translates the parse tree into a Tessla AST
+* Extracts location information from the tokens.
+
+→ Tessla
+
+### Flattener
+
+* Turns nested expressions into a flat, three-address-code-like structure
+* Append a unique numeric value to each identifier to make them unique across the entire specification
+* Adds scope objects to the global and macro scopes, which map identifiers to their associated expressions, and produces errors for conflicting definitions in the same scope
+* Removes block expressions and hoists them into the surrounding macro scope or the global scope)
+* Transforms modules into records
+* Resolves imports of modules by replacing usages of imported identifiers by a member-access on that module.
+
+→ FlatTessla
+
+### TypeChecker
+
+* Annotates every expression with its type
+* Checks for type errors
+* Converts constant value expressions to `default(nil, value)`-streams where needed
+* Converts primitive n-ary operator applications on streams `a + b` with an n-ary signal lift `slift(a, b, +)`  
+
+→ TypedTessla
+
+### TypedTessla2TesslaASTCore
+
+* Translates from the old TeSSLa 1.0 AST of the previous phase to the newly introduced AST in version 1.2.
+
+→ TesslaAST.Typed
+
+### ConstantEvaluator
+
+* Uses the externs defined in `RuntimeExterns` to evaluate constant expressions.
+
+→ TesslaAST.Core
