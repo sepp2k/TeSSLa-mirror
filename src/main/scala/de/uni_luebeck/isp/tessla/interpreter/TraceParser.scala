@@ -3,19 +3,61 @@ package de.uni_luebeck.isp.tessla.interpreter
 import de.uni_luebeck.isp.tessla.{InputTraceLexer, InputTraceParser, Location}
 import de.uni_luebeck.isp.tessla.Errors._
 import org.antlr.v4.runtime._
+
 import scala.jdk.CollectionConverters._
 
-case class ParserEventRange(
-  streamName: Token,
-  expression: InputTraceParser.ExpressionContext,
-  timeRange: InputTraceParser.TimeRangeContext,
-  loc: Location
-)
-
 object TraceParser {
-  def createInputTraceParser(line: CharStream, lineNumber: Int): InputTraceParser = {
+
+  case class Event(
+    streamName: Token,
+    expression: InputTraceParser.ExpressionContext,
+    timestamp: InputTraceParser.TimestampContext,
+    loc: Location
+  )
+
+  def parseTrace(input: Iterator[String], fileName: String): Iterator[TraceParser.Event] = {
+    val parsers = lineParsers(input, fileName)
+    parsers.flatMap(parser => Option(parser.line().event())).map { ctx =>
+      val loc = Location.fromNode(ctx)
+      TraceParser.Event(ctx.streamName, ctx.expression(), ctx.timestamp(), loc)
+    }
+  }
+
+  def parseCsvTrace(input: Iterator[String], fileName: String): Iterator[TraceParser.Event] = {
+    val parsers = lineParsers(input, fileName)
+
+    val streamNames = parsers.nextOption().flatMap(parser => Option(parser.csvHeader())) match {
+      case Some(h) =>
+        h.streamNames.asScala.toList.tail
+      case None =>
+        throw ParserError("No header row found", Location.forWholeFile("", fileName))
+    }
+
+    parsers.flatMap(parser => Option(parser.csvLine())).flatMap { lineContext =>
+      lineContext
+        .commaExpression()
+        .asScala
+        .zipWithIndex
+        .collect {
+          case (ctx, index) if ctx.expression() != null =>
+            val loc = Location.fromNode(ctx.expression())
+            TraceParser.Event(streamNames(index), ctx.expression(), lineContext.timestamp(), loc)
+        }
+        .iterator
+    }
+  }
+
+  private def lineParsers(input: Iterator[String], fileName: String): Iterator[InputTraceParser] = {
+    input.zipWithIndex.map {
+      case (line, id) =>
+        val charStream = CharStreams.fromString(line, fileName)
+        TraceParser.createInputTraceParser(charStream, id)
+    }
+  }
+
+  private def createInputTraceParser(line: CharStream, lineNumber: Int): InputTraceParser = {
     val lexer = new InputTraceLexer(line)
-    lexer.setLine(lineNumber)
+    lexer.setLine(lineNumber + 1)
     val tokens = new CommonTokenStream(lexer)
     val parser = new InputTraceParser(tokens)
     parser.removeErrorListeners()
@@ -27,94 +69,10 @@ object TraceParser {
         c: Int,
         msg: String,
         e: RecognitionException
-      ) = {
+      ): Unit = {
         throw ParserError(msg, Location.fromToken(offendingToken.asInstanceOf[Token]))
       }
     })
     parser
-  }
-}
-
-class TraceParser(input: Iterator[String], fileName: String) {
-  def parseTrace(): Iterator[ParserEventRange] = {
-    input.flatMap { line =>
-      parseLine(line) match {
-        case Some(l) => Iterator(l)
-        case None    => Iterator()
-      }
-    }
-  }
-
-  def parseLine(line: String): Option[ParserEventRange] = {
-    parseLine(CharStreams.fromString(line, fileName))
-  }
-
-  var lineNumber = 0
-
-  def parseLine(line: CharStream): Option[ParserEventRange] = {
-    lineNumber += 1
-    val parser = TraceParser.createInputTraceParser(line, lineNumber)
-
-    Option(parser.line().eventRange).map(ctx =>
-      ParserEventRange(ctx.streamName, ctx.expression(), ctx.timeRange(), Location.fromNode(ctx))
-    )
-  }
-}
-
-class CsvTraceParser(input: Iterator[String], fileName: String) {
-  var streamNames = List[Token]()
-
-  def parseTrace(): Iterator[ParserEventRange] = {
-    if (!input.hasNext) {
-      throw ParserError("No header row found", Location.unknown)
-    }
-    parseHeader(input.next()) match {
-      case Some(h) =>
-        streamNames = h.streamNames.asScala.toList.tail
-      case None =>
-        throw ParserError("No header row found", Location.unknown)
-    }
-
-    input.flatMap { line => parseLine(line) }
-  }
-
-  def parseLine(line: String): Iterator[ParserEventRange] = {
-    parseLine(CharStreams.fromString(line, fileName))
-  }
-
-  def parseHeader(line: String): Option[InputTraceParser.CsvHeaderContext] = {
-    parseHeader(CharStreams.fromString(line, fileName))
-  }
-
-  var lineNumber = 0
-
-  def parseHeader(line: CharStream): Option[InputTraceParser.CsvHeaderContext] = {
-    lineNumber += 1
-    val parser = TraceParser.createInputTraceParser(line, lineNumber)
-    Option(parser.csvHeader())
-  }
-
-  def parseLine(line: CharStream): Iterator[ParserEventRange] = {
-    lineNumber += 1
-    val parser = TraceParser.createInputTraceParser(line, lineNumber)
-    Option(parser.csvLine()) match {
-      case Some(lineContext) =>
-        lineContext
-          .commaExpression()
-          .asScala
-          .zipWithIndex
-          .filter { case (ctx, _) => ctx.expression() != null }
-          .map {
-            case (ctx, index) =>
-              ParserEventRange(
-                streamNames(index),
-                ctx.expression(),
-                lineContext.timeRange(),
-                Location.fromNode(ctx.expression())
-              )
-          }
-          .iterator
-      case None => Iterator()
-    }
   }
 }

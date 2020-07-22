@@ -4,8 +4,6 @@ import java.io.File
 
 import de.uni_luebeck.isp.tessla.{Location, Tessla}
 import de.uni_luebeck.isp.tessla.Errors.InternalError
-import de.uni_luebeck.isp.tessla.interpreter.Trace.TimeStamp
-import org.eclipse.tracecompass.ctf.core.CTFException
 import org.eclipse.tracecompass.ctf.core.trace.{CTFTrace, CTFTraceReader}
 
 import scala.io.Source
@@ -27,63 +25,56 @@ object Trace {
   }
 
   case class TimeStamp(loc: Location, time: Specification.Time) {
-    override def toString = time.toString
+    override def toString: String = time.toString
   }
 
   def fromCtfFile(ctfFile: File, abortAt: Option[BigInt]): Interpreter.Trace = {
-    val reader = new CTFTraceReader(new CTFTrace(ctfFile))
-
-    new Iterator[Trace.Event] {
-      private var eventCounter = 0
-
-      override def hasNext = reader.hasMoreEvents && abortAt.forall(eventCounter < _)
-
-      override def next() = {
-        val event = reader.getCurrentEventDef
-        try {
-          reader.advance
-        } catch {
-          case e: CTFException => throw new RuntimeException(e)
-        }
-        val ts = TimeStamp(Location.unknown, BigInt(event.getTimestamp))
-        val stream = Trace.Identifier(event.getDeclaration.getName, Location.unknown)
-        eventCounter += 1
-        Trace.Event(Location.unknown, ts, Some(stream), event)
-      }
-    }
+    new CtfEventIterator(new CTFTraceReader(new CTFTrace(ctfFile)), abortAt)
   }
 
-  def fromLineIterator(lineIterator: Iterator[String], fileName: String, abortAt: Option[Specification.Time] = None) = {
-    val rawTrace = new TraceParser(lineIterator, fileName).parseTrace()
-    new FlatEventIterator(rawTrace, abortAt)
+  def fromLineIterator(
+    lineIterator: Iterator[String],
+    fileName: String,
+    abortAt: Option[Specification.Time] = None
+  ): Interpreter.Trace = {
+    val rawTrace = TraceParser.parseTrace(lineIterator, fileName)
+    new EventIterator(rawTrace, abortAt)
   }
 
-  def fromSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {
+  def fromSource(
+    traceSource: Source,
+    fileName: String,
+    abortAt: Option[Specification.Time] = None
+  ): Interpreter.Trace = {
     fromLineIterator(traceSource.getLines, fileName, abortAt)
   }
 
-  def fromFile(file: File, abortAt: Option[Specification.Time] = None) =
+  def fromFile(file: File, abortAt: Option[Specification.Time] = None): Interpreter.Trace =
     fromSource(Source.fromFile(file), file.getName, abortAt)
 
-  def fromString(string: String, fileName: String, abortAt: Option[Specification.Time] = None) =
+  def fromString(string: String, fileName: String, abortAt: Option[Specification.Time] = None): Interpreter.Trace =
     fromSource(Source.fromString(string), fileName, abortAt)
 
   def fromCsvLineIterator(
     lineIterator: Iterator[String],
     fileName: String,
     abortAt: Option[Specification.Time] = None
-  ) = {
-    val rawTrace = new CsvTraceParser(lineIterator, fileName).parseTrace()
-    new FlatEventIterator(rawTrace, abortAt)
+  ): Interpreter.Trace = {
+    val rawTrace = TraceParser.parseCsvTrace(lineIterator, fileName)
+    new EventIterator(rawTrace, abortAt)
   }
 
-  def fromCsvSource(traceSource: Source, fileName: String, abortAt: Option[Specification.Time] = None) = {
+  def fromCsvSource(
+    traceSource: Source,
+    fileName: String,
+    abortAt: Option[Specification.Time] = None
+  ): Interpreter.Trace = {
     fromCsvLineIterator(traceSource.getLines, fileName, abortAt)
   }
 
-  def fromCsvFile(file: File, abortAt: Option[Specification.Time] = None) =
+  def fromCsvFile(file: File, abortAt: Option[Specification.Time] = None): Interpreter.Trace =
     fromCsvSource(Source.fromFile(file), file.getName, abortAt)
 
-  def fromCsvString(string: String, fileName: String, abortAt: Option[Specification.Time] = None) =
+  def fromCsvString(string: String, fileName: String, abortAt: Option[Specification.Time] = None): Interpreter.Trace =
     fromCsvSource(Source.fromString(string), fileName, abortAt)
 }

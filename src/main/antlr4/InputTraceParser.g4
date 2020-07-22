@@ -4,25 +4,20 @@ options {
     tokenVocab = 'InputTraceLexer';
 }
 
-line: eventRange? NL? EOF;
-
 csvHeader: streamNames+=ID (',' streamNames+=ID)+ NL? EOF;
 
-csvLine: timeRange commaExpression+ NL? EOF;
+csvLine: timestamp commaExpression+ NL? EOF;
+
+line: event? NL? EOF;
 
 commaExpression: ',' expression?;
 
-eventRange: timeRange ':' streamName=ID ('=' expression)?;
+event: timestamp ':' streamName=ID ('=' expression)?;
 
-timeRange
-    : DECINT # SingleTime
-    | lowerBound=DECINT lowerOp=('<'|'<=') ID (upperOp=('<'|'<=') upperBound=DECINT)? #CompRange
-    | first=DECINT (',' second=DECINT)? '..' last=DECINT? #Range
-    ;
+timestamp: DECINT;
 
 expression
-    : ID #Variable
-    | DQUOTE stringContents* DQUOTE #StringLiteral
+    : DQUOTE stringContents* DQUOTE #StringLiteral
     | (DECINT | HEXINT) #IntLiteral
     | FLOAT #FloatLiteral
     | 'true' #True
@@ -50,7 +45,6 @@ stringContents
     : TEXT
     | ESCAPE_SEQUENCE
     | '${' expression '}'
-    | '$' ID
     ;
 
 memberDefinition: ID (':'|'=') expression;

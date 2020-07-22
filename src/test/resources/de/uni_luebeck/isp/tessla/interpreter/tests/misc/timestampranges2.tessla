@@ -1,5 +1,0 @@
-in x: Events[Int]
-in 💩: Events[String]
-
-out x
-out 💩
