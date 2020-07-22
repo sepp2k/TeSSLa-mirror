@@ -1,6 +1,6 @@
 ## Strings
 module String {
-  ## Concatenates the [`String`](#string)s `str1` and `str2`
+  ## Concatenates the @[Types#string] `str1` and `str2`
   ##
   ## **Usage example:**
   ##
@@ -31,9 +31,64 @@ module String {
   ## ~~~
   liftable def concat(str1: strict String, str2: strict String): String = extern("String_concat")
 
+  ## Returns a formatted string from the given format and argument.
+  ## In the TeSSLa software backend, the format specifier has the syntax `%[flags][width][.precision]type`, where
+  ## the following types and flags are supported:
+  ##
+  ## <pre>
+  ## type           allowed types   Behaviour
+  ## ------------   -------------   ------------------------------------------------------------------
+  ## x, X           Int             Converts an integer to hexadecimal representation
+  ## s, S           all             Converts the type to string using toString
+  ## d              Int             Format the value as a decimal integer
+  ## o              Int             Format the value as an octal integer
+  ## e              Float           Format with scientific notation
+  ## f              Float           Format as decimal number
+  ## g, G           Float           Scientific notation or decimal depending on precision and rounding
+  ## a, A           Float           Hexadecimal floating-point number with significand and exponent
+  ## </pre>
+  ##
+  ## <pre>
+  ## flag   Behaviour
+  ## ----   ----------------------------------------------
+  ##  -     Left justify within the given field of the given width.
+  ##  +     Precede the output with a <i>+</i>, unless the value is negative.
+  ##  ␣     If no sign is written, write a space (0x20) instead.
+  ##  #     Alternative form:
+  ##          Precede with <i>0</i> for <i>o</i>, <i>0x</i> for <i>x</i> and <i>0X</i> for <i>X</i>.
+  ##          Always include a decimal point for <i>f</i>, <i>g</i>, <i>e</i>, <i>a</i>, <i>A</i>.
+  ##  0     Left-pad the number with <i>0</i> if a padding is specified.
+  ##  ,     Use a locale-specific grouping separator.
+  ##  (     Enclose negative numbers with parenthesis.
+  ## </pre>
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in x: Events[Int]
+  ## def result := String.format("%#05x", x)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: events
+  ## stream result: signal
+  ## ---
+  ## 1: x = 5
+  ## 1: result = "0x005"
+  ## 4: x = 100
+  ## 4: result = "0x064"
+  ## 7: x = 10000
+  ## 7: result = "0x2710"
+  ## ~~~
   liftable def format[T](formatString: strict String, value: strict T): String = extern("String_format")
 
+  ## Formats an integer argument with the given format string
   liftable def formatInt(formatString: String, value: Int): String = format(formatString, value)
 
+  ## Formats a float argument with the given format string
   liftable def formatFloat(formatString: String, value: Float): String = format(formatString, value)
 }
