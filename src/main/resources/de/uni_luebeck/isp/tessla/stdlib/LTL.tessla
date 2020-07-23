@@ -43,7 +43,7 @@ module MITL {
     merge3(
       constIf(true, a&&b),
       constIf(false, !a),
-      on(delay(constIf(x, !b), falling(b)), false)
+      on(delay(constIf(x, !b), boolFilter(!b)), false)
     )
 
   # a S[x, ∞] b, x ≥ 0
@@ -88,7 +88,7 @@ module MITL {
         constIf(false, !a)
       )
     else {
-      def firstA: Events[Bool] = merge(const(true, rising(default(a, false))), last(firstA, b) && b)
+      def firstA: Events[Bool] = merge(boolFilter(a), last(firstA, b) && b)
       def start = unitIf(on(b, firstA))
       merge(
         on(delay(on(start, x), merge(start, unitIf(!a))), true),

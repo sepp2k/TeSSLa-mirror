@@ -1551,6 +1551,32 @@ module StreamFunctions {
   ## ~~~
   def unitIf(cond: Events[Bool]): Events[Unit] = constIf((), cond)
 
+  ## Filter a boolean event stream for true events.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~ruby
+  ## in b: Events[Bool]
+  ## def result = boolFilter(b)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## 2: b = false
+  ## 4: result = true
+  ## 4: b = true
+  ## 5: result = true
+  ## 5: b = true
+  ## 8: b = false
+  ## 9: b = false
+  ## 10: b = false
+  ## 12: result = true
+  ## 12: b = true
+  ## ~~~
+  def boolFilter(b: Events[Bool]): Events[Bool] = filter(b,b)
+
   ## Detect rising edge on `condition`
   ##
   ## **Usage example:**
