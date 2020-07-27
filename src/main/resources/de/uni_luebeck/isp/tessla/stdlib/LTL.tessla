@@ -1,8 +1,11 @@
-## MITL[S_{0,∞}]
+## The module for MITL[S_{0,∞}] formulas. MITL[S_{0,∞}] is the past fragment of MITL (Metric Interval Temporal Logic), where either the lowest time bound is 0 or the highest time bound is ∞.
+##
+## In this case we view streams as signals with continuously existing values. The events denote only the change points of these values.
 module MITL {
 
-  # a S[0, x] b, x > 0
   ## Expects [`pure`](streamfunctions#pure) input streams which are initialized (have an event at timestamp 0). Returns a stream which gets `true` every time both input streams are `true`. The output stream gets `false` every time the first input stream gets `false` or the last point where both streams where `true` lies `x` time units in the past.
+  ##
+  ## It represents the formula `a S[0, x] b, x > 0`.
   ##
   ## **Usage example:**
   ## 
@@ -46,8 +49,9 @@ module MITL {
 	  false
     )
 
-  # a S[x, ∞] b, x ≥ 0
   ## Expects [`pure`](streamfunctions#pure) input streams which are initialized (have an event at timestamp 0). Returns a stream which gets `true` every time both input streams are `true` at a point which lies `x` time units in the past and the first input stream did not get `false` in between. The output stream gets `false` every time the first input stream gets `false`.
+  ##
+  ## It represents the formula `a S[x, ∞] b, x ≥ 0`.
   ##
   ## **Usage example:**
   ## 
@@ -99,8 +103,9 @@ module MITL {
       )
     }
 
-  # O[0, x] a
   ## Expects a [`pure`](streamfunctions#pure) input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `true` the when the input stream gets `true`. The output stream gets `false` if the input stream is `false` for `x` time units.
+  ##
+  ## It represents the formula `O[0, x] a = true S[0,x] a` and is equal to [`since0`](streamfunctions#since0)`(x, true, a)`.
   ##
   ## **Usage example:**
   ## 
@@ -128,8 +133,9 @@ module MITL {
   ##
   def once0(x: Int, a: Events[Bool]) = since0(x, true, a)
 
-  # O[x, ∞] a
   ## Expects a [`pure`](streamfunctions#pure) input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `true` if the point the input stream gets `true` the first time lies `x` time units in the past.
+  ##
+  ## It represents the formula `O[x, ∞] a = true S[x,∞]` a and is equal to [`sinceInfinity`](streamfunctions#sinceinfinity)`(x, true, a)`.
   ##
   ## **Usage example:**
   ## 
@@ -156,8 +162,9 @@ module MITL {
   ##
   def onceInfinity(x: Int, a: Events[Bool]) = sinceInfinity(x, true, a)
 
-  # H[0, x] a
   ## Expects a [`pure`](streamfunctions#pure) input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `false` every time the input stream gets `false`. The output stream gets `true` if the input stream was `true` for `x` time units.
+  ##
+  ## It represents the formula `H[0, x] a = !O[0, x] !a` and is equal to `!`[`once0`](streamfunctions#once0)`(x, !a)`.
   ##
   ## **Usage example:**
   ## 
@@ -185,8 +192,9 @@ module MITL {
   ##
   def historically0(x: Int, a: Events[Bool]) = !once0(x, !a)
 
-  # H[x, ∞] a
   ## Expects a [`pure`](streamfunctions#pure) input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `false` the first time the input stream got `false` `x` time units ago.
+  ##
+  ## It represents the formula `H[x, ∞] a = !O[x, ∞] !a` and is equal to `!`[`onceInfinity`](streamfunctions#onceinfinity)`(x, !a)`.
   ##
   ## **Usage example:**
   ## 
@@ -217,8 +225,9 @@ module MITL {
 ## past-time LTL
 module LTL {
 
-  # a S b
   ## Expects [`pure`](streamfunctions#pure) input streams which are initialized (have an event at timestamp 0). Returns a stream which gets `true` every time both input streams are `true`. The output stream gets `false` every time the first input stream gets `false`.
+  ##
+  ## It represents the formula `a S b`.
   ##
   ## **Usage example:**
   ## 
@@ -256,8 +265,9 @@ module LTL {
   def since(a: Events[Bool], b: Events[Bool]): Events[Bool] = MITL.sinceInfinity(0, a, b)
   
 
-  # O a
   ## Expects a [`pure`](streamfunctions#pure) input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `true` the first time the input stream gets `true`.
+  ##
+  ## It represents the formula `O a = true S a` and is equal to [`since`](streamfunctions#since)`(true, a)`.
   ##
   ## **Usage example:**
   ## 
@@ -284,8 +294,9 @@ module LTL {
   ##
   def once(a: Events[Bool]): Events[Bool] = since(true, a)
 
-  # H a
   ## Expects a [`pure`](streamfunctions#pure) input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `false` the first time the input stream gets `false`.
+  ##
+  ## It represents the formula `H a = !O !a` and is equal to `!`[`once`](streamfunctions#once)`(!a)`.
   ##
   ## **Usage example:**
   ## 
