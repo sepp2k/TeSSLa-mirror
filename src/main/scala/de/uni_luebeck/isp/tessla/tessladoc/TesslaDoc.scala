@@ -4,6 +4,7 @@ import de.uni_luebeck.isp.tessla.Errors.InternalError
 import de.uni_luebeck.isp.tessla.tessladoc.DocJsonProtocol._
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla._
+import org.antlr.v4.runtime.misc.Interval
 import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.{CharStream, ParserRuleContext, Token}
 
@@ -36,6 +37,7 @@ object TesslaDoc {
 
   case class DefDoc(
     name: String,
+    src: String,
     typeParameters: Seq[String],
     parameters: Seq[Param],
     returnType: Option[Type],
@@ -133,8 +135,26 @@ object TesslaDoc {
 
       override def visitDef(definition: TesslaSyntax.DefContext): Seq[Statement] = {
         val header = definition.header
+
+        // Fetch the original source code, skipping documentation
+        val start: Int =
+          if (header.tessladoc.isEmpty) definition.start.getStartIndex
+          else header.tessladoc.asScala.last.getStopIndex + 1
+        val end: Int = definition.stop.getStopIndex
+        val interval: Interval = new Interval(start, end)
+        val source = definition.start.getInputStream.getText(interval)
+        val leadingWhitespaces = source.segmentLength(_ == ' ')
+        val unindented = source
+          .split("\n")
+          .map(s => {
+            val n = s.segmentLength(_ == ' ')
+            s.drop(if (leadingWhitespaces > n) n else leadingWhitespaces)
+          })
+          .mkString("\n")
+
         val doc = DefDoc(
           name = header.name.getText,
+          src = unindented,
           typeParameters = header.typeParameters.asScala.map(_.getText).toSeq,
           parameters = header.parameters.asScala
             .map(p => Param(p.ID.getText, translateEvalType(p.parameterType)))

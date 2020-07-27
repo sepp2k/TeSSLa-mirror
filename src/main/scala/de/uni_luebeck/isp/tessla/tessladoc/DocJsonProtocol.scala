@@ -11,7 +11,7 @@ object DocJsonProtocol extends DefaultJsonProtocol {
   implicit val typeDocFormat: JsonFormat[TypeDoc] = lazyFormat(jsonFormat5(TypeDoc))
   implicit val annotationDocFormat: JsonFormat[AnnotationDoc] = lazyFormat(jsonFormat5(AnnotationDoc))
   implicit val moduleDocFormat: JsonFormat[ModuleDoc] = lazyFormat(jsonFormat5(ModuleDoc))
-  implicit val defDocFormat: JsonFormat[DefDoc] = lazyFormat(jsonFormat8(DefDoc))
+  implicit val defDocFormat: JsonFormat[DefDoc] = lazyFormat(jsonFormat9(DefDoc))
 
   implicit val paramFormat: JsonFormat[Param] = lazyFormat(jsonFormat2(Param))
 
