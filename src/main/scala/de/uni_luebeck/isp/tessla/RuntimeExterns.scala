@@ -122,7 +122,7 @@ object RuntimeExterns {
       }
     ),
     "None" -> ((_: ArraySeq[A[Any]]) => None.pure[A]),
-    "Some" -> strict(arguments => Some(arguments(0)).pure[A]),
+    "Some" -> ((arguments: ArraySeq[A[Any]]) => arguments(0).map(Some(_))),
     "isNone" -> strict(arguments => propagateSingle(arguments(0))(_.asInstanceOf[Option[Any]].isEmpty.pure[A])),
     "getSome" -> strict(arguments =>
       propagateSingle(arguments(0))(
