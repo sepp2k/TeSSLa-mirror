@@ -2,7 +2,7 @@
 module MITL {
 
   # a S[0, x] b, x > 0
-  ## Returns a stream which has an event with `true` every time Since would be `true` at most `x` time units in the past from that point on, therefore, both input streams have an event with `true` at most `x` time units ago. The output stream has an event with `false` every time Since does not hold any more, which means that the first input stream has an event with `false` or that the point where one of the streams gets `false` is more than `x` time units in the past.
+  ## Expects [`pure`](streamfunctions#pure) input streams. Returns a stream which gets `true` every time both input streams are `true`. The output stream gets `false` every time the first input stream gets `false` or the last point where both streams where `true` lies `x` time units in the past.
   ##
   ## **Usage example:**
   ## 
@@ -17,24 +17,20 @@ module MITL {
   ##
   ## ~~~trace
   ## option timeDomain: [-0.1,10]
-  ## stream a: bubbles
-  ## stream b: bubbles
-  ## stream d: bubbles
+  ## stream a: bool
+  ## stream b: bool
+  ## stream d: bool
   ## ---
   ## 1: a = true
   ## 1: b = true
   ## 1: d = true
   ## 2: b = false
-  ## 3: a = true
   ## 4: a = false
   ## 4: d = false
   ## 5: a = true
   ## 5: b = true
   ## 5: d = true
-  ## 6: a = true
-  ## 7: a = true
-  ## 8: a = true
-  ## 9: a = true
+  ## 6: b = false
   ## 9: d = false
   ## ~~~
   ##
@@ -43,18 +39,18 @@ module MITL {
     merge3(
       constIf(true, a&&b),
       constIf(false, !a),
-      on(delay(constIf(x, !b), falling(b)), false)
+      on(delay(constIf(x, !b), boolFilter(!b)), false)
     )
 
   # a S[x, ∞] b, x ≥ 0
-  ## Returns a stream which has an event with `true` every time Since would be `true` at least `x` time units in the past, therefore, the last event on `a` has the value `true` and `b` is true and both occurred at least `x` time units ago and `a` has not been `false` afterwards up to now. The output stream has an event with `false` every time `a` has an event with `false`.
+  ## Expects [`pure`](streamfunctions#pure) input streams. Returns a stream which gets `true` every time both input streams are `true` at a point which lies `x` time units in the past and the first input stream did not get `false` in between. The output stream gets `false` every time the first input stream gets `false`.
   ##
   ## **Usage example:**
   ## 
   ## ~~~ruby
   ## in a: Events[Int]
   ## in b: Events[Int]
-  ## def d = sinceinfinity(3, a, b)
+  ## def d = sinceInfinity(3, a, b)
   ## out d
   ## ~~~
   ##
@@ -62,9 +58,9 @@ module MITL {
   ##
   ## ~~~trace
   ## option timeDomain: [-0.1,10]
-  ## stream a: bubbles
-  ## stream b: bubbles
-  ## stream d: bubbles
+  ## stream a: bool
+  ## stream b: bool
+  ## stream d: bool
   ## ---
   ## 1: a = true
   ## 1: b = true
@@ -73,8 +69,6 @@ module MITL {
   ## 3: d = false
   ## 4: a = true
   ## 5: b = true
-  ## 6: a = true
-  ## 7: a = true
   ## 8: d = true
   ## 9: a = false
   ## 9: d = false
@@ -88,7 +82,7 @@ module MITL {
         constIf(false, !a)
       )
     else {
-      def firstA: Events[Bool] = merge(const(true, rising(default(a, false))), last(firstA, b) && b)
+      def firstA: Events[Bool] = merge(boolFilter(a), last(firstA, b) && b)
       def start = unitIf(on(b, firstA))
       merge(
         on(delay(on(start, x), merge(start, unitIf(!a))), true),
@@ -97,7 +91,7 @@ module MITL {
     }
 
   # O[0, x] a
-  ## Returns a stream which has an event with `true` every time the input stream has an event with `true`. It outputs an event with `false` if the input stream is `false` for `x` seconds.
+  ## Expects a [`pure`](streamfunctions#pure) input stream. Returns a stream which gets `true` the when the input stream gets `true`. The output stream gets `false` if the input stream is `false` for `x` time units.
   ##
   ## **Usage example:**
   ## 
@@ -111,16 +105,13 @@ module MITL {
   ##
   ## ~~~trace
   ## option timeDomain: [-0.1,8]
-  ## stream a: bubbles
-  ## stream d: bubbles
+  ## stream a: bool
+  ## stream d: bool
   ## ---
   ## 1: a = false
   ## 2: a = true
   ## 2: d = true
-  ## 3: a = true
-  ## 3: d = true
   ## 4: a = false
-  ## 5: a = false
   ## 7: d = false
   ## ~~~
   ##
@@ -128,7 +119,7 @@ module MITL {
   def once0(x: Int, a: Events[Bool]) = since0(x, true, a)
 
   # O[x, ∞] a
-  ## Returns a stream which has an event with `true` every time the input stream has an event with `true` which lies at least `x` time units in the past.
+  ## Expects a [`pure`](streamfunctions#pure) input stream. Returns a stream which gets `true` if the point the input stream gets `true` the first time lies `x` time units in the past.
   ##
   ## **Usage example:**
   ## 
@@ -142,21 +133,20 @@ module MITL {
   ##
   ## ~~~trace
   ## option timeDomain: [-0.1,8]
-  ## stream a: bubbles
-  ## stream d: bubbles
+  ## stream a: bool
+  ## stream d: bool
   ## ---
   ## 1: a = false
   ## 2: a = true
-  ## 3: a = true
-  ## 6: d = true
-  ## 7: a = false
+  ## 5: d = true
+  ## 6: a = false
   ## ~~~
   ##
   ##
   def onceInfinity(x: Int, a: Events[Bool]) = sinceInfinity(x, true, a)
 
   # H[0, x] a
-  ## Returns a stream which has an event with `false` every time the input stream has an event with `false`. It outputs an event with `true` if the input stream is `true` for `x` seconds.
+  ## Expects a [`pure`](streamfunctions#pure) input stream. Returns a stream which gets `false` every time the input stream gets `false`. The output stream gets `true` if the input stream was `true` for `x` time units.
   ##
   ## **Usage example:**
   ## 
@@ -170,14 +160,13 @@ module MITL {
   ##
   ## ~~~trace
   ## option timeDomain: [-0.1,8]
-  ## stream a: bubbles
-  ## stream d: bubbles
+  ## stream a: bool
+  ## stream d: bool
   ## ---
   ## 1: a = true
   ## 2: a = false
   ## 2: d = false
   ## 3: a = true
-  ## 5: a = true
   ## 6: d = true
   ## ~~~
   ##
@@ -185,7 +174,7 @@ module MITL {
   def historically0(x: Int, a: Events[Bool]) = !once0(x, !a)
 
   # H[x, ∞] a
-  ## Returns a stream which has an event with `false` every time the input stream has an event with `false` which lies at least `x` time units in the past.
+  ## Expects a [`pure`](streamfunctions#pure) input stream. Returns a stream which gets `false` the first time the input stream got `false` `x` time units ago.
   ##
   ## **Usage example:**
   ## 
@@ -199,8 +188,8 @@ module MITL {
   ##
   ## ~~~trace
   ## option timeDomain: [-0.1,8]
-  ## stream a: bubbles
-  ## stream d: bubbles
+  ## stream a: bool
+  ## stream d: bool
   ## ---
   ## 1: a = true
   ## 2: a = false
@@ -216,7 +205,7 @@ module MITL {
 module LTL {
 
   # a S b
-  ## Returns a stream which has an event with `true` every time Since would be `true` from that point on, therefore, both input streams have an event with `true`. The output stream has an event with `false` every time Since does not hold any more, which means that the first input stream has an event with `false`.
+  ## Expects [`pure`](streamfunctions#pure) input streams. Returns a stream which gets `true` every time both input streams are `true`. The output stream gets `false` every time the first input stream gets `false`.
   ##
   ## **Usage example:**
   ## 
@@ -231,12 +220,11 @@ module LTL {
   ##
   ## ~~~trace
   ## option timeDomain: [-0.1,8]
-  ## stream a: bubbles
-  ## stream b: bubbles
-  ## stream d: bubbles
+  ## stream a: bool
+  ## stream b: bool
+  ## stream d: bool
   ## ---
   ## 1: a = true
-  ## 2: a = true
   ## 2: b = true
   ## 2: d = true
   ## 3: b = false
@@ -245,6 +233,7 @@ module LTL {
   ## 5: d = false
   ## 6: b = true
   ## 7: a = true
+  ## 7: d = true
   ## ~~~
   ##
   ##
@@ -252,7 +241,7 @@ module LTL {
   
 
   # O a
-  ## Returns a stream which has an event with `true` every time the input stream has an event with `true`.
+  ## Expects a [`pure`](streamfunctions#pure) input stream. Returns a stream which gets `true` the first time the input stream gets `true`.
   ##
   ## **Usage example:**
   ## 
@@ -266,21 +255,20 @@ module LTL {
   ##
   ## ~~~trace
   ## option timeDomain: [-0.1,6]
-  ## stream a: bubbles
-  ## stream d: bubbles
+  ## stream a: bool
+  ## stream d: bool
   ## ---
   ## 1: a = false
   ## 2: a = true
   ## 2: d = true
   ## 3: a = false
-  ## 5: a = false
   ## ~~~
   ##
   ##
   def once(a: Events[Bool]): Events[Bool] = since(true, a)
 
   # H a
-  ## Returns a stream which has an event with `false` every time the input stream has an event with `false`.
+  ## Expects a [`pure`](streamfunctions#pure) input stream. Returns a stream which gets `false` the first time the input stream gets `false`.
   ##
   ## **Usage example:**
   ## 
@@ -294,14 +282,13 @@ module LTL {
   ##
   ## ~~~trace
   ## option timeDomain: [-0.1,6]
-  ## stream a: bubbles
-  ## stream d: bubbles
+  ## stream a: bool
+  ## stream d: bool
   ## ---
   ## 1: a = true
   ## 2: a = false
   ## 2: d = false
   ## 3: a = true
-  ## 5: a = true
   ## ~~~
   ##
   ##
