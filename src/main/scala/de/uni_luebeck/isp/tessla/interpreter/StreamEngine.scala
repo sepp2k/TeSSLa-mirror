@@ -7,14 +7,14 @@ import de.uni_luebeck.isp.tessla.Location
 
 import scala.annotation.tailrec
 
-object Specification {
+object StreamEngine {
   type Time = BigInt
 }
 
-import Specification._
+import StreamEngine._
 
 // TODO: Streams or at least InputStreams should have locations for error messages
-class Specification(unitValue: Any) {
+class StreamEngine(unitValue: Any) {
   private var timeVar: Time = 0
   private var trigger: (Map[Any, Time], SortedMap[Time, Set[Any]]) = (Map(), SortedMap())
   private var acceptInput = true

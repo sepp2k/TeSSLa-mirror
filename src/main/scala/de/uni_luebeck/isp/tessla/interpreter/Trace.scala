@@ -24,7 +24,7 @@ object Trace {
     }
   }
 
-  case class TimeStamp(loc: Location, time: Specification.Time) {
+  case class TimeStamp(loc: Location, time: StreamEngine.Time) {
     override def toString: String = time.toString
   }
 
@@ -35,7 +35,7 @@ object Trace {
   def fromLineIterator(
     lineIterator: Iterator[String],
     fileName: String,
-    abortAt: Option[Specification.Time] = None
+    abortAt: Option[StreamEngine.Time] = None
   ): Interpreter.Trace = {
     val rawTrace = TraceParser.parseTrace(lineIterator, fileName)
     new EventIterator(rawTrace, abortAt)
@@ -44,21 +44,21 @@ object Trace {
   def fromSource(
     traceSource: Source,
     fileName: String,
-    abortAt: Option[Specification.Time] = None
+    abortAt: Option[StreamEngine.Time] = None
   ): Interpreter.Trace = {
     fromLineIterator(traceSource.getLines, fileName, abortAt)
   }
 
-  def fromFile(file: File, abortAt: Option[Specification.Time] = None): Interpreter.Trace =
+  def fromFile(file: File, abortAt: Option[StreamEngine.Time] = None): Interpreter.Trace =
     fromSource(Source.fromFile(file), file.getName, abortAt)
 
-  def fromString(string: String, fileName: String, abortAt: Option[Specification.Time] = None): Interpreter.Trace =
+  def fromString(string: String, fileName: String, abortAt: Option[StreamEngine.Time] = None): Interpreter.Trace =
     fromSource(Source.fromString(string), fileName, abortAt)
 
   def fromCsvLineIterator(
     lineIterator: Iterator[String],
     fileName: String,
-    abortAt: Option[Specification.Time] = None
+    abortAt: Option[StreamEngine.Time] = None
   ): Interpreter.Trace = {
     val rawTrace = TraceParser.parseCsvTrace(lineIterator, fileName)
     new EventIterator(rawTrace, abortAt)
@@ -67,14 +67,14 @@ object Trace {
   def fromCsvSource(
     traceSource: Source,
     fileName: String,
-    abortAt: Option[Specification.Time] = None
+    abortAt: Option[StreamEngine.Time] = None
   ): Interpreter.Trace = {
     fromCsvLineIterator(traceSource.getLines, fileName, abortAt)
   }
 
-  def fromCsvFile(file: File, abortAt: Option[Specification.Time] = None): Interpreter.Trace =
+  def fromCsvFile(file: File, abortAt: Option[StreamEngine.Time] = None): Interpreter.Trace =
     fromCsvSource(Source.fromFile(file), file.getName, abortAt)
 
-  def fromCsvString(string: String, fileName: String, abortAt: Option[Specification.Time] = None): Interpreter.Trace =
+  def fromCsvString(string: String, fileName: String, abortAt: Option[StreamEngine.Time] = None): Interpreter.Trace =
     fromCsvSource(Source.fromString(string), fileName, abortAt)
 }

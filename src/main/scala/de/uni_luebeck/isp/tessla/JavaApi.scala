@@ -28,9 +28,9 @@ object JavaApi {
   case class Result(warnings: java.util.List[Diagnostic], errors: java.util.List[Diagnostic])
 
   abstract class EngineListener {
-    def event(stream: String, time: Specification.Time, value: Any): Unit
+    def event(stream: String, time: StreamEngine.Time, value: Any): Unit
 
-    def printEvent(time: Specification.Time, value: Any): Unit
+    def printEvent(time: StreamEngine.Time, value: Any): Unit
   }
 
   case class CompilationResult(result: Result, engine: Engine)
@@ -100,7 +100,7 @@ object JavaApi {
     /**
      * Propagates all inputs and progresses time to the given timestamp.
      */
-    def setTime(time: Specification.Time): Unit = {
+    def setTime(time: StreamEngine.Time): Unit = {
       if (time > spec.getTime) {
         try {
           spec.step(time - spec.getTime)

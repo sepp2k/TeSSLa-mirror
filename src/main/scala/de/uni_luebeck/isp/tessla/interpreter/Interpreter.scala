@@ -10,7 +10,7 @@ import TesslaAST.Core
 import scala.collection.immutable.ArraySeq
 import scala.util.Try
 
-class Interpreter(val spec: Core.Specification) extends Specification(RuntimeEvaluator.Record(Map())) {
+class Interpreter(val spec: Core.Specification) extends StreamEngine(RuntimeEvaluator.Record(Map())) {
   val inStreams: Map[String, (Input, Core.Type)] = spec.in.map { inStream =>
     inStream._1.idOrName.left.get -> (new Input, inStream._2._1)
   }
