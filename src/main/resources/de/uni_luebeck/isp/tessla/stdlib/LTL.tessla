@@ -92,7 +92,7 @@ module MITL {
     else {
       def firstA: Events[Bool] = merge(boolFilter(a), last(firstA, b) && b)
       def start = unitIf(on(b, firstA))
-      merge(
+      merge3(
         on(delay(on(start, x), merge(start, unitIf(!a))), true),
         constIf(false, !a),
 		false
