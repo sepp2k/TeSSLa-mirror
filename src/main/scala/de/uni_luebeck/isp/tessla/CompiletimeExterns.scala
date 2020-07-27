@@ -6,6 +6,7 @@ import Core.Identifier
 import scala.collection.immutable.ArraySeq
 import cats._
 import cats.implicits._
+import de.uni_luebeck.isp.tessla.ConstantEvaluator.errorExtern
 import de.uni_luebeck.isp.tessla.Errors.InternalError
 import de.uni_luebeck.isp.tessla.util.ArraySeqMonad.instance
 
@@ -21,30 +22,43 @@ object CompiletimeExterns {
 
   import ConstantEvaluator.lazyWithStack._
 
-  def reify(value: Any, tpe: Core.Type): StackLazy[WithError[Core.Expression]] = tpe match {
-    case Core.InstantiatedType(name, typeArgs, _) =>
-      (for {
-        reifier <-
-          reifiers
-            .get(name)
-            .map(Right(_))
-            .getOrElse(Left(InternalError(s"No reifier for extern type $name.")))
-        (subValues, reification) = reifier(value, typeArgs)
-      } yield for {
-        reified <- subValues.traverse(x => reify(x._1, x._2))
-      } yield for {
-        r <- reified.sequence
-      } yield reification(r)).sequence.map(_.flatten)
-    case Core.RecordType(entries, _) =>
-      val entries = value.asInstanceOf[RuntimeEvaluator.Record].entries.map { v =>
-        //reify(v._2, entries(Identifier(v._1))).map(y => (Identifier(v._1), y))
-        v._1 -> ConstantEvaluator
-          .getExpressionArgStrict(v._2.asInstanceOf[ConstantEvaluator.TranslationResult[Any, Some]])
-          .map(x => (x, Location.unknown))
-      }
-      entries.unorderedSequence.map(v => Right(Core.RecordConstructorExpression(v)))
-    case _ => Lazy(Left(InternalError(s"Could not reify value for type $tpe.")))
-  }
+  def reify(value: Any, tpe: Core.Type): StackLazy[WithError[Core.Expression]] =
+    value match {
+      case error: RuntimeEvaluator.RuntimeError =>
+        Lazy(
+          Right(
+            Core.ApplicationExpression(
+              Core.TypeApplicationExpression(errorExtern, List(tpe)),
+              ArraySeq(Core.StringLiteralExpression(error.msg))
+            )
+          )
+        )
+      case _ =>
+        tpe match {
+          case Core.InstantiatedType(name, typeArgs, _) =>
+            (for {
+              reifier <-
+                reifiers
+                  .get(name)
+                  .map(Right(_))
+                  .getOrElse(Left(InternalError(s"No reifier for extern type $name.")))
+              (subValues, reification) = reifier(value, typeArgs)
+            } yield for {
+              reified <- subValues.traverse(x => reify(x._1, x._2))
+            } yield for {
+              r <- reified.sequence
+            } yield reification(r)).sequence.map(_.flatten)
+          case Core.RecordType(entries, _) =>
+            val entries = value.asInstanceOf[RuntimeEvaluator.Record].entries.map { v =>
+              //reify(v._2, entries(Identifier(v._1))).map(y => (Identifier(v._1), y))
+              v._1 -> ConstantEvaluator
+                .getExpressionArgStrict(v._2.asInstanceOf[ConstantEvaluator.TranslationResult[Any, Some]])
+                .map(x => (x, Location.unknown))
+            }
+            entries.unorderedSequence.map(v => Right(Core.RecordConstructorExpression(v)))
+          case _ => Lazy(Left(InternalError(s"Could not reify value for type $tpe.")))
+        }
+    }
 
   val true_extern = Core.ExternExpression("true", Core.BoolType)
 
