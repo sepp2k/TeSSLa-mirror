@@ -1,8 +1,8 @@
 ## Optional values
 module OptionUtils {
 
-  ## Returns the function `f` applied to the value of `opt` wrapped in @[#Some] if `opt` is @[#Some],
-  ## or @[#None] otherwise
+  ## Returns the function `f` applied to the value of `opt` wrapped in @[Option#Some] if `opt` is @[Option#Some],
+  ## or @[Option#None] otherwise
   ##
   ## **Usage example:**
   ##
@@ -30,14 +30,14 @@ module OptionUtils {
   ## 8: mapped = 8
   ## ~~~
   ##
-  ## Note that in this example, @[#Some] are represented as their value, and @[#None] as —
+  ## Note that in this example, @[Option#Some] are represented as their value, and @[Option#None] as —
   def map[T, U](opt: Option[T], f: (T) => U): Option[U] =
     if isNone(opt)
     then None[U]
     else Some(f(getSome(opt)))
 
-  ## Returns the result of the function `f` applied to the value of `opt` if `opt` is @[#Some],
-  ## or @[#None] otherwise.
+  ## Returns the result of the function `f` applied to the value of `opt` if `opt` is @[Option#Some],
+  ## or @[Option#None] otherwise.
   ##
   ## **Usage example:**
   ##
@@ -65,15 +65,15 @@ module OptionUtils {
   ## 8: mapped = 8
   ## ~~~
   ##
-  ## Note that in this example, @[#Some] are represented as their value, and @[#None] as —
+  ## Note that in this example, @[Option#Some] are represented as their value, and @[Option#None] as —
   def flatMap[T, U](opt: Option[T], f: (T) => Option[U]): Option[U] =
     if isNone(opt)
     then None[U]
     else f(getSome(opt))
 
-  ## Applies the function `f` to the value of `opt1` and `opt2` and wraps it in @[#Some]
-  ## if `opt1` and `opt2` are both @[#Some]
-  ## or @[#None] otherwise.
+  ## Applies the function `f` to the value of `opt1` and `opt2` and wraps it in @[Option#Some]
+  ## if `opt1` and `opt2` are both @[Option#Some]
+  ## or @[Option#None] otherwise.
   ##
   ## **Usage example:**
   ##

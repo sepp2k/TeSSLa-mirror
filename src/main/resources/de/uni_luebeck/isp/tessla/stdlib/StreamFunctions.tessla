@@ -46,7 +46,7 @@ module StreamFunctions {
   ##
   def default[T](stream: strict Events[T], value: strict T): Events[T] = extern("default")
 
-  ## Similar to [`default`](streamfunctions#default), this operation returns a stream which contains
+  ## Similar to @[#default], this operation returns a stream which contains
   ## all the events of the given `valueStream`. If the first event on `defaultStream` happens
   ## strictly before the first event on `valueStream` then this event is added. No events other
   ## than the first event on `defaultStream` are considered.
@@ -328,7 +328,7 @@ module StreamFunctions {
   def last[T, U](stream: lazy Events[T], trigger: strict Events[U]): Events[T] = extern("last")
 
   ## Return the previous event of `a`, when the current event occurs. Does not work in recursive equations.
-  ## Use [`last`](streamfunctions#last) with an explicit external trigger in recursive equations
+  ## Use @[#last] with an explicit external trigger in recursive equations
   ## instead.
   ##
   ## **Usage example:**
@@ -523,7 +523,7 @@ module StreamFunctions {
   ## called with the last known value of that stream. `f` is not called
   ## before every stream had at least one event.
   ##
-  ## Note, that in comparison to [`lift`](streamfunctions#lift) `f` takes no [`Option`](streamfunctions#option)
+  ## Note, that in comparison to @[#lift] `f` takes no @[Types#option]
   ## type. `slift` cannot filter events. The generated event pattern is independent
   ## of the lifted function `f`.
   ##
@@ -557,7 +557,7 @@ module StreamFunctions {
   ## ~~~
   def slift2[T,U,V](a: strict Events[T], b: strict Events[U], f: strict (strict T, strict U) => V): Events[V] = extern("slift")
 
-  ## `slift` is an alias for [`slift2`](streamfunctions#slift2)
+  ## `slift` is an alias for @[#slift2]
   def slift = slift2
 
   ## Takes a function `f` on values and lifts it to a function on streams
@@ -567,7 +567,7 @@ module StreamFunctions {
   ## called with the last known value of that stream. `f` is not called
   ## before every stream had at least one event.
   ##
-  ## Note, that in comparison to [`lift3`](streamfunctions#lift3) `f` takes no [`Option`](streamfunctions#option)
+  ## Note, that in comparison to @[#lift3] `f` takes no @[Types#option]
   ## type. `slift3` cannot filter events. The generated event pattern is independent
   ## of the lifted function `f`.
   ##
@@ -613,7 +613,7 @@ module StreamFunctions {
   ## called with the last known value of that stream. `f` is not called
   ## before every stream had at least one event.
   ##
-  ## Note, that in comparison to [`lift4`](streamfunctions#lift4) `f` takes no [`Option`](streamfunctions#option)
+  ## Note, that in comparison to @[#lift4] `f` takes no @[Types#option]
   ## type. `slift4` cannot filter events. The generated event pattern is independent
   ## of the lifted function `f`.
   ##
@@ -668,11 +668,11 @@ module StreamFunctions {
   ## called with the last known value of that stream. `f` is not called
   ## before every stream had at least one event.
   ##
-  ## Note, that in comparison to [`lift5`](streamfunctions#lift5) `f` takes no [`Option`](#option)
+  ## Note, that in comparison to @[#lift5] `f` takes no @[Types#option]
   ## type. `slift5` cannot filter events. The generated event pattern is independent
   ## of the lifted function `f`.
   ##
-  ## See [`slift4`](#slift4) for a usage example.
+  ## See @[#slift4] for a usage example.
   def slift5[T1, T2, T3, T4, T5, U](s1: strict Events[T1],
                                     s2: strict Events[T2],
                                     s3: strict Events[T3],
@@ -733,7 +733,7 @@ module StreamFunctions {
   ## ~~~
   def merge2[T](stream1: strict Events[T], stream2: strict Events[T]): Events[T] = extern("merge")
 
-  ## `merge` is an alias for [`merge2`](streamfunctions#merge2)
+  ## `merge` is an alias for @[#merge2]
   def merge = merge2
 
   ## Merges the given event streams. Prioritizing the event streams
@@ -780,35 +780,35 @@ module StreamFunctions {
   ## Merges the given event streams. Prioritizing the event streams
   ## from the left to the right in case of simultaneous events.
   ##
-  ## See [`merge`](streamfunctions#merge) for a usage example.
+  ## See @[#merge] for a usage example.
   def merge4[T](a: strict Events[T], b: strict Events[T], c: strict Events[T], d: strict Events[T]): Events[T] =
     extern("merge")
 
   ## Merges the given event streams. Prioritizing the event streams
   ## from the left to the right in case of simultaneous events.
   ##
-  ## See [`merge`](streamfunctions#merge) for a usage example.
+  ## See @[#merge] for a usage example.
   def merge5[T](a: strict Events[T], b: strict Events[T], c: strict Events[T], d: strict Events[T], e: strict Events[T]): Events[T] =
     extern("merge")
 
   ## Merges the given event streams. Prioritizing the event streams
   ## from the left to the right in case of simultaneous events.
   ##
-  ## See [`merge`](streamfunctions#merge) for a usage example.
+  ## See @[#merge] for a usage example.
   def merge6[T](a: strict Events[T], b: strict Events[T], c: strict Events[T], d: strict Events[T], e: strict Events[T],
                 f: strict Events[T]): Events[T] = extern("merge")
 
   ## Merges the given event streams. Prioritizing the event streams
   ## from the left to the right in case of simultaneous events.
   ##
-  ## See [`merge`](streamfunctions#merge) for a usage example.
+  ## See @[#merge] for a usage example.
   def merge7[T](a: strict Events[T], b: strict Events[T], c: strict Events[T], d: strict Events[T], e: strict Events[T],
                 f: strict Events[T], g: strict Events[T]): Events[T] = extern("merge")
 
   ## Merges the given event streams. Prioritizing the event streams
   ## from the left to the right in case of simultaneous events.
   ##
-  ## See [`merge`](streamfunctions#merge) for a usage example.
+  ## See @[#merge] for a usage example.
   def merge8[T](a: strict Events[T], b: strict Events[T], c: strict Events[T], d: strict Events[T], e: strict Events[T],
                 f: strict Events[T], g: strict Events[T], h: strict Events[T]): Events[T] = extern("merge")
 
@@ -845,19 +845,19 @@ module StreamFunctions {
   ## ~~~
   def mergeUnit2[T, U](a: Events[T], b: Events[U]): Events[Unit] = merge(const((), a), const((), b))
 
-  ## `mergeUnit` is an alias for [`mergeUnit2`](streamfunctions#mergeUnit2)
+  ## `mergeUnit` is an alias for @[#mergeUnit2]
   def mergeUnit = mergeUnit2
 
   ## Merges streams of different types, resulting in a stream that contains a unit
   ## event whenever any of the input streams produces an event.
   ##
-  ## See [`mergeUnit`](streamfunctions#mergeunit) for a usage example.
+  ## See @[#mergeunit] for a usage example.
   def mergeUnit3[T, U, V](a: Events[T], b: Events[U], c: Events[V]): Events[Unit] = merge3(const((), a), const((), b), const((), c))
 
   ## Merges streams of different types, resulting in a stream that contains a unit
   ## event whenever any of the input streams produces an event.
   ##
-  ## See [`mergeUnit`](streamfunctions#mergeunit) for a usage example.
+  ## See @[#mergeunit] for a usage example.
   def mergeUnit4[T, U, V, W](a: Events[T], b: Events[U], c: Events[V], d: Events[W]): Events[Unit] = merge4(const((), a), const((), b), const((), c), const((), d))
 
   ## Filter the event stream `events` based on the last known value
@@ -1129,7 +1129,7 @@ module StreamFunctions {
   ## Count the number of events on `x`. Provides for
   ## every input event an output event whose value is
   ## the number of events seen so far.
-  ## See [`resetCount`](streamfunctions#resetcount) for a counting macro with an
+  ## See @[#resetcount] for a counting macro with an
   ## external reset.
   ##
   ## **Usage example:**
@@ -1208,7 +1208,7 @@ module StreamFunctions {
   ## 5: y = f(f(f(0,2),6),1)
   ## ~~~
   ##
-  ## See [`count`](streamfunctions#count) for an example of `fold` in action.
+  ## See @[#count] for an example of `fold` in action.
   ## `count` is defined as `fold(x, 0, inc)`.
   def fold[T,R](stream: Events[T], init: R, f: (R, T) => R): Events[R] = result where {
     def result: Events[R] =
@@ -1241,7 +1241,7 @@ module StreamFunctions {
   ## 5: y = f(f(2,6),1)
   ## ~~~
   ##
-  ## See [`minimum`](streamfunctions#minimum) for an example of reduce in action.
+  ## See @[#minimum] for an example of reduce in action.
   ## `minimum` is defined as `reduce(x, min)`.
   def reduce[T](stream: Events[T], f: (Events[T], Events[T]) => Events[T]): Events[T] = result where {
     def result: Events[T] = defaultFrom(f(last(result, stream), stream), stream)
