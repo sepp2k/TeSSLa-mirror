@@ -39,7 +39,7 @@ object Main {
       val includeResolver = optionIf(docCfg.includes)(IncludeResolvers.fromFile _)
       val output = unwrapResult(
         TesslaDoc.extract(docCfg.sources, includeResolver, includeStdlib = docCfg.stdLib)
-      ).globalsOnly.toString
+      ).toString
 
       docCfg.outfile match {
         case Some(file) =>

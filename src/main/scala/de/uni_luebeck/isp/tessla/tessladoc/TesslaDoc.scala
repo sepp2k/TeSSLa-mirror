@@ -14,24 +14,12 @@ import spray.json._
 sealed trait Statement
 
 sealed trait TesslaDoc extends Statement {
-  def scope: TesslaDoc.Scope
-
   def doc: String
-
-  final def isGlobal: Boolean = scope == TesslaDoc.Global
-
-  def globalsOnly: Option[TesslaDoc] = if (isGlobal) Some(this) else None
-}
-
-sealed trait GlobalDoc extends TesslaDoc {
-  final override def scope: TesslaDoc.Scope = TesslaDoc.Global
 }
 
 object TesslaDoc {
 
   case class Docs(items: Seq[TesslaDoc], imports: Seq[Import]) {
-    def globalsOnly: Docs = Docs(items.flatMap(_.globalsOnly), imports)
-
     override def toString: String = this.toJson.prettyPrint
   }
 
@@ -41,23 +29,19 @@ object TesslaDoc {
     typeParameters: Seq[String],
     parameters: Seq[Param],
     returnType: Option[Type],
-    scope: Scope,
     doc: String,
     loc: Location,
     isLiftable: Boolean
   ) extends TesslaDoc
 
   case class AnnotationDoc(name: String, parameters: Seq[Param], doc: String, inModule: Option[String], loc: Location)
-      extends GlobalDoc
+      extends TesslaDoc
 
   case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, inModule: Option[String], loc: Location)
-      extends GlobalDoc
+      extends TesslaDoc
 
   case class ModuleDoc(name: String, doc: String, members: Seq[TesslaDoc], imports: Seq[Import], loc: Location)
-      extends GlobalDoc {
-    override def globalsOnly: Option[TesslaDoc] =
-      if (isGlobal) Some(copy(members = members.flatMap(_.globalsOnly))) else None
-  }
+      extends TesslaDoc {}
 
   case class Import(path: Seq[String]) extends Statement
 
@@ -77,20 +61,24 @@ object TesslaDoc {
 
   case class TupleType(members: Seq[Type]) extends Type
 
-  sealed abstract class Scope
-
-  case object Global extends Scope
-
-  case class Local(scopeLocation: Location) extends Scope
-
   class Extractor(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[Docs] {
     override protected def translateSpec(): Docs = {
-      val (docs, imports) = split(spec.flatMap(_.tree.entries.asScala.map(_.statement).flatMap(translateStatement)))
-      Docs(docs.filter(_.doc != "nodoc"), imports)
+      val (docs, imports) = translate(spec.flatMap(_.tree.entries.asScala.map(_.statement)))
+      Docs(docs, imports)
     }
 
-    def translateStatement(definition: TesslaSyntax.StatementContext): Seq[Statement] = {
-      new StatementVisitor(Global).visit(definition)
+    def translate(statements: Seq[TesslaSyntax.StatementContext]): (Seq[TesslaDoc], Seq[Import]) = {
+      val (docs, imports) = statements.flatMap(StatementVisitor.visit).partitionMap {
+        case doc: TesslaDoc => Left(doc)
+        case imprt: Import  => Right(imprt)
+      }
+      (docs.filter(_.doc != "nodoc"), imports)
+    }
+
+    def translateEvalType(evTyp: TesslaSyntax.EvalTypeContext): EvalType = {
+      val typ = TypeVisitor.visit(evTyp.typ)
+      val evaluation = Option(evTyp.evaluation).map(_.getText).getOrElse("")
+      EvalType(evaluation, typ)
     }
 
     object TypeVisitor extends TesslaSyntaxBaseVisitor[Type] {
@@ -125,13 +113,7 @@ object TesslaDoc {
       }
     }
 
-    def translateEvalType(evTyp: TesslaSyntax.EvalTypeContext): EvalType = {
-      val typ = TypeVisitor.visit(evTyp.typ)
-      val evaluation = Option(evTyp.evaluation).map(_.getText).getOrElse("")
-      EvalType(evaluation, typ)
-    }
-
-    class StatementVisitor(scope: Scope) extends TesslaSyntaxBaseVisitor[Seq[Statement]] {
+    object StatementVisitor extends TesslaSyntaxBaseVisitor[Seq[Statement]] {
 
       override def visitDef(definition: TesslaSyntax.DefContext): Seq[Statement] = {
         val header = definition.header
@@ -160,7 +142,6 @@ object TesslaDoc {
             .map(p => Param(p.ID.getText, translateEvalType(p.parameterType)))
             .toSeq,
           returnType = Option(header.resultType).map(TypeVisitor.visit),
-          scope = scope,
           doc = getDoc(header.tessladoc.asScala.toSeq),
           loc = Location.fromNode(definition),
           isLiftable = definition.header.liftable != null
@@ -168,10 +149,7 @@ object TesslaDoc {
         val body = definition.body
         body match {
           case body: TesslaSyntax.ExpressionBodyContext =>
-            val whereLoc = Option(body.LBRACE).map(lb => Location.fromToken(lb).merge(Location.fromToken(body.RBRACE)))
-            val whereDefs =
-              whereLoc.map(loc => body.defs.asScala.flatMap(new StatementVisitor(Local(loc)).visit))
-            doc +: (visit(body.expression) ++ whereDefs.getOrElse(Seq()))
+            doc +: visit(body.expression)
           case _ =>
             Seq(doc)
         }
@@ -207,13 +185,10 @@ object TesslaDoc {
         )
       }
 
-      override def visitBlock(block: TesslaSyntax.BlockContext): Seq[Statement] = {
-        val visitor = new StatementVisitor(Local(Location.fromNode(block))).visit _
-        visitor(block.expression) ++ block.definitions.asScala.flatMap(visitor)
-      }
+      override def visitBlock(block: TesslaSyntax.BlockContext): Seq[Statement] = Seq()
 
       override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext): Seq[ModuleDoc] = {
-        val (members, imports) = split(module.contents.asScala.map(_.statement).flatMap(visit).toSeq)
+        val (members, imports) = translate(module.contents.asScala.map(_.statement).toSeq)
         Seq(
           ModuleDoc(
             module.name.getText,
@@ -229,11 +204,6 @@ object TesslaDoc {
         Seq(Import(ctx.path.asScala.map(_.getText).toList))
 
       override def defaultResult(): Seq[TesslaDoc] = Seq()
-    }
-
-    private def split(s: Seq[Statement]): (Seq[TesslaDoc], Seq[Import]) = s.partitionMap {
-      case doc: TesslaDoc => Left(doc)
-      case imprt: Import  => Right(imprt)
     }
 
     private def getDoc(lines: Seq[Token]): String = {

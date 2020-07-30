@@ -11,7 +11,7 @@ object DocJsonProtocol extends DefaultJsonProtocol {
   implicit val typeDocFormat: JsonFormat[TypeDoc] = lazyFormat(jsonFormat5(TypeDoc))
   implicit val annotationDocFormat: JsonFormat[AnnotationDoc] = lazyFormat(jsonFormat5(AnnotationDoc))
   implicit val moduleDocFormat: JsonFormat[ModuleDoc] = lazyFormat(jsonFormat5(ModuleDoc))
-  implicit val defDocFormat: JsonFormat[DefDoc] = lazyFormat(jsonFormat9(DefDoc))
+  implicit val defDocFormat: JsonFormat[DefDoc] = lazyFormat(jsonFormat8(DefDoc))
 
   implicit val paramFormat: JsonFormat[Param] = lazyFormat(jsonFormat2(Param))
 
@@ -67,23 +67,11 @@ object DocJsonProtocol extends DefaultJsonProtocol {
     }
   }
 
-  implicit val scopeFormat: JsonFormat[Scope] = new JsonFormat[Scope] {
-    override def write(scope: Scope): JsValue = scope match {
-      case Global               => JsString("global")
-      case Local(scopeLocation) => scopeLocation.toJson
-    }
-
-    override def read(json: JsValue): Scope = json match {
-      case JsString("global") => Global
-      case _                  => Local(json.convertTo[Location])
-    }
-  }
-
   implicit val locationFormat: JsonFormat[Location] = new JsonFormat[Location] {
     private case class Loc(path: String, range: Option[Location.SourceRange])
     implicit val sourceRangeFormat: JsonFormat[SourceRange] = jsonFormat4(Location.SourceRange)
     implicit val locFormat: JsonFormat[Loc] = jsonFormat2(Loc)
-    val Opt = """option '(.*)'""".r
+    private val Opt = """option '(.*)'""".r
 
     override def write(loc: Location): JsValue = Loc(loc.path, loc.range).toJson
 
