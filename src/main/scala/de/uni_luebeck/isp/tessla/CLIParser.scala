@@ -42,7 +42,6 @@ object CLIParser {
     listInStreams: Boolean = false,
     observations: Boolean = false,
     abortAt: Option[BigInt] = None,
-    flattenInput: Boolean = false,
     ctfTrace: Boolean = false,
     csvTrace: Boolean = false,
     doc: DocConfig = DocConfig(),
@@ -133,9 +132,6 @@ object CLIParser {
     opt[Unit]("observations")
       .action((_, c) => c.copy(observations = true))
       .text("Generate observation specification file from the corresponding annotations")
-    opt[Unit]("flatten-input")
-      .action((_, c) => c.copy(flattenInput = true))
-      .text("Print the input trace in a flattened form.")
     opt[Unit]("ctf")
       .action((_, c) => c.copy(ctfTrace = true))
       .text(
