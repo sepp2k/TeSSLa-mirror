@@ -14,10 +14,10 @@ import de.uni_luebeck.isp.tessla.util._
 import scala.io.Source
 
 /**
-  * Entry point of the application.
-  * Depending on the provided arguments, it either launches the compiler or the
-  * documentation generation.
-  */
+ * Entry point of the application.
+ * Depending on the provided arguments, it either launches the compiler or the
+ * documentation generation.
+ */
 object Main {
   val programName: String = BuildInfo.name
   val programVersion: String = BuildInfo.version
@@ -31,15 +31,15 @@ object Main {
   }
 
   /**
-    * Contains the different running modes.
-    *
+   * Contains the different running modes.
+   *
     * @param config The configuration defining the behaviour
-    */
+   */
   class Application(config: CLIParser.Config) {
 
     /**
-      * Decides which mode to run in depending on the [[config]].
-      */
+     * Decides which mode to run in depending on the configuration.
+     */
     def run(): Unit = {
       config.mode match {
         case Mode.Doc     => runDoc()
@@ -48,13 +48,13 @@ object Main {
     }
 
     /**
-      * Generate documentation.
-      *
+     * Generate documentation.
+     *
       * This mode parses the input, then extracts and processes the documentation strings
-      * from each definition. The result is either printed to stdout or to a file, depending on the [[config]].
-      *
-      * @see See [[TesslaDoc.extract]] for more
-      */
+     * from each definition. The result is either printed to stdout or to a file, depending on the configuration.
+     *
+      * @see See [[tessladoc.TesslaDoc.extract]] for more
+     */
     def runDoc(): Unit = {
       val docCfg = config.doc
       val includeResolver = optionIf(docCfg.includes)(IncludeResolvers.fromFile _)
@@ -77,19 +77,20 @@ object Main {
     }
 
     /**
-      * Runs the [[Compiler]] and, if wanted, the [[Interpreter]] afterwards.
-      *
-      * Translates the in [[config]] provided specification to [[TesslaAST.Core]].
-      *
-      * If either of [[config.printTyped]], [[config.printCoreLanSpec]], [[config.printCore]],
-      * [[config.verifyOnly]], [[config.listInStreams]], [[config.listOutStreams]], [[config.observations]] is set,
-      * the requested output will be printed and the run terminates.
-      *
+     * Runs the [[Compiler]] and, if wanted, the [[interpreter.Interpreter]] afterwards.
+     *
+      * Translates the in specification provided by [[CLIParser.Config.specSource]] to [[TesslaAST.Core]].
+     *
+      * If either of [[CLIParser.Config.printTyped]], [[CLIParser.Config.printCoreLanSpec]],
+     * [[CLIParser.Config.printCore]], [[CLIParser.Config.verifyOnly]], [[CLIParser.Config.listInStreams]],
+     * [[CLIParser.Config.listOutStreams]], [[CLIParser.Config.observations]] is set,
+     * the requested output will be printed and the run terminates.
+     *
       * If none of the aforementioned flags are set, the interpreter is executed with the translated [[TesslaAST.Core]]
-      * code. The input trace for the interpreter is either provided through a file or stdin.
-      *
-      * @see [[Observations]] for more information on [[config.observations]]
-      */
+     * code. The input trace for the interpreter is either provided through a file or stdin.
+     *
+      * @see [[analyses.Observations]] for more information on [[CLIParser.Config.observations]]
+     */
     def runCompiler(): Unit = {
       val compiler = new Compiler(config.compilerOptions)
       try {

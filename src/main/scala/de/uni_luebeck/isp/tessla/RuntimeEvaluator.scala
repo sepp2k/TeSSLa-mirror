@@ -20,10 +20,26 @@ object RuntimeEvaluator {
 
 }
 
+/**
+ * An evaluator for [[TesslaAST.Core.Expression]]s, given implementations for externs.
+ *
+  * @param externs definitions of externs, as mapping from their name to their definition
+ */
+
 // TODO: All arguments are currently wrapped in Lazy, even if they are strictly evaluated
 // TODO: Replace argument lists by tuples?
 class RuntimeEvaluator(externs: Map[String, Any]) {
 
+  /**
+   * Evaluate an expression argument.
+   *
+    * In case of a reference, the identifier is resolved using the provided environment,
+   * otherwise the expression is evaluated in [[evalExpression]].
+   *
+    * @param arg the argument to evaluate
+   * @param env the environment
+   * @return
+   */
   def evalExpressionArg(arg: Core.ExpressionArg, env: => Env): Lazy[Any] = arg match {
     case Core.ExpressionRef(id, _, _) =>
       Lazy {
@@ -32,9 +48,13 @@ class RuntimeEvaluator(externs: Map[String, Any]) {
     case e: Core.Expression => Lazy(evalExpression(e, env))
   }
 
-  def propagateInternal(arg: Any)(f: Any => Any) =
-    if (arg.isInstanceOf[RuntimeError]) arg else f(arg)
-
+  /**
+   * Evaluate the expression with the provided environment and externs.
+   *
+    * @param exp the expression to evaluate
+   * @param env the environment
+   * @return the resulting value
+   */
   def evalExpression(exp: Core.Expression, env: Env): Any = exp match {
     case Core.FunctionExpression(_, params, body, result, location) =>
       (args: ArraySeq[Lazy[Any]]) => {
@@ -76,5 +96,8 @@ class RuntimeEvaluator(externs: Map[String, Any]) {
     case Core.IntLiteralExpression(value, _)    => value
     case Core.FloatLiteralExpression(value, _)  => value
   }
+
+  private def propagateInternal(arg: Any)(f: Any => Any) =
+    if (arg.isInstanceOf[RuntimeError]) arg else f(arg)
 
 }

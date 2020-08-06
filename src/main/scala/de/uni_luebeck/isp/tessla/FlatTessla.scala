@@ -1,8 +1,18 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.Errors.InternalError
-import de.uni_luebeck.isp.tessla.util.mapValues
 import scala.collection.mutable
+
+/**
+ * A flat representation of TeSSLa code.
+ *
+  * All the definitions are grouped in an instance of [[Definitions]], which is potentially composed of more instances,
+ * modelling the scopes of definitions.
+ *
+  * Entries to definitions are either [[TypeEntry]] for type definitions, or [[VariableEntry]] for all other kinds of
+ * definitions.
+ *
+  * @see [[Flattener]]
+ */
 
 abstract class FlatTessla extends HasUniqueIdentifiers {
   case class Specification(

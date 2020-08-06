@@ -10,6 +10,12 @@ import TesslaAST.Core
 import scala.collection.immutable.ArraySeq
 import scala.util.Try
 
+/**
+ * An interpreter instance for a given specification.
+ *
+  * @param spec the specification
+ */
+
 class Interpreter(val spec: Core.Specification) extends StreamEngine(RuntimeEvaluator.Record(Map())) {
   val inStreams: Map[String, (Input, Core.Type)] = spec.in.map { inStream =>
     inStream._1.idOrName.left.get -> (new Input, inStream._2._1)
@@ -63,9 +69,23 @@ class Interpreter(val spec: Core.Specification) extends StreamEngine(RuntimeEval
 
 }
 
+/**
+ * Evaluates a [[TesslaAST.Core.Specification]] with a given input trace, producing a trace of events as result.
+ */
+
 object Interpreter {
   type Trace = Iterator[Trace.Event]
 
+  /**
+   * Executes the interpreter.
+   *
+    * @param spec the specification
+   * @param input the input trace to use
+   * @param stopOn stop when an event on an output stream with this name is produced
+   * @param rejectUndeclaredInputs defines if undeclared events occurring in the input trace should be ignored or
+   *                               result in an error
+   * @return
+   */
   def run(spec: Core.Specification, input: Trace, stopOn: Option[String], rejectUndeclaredInputs: Boolean): Trace = {
     val interpreter = new Interpreter(spec)
     new Iterator[Trace.Event] {

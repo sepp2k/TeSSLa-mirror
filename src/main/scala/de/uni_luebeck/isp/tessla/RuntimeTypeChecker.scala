@@ -6,6 +6,10 @@ import org.eclipse.tracecompass.ctf.core.event.types.ICompositeDefinition
 
 import scala.collection.immutable.SortedSet
 
+/**
+ * Performs type checking on runtime values.
+ */
+
 object RuntimeTypeChecker {
 
   val checker: Map[String, (List[Core.Type], Any) => Option[String]] = Map(
@@ -36,7 +40,7 @@ object RuntimeTypeChecker {
     )
   )
 
-  def checkAtomic(check: Boolean, name: String, value: Any) = if (check) {
+  private def checkAtomic(check: Boolean, name: String, value: Any) = if (check) {
     None
   } else {
     Some(s"${if (value.isInstanceOf[String]) s""""$value"""" else value} is not of type $name.")

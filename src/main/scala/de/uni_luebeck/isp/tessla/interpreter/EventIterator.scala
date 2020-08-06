@@ -4,6 +4,14 @@ import java.util.NoSuchElementException
 
 import de.uni_luebeck.isp.tessla.Location
 
+/** An [[Interpreter.Trace]] generated from [[TraceParser.Event]]s.
+ *
+  * This makes use of the [[TraceExpressionEvaluator]] to evaluate the event data.
+ *
+  * @param events the parsed input events
+ * @param abortAt the amount of events after which the trace should stop
+ */
+
 class EventIterator(events: Iterator[TraceParser.Event], abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
   private var eventCounter = 0
 

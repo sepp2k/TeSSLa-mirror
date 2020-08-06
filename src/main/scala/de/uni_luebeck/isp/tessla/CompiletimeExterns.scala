@@ -10,6 +10,10 @@ import de.uni_luebeck.isp.tessla.ConstantEvaluator.errorExtern
 import de.uni_luebeck.isp.tessla.Errors.InternalError
 import de.uni_luebeck.isp.tessla.util.ArraySeqMonad.instance
 
+/**
+ * Provider for externs which are known at compile time, to use for reification within the [[ConstantEvaluator]].
+ */
+
 // TODO: use extern declarations from the standard library
 object CompiletimeExterns {
 

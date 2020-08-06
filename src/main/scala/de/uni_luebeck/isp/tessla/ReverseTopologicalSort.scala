@@ -2,6 +2,11 @@ package de.uni_luebeck.isp.tessla
 
 import scala.collection.mutable
 
+/**
+ * Applies a reverse topological sort on an arbitrary graph data structure.
+ *
+  * This is used in the [[TypeChecker]] to check for recursive definitions.
+ */
 object ReverseTopologicalSort {
   sealed abstract class Result[Node]
   final case class Sorted[Node](nodes: Seq[Node]) extends Result[Node]

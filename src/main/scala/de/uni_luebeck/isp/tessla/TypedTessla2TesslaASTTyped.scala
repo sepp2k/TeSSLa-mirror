@@ -1,9 +1,8 @@
 package de.uni_luebeck.isp.tessla
 
 import TesslaAST.Typed
-import Typed.Identifier
 import cats.data.Ior
-import de.uni_luebeck.isp.tessla.Errors.{InternalError, UndefinedBaseTime}
+import de.uni_luebeck.isp.tessla.Errors.UndefinedBaseTime
 import de.uni_luebeck.isp.tessla.Tessla.{
   ConstantExpression,
   FloatLiteral,
@@ -29,6 +28,21 @@ import de.uni_luebeck.isp.tessla.TypedTessla.{
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
+
+class TypedTessla2TesslaASTCore(baseTime: Option[TimeLiteral])
+    extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {
+  override def translate(spec: TypedTessla.TypedSpecification): Result[TesslaAST.Typed.Specification] = {
+    new TypedTessla2TesslaASTTypedWorker(spec, baseTime).translate()
+  }
+}
+
+/**
+ * Translates from the old TeSSLa 1.0 AST to the newly introduced AST in version 1.2.
+ *
+  * This phase also adds a \$name annotation to each output stream defining its display name.
+ *
+  * @param baseTime the base time relative to which time literals get evaluated
+ */
 
 class TypedTessla2TesslaASTTypedWorker(
   spec: TypedTessla.TypedSpecification,
@@ -278,11 +292,4 @@ class TypedTessla2TesslaASTTypedWorker(
     case (_, _) => Map()
   }
 
-}
-
-class TypedTessla2TesslaASTCore(baseTime: Option[TimeLiteral])
-    extends TranslationPhase[TypedTessla.TypedSpecification, Typed.Specification] {
-  override def translate(spec: TypedTessla.TypedSpecification): Result[TesslaAST.Typed.Specification] = {
-    new TypedTessla2TesslaASTTypedWorker(spec, baseTime).translate()
-  }
 }

@@ -10,7 +10,17 @@ import org.antlr.v4.runtime._
 import scala.jdk.CollectionConverters._
 import scala.collection.mutable
 
+/**
+ * Parses given TeSSLa code using ANTLR4
+ */
+
 object TesslaParser {
+
+  /** The result of the parser
+   * @param fileName the file name of the source
+   * @param tokens the generated tokens
+   * @param tree the parsed specification
+   */
   case class ParseResult(
     fileName: String,
     tokens: CommonTokenStream,
@@ -51,6 +61,26 @@ object TesslaParser {
     }
   }
 
+  /**
+   * Translation phase which parses a source while resolving its includes with the provided resolver.
+   *
+    * @param resolveInclude the include resolver to use
+   *
+    * @see [[WithIncludesTranslator]]
+   */
+  class WithIncludes(resolveInclude: String => Option[CharStream])
+      extends TranslationPhase[CharStream, IndexedSeq[ParseResult]] {
+    override def translate(src: CharStream) = {
+      new WithIncludesTranslator(src, resolveInclude).translate()
+    }
+  }
+
+  /**
+   * Parse a given source file while resolving its includes with the provided resolver.
+   *
+    * @param src the source
+   * @param resolveInclude the include resolver to use
+   */
   class WithIncludesTranslator(src: CharStream, resolveInclude: String => Option[CharStream])
       extends TranslationPhase.Translator[IndexedSeq[ParseResult]]
       with CanParseConstantString {
@@ -104,13 +134,6 @@ object TesslaParser {
           error(StringInterpolationOrFormatInConstantString(Location.fromNode(part)))
           part.getText
       }.mkString
-    }
-  }
-
-  class WithIncludes(resolveInclude: String => Option[CharStream])
-      extends TranslationPhase[CharStream, IndexedSeq[ParseResult]] {
-    override def translate(src: CharStream) = {
-      new WithIncludesTranslator(src, resolveInclude).translate()
     }
   }
 

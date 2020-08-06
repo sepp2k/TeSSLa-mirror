@@ -17,6 +17,11 @@ sealed trait TesslaDoc extends Statement {
   def doc: String
 }
 
+/**
+ * Contains the data structures for different documentation elements as well as the
+ * [[TesslaDoc.Extractor]] which extracts the documentation from the parsed specification.
+ */
+
 object TesslaDoc {
 
   case class Docs(items: Seq[TesslaDoc], imports: Seq[Import]) {

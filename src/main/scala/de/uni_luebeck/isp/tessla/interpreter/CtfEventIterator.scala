@@ -5,7 +5,13 @@ import de.uni_luebeck.isp.tessla.interpreter.Trace.TimeStamp
 import org.eclipse.tracecompass.ctf.core.CTFException
 import org.eclipse.tracecompass.ctf.core.trace.CTFTraceReader
 
-class CtfEventIterator(reader: CTFTraceReader, abortAt: Option[BigInt]) extends Iterator[Trace.Event] {
+/** An [[Interpreter.Trace]] generated from a CTF trace.
+ *
+  * @param reader the reader providing the trace data
+ * @param abortAt the amount of events after which the trace should stop
+ */
+
+class CtfEventIterator(reader: CTFTraceReader, abortAt: Option[BigInt]) extends Interpreter.Trace {
   private var eventCounter = 0
 
   override def hasNext: Boolean = reader.hasMoreEvents && abortAt.forall(eventCounter < _)

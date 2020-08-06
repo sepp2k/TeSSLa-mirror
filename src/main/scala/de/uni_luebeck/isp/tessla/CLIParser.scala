@@ -45,13 +45,7 @@ object CLIParser {
     ctfTrace: Boolean = false,
     csvTrace: Boolean = false,
     doc: DocConfig = DocConfig(),
-    compilerOptions: Compiler.Options = Compiler.Options(
-      baseTimeString = None,
-      includeResolver = IncludeResolvers.fromFile,
-      stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
-      stdlibPath = "stdlib.tessla",
-      flattenCore = false
-    )
+    compilerOptions: Compiler.Options = Compiler.Options()
   )
 
   private val parser: OptionParser[Config] = new OptionParser[Config](programName) {

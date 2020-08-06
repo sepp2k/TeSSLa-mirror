@@ -4,23 +4,42 @@ import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.Errors._
 import de.uni_luebeck.isp.tessla.Warnings.ConflictingOut
 
+import scala.annotation.unused
+
+object Flattener extends TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
+  override def translate(spec: Tessla.Specification): TranslationPhase.Result[FlatTessla.Specification] = {
+    new Flattener(spec).translate()
+  }
+}
+
+/**
+ * Performs the following tasks:
+ *  - Turns nested expressions into a flat, three-address-code-like structure
+ *  - Append a unique numeric value to each identifier to make them unique across the entire specification
+ *  - Adds scope objects to the global and macro scopes, which map identifiers to their associated expressions,
+ *  and produces errors for conflicting definitions in the same scope
+ *  - Removes block expressions and hoists them into the surrounding macro scope or the global scope)
+ *  - Transforms modules into records
+ *  - Resolves imports of modules by replacing usages of imported identifiers by a member-access on that module.
+ *
+  */
 class Flattener(spec: Tessla.Specification)
     extends FlatTessla.IdentifierFactory
     with TranslationPhase.Translator[FlatTessla.Specification] {
   type IdMap = Map[String, FlatTessla.Identifier]
   type Imports = Map[String, FlatTessla.Identifier]
 
-  case class Env(variables: IdMap, types: IdMap) {
+  private case class Env(variables: IdMap, types: IdMap) {
     def ++(other: Env): Env = Env(variables ++ other.variables, types ++ other.types)
   }
 
-  def createIdMap(names: Iterable[String]): IdMap = {
+  private def createIdMap(names: Iterable[String]): IdMap = {
     names.map(name => name -> makeIdentifier(name)).toMap
   }
 
-  def getName(statement: Tessla.Statement): Option[String] = Tessla.getId(statement).map(_.name)
+  private def getName(statement: Tessla.Statement): Option[String] = Tessla.getId(statement).map(_.name)
 
-  val annotationDefs: Map[String, Tessla.AnnotationDefinition] = spec.statements.collect {
+  private val annotationDefs: Map[String, Tessla.AnnotationDefinition] = spec.statements.collect {
     case annotationDef: Tessla.AnnotationDefinition =>
       annotationDef.parameters.foreach { param =>
         if (param.parameterType.isEmpty) {
@@ -37,6 +56,7 @@ class Flattener(spec: Tessla.Specification)
   })
   private var moduleEnvs = Map[FlatTessla.Identifier, Env]()
   private val globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
+  private val errorExpression: FlatTessla.Variable = FlatTessla.Variable(makeIdentifier("<<error>>"), Location.unknown)
 
   override def translateSpec(): FlatTessla.Specification = {
     val emptySpec = FlatTessla.Specification(globalDefs, Seq(), outAll = None, globalVariableIdMap)
@@ -86,6 +106,13 @@ class Flattener(spec: Tessla.Specification)
     }
   }
 
+  /**
+   * Add an input stream to the definitions.
+   *
+    * @param in the input stream to add
+   * @param defs the definitions to add the stream to
+   * @param env the current environment
+   */
   def addInStream(in: Tessla.In, defs: FlatTessla.Definitions, env: Env): Unit = {
     val streamType = translateType(in.streamType, defs, env)
     val inputStream = FlatTessla.InputStream(in.id.name, streamType, in.streamType.loc, in.loc)
@@ -100,6 +127,11 @@ class Flattener(spec: Tessla.Specification)
     defs.addVariable(entry)
   }
 
+  /**
+   * Create the environment for the given module
+   * @param module the module
+   * @param outerEnv the current environment
+   */
   def addModuleEnv(module: Tessla.Module, outerEnv: Env): Unit = {
     val variableIdMap = createIdMap(module.contents.flatMap(getName))
     val typeIdMap = createIdMap(module.contents.collect {
@@ -113,6 +145,13 @@ class Flattener(spec: Tessla.Specification)
     }
   }
 
+  /**
+   * Add a module to the definitions
+   * @param module the module to add
+   * @param defs the definitions to add the module to
+   * @param outerEnv the current environment
+   * @param outerImports the currently scoped imports
+   */
   def addModule(module: Tessla.Module, defs: FlatTessla.Definitions, outerEnv: Env, outerImports: Imports): Unit = {
     val innerEnv = moduleEnvs(outerEnv.variables(module.name))
     val env = outerEnv ++ innerEnv
@@ -152,6 +191,15 @@ class Flattener(spec: Tessla.Specification)
     )
   }
 
+  /**
+   * Resolve and add an import to the current imports
+   * @param imports the current imports
+   * @param imprt the import to add
+   * @param defs the current definitions
+   * @param envs the mapping of module environments
+   * @param outerEnv the current environment
+   * @return the resolved imports
+   */
   def addImport(
     imports: Imports,
     imprt: Tessla.Import,
@@ -183,59 +231,21 @@ class Flattener(spec: Tessla.Specification)
     imports ++ newImports
   }
 
-  def translateParameter(
-    param: Tessla.Parameter,
-    idMap: IdMap,
-    defs: FlatTessla.Definitions,
-    env: Env
-  ): FlatTessla.Parameter = {
-    val typ = param.parameterType match {
-      case Some(t) =>
-        translateType(t, defs, env)
-      case None =>
-        error(MissingTypeAnnotationParam(param.id.name, param.id.loc))
-        // Since we call error here, the compilation will abort after this phase and the result will never be used.
-        // Therefore it's okay to insert a null here (once we extend the system to keep compiling after errors, the
-        // null should be replaced by a proper error node)
-        null
-    }
-    FlatTessla.Parameter(param, typ, idMap(param.id.name))
-  }
-
-  def translateAnnotation(annotation: Tessla.Annotation): tessla.FlatTessla.Annotation = {
-    annotationDefs.get(annotation.name) match {
-      case Some(annotationDef) =>
-        if (annotationDef.parameters.size != annotation.arguments.size) {
-          error(
-            ArityMismatch(
-              name = annotation.name,
-              expected = annotationDef.parameters.size,
-              actual = annotation.arguments.size,
-              loc = annotation.loc
-            )
-          )
-          FlatTessla.Annotation(annotation.name, Map(), annotation.loc)
-        } else {
-          var posArgIdx = 0
-          val args: Map[String, Tessla.ConstantExpression] = annotation.arguments.map {
-            case arg: Tessla.PositionalArgument[Tessla.ConstantExpression] =>
-              val param = annotationDef.parameters(posArgIdx)
-              posArgIdx += 1
-              param.name -> arg.expr
-            case arg: Tessla.NamedArgument[Tessla.ConstantExpression] =>
-              annotationDef.parameters.find(_.name == arg.name) match {
-                case Some(param) => param.name -> arg.expr
-                case None        => throw UndefinedNamedArg(arg.name, arg.id.loc)
-              }
-          }.toMap
-          FlatTessla.Annotation(annotation.name, args, annotation.loc)
-        }
-      case None =>
-        error(UndefinedAnnotation(annotation.id))
-        FlatTessla.Annotation(annotation.name, Map(), annotation.loc)
-    }
-  }
-
+  /**
+   * Translate and add a definition to the current definitions.
+   *
+    * In general, the inner definitions of the definition get added to a newly created local set of definitions,
+   * and then the return expression gets translated.
+   *
+    * For parameterless macros, their inner definitions get extracted into the global scope.
+   *
+    * The body of the definition is flattened using [[expToId]].
+   *
+    * @param definition the definition to add
+   * @param defs the current definitions
+   * @param env the current environment
+   * @param imports the current imports
+   */
   def addDefinition(definition: Tessla.Definition, defs: FlatTessla.Definitions, env: Env, imports: Imports): Unit = {
     val (blockDefs, defBody) = definition.body match {
       case Tessla.ExpressionBody(block: Tessla.Block) =>
@@ -353,11 +363,18 @@ class Flattener(spec: Tessla.Specification)
     }
   }
 
+  /** Add a type definition to the current definitions
+   * @param definition the type definition to add
+   * @param defs the current definitions
+   * @param env the current environment
+   * @param imports the current imports (unused, as modules do not contain type definitions at this point, which
+   *                entails that cannot contain type definitions either)
+   */
   def addTypeDefinition(
     definition: Tessla.TypeDefinition,
     defs: FlatTessla.Definitions,
     env: Env,
-    imports: Imports // TODO: Currently unused as modules do not contain type definitions.
+    @unused imports: Imports // TODO: Currently unused as modules do not contain type definitions.
   ): Unit = {
     def constructType(typeArgs: Seq[FlatTessla.Type]) = {
       val innerDefs = new FlatTessla.Definitions(Some(defs))
@@ -382,8 +399,6 @@ class Flattener(spec: Tessla.Specification)
       )
     )
   }
-
-  val errorExpression: FlatTessla.Variable = FlatTessla.Variable(makeIdentifier("<<error>>"), Location.unknown)
 
   def getExp(tesslaId: Tessla.Identifier, env: Env, imports: Imports): FlatTessla.Expression = {
     env.variables
@@ -410,6 +425,59 @@ class Flattener(spec: Tessla.Specification)
       val id = makeIdentifier()
       defs.addVariable(FlatTessla.VariableEntry(id, exp, typeAnnotation, Seq(), exp.loc))
       id
+  }
+
+  def translateParameter(
+    param: Tessla.Parameter,
+    idMap: IdMap,
+    defs: FlatTessla.Definitions,
+    env: Env
+  ): FlatTessla.Parameter = {
+    val typ = param.parameterType match {
+      case Some(t) =>
+        translateType(t, defs, env)
+      case None =>
+        error(MissingTypeAnnotationParam(param.id.name, param.id.loc))
+        // Since we call error here, the compilation will abort after this phase and the result will never be used.
+        // Therefore it's okay to insert a null here (once we extend the system to keep compiling after errors, the
+        // null should be replaced by a proper error node)
+        null
+    }
+    FlatTessla.Parameter(param, typ, idMap(param.id.name))
+  }
+
+  def translateAnnotation(annotation: Tessla.Annotation): tessla.FlatTessla.Annotation = {
+    annotationDefs.get(annotation.name) match {
+      case Some(annotationDef) =>
+        if (annotationDef.parameters.size != annotation.arguments.size) {
+          error(
+            ArityMismatch(
+              name = annotation.name,
+              expected = annotationDef.parameters.size,
+              actual = annotation.arguments.size,
+              loc = annotation.loc
+            )
+          )
+          FlatTessla.Annotation(annotation.name, Map(), annotation.loc)
+        } else {
+          var posArgIdx = 0
+          val args: Map[String, Tessla.ConstantExpression] = annotation.arguments.map {
+            case arg: Tessla.PositionalArgument[Tessla.ConstantExpression] =>
+              val param = annotationDef.parameters(posArgIdx)
+              posArgIdx += 1
+              param.name -> arg.expr
+            case arg: Tessla.NamedArgument[Tessla.ConstantExpression] =>
+              annotationDef.parameters.find(_.name == arg.name) match {
+                case Some(param) => param.name -> arg.expr
+                case None        => throw UndefinedNamedArg(arg.name, arg.id.loc)
+              }
+          }.toMap
+          FlatTessla.Annotation(annotation.name, args, annotation.loc)
+        }
+      case None =>
+        error(UndefinedAnnotation(annotation.id))
+        FlatTessla.Annotation(annotation.name, Map(), annotation.loc)
+    }
   }
 
   def translateType(typ: Tessla.Type, defs: FlatTessla.Definitions, env: Env): FlatTessla.Type =
@@ -554,11 +622,5 @@ class Flattener(spec: Tessla.Specification)
     case _: Tessla.TypeDefinition => 1
     case _: Tessla.Module         => 2
     case _                        => 3
-  }
-}
-
-object Flattener extends TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
-  override def translate(spec: Tessla.Specification): TranslationPhase.Result[FlatTessla.Specification] = {
-    new Flattener(spec).translate()
   }
 }

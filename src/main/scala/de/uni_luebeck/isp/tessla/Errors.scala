@@ -4,6 +4,10 @@ import java.util.IllegalFormatException
 
 import de.uni_luebeck.isp.tessla.Tessla.TimeLiteral
 
+/**
+ * Contains all errors used within this application
+ */
+
 object Errors {
 
   trait TesslaError extends Exception with Diagnostic

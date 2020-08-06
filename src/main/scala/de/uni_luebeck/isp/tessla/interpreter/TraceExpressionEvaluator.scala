@@ -34,6 +34,12 @@ import org.antlr.v4.runtime.tree.RuleNode
 import scala.collection.immutable.ArraySeq
 import collection.JavaConverters._
 
+/**
+ * Evaluates expressions used in traces.
+ *
+  * @see [[TraceParser.Event]]
+ */
+
 object TraceExpressionEvaluator {
 
   def eval(exp: ExpressionContext): Any = {

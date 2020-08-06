@@ -6,8 +6,22 @@ import org.antlr.v4.runtime._
 
 import scala.jdk.CollectionConverters._
 
+/**
+ * Provides parsing for traces in csv or standard format.
+ */
+
 object TraceParser {
 
+  /** Representation of a parsed event.
+   *
+    * @param streamName the token representing the stream name
+   * @param expression the parsed expression
+   * @param timestamp the parsed timestamp
+   * @param loc location information for this event
+   *
+    * @see [[EventIterator]]
+   * @see [[TraceExpressionEvaluator]] for evaluation of [[expression]]
+   */
   case class Event(
     streamName: Token,
     expression: InputTraceParser.ExpressionContext,
@@ -15,6 +29,12 @@ object TraceParser {
     loc: Location
   )
 
+  /**
+   * Parse a trace in the standard format
+   * @param input the trace as line iterator
+   * @param fileName the file name, used for location information
+   * @return the resulting trace of parsed events
+   */
   def parseTrace(input: Iterator[String], fileName: String): Iterator[TraceParser.Event] = {
     val parsers = lineParsers(input, fileName)
     parsers.flatMap(parser => Option(parser.line().event())).map { ctx =>
@@ -23,6 +43,12 @@ object TraceParser {
     }
   }
 
+  /**
+   * Parse a trace in csv format
+   * @param input the trace as line iterator
+   * @param fileName the file name, used for location information
+   * @return the resulting trace of parsed events
+   */
   def parseCsvTrace(input: Iterator[String], fileName: String): Iterator[TraceParser.Event] = {
     val parsers = lineParsers(input, fileName)
 

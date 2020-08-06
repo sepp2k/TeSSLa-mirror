@@ -6,6 +6,26 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 
 import scala.collection.mutable
 
+/**
+ * Flattens a [[TesslaAST.Core.Specification]] further, such that its representation is compliant to the definition in the
+ * language specification. Per default, this phase is skipped as it reduces the readability of the resulting core
+ * code.
+ *
+  * Specifically, this phase moves every argument which is not a constant or an identifier to a new definition.
+ *
+  * Example:
+ * The following expression
+ * {{{
+ *   def \$2: Events[Int] = extern("foo")[Int](x)
+ * }}}
+ *
+  * will in this phase be translated to
+ * {{{
+ *   def \$1: (Events[Int]) => Events[Int] = extern("foo")
+ *   def \$2: Events[Int] = \$1(x)
+ * }}}
+ */
+
 object FlattenCore extends TranslationPhase[Core.Specification, Core.Specification] {
 
   type Definitions = mutable.Map[Core.Identifier, Core.Expression]

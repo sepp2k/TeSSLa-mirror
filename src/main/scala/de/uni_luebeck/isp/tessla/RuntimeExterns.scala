@@ -13,6 +13,12 @@ import cats.implicits._
 import de.uni_luebeck.isp.tessla.util.ArraySeqMonad._
 import org.eclipse.tracecompass.ctf.core.event.IEventDefinition
 
+/**
+ * Provides definitions for externs at runtime.
+ *
+  * Used in [[ConstantEvaluator]].
+ */
+
 object RuntimeExterns {
 
   def propagate[A[+_]: Monad](args: ArraySeq[Any])(f: ArraySeq[Any] => A[Any]): A[Any] =

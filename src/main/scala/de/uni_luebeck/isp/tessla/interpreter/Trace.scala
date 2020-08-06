@@ -8,10 +8,22 @@ import org.eclipse.tracecompass.ctf.core.trace.{CTFTrace, CTFTraceReader}
 
 import scala.io.Source
 
+/**
+ * Factory for [[Interpreter.Trace]]s.
+ */
+
 object Trace {
   type Identifier = Tessla.Identifier
   val Identifier = Tessla.Identifier
 
+  /** Representation of a single event in a trace.
+   *
+    * @param loc the location information of this event, used for error messages
+   * @param timeStamp the timestamp of the event
+   * @param streamOpt the identifier of the stream this event is associated to. If not existing, the stream is
+   *                  considered to be a raw stream.
+   * @param value the data value of the event
+   */
   case class Event(loc: Location, timeStamp: TimeStamp, streamOpt: Option[Identifier], value: Any) {
     override def toString: String = streamOpt match {
       case Some(stream) => s"$timeStamp: ${stream.name} = $value"

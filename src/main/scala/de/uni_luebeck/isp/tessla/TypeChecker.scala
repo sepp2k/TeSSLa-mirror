@@ -6,6 +6,20 @@ import util.mapValues
 import scala.annotation.tailrec
 import scala.collection.mutable
 
+object TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla.TypedSpecification] {
+  override def translate(spec: FlatTessla.Specification): TranslationPhase.Result[TypedTessla.TypedSpecification] = {
+    new TypeChecker(spec).translate()
+  }
+}
+
+/**
+ * The type checker:
+ *  - Annotates every expression with its type
+ *  - Checks for type errors
+ *  - Converts constant value expressions to `default(nil, value)`-streams where needed
+ *  - Converts primitive n-ary operator applications on streams `a + b` with an n-ary signal lift `slift(a, b, +)`
+ */
+
 class TypeChecker(spec: FlatTessla.Specification)
     extends TypedTessla.IdentifierFactory
     with TranslationPhase.Translator[TypedTessla.TypedSpecification] {
@@ -51,10 +65,17 @@ class TypeChecker(spec: FlatTessla.Specification)
     }
   }
 
-  def processTypeAnnotation(entry: FlatTessla.VariableEntry, env: Env) = entry.typeInfo.foreach { typ =>
+  def processTypeAnnotation(entry: FlatTessla.VariableEntry, env: Env): Unit = entry.typeInfo.foreach { typ =>
     typeMap(env(entry.id)) = translateType(typ, env)
   }
 
+  /**
+   * Translate the provided type by resolving type parameters using the environment.
+   *
+    * @param typ the type to translate
+   * @param env the environment
+   * @return the resulting type
+   */
   def translateType(typ: FlatTessla.Type, env: Env): TypedTessla.Type = typ match {
     case b: FlatTessla.BuiltInType =>
       TypedTessla.BuiltInType(b.name, b.typeArgs.map(translateType(_, env)))
@@ -78,6 +99,16 @@ class TypeChecker(spec: FlatTessla.Specification)
       TypedTessla.TypeParameter(newTvar, tvar.loc)
   }
 
+  /**
+   * Insert an inferred type into the type map.
+   *
+    * If the map already contains an entry with this id and the inferred type is not a subtype of the existing entry,
+   * a type mismatch error is produced.
+   *
+    * @param id the identifier the type was inferred for
+   * @param inferredType the inferred type
+   * @param loc the location
+   */
   def insertInferredType(
     id: TypedTessla.Identifier,
     inferredType: TypedTessla.Type,
@@ -115,9 +146,12 @@ class TypeChecker(spec: FlatTessla.Specification)
 
   def isBuiltIn(exp: FlatTessla.Expression): Boolean = exp.isInstanceOf[FlatTessla.Extern]
 
-  /*
+  /**
    * Return all the entries that need to be type inferred before the current entry, i.e.
    * all the entries that are used by this entry and do not have an explicit type annotation.
+   *
+    * @param defs the scope of definitions
+   * @param entry the entry to infer the type of
    */
   def requiredEntries(
     defs: FlatTessla.Definitions,
@@ -194,6 +228,16 @@ class TypeChecker(spec: FlatTessla.Specification)
     }
   }
 
+  /**
+   * Translate an instance of [[FlatTessla.Definitions]].
+   *
+    * This generates a local environment, and processes all definition entries.
+   *
+    * @param defs the definitions to translate
+   * @param parent the parent definitions, will be the parent of the resulting translated definitions
+   * @param parentEnv the current environment
+   * @return the translated definitions and the new environment
+   */
   def translateDefs(
     defs: FlatTessla.Definitions,
     parent: Option[TypedTessla.Definitions],
@@ -234,7 +278,7 @@ class TypeChecker(spec: FlatTessla.Specification)
     TypedTessla.Annotation(annotation.name, annotation.arguments, annotation.loc)
   }
 
-  def condense(substitutions: mutable.Map[TypedTessla.Identifier, TypedTessla.Type]): Unit = {
+  private def condense(substitutions: mutable.Map[TypedTessla.Identifier, TypedTessla.Type]): Unit = {
     def substitute(t: TypedTessla.Type): TypedTessla.Type = t match {
       case ext: TypedTessla.BuiltInType => ext.copy(typeArgs = ext.typeArgs.map(substitute))
       case o: TypedTessla.ObjectType    => o.copy(memberTypes = o.memberTypes.view.mapValues(substitute).toMap)
@@ -247,6 +291,17 @@ class TypeChecker(spec: FlatTessla.Specification)
     substitutions.keySet.foreach(k => substitutions.update(k, substitute(substitutions(k))))
   }
 
+  /**
+   * Perform type substitution, using an expected and an actual type, as well known substitutions.
+   *
+    * Known type parameters are substituted, and the substitutions are potentially expanded by new entries which
+   * could be deduced from the given actual and expected types.
+   *
+    * @param expected the expected type
+   * @param actual the actual type
+   * @param substitutions the currently known substitutions
+   * @return the substituted actual type
+   */
   def typeSubst(
     expected: TypedTessla.Type,
     actual: TypedTessla.Type,
@@ -337,25 +392,35 @@ class TypeChecker(spec: FlatTessla.Specification)
     }
   }
 
-  def findPredef(name: String, env: Env): TypedTessla.Identifier = {
+  private def findPredef(name: String, env: Env): TypedTessla.Identifier = {
     env(
       spec.globalNames.getOrElse(name, throw InternalError(s"Standard library must define $name"))
     )
   }
 
-  def findPredef(name: String, env: Env, loc: Location): TypedTessla.Identifier = {
+  private def findPredef(name: String, env: Env, loc: Location): TypedTessla.Identifier = {
     env(
       spec.globalNames
         .getOrElse(name, throw UndefinedVariable(Tessla.Identifier(s"__root__.$name", loc)))
     )
   }
 
+  /**
+   * Lift a constant to a stream by wrapping it in a `default(nil, x)` and adds those newly generated definitions
+   * to the known definitions.
+   *
+    * @param constant the constant value to lift
+   * @param defs the current definitions
+   * @param env the current environment
+   * @param loc the location
+   * @return the identifier referencing the lifted result
+   */
   def liftConstant(
     constant: TypedTessla.Identifier,
     defs: TypedTessla.Definitions,
     env: Env,
     loc: Location
-  ) = {
+  ): TypedTessla.Identifier = {
     val typeOfConstant = typeMap(constant)
     val liftedType = streamType(typeOfConstant)
     val liftedId = makeIdentifier()
@@ -375,11 +440,11 @@ class TypeChecker(spec: FlatTessla.Specification)
     liftedId
   }
 
-  def checkLiftability(functionType: TypedTessla.FunctionType) = {
+  def checkLiftability(functionType: TypedTessla.FunctionType): Boolean = {
     functionType.parameterTypes.forall(_._2.isValueType) && functionType.returnType.isValueType
   }
 
-  def liftFunctionType(functionType: TypedTessla.FunctionType) = {
+  def liftFunctionType(functionType: TypedTessla.FunctionType): TypedTessla.FunctionType = {
     TypedTessla.FunctionType(
       functionType.typeParameters,
       functionType.parameterTypes.map(t => t._1 -> streamType(t._2)),
@@ -388,6 +453,15 @@ class TypeChecker(spec: FlatTessla.Specification)
     )
   }
 
+  /**
+   * Checks if two types are subtypes of one another or equal.
+   *
+    * For function types this check not only checks for compatible types but also if they are liftable or not.
+   *
+    * @param parent the parent type
+   * @param child the child type
+   * @return the result of the check
+   */
   def isSubtypeOrEqual(parent: TypedTessla.Type, child: TypedTessla.Type): Boolean =
     (parent, child) match {
       case (parent: TypedTessla.FunctionType, genericChild: TypedTessla.FunctionType) =>
@@ -425,6 +499,22 @@ class TypeChecker(spec: FlatTessla.Specification)
 
   def streamType(t: TypedTessla.Type) = TypedTessla.BuiltInType("Events", Seq(t))
 
+  /**
+   * Translate an expression to a typed expression and infer its type.
+   *
+    * On macro calls, this also lifts expressions if necessary, and adds the new definitions accordingly.
+   * Named arguments are translated into positional arguments.
+   * Type parameters are inferred from their usage in call parameters, if possible.
+   *
+    * Member accesses on streams of records are lifted as well.
+   *
+    * @param expression the expression to translate
+   * @param declaredType the declared type, if existing
+   * @param defs the known definitions
+   * @param flatDefs the already translated definitions
+   * @param env the environment
+   * @return the translated expression and the resulting type
+   */
   def translateExpression(
     expression: FlatTessla.Expression,
     declaredType: Option[TypedTessla.Type],
@@ -701,6 +791,14 @@ class TypeChecker(spec: FlatTessla.Specification)
   def lookup(env: FlatTessla.Definitions, id: FlatTessla.Identifier): FlatTessla.VariableEntry =
     env.variables.getOrElse(id, lookup(env.parent.get, id))
 
+  /**
+   * Look up the parameter names of the macro with the given identifier. This is used to be able to resolve
+   * named arguments.
+   *
+    * @param env the environment
+   * @param macroID the macro id
+   * @return the parameter names and locations
+   */
   def lookupParameterNames(
     env: FlatTessla.Definitions,
     macroID: FlatTessla.Identifier
@@ -716,10 +814,4 @@ class TypeChecker(spec: FlatTessla.Specification)
         }
       case _ => None
     }
-}
-
-object TypeChecker extends TranslationPhase[FlatTessla.Specification, TypedTessla.TypedSpecification] {
-  override def translate(spec: FlatTessla.Specification) = {
-    new TypeChecker(spec).translate()
-  }
 }

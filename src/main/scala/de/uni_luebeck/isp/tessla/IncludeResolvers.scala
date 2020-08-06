@@ -7,14 +7,19 @@ import java.nio.file.{Files, Paths}
 import org.antlr.v4.runtime.{CharStream, CharStreams}
 import util._
 
+/**
+ * Provides multiple include resolvers, for use in [[Compiler.Options]]
+ */
+
 object IncludeResolvers {
+
   def fromFile(fileName: String): Option[CharStream] = {
     optionIf(Files.exists(Paths.get(fileName))) {
       CharStreams.fromFileName(fileName)
     }
   }
 
-  def fromResource(klass: Class[_], basePath: String)(fileName: String) = {
+  def fromResource(klass: Class[_], basePath: String)(fileName: String): Option[CharStream] = {
     val fullPath = s"$basePath/$fileName"
     Option(klass.getResourceAsStream(fullPath.toString)).map { stream =>
       val channel = Channels.newChannel(stream)
@@ -29,8 +34,8 @@ object IncludeResolvers {
     }
   }
 
-  def fromStdlibResource =
-    fromResource(this.getClass, "/de/uni_luebeck/isp/tessla/stdlib") _
+  def fromStdlibResource: String => Option[CharStream] =
+    fromResource(this.getClass, "/de/uni_luebeck/isp/tessla/stdlib")
 
-  def empty(fileName: String) = None
+  def empty(fileName: String): Option[CharStream] = None
 }

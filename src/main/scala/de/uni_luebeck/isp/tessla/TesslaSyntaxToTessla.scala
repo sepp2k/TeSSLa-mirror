@@ -10,6 +10,18 @@ import scala.collection.mutable.ArrayBuffer
 
 import cats.implicits._
 
+object TesslaSyntaxToTessla extends TranslationPhase[Seq[TesslaParser.ParseResult], Tessla.Specification] {
+  override def translate(spec: Seq[TesslaParser.ParseResult]) = {
+    new TesslaSyntaxToTessla(spec).translate()
+  }
+}
+
+/**
+ * Translation phase which performs the following tasks:
+ *   - Translates the parse tree into a TeSSLa AST
+ *   - Extracts location information from the tokens.
+ */
+
 class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     extends TranslationPhase.Translator[Tessla.Specification]
     with TesslaParser.CanParseConstantString {
@@ -523,10 +535,4 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
   }
 
-}
-
-object TesslaSyntaxToTessla extends TranslationPhase[Seq[TesslaParser.ParseResult], Tessla.Specification] {
-  override def translate(spec: Seq[TesslaParser.ParseResult]) = {
-    new TesslaSyntaxToTessla(spec).translate()
-  }
 }
