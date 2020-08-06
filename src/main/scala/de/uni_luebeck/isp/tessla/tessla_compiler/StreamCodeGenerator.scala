@@ -526,7 +526,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  def produceMergeStepCode(
+  private def produceMergeStepCode(
     id: Identifier,
     ot: Type,
     args: Seq[ExpressionArg],

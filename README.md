@@ -65,7 +65,7 @@ Additional infos on the input/output format can be found in [the I/O documentati
 
 ## Architecture
 
-The project is a beckend to the [TeSSLa compiler frontend](https://gitlab.isp.uni-luebeck.de/tessla/tessla) project.
+The project is a backend to the [TeSSLa compiler frontend](https://gitlab.isp.uni-luebeck.de/tessla/tessla) project.
 
 It consists of `TranslationPhases` which are run sequentially.
 The TeSSLa Core AST received from the frontend is preprocessed, translated to a common intermediate language and then translated to the target language.
