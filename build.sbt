@@ -10,9 +10,10 @@ name := "tessla-compiler"
 
 organization := "de.uni_luebeck.isp"
 
-version := s"1.0.0-SNAPSHOT"
+version := s"1.0.1-SNAPSHOT"
 
 scalaVersion := "2.13.1"
+val compilerVersion = "2.13.1"
 
 resolvers ++= Seq(
   releases,
@@ -27,12 +28,25 @@ libraryDependencies ++= Seq(
   "de.uni_luebeck.isp" %% "sexyopt" % "0.1.1",
   "de.uni_luebeck.isp" %% "tessla" % "1.2.0-SNAPSHOT",
   "org.scalatest" %% "scalatest" % "3.1.0" % "test",
-  "com.eclipsesource" %% "play-json-schema-validator" % "0.9.5" % "test"
+  "com.eclipsesource" %% "play-json-schema-validator" % "0.9.5" % "test",
+  "org.scala-lang" % "scala-compiler" % compilerVersion
 )
 
-scalacOptions += "-feature"
-scalacOptions += "-unchecked"
-scalacOptions += "-deprecation"
+scalacOptions ++= Seq(
+  "-feature",
+  "-unchecked",
+  "-deprecation",
+  "-target:jvm-1.8",
+  "-Ypatmat-exhaust-depth",
+  "off"
+)
+
+javacOptions ++= Seq(
+  "-source",
+  "1.8",
+  "-target",
+  "1.8"
+)
 
 cancelable in Global := true
 

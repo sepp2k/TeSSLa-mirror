@@ -1,11 +1,12 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import java.io.{File, PrintWriter}
+import java.nio.file.{Files, Path}
 
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.IncludeResolvers
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaBackend
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.Compiler
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{LazynessAnalysis, UsageAnalysis}
 import org.antlr.v4.runtime.CharStreams
@@ -17,7 +18,7 @@ import sexyopt.SexyOpt
 
 object Main extends SexyOpt {
   override val programName = "tessla-compiler"
-  override val version = Some("1.0.0")
+  override val version = Some("1.0.1")
   override val programDescription = "Generate Java/Rust code from a TeSSLa specification"
 
   val tesslaFile = posArg("tessla-file", "The file containing the Tessla specification")
@@ -26,6 +27,11 @@ object Main extends SexyOpt {
   val noDiagnostics = flag("no-diagnostics", "Don't print error messages and warnings")
   val noOptimization = flag("no-optimization", "Produce non-optimized output code")
   val outputPath = option("output-file", 'o', "Location of the output (including filename)")
+  val jarPath = option(
+    "jar-file",
+    'j',
+    "Compiles Scala code to a jar file which is created at the given location. No source output is generated"
+  )
   val verbose = flag("verbose", 'v', "Produce a lot of output")
 
   def main(args: Array[String]): Unit = {
@@ -92,14 +98,19 @@ object Main extends SexyOpt {
         println("###############################")
       }
 
-      val source = unwrapResult(backend.translate(optIntermediateCode))
+      val source = backend.translate(optIntermediateCode)
+      val sourceStr = unwrapResult(source)
 
-      if (outputPath.isDefined) {
+      if (jarPath.isDefined) {
+        val p = Path.of(jarPath.get).toAbsolutePath
+        val isDir = Files.exists(p) && Files.isDirectory(p)
+        source.andThen(new ScalaCompiler(if (isDir) p else p.getParent, if (isDir) "monitor.jar" else p.toFile.getName))
+      } else if (outputPath.isDefined) {
         val pw = new PrintWriter(new File(outputPath.get))
-        pw.write(source)
+        pw.write(sourceStr)
         pw.close()
       } else {
-        println(source)
+        println(sourceStr)
       }
     } catch {
       case ex: TesslaError =>

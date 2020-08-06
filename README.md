@@ -25,7 +25,7 @@ The compiler's jar archive can be found under `target/scala-2.13/tessla-compiler
 
 Once the project is built, the compiler can be used from the command line with the following command:
 
-`java -jar target/scala-2.13/tessla-compiler-assembly-x.x.x-SNAPSHOT.jar input.tessla -o Main.scala`
+`java -jar target/scala-2.13/tessla-compiler-assembly-x.x.x-SNAPSHOT.jar input.tessla -j monitor.jar`
 
 Further additional options are:
 
@@ -33,6 +33,8 @@ Further additional options are:
   -h, --help             Display this help message and exit
       --debug            Print stack traces for runtime errors
       --no-diagnostics   Don't print error messages and warnings
+  -j, --jar-file         Compiles Scala code to a jar file which is created at the
+                         given location. No source output is generated
       --no-optimization  Produce non-optimized output code
   -o, --output-file      Location of the output (including filename)
       --version          Display version information and exit
@@ -42,9 +44,16 @@ Further additional options are:
 
 ```
 
-After that the Scala code can be compiled and the TeSSLa monitor can be launched:
+After that the TeSSLa monitor can be launched (even without scala installed on the system):
 
 ```
+java -jar monitor.jar
+```
+
+Alternatively the source can be generated directly and compiled and launched by hand:
+
+```
+java -jar target/scala-2.13/tessla-compiler-assembly-x.x.x-SNAPSHOT.jar input.tessla -o Main.scala
 scalac Main.scala
 scala Main
 ```
@@ -77,5 +86,4 @@ Details on the architecture can be found in the architecture [documentation](doc
 + Include Mutability/Immutablity detection in master branch
 + Rust translation
 + Java-Script translation
-+ (Script) performing compilation to bytecode/binary code
 + For further bugfixes see issue section in the gitLab

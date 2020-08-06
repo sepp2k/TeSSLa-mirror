@@ -138,6 +138,15 @@ real-world code.
 The Scala translation can be found in `backends.scalaBackend.ScalaBackend`. It
 inherits `backends.BackendInterface`.
 
+### Further translation steps
+
+For Scala there is also the possibility to generate the monitor as fat jar.
+This is done in class `backends.scalaBackend.ScalaCompiler`.
+Therefore the standard scala compiler is used as resource in the sbt project.
+To generate a fat jar, all scala dependencies are extracted from the
+`scala-library.jar` which is used by the compiler itself and packed into the
+generated monitor.
+
 Further documentation
 ---------------------
 
