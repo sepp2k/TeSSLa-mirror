@@ -6,19 +6,24 @@ val validatorResolver = "emueller-bintray" at "https://dl.bintray.com/emueller/m
 val efficiosSnapshots = "efficios-snapshots" at "https://mvn.efficios.com/repository/snapshots"
 val efficiosReleases = "efficios-releases" at "https://mvn.efficios.com/repository/releases"
 
-name := "tessla"
-
-organization := "de.uni_luebeck.isp"
-
-val versionFile = new File("src/main/resources/de/uni_luebeck/isp/tessla/stdlib/Tessla.tessla")
-
+val versionFile = new File("core/src/main/resources/de/uni_luebeck/isp/tessla/stdlib/Tessla.tessla")
 val versionPattern = "def\\s+version(?:\\s*:\\s*String)?\\s*=\\s*\"([^\"]+)\"".r
 
-version := versionPattern.findFirstMatchIn(IO.read(versionFile)).get.group(1)
+// Global settings
+Global / onChangedBuildSource := ReloadOnSourceChanges
+Global / cancelable := true
 
-scalaVersion := "2.13.1"
+// ThisBuild scoped settings
+ThisBuild / organization := "de.uni_luebeck.isp"
+ThisBuild / scalaVersion := "2.13.3"
+ThisBuild / version := versionPattern.findFirstMatchIn(IO.read(versionFile)).get.group(1)
 
-resolvers ++= Seq(
+ThisBuild / publishTo := { if (isSnapshot.value) Some(snapshots) else Some(releases) }
+ThisBuild / credentials += Credentials(
+  Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials"
+)
+
+ThisBuild / resolvers ++= Seq(
   releases,
   snapshots,
   playResolver,
@@ -27,18 +32,8 @@ resolvers ++= Seq(
   efficiosReleases
 )
 
-publishTo := {
-  if (isSnapshot.value)
-    Some(snapshots)
-  else
-    Some(releases)
-}
-
-credentials += Credentials(
-  Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials"
-)
-
-libraryDependencies ++= Seq(
+// Shared dependencies and settings between modules
+lazy val commonDependencies = Seq(
   "com.github.scopt" %% "scopt" % "4.0.0-RC2",
   "com.github.rjeschke" % "txtmark" % "0.13",
   "org.scalatest" %% "scalatest" % "3.1.0" % "test",
@@ -49,30 +44,89 @@ libraryDependencies ++= Seq(
   "org.typelevel" %% "cats-core" % "2.0.0"
 )
 
-mainClass in (Compile, run) := Some("de.uni_luebeck.isp.tessla.Main")
-mainClass in (Compile, packageBin) := Some("de.uni_luebeck.isp.tessla.Main")
+lazy val commonSettings = Seq(
+  libraryDependencies ++= commonDependencies,
+  scalacOptions ++= Seq(
+    "-feature",
+    "-unchecked",
+    "-deprecation",
+    "-Ypatmat-exhaust-depth",
+    "off",
+    "-target:jvm-1.8"
+  ),
+  javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
+  assembly / assemblyMergeStrategy := {
+    case PathList("module-info.class") => MergeStrategy.discard
+    case x                             => (assembly / assemblyMergeStrategy).value(x)
+  },
+  buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+  Antlr4 / antlr4Version := "4.7.2",
+  Antlr4 / antlr4GenListener := false,
+  Antlr4 / antlr4GenVisitor := true
+)
 
-scalacOptions += "-feature"
-scalacOptions += "-unchecked"
-scalacOptions += "-deprecation"
-scalacOptions ++= Seq("-Ypatmat-exhaust-depth", "off")
+// Module definitions
+val rootPackage = "de.uni_luebeck.isp.tessla"
+lazy val root = (project in file("."))
+  .enablePlugins(
+    BuildInfoPlugin
+  )
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tessla",
+    Compile / run / mainClass := Some(s"$rootPackage.Main"),
+    Compile / packageBin / mainClass := Some(s"$rootPackage.Main"),
+    buildInfoPackage := rootPackage
+  )
+  .dependsOn(
+    core,
+    interpreter,
+    docs
+  )
+  .aggregate(
+    core,
+    interpreter,
+    docs
+  )
 
-cancelable in Global := true
+lazy val core = (project in file("core"))
+  .enablePlugins(
+    BuildInfoPlugin,
+    Antlr4Plugin
+  )
+  .settings(commonSettings: _*)
+  .settings(
+    name := "core",
+    Antlr4 / antlr4PackageName := Some(s"$rootPackage.core"),
+    buildInfoPackage := s"$rootPackage.core"
+  )
 
-enablePlugins(BuildInfoPlugin)
-buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion)
-buildInfoPackage := "de.uni_luebeck.isp.tessla"
+lazy val interpreter = (project in file("interpreter"))
+  .enablePlugins(
+    BuildInfoPlugin,
+    Antlr4Plugin
+  )
+  .settings(commonSettings: _*)
+  .settings(
+    name := "interpreter",
+    Antlr4 / antlr4PackageName := Some(s"$rootPackage.interpreter"),
+    buildInfoPackage := s"$rootPackage.interpreter"
+  )
+  .dependsOn(
+    core
+  )
 
-enablePlugins(Antlr4Plugin)
-antlr4Version in Antlr4 := "4.7.2"
-antlr4PackageName in Antlr4 := Some("de.uni_luebeck.isp.tessla")
-antlr4GenListener in Antlr4 := false
-antlr4GenVisitor in Antlr4 := true
-
-javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
-scalacOptions += "-target:jvm-1.8"
-
-assemblyMergeStrategy in assembly := {
-  case PathList("module-info.class") => MergeStrategy.discard
-  case x                             => (assemblyMergeStrategy in assembly).value(x)
-}
+lazy val docs = (project in file("docs"))
+  .enablePlugins(
+    BuildInfoPlugin,
+    Antlr4Plugin
+  )
+  .settings(commonSettings: _*)
+  .settings(
+    name := "docs",
+    Antlr4 / antlr4PackageName := Some(s"$rootPackage.docs"),
+    buildInfoPackage := s"$rootPackage.docs"
+  )
+  .dependsOn(
+    core
+  )

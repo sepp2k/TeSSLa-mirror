@@ -3,48 +3,54 @@ package de.uni_luebeck.isp.tessla
 import java.io.IOException
 import java.nio.file.Files
 
-import de.uni_luebeck.isp.tessla.CLIParser.Mode
-import de.uni_luebeck.isp.tessla.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
-import de.uni_luebeck.isp.tessla.analyses.Observations
+import de.uni_luebeck.isp.tessla.CLIParser.{ConfigTrait, DocConfig, Task}
+import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.core.analyses.Observations
 import de.uni_luebeck.isp.tessla.interpreter._
-import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc
-import de.uni_luebeck.isp.tessla.util._
+import tessladoc.TesslaDoc
+import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TesslaAST}
 
 import scala.io.Source
 
 /**
  * Entry point of the application.
- * Depending on the provided arguments, it either launches the compiler or the
- * documentation generation.
+ * Depending on the provided arguments, the according task is executed.
  */
 object Main {
-  val programName: String = BuildInfo.name
-  val programVersion: String = BuildInfo.version
-  val programDescription =
-    "Evaluate the given Tessla specification on the input streams provided by the given trace file."
-  val licenseLocation = "de/uni_luebeck/isp/tessla/License"
 
   def main(args: Array[String]): Unit = {
-    val config = CLIParser.parse(args)
-    new Application(config).run()
+    val (global, tasks) = CLIParser.parse(args)
+    new Application(global, tasks).run()
   }
 
   /**
    * Contains the different running modes.
    *
-    * @param config The configuration defining the behaviour
+    * @param global the global, task-independent configuration settings
+   * @param tasks the tasks to be executed
    */
-  class Application(config: CLIParser.Config) {
+  class Application(global: CLIParser.GlobalConfig, tasks: List[Task[ConfigTrait]]) {
 
     /**
-     * Decides which mode to run in depending on the configuration.
+     * Decides which mode to run in depending on the configuration provided.
      */
     def run(): Unit = {
-      config.mode match {
-        case Mode.Doc     => runDoc()
-        case Mode.Default => runCompiler()
+      try {
+        tasks.foreach {
+          case Task(_, config: CLIParser.DocConfig)         => runDoc(config)
+          case Task(_, config: CLIParser.CoreConfig)        => runCompiler(config)
+          case Task(_, config: CLIParser.InterpreterConfig) => runInterpreter(config)
+        }
+      } catch {
+        case ex: TesslaError =>
+          printErr(s"Runtime error: $ex")
+          if (global.debug) ex.printStackTrace()
+        case ex: IOException =>
+          printErr(s"IO Error: ${ex.getMessage}")
+          if (global.debug) ex.printStackTrace()
       }
+
     }
 
     /**
@@ -55,14 +61,13 @@ object Main {
      *
       * @see See [[tessladoc.TesslaDoc.extract]] for more
      */
-    def runDoc(): Unit = {
-      val docCfg = config.doc
-      val includeResolver = optionIf(docCfg.includes)(IncludeResolvers.fromFile _)
+    def runDoc(docConfig: DocConfig): Unit = {
+      val includeResolver = Option.when(docConfig.includes)(IncludeResolvers.fromFile _)
       val output = unwrapResult(
-        TesslaDoc.extract(docCfg.sources, includeResolver, includeStdlib = docCfg.stdLib)
+        TesslaDoc.extract(docConfig.sources, includeResolver, includeStdlib = docConfig.stdLib)
       ).toString
 
-      docCfg.outfile match {
+      docConfig.outfile match {
         case Some(file) =>
           try {
             Files.write(file.toPath, output.getBytes("UTF-8"))
@@ -77,105 +82,71 @@ object Main {
     }
 
     /**
-     * Runs the [[Compiler]] and, if wanted, the [[interpreter.Interpreter]] afterwards.
-     *
-      * Translates the in specification provided by [[CLIParser.Config.specSource]] to [[TesslaAST.Core]].
-     *
-      * If either of [[CLIParser.Config.printTyped]], [[CLIParser.Config.printCoreLanSpec]],
-     * [[CLIParser.Config.printCore]], [[CLIParser.Config.verifyOnly]], [[CLIParser.Config.listInStreams]],
-     * [[CLIParser.Config.listOutStreams]], [[CLIParser.Config.observations]] is set,
-     * the requested output will be printed and the run terminates.
-     *
-      * If none of the aforementioned flags are set, the interpreter is executed with the translated [[TesslaAST.Core]]
-     * code. The input trace for the interpreter is either provided through a file or stdin.
-     *
-      * @see [[analyses.Observations]] for more information on [[CLIParser.Config.observations]]
+     * Runs the [[Compiler]] on the provided specification and prints the resulting Tessla-Core code,
+     * depending on the configuration.
      */
-    def runCompiler(): Unit = {
+    def runCompiler(config: CLIParser.CoreConfig): Unit = {
       val compiler = new Compiler(config.compilerOptions)
-      try {
-        val typed = unwrapResult(compiler.tesslaToTyped(config.specSource))
-        val core = unwrapResult(compiler.typedToCore(typed))
-        lazy val flatCore = unwrapResult(compiler.coreToFlatCore(core))
-        val printOptions = TesslaAST.PrintOptions(
-          !config.printAllTypes,
-          config.printAllTypes,
-          config.printAllTypes,
-          paramTypes = true,
-          config.printLocations
-        )
+      val typed = unwrapResult(compiler.tesslaToTyped(config.specSource))
+      val core = unwrapResult(compiler.typedToCore(typed))
+      lazy val flatCore = unwrapResult(compiler.coreToFlatCore(core))
+      val printOptions = TesslaAST.PrintOptions(
+        !config.printAllTypes,
+        config.printAllTypes,
+        config.printAllTypes,
+        paramTypes = true,
+        config.printLocations
+      )
 
-        if (config.printTyped) {
-          println(typed.print(printOptions))
-          return
-        }
+      // All those options are mutually exclusive, only apply the first one in this list
+      LazyList(
+        if (config.printCore) println(core.print(printOptions)),
+        if (config.printCoreLanSpec) println(flatCore.print(printOptions)),
+        if (config.printTyped) println(typed.print(printOptions)),
+        if (config.observations) println(unwrapResult(Observations.Generator.translate(core))),
+        if (config.listInStreams) core.in.foreach(is => println(is._1.idOrName)),
+        if (config.listOutStreams) core.out.foreach(os => println(os._1.id.idOrName))
+      ).headOption
 
-        if (config.printCoreLanSpec) {
-          println(flatCore.print(printOptions))
-          return
-        }
+    }
 
-        if (config.printCore) {
-          println(core.print(printOptions))
-          return
-        }
+    /**
+     * Runs the [[Interpreter]] on the provided specification and trace, or uses the stdin if no trace is provided.
+     */
+    def runInterpreter(config: CLIParser.InterpreterConfig): Unit = {
+      val core = unwrapResult(Compiler.compile(config.specSource, config.compilerOptions))
 
-        if (config.observations) {
-          println(unwrapResult(Observations.Generator.translate(core)))
-          return
-        }
-
-        if (config.listInStreams) {
-          core.in.foreach { is => println(is._1.idOrName) }
-          return
-        }
-
-        if (config.listOutStreams) {
-          core.out.foreach { os => println(os._1.id.idOrName) }
-          return
-        }
-
-        if (config.verifyOnly) {
-          return
-        }
-
-        if (config.ctfTrace) {
-          val trace = Trace.fromCtfFile(config.traceFile.get, config.abortAt)
-          val output = Interpreter.run(core, trace, config.stopOn, config.rejectUndeclaredInputs)
-          output.foreach(println)
-        } else {
-          val trace = if (config.csvTrace) {
-            config.traceFile
-              .map(Trace.fromCsvFile(_, config.abortAt))
-              .getOrElse(Trace.fromCsvSource(Source.stdin, "<stdin>", config.abortAt))
-          } else {
-            config.traceFile
-              .map(Trace.fromFile(_, config.abortAt))
-              .getOrElse(Trace.fromSource(Source.stdin, "<stdin>", config.abortAt))
+      val trace = if (config.ctfTrace) {
+        config.traceFile
+          .map(Trace.fromCtfFile(_, config.abortAt))
+          .getOrElse {
+            printErr("No CTF trace file provided.")
+            sys.exit(1)
           }
-          val output = Interpreter.run(core, trace, config.stopOn, config.rejectUndeclaredInputs)
-          output.foreach(println)
-        }
-      } catch {
-        case ex: TesslaError =>
-          printErr(s"Runtime error: $ex")
-          if (config.debug) ex.printStackTrace()
-        case ex: IOException =>
-          printErr(s"IO Error: ${ex.getMessage}")
-          if (config.debug) ex.printStackTrace()
+      } else if (config.csvTrace) {
+        config.traceFile
+          .map(Trace.fromCsvFile(_, config.abortAt))
+          .getOrElse(Trace.fromCsvSource(Source.stdin, "<stdin>", config.abortAt))
+      } else {
+        config.traceFile
+          .map(Trace.fromFile(_, config.abortAt))
+          .getOrElse(Trace.fromSource(Source.stdin, "<stdin>", config.abortAt))
       }
+      val output = Interpreter.run(core, trace, config.stopOn, config.rejectUndeclaredInputs)
+      output.foreach(println)
+
     }
 
     private def unwrapResult[T](result: Result[T]): T = result match {
       case Success(res, warnings) =>
-        if (config.diagnostics) warnings.foreach(w => printErr(s"Warning: $w"))
+        if (global.diagnostics) warnings.foreach(w => printErr(s"Warning: $w"))
         res
       case Failure(errors, warnings) =>
-        if (config.diagnostics) {
+        if (global.diagnostics) {
           warnings.foreach(w => printErr(s"Warning: $w"))
           errors.foreach { e =>
             printErr(s"Error: $e")
-            if (config.debug) e.printStackTrace()
+            if (global.debug) e.printStackTrace()
           }
           printErr(s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors")
         }

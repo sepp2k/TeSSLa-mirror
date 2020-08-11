@@ -33,3 +33,4 @@ deploy:
     paths:
     - target/scala-2.13/*.jar
     - target/scala-2.13/api
+    - core/target/scala-2.13/*.jar
