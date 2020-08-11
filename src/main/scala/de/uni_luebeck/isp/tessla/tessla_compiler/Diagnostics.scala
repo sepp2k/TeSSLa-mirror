@@ -1,11 +1,12 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import de.uni_luebeck.isp.tessla.Location
+import de.uni_luebeck.isp.tessla.{Diagnostic, Location}
 
 /**
  * Class containing errors complementing those in [[de.uni_luebeck.isp.tessla.Errors]] by special compilation errors
+ * and additional compiler related warnings
  */
-object Errors {
+object Diagnostics {
 
   /**
    * Error thrown if a certain command (annotation, expression or statements) is not supported in the compiler backend
@@ -65,6 +66,17 @@ object Errors {
   case class CLIError(m: String) extends de.uni_luebeck.isp.tessla.Errors.TesslaError {
     override def message = s"The compiler received unvalid commandline arguments.\nDetails: $m"
     override def loc: Location = Location.unknown
+  }
+
+  /**
+   * Warning raised if the compilation of the generated code raises a warning or information
+   * @param message The message of the base warning
+   * @param compiler The compiler backend originally raising the warning
+   * @param msgType Kind of the warning, e.g. warning, information, note ...
+   */
+  case class CompilationWarning(message: String, compiler: String, msgType: String) extends Diagnostic {
+    override def loc: Location = Location.unknown
+    override def toString(): String = s"$compiler raised $msgType :\n$message"
   }
 
 }

@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend
 
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCode}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, IntermediateCode}
 
 /**
  * Class containing Scala-specific constants for the translation
@@ -187,12 +187,12 @@ object ScalaConstants {
             val add = if (fieldNames.size == 1) "" else s"._${fieldNames.indexOf(fieldName) + 1}"
             s"${args(0)}$add"
           }
-          case _ => throw Errors.DSLError(s"__getStruct__ call has wrong type hint $typeHint")
+          case _ => throw Diagnostics.DSLError(s"__getStruct__ call has wrong type hint $typeHint")
         }
       }
       case "__mkStruct__" => s"(${args.mkString(", ")})"
 
-      case _ => throw Errors.CommandNotSupportedError(s"Unsupported built-in function for Scala backend: $name")
+      case _ => throw Diagnostics.CommandNotSupportedError(s"Unsupported built-in function for Scala backend: $name")
     }
   }
 

@@ -36,7 +36,7 @@ class TesslaCoreToIntermediate(consoleInterface: Boolean)
         case e: ExternExpression                                 => e
         case ExpressionRef(id, _, _) if definitions.contains(id) => externResolution(definitions(id))
         case _ =>
-          throw Errors.CoreASTError(
+          throw Diagnostics.CoreASTError(
             "No extern or reference to extern in function application with stream result",
             e.location
           )
@@ -49,7 +49,7 @@ class TesslaCoreToIntermediate(consoleInterface: Boolean)
       } else if (in.contains(id)) {
         in(id)._1
       } else {
-        throw Errors.CoreASTError(s"Type of stream $id cannot be found")
+        throw Diagnostics.CoreASTError(s"Type of stream $id cannot be found")
       }
     }
 
@@ -66,7 +66,7 @@ class TesslaCoreToIntermediate(consoleInterface: Boolean)
               case ApplicationExpression(e, args, _) =>
                 streamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, Seq(), currSrc)
               case e =>
-                throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
+                throw Diagnostics.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
             }
           case _ =>
             SourceListing(
@@ -95,7 +95,7 @@ class TesslaCoreToIntermediate(consoleInterface: Boolean)
         currSrc =
           streamCodeGenerator.produceOutputCode(o._1.id, getStreamType(o._1.id), name, currSrc, o._2.contains("raw"))
       } else {
-        throw Errors.NotYetImplementedError("Translation without value output to stdout is not implemented yet")
+        throw Diagnostics.NotYetImplementedError("Translation without value output to stdout is not implemented yet")
       }
     }
 
@@ -104,7 +104,9 @@ class TesslaCoreToIntermediate(consoleInterface: Boolean)
       if (consoleInterface) {
         currSrc = streamCodeGenerator.produceInputFromConsoleCode(i._1, i._2._1, currSrc)
       } else {
-        throw Errors.NotYetImplementedError("Translation without value consumption from stdin is not implemented yet")
+        throw Diagnostics.NotYetImplementedError(
+          "Translation without value consumption from stdin is not implemented yet"
+        )
       }
       currSrc = streamCodeGenerator.produceInputUnchangeCode(i._1, currSrc)
     }

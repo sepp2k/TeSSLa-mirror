@@ -42,7 +42,8 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
       case e: ExternExpression => translateExtern(e, tm, defContext)
       case _: FunctionExpression | _: ExpressionRef | _: ApplicationExpression | _: RecordAccessorExpression =>
         LambdaApplication(translateExpressionArg(e, tm, defContext), args)
-      case e => throw Errors.CoreASTError("Function call to expression of wrong type cannot be translated", e.location)
+      case e =>
+        throw Diagnostics.CoreASTError("Function call to expression of wrong type cannot be translated", e.location)
     }
   }
 
@@ -192,7 +193,7 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
       case RecordAccessorExpression(name, target, _, _) =>
         GetStruct(translateExpressionArg(target, tm, defContext), name.name, target.tpe)
       case _ =>
-        throw Errors.CoreASTError("Unexpected ExpressionArg cannot be translated", e.location)
+        throw Diagnostics.CoreASTError("Unexpected ExpressionArg cannot be translated", e.location)
     }
   }
 

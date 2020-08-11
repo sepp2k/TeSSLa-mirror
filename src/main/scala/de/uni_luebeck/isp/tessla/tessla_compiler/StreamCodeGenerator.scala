@@ -54,7 +54,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
         produceSignalLiftStepCode(id, typ.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
       case "merge" =>
         produceMergeStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
-      case _ => throw tessla_compiler.Errors.CommandNotSupportedError(e.toString)
+      case _ => throw tessla_compiler.Diagnostics.CommandNotSupportedError(e.toString)
     }
   }
 
@@ -67,7 +67,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     ea match {
       case ExpressionRef(id, tpe, _) => ("var_" + id.fullName, tpe)
       case e: Expression =>
-        throw tessla_compiler.Errors
+        throw tessla_compiler.Diagnostics
           .CoreASTError("Required ExpressionRef, but Expression found. Non flat AST.", e.location)
     }
   }

@@ -155,7 +155,7 @@ object IntermediateCodeUtils {
     val duplicates = varDefs.groupBy { case (n, _, _, _) => n }.collect { case (x, List(_, _, _*)) => x }
 
     if (duplicates.nonEmpty) {
-      throw tessla_compiler.Errors.DSLError(
+      throw tessla_compiler.Diagnostics.DSLError(
         s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}"
       )
     }
@@ -195,7 +195,8 @@ object IntermediateCodeUtils {
         StructType(types, names)
       }
       case TypeParam(_, _) => GeneralType
-      case _               => throw tessla_compiler.Errors.CommandNotSupportedError(s"Type translation for type $t not supported")
+      case _ =>
+        throw tessla_compiler.Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
   }
 
@@ -218,7 +219,7 @@ object IntermediateCodeUtils {
       case TesslaAST.Core.FunctionType(_, _, _, _)   => EmptyFunction(t)
       case TypeParam(_, _)                           => GeneralValue
       case RecordType(entries, _)                    => StructValue(entries.map { case (n, t) => (n.name, defaultValueForType(t._1)) })
-      case _                                         => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $t not supported")
+      case _                                         => throw tessla_compiler.Diagnostics.CommandNotSupportedError(s"Default value for type $t not supported")
     }
   }
 
@@ -230,7 +231,7 @@ object IntermediateCodeUtils {
   def defaultValueForStreamType(t: Type): ImpLanVal = {
     t match {
       case InstantiatedType("Events", Seq(t), _) => defaultValueForType(t)
-      case _                                     => throw tessla_compiler.Errors.CoreASTError(s"Stream type required but non-stream type $t passed.")
+      case _                                     => throw tessla_compiler.Diagnostics.CoreASTError(s"Stream type required but non-stream type $t passed.")
     }
   }
 
@@ -427,11 +428,11 @@ class IntermediateCodeUtils(
    */
   def generateStatements: Seq[ImpLanStmt] = {
     if (blockState.head != Out) {
-      throw tessla_compiler.Errors.DSLError("At least one unclosed If")
+      throw tessla_compiler.Diagnostics.DSLError("At least one unclosed If")
     }
 
     if (ifTryStack.nonEmpty || elseCatchStack.nonEmpty || condStack.nonEmpty) {
-      throw tessla_compiler.Errors.DSLError("Stack sizes are not valid")
+      throw tessla_compiler.Diagnostics.DSLError("Stack sizes are not valid")
     }
     stmts
   }
@@ -512,8 +513,8 @@ class IntermediateCodeUtils(
    */
   def Else(): IntermediateCodeUtils = blockState.head match {
     case InIf   => new IntermediateCodeUtils(stmts, blockState.updated(0, InElse), ifTryStack, elseCatchStack, condStack)
-    case InElse => throw tessla_compiler.Errors.DSLError("Two subseqeuent Else blocks")
-    case _      => throw tessla_compiler.Errors.DSLError("Else without previous If")
+    case InElse => throw tessla_compiler.Diagnostics.DSLError("Two subseqeuent Else blocks")
+    case _      => throw tessla_compiler.Diagnostics.DSLError("Else without previous If")
   }
 
   /**
@@ -523,7 +524,7 @@ class IntermediateCodeUtils(
   def EndIf(): IntermediateCodeUtils = {
     val stmt = blockState.head match {
       case InIf | InElse => IntermediateCode.If(condStack.head, ifTryStack.head, elseCatchStack.head)
-      case _             => throw tessla_compiler.Errors.DSLError("EndIf without previous If")
+      case _             => throw tessla_compiler.Diagnostics.DSLError("EndIf without previous If")
     }
     val tmpRes = new IntermediateCodeUtils(
       stmts,
@@ -560,8 +561,8 @@ class IntermediateCodeUtils(
   def Catch(): IntermediateCodeUtils = blockState.head match {
     case InTry =>
       new IntermediateCodeUtils(stmts, blockState.updated(0, InCatch), ifTryStack, elseCatchStack, condStack)
-    case InCatch => throw tessla_compiler.Errors.DSLError("Two subseqeuent Catch blocks")
-    case _       => throw tessla_compiler.Errors.DSLError("Catch without previous Try")
+    case InCatch => throw tessla_compiler.Diagnostics.DSLError("Two subseqeuent Catch blocks")
+    case _       => throw tessla_compiler.Diagnostics.DSLError("Catch without previous Try")
   }
 
   /**
@@ -571,7 +572,7 @@ class IntermediateCodeUtils(
   def EndTry(): IntermediateCodeUtils = {
     val stmt = blockState.head match {
       case InTry | InCatch => IntermediateCode.TryCatchBlock(ifTryStack.head, elseCatchStack.head)
-      case _               => throw tessla_compiler.Errors.DSLError("EndTry without previous Try")
+      case _               => throw tessla_compiler.Diagnostics.DSLError("EndTry without previous Try")
     }
     val tmpRes =
       new IntermediateCodeUtils(stmts, blockState.drop(1), ifTryStack.drop(1), elseCatchStack.drop(1), condStack)

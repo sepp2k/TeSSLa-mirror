@@ -1,7 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend
 
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCodeUtils}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, IntermediateCodeUtils}
 
 /**
  * Class containing code for parsing values from and to strings. Used for generating the input/output parsing
@@ -41,7 +41,9 @@ object ScalaIOHandling {
           case StructType(subTypes, fieldNames) =>
             getInputParseExpressionForStruct(fieldNames, subTypes, exp, freshVarCount)
           case t =>
-            throw Errors.CommandNotSupportedError(s"Input parsing of type $t is not supported in the Scala translation")
+            throw Diagnostics.CommandNotSupportedError(
+              s"Input parsing of type $t is not supported in the Scala translation"
+            )
         }
         s + s".asInstanceOf[${ScalaConstants.typeTranslation(to)}]"
     }
@@ -269,7 +271,7 @@ object ScalaIOHandling {
         getParseExpressionToStringForTuple(subTypes, exp, freshVarCount)
       case StructType(subTypes, fieldNames) =>
         getParseExpressionToStringForRecord(fieldNames, subTypes, exp, freshVarCount)
-      case GeneralType => throw Errors.DSLError(s"General type expression $exp cannot be used for printing")
+      case GeneralType => throw Diagnostics.DSLError(s"General type expression $exp cannot be used for printing")
       case _           => s"$exp.toString()"
     }
   }
