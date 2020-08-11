@@ -8,12 +8,15 @@ import java.util.Comparator
 import java.util.jar.{Attributes, JarEntry, JarInputStream, JarOutputStream}
 
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
-import de.uni_luebeck.isp.tessla.{Errors, TranslationPhase}
+import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics.CompilationWarning
+import de.uni_luebeck.isp.tessla.{Diagnostic, Errors, TranslationPhase}
 
 import scala.jdk.CollectionConverters._
-import scala.tools.nsc.reporters.ConsoleReporter
+import scala.reflect.internal.util.Position
+import scala.tools.nsc.reporters.{FilteringReporter, Reporter}
 import scala.tools.nsc.{Global, Settings}
 import scala.util.Using
+import scala.reflect.internal.util.Position.formatMessage
 
 /**
  * [[TranslationPhase]] generating a monitor as fat jar from Scala code
@@ -43,27 +46,43 @@ class ScalaCompiler(outDir: Path, jarName: String) extends TranslationPhase[Stri
     deleteOnExit(compileDir)
     deleteOnExit(sourceDir)
 
+    val settings = createSettings(compileDir)
+    val reporter = new TesslaCompilerReporter(settings)
+
     val sourcePath = Path.of(URI.create(outDir.toUri.toString + "Main.scala"))
+    deleteOnExit(sourcePath)
+
     writeCode(sourcePath, sourceCode)
-    compileCode(compileDir, sourcePath)
-    Files.delete(sourcePath)
+    compileCode(sourcePath, settings, reporter)
 
     unzipJar(compileDir)
     makeJar(compileDir, outDir.resolve(jarName), "Main")
 
-    Success((), Seq())
+    Success((), reporter.warnings.toSeq)
+  }
+
+  /**
+   * Creates a [[Settings]] instance for the scala compilation
+   * @param compileDir The working directory of the compilation
+   * @return [[Settings]] to be used for the compilation
+   */
+  private def createSettings(compileDir: Path): Settings = {
+
+    val settings = new Settings()
+    settings.usejavacp.value = true
+    settings.outputDirs.setSingleOutput(compileDir.toAbsolutePath.toString)
+    settings.optimise.value = true
+
+    settings
   }
 
   /**
    * Method triggering compilation of a single Scala source file to class file(s)
-   * @param dir The output directory of the compilation
    * @param source The path of the source file to be compiled
+   * @param settings The compilation settings
+   * @param reporter The reporter getting attached to the compiler
    */
-  private def compileCode(dir: Path, source: Path): Unit = {
-    val settings = new Settings()
-    settings.usejavacp.value = true
-    settings.outputDirs.setSingleOutput(dir.toAbsolutePath.toString)
-    val reporter = new ConsoleReporter(settings)
+  private def compileCode(source: Path, settings: Settings, reporter: Reporter): Unit = {
     val compiler = new Global(settings, reporter)
     (new compiler.Run) compile List(source.toAbsolutePath.toString)
     reporter.finish()
@@ -138,7 +157,7 @@ class ScalaCompiler(outDir: Path, jarName: String) extends TranslationPhase[Stri
   /**
    * Packs (compiled) sources to an executable jar file
    * @param sources The path where the sources are located
-   * @param outPath The path of the genaerated jar file
+   * @param outPath The path of the generated jar file
    * @param mainClass The main class to be executed when launching the jar
    */
   private def makeJar(sources: Path, outPath: Path, mainClass: String): Unit = {
@@ -176,6 +195,30 @@ class ScalaCompiler(outDir: Path, jarName: String) extends TranslationPhase[Stri
     Runtime.getRuntime.addShutdownHook(new Thread(() => {
       Files.walk(path).sorted(Comparator.reverseOrder).forEach(Files.delete _)
     }))
+  }
+
+  /**
+   * A [[Reporter]] implementation raising TeSSLa compiler errors if the supervised Scala compiler raises an error
+   * and collects TeSSLa warnings if it raises warnings or information
+   * @param settings Settings passed to the extended [[FilteringReporter]]
+   */
+  class TesslaCompilerReporter(val settings: Settings) extends FilteringReporter {
+
+    val warnings: collection.mutable.ArrayBuffer[Diagnostic] = collection.mutable.ArrayBuffer()
+
+    override def doReport(pos: Position, msg: String, severity: Severity): Unit = {
+      val combMsg = formatMessage(pos, msg, false)
+      severity match {
+        case reflect.internal.Reporter.INFO    => warnings += CompilationWarning(combMsg, "scalac", "info")
+        case reflect.internal.Reporter.WARNING => warnings += CompilationWarning(combMsg, "scalac", "warning")
+        case reflect.internal.Reporter.ERROR =>
+          throw Errors.InternalError(s"Scala Compilation raised error, compilation aborted:\n$combMsg")
+        case _ =>
+          throw Errors.InternalError(
+            s"Scala Compilation raised error of unknown Severity, compilation aborted:\n$combMsg"
+          )
+      }
+    }
   }
 
 }
