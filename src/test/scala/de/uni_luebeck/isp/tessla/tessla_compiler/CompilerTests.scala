@@ -21,6 +21,38 @@ import scala.io.Source
 import scala.reflect.io.Directory
 import scala.sys.process._
 
+/**
+ * Object contains static functions often used in test cases
+ */
+object CompilerTests {
+  def compileChain(src: CharStream, compiler: Compiler): TranslationPhase.Result[String] = {
+    compiler
+      .tesslaToTyped(src)
+      .andThen(compiler.typedToCore)
+      .andThen(new UsageAnalysis)
+      .andThen(new LazynessAnalysis)
+      .andThen(new TesslaCoreToIntermediate(true))
+      .andThen(UnusedVarRemove)
+      .andThen(new ScalaBackend)
+  }
+
+  def writeToFile(path: String, content: String): Unit = {
+    val sPw = new PrintWriter(path)
+    sPw.write(content)
+    sPw.close()
+  }
+
+  class TestProcessLogger extends ProcessLogger {
+    var output: Seq[String] = Seq()
+
+    override def out(s: => String): Unit = output :+= s
+
+    override def err(s: => String): Unit = output :+= s"E $s"
+
+    override def buffer[T](f: => T): T = f
+  }
+}
+
 class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
 
   val root = "tests/"
@@ -154,26 +186,14 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
 
       def compileAndExecute(sourceCode: String, inputTracePath: String): (Seq[String], Boolean) = {
 
-        class myProcessLogger extends ProcessLogger {
-          var output: Seq[String] = Seq()
+        val compileLogger = new CompilerTests.TestProcessLogger
+        val executionLogger = new CompilerTests.TestProcessLogger
 
-          override def out(s: => String): Unit = output :+= s
-
-          override def err(s: => String): Unit = output :+= s"E $s"
-
-          override def buffer[T](f: => T): T = f
-        }
-
-        val compileLogger = new myProcessLogger
-        val executionLogger = new myProcessLogger
-
-        val sPw = new PrintWriter(new File(fsPath.toAbsolutePath.toString + "/out.scala"))
-        sPw.write(sourceCode)
-        sPw.close()
-
-        val tPw = new PrintWriter(new File(fsPath.toAbsolutePath.toString + "/input"))
-        tPw.write(testSource(inputTracePath).getLines.mkString("\n"))
-        tPw.close()
+        CompilerTests.writeToFile(fsPath.toAbsolutePath.toString + "/out.scala", sourceCode)
+        CompilerTests.writeToFile(
+          fsPath.toAbsolutePath.toString + "/input",
+          testSource(inputTracePath).getLines.mkString("\n")
+        )
 
         val compile = Process("scalac out.scala", new File(fsPath.toAbsolutePath.toString))
         if (compile.!(compileLogger) != 0) {
@@ -186,17 +206,6 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
 
         (executionLogger.output, rc != 0)
 
-      }
-
-      def compileChain(src: CharStream, compiler: Compiler): TranslationPhase.Result[String] = {
-        compiler
-          .tesslaToTyped(src)
-          .andThen(compiler.typedToCore)
-          .andThen(new UsageAnalysis)
-          .andThen(new LazynessAnalysis)
-          .andThen(new TesslaCoreToIntermediate(true))
-          .andThen(UnusedVarRemove)
-          .andThen(new ScalaBackend)
       }
 
       def handleResult(
@@ -263,7 +272,7 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
 
             testCase.input match {
               case Some(input) =>
-                val code = compileChain(src, compiler)
+                val code = CompilerTests.compileChain(src, compiler)
 
                 handleResult(code, testCase.expectedErrors, testCase.expectedWarnings, input) {
                   (output: Seq[String], runtimeError: Boolean) =>
@@ -291,7 +300,7 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
                 }
               case None =>
                 handleResult(
-                  compileChain(src, compiler),
+                  CompilerTests.compileChain(src, compiler),
                   testCase.expectedErrors,
                   testCase.expectedWarnings,
                   ""
