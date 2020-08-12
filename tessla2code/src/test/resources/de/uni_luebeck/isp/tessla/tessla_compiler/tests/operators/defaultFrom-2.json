@@ -1,0 +1,5 @@
+{
+  "spec": "defaultFrom.tessla",
+  "input": "defaultFrom-2.input",
+  "expectedOutput": "defaultFrom-2.output"
+}

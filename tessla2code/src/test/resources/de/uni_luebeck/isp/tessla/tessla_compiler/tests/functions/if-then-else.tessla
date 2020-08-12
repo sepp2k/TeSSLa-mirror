@@ -1,0 +1,10 @@
+in x: Events[Int]
+
+def f(x: Int) =
+  (y: Int) =>
+    static if x < 5 then x + y else x - y
+
+def y := slift1(x, f(3))
+out y
+def z := slift1(x, f(7))
+out z

@@ -1,0 +1,6 @@
+{
+  "spec": "timeunits-undefined.tessla",
+  "input": "timeunits-undefined.input",
+  "expectedErrors": "timeunits-undefined.errors"
+}
+            

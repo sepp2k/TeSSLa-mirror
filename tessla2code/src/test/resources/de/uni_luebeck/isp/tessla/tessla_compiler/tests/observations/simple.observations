@@ -1,0 +1,15 @@
+{
+  "Assignments": [],
+  "FunctionCalled": [{
+    "FunctionName": "add",
+    "code": "uint8_t* events = trace_create_events(1);\ntrace_push_unit(events, \"add\");\ntrace_write(events);"
+  }, {
+    "FunctionName": "check",
+    "code": "uint8_t* events = trace_create_events(1);\ntrace_push_bool(events, \"sub\", (bool) arg0);\ntrace_write(events);"
+  }],
+  "FunctionCalls": [],
+  "FunctionReturned": [],
+  "FunctionReturns": [],
+  "VarReads": [],
+  "userCbPrefix": "#include \"instrumentation.h\"\n"
+}

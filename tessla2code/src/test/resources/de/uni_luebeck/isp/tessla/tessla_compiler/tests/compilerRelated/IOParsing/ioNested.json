@@ -1,0 +1,5 @@
+{
+  "input": "ioNested.input",
+  "expectedOutput": "ioNested.output",
+  "spec": "ioNested.tessla"
+}

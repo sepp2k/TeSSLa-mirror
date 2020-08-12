@@ -1,0 +1,3 @@
+errors/object-type-error.tessla(8,11 - 8,12): Type mismatch: Expected {x: Events[Int], y: Events[Int]}, found {x: Events[Int], z: Events[Int]}
+errors/object-type-error.tessla(9,11 - 9,38): Type mismatch: Expected {x: Events[Int], y: Events[Int]}, found {x: Events[Int], y: Events[Int], z: Events[Int]}
+errors/object-type-error.tessla(12,11 - 12,13): Type mismatch: Expected {x: Events[Int], y: Events[Int]}, found {x: Events[Int], y: Events[Int], ..}

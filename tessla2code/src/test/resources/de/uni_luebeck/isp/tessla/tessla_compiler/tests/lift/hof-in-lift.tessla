@@ -1,0 +1,8 @@
+in x: Events[Int]
+
+out lift(x, nil[Int], (oi: Option[Int], nothing: Option[Int]) => map_option(oi, (i: Int) => i+1)) as y
+
+def map_option[T, U](o: Option[T], f: (T) => U): Option[U] :=
+    if isNone(o)
+    then None[U]
+    else Some(f(getSome(o)))

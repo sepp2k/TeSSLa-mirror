@@ -1,0 +1,3 @@
+in x: Events[Int]
+
+out lift1(x, (a: Option[Int], b: Option[Int]) => b)

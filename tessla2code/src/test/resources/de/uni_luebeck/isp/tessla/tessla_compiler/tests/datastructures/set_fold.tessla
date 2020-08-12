@@ -1,0 +1,13 @@
+def op(acc: Int, value: (Int, Int)) = {
+  def add(x: Int, y: Int, z: Int) = x + y + z
+  return add(acc, value._1, value._2)
+}
+
+def ss = const(Set.add(Set.add(Set.empty[(Int, Int)], (2,1)), (4,7)), ())
+def os = lift(s, nil[Unit], (x: Option[Set[(Int,Int)]], y: Option[Unit]) =>
+  Some(Set.fold(getSome(x), 0, op)))
+out os
+
+def s = Set.add(Set.add(Set.empty[(Int, Int)], (1,2)), (3,4))
+def o = Set.fold(s, 0, op)
+out o

@@ -1,0 +1,6 @@
+{
+  "spec": "not-equal.tessla",
+  "input": "not-equal.input",
+  "expectedOutput": "not-equal.output"
+}
+            

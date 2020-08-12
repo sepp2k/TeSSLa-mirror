@@ -1,0 +1,4 @@
+{
+  "spec": "undefined-variable.tessla",
+  "expectedErrors": "undefined-variable.errors"
+}

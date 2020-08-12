@@ -1,0 +1,4 @@
+in x: Events[Int]
+  
+liftable def y[A](a: Int) = a + 5
+out y[Int](x)

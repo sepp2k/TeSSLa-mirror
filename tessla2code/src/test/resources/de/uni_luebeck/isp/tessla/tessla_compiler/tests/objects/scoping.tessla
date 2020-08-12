@@ -1,0 +1,16 @@
+in x: Events[Int]
+
+def y = x + 1
+
+def o1 = ${
+  x: y,        -- We can use : to define members, too
+  xp1 = x + 1, -- Here x refers to the outer variable x, not the member x
+}
+
+def o2 = ${x, y} -- In this shorthand notation the members x and y are assigned the values of
+                 -- the variables of the same name
+
+out o1.xp1
+out o1.x
+out o2.x
+out o2.y

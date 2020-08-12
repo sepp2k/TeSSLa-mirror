@@ -1,0 +1,13 @@
+in x: Events[Int]
+in y: Events[Int]
+in e: Events[Unit]
+in c: Events[Bool]
+
+def z := x + y
+out z
+
+def ec := count(e)
+out ec
+
+def ecOrZ := if c then z else ec
+out ecOrZ

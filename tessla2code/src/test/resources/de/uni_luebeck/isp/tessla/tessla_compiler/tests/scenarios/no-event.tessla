@@ -1,0 +1,12 @@
+in a: Events[Unit]
+in b: Events[Unit]
+in z: Events[Unit]
+
+def c := merge(a,b)
+
+def verify := default(const(false, c), true)
+
+out a
+out b
+out c
+out verify

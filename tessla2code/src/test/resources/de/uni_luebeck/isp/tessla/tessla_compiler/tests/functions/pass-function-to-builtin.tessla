@@ -1,0 +1,4 @@
+def add(a: Int, b: Int) = a + b
+def s = Set.empty[Int]
+def o = Set.fold(s, 0, add)
+out o

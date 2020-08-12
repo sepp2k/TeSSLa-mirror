@@ -1,0 +1,5 @@
+{
+  "spec": "set_union_intersection.tessla",
+  "input": "set_union_intersection.input",
+  "expectedOutput": "set_union_intersection.output"
+}

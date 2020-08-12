@@ -1,0 +1,3 @@
+liftable def f(x: Int, y: Events[Int]) := ()
+
+liftable def g(f: (Int) => Int) := ()

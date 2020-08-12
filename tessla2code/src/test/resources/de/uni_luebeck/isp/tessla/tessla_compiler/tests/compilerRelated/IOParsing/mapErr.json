@@ -1,0 +1,6 @@
+{
+  "expectedRuntimeErrors": "mapErr.errors",
+  "spec": "io.tessla",
+  "input": "mapErr.input",
+  "expectedOutput": "empty.output"
+}

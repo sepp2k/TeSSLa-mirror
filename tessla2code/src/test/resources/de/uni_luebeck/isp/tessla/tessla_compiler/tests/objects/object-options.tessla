@@ -1,0 +1,7 @@
+def foo(x: Option[(Int, Int)]) := if isNone(x) then 5 else getSome(x)._2
+
+in i: Events[Option[(Int, Int)]]
+
+out foo(None[(Int, Int)]) as a
+out foo(Some((2,3))) as b
+out slift1(i, foo) as c

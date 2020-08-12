@@ -1,0 +1,8 @@
+in x: Events[Float]
+
+def p(name: String, f: Events[Float]) = f"${time(f)}: $name = ${f}%+.10f"
+
+@raw out p("sin", sin(x))
+@raw out p("cos", cos(x))
+@raw out p("tan", tan(x))
+@raw out p("ata", atan(x))

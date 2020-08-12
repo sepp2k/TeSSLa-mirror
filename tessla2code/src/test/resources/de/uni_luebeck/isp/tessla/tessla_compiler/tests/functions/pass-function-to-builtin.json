@@ -1,0 +1,5 @@
+{
+  "input": "pass-function-to-builtin.input",
+  "expectedOutput": "pass-function-to-builtin.output",
+  "spec": "pass-function-to-builtin.tessla"
+}
