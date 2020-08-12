@@ -7,7 +7,7 @@ import de.uni_luebeck.isp.tessla.core.util.Lazy
 
 import scala.collection.immutable.ArraySeq
 import cats.implicits._
-import de.uni_luebeck.isp.tessla.core.Errors.RuntimeError
+import de.uni_luebeck.isp.tessla.core.ConstantEvaluator.RuntimeError
 import de.uni_luebeck.isp.tessla.core.util.ArraySeqMonad._
 import org.eclipse.tracecompass.ctf.core.event.IEventDefinition
 

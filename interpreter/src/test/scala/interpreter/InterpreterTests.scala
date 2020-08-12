@@ -221,7 +221,7 @@ class InterpreterTests extends AnyFunSuite {
                 .map(spec => Interpreter.run(spec, trace, None, true))
 
               handleResult(result, testCase.expectedErrors, testCase.expectedWarnings) { output =>
-                val expectedOutput = testSource(testCase.expectedOutput.get).getLines.toSet
+                val expectedOutput = testSource(testCase.expectedOutput.get).getLines().toSet
                 val actualOutput = output.toSet
 
                 assert(

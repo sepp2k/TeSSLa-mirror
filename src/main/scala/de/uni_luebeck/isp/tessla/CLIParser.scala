@@ -16,14 +16,14 @@ object CLIParser {
     "Compile Tessla specifications and evaluate them on provided input streams."
   val licenseLocation = "de/uni_luebeck/isp/tessla/License"
 
-  sealed trait ConfigTrait
+  sealed trait Config
 
   case class DocConfig(
     stdLib: Boolean = false,
     includes: Boolean = false,
     outfile: Option[File] = None,
     sources: Seq[CharStream] = Seq()
-  ) extends ConfigTrait
+  ) extends Config
 
   case class CoreConfig(
     specSource: CharStream = null,
@@ -36,7 +36,7 @@ object CLIParser {
     listInStreams: Boolean = false,
     observations: Boolean = false,
     compilerOptions: Compiler.Options = Compiler.Options()
-  ) extends ConfigTrait
+  ) extends Config
 
   case class InterpreterConfig(
     specSource: CharStream = null,
@@ -48,18 +48,18 @@ object CLIParser {
     ctfTrace: Boolean = false,
     csvTrace: Boolean = false,
     compilerOptions: Compiler.Options = Compiler.Options()
-  ) extends ConfigTrait
+  ) extends Config
 
   case class GlobalConfig(
     diagnostics: Boolean = true,
     debug: Boolean = false
-  ) extends ConfigTrait
+  )
 
-  case class Task[T <: ConfigTrait](name: String, config: T)
+  case class Task[T <: Config](name: String, config: T)
 
   private var global = GlobalConfig()
   private var compilerOptions = Compiler.Options()
-  private val tasks = mutable.ArrayBuffer[() => Task[ConfigTrait]]()
+  private val tasks = mutable.ArrayBuffer[() => Task[Config]]()
 
   private val parser: OptionParser[Unit] = new OptionParser[Unit](programName) {
     head(s"$programName $programVersion")
@@ -213,7 +213,7 @@ object CLIParser {
       )
   }
 
-  def parse(args: Array[String], helpOnEmpty: Boolean = true): (GlobalConfig, List[Task[ConfigTrait]]) = {
+  def parse(args: Array[String], helpOnEmpty: Boolean = true): (GlobalConfig, List[Task[Config]]) = {
     val a = if (helpOnEmpty && args.isEmpty) Array("--help") else args
     parser.parse(a, ()).getOrElse(sys.exit(1))
     (global, tasks.map(_()).toList)

@@ -3,13 +3,13 @@ package de.uni_luebeck.isp.tessla
 import java.io.IOException
 import java.nio.file.Files
 
-import de.uni_luebeck.isp.tessla.CLIParser.{ConfigTrait, DocConfig, Task}
+import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.core.analyses.Observations
 import de.uni_luebeck.isp.tessla.interpreter._
-import tessladoc.TesslaDoc
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TesslaAST}
+import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc
 
 import scala.io.Source
 
@@ -30,7 +30,7 @@ object Main {
     * @param global the global, task-independent configuration settings
    * @param tasks the tasks to be executed
    */
-  class Application(global: CLIParser.GlobalConfig, tasks: List[Task[ConfigTrait]]) {
+  class Application(global: CLIParser.GlobalConfig, tasks: List[Task[Config]]) {
 
     /**
      * Decides which mode to run in depending on the configuration provided.
