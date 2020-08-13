@@ -1,3 +1,4 @@
+// Resolvers
 val nexus = "https://sourcecode.isp.uni-luebeck.de/nexus/"
 val snapshots = "ISP Snapshots" at nexus + "content/repositories/snapshots"
 val releases = "ISP Releases" at nexus + "content/repositories/releases"
@@ -6,6 +7,7 @@ val validatorResolver = "emueller-bintray" at "https://dl.bintray.com/emueller/m
 val efficiosSnapshots = "efficios-snapshots" at "https://mvn.efficios.com/repository/snapshots"
 val efficiosReleases = "efficios-releases" at "https://mvn.efficios.com/repository/releases"
 
+// Pattern to extract the version from the stdlib file
 val versionFile = new File("core/src/main/resources/de/uni_luebeck/isp/tessla/stdlib/Tessla.tessla")
 val versionPattern = "def\\s+version(?:\\s*:\\s*String)?\\s*=\\s*\"([^\"]+)\"".r
 
@@ -14,8 +16,9 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / cancelable := true
 
 // ThisBuild scoped settings
+val compilerVersion = "2.13.3"
 ThisBuild / organization := "de.uni_luebeck.isp"
-ThisBuild / scalaVersion := "2.13.3"
+ThisBuild / scalaVersion := compilerVersion
 ThisBuild / version := versionPattern.findFirstMatchIn(IO.read(versionFile)).get.group(1)
 
 ThisBuild / publishTo := { if (isSnapshot.value) Some(snapshots) else Some(releases) }
@@ -81,12 +84,14 @@ lazy val root = (project in file("."))
   .dependsOn(
     core,
     interpreter,
-    docs
+    docs,
+    tesslac
   )
   .aggregate(
     core,
     interpreter,
-    docs
+    docs,
+    tesslac
   )
 
 lazy val core = (project in file("core"))
@@ -126,6 +131,22 @@ lazy val docs = (project in file("docs"))
     name := "docs",
     Antlr4 / antlr4PackageName := Some(s"$rootPackage.docs"),
     buildInfoPackage := s"$rootPackage.docs"
+  )
+  .dependsOn(
+    core
+  )
+
+lazy val tesslac = (project in file("tessla-compiler"))
+  .enablePlugins(
+    BuildInfoPlugin
+  )
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tessla-compiler",
+    buildInfoPackage := s"$rootPackage.tessla_compiler",
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-compiler" % compilerVersion
+    )
   )
   .dependsOn(
     core

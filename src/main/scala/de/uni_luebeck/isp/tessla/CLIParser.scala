@@ -50,6 +50,13 @@ object CLIParser {
     compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
+  case class TesslacConfig(
+    specSource: CharStream = null,
+    optimise: Boolean = true,
+    outFile: Option[File] = None,
+    jarFile: Option[File] = None
+                          ) extends Config
+
   case class GlobalConfig(
     diagnostics: Boolean = true,
     debug: Boolean = false
@@ -70,9 +77,9 @@ object CLIParser {
         "Use the given time constant (including a unit) as the reference time for time literals" +
           "(only in 'interpreter' and 'compile-core'"
       )
-    opt[File]('s', "stdlib")
+    opt[File]('s', "stdlib") // TODO Overlaps with doc stdlib?
       .valueName("<file>")
-      .action((f, _) =>
+      .action((f, _) => //TODO replace actions with foreach
         compilerOptions = compilerOptions.copy(
           stdlibPath = f.getPath,
           stdlibIncludeResolver = IncludeResolvers.fromFile
@@ -82,10 +89,13 @@ object CLIParser {
         "Provide a standard library to use instead of the default one." +
           "(only in 'interpreter' and 'compile-core'"
       )
+
+    opt[Unit]("no-diagnostics")
+        .foreach(_ => global = global.copy(diagnostics = false))
+        .text("Suppress error messages and warnings")
     opt[Unit]("debug")
-      .hidden()
       .action((_, _) => global = global.copy(debug = true))
-      .text("Print stack traces for runtime errors")
+      .text("Print stack traces for errors and provide more verbose output")
     note("") // Spacer
     help("help")
       .text("Prints this help message and exit.")
@@ -211,6 +221,26 @@ object CLIParser {
           .action((s, _) => config = config.copy(sources = config.sources :+ CharStreams.fromFileName(s.getPath)))
           .text("The TeSSLa files for which to generate documentation")
       )
+  }
+
+  // Extension for the 'compile' command
+  {
+    import parser._
+    var config = TesslacConfig()
+
+    note("")
+    cmd("compile")
+      .foreach(_ => tasks += (() => Task("compile", config)))
+        .text("Compile TeSSLa specifications to Scala")
+    arg[File]("<tessla-file>")
+      .foreach(f => config = config.copy(specSource = CharStreams.fromFileName(f.getPath)))
+        .text("The file containing the Tessla specification")
+    opt[File]('o', "out-file")
+      .foreach(f => config = config.copy(outFile = Some(f)))
+      .text("Path to the output file")
+    opt[File]('j', "jar-file")
+      .foreach(f => config = config.copy(jarFile = Some(f)))
+      .text("Compiles Scala code to a jar file which is created at the given location. No source output is generated")
   }
 
   def parse(args: Array[String], helpOnEmpty: Boolean = true): (GlobalConfig, List[Task[Config]]) = {

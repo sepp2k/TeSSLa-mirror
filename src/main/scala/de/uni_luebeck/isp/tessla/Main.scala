@@ -1,14 +1,20 @@
 package de.uni_luebeck.isp.tessla
 
 import java.io.IOException
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
-import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
+import de.uni_luebeck.isp.tessla.CLIParser.{Config, CoreConfig, DocConfig, InterpreterConfig, Task, TesslacConfig}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.core.analyses.Observations
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TesslaAST}
+import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics.NotYetImplementedError
+import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.BackendInterface
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc
 
 import scala.io.Source
@@ -39,8 +45,9 @@ object Main {
       try {
         tasks.foreach {
           case Task(_, config: CLIParser.DocConfig)         => runDoc(config)
-          case Task(_, config: CLIParser.CoreConfig)        => runCompiler(config)
+          case Task(_, config: CLIParser.CoreConfig)        => runCore(config)
           case Task(_, config: CLIParser.InterpreterConfig) => runInterpreter(config)
+          case Task(_, config: CLIParser.TesslacConfig) => runTesslaCompiler(config)
         }
       } catch {
         case ex: TesslaError =>
@@ -52,14 +59,13 @@ object Main {
       }
 
     }
-
     /**
      * Generate documentation.
      *
       * This mode parses the input, then extracts and processes the documentation strings
      * from each definition. The result is either printed to stdout or to a file, depending on the configuration.
      *
-      * @see See [[tessladoc.TesslaDoc.extract]] for more
+      * @see See [[TesslaDoc.extract]] for more
      */
     def runDoc(docConfig: DocConfig): Unit = {
       val includeResolver = Option.when(docConfig.includes)(IncludeResolvers.fromFile _)
@@ -85,7 +91,7 @@ object Main {
      * Runs the [[Compiler]] on the provided specification and prints the resulting Tessla-Core code,
      * depending on the configuration.
      */
-    def runCompiler(config: CLIParser.CoreConfig): Unit = {
+    def runCore(config: CLIParser.CoreConfig): Unit = {
       val compiler = new Compiler(config.compilerOptions)
       val typed = unwrapResult(compiler.tesslaToTyped(config.specSource))
       val core = unwrapResult(compiler.typedToCore(typed))
@@ -135,6 +141,66 @@ object Main {
       val output = Interpreter.run(core, trace, config.stopOn, config.rejectUndeclaredInputs)
       output.foreach(println)
 
+    }
+
+    def runTesslaCompiler(config: CLIParser.TesslacConfig): Unit = {
+      try {
+        val compilerOptions = Compiler.Options()
+        val (backend, stdinRead) = (new ScalaBackend, true)
+
+        val core = unwrapResult(
+          Compiler.compile(config.specSource, compilerOptions)
+          andThen UsageAnalysis
+          andThen Laziness
+        )
+
+        if (global.debug) {
+          println("###############################")
+          println("#        TeSSLa Core          #")
+          println("###############################")
+          println(core.spec)
+          println("###############################")
+        }
+
+        val optIntermediateCode = unwrapResult(
+          new TesslaCoreToIntermediate(stdinRead)(core)
+          andThen UnusedVarRemove
+        )
+
+        if (global.debug) {
+          println("###############################")
+          println("#      Intermediate Code      #")
+          println("###############################")
+          println(optIntermediateCode)
+          println("###############################")
+        }
+
+        val source = backend.translate(optIntermediateCode)
+        val sourceStr = unwrapResult(source)
+
+        config.jarFile.map{ file =>
+        val p = file.toPath
+          val (dirPath, name) = if (file.isDirectory) {
+            (p, "monitor.jar")
+          } else {
+            val n = file.getName
+            (p.getParent, if (n.contains(".")) n else s"$n.jar")
+          }
+          new ScalaCompiler(dirPath, name).translate(sourceStr)
+        }
+
+        config.outFile match {
+          case Some(f) =>
+            Files.createDirectories(f.toPath.getParent)
+            Files.write(f.toPath, sourceStr.getBytes(StandardCharsets.UTF_8))
+          case None => println(sourceStr)
+        }
+
+      } catch {
+        case ex: TesslaError =>
+          System.err.println(s"Compilation error: $ex")
+          if (global.debug) ex.printStackTrace()
+      }
     }
 
     private def unwrapResult[T](result: Result[T]): T = result match {
