@@ -2,7 +2,8 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check
 
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.TranslationPhase.Success
-import de.uni_luebeck.isp.tessla.tessla_compiler.{ControlFlowAnalysis, DefinitionOrdering}
+import de.uni_luebeck.isp.tessla.tessla_compiler.DefinitionOrdering
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.ControlFlowAnalysis
 import de.uni_luebeck.isp.tessla.{TesslaAST, TranslationPhase}
 
 class TesslaCoreWithMutabilityInfo(val spec: TesslaAST.Core.Specification,

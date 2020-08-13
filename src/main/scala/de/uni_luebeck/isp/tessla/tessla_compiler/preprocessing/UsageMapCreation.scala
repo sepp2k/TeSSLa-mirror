@@ -1,7 +1,7 @@
-package de.uni_luebeck.isp.tessla.tessla_compiler
+package de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing
 
-import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.TesslaAST.Core
+import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 
 class UsageMapCreation(spec: Core.Specification) {
 

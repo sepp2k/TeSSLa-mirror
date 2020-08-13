@@ -5,6 +5,7 @@ import de.uni_luebeck.isp.tessla.TranslationPhase
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.TesslaCoreWithMutabilityInfo
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.ControlFlowAnalysis
 
 /**
   * Class implementing de.uni_luebeck.isp.tessla.TranslationPhase for the translation from TeSSLa Core to

@@ -4,6 +4,7 @@ import de.uni_luebeck.isp.tessla.TesslaAST
 import de.uni_luebeck.isp.tessla.TesslaAST.Core.{FunctionType => _, _}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.ControlFlowAnalysis
 
 import scala.language.implicitConversions
 import scala.language.postfixOps

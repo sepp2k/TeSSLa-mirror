@@ -7,6 +7,7 @@ import scala.language.postfixOps
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
 import de.uni_luebeck.isp.tessla._
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.ControlFlowAnalysis
 /**
   * Class containing functions for the translation of single TeSSLa expressions to imperative code
   */
