@@ -9,10 +9,15 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference,
   */
 class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeleton.scala") {
 
-  def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr])]): Seq[String] = {
-    vars.map {
-      case (name, (typ, scala.Some(default))) => s"var $name : ${ScalaConstants.typeTranslation(typ)} = ${translateExpression(default)}"
-      case (name, (typ, scala.None)) => s"var $name : ${ScalaConstants.typeTranslation(typ)} = null"
+  override def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)]): Seq[String] = {
+    generateVariableDeclarationsWithScopeInfo(vars)
+  }
+
+  def generateVariableDeclarationsWithScopeInfo(vars: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)], outScope: Boolean = true): Seq[String] = {
+    vars.flatMap {
+      case (_, (_, _, true)) if !outScope => scala.None
+      case (name, (typ, scala.Some(default), _)) => scala.Some(s"var $name : ${ScalaConstants.typeTranslation(typ)} = ${translateExpression(default)}")
+      case (name, (typ, scala.None, _)) => scala.Some(s"var $name : ${ScalaConstants.typeTranslation(typ)} = null")
     }.toSeq
   }
 
@@ -38,7 +43,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       case TryCatchBlock(tr, cat) =>
         s"try {\n${generateCode(tr)}\n} catch {\ncase var_err : Throwable => {\n${generateCode(cat)}\n}\n}"
 
-      case Assignment(lhs, rexpr, _, t) => s"$lhs = " +
+      case Assignment(lhs, rexpr, _, t, _) => s"$lhs = " +
         s"${translateExpression(rexpr)}"
       case FinalAssignment(_, _, _) => ""
 
@@ -58,7 +63,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       case LambdaApplication(exp, params) => s"${translateExpression(exp)}.apply(${params.map(translateExpression).mkString(", ")})"
       case TernaryExpression(guard, e1, e2) => s"if(${foldGuard(guard)}) {${translateExpression(e1)}} else {${translateExpression(e2)}}"
       case Equal(a, b) => {
-        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _) => typ }.toMap))) {
+        if (isObjectType(IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _, _) => typ }.toMap))) {
           s"${translateExpression(a)}.equals(${translateExpression(b)})"
         } else {
           s"${translateExpression(a)} == ${translateExpression(b)}"
@@ -66,7 +71,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       }
       case LambdaExpression(argNames, argsTypes, _, body) => {
         val args = argsTypes.zip(argNames).map { case (t, n) => s"$n : ${ScalaConstants.typeTranslation(t)}" }.mkString(", ")
-        s"(($args) => {\n${generateVariableDeclarations(IntermediateCodeUtils.getVariableMap(body)).mkString("\n")}\n${generateCode(body)}\n})"
+        s"(($args) => {\n${generateVariableDeclarationsWithScopeInfo(IntermediateCodeUtils.getVariableMap(body, Map(), false), false).mkString("\n")}\n${generateCode(body)}\n})"
       }
       case Variable(name) => name
       case CastingExpression(e, t) => s"(${translateExpression(e)}).asInstanceOf[${ScalaConstants.typeTranslation(t)}]"

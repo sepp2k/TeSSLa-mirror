@@ -11,36 +11,35 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCodeTypeIn
   */
 abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase[SourceListing, String] {
 
-  var variables : Map[String, (ImpLanType, Option[ImpLanExpr])] = Map()
+  var variables : Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map()
 
   def translate(orgListing: SourceListing) : Result[String] = {
     var warnings = Seq()
 
-    val nonStaticVars = IntermediateCodeUtils.getVariableMap(orgListing.tsGenSource.concat(orgListing.stepSource).concat(orgListing.inputProcessing).concat(orgListing.tailSource)) ++
-      Map("inputStream" -> (StringType, scala.Some(StringValue(""))),
-      "value" -> (StringType, scala.Some(StringValue(""))),
-      "currTs" -> (LongType, scala.Some(LongValue(0))),
-      "lastProcessedTs" -> (LongType, scala.Some(LongValue(0))),
-      "newInputTs" -> (LongType, scala.Some(LongValue(0))))
+    val nonStaticVars = IntermediateCodeUtils.getVariableMap(orgListing.tsGenSource.concat(orgListing.stepSource).concat(orgListing.callbacks).concat(orgListing.tailSource), Map(),true) ++
+      Map("inputStream" -> (StringType, scala.Some(StringValue("")), true),
+      "value" -> (StringType, scala.Some(StringValue("")), true),
+      "currTs" -> (LongType, scala.Some(LongValue(0)), true),
+      "lastProcessedTs" -> (LongType, scala.Some(LongValue(0)), true))
 
-    val staticVars = IntermediateCodeUtils.getVariableMap(orgListing.staticSource)
+    val staticVars = IntermediateCodeUtils.getVariableMap(orgListing.staticSource, Map(), true)
 
     variables = nonStaticVars ++ staticVars
 
-    val listing = IntermediateCodeTypeInference.generateCodeWithCasts(orgListing, variables.map{case (n, (t, _)) => (n, t)})
+    val listing = IntermediateCodeTypeInference.generateCodeWithCasts(orgListing, variables.map{case (n, (t, _, _)) => (n, t)})
 
     val source =  scala.io.Source.fromResource(sourceTemplate).mkString
     val rewrittenSource = source.replaceAllLiterally("//VARDEF", generateVariableDeclarations(nonStaticVars).mkString("\n"))
         .replaceAllLiterally("//TRIGGER", generateCode(listing.tsGenSource))
         .replaceAllLiterally("//STEP", generateCode(listing.stepSource))
         .replaceAllLiterally("//TAIL", generateCode(listing.tailSource))
-        .replaceAllLiterally("//INPUTPROCESSING", generateCode(listing.inputProcessing))
+        .replaceAllLiterally("//CALLBACKS", generateCode(listing.callbacks))
         .replaceAllLiterally("//STATIC", generateVariableDeclarations(staticVars).mkString("\n") + "\n\n" + generateCode(listing.staticSource))
 
     Success(rewrittenSource, warnings)
   }
 
-  def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr])]) : Seq[String]
+  def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)]) : Seq[String]
 
   def generateCode(stmts: Seq[ImpLanStmt]) : String
 }

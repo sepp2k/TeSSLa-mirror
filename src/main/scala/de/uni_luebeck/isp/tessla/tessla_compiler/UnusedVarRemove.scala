@@ -9,12 +9,13 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
 
   override def translate(listing: SourceListing): Result[SourceListing] = {
-    val outerStmts = listing.stepSource ++ listing.tailSource ++ listing.tsGenSource ++ listing.inputProcessing ++ listing.staticSource
+    val outerStmts = listing.stepSource ++ listing.tailSource ++ listing.tsGenSource ++ listing.callbacks ++ listing.staticSource
+    val neverDel = Set("*", "newInputTs")
 
     val usages = getUsageMap(outerStmts, Map())
     var usedIn = usages.foldLeft[Map[String, Set[String]]](Map()) { case (map, (k, v)) => v.foldLeft(map) { case (map, e) => map + (e -> (map.getOrElse(e, Set()) + k)) } }
 
-    var newDel = (usages.keys.toSet -- usedIn.keys) - "*"
+    var newDel = ((usages.keys.toSet -- usedIn.keys) -- neverDel).filter(!_.startsWith("set"))
     val deleteVars : collection.mutable.Set[String] = collection.mutable.Set()
 
     while (newDel.nonEmpty) {
@@ -22,13 +23,13 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
       usedIn = usedIn.view.mapValues(_.removedAll(newDel)).filter{case (k,_) => !newDel.contains(k)}.toMap
       deleteVars ++= newDel
 
-      newDel = usedIn.flatMap{case (k, v) => if (v.isEmpty) scala.Some(k) else scala.None}.toSet - "*"
+      newDel = (usedIn.flatMap{case (k, v) => if (v.isEmpty) scala.Some(k) else scala.None}.toSet -- neverDel).filter(!_.startsWith("set"))
     }
 
     Success(SourceListing(removeAssignments(listing.stepSource, deleteVars.toSet),
                           removeAssignments(listing.tailSource, deleteVars.toSet),
                           removeAssignments(listing.tsGenSource, deleteVars.toSet),
-                          removeAssignments(listing.inputProcessing, deleteVars.toSet),
+                          removeAssignments(listing.callbacks, deleteVars.toSet),
                           removeAssignments(listing.staticSource, deleteVars.toSet),
     ), Seq())
   }
@@ -37,7 +38,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
 
     val f = (stmt: ImpLanStmt) => {
       stmt match {
-        case Assignment(lhs, _, _, _) if del.contains(lhs.name) => scala.None
+        case Assignment(lhs, _, _, _, _) if del.contains(lhs.name) => scala.None
         case FinalAssignment(lhs, _, _) if del.contains(lhs.name) => scala.None
         case _ => scala.Some(stmt)
       }
@@ -54,14 +55,14 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
     val prevMap = stmt match {
       case If(guard, stmts, elseStmts) => getUsageMap(stmts, getUsageMap(elseStmts, getUsageMap(guard.flatten, currMap)))
       case TryCatchBlock(tr, cat) => getUsageMap(tr, getUsageMap(cat, currMap))
-      case Assignment(lhs, rexpr, defExpr, _) => currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(rexpr)).union(if (defExpr.isDefined) getUsagesInExpr(defExpr.get) else Set()))
+      case Assignment(lhs, rexpr, defExpr, _, _) => currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(rexpr)).union(if (defExpr.isDefined) getUsagesInExpr(defExpr.get) else Set()))
       case FinalAssignment(lhs, defExp, _) => currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(defExp)))
       case e: ImpLanExpr => currMap + (scopeVar -> currMap.getOrElse(scopeVar, Set()).union(getUsagesInExpr(e)))
       case ReturnStatement(e) => currMap + (scopeVar -> currMap.getOrElse(scopeVar, Set()).union(getUsagesInExpr(e)))
     }
 
     val subScopeVar = stmt match {
-      case Assignment(lhs, _, _, _) => lhs.name
+      case Assignment(lhs, _, _, _, _) => lhs.name
       case FinalAssignment(lhs, _, _) => lhs.name
       case _ => scopeVar
     }
@@ -82,13 +83,13 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
   }
 
   def getDefines(stmts: Seq[ImpLanStmt]): Set[String] = {
-    stmts.map[Set[String]]{
+    stmts.flatMap[String]{
         case If(_, stmts, elseStmts) => getDefines(stmts) ++ getDefines(elseStmts)
         case TryCatchBlock(tr, cat) => getDefines(tr) ++ getDefines(cat)
-        case Assignment(lhs, _, _, _) => Set(lhs.name)
-        case FinalAssignment(lhs, _, _) => Set(lhs.name)
-        case _ => Set()
-    }.reduce(_ ++ _)
+        case Assignment(lhs, _, _, _, _) => Seq(lhs.name)
+        case FinalAssignment(lhs, _, _) => Seq(lhs.name)
+        case _ => Seq()
+    }.toSet
   }
 
   def getLambdaBodies(stmts: Seq[ImpLanStmt]): Seq[ImpLanStmt] = {

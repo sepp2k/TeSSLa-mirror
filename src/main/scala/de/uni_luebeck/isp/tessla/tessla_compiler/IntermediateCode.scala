@@ -15,7 +15,7 @@ object IntermediateCode {
   case class SourceListing(stepSource: Seq[ImpLanStmt],
                            tailSource: Seq[ImpLanStmt],
                            tsGenSource: Seq[ImpLanStmt],
-                           inputProcessing: Seq[ImpLanStmt],
+                           callbacks: Seq[ImpLanStmt],
                            staticSource: Seq[ImpLanStmt]) {
 
     override def toString: String =
@@ -23,7 +23,7 @@ object IntermediateCode {
       s"## Tail Code:\n${tailSource.mkString("\n")}\n" +
       s"## Step Source:\n${stepSource.mkString("\n")}\n" +
       s"## TS Generation:\n${tsGenSource.mkString("\n")}\n" +
-      s"## Input Processing:\n${inputProcessing.mkString("\n")}\n"
+      s"## Callbacks:\n${callbacks.mkString("\n")}\n"
 
   }
 
@@ -43,6 +43,10 @@ object IntermediateCode {
 
   final case object GeneralType extends  ImpLanType {
     override def toString = "GeneralType"
+  }
+
+  final case object VoidType extends ImpLanType {
+    override def toString = "Void"
   }
 
   final case object LongType extends ImpLanType {
@@ -180,9 +184,9 @@ object IntermediateCode {
     override def toString = s"Try: \n${tr.mkString("\n")}\nCATCH var_err: \n${cat.mkString("\n")}\nEndTry"
   }
 
-  final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: Option[ImpLanExpr], typ: ImpLanType)
+  final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: Option[ImpLanExpr], typ: ImpLanType, global: Boolean)
     extends ImpLanStmt {
-    override def toString = s"$lhs = ${rexpr} (default: ${defVal})"
+    override def toString = s"$lhs = ${rexpr} (default: $defVal, global: $global)"
   }
 
   final case class FinalAssignment(lhs: Variable, defVal: ImpLanExpr, typ: ImpLanType) extends ImpLanStmt {

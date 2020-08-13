@@ -88,14 +88,14 @@ class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
           case ApplicationExpression(e: ExternExpression, args, _) => translateExternSignalExpression(id, e, args, Seq(), currSource) //TODO: Does this exist?
           case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
         }
-        case _ => SourceListing(currSource.stepSource, currSource.tailSource, currSource.tsGenSource, currSource.inputProcessing, currSource.staticSource :+ myNonStreamCodeGenerator.translateDefinition(id, definition, definitions))
+        case _ => SourceListing(currSource.stepSource, currSource.tailSource, currSource.tsGenSource, currSource.callbacks, currSource.staticSource :+ myNonStreamCodeGenerator.translateDefinition(id, definition, definitions))
       }
     }
     }
 
     in.foreach {i =>
       if (consoleInterface) {
-        currSource = myStreamCodeGenerator.produceInputFromConsoleCode(i._1, i._2._1, currSource)
+        currSource = myStreamCodeGenerator.produceInputCode(i._1, i._2._1, currSource)
       } else {
         throw Errors.NotYetImplementedError("Translation without value consumption from stdin is not implemented yet")
       }

@@ -33,7 +33,7 @@ class NonStreamCodeGenerator(val addDeps: Map[Identifier, Set[Identifier]], cfAn
   }
 
   def translateDefinition(id: Identifier, e: ExpressionArg, defContext: Map[Identifier, DefinitionExpression]) : ImpLanStmt = {
-    Assignment(s"var_$id", translateExpressionArg(e, defContext), scala.Some(defaultValueForType(e.tpe)), e.tpe)
+    Assignment(s"var_$id", translateExpressionArg(e, defContext), scala.Some(defaultValueForType(e.tpe)), e.tpe, false)
   }
 
   def translateFunction(e: FunctionExpression, defContext: Map[Identifier, DefinitionExpression]) : ImpLanExpr = {

@@ -44,7 +44,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
       FinalAssignment(s"${o}_changed", BoolValue(false), BoolType)
       )
 
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
   }
 
   def produceDefaultStepCode(id: Identifier, ot: Type, stream : ExpressionArg, value : ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -69,7 +69,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
   }
 
   def produceDefaultFromStepCode(id: Identifier, ot: Type, stream : ExpressionArg, default : ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -103,7 +103,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
   }
 
   def produceTimeStepCode(id: Identifier, stream: ExpressionArg, loc: Location, currSrc: SourceListing) : SourceListing = {
@@ -126,7 +126,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
     EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
   }
 
   def produceLastStepCode(id: Identifier, ot: Type, values: ExpressionArg, clock: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -155,7 +155,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
       EndIf()
 
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
   }
 
   def produceDelayStepCode(id: Identifier, delay: ExpressionArg, reset: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -205,7 +205,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
       EndIf()
       )
 
-    SourceListing(newStmt, newTail, newTsGen, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, newTail, newTsGen, currSrc.callbacks, currSrc.staticSource)
   }
 
   @scala.annotation.tailrec
@@ -252,7 +252,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
         Assignment(s"${o}_errval", inputError, LongValue(0), LongType).
         If(Seq(Seq(Equal(s"${o}_errval", LongValue(0))))).
           Try().
-            Assignment(s"${o}_fval", myNonStreamCodeGenerator.translateFunctionCall(function, params, Seq()), scala.None, OptionType(ot)).
+            Assignment(s"${o}_fval", myNonStreamCodeGenerator.translateFunctionCall(function, params, Seq()), scala.None, OptionType(ot), true).
             If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
               Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
               Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
@@ -278,7 +278,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
         EndIf().
       EndIf()
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
   }
 
   def produceSignalLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
@@ -318,7 +318,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
         EndIf().
       EndIf()
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
   }
 
   def produceMergeStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], loc: Location, currSrc: SourceListing): SourceListing = {
@@ -353,21 +353,25 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
 
     (1 to args.length + 1).foreach{_ => newStmt = newStmt.EndIf()}
 
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
   }
 
   def produceOutputCode(id: Identifier, t: Type, nameOpt: Option[String], currSrc: SourceListing) : SourceListing = {
     val s = s"var_${id.fullName}"
     val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
+    val ft = IntermediateCode.FunctionType(Seq(t, LongType, StringType, LongType), VoidType)
+
+    val newCallbacks = (currSrc.callbacks.
+      Assignment(s"out_$s", EmptyFunction(ft), EmptyFunction(ft), ft)
+      )
 
     val newStepSrc = (currSrc.stepSource.
       If(Seq(Seq(s"${s}_changed", s"${s}_init"))).
-        FunctionCall("__[TC]output__", Seq(s"${s}_value", StringValue(name), s"${s}_error"),
-                      IntermediateCode.FunctionType(Seq(t, StringType, LongType), UnitType)).
+      LambdaApllication(s"out_$s", Seq(s"${s}_value", "currTs", StringValue(name), s"${s}_error")).
       EndIf()
     )
 
-    SourceListing(newStepSrc, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(newStepSrc, currSrc.tailSource, currSrc.tsGenSource, newCallbacks, currSrc.staticSource)
   }
 
   def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing) = {
@@ -375,33 +379,35 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
 
     val newTail = (
       currSrc.tailSource.
-        Assignment(s"${s}_changed", BoolValue(false), BoolValue(false), BoolType)
+        Assignment(s"${s}_changed", BoolValue(false), BoolValue(false), BoolType, true)
       )
 
-    SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+    SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
   }
 
-  def produceInputFromConsoleCode(inStream: Identifier, typ: Type, currSrc: SourceListing) = {
+  def produceInputCode(inStream: Identifier, typ: Type, currSrc: SourceListing) = {
     val s = s"var_${inStream.fullName}"
-    val parseExp = typ match {
-      case InstantiatedType("Events", Seq(RecordType(m, _)), _) if m.isEmpty => UnitValue
-      case _ => FunctionCall("__[TC]inputParse__", Seq("value"), IntermediateCode.FunctionType(Seq(StringType), typ))
-    }
+    val ft = IntermediateCode.FunctionType(Seq(typ, LongType), VoidType)
 
-    val newInputProcessing = (currSrc.inputProcessing.
-      If(Seq(Seq(Equal("inputStream", StringValue(inStream.idOrName.left.get))))).
-        Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForStreamType(typ), typ).
-        Assignment(s"${s}_lastInit", s"${s}_init", BoolValue(false), BoolType).
-        FinalAssignment(s"${s}_lastError", LongValue(0), LongType).
-        Assignment(s"${s}_value", parseExp, defaultValueForStreamType(typ), typ).
-        Assignment(s"${s}_init", BoolValue(true), BoolValue(false), BoolType).
-        Assignment(s"${s}_ts", "currTs", LongValue(0), LongType).
-        FinalAssignment(s"${s}_error", LongValue(0), LongType).
-        Assignment(s"${s}_changed", BoolValue(true), BoolValue(false), BoolType).
-      EndIf()
+    val stmts = Seq().
+      If(Seq(Seq(NotEqual("currTs", "ts")))).
+      Assignment(s"newInputTs", s"ts", LongValue(0), typ, true).
+      FunctionCall("run", Seq(), IntermediateCode.FunctionType(Seq(), VoidType)).
+      EndIf().
+      Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForStreamType(typ), typ, true).
+      Assignment(s"${s}_lastInit", s"${s}_init", BoolValue(false), BoolType, true).
+      Assignment(s"${s}_value", "value", defaultValueForStreamType(typ), typ, true).
+      Assignment(s"${s}_init", BoolValue(true), BoolValue(false), BoolType, true).
+      Assignment(s"${s}_ts", "ts", LongValue(0), LongType, true).
+      Assignment(s"${s}_changed", BoolValue(true), BoolValue(false), BoolType, true)
+
+    val newCallbacks = (currSrc.callbacks.
+      FinalAssignment(s"${s}_lastError", LongValue(0), LongType).
+      FinalAssignment(s"${s}_error", LongValue(0), LongType).
+      Assignment(s"set_$s", LambdaExpression(Seq("value", "ts"), Seq(typ, LongType), VoidType, stmts), EmptyFunction(ft), ft)
     )
 
-    SourceListing(currSrc.stepSource, currSrc.tailSource, currSrc.tsGenSource, newInputProcessing, currSrc.staticSource)
+    SourceListing(currSrc.stepSource, currSrc.tailSource, currSrc.tsGenSource, newCallbacks, currSrc.staticSource)
   }
 
 }

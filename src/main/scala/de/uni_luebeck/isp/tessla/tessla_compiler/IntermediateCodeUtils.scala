@@ -36,7 +36,7 @@ object IntermediateCodeUtils {
           case expr: ImpLanExpr => Seq()
           case If(guard, stmts, elseStmts) => guard.flatten ++ stmts ++ elseStmts
           case TryCatchBlock(tr, cat) => tr ++ cat
-          case Assignment(_, rexpr, defVal, _) => Seq(rexpr) ++ (if (defVal.isDefined) Seq(defVal.get) else Seq())
+          case Assignment(_, rexpr, defVal, _, _) => Seq(rexpr) ++ (if (defVal.isDefined) Seq(defVal.get) else Seq())
           case FinalAssignment(_, defVal, _) => Seq(defVal)
           case ReturnStatement(expr) => Seq(expr)
         }
@@ -56,7 +56,7 @@ object IntermediateCodeUtils {
           case expr: ImpLanExpr => mapAST(expr, f, g)
           case If(guard, stmts, elseStmts) => If(guard.map(_.map(mapAST(_, f, g))), mapAST(stmts, f, g), mapAST(elseStmts, f, g))
           case TryCatchBlock(tr, cat) => TryCatchBlock(mapAST(tr, f, g), mapAST(cat, f, g))
-          case Assignment(lhs, rexpr, defVal, typ) => Assignment(lhs, mapAST(rexpr, f, g), if (defVal.isDefined) scala.Some(mapAST(defVal.get, f, g)) else scala.None, typ)
+          case Assignment(lhs, rexpr, defVal, typ, global) => Assignment(lhs, mapAST(rexpr, f, g), if (defVal.isDefined) scala.Some(mapAST(defVal.get, f, g)) else scala.None, typ, global)
           case FinalAssignment(lhs, defVal, typ) => FinalAssignment(lhs, mapAST(defVal, f, g), typ)
           case ReturnStatement(expr) => ReturnStatement(mapAST(expr, f, g))
         }
@@ -78,24 +78,35 @@ object IntermediateCodeUtils {
     f(mappedExp)
   }
 
-  def getVariableMap(stmts: Seq[ImpLanStmt], baseMap: Map[String, (ImpLanType, Option[ImpLanExpr])] = Map()) : Map[String, (ImpLanType, Option[ImpLanExpr])] = {
+  def getVariableMap(stmts: Seq[ImpLanStmt], baseMap: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map(), global: Boolean) : Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = {
 
-    def extractAssignments(stmt: ImpLanStmt) : Seq[(String, ImpLanType, Option[ImpLanExpr])] = stmt match {
-      case Assignment(lhs, _, defVal, typ) => Seq((lhs.name, typ, defVal))
-      case FinalAssignment(lhs, defVal, typ) => Seq((lhs.name, typ, scala.Some(defVal)))
-      case If(_, stmts, elseStmts) => stmts.concat(elseStmts).flatMap(extractAssignments)
-      case TryCatchBlock(tr, cat) => tr.concat(cat).flatMap(extractAssignments)
+    def extractAssignments(topLevel: Boolean)(stmt: ImpLanStmt) : Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = stmt match {
+      case Assignment(lhs, rhs, defVal, typ, globVar) => (if (global && globVar || topLevel && !globVar) Seq((lhs.name, typ, defVal, global)) else Seq()) ++
+                                                         (if (global) extractAssignmentsFromExp(rhs) else Seq())
+      case FinalAssignment(lhs, defVal, typ) => Seq((lhs.name, typ, scala.Some(defVal), false))
+      case If(_, stmts, elseStmts) => stmts.concat(elseStmts).flatMap(extractAssignments(true))
+      case TryCatchBlock(tr, cat) => tr.concat(cat).flatMap(extractAssignments(true))
       case _ => Seq()
     }
 
-    val varDefs : Seq[(String, ImpLanType, Option[ImpLanExpr])] = baseMap.toSeq.map{case (a, (b,c)) => (a,b,c)} ++ stmts.flatMap(extractAssignments).distinct
-    val duplicates = varDefs.groupBy{case (n, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
+    def extractAssignmentsFromExp(exp: ImpLanExpr) : Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = exp match {
+      case CastingExpression(e, _) => extractAssignmentsFromExp(e)
+      case FunctionCall(_, params, _) => params.flatMap(extractAssignmentsFromExp)
+      case LambdaApplication(exp, _) => extractAssignmentsFromExp(exp)
+      case TernaryExpression(guard, e1, e2) => guard.flatMap(_.flatMap(extractAssignmentsFromExp)) ++ extractAssignmentsFromExp(e1) ++ extractAssignmentsFromExp(e2)
+      case Equal(e1, e2) => extractAssignmentsFromExp(e1) ++ extractAssignmentsFromExp(e2)
+      case LambdaExpression(_, _, _, body) => body.flatMap(extractAssignments(false))
+      case _ => Seq()
+    }
+
+    val varDefs : Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = baseMap.toSeq.map{case (a, (b, c, d)) => (a,b, c, d)} ++ stmts.flatMap(extractAssignments(true)).distinct
+    val duplicates = varDefs.groupBy{case (n, _, _, _) => n}.collect{case (x, List(_,_,_*)) => x}
 
     if (duplicates.nonEmpty) {
       throw tessla_compiler.Errors.DSLError(s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}")
     }
 
-    varDefs.map{case (name, typ, default) => (name, (typ, default))}.toMap
+    varDefs.map{case (name, typ, default, global) => (name, (typ, default, global))}.toMap
   }
 
   implicit def typeConversion(t: Type): ImpLanType = {
@@ -252,12 +263,12 @@ class IntermediateCodeUtils(stmts: Seq[ImpLanStmt], blockState : Seq[BlockState]
       case Out => (stmts :+ stmt, ifTryStack, elseCatchStack)
     }
 
-    def Assignment(lhs: Variable, rhs: ImpLanExpr, default: ImpLanExpr, typ: ImpLanType) : IntermediateCodeUtils = {
-      Assignment(lhs, rhs, scala.Some(default), typ)
+    def Assignment(lhs: Variable, rhs: ImpLanExpr, default: ImpLanExpr, typ: ImpLanType, global: Boolean = false) : IntermediateCodeUtils = {
+      Assignment(lhs, rhs, scala.Some(default), typ, global)
     }
 
-    def Assignment(lhs: Variable, rhs: ImpLanExpr, default: Option[ImpLanExpr], typ: ImpLanType) : IntermediateCodeUtils = {
-      val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.Assignment(lhs, rhs, default, typ))
+    def Assignment(lhs: Variable, rhs: ImpLanExpr, default: Option[ImpLanExpr], typ: ImpLanType, global: Boolean) : IntermediateCodeUtils = {
+      val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.Assignment(lhs, rhs, default, typ, global))
       new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
     }
 
