@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import java.io.{File, PrintWriter}
+import java.io.{ByteArrayOutputStream, InputStream, PrintStream, PrintWriter}
+import java.lang.reflect.InvocationTargetException
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 
@@ -9,8 +10,8 @@ import com.eclipsesource.schema.drafts.Version4._
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend._
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
-import de.uni_luebeck.isp.tessla.core.{IncludeResolvers, TranslationPhase}
-import de.uni_luebeck.isp.tessla.core.Compiler
+import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TranslationPhase}
+import de.uni_luebeck.isp.tessla.tessla_compiler.NoExitSecurityManager.SystemExitException
 import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
@@ -18,8 +19,9 @@ import play.api.libs.json.Reads.verifying
 import play.api.libs.json._
 
 import scala.io.Source
+import scala.reflect.internal.util.ScalaClassLoader.URLClassLoader
 import scala.reflect.io.Directory
-import scala.sys.process._
+import scala.tools.nsc.{Global, Settings}
 
 /**
  * Object contains static functions often used in test cases
@@ -27,8 +29,7 @@ import scala.sys.process._
 object CompilerTests {
   def compileChain(src: CharStream, compiler: Compiler): TranslationPhase.Result[String] = {
     compiler
-      .tesslaToTyped(src)
-      .andThen(compiler.typedToCore)
+      .instantiatePipeline(src)
       .andThen(UsageAnalysis)
       .andThen(Laziness)
       .andThen(new TesslaCoreToIntermediate(true))
@@ -36,21 +37,94 @@ object CompilerTests {
       .andThen(new ScalaBackend)
   }
 
-  def writeToFile(path: String, content: String): Unit = {
-    val sPw = new PrintWriter(path)
-    sPw.write(content)
-    sPw.close()
+  def withRedirectedIO[T](in: InputStream, out: PrintStream, err: PrintStream)(body: => T): T = {
+    val (oldIn, oldOut, oldErr) = (System.in, System.out, System.err)
+    System.setIn(in)
+    System.setOut(out)
+    System.setErr(err)
+    try Console.withIn(in)(
+      Console.withOut(out)(
+        Console.withErr(err)(
+          body
+        )
+      )
+    )
+    finally {
+      System.setIn(oldIn)
+      System.setOut(oldOut)
+      System.setErr(oldErr)
+    }
   }
 
-  class TestProcessLogger extends ProcessLogger {
-    var output: Seq[String] = Seq()
+  // Search for Main$ in the provided path and execute Main$.main with the input trace.
+  def execute(path: Path, inputTrace: InputStream): (Seq[String], Seq[String], Boolean) = {
+    import scala.reflect.runtime.universe._
+    val cl = new URLClassLoader(Seq(path.toUri.toURL), this.getClass.getClassLoader)
 
-    override def out(s: => String): Unit = output :+= s
+    // Load the generated Main$.class and look for the main method.
+    val main = cl.loadClass("Main$")
+    val method = main.getDeclaredMethod("main", classOf[Array[String]])
 
-    override def err(s: => String): Unit = output :+= s"E $s"
+    // Create reflection mirror from the newly created class loader, to then load the module 'Main' to execute the main
+    // method on
+    val mirror = runtimeMirror(cl)
+    val module = mirror.staticModule("Main")
+    val obj = mirror.reflectModule(module)
 
-    override def buffer[T](f: => T): T = f
+    // Set a custom security manager to forbid system.exit calls, and override all IO (in, out, err)
+    val secMan = System.getSecurityManager
+    val out = new ByteArrayOutputStream()
+    val err = new ByteArrayOutputStream()
+    try {
+      System.setSecurityManager(new NoExitSecurityManager())
+      CompilerTests.withRedirectedIO(inputTrace, new PrintStream(out), new PrintStream(err))(
+        method.invoke(obj.instance, Array.empty[String])
+      )
+    } catch {
+      case e: InvocationTargetException =>
+        // Since the main method which calls the system exit is invoked through reflection, the
+        // thrown exit exception will be wrapped inside of an InvocationTargetException.
+        e.getTargetException match {
+          case SystemExitException(_) => // Suppress
+          case t                      => throw t
+        }
+    } finally {
+      System.setSecurityManager(secMan)
+    }
+
+    val errors = err.toString(StandardCharsets.UTF_8).linesIterator.toSeq
+    val output = out.toString(StandardCharsets.UTF_8).linesIterator.toSeq
+
+    // A bit of a workaround. Since the exception from the security manager is thrown while the redirected
+    // IO is active, that exception will be logged by the generated code as well.
+    val filtered = if (errors.lastOption.exists(_.contains("SystemExitException"))) errors.dropRight(2) else errors
+
+    (output, filtered, filtered.nonEmpty)
   }
+
+  def compile(dirPath: Path, sourceCode: String): Unit = {
+    Files.writeString(dirPath.resolve("out.scala"), sourceCode)
+
+    val settings = ScalaCompiler.defaultSettings(dirPath, false)
+    settings.opt.clear()
+    settings.usejavacp.value = false
+
+    // IMPORTANT
+    // This is a somewhat unstable workaround. When running the tests from sbt, the java.class.path is
+    // overridden with the sbt-launcher, since sbt handles class loading differently. Since the scala compiler
+    // however fetches java.class.path, this causes it to fail since none of the scala libraries can be found
+    // This line takes the location of Predef and adds this to the classpath (so the scala-library) to prevent this.
+    // However I don't know if that's always sufficient. Also, there's probably a cleaner solution for it.
+    settings.classpath.value = Predef.getClass.getProtectionDomain.getCodeSource.getLocation.getPath
+
+    val reporter = new TesslaCompilerReporter(settings)
+    ScalaCompiler.compileCode(dirPath.resolve("out.scala"), settings, reporter)
+
+    val compiler = new Global(settings, reporter)
+    (new compiler.Run) compile List(dirPath.resolve("out.scala").toAbsolutePath.toString)
+    reporter.finish()
+  }
+
 }
 
 class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
@@ -92,7 +166,6 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
   def assertEqualSets[T: Ordering](
     actual: Set[T],
     expected: Set[T],
-    name: String,
     stringify: T => String = (x: T) => x.toString
   ): Unit = {
     def sort(s: Set[T]) = s.toIndexedSeq.sorted.map(stringify).mkString("\n")
@@ -100,12 +173,8 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   def splitOutput(line: String): (BigInt, String) = {
-    if (line.startsWith("$timeunit")) {
-      (-1, line)
-    } else {
-      val parts = line.split(":", 2)
-      (BigInt(parts(0)), parts(1))
-    }
+    val parts = line.split(":", 2)
+    (BigInt(parts(0)), parts(1))
   }
 
   def unsplitOutput(pair: (BigInt, String)): String = s"${pair._1}:${pair._2}"
@@ -144,16 +213,11 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
     implicit val interpreterTestReads: Reads[TestCase] = Json.reads[TestCase]
 
     def jsErrorToString(jsError: JsError): String = {
-      jsError.errors
-        .map {
-          case (_, errors) =>
-            errors
-              .map {
+      jsError.errors.map {
+        case (_, errors) => errors.map {
                 case JsonValidationError(messages, _) => messages.mkString("\n")
-              }
-              .mkString("\n")
-        }
-        .mkString("\n")
+              }.mkString("\n")
+        }.mkString("\n")
     }
 
     case class TestCase(
@@ -171,62 +235,32 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
     )
   }
 
+
   testCases.zipWithIndex.foreach {
     case ((path, name), idx) =>
+
       def testStream(file: String): CharStream = {
         IncludeResolvers.fromResource(getClass, root)(s"$path$file").get
       }
+
       def testSource(file: String): Source = {
-        Source.fromInputStream(getClass.getResourceAsStream(s"$root$path$file"))(
-          StandardCharsets.UTF_8
-        )
+        Source.fromInputStream(testInputStream(file))(StandardCharsets.UTF_8)
       }
 
-      def compileAndExecute(sourceCode: String, inputTracePath: String): (Seq[String], Boolean) = {
-
-        val compileLogger = new CompilerTests.TestProcessLogger
-        val executionLogger = new CompilerTests.TestProcessLogger
-
-        CompilerTests.writeToFile(fsPath.toAbsolutePath.toString + "/out.scala", sourceCode)
-        CompilerTests.writeToFile(
-          fsPath.toAbsolutePath.toString + "/input",
-          testSource(inputTracePath).getLines().mkString("\n")
-        )
-
-        val scalac = sys.props("os.name").toLowerCase match {
-          case s if s.contains("windows") => "scalac.bat"
-          case _ => "scalac"
-        }
-        val workingDir = new File(fsPath.toAbsolutePath.toString)
-        val compile = Process(s"$scalac out.scala", workingDir)
-        if (compile.!(compileLogger) != 0) {
-          fail(s"Compilation failed:\n${compileLogger.output.mkString("\n")}")
-        }
-
-        val run = Process("cat input", workingDir) #|
-          Process(s"scala Main < input", workingDir)
-        val rc = run.!(executionLogger)
-
-        (executionLogger.output, rc != 0)
-
+      def testInputStream(file: String): InputStream = {
+        getClass.getResourceAsStream(s"$root$path$file")
       }
 
       def handleResult(
         result: TranslationPhase.Result[String],
         expectedErrors: Option[String],
-        expectedWarnings: Option[String],
-        inputTracePath: String
-      )(onSuccess: (Seq[String], Boolean) => Unit): Unit = {
+        expectedWarnings: Option[String]
+      )(onSuccess: String => Unit): Unit = {
         println(s"Evaluate testcase ${idx + 1} / ${testCases.size}: $name ($path)...")
         result match {
-          case Success(output, _) =>
-            val compilation = compileAndExecute(output, inputTracePath)
-
-            assert(
-              expectedErrors.isEmpty,
-              "Expected: Compilation failure. Actual: Compilation success."
-            )
-            onSuccess(compilation._1, compilation._2)
+          case Success(source, _) =>
+            assert(expectedErrors.isEmpty, "Expected: Compilation failure. Actual: Compilation success.")
+            onSuccess(source)
           case Failure(errors, _) =>
             expectedErrors match {
               case None =>
@@ -238,15 +272,14 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
                 // and still part of the same error message (e.g. a stack trace)
                 val expectedErrors =
                   testSource(expectedErrorsFile).getLines().mkString("\n").split("\n(?! )").toSet
-                assertEqualSets(errors.map(_.toString).toSet, expectedErrors, "errors")
+                assertEqualSets(errors.map(_.toString).toSet, expectedErrors)
             }
         }
         expectedWarnings match {
           case Some(expectedWarnings) =>
             assertEqualSets(
               result.warnings.map(_.toString).toSet,
-              testSource(expectedWarnings).getLines().toSet,
-              "warnings"
+              testSource(expectedWarnings).getLines().toSet
             )
           case None =>
           // If there is no expected warnings file, we don't care whether there were warnings or not.
@@ -262,49 +295,45 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
           test(s"$path$name (Compiler, Scala)") {
             val options = Compiler.Options(
               baseTimeString = testCase.baseTime,
-              includeResolver = IncludeResolvers.fromResource(getClass, root),
+              includeResolver = IncludeResolvers.fromResource(getClass, root)
             )
             val src = testStream(testCase.spec)
             val compiler = new Compiler(options)
-
-            // testCase.expectedObservations.foreach { ??? }
-            // testCase.expectedObservationErrors.foreach { ??? }
 
             testCase.input match {
               case Some(input) =>
                 val code = CompilerTests.compileChain(src, compiler)
 
-                handleResult(code, testCase.expectedErrors, testCase.expectedWarnings, input) {
-                  (output: Seq[String], runtimeError: Boolean) =>
-                    val expectedOutput = testSource(testCase.expectedOutput.get).getLines().toSet
-                    val actualOutput = output.toSet
+                handleResult(code, testCase.expectedErrors, testCase.expectedWarnings) { code =>
+                  CompilerTests.compile(fsPath, code)
+                  val (output, errors, runtimeError) = CompilerTests.execute(fsPath, testInputStream(input))
+                  val expectedOutput = testSource(testCase.expectedOutput.get).getLines().toSet
+                  val actualOutput = output.toSet
 
-                    if (runtimeError) {
-                      assert(
-                        testCase.expectedRuntimeErrors.isDefined,
-                        s"Expected: success. Actual: Runtime error\n${output.mkString("\n")}"
-                      )
-                    } else {
-                      assert(
-                        testCase.expectedRuntimeErrors.isEmpty,
-                        s"Expected: Runtime error. Actual: success\n${testCase.expectedRuntimeErrors}"
-                      )
+                  if (runtimeError) {
+                    assert(
+                      testCase.expectedRuntimeErrors.isDefined,
+                      s"Expected: success. Actual: Runtime error\n${errors.mkString("\n")}"
+                    )
+                  } else {
+                    assert(
+                      testCase.expectedRuntimeErrors.isEmpty,
+                      s"Expected: Runtime error. Actual: success\n${testCase.expectedRuntimeErrors}"
+                    )
 
-                      assertEqualSets(
-                        actualOutput.map(splitOutput),
-                        expectedOutput.map(splitOutput),
-                        "output",
-                        unsplitOutput
-                      )
-                    }
+                    assertEqualSets(
+                      actualOutput.map(splitOutput),
+                      expectedOutput.map(splitOutput),
+                      unsplitOutput
+                    )
+                  }
                 }
               case None =>
                 handleResult(
                   CompilerTests.compileChain(src, compiler),
                   testCase.expectedErrors,
-                  testCase.expectedWarnings,
-                  ""
-                )((_, _) => ())
+                  testCase.expectedWarnings
+                )(_ => ())
             }
           }
       }

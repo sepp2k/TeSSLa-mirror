@@ -1,1 +1,0 @@
-errors/invalid-input-object1.input(1,1 - 1,10): input o: Expected {x: Int, y: Int} but found scala.math.BigInt with value 42.

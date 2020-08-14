@@ -4,75 +4,35 @@ import java.io.{FileOutputStream, InputStream, OutputStream}
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, Paths}
-import java.util.Comparator
 import java.util.jar.{Attributes, JarEntry, JarInputStream, JarOutputStream}
 
-import de.uni_luebeck.isp.tessla.core.{Diagnostic, Errors, TranslationPhase}
+import de.uni_luebeck.isp.tessla.core.{Errors, TranslationPhase}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
-import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics.CompilationWarning
 
 import scala.jdk.CollectionConverters._
-import scala.reflect.internal.util.Position
-import scala.tools.nsc.reporters.{FilteringReporter, Reporter}
+import scala.tools.nsc.reporters.{ConsoleReporter, Reporter}
 import scala.tools.nsc.{Global, Settings}
 import scala.util.Using
-import scala.reflect.internal.util.Position.formatMessage
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaCompiler._
 
-/**
- * [[TranslationPhase]] generating a monitor as fat jar from Scala code
- * @param outDir The directory where the jar shall be created.
- *               All temporary files will aslo be created in this directory.
- *               This directory has to exist.
- * @param jarName The name of the generated jar file
- */
-class ScalaCompiler(outDir: Path, jarName: String) extends TranslationPhase[String, Unit] {
+import scala.reflect.io.Directory
 
-  /**
-   * Function triggering the translation from a Scala source string to a jar archive which is created at the given
-   * location
-   * @param sourceCode The source code to be compiled
-   * @return Unit wrapped in a Result data structure
-   */
-  def translate(sourceCode: String): Result[Unit] = {
-
-    println(s"Do this $outDir on $jarName")
-    Files.createDirectories(outDir)
-
-    // Generated source files go here
-    val sourceDir = Files.createTempDirectory(outDir, "source")
-
-    // Compiled and unzipped .class files go here
-    val compileDir = Files.createTempDirectory(outDir, "compile")
-
-    deleteOnExit(compileDir)
-    deleteOnExit(sourceDir)
-
-    val settings = createSettings(compileDir)
-    val reporter = new TesslaCompilerReporter(settings)
-
-    val sourcePath = Path.of(URI.create(outDir.toUri.toString + "Main.scala"))
-    deleteOnExit(sourcePath)
-
-    writeCode(sourcePath, sourceCode)
-    compileCode(sourcePath, settings, reporter)
-
-    unzipJar(compileDir)
-    makeJar(compileDir, outDir.resolve(jarName), "Main")
-
-    Success((), reporter.warnings.toSeq)
-  }
-
+object ScalaCompiler {
   /**
    * Creates a [[Settings]] instance for the scala compilation
    * @param compileDir The working directory of the compilation
    * @return [[Settings]] to be used for the compilation
    */
-  private def createSettings(compileDir: Path): Settings = {
-
+  def defaultSettings(compileDir: Path, debug: Boolean): Settings = {
     val settings = new Settings()
     settings.usejavacp.value = true
     settings.outputDirs.setSingleOutput(compileDir.toAbsolutePath.toString)
-    settings.optimise.value = true
+    settings.opt.enable(settings.optChoices.lDefault)
+    settings.opt.enable(settings.optChoices.lMethod)
+    if (debug) {
+      settings.verbose.value = true
+      settings.Ylogcp.value = true
+    }
 
     settings
   }
@@ -83,21 +43,12 @@ class ScalaCompiler(outDir: Path, jarName: String) extends TranslationPhase[Stri
    * @param settings The compilation settings
    * @param reporter The reporter getting attached to the compiler
    */
-  private def compileCode(source: Path, settings: Settings, reporter: Reporter): Unit = {
+  def compileCode(source: Path, settings: Settings, reporter: Reporter): Unit = {
     val compiler = new Global(settings, reporter)
     (new compiler.Run) compile List(source.toAbsolutePath.toString)
     reporter.finish()
   }
 
-  /**
-   * Writes the content of a string to a file
-   * @param path The file to be written
-   * @param source The file's content
-   */
-  private def writeCode(path: Path, source: String): Unit = {
-    Files.createDirectories(path.getParent)
-    Files.write(path, source.getBytes(StandardCharsets.UTF_8))
-  }
 
   /**
    * Unzips all files starting with scala (those in the scala directory/package) from the scala-library.jar
@@ -145,17 +96,6 @@ class ScalaCompiler(outDir: Path, jarName: String) extends TranslationPhase[Stri
   }
 
   /**
-   * Helper method that pipes from an input to an output stream
-   * @param in The input stream
-   * @param out The output stream
-   * @param bufSize The size of the used buffer
-   */
-  private def transfer(in: InputStream, out: OutputStream, bufSize: Int = 1024): Unit = {
-    val buffer = new Array[Byte](bufSize)
-    LazyList.continually(in.read(buffer)).takeWhile(_ != -1).foreach(out.write(buffer, 0, _))
-  }
-
-  /**
    * Packs (compiled) sources to an executable jar file
    * @param sources The path where the sources are located
    * @param outPath The path of the generated jar file
@@ -189,37 +129,83 @@ class ScalaCompiler(outDir: Path, jarName: String) extends TranslationPhase[Stri
   }
 
   /**
+   * Helper method that pipes from an input to an output stream
+   * @param in The input stream
+   * @param out The output stream
+   * @param bufSize The size of the used buffer
+   */
+  private def transfer(in: InputStream, out: OutputStream, bufSize: Int = 1024): Unit = {
+    val buffer = new Array[Byte](bufSize)
+    LazyList.continually(in.read(buffer)).takeWhile(_ != -1).foreach(out.write(buffer, 0, _))
+  }
+}
+
+/**
+ * [[TranslationPhase]] generating a monitor as fat jar from Scala code
+ * @param outDir The directory where the jar shall be created.
+ *               All temporary files will aslo be created in this directory.
+ *               This directory has to exist.
+ * @param jarName The name of the generated jar file
+ */
+class ScalaCompiler(outDir: Path,
+                    jarName: String,
+                    debug: Boolean,
+                   )(settingsModifier: Settings => Unit = _ => ()) extends TranslationPhase[String, Unit] {
+
+  /**
+   * Function triggering the translation from a Scala source string to a jar archive which is created at the given
+   * location
+   * @param sourceCode The source code to be compiled
+   * @return Unit wrapped in a Result data structure
+   */
+  def translate(sourceCode: String): Result[Unit] = {
+    Files.createDirectories(outDir)
+
+    // Generated source files go here
+    val sourceDir = Files.createTempDirectory(outDir, "source")
+
+    // Compiled and unzipped .class files go here
+    val compileDir = Files.createTempDirectory(outDir, "compile")
+
+    deleteOnExit(compileDir)
+    deleteOnExit(sourceDir)
+
+    val settings = defaultSettings(compileDir, debug)
+    settingsModifier(settings)
+    val reporter = new ConsoleReporter(settings)
+
+    val sourcePath = Path.of(URI.create(outDir.toUri.toString + "Main.scala"))
+    deleteOnExit(sourcePath)
+
+    writeCode(sourcePath, sourceCode)
+    compileCode(sourcePath, settings, reporter)
+
+    unzipJar(compileDir)
+    makeJar(compileDir, outDir.resolve(jarName), "Main")
+
+    Success((), Seq())
+  }
+
+
+
+  /**
+   * Writes the content of a string to a file
+   * @param path The file to be written
+   * @param source The file's content
+   */
+  private def writeCode(path: Path, source: String): Unit = {
+    Files.createDirectories(path.getParent)
+    Files.write(path, source.getBytes(StandardCharsets.UTF_8))
+  }
+
+  /**
    * Deletes a file on program shutdown.
    * @param path Path of the file to be deleted
    */
   private def deleteOnExit(path: Path): Unit = {
     Runtime.getRuntime.addShutdownHook(new Thread(() => {
-      Files.walk(path).sorted(Comparator.reverseOrder).forEach(Files.delete _)
+      Directory(path.toFile).deleteRecursively()
     }))
-  }
-
-  /**
-   * A [[Reporter]] implementation raising TeSSLa compiler errors if the supervised Scala compiler raises an error
-   * and collects TeSSLa warnings if it raises warnings or information
-   * @param settings Settings passed to the extended [[FilteringReporter]]
-   */
-  class TesslaCompilerReporter(val settings: Settings) extends FilteringReporter {
-
-    val warnings: collection.mutable.ArrayBuffer[Diagnostic] = collection.mutable.ArrayBuffer()
-
-    override def doReport(pos: Position, msg: String, severity: Severity): Unit = {
-      val combMsg = formatMessage(pos, msg, shortenFile = false)
-      severity match {
-        case reflect.internal.Reporter.INFO    => warnings += CompilationWarning(combMsg, "scalac", "info")
-        case reflect.internal.Reporter.WARNING => warnings += CompilationWarning(combMsg, "scalac", "warning")
-        case reflect.internal.Reporter.ERROR =>
-          throw Errors.InternalError(s"Scala Compilation raised error, compilation aborted:\n$combMsg")
-        case _ =>
-          throw Errors.InternalError(
-            s"Scala Compilation raised error of unknown Severity, compilation aborted:\n$combMsg"
-          )
-      }
-    }
   }
 
 }

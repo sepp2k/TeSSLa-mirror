@@ -1,5 +1,0 @@
-{
-  "input": "pass-self-to-builtin.input",
-  "expectedOutput": "pass-self-to-builtin.output",
-  "spec": "pass-self-to-builtin.tessla"
-}

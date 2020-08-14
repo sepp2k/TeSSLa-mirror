@@ -1,7 +1,0 @@
-{
-  "spec": "negative-step-error.tessla",
-  "input": "negative-step-error.input",
-  "expectedOutput": "negative-step-error.output",
-  "expectedRuntimeErrors": "negative-step-error.runtime-errors"
-}
-            

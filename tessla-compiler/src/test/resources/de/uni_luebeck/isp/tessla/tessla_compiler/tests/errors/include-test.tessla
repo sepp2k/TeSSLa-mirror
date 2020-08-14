@@ -1,4 +1,0 @@
-include "include-test.d/incl.tessla"
-include "include-test-incl.tessla"
-
-def schnupp := "\s\r\n"

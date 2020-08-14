@@ -4,15 +4,13 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
-import de.uni_luebeck.isp.tessla.CLIParser.{Config, CoreConfig, DocConfig, InterpreterConfig, Task, TesslacConfig}
+import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.core.analyses.Observations
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TesslaAST}
-import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics.NotYetImplementedError
 import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.BackendInterface
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc
@@ -186,7 +184,7 @@ object Main {
             val n = file.getName
             (p.getParent, if (n.contains(".")) n else s"$n.jar")
           }
-          new ScalaCompiler(dirPath, name).translate(sourceStr)
+          new ScalaCompiler(dirPath, name, false)().translate(sourceStr)
         }
 
         config.outFile match {

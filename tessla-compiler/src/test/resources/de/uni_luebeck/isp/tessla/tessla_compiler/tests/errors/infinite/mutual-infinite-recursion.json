@@ -1,4 +1,0 @@
-{
-    "spec": "mutual-infinite-recursion.tessla",
-    "expectedErrors": "mutual-infinite-recursion.errors"
-}

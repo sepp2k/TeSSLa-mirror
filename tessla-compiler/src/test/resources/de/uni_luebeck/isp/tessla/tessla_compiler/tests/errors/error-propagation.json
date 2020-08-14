@@ -1,6 +1,0 @@
-{
-  "spec": "error-propagation.tessla",
-  "input": "error-propagation.input",
-  "expectedOutput": "error-propagation.output",
-  "expectedRuntimeErrors": "error-propagation.runtime-errors"
-}

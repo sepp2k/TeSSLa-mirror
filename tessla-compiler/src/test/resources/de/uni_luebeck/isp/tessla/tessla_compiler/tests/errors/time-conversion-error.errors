@@ -1,5 +1,0 @@
-errors/time-conversion-error.tessla(1,6 - 1,8): Cannot represent 1 us in terms of base time 33333 us.
-errors/time-conversion-error.tessla(2,7 - 2,9): Cannot represent 10 us in terms of base time 33333 us.
-errors/time-conversion-error.tessla(3,8 - 3,10): Cannot represent 100 us in terms of base time 33333 us.
-errors/time-conversion-error.tessla(4,6 - 4,8): Cannot represent 1 ms in terms of base time 33333 us.
-errors/time-conversion-error.tessla(5,7 - 5,9): Cannot represent 10 ms in terms of base time 33333 us.

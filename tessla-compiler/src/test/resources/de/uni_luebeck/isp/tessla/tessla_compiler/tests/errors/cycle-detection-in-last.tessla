@@ -1,2 +1,0 @@
-def y: Events[Int] = last(5, y)
-out y

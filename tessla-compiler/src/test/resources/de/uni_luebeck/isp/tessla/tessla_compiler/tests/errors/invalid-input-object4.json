@@ -1,6 +1,0 @@
-{
-  "input": "invalid-input-object4.input",
-  "expectedOutput": "empty.output",
-  "expectedRuntimeErrors": "invalid-input-object4.runtime-errors",
-  "spec": "invalid-input-object4.tessla"
-}

@@ -1,1 +1,0 @@
-errors/invalid-input-object4.input(1,1 - 1,17): input i: {x = 42} is not of type Int.

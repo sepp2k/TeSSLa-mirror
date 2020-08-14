@@ -1,7 +1,0 @@
-{
-  "spec": "decreasingTimestamp.tessla",
-  "input": "decreasingTimestamp.input",
-  "expectedOutput": "decreasingTimestamp.output",
-  "expectedRuntimeErrors": "decreasingTimestamp.runtime-errors"
-}
-            

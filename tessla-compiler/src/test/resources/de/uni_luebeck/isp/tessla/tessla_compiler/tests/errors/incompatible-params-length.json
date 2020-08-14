@@ -1,5 +1,0 @@
-{
-  "spec": "incompatible-params-length.tessla",
-  "input": "incompatible-params-length.input",
-  "expectedErrors": "incompatible-params-length.errors"
-}
