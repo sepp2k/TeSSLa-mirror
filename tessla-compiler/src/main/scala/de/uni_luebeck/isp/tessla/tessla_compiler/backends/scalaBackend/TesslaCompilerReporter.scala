@@ -8,7 +8,6 @@ import scala.reflect.internal.util.Position.formatMessage
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.FilteringReporter
 
-
 /**
  * A [[scala.tools.nsc.reporters.Reporter]] implementation raising TeSSLa compiler errors if the supervised Scala compiler raises an error
  * and collects TeSSLa warnings if it raises warnings or information

@@ -18,6 +18,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaComp
 import scala.reflect.io.Directory
 
 object ScalaCompiler {
+
   /**
    * Creates a [[Settings]] instance for the scala compilation
    * @param compileDir The working directory of the compilation
@@ -48,7 +49,6 @@ object ScalaCompiler {
     (new compiler.Run) compile List(source.toAbsolutePath.toString)
     reporter.finish()
   }
-
 
   /**
    * Unzips all files starting with scala (those in the scala directory/package) from the scala-library.jar
@@ -147,10 +147,8 @@ object ScalaCompiler {
  *               This directory has to exist.
  * @param jarName The name of the generated jar file
  */
-class ScalaCompiler(outDir: Path,
-                    jarName: String,
-                    debug: Boolean,
-                   )(settingsModifier: Settings => Unit = _ => ()) extends TranslationPhase[String, Unit] {
+class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean)(settingsModifier: Settings => Unit = _ => ())
+    extends TranslationPhase[String, Unit] {
 
   /**
    * Function triggering the translation from a Scala source string to a jar archive which is created at the given
@@ -185,8 +183,6 @@ class ScalaCompiler(outDir: Path,
 
     Success((), Seq())
   }
-
-
 
   /**
    * Writes the content of a string to a file

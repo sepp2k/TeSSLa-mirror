@@ -13,8 +13,7 @@ object Diagnostics {
    * @param m More detailed message
    * @param loc Location which code section in the original TeSSLa spec caused the error
    */
-  case class CommandNotSupportedError(m: String, loc: Location = Location.unknown)
-      extends Errors.TesslaError {
+  case class CommandNotSupportedError(m: String, loc: Location = Location.unknown) extends Errors.TesslaError {
     override def message =
       s"The translation of the given command is not supported by the compiler backend.\nDetails: $m"
   }
@@ -25,8 +24,7 @@ object Diagnostics {
    * @param m More detailed message
    * @param loc Location which code section in the original TeSSLa spec caused the error
    */
-  case class NotYetImplementedError(m: String, loc: Location = Location.unknown)
-      extends Errors.TesslaError {
+  case class NotYetImplementedError(m: String, loc: Location = Location.unknown) extends Errors.TesslaError {
     override def message = s"The translation of the given command is not supported, yet.\nDetails: $m"
   }
 
@@ -35,8 +33,7 @@ object Diagnostics {
    * @param m More detailed message
    * @param loc Location which code section in the original TeSSLa spec caused the error
    */
-  case class DSLError(m: String, loc: Location = Location.unknown)
-      extends Errors.TesslaError {
+  case class DSLError(m: String, loc: Location = Location.unknown) extends Errors.TesslaError {
     override def message = s"The intermediate code contains an error.\nDetails: $m"
   }
 
@@ -54,8 +51,7 @@ object Diagnostics {
    * @param m More detailed message
    * @param loc Location which code section in the original TeSSLa spec caused the error
    */
-  case class CoreASTError(m: String, loc: Location = Location.unknown)
-      extends Errors.TesslaError {
+  case class CoreASTError(m: String, loc: Location = Location.unknown) extends Errors.TesslaError {
     override def message = s"The TeSSLa Core AST contains an error.\nDetails: $m"
   }
 

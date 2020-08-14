@@ -27,7 +27,7 @@ object IntermediateCodeUtils {
       case v: ImpLanVal =>
         v match {
           case SomeValue(content) => Seq(content)
-          case _             => Seq()
+          case _                  => Seq()
         }
       case CastingExpression(e, _, _)       => Seq(e)
       case FunctionCall(_, params, _)       => params

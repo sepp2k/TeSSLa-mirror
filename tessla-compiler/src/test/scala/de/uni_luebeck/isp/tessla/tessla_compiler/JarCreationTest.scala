@@ -21,7 +21,7 @@ class JarCreationTest extends AnyFunSuite {
 
     val options = Compiler.Options(
       baseTimeString = None,
-      includeResolver = IncludeResolvers.empty,
+      includeResolver = IncludeResolvers.empty
     )
 
     //We just perform a simple testcase to see if the jar generation works
@@ -36,7 +36,6 @@ class JarCreationTest extends AnyFunSuite {
         s.usejavacp.value = false
         s.classpath.value = Predef.getClass.getProtectionDomain.getCodeSource.getLocation.getPath
       }))
-
 
     val input = getClass.getResourceAsStream("jar/jar.in")
     val (output, _, isError) = CompilerTests.execute(fsPath.resolve("monitor.jar"), input)

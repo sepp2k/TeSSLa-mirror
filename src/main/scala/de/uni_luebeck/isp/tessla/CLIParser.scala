@@ -55,7 +55,7 @@ object CLIParser {
     optimise: Boolean = true,
     outFile: Option[File] = None,
     jarFile: Option[File] = None
-                          ) extends Config
+  ) extends Config
 
   case class GlobalConfig(
     diagnostics: Boolean = true,
@@ -91,8 +91,8 @@ object CLIParser {
       )
 
     opt[Unit]("no-diagnostics")
-        .foreach(_ => global = global.copy(diagnostics = false))
-        .text("Suppress error messages and warnings")
+      .foreach(_ => global = global.copy(diagnostics = false))
+      .text("Suppress error messages and warnings")
     opt[Unit]("debug")
       .action((_, _) => global = global.copy(debug = true))
       .text("Print stack traces for errors and provide more verbose output")
@@ -231,10 +231,10 @@ object CLIParser {
     note("")
     cmd("compile")
       .foreach(_ => tasks += (() => Task("compile", config)))
-        .text("Compile TeSSLa specifications to Scala")
+      .text("Compile TeSSLa specifications to Scala")
     arg[File]("<tessla-file>")
       .foreach(f => config = config.copy(specSource = CharStreams.fromFileName(f.getPath)))
-        .text("The file containing the Tessla specification")
+      .text("The file containing the Tessla specification")
     opt[File]('o', "out-file")
       .foreach(f => config = config.copy(outFile = Some(f)))
       .text("Path to the output file")

@@ -45,7 +45,7 @@ object Main {
           case Task(_, config: CLIParser.DocConfig)         => runDoc(config)
           case Task(_, config: CLIParser.CoreConfig)        => runCore(config)
           case Task(_, config: CLIParser.InterpreterConfig) => runInterpreter(config)
-          case Task(_, config: CLIParser.TesslacConfig) => runTesslaCompiler(config)
+          case Task(_, config: CLIParser.TesslacConfig)     => runTesslaCompiler(config)
         }
       } catch {
         case ex: TesslaError =>
@@ -57,6 +57,7 @@ object Main {
       }
 
     }
+
     /**
      * Generate documentation.
      *
@@ -148,8 +149,8 @@ object Main {
 
         val core = unwrapResult(
           Compiler.compile(config.specSource, compilerOptions)
-          andThen UsageAnalysis
-          andThen Laziness
+            andThen UsageAnalysis
+            andThen Laziness
         )
 
         if (global.debug) {
@@ -162,7 +163,7 @@ object Main {
 
         val optIntermediateCode = unwrapResult(
           new TesslaCoreToIntermediate(stdinRead)(core)
-          andThen UnusedVarRemove
+            andThen UnusedVarRemove
         )
 
         if (global.debug) {
@@ -176,8 +177,8 @@ object Main {
         val source = backend.translate(optIntermediateCode)
         val sourceStr = unwrapResult(source)
 
-        config.jarFile.map{ file =>
-        val p = file.toPath
+        config.jarFile.map { file =>
+          val p = file.toPath
           val (dirPath, name) = if (file.isDirectory) {
             (p, "monitor.jar")
           } else {

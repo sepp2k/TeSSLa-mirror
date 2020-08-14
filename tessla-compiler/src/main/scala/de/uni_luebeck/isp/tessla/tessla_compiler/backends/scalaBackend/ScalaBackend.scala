@@ -33,7 +33,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
    * @return Translation of the guard in Scala
    */
   private def foldGuard(guard: Seq[Seq[ImpLanExpr]]): String = {
-    guard.map ( "(" + _.map(translateExpression).mkString(" && ") + ")").mkString(" || ")
+    guard.map("(" + _.map(translateExpression).mkString(" && ") + ")").mkString(" || ")
   }
 
   /**

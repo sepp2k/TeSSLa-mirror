@@ -213,11 +213,16 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
     implicit val interpreterTestReads: Reads[TestCase] = Json.reads[TestCase]
 
     def jsErrorToString(jsError: JsError): String = {
-      jsError.errors.map {
-        case (_, errors) => errors.map {
+      jsError.errors
+        .map {
+          case (_, errors) =>
+            errors
+              .map {
                 case JsonValidationError(messages, _) => messages.mkString("\n")
-              }.mkString("\n")
-        }.mkString("\n")
+              }
+              .mkString("\n")
+        }
+        .mkString("\n")
     }
 
     case class TestCase(
@@ -235,10 +240,8 @@ class CompilerTests extends AnyFunSuite with BeforeAndAfterAll {
     )
   }
 
-
   testCases.zipWithIndex.foreach {
     case ((path, name), idx) =>
-
       def testStream(file: String): CharStream = {
         IncludeResolvers.fromResource(getClass, root)(s"$path$file").get
       }

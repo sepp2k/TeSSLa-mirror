@@ -33,8 +33,8 @@ object IntermediateCodeTypeInference {
         }
         StructType(orderedVals.map { case (_, v) => typeInference(v, varTypes) }, orderedVals.map(_._1))
       case EmptyFunction(typeHint)                    => typeHint
-      case NoneValue(typeHint)                             => OptionType(typeHint)
-      case SomeValue(content)                              => OptionType(typeInference(content, varTypes))
+      case NoneValue(typeHint)                        => OptionType(typeHint)
+      case SomeValue(content)                         => OptionType(typeInference(content, varTypes))
       case EmptyMutableSet(valType)                   => MutableSetType(valType)
       case EmptyImmutableSet(valType)                 => ImmutableSetType(valType)
       case EmptyMutableMap(keyType, valType)          => MutableMapType(keyType, valType)
