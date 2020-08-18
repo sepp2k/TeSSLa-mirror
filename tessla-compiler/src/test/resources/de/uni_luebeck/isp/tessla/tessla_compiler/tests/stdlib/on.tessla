@@ -1,4 +1,0 @@
-in x: Events[Unit]
-in y: Events[Int]
-
-out on(x,y) as z

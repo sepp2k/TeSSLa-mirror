@@ -1,4 +1,0 @@
-in x: Events[Unit]
-in y: Events[Unit]
-def z := resetCount(x,y)
-out z

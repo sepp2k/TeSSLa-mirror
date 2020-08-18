@@ -1,6 +1,0 @@
-in a: Events[Unit]
-in b: Events[Unit]
-
-def c := time(a) > time(b)
-
-out c

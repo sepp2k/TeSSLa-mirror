@@ -1,6 +1,0 @@
-{
-  "spec": "event-count.tessla",
-  "input": "event-count.input",
-  "expectedOutput": "event-count.output"
-}
-            

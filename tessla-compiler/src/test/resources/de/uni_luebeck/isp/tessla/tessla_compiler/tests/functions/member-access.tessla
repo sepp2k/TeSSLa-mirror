@@ -1,8 +1,0 @@
-def foo(x: {a: Int}) = {
-  def f(o: Int) = x.a
-  f(5)
-}
-
-in x: Events[Int]
-def y = slift1(x, (x: Int) => {a: x})
-out slift1(y, foo) as z

@@ -1,5 +1,0 @@
-{
-  "input": "string-interpolation.input",
-  "expectedOutput": "string-interpolation.output",
-  "spec": "string-interpolation.tessla"
-}

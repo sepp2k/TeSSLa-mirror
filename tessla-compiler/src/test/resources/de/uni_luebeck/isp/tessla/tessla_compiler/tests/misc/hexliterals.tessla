@@ -1,3 +1,0 @@
-in x: Events[Int]
-out x
-out 0x10 as y

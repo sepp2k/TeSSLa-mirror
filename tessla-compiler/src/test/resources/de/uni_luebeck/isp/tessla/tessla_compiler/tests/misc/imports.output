@@ -1,3 +1,0 @@
-0: foo = Baz.foo
-0: foo2 = Foo.Bar.foo
-0: bar = Foo.Bar.Baz.foo

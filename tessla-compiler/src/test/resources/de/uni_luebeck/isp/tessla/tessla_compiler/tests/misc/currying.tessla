@@ -1,6 +1,0 @@
-in x: Events[Int]
-def foo(x: Events[Int]) := x
-def z = foo(5) + foo(4)
-def a := x + z
-out a
-out z

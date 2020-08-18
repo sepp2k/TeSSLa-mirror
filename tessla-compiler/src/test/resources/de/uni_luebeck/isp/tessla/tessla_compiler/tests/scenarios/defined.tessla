@@ -1,7 +1,0 @@
-in x: Events[Unit]
-in y: Events[Unit]
-
-def a := defined(x)
-def b := defined(y)
-out a
-out b

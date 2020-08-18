@@ -1,4 +1,0 @@
-in x: Events[Int]
-in y: Events[Int]
-def z := last(x, delay(y,y))
-out z

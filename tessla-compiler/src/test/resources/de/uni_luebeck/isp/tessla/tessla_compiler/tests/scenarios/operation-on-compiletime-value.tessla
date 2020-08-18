@@ -1,5 +1,0 @@
-def op(acc: Int, value: Int) = acc + 1
-def s = Set.add(Set.empty[Int], 2)
-def o = Set.fold(s, 0, op) + 1
-def x = if o == 2 then true else false
-out x

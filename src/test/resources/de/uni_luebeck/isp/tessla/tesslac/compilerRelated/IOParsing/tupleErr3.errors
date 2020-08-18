@@ -1,0 +1,2 @@
+ERROR parsing the input Stream
+ Main$InputError: Tuple input has invalid format: (true, 5, 8)

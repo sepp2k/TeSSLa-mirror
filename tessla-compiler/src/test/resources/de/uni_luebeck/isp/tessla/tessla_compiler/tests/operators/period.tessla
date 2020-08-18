@@ -1,3 +1,0 @@
-in x: Events[Unit]
-def z := period(5)
-out z

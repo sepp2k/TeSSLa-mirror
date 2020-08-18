@@ -1,5 +1,0 @@
-{
-  "input": "recursive-delay.input",
-  "expectedOutput": "recursive-delay.output",
-  "spec": "recursive-delay.tessla"
-}

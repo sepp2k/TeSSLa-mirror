@@ -129,6 +129,10 @@ object Errors {
     override def message = s"Use of time units is only allowed when a base time is set for the data"
   }
 
+  case class UnsupportedOpenTypes(loc: Location) extends TesslaError {
+    override def message = s"Open types are not (yet) supported"
+  }
+
   case class TimeUnitConversionError(from: TimeUnit, to: TimeUnit) extends TesslaError {
     // This error happens when applying the unit `from` to a number in a spec that uses the unit `to`
     // (where `from` can't be converted to `to`), so we want to use `from`'s location to have it

@@ -1,0 +1,10 @@
+in a: Events[Int]
+in b: Events[Int]
+
+def o1: {x: Events[Int], y: Events[Int], ..} = {x = a, y = b, z = a}
+
+def sumXY(o: {x: Events[Int], y: Events[Int], ..}) = o.x + o.y
+
+out sumXY(o1)
+
+

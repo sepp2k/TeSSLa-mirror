@@ -1,6 +1,0 @@
-{
-  "input": "blocks.input",
-  "expectedOutput": "blocks.output",
-  "expectedWarnings": "blocks.warnings",
-  "spec": "blocks.tessla"
-}

@@ -1,5 +1,0 @@
-{
-  "spec": "full-lockset.tessla",
-  "input": "../misc/empty.input",
-  "expectedOutput": "full-lockset.output"
-}

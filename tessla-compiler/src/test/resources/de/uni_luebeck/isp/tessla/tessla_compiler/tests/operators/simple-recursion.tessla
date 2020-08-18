@@ -1,5 +1,0 @@
-in a: Events[Int]
-def x: Events[Int] := last(z, a)
-def y := default(x, 0)
-def z := y + a
-out z

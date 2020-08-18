@@ -1,5 +1,0 @@
-in c: Events[Bool]
-in t: Events[String]
-in e: Events[String]
-
-out slift3(c, t, e, (c: Bool, t: String, e: String) => if c then t else e) as z

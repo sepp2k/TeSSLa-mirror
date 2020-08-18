@@ -1,9 +1,0 @@
-in x: Events[Int]
-in y: Events[Int]
-
-def xSet := Set.collect(x)
-def ySet := Set.collect(y)
-def union := Set.union(xSet, ySet)
-def intersection := Set.intersection(xSet, ySet)
-out union
-out intersection

@@ -1,6 +1,0 @@
-in x: Events[Int]
-
-out minimum(x)
-out maximum(x)
-out count(x)
-out sum(x)

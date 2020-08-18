@@ -1,6 +1,0 @@
-in x: Events[Int]
-
-def passThrough[A](a: Events[A]): Events[A] :=
-  lift(a, nil[A], (a: Option[A], b: Option[A]) => a)
-
-out passThrough(x) as z

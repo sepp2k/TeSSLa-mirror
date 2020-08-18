@@ -1,7 +1,0 @@
-{
-  "spec": "timeunits.tessla",
-  "input": "timeunits.input",
-  "expectedOutput": "timeunits.output",
-  "baseTime": "1 ms"
-}
-            

@@ -1,3 +1,0 @@
-in x: Events[Int]
-
-out x % 89 as y

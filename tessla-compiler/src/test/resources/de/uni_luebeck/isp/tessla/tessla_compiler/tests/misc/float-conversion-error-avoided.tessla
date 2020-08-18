@@ -1,5 +1,0 @@
-in x: Events[Float]
-in y: Events[Float]
-
-out x/.y
-out if y == 0.0 then 42 else floatToInt(x/.y) as z

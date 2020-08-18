@@ -1,4 +1,0 @@
-in x: Events[Int]
-in c: Events[Bool]
-
-out filter(x, c) as z

@@ -1,0 +1,4 @@
+{
+  "spec": "wrongType.tessla",
+  "expectedErrors": "wrongType.errors"
+}

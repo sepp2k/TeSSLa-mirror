@@ -1,9 +1,0 @@
-def total1[A,B](f: (A) => B) = (a: Option[A]) =>
-  if isNone(a)
-  then None[B]
-  else Some(f(getSome(a)))
-
-def not(a: Bool) = !a
-def notA(a: Option[Bool]) = total1(not)(a)
-
-out notA(Some(true))

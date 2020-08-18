@@ -1,7 +1,0 @@
-in input: Events[Int]
-
-liftable def f(x: Int) = x+1
-
-def g = f
-
-out g(input) as output

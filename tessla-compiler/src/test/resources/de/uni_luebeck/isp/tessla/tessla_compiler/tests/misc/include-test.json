@@ -1,6 +1,0 @@
-{
-  "input": "empty.input",
-  "expectedOutput": "include-test.output",
-  "expectedWarnings": "include-test.warnings",
-  "spec": "include-test.tessla"
-}

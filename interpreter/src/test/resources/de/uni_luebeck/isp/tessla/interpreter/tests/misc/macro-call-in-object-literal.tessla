@@ -1,9 +1,0 @@
-def foo(x: Int) := x
-
-def bar(x: Events[Int]) := {
-  def baz := foo(1)
-  return ${a = baz}
-}
-
-in i: Events[Int]
-out bar(i).a as x

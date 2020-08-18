@@ -1,3 +1,0 @@
-in x: Events[Int]
-def y := time(x)
-out y

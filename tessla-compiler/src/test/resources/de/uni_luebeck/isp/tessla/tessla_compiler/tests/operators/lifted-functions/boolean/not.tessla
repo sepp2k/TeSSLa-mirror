@@ -1,3 +1,0 @@
-in x: Events[Bool]
-def y := !x
-out y

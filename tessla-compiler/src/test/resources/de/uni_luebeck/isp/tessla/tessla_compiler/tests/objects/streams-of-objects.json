@@ -1,5 +1,0 @@
-{
-  "input": "objects.input",
-  "expectedOutput": "streams-of-objects.output",
-  "spec": "streams-of-objects.tessla"
-}

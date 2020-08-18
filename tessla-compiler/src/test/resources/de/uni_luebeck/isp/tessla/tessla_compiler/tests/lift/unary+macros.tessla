@@ -1,6 +1,0 @@
-in x: Events[Int]
-
-def add(a: Int, b: Int) := a + b
-def double(x: Int) := add(x, x)
-
-out slift1(x, double) as s

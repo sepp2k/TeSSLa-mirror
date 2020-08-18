@@ -1,6 +1,0 @@
-{
-  "input": "namedarguments.input",
-  "expectedOutput": "namedarguments.output",
-  "spec": "namedarguments.tessla",
-  "baseTime": "1 ms"
-}

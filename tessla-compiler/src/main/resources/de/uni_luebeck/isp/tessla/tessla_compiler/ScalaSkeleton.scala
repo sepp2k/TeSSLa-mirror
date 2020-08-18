@@ -158,7 +158,7 @@ object Main {
             }
         } catch {
             case e: Exception => {
-                System.err.println("ERROR parsing the input Stream\n" + e)
+                System.err.println("ERROR parsing the input Stream\n " + e)
                 System.exit(129)
             }
         }

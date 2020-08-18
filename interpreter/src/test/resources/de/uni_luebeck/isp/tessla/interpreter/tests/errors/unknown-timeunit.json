@@ -1,7 +1,0 @@
-{
-  "spec": "_.tessla",
-  "input": "_.input",
-  "expectedRuntimeErrors": "_.runtime-errors",
-  "expectedOutput": "_.output",
-  "baseTime": "1 x"
-}

@@ -1,7 +1,0 @@
-{
-  "input": "timestampranges2.input",
-  "expectedOutput": "timestampranges2.output",
-  "spec": "timestampranges2.tessla",
-  "abortAt": 100,
-  "excludeForCompiler": true
-}

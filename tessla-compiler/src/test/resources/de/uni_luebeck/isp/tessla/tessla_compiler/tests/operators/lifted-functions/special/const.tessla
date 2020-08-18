@@ -1,3 +1,0 @@
-in x: Events[Int]
-def y := const(5, x)
-out y

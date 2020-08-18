@@ -1,3 +1,0 @@
-in x: Events[Int]
-def y := ~x
-out y

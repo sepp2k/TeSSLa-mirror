@@ -1,5 +1,0 @@
-in idx: Events[Int]
-
-def xs = List.prepend(1, List.prepend(2, List.prepend(3, List.empty[Int])))
-
-out List.set(xs, idx, 42) as ys

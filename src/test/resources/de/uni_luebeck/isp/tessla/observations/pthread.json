@@ -1,0 +1,4 @@
+{
+  "spec": "pthread.tessla",
+  "expectedCompilerResult": "pthread.observations"
+}

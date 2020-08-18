@@ -1,4 +1,0 @@
-in x: Events[Bool]
-in y: Events[Bool]
-def z := x || y
-out z

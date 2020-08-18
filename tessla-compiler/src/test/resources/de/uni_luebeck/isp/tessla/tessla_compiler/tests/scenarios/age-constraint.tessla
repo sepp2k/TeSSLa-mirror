@@ -1,7 +1,0 @@
-in source: Events[Unit]
-in target: Events[Unit]
-
-def diff := time(target) - last(time(source), target)
-def error := diff < 2 || diff > 5
-
-out error

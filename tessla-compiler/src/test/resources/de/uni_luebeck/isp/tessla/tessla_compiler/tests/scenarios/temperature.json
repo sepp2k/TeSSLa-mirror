@@ -1,6 +1,0 @@
-{
-  "spec": "temperature.tessla",
-  "input": "temperature.input",
-  "expectedOutput": "temperature.output"
-}
-            

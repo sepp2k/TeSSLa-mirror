@@ -1,5 +1,0 @@
-{
-  "input": "objects.input",
-  "expectedOutput": "tuples.output",
-  "spec": "tuples.tessla"
-}

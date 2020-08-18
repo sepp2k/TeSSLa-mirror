@@ -1,5 +1,0 @@
-{
-  "spec": "lifted-macros.tessla",
-  "input": "lifted-macros.input",
-  "expectedOutput": "lifted-macros.output"
-}
