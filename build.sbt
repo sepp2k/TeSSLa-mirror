@@ -38,10 +38,7 @@ ThisBuild / resolvers ++= Seq(
 // Shared dependencies and settings between modules
 lazy val commonDependencies = Seq(
   "com.github.scopt" %% "scopt" % "4.0.0-RC2",
-  "com.github.rjeschke" % "txtmark" % "0.13",
   "org.scalatest" %% "scalatest" % "3.1.0" % "test",
-  "com.typesafe.play" %% "play-json" % "2.8.0",
-  "com.eclipsesource" %% "play-json-schema-validator" % "0.9.5" % "test",
   "io.spray" %% "spray-json" % "1.3.5",
   "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT",
   "org.typelevel" %% "cats-core" % "2.0.0"
