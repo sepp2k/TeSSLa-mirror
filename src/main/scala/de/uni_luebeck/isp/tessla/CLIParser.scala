@@ -7,14 +7,14 @@ import scopt.OptionParser
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers}
 
 import scala.collection.mutable
-import scala.io.Source
+import scala.io.{Codec, Source}
 
 object CLIParser {
   val programName: String = BuildInfo.name
   val programVersion: String = BuildInfo.version
   val programDescription =
     "Compile Tessla specifications and evaluate them on provided input streams."
-  val licenseLocation = "de/uni_luebeck/isp/tessla/License"
+  val licenseLocation = "LICENSE"
 
   sealed trait Config
 
@@ -102,11 +102,13 @@ object CLIParser {
     version("version")
       .text("Print the version and exit.")
     opt[Unit]('l', "license")
-      .action((_, _) => {
-        println(Source.fromResource(licenseLocation).mkString)
-        sys.exit(0)
-      })
+      .action((_, _) => printLicense())
       .text("Print the legal information for this software and exit.")
+  }
+
+  private def printLicense(): Unit ={
+    println(Source.fromResource(licenseLocation)(Codec.UTF8).mkString)
+    sys.exit(0)
   }
 
   // Extension for the 'interpreter' command
@@ -243,8 +245,10 @@ object CLIParser {
       .text("Compiles Scala code to a jar file which is created at the given location. No source output is generated")
   }
 
-  def parse(args: Array[String], helpOnEmpty: Boolean = true): (GlobalConfig, List[Task[Config]]) = {
-    val a = if (helpOnEmpty && args.isEmpty) Array("--help") else args
+  def parse(args: Array[String], helpIfEmpty: Boolean = true): (GlobalConfig, List[Task[Config]]) = {
+    val a = if (helpIfEmpty && args.isEmpty) Array("--help") else args
+    // handle this separately to suppress parsing errors... can scopt handle this differently?
+    if (a.contains("--license") || a.contains("-l")) printLicense()
     parser.parse(a, ()).getOrElse(sys.exit(1))
     (global, tasks.map(_()).toList)
   }
