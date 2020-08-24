@@ -145,37 +145,15 @@ object Main {
     def runTesslaCompiler(config: CLIParser.TesslacConfig): Unit = {
       try {
         val compilerOptions = Compiler.Options()
-        val (backend, stdinRead) = (new ScalaBackend, true)
 
-        val core = unwrapResult(
+        val sourceStr = unwrapResult(
           Compiler.compile(config.specSource, compilerOptions)
             andThen UsageAnalysis
             andThen Laziness
-        )
-
-        if (global.debug) {
-          println("###############################")
-          println("#        TeSSLa Core          #")
-          println("###############################")
-          println(core.spec)
-          println("###############################")
-        }
-
-        val optIntermediateCode = unwrapResult(
-          new TesslaCoreToIntermediate(stdinRead)(core)
+            andThen new TesslaCoreToIntermediate(consoleInterface = true)
             andThen UnusedVarRemove
+            andThen new ScalaBackend
         )
-
-        if (global.debug) {
-          println("###############################")
-          println("#      Intermediate Code      #")
-          println("###############################")
-          println(optIntermediateCode)
-          println("###############################")
-        }
-
-        val source = backend.translate(optIntermediateCode)
-        val sourceStr = unwrapResult(source)
 
         config.jarFile.map { file =>
           val p = file.toPath
