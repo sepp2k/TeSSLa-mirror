@@ -1,3 +1,5 @@
+import sbt.Keys.artifact
+
 // Resolvers
 val nexus = "https://sourcecode.isp.uni-luebeck.de/nexus/"
 val snapshots = "ISP Snapshots" at nexus + "content/repositories/snapshots"
@@ -64,6 +66,41 @@ lazy val commonSettings = Seq(
   Antlr4 / antlr4GenListener := false,
   Antlr4 / antlr4GenVisitor := true
 )
+
+// Task to copy the scala-library as managed dependency
+// This allows to have it as resource in the final artifact, without having to manually manage it.
+val libCopy = Def
+  .task {
+    val log = streams.value.log
+
+    val source = (Compile / dependencyClasspath).value
+      .find(file =>
+        file.get(artifact.key).exists(artifact => artifact.name == "scala-library" && artifact.`type` == "jar")
+      )
+      .getOrElse {
+        log.error("Artifact 'scala-library.jar' could not be found")
+        throw new sbt.MessageOnlyException("Failed to copy scala-library")
+      }
+      .data
+
+    val target = (Compile / resourceManaged).value / "scala-library.jar"
+
+    val cached = FileFunction.cached(
+      cacheBaseDirectory = streams.value.cacheDirectory / "scala-library",
+      inStyle = FilesInfo.hash,
+      outStyle = FilesInfo.exists
+    ) { (inputs: Set[File]) =>
+      IO.copyFile(inputs.head, target)
+      log.info(s"Copied resource")
+      log.info(s"$source")
+      log.info("  to")
+      log.info(s"$target")
+      Set(target)
+    }
+
+    cached(Set(source)).toSeq
+  }
+  .triggeredBy(Compile / compile)
 
 // Module definitions
 val rootPackage = "de.uni_luebeck.isp.tessla"
@@ -143,7 +180,8 @@ lazy val tesslac = (project in file("tessla-compiler"))
     buildInfoPackage := s"$rootPackage.tessla_compiler",
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-compiler" % compilerVersion
-    )
+    ),
+    Compile / resourceGenerators += libCopy.taskValue
   )
   .dependsOn(
     core

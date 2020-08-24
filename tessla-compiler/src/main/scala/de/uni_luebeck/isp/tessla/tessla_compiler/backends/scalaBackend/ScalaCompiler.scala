@@ -51,18 +51,18 @@ object ScalaCompiler {
   }
 
   /**
-   * Unzips all files starting with scala (those in the scala directory/package) from the scala-library.jar
+   * Unzips all files from the scala-library.jar
    * to a certain directory
    *
    * @param dir Directory where files are extracted to
    */
-  private def unzipJar(dir: Path): Unit = {
+  def unzipScalaLibrary(dir: Path): Unit = {
     // Fetch the scala-library.jar location
-    val source = Predef.getClass.getProtectionDomain.getCodeSource
+    val source = getClass.getClassLoader.getResource("scala-library.jar")
     if (source == null) {
       throw Errors.InternalError("Resource scala-library.jar could not be loaded. Monitor generation failed.")
     }
-    Using(source.getLocation.openStream)(unzipJar(dir, _))
+    Using(source.openStream)(unzipJar(dir, _))
   }
 
   /**
@@ -77,15 +77,6 @@ object ScalaCompiler {
       .continually(in.getNextJarEntry)
       .takeWhile(_ != null)
       .filterNot(_.isDirectory)
-      // This filters only scala sources, as on the assembled
-      // variant the source would resolve to the assembly itself, thus repackaging itself into the
-      // generated code
-      // TODO This is only a quick and ugly workaround, especially since this drops license information!
-      // Solution 1: More fine-grained filter to only include what's needed (this also requires manually filtering out
-      //   scala-compiler and scala-reflect classes
-      // Solution 2: Include scala-library as separate resource, easier to include but decoupled version of library and compiler
-      //   and scala-library effectively contained twice in the assembled compiler (not in the generated result of course)
-      .filter(_.getName.startsWith("scala"))
       .foreach { file =>
         val f = Paths.get(file.getName)
         val path = dir.resolve(f)
@@ -147,8 +138,9 @@ object ScalaCompiler {
  *               This directory has to exist.
  * @param jarName The name of the generated jar file
  */
-class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean)(settingsModifier: Settings => Unit = _ => ())
-    extends TranslationPhase[String, Unit] {
+class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean)(
+  settingsModifier: Settings => Unit = _ => ()
+) extends TranslationPhase[String, Unit] {
 
   /**
    * Function triggering the translation from a Scala source string to a jar archive which is created at the given
@@ -175,11 +167,16 @@ class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean)(settingsModif
     val sourcePath = Path.of(URI.create(outDir.toUri.toString + "Main.scala"))
     deleteOnExit(sourcePath)
 
+    println(s"Write code to $sourcePath ...")
     writeCode(sourcePath, sourceCode)
     compileCode(sourcePath, settings, reporter)
 
-    unzipJar(compileDir)
-    makeJar(compileDir, outDir.resolve(jarName), "Main")
+    println(s"Unzip scala library to $compileDir ...")
+    unzipScalaLibrary(compileDir)
+    println(s"Pack $compileDir into jar ...")
+    val jar = outDir.resolve(jarName)
+    makeJar(compileDir, jar, "Main")
+    println(s"Successfully generated jar file at $jar.")
 
     Success((), Seq())
   }

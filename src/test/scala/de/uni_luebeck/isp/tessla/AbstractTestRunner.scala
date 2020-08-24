@@ -53,7 +53,7 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
         }
         .toMap
     }
-    .reduce(_ ++ _)
+    .fold(Map())(_ ++ _)
     .toSeq
     .map(_.swap)
     .sorted
