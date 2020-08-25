@@ -1,45 +1,58 @@
 package de.uni_luebeck.isp.tessla.analyses
 
-import de.uni_luebeck.isp.tessla.TesslaCore
+import de.uni_luebeck.isp.tessla.core.Errors
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 
 import scala.collection.mutable
 
 object DepthChecker {
-  def nestingDepth(spec: TesslaCore.Specification): Int = {
-    val memTable: mutable.Map[TesslaCore.Identifier, Int] = mutable.Map()
-    val streams = spec.streams.map(s => s.id -> s.expression).toMap
-    (spec.outStreams.map { os => nestingDepth(streams, os.stream, memTable) } ++ spec.streams.flatMap { s =>
-      s.expression match {
-        case l: TesslaCore.Last =>
-          Some(nestingDepth(streams, l.values, memTable))
-        case d: TesslaCore.Delay =>
-          Some(nestingDepth(streams, d.delays, memTable))
-        case _ =>
-          None
+
+  def nestingDepth(spec: Core.Specification): Int = {
+    val memTable: mutable.Map[Core.Identifier, Int] = mutable.Map()
+    val ins = spec.in.keySet
+    val defDepths = spec.definitions.values
+      .map(extract)
+      .collect {
+        case (e: ExternExpression, args) if e.name == "last" || e.name == "delay" => args.head
       }
-    }).fold(0)(math.max)
+      .map(nestingDepth(spec.definitions, ins, _, None, memTable))
+
+    val outDepths = spec.out.map(_._1).map(nestingDepth(spec.definitions, ins, _, None, memTable))
+
+    (outDepths ++ defDepths).fold(0)(math.max)
   }
 
-  def nestingDepth(streams: Map[TesslaCore.Identifier, TesslaCore.Expression], stream: TesslaCore.StreamRef, memoized: mutable.Map[TesslaCore.Identifier, Int]): Int = {
-    def visitChild(child: TesslaCore.StreamRef): Int = {
-      nestingDepth(streams, child, memoized)
+  def nestingDepth(
+    streams: Map[Core.Identifier, Core.Expression],
+    ins: Set[Core.Identifier],
+    stream: Core.ExpressionArg,
+    id: Option[Core.Identifier],
+    memoized: mutable.Map[Core.Identifier, Int]
+  ): Int = {
+    def visitChild(child: Core.ExpressionArg): Int = {
+      nestingDepth(streams, ins, child, None, memoized)
     }
 
     stream match {
-      case _: TesslaCore.Nil | _: TesslaCore.InputStream => 0
-      case s: TesslaCore.Stream =>
-        if (memoized.contains(s.id)) return memoized(s.id)
-
-        val childDepth = streams(s.id) match {
-          case l: TesslaCore.Last =>
-            visitChild(l.clock)
-          case d: TesslaCore.Delay =>
-            visitChild(d.resets)
-          case c: TesslaCore.CustomBuiltInCall =>
-            c.streamArgs.map(visitChild).max
+      case ref: Core.ExpressionRef if ins.contains(ref.id)      => 0
+      case ref: Core.ExpressionRef if memoized.contains(ref.id) => memoized(ref.id)
+      case ref: Core.ExpressionRef                              => nestingDepth(streams, ins, streams(ref.id), Some(ref.id), memoized)
+      case exp: Core.Expression =>
+        val childDepth = extract(exp) match {
+          case (e: ExternExpression, args) if e.name == "last" || e.name == "delay" =>
+            visitChild(args(1))
+          case (e, args) =>
+            args.map(visitChild).maxOption.getOrElse(0)
         }
-        memoized(s.id) = 1 + childDepth
+        id.foreach(memoized(_) = 1 + childDepth)
         1 + childDepth
     }
+  }
+
+  private def extract(e: Core.Expression) = e match {
+    case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, _, _), args, _) => (e, args)
+    case ApplicationExpression(e: ExternExpression, args, _)                                  => (e, args)
+    case _                                                                                    => (e, Seq())
   }
 }

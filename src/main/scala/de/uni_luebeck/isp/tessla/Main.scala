@@ -7,7 +7,6 @@ import java.nio.file.Files
 import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
-import de.uni_luebeck.isp.tessla.core.analyses.Observations
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TesslaAST}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
@@ -108,7 +107,7 @@ object Main {
         if (config.printCore) println(core.print(printOptions)),
         if (config.printCoreLanSpec) println(flatCore.print(printOptions)),
         if (config.printTyped) println(typed.print(printOptions)),
-        if (config.observations) println(unwrapResult(Observations.Generator.translate(core))),
+        //TODO if (config.observations) println(unwrapResult(Observations.Generator.translate(core))),
         if (config.listInStreams) core.in.foreach(is => println(is._1.idOrName)),
         if (config.listOutStreams) core.out.foreach(os => println(os._1.id.idOrName))
       ).headOption

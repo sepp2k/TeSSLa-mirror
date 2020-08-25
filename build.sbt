@@ -44,7 +44,7 @@ lazy val commonDependencies = Seq(
   "io.spray" %% "spray-json" % "1.3.5",
   "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT",
   "org.typelevel" %% "cats-core" % "2.0.0",
-  "de.uni_luebeck.isp" %% "clang-instrumentation" % "0.0.28"
+  "de.uni_luebeck.isp" %% "clang-instrumentation" % "0.0.29"
 )
 
 lazy val commonSettings = Seq(
