@@ -14,9 +14,17 @@ You can get the latest version of TeSSLa from the [Gitlab Artifact Browser](http
 
 The project can be built using [sbt](https://www.scala-sbt.org/), by running `sbt assembly`. The finished assembly will then be located under `target/scala-*/`. This also generates assemblies for all sub-modules, which will be located in their respective target directories.
 
+If you want to build only a specific sub-project, run `sbt <project>/assembly` instead. (e.g. `sbt core/assembly`). The project names for sbt can be found in the [build.sbt](build.sbt).
+
 ## Docker Image
 
 TeSSLa is also available as part of the [TeSSLa docker image](https://gitlab.isp.uni-luebeck.de/tessla/tessla-docker), which is especially useful if you want to use TeSSLa on instrumented C code.
+
+## Documentation
+
+For more details on the different modules take a look at their respective READMEs. 
+
+Additionally, the generated scaladoc for each module can be found on the Artifact browser (see above) or at `target/scala-*/api/` after generating it through `sbt doc`.
 
 ## CLI
 

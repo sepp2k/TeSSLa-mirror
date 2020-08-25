@@ -1,3 +1,9 @@
+# Core
+
+This module contains the core compiler, which contains the entire frontend compilation pipeline for TeSSLa, responsible for parsing, typechecking and transforming the specification into a core representation, which can then be used by other backends.
+
+Entry point for most use cases would be [Compiler.scala](src/main/scala/de/uni_luebeck/isp/tessla/core/Compiler.scala)
+
 ## Translation Phases (v1.2.0)
 The pipeline of translation phases looks as follows:
 

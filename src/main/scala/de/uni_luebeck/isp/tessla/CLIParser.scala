@@ -106,7 +106,7 @@ object CLIParser {
       .text("Print the legal information for this software and exit.")
   }
 
-  private def printLicense(): Unit ={
+  private def printLicense(): Unit = {
     println(Source.fromResource(licenseLocation)(Codec.UTF8).mkString)
     sys.exit(0)
   }
