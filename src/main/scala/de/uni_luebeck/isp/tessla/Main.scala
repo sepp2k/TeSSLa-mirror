@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
+import de.uni_luebeck.isp.tessla.analyses.Observations
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.interpreter._
@@ -15,6 +16,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageA
 import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc
 
 import scala.io.Source
+import scala.Option.when
 
 /**
  * Entry point of the application.
@@ -104,13 +106,12 @@ object Main {
 
       // All those options are mutually exclusive, only apply the first one in this list
       LazyList(
-        if (config.printCore) println(core.print(printOptions)),
-        if (config.printCoreLanSpec) println(flatCore.print(printOptions)),
-        if (config.printTyped) println(typed.print(printOptions)),
-        //TODO if (config.observations) println(unwrapResult(Observations.Generator.translate(core))),
-        if (config.listInStreams) core.in.foreach(is => println(is._1.idOrName)),
-        if (config.listOutStreams) core.out.foreach(os => println(os._1.id.idOrName))
-      ).headOption
+        when (config.printCore)(println(core.print(printOptions))),
+        when (config.printCoreLanSpec)(println(flatCore.print(printOptions))),
+        when (config.printTyped)(println(typed.print(printOptions))),
+        when (config.listInStreams)(core.in.foreach(is => println(is._1.idOrName))),
+        when (config.listOutStreams)(core.out.foreach(os => println(os._1.id.idOrName)))
+      ).flatten.headOption
 
     }
 
