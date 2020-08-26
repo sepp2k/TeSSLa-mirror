@@ -8,6 +8,7 @@ import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
 import de.uni_luebeck.isp.tessla.analyses.Observations
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.core.util.Lazy
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TesslaAST}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
@@ -107,14 +108,15 @@ object Main {
 
       // All those options are mutually exclusive, only apply the first one in this list
       LazyList(
-        when (config.printCore)(println(core.print(printOptions))),
-        when (config.printCoreLanSpec)(println(flatCore.print(printOptions))),
-        when (config.printTyped)(println(typed.print(printOptions))),
-        when (config.observations)(new Observations.Instrumenter("C:\\Users\\thiem\\Desktop\\Tessla\\tesslac\\foo.c").translate(core)),
-        when (config.listInStreams)(core.in.foreach(is => println(is._1.idOrName))),
-        when (config.listOutStreams)(core.out.foreach(os => println(os._1.id.idOrName)))
-      ).flatten.headOption
-
+        when(config.printCore)(Lazy(println(core.print(printOptions)))),
+        when(config.printCoreLanSpec)(Lazy(println(flatCore.print(printOptions)))),
+        when(config.printTyped)(Lazy(println(typed.print(printOptions)))),
+        Option(config.observations).map(f =>
+          Lazy(unwrapResult(new Observations.Instrumenter(f.getAbsolutePath).translate(core)))
+        ),
+        when(config.listInStreams)(Lazy(core.in.foreach(is => println(is._1.idOrName)))),
+        when(config.listOutStreams)(Lazy(core.out.foreach(os => println(os._1.id.idOrName))))
+      ).flatten.headOption.foreach(_.get)
     }
 
     /**

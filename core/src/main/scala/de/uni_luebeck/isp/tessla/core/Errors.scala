@@ -267,4 +267,8 @@ object Errors {
     override def message = s"""Key "$key" not found"""
   }
 
+  case class UnsupportedPlatformError(os: String, arch: String, help: String) extends TesslaError {
+    override def message = s"Unsupported platform $os-$arch. $help"
+    val loc = Location.unknown
+  }
 }

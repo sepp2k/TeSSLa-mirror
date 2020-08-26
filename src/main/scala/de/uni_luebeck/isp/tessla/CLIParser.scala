@@ -34,7 +34,7 @@ object CLIParser {
     printAllTypes: Boolean = false,
     listOutStreams: Boolean = false,
     listInStreams: Boolean = false,
-    observations: Boolean = false,
+    observations: File = null,
     compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
@@ -77,7 +77,7 @@ object CLIParser {
         "Use the given time constant (including a unit) as the reference time for time literals" +
           "(only in 'interpreter' and 'compile-core'"
       )
-    opt[File]('s', "stdlib") // TODO Overlaps with doc stdlib?
+    opt[File]('s', "stdlib")
       .valueName("<file>")
       .action((f, _) => //TODO replace actions with foreach
         compilerOptions = compilerOptions.copy(
@@ -164,7 +164,6 @@ object CLIParser {
       .action((_, _) => tasks += (() => Task("compile-core", config.copy(compilerOptions = compilerOptions))))
       .children(
         arg[File]("<tessla-file>")
-          .optional()
           .action((s, _) => config = config.copy(specSource = CharStreams.fromFileName(s.getPath)))
           .text("The file containing the Tessla specification"),
         note(""), // Spacer
@@ -192,9 +191,9 @@ object CLIParser {
         opt[Unit]("list-in-streams")
           .action((_, _) => config = config.copy(listInStreams = true))
           .text("Print a list of the input streams defined in the given Tessla specification and then exit"),
-        opt[Unit]("observations")
-          .action((_, _) => config = config.copy(observations = true))
-          .text("Generate observation specification file from the corresponding annotations")
+        opt[File]("observations")
+          .action((f, _) => config = config.copy(observations = f))
+          .text("Instrument the provided C file according to the specification (only linux-x86_64)")
       )
   }
 
@@ -234,15 +233,19 @@ object CLIParser {
     cmd("compile")
       .foreach(_ => tasks += (() => Task("compile", config)))
       .text("Compile TeSSLa specifications to Scala")
-    arg[File]("<tessla-file>")
-      .foreach(f => config = config.copy(specSource = CharStreams.fromFileName(f.getPath)))
-      .text("The file containing the Tessla specification")
-    opt[File]('o', "out-file")
-      .foreach(f => config = config.copy(outFile = Some(f)))
-      .text("Path to the output file")
-    opt[File]('j', "jar-file")
-      .foreach(f => config = config.copy(jarFile = Some(f)))
-      .text("Compiles Scala code to a jar file which is created at the given location. No source output is generated")
+      .children(
+        arg[File]("<tessla-file>")
+          .foreach(f => config = config.copy(specSource = CharStreams.fromFileName(f.getPath)))
+          .text("The file containing the Tessla specification"),
+        opt[File]('o', "out-file")
+          .foreach(f => config = config.copy(outFile = Some(f)))
+          .text("Path to the output file"),
+        opt[File]('j', "jar-file")
+          .foreach(f => config = config.copy(jarFile = Some(f)))
+          .text(
+            "Compiles Scala code to a jar file which is created at the given location. No source output is generated"
+          )
+      )
   }
 
   def parse(args: Array[String], helpIfEmpty: Boolean = true): (GlobalConfig, List[Task[Config]]) = {

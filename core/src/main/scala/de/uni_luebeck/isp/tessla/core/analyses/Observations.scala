@@ -2,15 +2,7 @@ package de.uni_luebeck.isp.tessla.analyses
 
 import java.nio.file.Paths
 
-import de.uni_luebeck.isp.tessla.core.{
-  CPatternLexer,
-  CPatternParser,
-  Errors,
-  Location,
-  Tessla,
-  TesslaAST,
-  TranslationPhase
-}
+import de.uni_luebeck.isp.tessla.core.{CPatternLexer, CPatternParser, Errors, Location, TranslationPhase}
 import de.uni_luebeck.isp.clang_instrumentation.CPPBridge
 import de.uni_luebeck.isp.tessla.core.Errors.{InternalError, ParserError}
 import de.uni_luebeck.isp.tessla.core.CPatternParser.{
@@ -24,9 +16,10 @@ import de.uni_luebeck.isp.tessla.core.CPatternParser.{
   VariableContext
 }
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
+import de.uni_luebeck.isp.tessla.core.TranslationPhase.Failure
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
-
 import de.uni_luebeck.isp.tessla.core.util._
+
 import scala.collection.mutable
 import scala.util.Try
 
@@ -225,11 +218,15 @@ object Observations {
         .groupBy(_._1)
         .mapVals(_.values.toSeq)
 
-    private def createPatternObservations(annotationName: String, createCode: (Annotation, InStream) => String) =
-      spec.in.flatMap {
+    private def createPatternObservations(
+      annotationName: String,
+      createCode: (Annotation, InStream) => String
+    ): Seq[(Pattern, Option[String], String, InStream)] =
+      spec.in.toSeq.flatMap {
         case (id, (streamType, annotations)) =>
           annotations
             .filter(_._1 == annotationName)
+            .toSeq
             .map {
               case (name, args) => (name, args.head)
             }
@@ -498,7 +495,18 @@ object Observations {
 
   class Instrumenter(cFileName: String) extends TranslationPhase[Core.Specification, Unit] {
     override def translate(spec: Core.Specification) = {
-      new InstrumenterWorker(spec, cFileName).translate()
+      (sys.props("os.name").toLowerCase(), sys.props("os.arch").toLowerCase()) match {
+        case ("linux", "x86_64") => new InstrumenterWorker(spec, cFileName).translate()
+        case (os, arch) =>
+          Failure(
+            Errors.UnsupportedPlatformError(
+              os,
+              arch,
+              "C instrumentation is currently only supported for: linux-x86_64"
+            ) :: Nil,
+            Nil
+          )
+      }
     }
   }
 }
