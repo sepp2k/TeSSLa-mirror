@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-import java.io.IOException
+import java.io.{File, IOException}
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
@@ -14,6 +14,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, Unus
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc
+import scopt.OptionParser
 
 import scala.io.Source
 import scala.Option.when
@@ -109,6 +110,7 @@ object Main {
         when (config.printCore)(println(core.print(printOptions))),
         when (config.printCoreLanSpec)(println(flatCore.print(printOptions))),
         when (config.printTyped)(println(typed.print(printOptions))),
+        when (config.observations)(new Observations.Instrumenter("C:\\Users\\thiem\\Desktop\\Tessla\\tesslac\\foo.c").translate(core)),
         when (config.listInStreams)(core.in.foreach(is => println(is._1.idOrName))),
         when (config.listOutStreams)(core.out.foreach(os => println(os._1.id.idOrName)))
       ).flatten.headOption
