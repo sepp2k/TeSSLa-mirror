@@ -72,14 +72,14 @@ object CLIParser {
     head(s"$programName $programVersion")
     note(programDescription)
     opt[String]('t', "base-time")
-      .action((s, _) => compilerOptions = compilerOptions.copy(baseTimeString = Some(s)))
+      .foreach(s => compilerOptions = compilerOptions.copy(baseTimeString = Some(s)))
       .text(
         "Use the given time constant (including a unit) as the reference time for time literals" +
           "(only in 'interpreter' and 'compile-core'"
       )
     opt[File]('s', "stdlib")
       .valueName("<file>")
-      .action((f, _) => //TODO replace actions with foreach
+      .foreach(f =>
         compilerOptions = compilerOptions.copy(
           stdlibPath = f.getPath,
           stdlibIncludeResolver = IncludeResolvers.fromFile
@@ -94,7 +94,7 @@ object CLIParser {
       .foreach(_ => global = global.copy(diagnostics = false))
       .text("Suppress error messages and warnings")
     opt[Unit]("debug")
-      .action((_, _) => global = global.copy(debug = true))
+      .foreach(_ => global = global.copy(debug = true))
       .text("Print stack traces for errors and provide more verbose output")
     note("") // Spacer
     help("help")
@@ -102,7 +102,7 @@ object CLIParser {
     version("version")
       .text("Print the version and exit.")
     opt[Unit]('l', "license")
-      .action((_, _) => printLicense())
+      .foreach(_ => printLicense())
       .text("Print the legal information for this software and exit.")
   }
 
@@ -119,36 +119,36 @@ object CLIParser {
     note("")
     cmd("interpreter")
       .text("Evaluate the given Tessla specification on the input streams provided by a trace file.")
-      .action((_, _) => tasks += (() => Task("interpreter", config.copy(compilerOptions = compilerOptions))))
+      .foreach(_ => tasks += (() => Task("interpreter", config.copy(compilerOptions = compilerOptions))))
       .children(
         arg[File]("<tessla-file>")
           .optional()
-          .action((s, _) => config = config.copy(specSource = CharStreams.fromFileName(s.getPath)))
+          .foreach(s => config = config.copy(specSource = CharStreams.fromFileName(s.getPath)))
           .text("The file containing the Tessla specification"),
         arg[File]("<trace-file>")
           .optional()
-          .action((s, _) => config = config.copy(traceFile = Some(s)))
+          .foreach(s => config = config.copy(traceFile = Some(s)))
           .text(
             "The file containing the trace data used as input for the specification." +
               " If this is not provided, input is read from stdin"
           ),
         opt[String]('S', "stop-on")
-          .action((s, _) => config = config.copy(stopOn = Some(s)))
+          .foreach(s => config = config.copy(stopOn = Some(s)))
           .text("Stop when the output stream with the given name generates its first event"),
         opt[Unit]('r', "reject-undeclared-inputs")
-          .action((_, _) => config = config.copy(rejectUndeclaredInputs = true))
+          .foreach(_ => config = config.copy(rejectUndeclaredInputs = true))
           .text("Throw an error if an undeclared input stream occurs in the trace data"),
         opt[BigInt]('a', "abort-at")
-          .action((s, _) => config = config.copy(abortAt = Some(s)))
+          .foreach(s => config = config.copy(abortAt = Some(s)))
           .text("Stop the interpreter after a given amount of events."),
         opt[Unit]("ctf")
-          .action((_, _) => config = config.copy(ctfTrace = true))
+          .foreach(_ => config = config.copy(ctfTrace = true))
           .text(
             "The trace-file with the input data is in CTF format. With this option you must specify " +
               "a trace-file. stdin is not supported."
           ),
         opt[Unit]("csv")
-          .action((_, _) => config = config.copy(csvTrace = true))
+          .foreach(_ => config = config.copy(csvTrace = true))
           .text("The trace-file or the input stream is in CSV format.")
       )
   }
@@ -161,39 +161,39 @@ object CLIParser {
     note("")
     cmd("compile-core")
       .text("Compile the provided specification to Tessla Core")
-      .action((_, _) => tasks += (() => Task("compile-core", config.copy(compilerOptions = compilerOptions))))
+      .foreach(_ => tasks += (() => Task("compile-core", config.copy(compilerOptions = compilerOptions))))
       .children(
         arg[File]("<tessla-file>")
-          .action((s, _) => config = config.copy(specSource = CharStreams.fromFileName(s.getPath)))
+          .foreach(s => config = config.copy(specSource = CharStreams.fromFileName(s.getPath)))
           .text("The file containing the Tessla specification"),
         note(""), // Spacer
         opt[Unit]('c', "print-core")
-          .action((_, _) => config = config.copy(printCore = true))
+          .foreach(_ => config = config.copy(printCore = true))
           .text("Print the Tessla Core representation generated from the Tessla specification"),
         opt[Unit]("print-core-lanspec")
-          .action((_, _) => {
+          .foreach(_ => {
             config = config.copy(printCoreLanSpec = true)
             compilerOptions = compilerOptions.copy(flattenCore = true)
           })
           .text("Print the Tessla Core representation conform to the language specification."),
         opt[Unit]("print-typed")
-          .action((_, _) => config = config.copy(printTyped = true))
+          .foreach(_ => config = config.copy(printTyped = true))
           .text("Print the typed Tessla representation generated from the Tessla specification"),
         opt[Unit]("print-locations")
-          .action((_, _) => config = config.copy(printLocations = true))
+          .foreach(_ => config = config.copy(printLocations = true))
           .text("Print ASTs with locations"),
         opt[Unit]("print-all-types")
-          .action((_, _) => config = config.copy(printAllTypes = true))
+          .foreach(_ => config = config.copy(printAllTypes = true))
           .text("Print ASTs with all types"),
         opt[Unit]("list-out-streams")
-          .action((_, _) => config = config.copy(listOutStreams = true))
+          .foreach(_ => config = config.copy(listOutStreams = true))
           .text("Print a list of the output streams defined in the given Tessla specification and then exit"),
         opt[Unit]("list-in-streams")
-          .action((_, _) => config = config.copy(listInStreams = true))
+          .foreach(_ => config = config.copy(listInStreams = true))
           .text("Print a list of the input streams defined in the given Tessla specification and then exit"),
         opt[File]("observations")
-          .action((f, _) => config = config.copy(observations = f))
-          .text("Instrument the provided C file according to the specification (only linux-x86_64)")
+          .foreach(f => config = config.copy(observations = f))
+          .text("Instrument the provided C file according to the specification")
       )
   }
 
@@ -205,21 +205,21 @@ object CLIParser {
     note("")
     cmd("doc")
       .text("Generate documentation for Tessla code")
-      .action((_, _) => tasks += (() => Task("doc", config)))
+      .foreach(_ => tasks += (() => Task("doc", config)))
       .children(
         opt[Unit]('s', "stdlib")
-          .action((_, _) => config = config.copy(stdLib = true))
+          .foreach(_ => config = config.copy(stdLib = true))
           .text("Include documentation for definitions from the standard library"),
         opt[Unit]('i', "includes")
-          .action((_, _) => config = config.copy(includes = true))
+          .foreach(_ => config = config.copy(includes = true))
           .text("Include documentation from included files"),
         opt[File]('o', "outfile")
-          .action((s, _) => config = config.copy(outfile = Some(s)))
+          .foreach(s => config = config.copy(outfile = Some(s)))
           .text("Write the generated docs to the given file instead of stdout"),
         arg[File]("<files>")
           .optional()
           .unbounded()
-          .action((s, _) => config = config.copy(sources = config.sources :+ CharStreams.fromFileName(s.getPath)))
+          .foreach(s => config = config.copy(sources = config.sources :+ CharStreams.fromFileName(s.getPath)))
           .text("The TeSSLa files for which to generate documentation")
       )
   }

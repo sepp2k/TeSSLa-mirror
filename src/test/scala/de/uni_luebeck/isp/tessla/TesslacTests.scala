@@ -48,7 +48,7 @@ class TesslacTests extends AbstractTestRunner[String]("Tessla Compiler") with Be
 }
 
 object TesslacTests {
-  val pipeline =
+  def pipeline: TranslationPhase[Core.Specification, String] =
     UsageAnalysis
       .andThen(Laziness)
       .andThen(new TesslaCoreToIntermediate(true))

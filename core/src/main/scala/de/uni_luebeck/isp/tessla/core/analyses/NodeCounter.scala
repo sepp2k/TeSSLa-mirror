@@ -1,4 +1,4 @@
-package de.uni_luebeck.isp.tessla.analyses
+package de.uni_luebeck.isp.tessla.core.analyses
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._

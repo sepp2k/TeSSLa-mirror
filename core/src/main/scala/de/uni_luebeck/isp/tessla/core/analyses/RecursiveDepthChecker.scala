@@ -1,15 +1,16 @@
-package de.uni_luebeck.isp.tessla.analyses
+package de.uni_luebeck.isp.tessla.core.analyses
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 
 import scala.collection.mutable
+import de.uni_luebeck.isp.tessla.core.util._
 
 object RecursiveDepthChecker {
 
   def nestingDepth(spec: Core.Specification): Int = {
     val ins = spec.in.keySet
-    val defDepths = spec.definitions.mapValues(extract).collect {
+    val defDepths = spec.definitions.mapVals(extract).collect {
       case (id, (e: ExternExpression, args)) if e.name == "last" || e.name == "delay" =>
         nestingDepth(spec.definitions, ins, args.head, None, id, mutable.Map()).getOrElse(0)
     }

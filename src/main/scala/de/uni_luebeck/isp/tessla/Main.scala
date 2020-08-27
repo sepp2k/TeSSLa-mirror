@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
-import de.uni_luebeck.isp.tessla.analyses.Observations
+import de.uni_luebeck.isp.tessla.core.analyses.Observations
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.core.util.Lazy

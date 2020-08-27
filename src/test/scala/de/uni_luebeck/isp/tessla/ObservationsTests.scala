@@ -1,6 +1,6 @@
 package de.uni_luebeck.isp.tessla
 
-import de.uni_luebeck.isp.tessla.analyses.Observations
+import de.uni_luebeck.isp.tessla.core.analyses.Observations
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import spray.json.JsonParser

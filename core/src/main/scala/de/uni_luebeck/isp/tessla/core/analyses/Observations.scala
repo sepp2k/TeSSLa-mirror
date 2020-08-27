@@ -1,4 +1,4 @@
-package de.uni_luebeck.isp.tessla.analyses
+package de.uni_luebeck.isp.tessla.core.analyses
 
 import java.nio.file.Paths
 
@@ -48,7 +48,19 @@ object Observations {
     override def toString: String = s"*($base)"
   }
 
-  class InstrumenterWorker(spec: Core.Specification, cFileName: String) extends TranslationPhase.Translator[Unit] {
+  class InstrumenterWorker(spec: Core.Specification, cFileName: String, inclPath: Seq[String])
+      extends TranslationPhase.Translator[Unit] {
+
+    type Annotation = (String, Core.ExpressionArg)
+    type InStream = (Core.Identifier, Core.Type)
+
+    val supportedPlatforms = Set(
+      ("linux", "amd64")
+    )
+
+    val threadIdInStreams = spec.in.filter {
+      case (_, (_, annotations)) => annotations.keySet.contains("ThreadId")
+    }
 
     def parsePattern(str: String, loc: Location): Pattern = {
       val src = CharStreams.fromString(str, loc.path)
@@ -92,17 +104,10 @@ object Observations {
       translatePattern(pattern)
     }
 
-    type Annotation = (String, Core.ExpressionArg)
-    type InStream = (Core.Identifier, Core.Type)
-    def noArgError(name: String, loc: Location): InternalError =
-      InternalError(
-        "Annotation has no argument " + name + ", should have been caught by the (not yet implemented) type checker.",
-        loc
-      )
-
     private def argumentAsString(annotation: Annotation, argumentName: String): String = {
       val loc = annotation._2.location
-      val argument = annotationArgs(annotation).getOrElse(argumentName, throw noArgError(argumentName, loc))
+      val argument =
+        annotationArgs(annotation).getOrElse(argumentName, throw Errors.UndefinedNamedArg(argumentName, loc))
 
       argument match {
         case s: Core.StringLiteralExpression => s.value
@@ -122,7 +127,8 @@ object Observations {
 
     private def argumentAsInt(annotation: Annotation, argumentName: String): Int = {
       val loc = annotation._2.location
-      val argument = annotationArgs(annotation).getOrElse(argumentName, throw noArgError(argumentName, loc))
+      val argument =
+        annotationArgs(annotation).getOrElse(argumentName, throw Errors.UndefinedNamedArg(argumentName, loc))
 
       argument match {
         case s: Core.IntLiteralExpression => s.value.intValue
@@ -132,10 +138,6 @@ object Observations {
             argument.location
           )
       }
-    }
-
-    val threadIdInStreams = spec.in.filter {
-      case (_, (_, annotations)) => annotations.keySet.contains("ThreadId")
     }
 
     protected def encloseInstrumentationCode(code: String): String = {
@@ -194,8 +196,8 @@ object Observations {
         case (id, (streamType, annotations)) =>
           annotations.filter(_._1 == annotationName).foreach { annotation =>
             unwrapType(streamType) match {
-              case Core.UnitType => //good
-              case _             => error(Errors.WrongType("Events[Unit]", streamType, id.location))
+              case r: Core.RecordType if r.entries.isEmpty => //good
+              case _                                       => error(Errors.WrongType("Events[Unit]", streamType, id.location))
             }
           }
       }
@@ -249,7 +251,7 @@ object Observations {
           s"""trace_push_float(events, "$name", (double) $value);"""
         case Core.BoolType =>
           s"""trace_push_bool(events, "$name", (bool) $value);"""
-        case Core.UnitType =>
+        case r: Core.RecordType if r.entries.isEmpty =>
           s"""trace_push_unit(events, "$name");"""
         case _ => ""
       }
@@ -294,7 +296,7 @@ object Observations {
       val (id, tpe) = stream
       val streamName = id.fullName
       unwrapType(tpe) match {
-        case Core.UnitType =>
+        case r: Core.RecordType if r.entries.isEmpty =>
           if (cType != "void") {
             warn(id.location, s"Stream $streamName was declared as $tpe, but mapped to $cType.")
           }
@@ -318,6 +320,10 @@ object Observations {
     }
 
     override protected def translateSpec(): Unit = {
+      val (os, arch) = (sys.props("os.name").toLowerCase(), sys.props("os.arch").toLowerCase())
+      if (!supportedPlatforms.contains((os, arch)))
+        throw Errors.InstrUnsupportedPlatform(os, arch, supportedPlatforms)
+
       val functionCall = createFunctionObservations("InstFunctionCall")
       assertUnit("InstFunctionCall")
       val functionCallTypeAssertions = createFunctionTypeAssertions("InstFunctionCallArg")
@@ -488,25 +494,16 @@ object Observations {
       }
 
       val cFile = Paths.get(cFileName).toAbsolutePath
-      libraryInterface.addIncludePath("/usr/lib/gcc/x86_64-linux-gnu/7/include/")
+      inclPath.foreach(libraryInterface.addIncludePath)
       libraryInterface.runClang(cFile.getParent.toString, cFile.getFileName.toString)
     }
   }
 
-  class Instrumenter(cFileName: String) extends TranslationPhase[Core.Specification, Unit] {
-    override def translate(spec: Core.Specification) = {
-      (sys.props("os.name").toLowerCase(), sys.props("os.arch").toLowerCase()) match {
-        case ("linux", "x86_64") => new InstrumenterWorker(spec, cFileName).translate()
-        case (os, arch) =>
-          Failure(
-            Errors.UnsupportedPlatformError(
-              os,
-              arch,
-              "C instrumentation is currently only supported for: linux-x86_64"
-            ) :: Nil,
-            Nil
-          )
-      }
-    }
+  class Instrumenter(cFileName: String, inclPath: Seq[String] = Seq())
+      extends TranslationPhase[Core.Specification, Unit] {
+
+    override def translate(spec: Core.Specification): TranslationPhase.Result[Unit] =
+      new InstrumenterWorker(spec, cFileName, inclPath).translate()
+
   }
 }
