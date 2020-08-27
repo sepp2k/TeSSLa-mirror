@@ -4,10 +4,16 @@ import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 
 import scala.language.implicitConversions
 import scala.language.postfixOps
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{
+  BoolType,
+  StringType,
+  UnitType,
+  _
+}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
 import de.uni_luebeck.isp.tessla._
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.ControlFlowAnalysis
+
 /**
   * Class containing functions for the translation of single TeSSLa expressions to imperative code
   */
@@ -17,212 +23,337 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
   def getAdditionalGuard(id: Identifier): Seq[Seq[ImpLanExpr]] = {
     val (pos, neg) = myControlFlowAnalysis.getAddConditions(id)
 
-    Seq(pos.map(i => Variable(s"var_${i.fullName}_value")).toSeq ++
-      neg.map(i => Negation(Variable(s"var_${i.fullName}_value"))).toSeq)
+    Seq(
+      pos.map(i => Variable(s"var_${i.fullName}_value")).toSeq ++
+        neg.map(i => Negation(Variable(s"var_${i.fullName}_value"))).toSeq
+    )
   }
 
-
-  def streamNameAndTypeFromExpressionArg(ea : ExpressionArg) : (String, ImpLanType) = {
+  def streamNameAndTypeFromExpressionArg(
+    ea: ExpressionArg
+  ): (String, ImpLanType) = {
     ea match {
-      case ExpressionRef(id, tpe, _) =>("var_" + id.fullName, tpe)
-      case e: Expression => throw tessla_compiler.Errors.CoreASTError("Required ExpressionRef, but Expression found", e.location)
+      case ExpressionRef(id, tpe, _) => ("var_" + id.fullName, tpe)
+      case e: Expression =>
+        throw tessla_compiler.Errors.CoreASTError(
+          "Required ExpressionRef, but Expression found",
+          e.location
+        )
     }
   }
 
-  def produceNilStepCode(id: Identifier, ot: Type, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceNilStepCode(id: Identifier,
+                         ot: Type,
+                         loc: Location,
+                         currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
-    val newStmt = (currSrc.stepSource.
+    val newStmt = (currSrc.stepSource
+      .FinalAssignment(s"${o}_lastValue", defaultValueForStreamType(ot), ot)
+      .FinalAssignment(s"${o}_lastInit", BoolValue(false), BoolType)
+      .FinalAssignment(s"${o}_lastError", LongValue(0), LongType)
+      .FinalAssignment(s"${o}_value", defaultValueForStreamType(ot), ot)
+      .FinalAssignment(s"${o}_init", BoolValue(false), BoolType)
+      .FinalAssignment(s"${o}_ts", LongValue(0), LongType)
+      .FinalAssignment(s"${o}_error", LongValue(0), LongType)
+      .FinalAssignment(s"${o}_changed", BoolValue(false), BoolType))
 
-      FinalAssignment(s"${o}_lastValue", defaultValueForStreamType(ot), ot).
-      FinalAssignment(s"${o}_lastInit", BoolValue(false), BoolType).
-      FinalAssignment(s"${o}_lastError", LongValue(0), LongType).
-      FinalAssignment(s"${o}_value", defaultValueForStreamType(ot), ot).
-      FinalAssignment(s"${o}_init", BoolValue(false), BoolType).
-      FinalAssignment(s"${o}_ts", LongValue(0), LongType).
-      FinalAssignment(s"${o}_error", LongValue(0), LongType).
-      FinalAssignment(s"${o}_changed", BoolValue(false), BoolType)
-      )
-
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
+    SourceListing(
+      newStmt,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      currSrc.callbacks,
+      currSrc.staticSource
+    )
   }
 
-  def produceDefaultStepCode(id: Identifier, ot: Type, stream : ExpressionArg, value : ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceDefaultStepCode(id: Identifier,
+                             ot: Type,
+                             stream: ExpressionArg,
+                             value: ExpressionArg,
+                             loc: Location,
+                             currSrc: SourceListing): SourceListing = {
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val o = s"var_${id.fullName}"
     val default = myNonStreamCodeGenerator.translateExpressionArg(value)
 
-    val newStmt = (currSrc.stepSource.
-
-      If(Seq(Seq(NotEqual("currTs", LongValue(0))))).
-        Assignment(s"${o}_changed", BoolValue(false), BoolValue(true), BoolType).
-      EndIf().
-      If(Seq(Seq(s"${s}_changed"))).
-        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
-        Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-        Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-        Assignment(s"${o}_value", s"${s}_value", default, ot).
-        Assignment(s"${o}_init", BoolValue(true), BoolValue(true), BoolType).
-        Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-        Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType).
-        Assignment(s"${o}_changed", BoolValue(true), BoolValue(true), BoolType).
-      EndIf()
-
+    val newStmt = (currSrc.stepSource
+      .If(Seq(Seq(NotEqual("currTs", LongValue(0)))))
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(true), BoolType)
+      .EndIf()
+      .If(Seq(Seq(s"${s}_changed")))
+      .Assignment(
+        s"${o}_lastValue",
+        s"${o}_value",
+        defaultValueForStreamType(ot),
+        ot
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_value", s"${s}_value", default, ot)
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(true), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(true), BoolType)
+      .EndIf())
+    SourceListing(
+      newStmt,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      currSrc.callbacks,
+      currSrc.staticSource
+    )
   }
 
-  def produceDefaultFromStepCode(id: Identifier, ot: Type, stream : ExpressionArg, default : ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceDefaultFromStepCode(id: Identifier,
+                                 ot: Type,
+                                 stream: ExpressionArg,
+                                 default: ExpressionArg,
+                                 loc: Location,
+                                 currSrc: SourceListing): SourceListing = {
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val (d, _) = streamNameAndTypeFromExpressionArg(default)
     val o = s"var_${id.fullName}"
 
-    val newStmt = (currSrc.stepSource.
-
-      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-      If(Seq(Seq(s"${s}_changed"))).
-        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
-        Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-        Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-        Assignment(s"${o}_value", s"${s}_value", defaultValueForStreamType(ot), ot).
-        Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-        Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-        Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType).
-        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
-      Else().
-        If(Seq(Seq(Negation(s"${o}_init"),s"${d}_init"))).
-          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
-          Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-          Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-          Assignment(s"${o}_value", s"${d}_value", defaultValueForStreamType(ot), ot).
-          Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-          Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-          Assignment(s"${o}_error", s"${d}_error", LongValue(0), LongType).
-          Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
-        EndIf().
-      EndIf()
-
+    val newStmt = (currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(Seq(Seq(s"${s}_changed")))
+      .Assignment(
+        s"${o}_lastValue",
+        s"${o}_value",
+        defaultValueForStreamType(ot),
+        ot
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+      .Assignment(
+        s"${o}_value",
+        s"${s}_value",
+        defaultValueForStreamType(ot),
+        ot
+      )
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .Else()
+      .If(Seq(Seq(Negation(s"${o}_init"), s"${d}_init")))
+      .Assignment(
+        s"${o}_lastValue",
+        s"${o}_value",
+        defaultValueForStreamType(ot),
+        ot
+      )
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+      .Assignment(
+        s"${o}_value",
+        s"${d}_value",
+        defaultValueForStreamType(ot),
+        ot
+      )
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_error", s"${d}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .EndIf()
+      .EndIf())
+    SourceListing(
+      newStmt,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      currSrc.callbacks,
+      currSrc.staticSource
+    )
   }
 
-  def produceTimeStepCode(id: Identifier, stream: ExpressionArg, loc: Location, currSrc: SourceListing) : SourceListing = {
+  def produceTimeStepCode(id: Identifier,
+                          stream: ExpressionArg,
+                          loc: Location,
+                          currSrc: SourceListing): SourceListing = {
 
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val o = s"var_${id.fullName}"
 
-    val newStmt = (currSrc.stepSource.
-
-    Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-    If(Seq(Seq(s"${s}_changed"))).
-      Assignment(s"${o}_lastValue", s"${o}_value", LongValue(0), LongType).
-      Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-      Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-      Assignment(s"${o}_value", s"${s}_ts", LongValue(0), LongType).
-      Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-      Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-      Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType).
-      Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
-    EndIf()
-
-      )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
+    val newStmt = (currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(Seq(Seq(s"${s}_changed")))
+      .Assignment(s"${o}_lastValue", s"${o}_value", LongValue(0), LongType)
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_value", s"${s}_ts", LongValue(0), LongType)
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_error", s"${s}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .EndIf())
+    SourceListing(
+      newStmt,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      currSrc.callbacks,
+      currSrc.staticSource
+    )
   }
 
-  def produceLastStepCode(id: Identifier, ot: Type, values: ExpressionArg, clock: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceLastStepCode(id: Identifier,
+                          ot: Type,
+                          values: ExpressionArg,
+                          clock: ExpressionArg,
+                          loc: Location,
+                          currSrc: SourceListing): SourceListing = {
     val (v, _) = streamNameAndTypeFromExpressionArg(values)
     val (c, _) = streamNameAndTypeFromExpressionArg(clock)
     val o = s"var_${id.fullName}"
 
-    val newStmt = (currSrc.stepSource.
-
-      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-      If(Seq(Seq(s"${c}_changed", s"${v}_init"))).
-        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
-        Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-        Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-        Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
-        If(Seq(Seq(Equal(s"${v}_ts", "currTs")))).
-          Assignment(s"${o}_value", s"${v}_lastValue", defaultValueForStreamType(ot), ot).
-          Assignment(s"${o}_error", s"${v}_lastError", LongValue(0), LongType).
-          Assignment(s"${o}_init", s"${v}_lastInit", BoolValue(false), BoolType).
-        Else().
-          Assignment(s"${o}_value", s"${v}_value", defaultValueForStreamType(ot), ot).
-          Assignment(s"${o}_error", s"${v}_error", LongValue(0), LongType).
-          Assignment(s"${o}_init", s"${v}_init", BoolValue(false), BoolType).
-        EndIf().
-      EndIf()
-
+    val newStmt = (currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(Seq(Seq(s"${c}_changed", s"${v}_init")))
+      .Assignment(
+        s"${o}_lastValue",
+        s"${o}_value",
+        defaultValueForStreamType(ot),
+        ot
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .If(Seq(Seq(Equal(s"${v}_ts", "currTs"))))
+      .Assignment(
+        s"${o}_value",
+        s"${v}_lastValue",
+        defaultValueForStreamType(ot),
+        ot
+      )
+      .Assignment(s"${o}_error", s"${v}_lastError", LongValue(0), LongType)
+      .Assignment(s"${o}_init", s"${v}_lastInit", BoolValue(false), BoolType)
+      .Else()
+      .Assignment(
+        s"${o}_value",
+        s"${v}_value",
+        defaultValueForStreamType(ot),
+        ot
+      )
+      .Assignment(s"${o}_error", s"${v}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_init", s"${v}_init", BoolValue(false), BoolType)
+      .EndIf()
+      .EndIf())
+    SourceListing(
+      newStmt,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      currSrc.callbacks,
+      currSrc.staticSource
+    )
   }
 
-  def produceDelayStepCode(id: Identifier, delay: ExpressionArg, reset: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceDelayStepCode(id: Identifier,
+                           delay: ExpressionArg,
+                           reset: ExpressionArg,
+                           loc: Location,
+                           currSrc: SourceListing): SourceListing = {
     val (d, _) = streamNameAndTypeFromExpressionArg(delay)
     val (r, _) = streamNameAndTypeFromExpressionArg(reset)
     val o = s"var_${id.fullName}"
 
-    val newStmt = (currSrc.stepSource.
+    val newStmt = (currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(Seq(Seq(Equal(s"${o}_nextTs", "currTs"))))
+      .FinalAssignment(s"${o}_lastValue", UnitValue, UnitType)
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .FinalAssignment(s"${o}_lastError", LongValue(0), LongType)
+      .FinalAssignment(s"${o}_value", UnitValue, UnitType)
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .EndIf())
 
-      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-      If(Seq(Seq(Equal(s"${o}_nextTs", "currTs")))).
-        FinalAssignment(s"${o}_lastValue", UnitValue, UnitType).
-        Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-        FinalAssignment(s"${o}_lastError", LongValue(0), LongType).
-        FinalAssignment(s"${o}_value", UnitValue, UnitType).
-        Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-        Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
-      EndIf()
-
+    val newTsGen = (currSrc.tsGenSource
+      .If(
+        Seq(
+          Seq(
+            Greater(s"${o}_nextTs", "lastProcessedTs"),
+            Greater("currTs", s"${o}_nextTs"),
+            Greater("newInputTs", s"${o}_nextTs")
+          )
+        )
       )
+      .Assignment("currTs", s"${o}_nextTs", LongValue(0), LongType)
+      .EndIf())
 
-    val newTsGen = (currSrc.tsGenSource.
-
-      If(Seq(Seq(Greater(s"${o}_nextTs", "lastProcessedTs"), Greater("currTs", s"${o}_nextTs"), Greater("newInputTs", s"${o}_nextTs")))).
-        Assignment("currTs", s"${o}_nextTs", LongValue(0), LongType).
-      EndIf()
-
+    val newTail = (currSrc.tailSource
+      .If(Seq(Seq(s"${d}_changed")))
+      .If(Seq(Seq(s"${o}_changed"), Seq(s"${r}_changed")))
+      .If(
+        Seq(
+          Seq(NotEqual(s"${o}_error", LongValue(0))),
+          Seq(NotEqual(s"${d}_error", LongValue(0))),
+          Seq(NotEqual(s"${r}_error", LongValue(0)))
+        )
       )
-
-    val newTail = (currSrc.tailSource.
-
-      If(Seq(Seq(s"${d}_changed"))).
-        If(Seq(Seq(s"${o}_changed"), Seq(s"${r}_changed"))).
-          If(Seq(Seq(NotEqual(s"${o}_error", LongValue(0))), Seq(NotEqual(s"${d}_error", LongValue(0))), Seq(NotEqual(s"${r}_error", LongValue(0))))).
-            Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType).
-            Assignment(s"${o}_error", BitwiseOr(Seq(s"${o}_error", s"${d}_error", s"${r}_error")), LongValue(0), LongType).
-          Else().
-            Assignment(s"${o}_nextTs", Addition("currTs", s"${d}_value"), LongValue(-1), LongType).
-          EndIf().
-        EndIf().
-      Else().
-        If(Seq(Seq(s"${r}_changed"))).
-          Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType).
-          Assignment(s"${o}_error", s"${r}_error", LongValue(0), LongType).
-        EndIf().
-      EndIf()
+      .Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType)
+      .Assignment(
+        s"${o}_error",
+        BitwiseOr(Seq(s"${o}_error", s"${d}_error", s"${r}_error")),
+        LongValue(0),
+        LongType
       )
+      .Else()
+      .Assignment(
+        s"${o}_nextTs",
+        Addition("currTs", s"${d}_value"),
+        LongValue(-1),
+        LongType
+      )
+      .EndIf()
+      .EndIf()
+      .Else()
+      .If(Seq(Seq(s"${r}_changed")))
+      .Assignment(s"${o}_nextTs", LongValue(-1), LongValue(-1), LongType)
+      .Assignment(s"${o}_error", s"${r}_error", LongValue(0), LongType)
+      .EndIf()
+      .EndIf())
 
-    SourceListing(newStmt, newTail, newTsGen, currSrc.callbacks, currSrc.staticSource)
+    SourceListing(
+      newStmt,
+      newTail,
+      newTsGen,
+      currSrc.callbacks,
+      currSrc.staticSource
+    )
   }
 
   @scala.annotation.tailrec
-  final def getErrorExpressionsforLiftSLift(args: Seq[ExpressionArg], f: ExpressionArg): (ImpLanExpr, ImpLanExpr) = {
+  final def getErrorExpressionsforLiftSLift(
+    args: Seq[ExpressionArg],
+    f: ExpressionArg
+  ): (ImpLanExpr, ImpLanExpr) = {
     f match {
-      case TypeApplicationExpression(exp, _, _) => getErrorExpressionsforLiftSLift(args, exp)
+      case TypeApplicationExpression(exp, _, _) =>
+        getErrorExpressionsforLiftSLift(args, exp)
       case _ => {
         val inputError = f match {
           case ExternExpression(_, _, _, "ite", _) |
-               ExternExpression(_, _, _, "staticite", _) => Variable(streamNameAndTypeFromExpressionArg(args.head)._1 + "_error")
-          case _ => BitwiseOr(args.map(streamNameAndTypeFromExpressionArg(_)._1 + "_error"))
+              ExternExpression(_, _, _, "staticite", _) =>
+            Variable(
+              streamNameAndTypeFromExpressionArg(args.head)._1 + "_error"
+            )
+          case _ =>
+            BitwiseOr(
+              args.map(streamNameAndTypeFromExpressionArg(_)._1 + "_error")
+            )
         }
         val outputError = f match {
           case ExternExpression(_, _, _, "ite", _) |
-               ExternExpression(_, _, _, "staticite", _) => TernaryExpression(Seq(Seq(streamNameAndTypeFromExpressionArg(args.head)._1 + "_value")),
-            streamNameAndTypeFromExpressionArg(args(1))._1 + "_error",
-            streamNameAndTypeFromExpressionArg(args(2))._1 + "_error")
+              ExternExpression(_, _, _, "staticite", _) =>
+            TernaryExpression(
+              Seq(
+                Seq(streamNameAndTypeFromExpressionArg(args.head)._1 + "_value")
+              ),
+              streamNameAndTypeFromExpressionArg(args(1))._1 + "_error",
+              streamNameAndTypeFromExpressionArg(args(2))._1 + "_error"
+            )
           case _ => LongValue(0)
         }
 
@@ -231,183 +362,372 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
     }
   }
 
-  def produceLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceLiftStepCode(id: Identifier,
+                          ot: Type,
+                          args: Seq[ExpressionArg],
+                          function: ExpressionArg,
+                          loc: Location,
+                          currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
-    val params = args.map{sr => { val (sName, sType) = streamNameAndTypeFromExpressionArg(sr) //TODO: Sufficient???
-                                  TernaryExpression(Seq(Seq(s"${sName}_changed")),
-                                                  FunctionCall("__Some__", Seq(s"${sName}_value"), IntermediateCode.FunctionType(Seq(sType), OptionType(sType))),
-                                                  None(sType))
-                                }
-                         }
+    val params = args.map { sr =>
+      {
+        val (sName, sType) = streamNameAndTypeFromExpressionArg(sr) //TODO: Sufficient???
+        TernaryExpression(
+          Seq(Seq(s"${sName}_changed")),
+          FunctionCall(
+            "__Some__",
+            Seq(s"${sName}_value"),
+            IntermediateCode.FunctionType(Seq(sType), OptionType(sType))
+          ),
+          None(sType)
+        )
+      }
+    }
 
-    val (inputError, outputError) = getErrorExpressionsforLiftSLift(args, function)
+    val (inputError, outputError) =
+      getErrorExpressionsforLiftSLift(args, function)
 
-    val guard : Seq[Seq[ImpLanExpr]] = args.map{sr => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))}
+    val guard: Seq[Seq[ImpLanExpr]] = args.map { sr =>
+      Seq(Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_changed"))
+    }
 
-    val newStmt = (currSrc.stepSource.
-
-      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-      If(guard).
-        Assignment(s"${o}_errval", inputError, LongValue(0), LongType).
-        If(Seq(Seq(Equal(s"${o}_errval", LongValue(0))))).
-          Try().
-            Assignment(s"${o}_fval", myNonStreamCodeGenerator.translateFunctionCall(function, params, Seq()), scala.None, OptionType(ot), true).
-            If(Seq(Seq(FunctionCall("__isSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType))))).
-              Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
-              Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-              Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-              Assignment(s"${o}_value", FunctionCall("__getSome__", Seq(s"${o}_fval"), IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)), defaultValueForStreamType(ot), ot).
-              Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-              Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-              Assignment(s"${o}_error", outputError, LongValue(0), LongType).
-              Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
-            EndIf().
-          Catch().
-            Assignment(s"${o}_errval", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
-          EndTry().
-        EndIf().
-        If(Seq(Seq(NotEqual(s"${o}_errval", LongValue(0))))).
-          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
-          Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-          Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-          Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-          Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-          Assignment(s"${o}_error", s"${o}_errval", LongValue(0), LongType).
-          Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
-        EndIf().
-      EndIf()
+    val newStmt = (currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(guard)
+      .Assignment(s"${o}_errval", inputError, LongValue(0), LongType)
+      .If(Seq(Seq(Equal(s"${o}_errval", LongValue(0)))))
+      .Try()
+      .Assignment(
+        s"${o}_fval",
+        myNonStreamCodeGenerator.translateFunctionCall(function, params, Seq()),
+        scala.None,
+        OptionType(ot),
+        true
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
+      .If(
+        Seq(
+          Seq(
+            FunctionCall(
+              "__isSome__",
+              Seq(s"${o}_fval"),
+              IntermediateCode.FunctionType(Seq(OptionType(ot)), BoolType)
+            )
+          )
+        )
+      )
+      .Assignment(
+        s"${o}_lastValue",
+        s"${o}_value",
+        defaultValueForStreamType(ot),
+        ot
+      )
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+      .Assignment(
+        s"${o}_value",
+        FunctionCall(
+          "__getSome__",
+          Seq(s"${o}_fval"),
+          IntermediateCode.FunctionType(Seq(OptionType(ot)), ot)
+        ),
+        defaultValueForStreamType(ot),
+        ot
+      )
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_error", outputError, LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .EndIf()
+      .Catch()
+      .Assignment(
+        s"${o}_errval",
+        FunctionCall(
+          "__[TC]getErrorCode__",
+          Seq(s"var_err"),
+          IntermediateCode.FunctionType(Seq(GeneralType), LongType)
+        ),
+        LongValue(0),
+        LongType
+      )
+      .EndTry()
+      .EndIf()
+      .If(Seq(Seq(NotEqual(s"${o}_errval", LongValue(0)))))
+      .Assignment(
+        s"${o}_lastValue",
+        s"${o}_value",
+        defaultValueForStreamType(ot),
+        ot
+      )
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_error", s"${o}_errval", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .EndIf()
+      .EndIf())
+    SourceListing(
+      newStmt,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      currSrc.callbacks,
+      currSrc.staticSource
+    )
   }
 
-  def produceSignalLiftStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], function: ExpressionArg, loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceSignalLiftStepCode(id: Identifier,
+                                ot: Type,
+                                args: Seq[ExpressionArg],
+                                function: ExpressionArg,
+                                loc: Location,
+                                currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
     val addGuard = getAdditionalGuard(id)
-    val guard1 : Seq[Seq[ImpLanExpr]] = Seq(args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_init")})
-    val guard2 : Seq[Seq[ImpLanExpr]] = args.map{arg => Seq(Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_changed"))}
-    val fargs = args.map{arg => Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")}//TODO: Sufficient?
+    val guard1: Seq[Seq[ImpLanExpr]] = Seq(args.map { arg =>
+      Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_init")
+    })
+    val guard2: Seq[Seq[ImpLanExpr]] = args.map { arg =>
+      Seq(Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_changed"))
+    }
+    val fargs = args.map { arg =>
+      Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")
+    } //TODO: Sufficient?
 
-    val fcall = myNonStreamCodeGenerator.translateFunctionCall(function, fargs, Seq())
+    val fcall =
+      myNonStreamCodeGenerator.translateFunctionCall(function, fargs, Seq())
 
-    val (inputError, outputError) = getErrorExpressionsforLiftSLift(args, function)
+    val (inputError, outputError) =
+      getErrorExpressionsforLiftSLift(args, function)
 
-    val newStmt = (currSrc.stepSource.
-
-      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-      If(guard1).
-        If(guard2).
-          Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
-          Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-          Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-          Assignment(s"${o}_error", inputError, LongValue(0), LongType).
-          If(Seq(Seq(Equal(s"${o}_error", LongValue(0))))).
-            Try().
-              If(addGuard).
-                Assignment(s"${o}_value", fcall, defaultValueForStreamType(ot), ot).
-              EndIf().
-              Assignment(s"${o}_error", outputError, LongValue(0), LongType).
-            Catch().
-              Assignment(s"${o}_error", FunctionCall("__[TC]getErrorCode__", Seq(s"var_err"), IntermediateCode.FunctionType(Seq(GeneralType), LongType)), LongValue(0), LongType).
-            EndTry().
-          EndIf().
-          Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-          Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-          Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType).
-        EndIf().
-      EndIf()
+    val newStmt = (currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(guard1)
+      .If(guard2)
+      .Assignment(
+        s"${o}_lastValue",
+        s"${o}_value",
+        defaultValueForStreamType(ot),
+        ot
       )
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_error", inputError, LongValue(0), LongType)
+      .If(Seq(Seq(Equal(s"${o}_error", LongValue(0)))))
+      .Try()
+      .If(addGuard)
+      .Assignment(s"${o}_value", fcall, defaultValueForStreamType(ot), ot)
+      .EndIf()
+      .Assignment(s"${o}_error", outputError, LongValue(0), LongType)
+      .Catch()
+      .Assignment(
+        s"${o}_error",
+        FunctionCall(
+          "__[TC]getErrorCode__",
+          Seq(s"var_err"),
+          IntermediateCode.FunctionType(Seq(GeneralType), LongType)
+        ),
+        LongValue(0),
+        LongType
+      )
+      .EndTry()
+      .EndIf()
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .EndIf()
+      .EndIf())
+    SourceListing(
+      newStmt,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      currSrc.callbacks,
+      currSrc.staticSource
+    )
   }
 
-  def produceMergeStepCode(id: Identifier, ot: Type, args: Seq[ExpressionArg], loc: Location, currSrc: SourceListing): SourceListing = {
+  def produceMergeStepCode(id: Identifier,
+                           ot: Type,
+                           args: Seq[ExpressionArg],
+                           loc: Location,
+                           currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
 
-    val guard : Seq[Seq[ImpLanExpr]] = args.map{arg =>
+    val guard: Seq[Seq[ImpLanExpr]] = args.map { arg =>
       val n = streamNameAndTypeFromExpressionArg(arg)._1
       Seq(Variable(s"${n}_init"), Variable(s"${n}_changed"))
     }
 
-    var newStmt = (currSrc.stepSource.
-
-      Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType).
-      If(guard).
-        Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot).
-        Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType).
-        Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType).
-        Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType).
-        Assignment(s"${o}_ts", "currTs", LongValue(0), LongType).
-        Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+    var newStmt = (currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(guard)
+      .Assignment(
+        s"${o}_lastValue",
+        s"${o}_value",
+        defaultValueForStreamType(ot),
+        ot
       )
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", LongValue(0), LongType)
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType))
 
-    args.foreach{arg =>
+    args.foreach { arg =>
       val (sn, _) = streamNameAndTypeFromExpressionArg(arg)
-      newStmt = (newStmt.
-        If(Seq(Seq(s"${sn}_init",s"${sn}_changed"))).
-          Assignment(s"${o}_value", s"${sn}_value", defaultValueForStreamType(ot), ot).
-          Assignment(s"${o}_error", s"${sn}_error", LongValue(0), LongType).
-        Else()
-      )
+      newStmt = (newStmt
+        .If(Seq(Seq(s"${sn}_init", s"${sn}_changed")))
+        .Assignment(
+          s"${o}_value",
+          s"${sn}_value",
+          defaultValueForStreamType(ot),
+          ot
+        )
+        .Assignment(s"${o}_error", s"${sn}_error", LongValue(0), LongType)
+        .Else())
     }
 
-    (1 to args.length + 1).foreach{_ => newStmt = newStmt.EndIf()}
+    (1 to args.length + 1).foreach { _ =>
+      newStmt = newStmt.EndIf()
+    }
 
-    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
+    SourceListing(
+      newStmt,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      currSrc.callbacks,
+      currSrc.staticSource
+    )
   }
 
-  def produceOutputCode(id: Identifier, t: Type, nameOpt: Option[String], currSrc: SourceListing) : SourceListing = {
+  def produceOutputCode(id: Identifier,
+                        t: Type,
+                        nameOpt: Option[String],
+                        currSrc: SourceListing): SourceListing = {
     val s = s"var_${id.fullName}"
     val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
-    val ft = IntermediateCode.FunctionType(Seq(t, LongType, StringType, LongType), VoidType)
-
-    val newCallbacks = (currSrc.callbacks.
-      Assignment(s"out_$s", EmptyFunction(ft), EmptyFunction(ft), ft)
-      )
-
-    val newStepSrc = (currSrc.stepSource.
-      If(Seq(Seq(s"${s}_changed", s"${s}_init"))).
-      LambdaApllication(s"out_$s", Seq(s"${s}_value", "currTs", StringValue(name), s"${s}_error")).
-      EndIf()
+    val ft = IntermediateCode.FunctionType(
+      Seq(t, LongType, StringType, LongType),
+      VoidType
     )
 
-    SourceListing(newStepSrc, currSrc.tailSource, currSrc.tsGenSource, newCallbacks, currSrc.staticSource)
+    val newCallbacks = (currSrc.callbacks
+      .Assignment(s"out_$name", EmptyFunction(ft), EmptyFunction(ft), ft))
+
+    val newStepSrc = (currSrc.stepSource
+      .If(Seq(Seq(s"${s}_changed", s"${s}_init")))
+      .LambdaApllication(
+        s"out_$name",
+        Seq(s"${s}_value", "currTs", StringValue(name), s"${s}_error")
+      )
+      .EndIf())
+
+    SourceListing(
+      newStepSrc,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      newCallbacks,
+      currSrc.staticSource
+    )
   }
 
   def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing) = {
     val s = s"var_${inStream.fullName}"
 
     val newTail = (
-      currSrc.tailSource.
-        Assignment(s"${s}_changed", BoolValue(false), BoolValue(false), BoolType, true)
+      currSrc.tailSource.Assignment(
+        s"${s}_changed",
+        BoolValue(false),
+        BoolValue(false),
+        BoolType,
+        true
       )
+    )
 
-    SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.callbacks, currSrc.staticSource)
+    SourceListing(
+      currSrc.stepSource,
+      newTail,
+      currSrc.tsGenSource,
+      currSrc.callbacks,
+      currSrc.staticSource
+    )
   }
 
-  def produceInputCode(inStream: Identifier, typ: Type, currSrc: SourceListing) = {
+  def produceInputCode(inStream: Identifier,
+                       typ: Type,
+                       currSrc: SourceListing) = {
     val s = s"var_${inStream.fullName}"
     val ft = IntermediateCode.FunctionType(Seq(typ, LongType), VoidType)
 
-    val stmts = Seq().
-      If(Seq(Seq(NotEqual("currTs", "ts")))).
-      Assignment(s"newInputTs", s"ts", LongValue(0), typ, true).
-      FunctionCall("run", Seq(), IntermediateCode.FunctionType(Seq(), VoidType)).
-      EndIf().
-      Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForStreamType(typ), typ, true).
-      Assignment(s"${s}_lastInit", s"${s}_init", BoolValue(false), BoolType, true).
-      Assignment(s"${s}_value", "value", defaultValueForStreamType(typ), typ, true).
-      Assignment(s"${s}_init", BoolValue(true), BoolValue(false), BoolType, true).
-      Assignment(s"${s}_ts", "ts", LongValue(0), LongType, true).
-      Assignment(s"${s}_changed", BoolValue(true), BoolValue(false), BoolType, true)
+    val stmts = Seq()
+      .If(Seq(Seq(NotEqual("currTs", "ts"))))
+      .Assignment(s"newInputTs", s"ts", LongValue(0), typ, true)
+      .FunctionCall(
+        "run",
+        Seq(),
+        IntermediateCode.FunctionType(Seq(), VoidType)
+      )
+      .EndIf()
+      .Assignment(
+        s"${s}_lastValue",
+        s"${s}_value",
+        defaultValueForStreamType(typ),
+        typ,
+        true
+      )
+      .Assignment(
+        s"${s}_lastInit",
+        s"${s}_init",
+        BoolValue(false),
+        BoolType,
+        true
+      )
+      .Assignment(
+        s"${s}_value",
+        "value",
+        defaultValueForStreamType(typ),
+        typ,
+        true
+      )
+      .Assignment(
+        s"${s}_init",
+        BoolValue(true),
+        BoolValue(false),
+        BoolType,
+        true
+      )
+      .Assignment(s"${s}_ts", "ts", LongValue(0), LongType, true)
+      .Assignment(
+        s"${s}_changed",
+        BoolValue(true),
+        BoolValue(false),
+        BoolType,
+        true
+      )
 
-    val newCallbacks = (currSrc.callbacks.
-      FinalAssignment(s"${s}_lastError", LongValue(0), LongType).
-      FinalAssignment(s"${s}_error", LongValue(0), LongType).
-      Assignment(s"set_$s", LambdaExpression(Seq("value", "ts"), Seq(typ, LongType), VoidType, stmts), EmptyFunction(ft), ft)
+    val newCallbacks = (currSrc.callbacks
+      .FinalAssignment(s"${s}_lastError", LongValue(0), LongType)
+      .FinalAssignment(s"${s}_error", LongValue(0), LongType)
+      .Assignment(
+        s"set_$s",
+        LambdaExpression(
+          Seq("value", "ts"),
+          Seq(typ, LongType),
+          VoidType,
+          stmts
+        ),
+        EmptyFunction(ft),
+        ft
+      ))
+
+    SourceListing(
+      currSrc.stepSource,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      newCallbacks,
+      currSrc.staticSource
     )
-
-    SourceListing(currSrc.stepSource, currSrc.tailSource, currSrc.tsGenSource, newCallbacks, currSrc.staticSource)
   }
 
 }
