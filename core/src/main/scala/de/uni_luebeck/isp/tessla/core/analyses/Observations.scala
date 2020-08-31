@@ -20,6 +20,7 @@ import de.uni_luebeck.isp.tessla.core.TranslationPhase.Failure
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
 import de.uni_luebeck.isp.tessla.core.util._
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.Try
 
@@ -223,7 +224,7 @@ object Observations {
     private def createPatternObservations(
       annotationName: String,
       createCode: (Annotation, InStream) => String
-    ): Seq[(Pattern, Option[String], String, InStream)] =
+    ): Map[(Option[String], Pattern), (String, InStream)] =
       spec.in.toSeq.flatMap {
         case (id, (streamType, annotations)) =>
           annotations
@@ -233,27 +234,27 @@ object Observations {
               case (name, args) => (name, args.head)
             }
             .map { annotation =>
-              val function = Try(argumentAsString(annotation, "function")) toOption
+              val function = Try(argumentAsString(annotation, "function")).toOption
               val lvalue = argumentAsString(annotation, "lvalue")
-              val pattern = parsePattern(lvalue, annotationArgs(annotation)("lvalue").location)
               val code = createCode(annotation, (id, streamType))
-              (pattern, function, code, (id, streamType))
+              val pattern = parsePattern(lvalue, annotationArgs(annotation)("lvalue").location)
+              (function, pattern) -> (code, (id, streamType))
             }
-      }
+      }.toMap
 
     protected def printEvent(in: InStream, value: String): String = {
       val name = in._1.fullName
 
       unwrapType(in._2) match {
-        case Core.IntType =>
+        case t: Core.InstantiatedType if t.name == Core.IntType.name =>
           s"""trace_push_int(events, "$name", (int64_t) $value);"""
-        case Core.FloatType =>
+        case t: Core.InstantiatedType if t.name == Core.FloatType.name =>
           s"""trace_push_float(events, "$name", (double) $value);"""
-        case Core.BoolType =>
+        case t: Core.InstantiatedType if t.name == Core.BoolType.name =>
           s"""trace_push_bool(events, "$name", (bool) $value);"""
-        case r: Core.RecordType if r.entries.isEmpty =>
+        case r: Core.RecordType if r.entries == Core.UnitType.entries =>
           s"""trace_push_unit(events, "$name");"""
-        case _ => ""
+        case t => s"$t"
       }
     }
 
@@ -344,30 +345,45 @@ object Observations {
 
       // TODO merge pattern observations for same pattern into one observation entry and call encloseInstrumentationCode
 
-      val writes = createPatternObservations("InstWrite", (annotation, in) => printEventValue(in)) ++
+      val globalWrite = createPatternObservations("GlobalWrite", (annotation, in) => printEventValue(in)) ++
         createPatternObservations(
-          "InstWriteIndex",
+          "GlobalWriteIndex",
           (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index"))
         )
+      val globalWriteTypeAssertions: Map[(Option[String], Pattern), InStream] = globalWrite.mapVals(_._2)
 
-      val writesInFunction =
-        createPatternObservations("InstWriteInFunction", (annotation, in) => printEventValue(in)) ++
+      val localWrite =
+        createPatternObservations("LocalWrite", (annotation, in) => printEventValue(in)) ++
           createPatternObservations(
-            "InstWriteInFunctionIndex",
+            "LocalWriteIndex",
             (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index"))
           )
+      val localWriteTypeAssertions: Map[(Option[String], Pattern), InStream] = localWrite.mapVals(_._2)
 
-      val reads = createPatternObservations("InstRead", (annotation, in) => printEventValue(in)) ++
+      val globalRead = createPatternObservations("GlobalRead", (annotation, in) => printEventValue(in)) ++
         createPatternObservations(
-          "InstReadIndex",
+          "GlobalReadIndex",
           (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index"))
         )
+      val globalReadTypeAssertions: Map[(Option[String], Pattern), InStream] = globalRead.mapVals(_._2)
 
-      val readsInFunction = createPatternObservations("InstReadInFunction", (annotation, in) => printEventValue(in)) ++
+      val localRead = createPatternObservations("LocalRead", (annotation, in) => printEventValue(in)) ++
         createPatternObservations(
-          "InstReadInFunctionIndex",
+          "LocalReadIndex",
           (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index"))
         )
+      val localReadTypeAssertions: Map[(Option[String], Pattern), InStream] = localRead.mapVals(_._2)
+
+      var c = 0
+      val memoize = mutable.HashMap[(String, Pattern), String]()
+      def patternCbBase(fName: String, pattern: Pattern) = {
+        memoize.getOrElseUpdate(
+          (fName, pattern), {
+            c += 1
+            s"${fName}_$c"
+          }
+        )
+      }
 
       val callbacks = functionCall.map {
         case (name, code) =>
@@ -381,6 +397,18 @@ object Observations {
       } ++ functionReturned.map {
         case (name, code) =>
           name + "_returned" -> code
+      } ++ globalWrite.map {
+        case ((f, value), (code, _)) =>
+          patternCbBase(f.getOrElse(""), value) + "_globalWrite" -> code
+      } ++ globalRead.map {
+        case ((f, value), (code, _)) =>
+          patternCbBase(f.getOrElse(""), value) + "_globalRead" -> code
+      } ++ localWrite.map {
+        case ((f, value), (code, _)) =>
+          patternCbBase(f.getOrElse(""), value) + "_localWrite" -> code
+      } ++ localRead.map {
+        case ((f, value), (code, _)) =>
+          patternCbBase(f.getOrElse(""), value) + "_localRead" -> code
       }
 
       val libraryInterface: CPPBridge.LibraryInterface = new CPPBridge.LibraryInterface {
@@ -397,6 +425,15 @@ object Observations {
                 }
             }
           }
+        }
+
+        def assertTypes2(
+          value: Pattern,
+          typ: String,
+          enclosing: CPPBridge.FullFunctionDesc,
+          assertions: Map[(Option[String], Pattern), InStream]
+        ): Unit = {
+          assertions.get((Option(enclosing).map(_.name), value)).foreach(assertSameType(typ, _))
         }
 
         override def checkInstrumentationRequiredFuncReturn(
@@ -465,8 +502,15 @@ object Observations {
           line: Int,
           col: Int
         ): String = {
-          // TODO assert types and create callbacks for writes and writesInFunction
-          ""
+          val pat = parsePattern(pattern, Location.unknown)
+          val f = Option(containingFunc).map(_.name)
+          if (globalWrite.contains((None, pat))) {
+            assertTypes2(pat, typ, containingFunc, globalWriteTypeAssertions)
+            patternCbBase("", pat) + "_globalWrite"
+          } else if (localWrite.contains((f, pat))) {
+            assertTypes2(pat, typ, containingFunc, localWriteTypeAssertions)
+            patternCbBase(f.get, pat) + "_localWrite"
+          } else ""
         }
 
         override def checkInstrumentationRequiredRead(
@@ -477,8 +521,15 @@ object Observations {
           line: Int,
           col: Int
         ): String = {
-          // TODO assert types and create callbacks for reads and readsInFunction
-          ""
+          val pat = parsePattern(pattern, Location.unknown)
+          val f = Option(containingFunc).map(_.name)
+          if (globalRead.contains((None, pat))) {
+            assertTypes2(pat, typ, containingFunc, globalReadTypeAssertions)
+            patternCbBase("", pat) + "_globalRead"
+          } else if (localRead.contains((f, pat))) {
+            assertTypes2(pat, typ, containingFunc, localReadTypeAssertions)
+            patternCbBase(f.get, pat) + "_localRead"
+          } else ""
         }
 
         override def getUserCbPrefix: String = prefix
