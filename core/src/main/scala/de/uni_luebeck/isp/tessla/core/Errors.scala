@@ -3,6 +3,7 @@ package de.uni_luebeck.isp.tessla.core
 import java.util.IllegalFormatException
 
 import de.uni_luebeck.isp.tessla.core.Tessla.TimeLiteral
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 
 /**
  * Contains all errors used within this application
@@ -44,8 +45,8 @@ object Errors {
     }
   }
 
-  case class WrongType(expected: String, found: TesslaAST.Core.Type, loc: Location) extends TesslaError {
-    override def message = s"Type mismatch: Expected $expected, but found $found"
+  case class WrongType(expected: String, actual: Core.Type, loc: Location) extends TesslaError {
+    override def message = s"Type mismatch: Expected $expected, but found $actual"
   }
 
   case class InstArgDoesNotExist(functionName: String, argumentIndex: Int, loc: Location) extends TesslaError {

@@ -16,12 +16,11 @@ import de.uni_luebeck.isp.tessla.core.CPatternParser.{
   VariableContext
 }
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import de.uni_luebeck.isp.tessla.core.TranslationPhase.Failure
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
 import de.uni_luebeck.isp.tessla.core.util._
 
-import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.reflect.ClassTag
 import scala.util.Try
 
 object Observations {
@@ -105,19 +104,32 @@ object Observations {
       translatePattern(pattern)
     }
 
-    private def argumentAsString(annotation: Annotation, argumentName: String): String = {
-      val loc = annotation._2.location
-      val argument =
-        annotationArgs(annotation).getOrElse(argumentName, throw Errors.UndefinedNamedArg(argumentName, loc))
-
-      argument match {
+    private def argumentAsString(annotation: Annotation, argumentName: String): String =
+      argumentAs[String](annotation, argumentName) {
         case s: Core.StringLiteralExpression => s.value
-        case _ =>
-          throw InternalError(
-            "Expression must be a string, should have been caught by the (not yet implemented) type checker.",
-            argument.location
-          )
       }
+
+    private def argumentAsInt(annotation: Annotation, argumentName: String): Int =
+      argumentAs[Int](annotation, argumentName) {
+        case n: Core.IntLiteralExpression => n.value.intValue
+      }
+
+    private def argumentAs[T: ClassTag](annotation: Annotation, argumentName: String)(
+      convert: PartialFunction[Core.ExpressionArg, T]
+    ): T = {
+      val loc = annotation._2.location
+      val argument = annotationArgs(annotation).getOrElse(
+        argumentName,
+        throw Errors.UndefinedNamedArg(argumentName, loc)
+      )
+
+      convert.applyOrElse(
+        argument,
+        { arg: Core.ExpressionArg =>
+          val tpe = implicitly[ClassTag[T]].runtimeClass.getSimpleName
+          throw InternalError(s"Failed to convert argument $argumentName to $tpe.", arg.location)
+        }
+      )
     }
 
     private def annotationArgs(annotation: Annotation): Map[String, Core.ExpressionArg] =
@@ -125,21 +137,6 @@ object Observations {
         case r: Core.RecordConstructorExpression => r.entries.mapVals(_._1)
         case _                                   => Map()
       }
-
-    private def argumentAsInt(annotation: Annotation, argumentName: String): Int = {
-      val loc = annotation._2.location
-      val argument =
-        annotationArgs(annotation).getOrElse(argumentName, throw Errors.UndefinedNamedArg(argumentName, loc))
-
-      argument match {
-        case s: Core.IntLiteralExpression => s.value.intValue
-        case _ =>
-          throw InternalError(
-            "Expression must be a string, should have been caught by the (not yet implemented) type checker.",
-            argument.location
-          )
-      }
-    }
 
     protected def encloseInstrumentationCode(code: String): String = {
       val lines = code.split("\n") ++
@@ -160,32 +157,59 @@ object Observations {
       case (key, seq) => key -> seq.flatMap(_._2)
     }
 
-    private def createFunctionObservations(annotationName: String): Map[String, String] =
+    def createFunctionCbName(cbSuffix: String)(annotation: Annotation) =
+      argumentAsString(annotation, "name") + cbSuffix
+
+    def createPatternCbName(cbSuffix: String)(annotation: Annotation) = {
+      val function = Try(argumentAsString(annotation, "function")).toOption
+      val lvalue = argumentAsString(annotation, "lvalue")
+      def scoped(p: Pattern): Pattern = p match {
+        case v: Variable if function.isDefined => v.copy(functionName = function)
+        case v: Variable                       => v
+        case s: StructUnionAccess              => s.copy(base = scoped(s.base))
+        case s: ArrayAccess                    => s.copy(base = scoped(s.base))
+        case s: Reference                      => s.copy(base = scoped(s.base))
+        case s: Dereference                    => s.copy(base = scoped(s.base))
+      }
+
+      val pattern = scoped(parsePattern(lvalue, annotation._2.location))
+      patternCb(pattern) + cbSuffix
+    }
+
+    private def createFunctionObservations(annotationName: String, cbSuffix: String): Map[String, String] = {
+      val createObs = createObservations(createFunctionCbName(cbSuffix)) _
+
       mergeObservations(
-        createFunctionObservations(annotationName, (_, in) => printEventValue(in)),
-        createFunctionObservations(
+        createObs(annotationName, (_, in) => printEventValue(in)),
+        createObs(
           annotationName + "Arg",
           (annotation, in) => printEventArgument(in, argumentAsInt(annotation, "index"))
         )
       )
+    }
 
-    private def createFunctionObservations(
-      annotationName: String,
-      createCode: (Annotation, InStream) => String
-    ): Seq[(String, String)] =
-      spec.in.toSeq.flatMap {
-        case (id, (tpe, annotations)) =>
-          annotations
-            .filter(_._1 == annotationName)
-            .map {
-              case (name, args) => (name, args.head)
-            }
-            .map { annotation =>
-              val name = argumentAsString(annotation, "name")
-              val code = createCode(annotation, (id, tpe))
-              (name, code)
-            }
+    private def createPatternObservations(annotationName: String, cbSuffix: String): Map[String, String] = {
+      val createObs = createObservations(createPatternCbName(cbSuffix)) _
+
+      mergeObservations(
+        createObs(annotationName, (_, in) => printEventValue(in)),
+        createObs(
+          annotationName + "Index",
+          (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index"))
+        )
+      )
+    }
+
+    def createObservations(
+      createCbName: Annotation => String
+    )(annotationName: String, createCode: (Annotation, InStream) => String) = {
+      annotationsByName(annotationName).map {
+        case (annotation, inStream) =>
+          val name = createCbName(annotation)
+          val code = createCode(annotation, inStream)
+          (name, code)
       }
+    }
 
     private def unwrapType(streamType: Core.Type) = streamType match {
       case Core.InstantiatedType("Events", t :: Nil, _) => t
@@ -193,54 +217,57 @@ object Observations {
     }
 
     private def assertUnit(annotationName: String): Unit =
-      spec.in.foreach {
-        case (id, (streamType, annotations)) =>
-          annotations.filter(_._1 == annotationName).foreach { annotation =>
-            unwrapType(streamType) match {
-              case r: Core.RecordType if r.entries.isEmpty => //good
-              case _                                       => error(Errors.WrongType("Events[Unit]", streamType, id.location))
-            }
+      annotationsByName(annotationName).map {
+        case (_, (id, typ)) =>
+          unwrapType(typ) match {
+            case r: Core.RecordType if r.entries.isEmpty => //good
+            case _                                       => error(Errors.WrongType("Events[Unit]", typ, id.location))
           }
       }
 
-    private def createFunctionTypeAssertions(annotationName: String): Map[String, Seq[(Int, InStream)]] =
-      spec.in
-        .flatMap {
-          case (id, (streamType, annotations)) =>
-            annotations
-              .filter(_._1 == annotationName)
-              .map {
-                case (name, args) => (name, args.head)
-              }
-              .map { annotation =>
-                val name = argumentAsString(annotation, "name")
-                val argIndex = Try(argumentAsInt(annotation, "index")) getOrElse -1
-                name -> (argIndex -> (id, streamType))
-              }
-        }
-        .groupBy(_._1)
-        .mapVals(_.values.toSeq)
+    private def createPatternTypeAssertions(annotationName: String, cbSuffix: String): Map[String, InStream] =
+      annotationsByName(annotationName).map {
+        case (annotation, inStream) =>
+          createPatternCbName(cbSuffix)(annotation) -> inStream
+      }.toMap
 
-    private def createPatternObservations(
+    private def createFunctionTypeAssertions(
       annotationName: String,
-      createCode: (Annotation, InStream) => String
-    ): Map[(Option[String], Pattern), (String, InStream)] =
+      cbSuffix: String
+    ): Map[String, Seq[(Int, InStream)]] =
+      annotationsByName(annotationName)
+        .map {
+          case (annotation, inStream) =>
+            val name = createFunctionCbName(cbSuffix)(annotation)
+            val argIndex = Try(argumentAsInt(annotation, "index")) getOrElse -1
+            name -> (argIndex -> inStream)
+        }
+        .groupMap(_._1)(_._2)
+
+    private var c = 0
+    private val memoize = mutable.HashMap[Pattern, String]()
+    def patternCb(pattern: Pattern) = {
+      memoize.getOrElseUpdate(
+        pattern, {
+          val patStr = pattern.toString
+          if (patStr.matches("""^[a-zA-Z_][\w_]*$""")) patStr
+          else {
+            c += 1
+            s"_$c"
+          }
+        }
+      )
+    }
+
+    def annotationsByName(annotationName: String): Seq[(Annotation, InStream)] = {
       spec.in.toSeq.flatMap {
         case (id, (streamType, annotations)) =>
           annotations
             .filter(_._1 == annotationName)
-            .toSeq
-            .map {
-              case (name, args) => (name, args.head)
-            }
-            .map { annotation =>
-              val function = Try(argumentAsString(annotation, "function")).toOption
-              val lvalue = argumentAsString(annotation, "lvalue")
-              val code = createCode(annotation, (id, streamType))
-              val pattern = parsePattern(lvalue, annotationArgs(annotation)("lvalue").location)
-              (function, pattern) -> (code, (id, streamType))
-            }
-      }.toMap
+            .flatMap { case (name, args) => args.map(name -> _) }
+            .map((_, (id, streamType)))
+      }
+    }
 
     protected def printEvent(in: InStream, value: String): String = {
       val name = in._1.fullName
@@ -325,94 +352,40 @@ object Observations {
       if (!supportedPlatforms.contains((os, arch)))
         throw Errors.InstrUnsupportedPlatform(os, arch, supportedPlatforms)
 
-      val functionCall = createFunctionObservations("InstFunctionCall")
       assertUnit("InstFunctionCall")
-      val functionCallTypeAssertions = createFunctionTypeAssertions("InstFunctionCallArg")
-
-      val functionCalled = createFunctionObservations("InstFunctionCalled")
       assertUnit("InstFunctionCalled")
-      val functionCalledTypeAssertions = createFunctionTypeAssertions("InstFunctionCalledArg")
 
-      val functionReturn = createFunctionObservations("InstFunctionReturn")
-      val functionReturnTypeAssertions =
-        merge(createFunctionTypeAssertions("InstFunctionReturn"), createFunctionTypeAssertions("InstFunctionReturnArg"))
-
-      val functionReturned = createFunctionObservations("InstFunctionReturned")
-      val functionReturnedTypeAssertions = merge(
-        createFunctionTypeAssertions("InstFunctionReturned"),
-        createFunctionTypeAssertions("InstFunctionReturnedArg")
+      val functionAnnotations = Map(
+        "InstFunctionCall" -> "_call",
+        "InstFunctionCalled" -> "_called",
+        "InstFunctionReturn" -> "_return",
+        "InstFunctionReturned" -> "_returned"
       )
+      val functionTypeAssertions = functionAnnotations
+        .map {
+          case (name, suffix) =>
+            merge(
+              createFunctionTypeAssertions(name, suffix),
+              createFunctionTypeAssertions(s"${name}Arg", suffix)
+            )
+        }
+        .reduce(_ ++ _)
+      val functionObservations = functionAnnotations.map((createFunctionObservations _).tupled)
 
-      // TODO merge pattern observations for same pattern into one observation entry and call encloseInstrumentationCode
+      val patternAnnotations = Map(
+        "GlobalWrite" -> "_globalWrite",
+        "GlobalRead" -> "_globalRead",
+        "LocalWrite" -> "_localWrite",
+        "LocalRead" -> "_localRead"
+      )
+      val patternObservations = patternAnnotations.map((createPatternObservations _).tupled)
+      // TODO: What about GlobalWriteIndex etc.?
+      val patternTypeAssertions = patternAnnotations.map((createPatternTypeAssertions _).tupled).reduce(_ ++ _)
 
-      val globalWrite = createPatternObservations("GlobalWrite", (annotation, in) => printEventValue(in)) ++
-        createPatternObservations(
-          "GlobalWriteIndex",
-          (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index"))
-        )
-      val globalWriteTypeAssertions: Map[(Option[String], Pattern), InStream] = globalWrite.mapVals(_._2)
-
-      val localWrite =
-        createPatternObservations("LocalWrite", (annotation, in) => printEventValue(in)) ++
-          createPatternObservations(
-            "LocalWriteIndex",
-            (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index"))
-          )
-      val localWriteTypeAssertions: Map[(Option[String], Pattern), InStream] = localWrite.mapVals(_._2)
-
-      val globalRead = createPatternObservations("GlobalRead", (annotation, in) => printEventValue(in)) ++
-        createPatternObservations(
-          "GlobalReadIndex",
-          (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index"))
-        )
-      val globalReadTypeAssertions: Map[(Option[String], Pattern), InStream] = globalRead.mapVals(_._2)
-
-      val localRead = createPatternObservations("LocalRead", (annotation, in) => printEventValue(in)) ++
-        createPatternObservations(
-          "LocalReadIndex",
-          (annotation, in) => printEventIndex(in, argumentAsInt(annotation, "index"))
-        )
-      val localReadTypeAssertions: Map[(Option[String], Pattern), InStream] = localRead.mapVals(_._2)
-
-      var c = 0
-      val memoize = mutable.HashMap[(String, Pattern), String]()
-      def patternCbBase(fName: String, pattern: Pattern) = {
-        memoize.getOrElseUpdate(
-          (fName, pattern), {
-            c += 1
-            s"${fName}_$c"
-          }
-        )
-      }
-
-      val callbacks = functionCall.map {
-        case (name, code) =>
-          name + "_call" -> code
-      } ++ functionCalled.map {
-        case (name, code) =>
-          name + "_called" -> code
-      } ++ functionReturn.map {
-        case (name, code) =>
-          name + "_return" -> code
-      } ++ functionReturned.map {
-        case (name, code) =>
-          name + "_returned" -> code
-      } ++ globalWrite.map {
-        case ((f, value), (code, _)) =>
-          patternCbBase(f.getOrElse(""), value) + "_globalWrite" -> code
-      } ++ globalRead.map {
-        case ((f, value), (code, _)) =>
-          patternCbBase(f.getOrElse(""), value) + "_globalRead" -> code
-      } ++ localWrite.map {
-        case ((f, value), (code, _)) =>
-          patternCbBase(f.getOrElse(""), value) + "_localWrite" -> code
-      } ++ localRead.map {
-        case ((f, value), (code, _)) =>
-          patternCbBase(f.getOrElse(""), value) + "_localRead" -> code
-      }
+      val callbacks = (functionObservations ++ patternObservations).reduce(_ ++ _)
 
       val libraryInterface: CPPBridge.LibraryInterface = new CPPBridge.LibraryInterface {
-        def assertTypes(f: CPPBridge.FunctionDesc, assertions: Map[String, Seq[(Int, InStream)]]): Unit = {
+        def assertFuncTypes(f: CPPBridge.FunctionDesc, assertions: Map[String, Seq[(Int, InStream)]]): Unit = {
           assertions.get(f.name).foreach { seq =>
             seq.foreach {
               case (argIndex, inStream) =>
@@ -427,13 +400,12 @@ object Observations {
           }
         }
 
-        def assertTypes2(
-          value: Pattern,
-          typ: String,
-          enclosing: CPPBridge.FullFunctionDesc,
-          assertions: Map[(Option[String], Pattern), InStream]
-        ): Unit = {
-          assertions.get((Option(enclosing).map(_.name), value)).foreach(assertSameType(typ, _))
+        def assertPatternTypes(cb: String, typ: String, assertions: Map[String, InStream]): Unit =
+          assertions.get(cb).foreach(assertSameType(typ, _))
+
+        def checkFunc(f: CPPBridge.FunctionDesc, suffix: String) = {
+          assertFuncTypes(f, functionTypeAssertions)
+          callbacks.get(f.name + suffix).getOrElse("")
         }
 
         override def checkInstrumentationRequiredFuncReturn(
@@ -441,14 +413,7 @@ object Observations {
           filename: String,
           line: Int,
           col: Int
-        ): String = {
-          assertTypes(f, functionReturnTypeAssertions)
-          if (functionReturn.contains(f.name)) {
-            f.name + "_return"
-          } else {
-            ""
-          }
-        }
+        ): String = checkFunc(f, "_return")
 
         override def checkInstrumentationRequiredFuncReturned(
           f: CPPBridge.FunctionDesc,
@@ -456,14 +421,7 @@ object Observations {
           filename: String,
           line: Int,
           col: Int
-        ): String = {
-          assertTypes(f, functionReturnedTypeAssertions)
-          if (functionReturned.contains(f.name)) {
-            f.name + "_returned"
-          } else {
-            ""
-          }
-        }
+        ): String = checkFunc(f, "_returned")
 
         override def checkInstrumentationRequiredFuncCall(
           f: CPPBridge.FunctionDesc,
@@ -471,27 +429,20 @@ object Observations {
           filename: String,
           line: Int,
           col: Int
-        ): String = {
-          assertTypes(f, functionCallTypeAssertions)
-          if (functionCall.contains(f.name)) {
-            f.name + "_call"
-          } else {
-            ""
-          }
-        }
+        ): String = checkFunc(f, "_call")
 
         override def checkInstrumentationRequiredFuncCalled(
           f: CPPBridge.FullFunctionDesc,
           filename: String,
           line: Int,
           col: Int
-        ): String = {
-          assertTypes(f, functionCalledTypeAssertions)
-          if (functionCalled.contains(f.name)) {
-            f.name + "_called"
-          } else {
-            ""
-          }
+        ): String = checkFunc(f, "_called")
+
+        def checkPattern(pattern: String, suffix: String, typ: String) = {
+          val pat = parsePattern(pattern, Location.unknown)
+          val cbName = patternCb(pat) + suffix
+          assertPatternTypes(cbName, typ, patternTypeAssertions)
+          Option.when(callbacks.contains(cbName))(cbName)
         }
 
         override def checkInstrumentationRequiredWrite(
@@ -501,17 +452,9 @@ object Observations {
           filename: String,
           line: Int,
           col: Int
-        ): String = {
-          val pat = parsePattern(pattern, Location.unknown)
-          val f = Option(containingFunc).map(_.name)
-          if (globalWrite.contains((None, pat))) {
-            assertTypes2(pat, typ, containingFunc, globalWriteTypeAssertions)
-            patternCbBase("", pat) + "_globalWrite"
-          } else if (localWrite.contains((f, pat))) {
-            assertTypes2(pat, typ, containingFunc, localWriteTypeAssertions)
-            patternCbBase(f.get, pat) + "_localWrite"
-          } else ""
-        }
+        ): String =
+          checkPattern(pattern, "_globalWrite", typ) orElse
+            checkPattern(pattern, "_localWrite", typ) getOrElse ""
 
         override def checkInstrumentationRequiredRead(
           pattern: String,
@@ -520,17 +463,9 @@ object Observations {
           filename: String,
           line: Int,
           col: Int
-        ): String = {
-          val pat = parsePattern(pattern, Location.unknown)
-          val f = Option(containingFunc).map(_.name)
-          if (globalRead.contains((None, pat))) {
-            assertTypes2(pat, typ, containingFunc, globalReadTypeAssertions)
-            patternCbBase("", pat) + "_globalRead"
-          } else if (localRead.contains((f, pat))) {
-            assertTypes2(pat, typ, containingFunc, localReadTypeAssertions)
-            patternCbBase(f.get, pat) + "_localRead"
-          } else ""
-        }
+        ): String =
+          checkPattern(pattern, "_globalRead", typ) orElse
+            checkPattern(pattern, "_localRead", typ) getOrElse ""
 
         override def getUserCbPrefix: String = prefix
 
