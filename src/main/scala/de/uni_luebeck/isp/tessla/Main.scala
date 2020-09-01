@@ -171,10 +171,11 @@ object Main {
         }
 
         config.outFile match {
-          case Some(f) =>
+          case Some(f) if config.jarFile.isEmpty =>
             Files.createDirectories(f.toPath.getParent)
             Files.write(f.toPath, sourceStr.getBytes(StandardCharsets.UTF_8))
-          case None => println(sourceStr)
+          case None if config.jarFile.isEmpty => println(sourceStr)
+          case _ =>
         }
 
       } catch {

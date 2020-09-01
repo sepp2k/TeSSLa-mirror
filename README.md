@@ -50,7 +50,7 @@ The CLI of TeSSLa follows a command based structure. The following commands are 
 
 For detailed usage information, take a look at the following help text.
 ```
-tessla 1.2.0-SNAPSHOT
+tessla 1.2.0
 Usage: tessla [interpreter|compile-core|doc|compile] [options] <args>...
 
 Compile Tessla specifications and evaluate them on provided input streams.
@@ -74,18 +74,18 @@ Evaluate the given Tessla specification on the input streams provided by a trace
   --ctf                    The trace-file with the input data is in CTF format. With this option you must specify a trace-file. stdin is not supported.
   --csv                    The trace-file or the input stream is in CSV format.
 
-Command: compile-core [options] [<tessla-file>]
+Command: compile-core [options] <tessla-file>
 Compile the provided specification to Tessla Core
   <tessla-file>            The file containing the Tessla specification
 
-  -c, --print-core         Print the Tessla Core representation generated from the Tessla specification
+  -c, --print-core         Print the extended Tessla Core representation generated from the Tessla specification
   --print-core-lanspec     Print the Tessla Core representation conform to the language specification.
   --print-typed            Print the typed Tessla representation generated from the Tessla specification
   --print-locations        Print ASTs with locations
   --print-all-types        Print ASTs with all types
   --list-out-streams       Print a list of the output streams defined in the given Tessla specification and then exit
   --list-in-streams        Print a list of the input streams defined in the given Tessla specification and then exit
-  --observations           Generate observation specification file from the corresponding annotations
+  --observations <value>   Instrument the provided C file according to the specification
 
 Command: doc [options] [<files>]
 Generate documentation for Tessla code
@@ -94,10 +94,10 @@ Generate documentation for Tessla code
   -o, --outfile <value>    Write the generated docs to the given file instead of stdout
   <files>                  The TeSSLa files for which to generate documentation
 
-Command: compile
+Command: compile [options] <tessla-file>
 Compile TeSSLa specifications to Scala
   <tessla-file>            The file containing the Tessla specification
-  -o, --out-file <value>   Path to the output file
+  -o, --out-file <value>   Path to the output file. If not specified source is printed to stdout.
   -j, --jar-file <value>   Compiles Scala code to a jar file which is created at the given location. No source output is generated
 ```
 
