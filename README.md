@@ -1,5 +1,4 @@
 [![pipeline](https://gitlab.isp.uni-luebeck.de/tessla/tessla/badges/development/pipeline.svg)](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/jobs)
-[![license](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 # TeSSLa Compiler and Backends
 
@@ -8,7 +7,7 @@ This project provides the core functionalities for the TeSSLa language.
 # Usage
 ## Download
 
-You can get the latest version of TeSSLa from the [Gitlab Artifact Browser](https://gitlab.isp.uni-luebeck.de/tessla/tessla/builds/artifacts/development/browse/target/scala-2.13?job=deploy).
+You can get the latest version of TeSSLa (Linux/x64) from the [Gitlab Artifact Browser](https://gitlab.isp.uni-luebeck.de/tessla/tessla/builds/artifacts/development/browse/target/scala-2.13?job=deploy).
 
 ## Building
 
@@ -20,9 +19,20 @@ If you want to build only a specific sub-project, run `sbt <project>/assembly` i
 
 TeSSLa is also available as part of the [TeSSLa docker image](https://gitlab.isp.uni-luebeck.de/tessla/tessla-docker), which is especially useful if you want to use TeSSLa on instrumented C code.
 
+## Project Structure
+
+This project consists of several submodules:
+
+- [Core](core/README.md):                    Sub-folder `core/`                Common Compiler Frontend, translating TeSSLa to TeSSLa Core
+- Interpreter:                               Sub-folder `interpreter/`         Interactive Shell for evaluation of TeSSLa specifications
+- [Compiler](tessla-compiler/README.md):     Sub-folder `tessla-compiler/`     Efficient compilation of TeSSLa Core to a Scala monitor
+- [Doc](docs/README.md):                     Sub-folder `docs/`                Generation of documentation from comments in a TeSSLa specification (Tessladoc)
+
+The code for the common Command line interface is located in `src/`
+
 ## Documentation
 
-For more details on the different modules take a look at their respective READMEs. 
+For more details on the different modules take a look at their respective READMEs.
 
 Additionally, the generated scaladoc for each module can be found on the Artifact browser (see above) or at `target/scala-*/api/` after generating it through `sbt doc`.
 
@@ -94,7 +104,3 @@ Compile TeSSLa specifications to Scala
 ## Examples
 
 Example tessla and input files can be found in the [tests directory](src/test/resources/de/uni_luebeck/isp/tessla/common) and in the [TeSSLa examples repository](https://gitlab.isp.uni-luebeck.de/tessla/rv-examples).
-
-# License
-
-[Apache Version 2.0](LICENSE)

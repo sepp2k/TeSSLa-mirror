@@ -1,6 +1,6 @@
 #  Tessla-Compiler
 
-TeSSLa Compiler is a project for the translation of TeSSLa specifications to Scala/Rust and JavaScript.
+TeSSLa Compiler is the sub-module for the translation of TeSSLa specifications to Scala/Rust and JavaScript.
 Currently, only the translation to Scala is implemented.
 
 The translation to Scala supports generation of a `.scala` source code file, or generation of a fully ready to use `.jar` file.
@@ -23,12 +23,12 @@ Additional infos on the input/output format can be found in [the I/O documentati
 
 ## Architecture
 
-The project is a backend to the [TeSSLa compiler frontend](https://gitlab.isp.uni-luebeck.de/tessla/tessla) project.
+The project is a backend to the [TeSSLa compiler frontend](../core/README.md) project.
 
 It consists of `TranslationPhases` which are run sequentially.
 The TeSSLa Core AST received from the frontend is preprocessed, translated to a common intermediate language and then translated to the target language.
 
-Details on the architecture can be found in the architecture [documentation](doc/Architecture.md) or in the Scaladoc contained in the source code.
+Details on the architecture can be found in the [architecture documentation](doc/Architecture.md) or in the Scaladoc contained in the source code.
 
 ## ToDo
 
