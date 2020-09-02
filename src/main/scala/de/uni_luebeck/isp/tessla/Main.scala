@@ -1,24 +1,23 @@
 package de.uni_luebeck.isp.tessla
 
-import java.io.{File, IOException}
+import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
-import de.uni_luebeck.isp.tessla.core.analyses.Observations
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
+import de.uni_luebeck.isp.tessla.core.analyses.Observations
 import de.uni_luebeck.isp.tessla.core.util.Lazy
-import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TesslaAST}
-import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
+import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
 import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc
-import scopt.OptionParser
 
-import scala.io.Source
 import scala.Option.when
+import scala.io.Source
 
 /**
  * Entry point of the application.
@@ -34,8 +33,8 @@ object Main {
   /**
    * Contains the different running modes.
    *
-    * @param global the global, task-independent configuration settings
-   * @param tasks the tasks to be executed
+   * @param global the global, task-independent configuration settings
+   * @param tasks  the tasks to be executed
    */
   class Application(global: CLIParser.GlobalConfig, tasks: List[Task[Config]]) {
 
@@ -64,10 +63,10 @@ object Main {
     /**
      * Generate documentation.
      *
-      * This mode parses the input, then extracts and processes the documentation strings
+     * This mode parses the input, then extracts and processes the documentation strings
      * from each definition. The result is either printed to stdout or to a file, depending on the configuration.
      *
-      * @see See [[TesslaDoc.extract]] for more
+     * @see See [[TesslaDoc.extract]] for more
      */
     def runDoc(docConfig: DocConfig): Unit = {
       val includeResolver = Option.when(docConfig.includes)(IncludeResolvers.fromFile _)
@@ -171,10 +170,11 @@ object Main {
         }
 
         config.outFile match {
-          case Some(f) =>
+          case Some(f) if config.jarFile.isEmpty =>
             Files.createDirectories(f.toPath.getParent)
             Files.write(f.toPath, sourceStr.getBytes(StandardCharsets.UTF_8))
-          case None => println(sourceStr)
+          case None if config.jarFile.isEmpty => println(sourceStr)
+          case _                              =>
         }
 
       } catch {

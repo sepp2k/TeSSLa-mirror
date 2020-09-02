@@ -2,10 +2,10 @@
 
 This module contains the core compiler, which contains the entire frontend compilation pipeline for TeSSLa, responsible for parsing, typechecking and transforming the specification into a core representation, which can then be used by other backends.
 
-Entry point for most use cases would be [Compiler.scala](src/main/scala/de/uni_luebeck/isp/tessla/core/Compiler.scala)
+Entry point for most use cases is [Compiler.scala](src/main/scala/de/uni_luebeck/isp/tessla/core/Compiler.scala)
 
 ## Translation Phases (v1.2.0)
-The pipeline of translation phases looks as follows:
+The pipeline of translation phases is as follows:
 
 TesslaParser → TesslaSyntaxToTessla → Flattener → TypeChecker → TypedTessla2TesslaASTCore → ConstantEvaluator
 
@@ -25,7 +25,7 @@ TesslaParser → TesslaSyntaxToTessla → Flattener → TypeChecker → TypedTes
 ### Flattener
 
 * Turns nested expressions into a flat, three-address-code-like structure
-* Append a unique numeric value to each identifier to make them unique across the entire specification
+* Appends a unique numeric value to each identifier to make them unique across the entire specification
 * Adds scope objects to the global and macro scopes, which map identifiers to their associated expressions, and produces errors for conflicting definitions in the same scope
 * Removes block expressions and hoists them into the surrounding macro scope or the global scope)
 * Transforms modules into records
@@ -38,7 +38,7 @@ TesslaParser → TesslaSyntaxToTessla → Flattener → TypeChecker → TypedTes
 * Annotates every expression with its type
 * Checks for type errors
 * Converts constant value expressions to `default(nil, value)`-streams where needed
-* Converts primitive n-ary operator applications on streams `a + b` with an n-ary signal lift `slift(a, b, +)`  
+* Converts primitive n-ary operator applications on streams `a + b` with an n-ary signal lift `slift(a, b, +)`
 
 → TypedTessla
 
@@ -53,3 +53,7 @@ TesslaParser → TesslaSyntaxToTessla → Flattener → TypeChecker → TypedTes
 * Uses the externs defined in `RuntimeExterns` to evaluate constant expressions.
 
 → TesslaAST.Core
+
+## Further Information
+
+Further details on the translation process can be found in the Scaladoc documentation of the single classes

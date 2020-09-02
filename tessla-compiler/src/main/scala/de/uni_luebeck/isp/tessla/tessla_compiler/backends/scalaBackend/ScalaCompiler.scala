@@ -167,16 +167,16 @@ class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean)(
     val sourcePath = Path.of(URI.create(outDir.toUri.toString + "Main.scala"))
     deleteOnExit(sourcePath)
 
-    println(s"Write code to $sourcePath ...")
+    //println(s"Write code to $sourcePath ...")
     writeCode(sourcePath, sourceCode)
     compileCode(sourcePath, settings, reporter)
 
-    println(s"Unzip scala library to $compileDir ...")
+    //println(s"Unzip scala library to $compileDir ...")
     unzipScalaLibrary(compileDir)
     println(s"Pack $compileDir into jar ...")
     val jar = outDir.resolve(jarName)
     makeJar(compileDir, jar, "Main")
-    println(s"Successfully generated jar file at $jar.")
+    //println(s"Successfully generated jar file at $jar.")
 
     Success((), Seq())
   }

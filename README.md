@@ -1,5 +1,4 @@
 [![pipeline](https://gitlab.isp.uni-luebeck.de/tessla/tessla/badges/development/pipeline.svg)](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/jobs)
-[![license](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 # TeSSLa Compiler and Backends
 
@@ -8,7 +7,7 @@ This project provides the core functionalities for the TeSSLa language.
 # Usage
 ## Download
 
-You can get the latest version of TeSSLa from the [Gitlab Artifact Browser](https://gitlab.isp.uni-luebeck.de/tessla/tessla/builds/artifacts/development/browse/target/scala-2.13?job=deploy).
+You can get the latest version of TeSSLa (Linux/x64) from the [Gitlab Artifact Browser](https://gitlab.isp.uni-luebeck.de/tessla/tessla/builds/artifacts/development/browse/target/scala-2.13?job=deploy).
 
 ## Building
 
@@ -20,9 +19,20 @@ If you want to build only a specific sub-project, run `sbt <project>/assembly` i
 
 TeSSLa is also available as part of the [TeSSLa docker image](https://gitlab.isp.uni-luebeck.de/tessla/tessla-docker), which is especially useful if you want to use TeSSLa on instrumented C code.
 
+## Project Structure
+
+This project consists of several submodules:
+
+- [Core](core/README.md):                    Sub-folder `core/`                Common Compiler Frontend, translating TeSSLa to TeSSLa Core
+- Interpreter:                               Sub-folder `interpreter/`         Interactive Shell for evaluation of TeSSLa specifications
+- [Compiler](tessla-compiler/README.md):     Sub-folder `tessla-compiler/`     Efficient compilation of TeSSLa Core to a Scala monitor
+- [Doc](docs/README.md):                     Sub-folder `docs/`                Generation of documentation from comments in a TeSSLa specification (Tessladoc)
+
+The code for the common Command line interface is located in `src/`
+
 ## Documentation
 
-For more details on the different modules take a look at their respective READMEs. 
+For more details on the different modules take a look at their respective READMEs.
 
 Additionally, the generated scaladoc for each module can be found on the Artifact browser (see above) or at `target/scala-*/api/` after generating it through `sbt doc`.
 
@@ -40,7 +50,7 @@ The CLI of TeSSLa follows a command based structure. The following commands are 
 
 For detailed usage information, take a look at the following help text.
 ```
-tessla 1.2.0-SNAPSHOT
+tessla 1.2.0
 Usage: tessla [interpreter|compile-core|doc|compile] [options] <args>...
 
 Compile Tessla specifications and evaluate them on provided input streams.
@@ -64,18 +74,18 @@ Evaluate the given Tessla specification on the input streams provided by a trace
   --ctf                    The trace-file with the input data is in CTF format. With this option you must specify a trace-file. stdin is not supported.
   --csv                    The trace-file or the input stream is in CSV format.
 
-Command: compile-core [options] [<tessla-file>]
+Command: compile-core [options] <tessla-file>
 Compile the provided specification to Tessla Core
   <tessla-file>            The file containing the Tessla specification
 
-  -c, --print-core         Print the Tessla Core representation generated from the Tessla specification
+  -c, --print-core         Print the extended Tessla Core representation generated from the Tessla specification
   --print-core-lanspec     Print the Tessla Core representation conform to the language specification.
   --print-typed            Print the typed Tessla representation generated from the Tessla specification
   --print-locations        Print ASTs with locations
   --print-all-types        Print ASTs with all types
   --list-out-streams       Print a list of the output streams defined in the given Tessla specification and then exit
   --list-in-streams        Print a list of the input streams defined in the given Tessla specification and then exit
-  --observations           Generate observation specification file from the corresponding annotations
+  --observations <value>   Instrument the provided C file according to the specification
 
 Command: doc [options] [<files>]
 Generate documentation for Tessla code
@@ -84,17 +94,13 @@ Generate documentation for Tessla code
   -o, --outfile <value>    Write the generated docs to the given file instead of stdout
   <files>                  The TeSSLa files for which to generate documentation
 
-Command: compile
+Command: compile [options] <tessla-file>
 Compile TeSSLa specifications to Scala
   <tessla-file>            The file containing the Tessla specification
-  -o, --out-file <value>   Path to the output file
+  -o, --out-file <value>   Path to the output file. If not specified source is printed to stdout.
   -j, --jar-file <value>   Compiles Scala code to a jar file which is created at the given location. No source output is generated
 ```
 
 ## Examples
 
 Example tessla and input files can be found in the [tests directory](src/test/resources/de/uni_luebeck/isp/tessla/common) and in the [TeSSLa examples repository](https://gitlab.isp.uni-luebeck.de/tessla/rv-examples).
-
-# License
-
-[Apache Version 2.0](LICENSE)

@@ -169,7 +169,7 @@ object CLIParser {
         note(""), // Spacer
         opt[Unit]('c', "print-core")
           .foreach(_ => config = config.copy(printCore = true))
-          .text("Print the Tessla Core representation generated from the Tessla specification"),
+          .text("Print the extended Tessla Core representation generated from the Tessla specification"),
         opt[Unit]("print-core-lanspec")
           .foreach(_ => {
             config = config.copy(printCoreLanSpec = true)
@@ -239,7 +239,7 @@ object CLIParser {
           .text("The file containing the Tessla specification"),
         opt[File]('o', "out-file")
           .foreach(f => config = config.copy(outFile = Some(f)))
-          .text("Path to the output file"),
+          .text("Path to the output file. If not specified source is printed to stdout."),
         opt[File]('j', "jar-file")
           .foreach(f => config = config.copy(jarFile = Some(f)))
           .text(
