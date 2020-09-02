@@ -157,10 +157,10 @@ object Observations {
       case (key, seq) => key -> seq.flatMap(_._2)
     }
 
-    def createFunctionCbName(cbSuffix: String)(annotation: Annotation) =
+    def createFunctionCbName(cbSuffix: String)(annotation: Annotation): String =
       argumentAsString(annotation, "name") + cbSuffix
 
-    def createPatternCbName(cbSuffix: String)(annotation: Annotation) = {
+    def createPatternCbName(cbSuffix: String)(annotation: Annotation): String = {
       val function = Try(argumentAsString(annotation, "function")).toOption
       val lvalue = argumentAsString(annotation, "lvalue")
       def scoped(p: Pattern): Pattern = p match {
@@ -202,7 +202,7 @@ object Observations {
 
     def createObservations(
       createCbName: Annotation => String
-    )(annotationName: String, createCode: (Annotation, InStream) => String) = {
+    )(annotationName: String, createCode: (Annotation, InStream) => String): Seq[(String, String)] = {
       annotationsByName(annotationName).map {
         case (annotation, inStream) =>
           val name = createCbName(annotation)
@@ -217,7 +217,7 @@ object Observations {
     }
 
     private def assertUnit(annotationName: String): Unit =
-      annotationsByName(annotationName).map {
+      annotationsByName(annotationName).foreach {
         case (_, (id, typ)) =>
           unwrapType(typ) match {
             case r: Core.RecordType if r.entries.isEmpty => //good
@@ -405,7 +405,7 @@ object Observations {
 
         def checkFunc(f: CPPBridge.FunctionDesc, suffix: String) = {
           assertFuncTypes(f, functionTypeAssertions)
-          callbacks.get(f.name + suffix).getOrElse("")
+          f.name + suffix
         }
 
         override def checkInstrumentationRequiredFuncReturn(
