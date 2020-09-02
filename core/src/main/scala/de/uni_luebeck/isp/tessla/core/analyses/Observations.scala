@@ -405,7 +405,8 @@ object Observations {
 
         def checkFunc(f: CPPBridge.FunctionDesc, suffix: String) = {
           assertFuncTypes(f, functionTypeAssertions)
-          f.name + suffix
+          val cbName = f.name + suffix
+          Option.when(callbacks.contains(cbName))(cbName) getOrElse ""
         }
 
         override def checkInstrumentationRequiredFuncReturn(
