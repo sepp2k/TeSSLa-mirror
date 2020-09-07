@@ -11,13 +11,44 @@ import de.uni_luebeck.isp.tessla.core.util._
 import scala.collection.mutable
 import scala.collection.immutable.ArraySeq
 
+/**
+ * Partially evaluates an AST.
+ * Constants are evaluated to values to allow to call runtime externs.
+ * Values are reified to expression to generate the result AST.
+ * Functions are expanded when values for all strict arguments are known.
+ * Atomic values are inlined.
+ * Named references are preserved.
+ *
+  * Current Limitation:
+ *   - values have to be reifiable
+ *   - higher order functions have to be TeSSLa functions
+ *   - externs may not return native functions as they cannot be reified.
+  *  - externs returning unreifiable values must not be provided to the ConstantEvaluater
+  *    and must be kept until runtime.
+ */
 object ConstantEvaluator {
 
+  /**
+   * When passing values to functions/externs or receiving results:
+   * Prefer expression reified from value over expression already available.
+   * (If set to false, reified values are only used, if no expression is available,
+   * e.g. due to an extern only returing a value).
+   */
   val PREFER_REIFIED_EXPRESSIONS = false
 
   type Env = Map[Typed.Identifier, TranslationResult[Any, Some]]
   type TypeEnv = Map[Typed.Identifier, Typed.Type]
 
+  /**
+   * For recursive definitions (e.g. recursive functions) identifiers have to be generated
+   * and generation of the definition has to be defered.
+   * This class keeps a queue of tasks that generate the expressions and is executed by calling `complete()`.
+   * The resulting definitions are stored in `expressions`.
+   * TranslatedExpressions is instantiated for each scope in the generated AST,
+   * i.e. there is a global instance for definitions going into the global scope and an instance
+   * for each function present in the generated ast. As definitions might depend on function parameters,
+   * they have to be inserted into the function scope.
+   */
   class TranslatedExpressions {
     val expressions = mutable.Map[Core.Identifier, Core.Expression]()
     val deferredQueue = mutable.Queue[() => Unit]()
@@ -29,12 +60,22 @@ object ConstantEvaluator {
     }
   }
 
+  /**
+   * Runtime value for a record.
+   */
   case class Record(entries: Map[String, Any]) {
     override def toString = TesslaAST.printRecord(entries, " = ", (x: Any) => x.toString, "()")
   }
 
+  /**
+   * Runtime value for an error.
+   */
   case class RuntimeError(msg: String) // TODO: support location information etc
 
+  /**
+   * Instantiate LazyWithStack for a stack of `Location`s.
+   * Provides Lazy construct to walk the AST recursively and keep track of the call stack.
+   */
   val lazyWithStack = new LazyWithStack[Location]() {
     override def call[A](stack: Stack, rec: Boolean)(a: Stack => A) = {
       if (stack.size > 1000) {
@@ -56,24 +97,67 @@ object ConstantEvaluator {
 
   import lazyWithStack._
 
+  /**
+   * Allows the caller to request strict or lazy translation.
+   * Strict translation will translate the experssion when the Lazy is evaluated.
+   * Strict translation will generate an identifier and defer the translation of the expression
+   * (using TranslatedExpressions).
+   */
   case class StrictOrLazy(
     translateStrict: StackLazy[Core.ExpressionArg],
     translateLazy: StackLazy[Core.ExpressionArg]
   )
 
-  // Expression that can be either an expression (left) or a reference to an expression or an literal (right).
-  // A reference (or a literal) can be requested with strict or lazy translation.
-  // When lazy translation is requested, the translation of a a referenced expression will be deferred.
+  /**
+   * Expression that can be either an expression (left) or a reference to an expression or an literal (right).
+   * A reference (or a literal) can be requested with strict or lazy translation.
+   * When lazy translation is requested, the translation of a a referenced expression will be deferred.
+   */
   type ExpressionOrRef = Either[StackLazy[Core.Expression], StrictOrLazy]
 
+  /**
+   * Result of translating an expression.
+   * A value might be available.
+   * A expression is wrapped in B.
+   * Option can be used for optional expressions.
+   * Some can be used for required expressions.
+   */
   case class TranslationResult[+A, +B[+_]](
     value: StackLazy[Option[A]],
     expression: StackLazy[B[ExpressionOrRef]]
   )
 
+  /**
+   *  Allows to generate a `TranslationResult` given `TranslatedExpressions` to defer translation
+   *  of recursive definitions.
+   */
   case class Translatable[+A, +B[+_]](translate: TranslatedExpressions => TranslationResult[A, B])
 
   type TranslatableMonad[+A] = Translatable[A, Option]
+
+  implicit val translatableMonad: Monad[TranslatableMonad] = new Monad[TranslatableMonad] {
+    override def flatMap[A, B](fa: TranslatableMonad[A])(f: A => TranslatableMonad[B]) =
+      Translatable { translatedExpressions =>
+        val result = fa
+          .translate(translatedExpressions)
+          .value
+          .map(_.map(a => f(a).translate(translatedExpressions)))
+        val value = result.flatMap(_.traverse(_.value)).map(_.flatten)
+        val expression = result.flatMap(_.traverse(_.expression)).map(_.flatten)
+        TranslationResult(value, expression)
+      }
+
+    override def tailRecM[A, B](
+      a: A
+    )(f: A => TranslatableMonad[Either[A, B]]): TranslatableMonad[B] =
+      flatMap(f(a)) {
+        case Right(b)    => pure(b)
+        case Left(nextA) => tailRecM(nextA)(f)
+      }
+
+    override def pure[A](x: A): TranslatableMonad[A] =
+      Translatable(_ => TranslationResult[A, Option](Lazy(Some(x)), Lazy(None)))
+  }
 
   def getExpressionArgStrict(result: TranslationResult[Any, Some]) =
     result.expression.flatMap(_.value match {
@@ -87,6 +171,10 @@ object ConstantEvaluator {
       Lazy(Some(Right(StrictOrLazy(Lazy(expression), Lazy(expression)))))
     )
 
+  /**
+   * Reify a required value.
+   * `result` has to provide a value or an Error will be thrown.
+   */
   def reified(
     result: TranslationResult[Any, Option],
     tpe: Core.Type
@@ -98,6 +186,15 @@ object ConstantEvaluator {
         case Left(error) => throw error
       }
     )
+
+  /**
+   * Try to reify an optional value
+   */
+  def tryReified(
+    result: TranslationResult[Any, Option],
+    tpe: Core.Type
+  ): TranslationResult[Any, Option] =
+    TranslationResult[Any, Option](result.value, getReified(result, tpe).map(_.toOption))
 
   def getReified(
     result: TranslationResult[Any, Option],
@@ -139,16 +236,26 @@ object ConstantEvaluator {
       }
   }
 
-  def tryReified(
-    result: TranslationResult[Any, Option],
-    tpe: Core.Type
-  ): TranslationResult[Any, Option] =
-    TranslationResult[Any, Option](result.value, getReified(result, tpe).map(_.toOption))
-
+  /**
+    * Value for a TeSSLa function/extern taking type parameters.
+    */
   type TypeApplicable = List[Typed.Type] => Applicable
+
+  /**
+    * Value for a TeSSLa function/extern. Expression in result is required.
+    */
   type Applicable = ArraySeq[Translatable[Any, Option]] => Translatable[Any, Some]
 
+  /**
+    * An extern taking type parameters.
+    */
   type TypeExtern = List[Typed.Type] => Extern
+
+  /**
+    * An extern.
+    * Expression in Result is optional.
+    * (It will be generated by reification if not available.)
+    */
   type Extern = ArraySeq[TranslatableMonad[Any]] => TranslatableMonad[Any]
 
   // TODO: shoud be declared in standard library
@@ -170,36 +277,16 @@ object ConstantEvaluator {
     TranslationResult[Any, Some](Lazy(Some(error)), Lazy(Some(Left(Lazy(expression)))))
   }
 
+  /**
+    * Default extern returning neither a value nor an expression.
+    * Used to keep all unknown externs.
+    */
   val noExtern: TypeExtern = _ =>
     _ => Translatable[Any, Option](_ => TranslationResult[Any, Option](Lazy(None), Lazy(None)))
 
-  val doNotExpandExterns: Map[String, TypeExtern] =
-    List("CTF_getInt", "CTF_getString").map(_ -> noExtern).toMap
-
-  implicit val translatableMonad: Monad[TranslatableMonad] = new Monad[TranslatableMonad] {
-    override def flatMap[A, B](fa: TranslatableMonad[A])(f: A => TranslatableMonad[B]) =
-      Translatable { translatedExpressions =>
-        val result = fa
-          .translate(translatedExpressions)
-          .value
-          .map(_.map(a => f(a).translate(translatedExpressions)))
-        val value = result.flatMap(_.traverse(_.value)).map(_.flatten)
-        val expression = result.flatMap(_.traverse(_.expression)).map(_.flatten)
-        TranslationResult(value, expression)
-      }
-
-    override def tailRecM[A, B](
-      a: A
-    )(f: A => TranslatableMonad[Either[A, B]]): TranslatableMonad[B] =
-      flatMap(f(a)) {
-        case Right(b)    => pure(b)
-        case Left(nextA) => tailRecM(nextA)(f)
-      }
-
-    override def pure[A](x: A): TranslatableMonad[A] =
-      Translatable(_ => TranslationResult[A, Option](Lazy(Some(x)), Lazy(None)))
-  }
-
+  /**
+    * Convert runtime to compile time externs by ignoring type parameters.
+    */
   val valueExterns: Map[String, Any] = RuntimeExterns
     .commonExterns[TranslatableMonad]
     .view

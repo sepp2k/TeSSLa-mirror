@@ -17,6 +17,14 @@ import de.uni_luebeck.isp.tessla.core.util.ArraySeqMonad.instance
 // TODO: use extern declarations from the standard library
 object CompiletimeExterns {
 
+  /**
+    * A function that reifies (i.e. converts to an expression) some value of some type.
+    * The first parameter is the value, the second a list of types for the type parameters of its type.
+    * It returns
+    *   - a sequence of values (with corresponding types) that still have to be reified (e.g. elements of a container type).
+    *   - a function that can generate the reified expression given expressions for the values in the sequence.
+    * If the sequence is empty, the function takes no arguments and can be called directly to obtain the reified expression.
+    */
   type Reifier = (Any, List[Core.Type]) => (
     ArraySeq[(Any, Core.Type)],
     ArraySeq[Core.ExpressionArg] => Core.Expression
@@ -26,6 +34,9 @@ object CompiletimeExterns {
 
   import ConstantEvaluator.lazyWithStack._
 
+  /**
+    * Converts a value (given its type) to an expression.
+    */
   def reify(value: Any, tpe: Core.Type): StackLazy[WithError[Core.Expression]] =
     value match {
       case error: ConstantEvaluator.RuntimeError =>

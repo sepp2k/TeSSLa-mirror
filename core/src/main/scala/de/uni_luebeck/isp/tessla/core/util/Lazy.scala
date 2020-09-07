@@ -4,6 +4,9 @@ import cats._
 
 import scala.annotation.tailrec
 
+/**
+  * Defer a computation until `get` is called.
+  */
 class Lazy[+A](a: => A) {
   override def toString = s"Lazy($a)"
 

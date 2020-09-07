@@ -2,6 +2,11 @@ package de.uni_luebeck.isp.tessla.core.util
 
 import cats._
 
+/**
+  * Defers a computation until `get` is invoked.
+  * Supports the notion of a call stack.
+  * Used to keep track of the stack when walking an AST recursively using lazy computation.
+  */
 class LazyWithStack[Frame]() {
 
   type Stack = List[Frame]
