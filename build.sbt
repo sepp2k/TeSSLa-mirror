@@ -70,6 +70,7 @@ lazy val commonSettings = Seq(
 
 // Task to copy the scala-library as managed dependency
 // This allows to have it as resource in the final artifact, without having to manually manage it.
+// Required by the compilation from tessla to scala
 val libCopy = Def
   .task {
     val log = streams.value.log
@@ -120,13 +121,15 @@ lazy val root = (project in file("."))
     core,
     interpreter,
     docs,
-    tesslac
+    tesslac,
+    instrumenter
   )
   .aggregate(
     core,
     interpreter,
     docs,
-    tesslac
+    tesslac,
+    instrumenter
   )
 
 lazy val core = (project in file("core"))
@@ -151,6 +154,21 @@ lazy val interpreter = (project in file("interpreter"))
     name := "interpreter",
     Antlr4 / antlr4PackageName := Some(s"$rootPackage.interpreter"),
     buildInfoPackage := s"$rootPackage.interpreter"
+  )
+  .dependsOn(
+    core
+  )
+
+lazy val instrumenter = (project in file("instrumenter"))
+  .enablePlugins(
+    BuildInfoPlugin,
+    Antlr4Plugin
+  )
+  .settings(commonSettings: _*)
+  .settings(
+    name := "instrumenter",
+    Antlr4 / antlr4PackageName := Some(s"$rootPackage.instrumenter"),
+    buildInfoPackage := s"$rootPackage.instrumenter"
   )
   .dependsOn(
     core

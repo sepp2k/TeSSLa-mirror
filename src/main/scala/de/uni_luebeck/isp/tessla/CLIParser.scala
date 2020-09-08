@@ -34,7 +34,6 @@ object CLIParser {
     printAllTypes: Boolean = false,
     listOutStreams: Boolean = false,
     listInStreams: Boolean = false,
-    observations: File = null,
     compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
@@ -55,6 +54,12 @@ object CLIParser {
     optimise: Boolean = true,
     outFile: Option[File] = None,
     jarFile: Option[File] = None
+  ) extends Config
+
+  case class InstrumenterConfig(
+    specSource: CharStream = null,
+    cFile: File = null,
+    includes: Seq[File] = Seq()
   ) extends Config
 
   case class GlobalConfig(
@@ -190,10 +195,7 @@ object CLIParser {
           .text("Print a list of the output streams defined in the given Tessla specification and then exit"),
         opt[Unit]("list-in-streams")
           .foreach(_ => config = config.copy(listInStreams = true))
-          .text("Print a list of the input streams defined in the given Tessla specification and then exit"),
-        opt[File]("observations")
-          .foreach(f => config = config.copy(observations = f))
-          .text("Instrument the provided C file according to the specification")
+          .text("Print a list of the input streams defined in the given Tessla specification and then exit")
       )
   }
 
@@ -245,6 +247,30 @@ object CLIParser {
           .text(
             "Compiles Scala code to a jar file which is created at the given location. No source output is generated"
           )
+      )
+  }
+
+  // Extension for the 'instrumenter' command
+  {
+    import parser._
+    var config = InstrumenterConfig()
+
+    note("")
+    cmd("instrumenter")
+      .foreach(_ => tasks += (() => Task("instrumenter", config)))
+      .text("Instrument C code based on the provided annotations (linux-amd64 only)")
+      .children(
+        arg[File]("<tessla-file>")
+          .foreach(f => config = config.copy(specSource = CharStreams.fromFileName(f.getPath)))
+          .text("The file containing the Tessla specification, with annotations for the instrumentation."),
+        arg[File]("<c-file>")
+          .foreach(f => config = config.copy(cFile = f))
+          .text("Instrument the provided C file according to the specification"),
+        arg[File]("<include-path>...")
+          .optional()
+          .unbounded()
+          .foreach(f => config = config.copy(includes = config.includes :+ f))
+          .text("Include paths for the C compiler")
       )
   }
 

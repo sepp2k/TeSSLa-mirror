@@ -7,9 +7,9 @@ import java.nio.file.Files
 import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
-import de.uni_luebeck.isp.tessla.core.analyses.Observations
 import de.uni_luebeck.isp.tessla.core.util.Lazy
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TesslaAST}
+import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentation
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
@@ -44,10 +44,11 @@ object Main {
     def run(): Unit = {
       try {
         tasks.foreach {
-          case Task(_, config: CLIParser.DocConfig)         => runDoc(config)
-          case Task(_, config: CLIParser.CoreConfig)        => runCore(config)
-          case Task(_, config: CLIParser.InterpreterConfig) => runInterpreter(config)
-          case Task(_, config: CLIParser.TesslacConfig)     => runTesslaCompiler(config)
+          case Task(_, config: CLIParser.DocConfig)          => runDoc(config)
+          case Task(_, config: CLIParser.CoreConfig)         => runCore(config)
+          case Task(_, config: CLIParser.InterpreterConfig)  => runInterpreter(config)
+          case Task(_, config: CLIParser.TesslacConfig)      => runTesslaCompiler(config)
+          case Task(_, config: CLIParser.InstrumenterConfig) => runInstrumenter(config)
         }
       } catch {
         case ex: TesslaError =>
@@ -110,9 +111,6 @@ object Main {
         when(config.printCore)(Lazy(println(core.print(printOptions)))),
         when(config.printCoreLanSpec)(Lazy(println(flatCore.print(printOptions)))),
         when(config.printTyped)(Lazy(println(typed.print(printOptions)))),
-        Option(config.observations).map(f =>
-          Lazy(unwrapResult(new Observations.Instrumenter(f.getAbsolutePath).translate(core)))
-        ),
         when(config.listInStreams)(Lazy(core.in.foreach(is => println(is._1.idOrName)))),
         when(config.listOutStreams)(Lazy(core.out.foreach(os => println(os._1.id.idOrName))))
       ).flatten.headOption.foreach(_.get)
@@ -182,6 +180,17 @@ object Main {
           System.err.println(s"Compilation error: $ex")
           if (global.debug) ex.printStackTrace()
       }
+    }
+
+    def runInstrumenter(config: CLIParser.InstrumenterConfig): Unit = {
+      val compilerOptions = Compiler.Options()
+      val core = unwrapResult(Compiler.compile(config.specSource, compilerOptions))
+      unwrapResult(
+        new CInstrumentation.Instrumenter(
+          config.cFile.getAbsolutePath,
+          config.includes.map(_.getAbsolutePath)
+        ).translate(core)
+      )
     }
 
     private def unwrapResult[T](result: Result[T]): T = result match {

@@ -1,29 +1,20 @@
-package de.uni_luebeck.isp.tessla.core.analyses
+package de.uni_luebeck.isp.tessla.instrumenter
 
+import de.uni_luebeck.isp.tessla.core.util._
 import java.nio.file.Paths
 
-import de.uni_luebeck.isp.tessla.core.{CPatternLexer, CPatternParser, Errors, Location, TranslationPhase}
 import de.uni_luebeck.isp.clang_instrumentation.CPPBridge
+import de.uni_luebeck.isp.tessla.core.CPatternParser._
 import de.uni_luebeck.isp.tessla.core.Errors.{InternalError, ParserError}
-import de.uni_luebeck.isp.tessla.core.CPatternParser.{
-  ArrayAccessContext,
-  DereferenceContext,
-  ParenthesesContext,
-  PatternContext,
-  ReferenceContext,
-  StructUnionAccessArrowContext,
-  StructUnionAccessContext,
-  VariableContext
-}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
-import de.uni_luebeck.isp.tessla.core.util._
+import de.uni_luebeck.isp.tessla.core._
+import org.antlr.v4.runtime._
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.util.Try
 
-object Observations {
+object CInstrumentation {
   sealed abstract class Pattern
   final case class Variable(functionName: Option[String], name: String) extends Pattern {
     override def toString: String = functionName match {

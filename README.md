@@ -7,7 +7,7 @@ This project provides the core functionalities for the TeSSLa language.
 # Usage
 ## Download
 
-You can get the latest version of TeSSLa (Linux/x64) from the [Gitlab Artifact Browser](https://gitlab.isp.uni-luebeck.de/tessla/tessla/builds/artifacts/development/browse/target/scala-2.13?job=deploy).
+You can get the latest version of TeSSLa from the [Gitlab Artifact Browser](https://gitlab.isp.uni-luebeck.de/tessla/tessla/builds/artifacts/development/browse/target/scala-2.13?job=deploy).
 
 ## Building
 
@@ -27,6 +27,7 @@ This project consists of several submodules:
 - Interpreter:                               Sub-folder `interpreter/`         Interactive Shell for evaluation of TeSSLa specifications
 - [Compiler](tessla-compiler/README.md):     Sub-folder `tessla-compiler/`     Efficient compilation of TeSSLa Core to a Scala monitor
 - [Doc](docs/README.md):                     Sub-folder `docs/`                Generation of documentation from comments in a TeSSLa specification (Tessladoc)
+- [Instrumenter](instrumenter/README.md):    Sub-folder `instrumenter/`        Instrumentation of C code to generate traces for a TeSSLa specification (linux-amd64 only)
 
 The code for the common Command line interface is located in `src/`
 
@@ -46,12 +47,13 @@ The CLI of TeSSLa follows a command based structure. The following commands are 
 | compile-core | Compile TeSSLa to TeSSLa Core and print the result          |
 | doc          | Generate documentation for TeSSLa code in JSON format       |
 | compile      | Generate a Scala monitor from a specification               |
+| instrumenter | Instrument C code based on the provided annotations         |
 
 
 For detailed usage information, take a look at the following help text.
 ```
 tessla 1.2.0
-Usage: tessla [interpreter|compile-core|doc|compile] [options] <args>...
+Usage: tessla [interpreter|compile-core|doc|compile|instrumenter] [options] <args>...
 
 Compile Tessla specifications and evaluate them on provided input streams.
   -t, --base-time <value>  Use the given time constant (including a unit) as the reference time for time literals(only in 'interpreter' and 'compile-core'
@@ -85,7 +87,6 @@ Compile the provided specification to Tessla Core
   --print-all-types        Print ASTs with all types
   --list-out-streams       Print a list of the output streams defined in the given Tessla specification and then exit
   --list-in-streams        Print a list of the input streams defined in the given Tessla specification and then exit
-  --observations <value>   Instrument the provided C file according to the specification
 
 Command: doc [options] [<files>]
 Generate documentation for Tessla code
@@ -99,6 +100,12 @@ Compile TeSSLa specifications to Scala
   <tessla-file>            The file containing the Tessla specification
   -o, --out-file <value>   Path to the output file. If not specified source is printed to stdout.
   -j, --jar-file <value>   Compiles Scala code to a jar file which is created at the given location. No source output is generated
+
+Command: instrumenter <tessla-file> <c-file> [<include-path>...]
+Instrument C code based on the provided annotations (linux-amd64 only)
+  <tessla-file>            The file containing the Tessla specification, with annotations for the instrumentation.
+  <c-file>                 Instrument the provided C file according to the specification
+  <include-path>...        Include paths for the C compiler
 ```
 
 ## Examples
