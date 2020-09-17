@@ -32,11 +32,6 @@ deploy:
   artifacts:
     paths:
     - target/scala-2.13/*.jar
-    - core/target/scala-2.13/*.jar
-    - docs/target/scala-2.13/*.jar
-    - interpreter/target/scala-2.13/*.jar
-    - instrumenter/target/scala-2.13/*.jar
-    - tessla-compiler/target/scala-2.13/*.jar
     - target/scala-2.13/api
     - core/target/scala-2.13/api
     - docs/target/scala-2.13/api

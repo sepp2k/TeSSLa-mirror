@@ -37,14 +37,17 @@ ThisBuild / resolvers ++= Seq(
   efficiosReleases
 )
 
-// Shared dependencies and settings between modules
+// Module-specific dependencies
+lazy val clang = "de.uni_luebeck.isp" %% "clang-instrumentation" % "0.0.29"
+lazy val scalac = "org.scala-lang" % "scala-compiler" % compilerVersion
+lazy val scopt = "com.github.scopt" %% "scopt" % "4.0.0-RC2"
+
+// Shared dependencies and settings for all modules
 lazy val commonDependencies = Seq(
-  "com.github.scopt" %% "scopt" % "4.0.0-RC2",
   "org.scalatest" %% "scalatest" % "3.1.0" % "test",
   "io.spray" %% "spray-json" % "1.3.5",
   "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT",
-  "org.typelevel" %% "cats-core" % "2.0.0",
-  "de.uni_luebeck.isp" %% "clang-instrumentation" % "0.0.29"
+  "org.typelevel" %% "cats-core" % "2.0.0"
 )
 
 lazy val commonSettings = Seq(
@@ -115,7 +118,10 @@ lazy val root = (project in file("."))
     name := "tessla",
     Compile / run / mainClass := Some(s"$rootPackage.Main"),
     Compile / packageBin / mainClass := Some(s"$rootPackage.Main"),
-    buildInfoPackage := rootPackage
+    buildInfoPackage := rootPackage,
+    libraryDependencies ++= Seq(
+      scopt
+    )
   )
   .dependsOn(
     core,
@@ -168,7 +174,10 @@ lazy val instrumenter = (project in file("instrumenter"))
   .settings(
     name := "instrumenter",
     Antlr4 / antlr4PackageName := Some(s"$rootPackage.instrumenter"),
-    buildInfoPackage := s"$rootPackage.instrumenter"
+    buildInfoPackage := s"$rootPackage.instrumenter",
+    libraryDependencies ++= Seq(
+      clang
+    )
   )
   .dependsOn(
     core
@@ -197,10 +206,10 @@ lazy val tesslac = (project in file("tessla-compiler"))
   .settings(
     name := "tessla-compiler",
     buildInfoPackage := s"$rootPackage.tessla_compiler",
+    Compile / resourceGenerators += libCopy.taskValue,
     libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-compiler" % compilerVersion
-    ),
-    Compile / resourceGenerators += libCopy.taskValue
+      scalac
+    )
   )
   .dependsOn(
     core
