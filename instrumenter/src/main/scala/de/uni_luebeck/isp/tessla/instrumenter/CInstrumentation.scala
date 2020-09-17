@@ -46,7 +46,8 @@ object CInstrumentation {
     type InStream = (Core.Identifier, Core.Type)
 
     val supportedPlatforms = Set(
-      ("linux", "amd64")
+      ("linux", "amd64"),
+      ("windows", "amd64")
     )
 
     val threadIdInStreams = spec.in.filter {
@@ -340,7 +341,11 @@ object CInstrumentation {
 
     override protected def translateSpec(): Unit = {
       val (os, arch) = (sys.props("os.name").toLowerCase(), sys.props("os.arch").toLowerCase())
-      if (!supportedPlatforms.contains((os, arch)))
+      if (
+        !supportedPlatforms.exists {
+          case (supportedOs, supportedArch) => supportedArch == arch && os.startsWith(supportedOs)
+        }
+      )
         throw Errors.InstrUnsupportedPlatform(os, arch, supportedPlatforms)
 
       assertUnit("InstFunctionCall")
