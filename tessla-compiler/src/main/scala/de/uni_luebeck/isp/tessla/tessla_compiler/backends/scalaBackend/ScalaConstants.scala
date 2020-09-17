@@ -9,7 +9,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, IntermediateCode}
 object ScalaConstants {
 
   /**
-   * Translates an [[ImpLanType]] to its corresponding Scala type.
+   * Translates an [[IntermediateCode.ImpLanType]] to its corresponding Scala type.
    *
    * - The Lazy container type is translated as Function0
    * - The generic type is translated as Any
@@ -45,7 +45,7 @@ object ScalaConstants {
   }
 
   /**
-   * Translates an [[ImpLanVal]] to its corresponding Scala value.
+   * Translates an [[IntermediateCode.ImpLanVal]] to its corresponding Scala value.
    *
    * - None/Some are translated to special values EONone/EOSome to be able to capture errors in Somes
    *

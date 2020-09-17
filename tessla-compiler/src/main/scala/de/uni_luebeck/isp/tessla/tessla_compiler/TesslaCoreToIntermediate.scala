@@ -8,7 +8,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.SourceListing
 import scala.annotation.tailrec
 
 /**
- * Class implementing [[TranslationPhase]] for the translation from TeSSLa Core to
+ * Class implementing TranslationPhase for the translation from TeSSLa Core to
  * abstract imperative code
  * The translation of stream functions is performed in StreamCodeGenerator
  * The translation of other expressions in NonStreamCodeGenerator

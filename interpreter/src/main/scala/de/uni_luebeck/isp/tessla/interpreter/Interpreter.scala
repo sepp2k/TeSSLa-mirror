@@ -68,7 +68,7 @@ class Interpreter(val spec: Core.Specification) extends StreamEngine(ConstantEva
 }
 
 /**
- * Evaluates a [[TesslaAST.Core.Specification]] with a given input trace, producing a trace of events as result.
+ * Evaluates a core specification with a given input trace, producing a trace of events as result.
  */
 
 object Interpreter {

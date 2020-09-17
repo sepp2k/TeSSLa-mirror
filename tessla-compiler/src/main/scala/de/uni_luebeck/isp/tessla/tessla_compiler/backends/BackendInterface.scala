@@ -3,7 +3,11 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
-import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference, IntermediateCodeUtils}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{
+  IntermediateCode,
+  IntermediateCodeTypeInference,
+  IntermediateCodeUtils
+}
 
 import scala.io.Source
 
@@ -16,8 +20,8 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
   protected var variables: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map()
 
   /**
-   * Function triggering the translation from a [[SourceListing]] to real-world source code as String.
-   * Therefore the sections of the [[SourceListing]] are translated to code and included at special places of
+   * Function triggering the translation from a [[IntermediateCode.SourceListing]] to real-world source code as String.
+   * Therefore the sections of the [[IntermediateCode.SourceListing]] are translated to code and included at special places of
    * the template code by replacing
    *
    * - //VARDEF by a section where all used variables are defined
@@ -79,7 +83,7 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
   def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)]): Seq[String]
 
   /**
-   * Translates a sequence of [[ImpLanStmt]] to the corresponding code in the target language.
+   * Translates a sequence of [[IntermediateCode.ImpLanStmt]] to the corresponding code in the target language.
    * Has to be implemented by Backend-Implementations.
    * @param stmts The sequence of statements to be translated.
    * @return The generated code in the target language

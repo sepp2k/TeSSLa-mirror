@@ -3,7 +3,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 import de.uni_luebeck.isp.tessla.core.{Diagnostic, Errors, Location}
 
 /**
- * Class containing errors complementing those in [[de.uni_luebeck.isp.tessla.core.Errors]] by special compilation errors
+ * Class containing errors complementing the core errors
  * and additional compiler related warnings
  */
 object Diagnostics {

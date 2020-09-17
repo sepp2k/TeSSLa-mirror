@@ -9,10 +9,10 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.FilteringReporter
 
 /**
- * A [[scala.tools.nsc.reporters.Reporter]] implementation raising TeSSLa compiler errors if the supervised Scala compiler raises an error
+ * A reporter implementation raising TeSSLa compiler errors if the supervised Scala compiler raises an error
  * and collects TeSSLa warnings if it raises warnings or information
  *
- * @param settings Settings passed to the extended [[FilteringReporter]]
+ * @param settings Settings passed to the reporter
  */
 class TesslaCompilerReporter(val settings: Settings) extends FilteringReporter {
 

@@ -11,7 +11,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 object IntermediateCodeTypeInference {
 
   /**
-   * Determines the type of an [[ImpLanExpr]].
+   * Determines the type of an [[IntermediateCode.ImpLanExpr]].
    * This function may return error-prone results if the examined expression is not type-correct.
    * @param impLanExpr Expression to be examined
    * @param varTypes Type environment, mapping every possibly involved variable identifier to its type
@@ -107,7 +107,7 @@ object IntermediateCodeTypeInference {
    * @param target Type to which the expression should be casted. Optional. If None only the sub-expressions are
    *               casted if necessary.
    * @param varTypes Type environment, mapping every possibly involved variable identifier to its type
-   * @return Expression potentially wrapped into a [[CastingExpression]] and all sub-expression with
+   * @return Expression potentially wrapped into a [[IntermediateCode.CastingExpression]] and all sub-expression with
    *         non-expected type also wrapped into a cast expression.
    */
   def castExpression(exp: ImpLanExpr, target: Option[ImpLanType], varTypes: Map[String, ImpLanType]): ImpLanExpr = {

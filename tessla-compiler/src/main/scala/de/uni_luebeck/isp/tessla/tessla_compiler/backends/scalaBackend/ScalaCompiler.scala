@@ -20,9 +20,9 @@ import scala.reflect.io.Directory
 object ScalaCompiler {
 
   /**
-   * Creates a [[Settings]] instance for the scala compilation
+   * Creates a Settings instance for the scala compilation
    * @param compileDir The working directory of the compilation
-   * @return [[Settings]] to be used for the compilation
+   * @return Settings to be used for the compilation
    */
   def defaultSettings(compileDir: Path, debug: Boolean): Settings = {
     val settings = new Settings()
@@ -132,7 +132,7 @@ object ScalaCompiler {
 }
 
 /**
- * [[TranslationPhase]] generating a monitor as fat jar from Scala code
+ * TranslationPhase generating a monitor as fat jar from Scala code
  * @param outDir The directory where the jar shall be created.
  *               All temporary files will aslo be created in this directory.
  *               This directory has to exist.

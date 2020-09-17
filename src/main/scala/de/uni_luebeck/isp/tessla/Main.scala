@@ -62,12 +62,11 @@ object Main {
     }
 
     /**
-     * Generate documentation.
+     * Generates documentation.
      *
      * This mode parses the input, then extracts and processes the documentation strings
      * from each definition. The result is either printed to stdout or to a file, depending on the configuration.
      *
-     * @see See [[TesslaDoc.extract]] for more
      */
     def runDoc(docConfig: DocConfig): Unit = {
       val includeResolver = Option.when(docConfig.includes)(IncludeResolvers.fromFile _)
@@ -90,7 +89,7 @@ object Main {
     }
 
     /**
-     * Runs the [[Compiler]] on the provided specification and prints the resulting Tessla-Core code,
+     * Runs the compiler on the provided specification and prints the resulting Tessla-Core code,
      * depending on the configuration.
      */
     def runCore(config: CLIParser.CoreConfig): Unit = {
@@ -117,7 +116,7 @@ object Main {
     }
 
     /**
-     * Runs the [[Interpreter]] on the provided specification and trace, or uses the stdin if no trace is provided.
+     * Runs the interpreter on the provided specification and trace, or uses the stdin if no trace is provided.
      */
     def runInterpreter(config: CLIParser.InterpreterConfig): Unit = {
       val core = unwrapResult(Compiler.compile(config.specSource, config.compilerOptions))
@@ -143,6 +142,9 @@ object Main {
 
     }
 
+    /**
+     * Runs the TeSSLa compiler, which takes a TeSSLa specification and compiles it to a monitor in a target language.
+     */
     def runTesslaCompiler(config: CLIParser.TesslacConfig): Unit = {
       try {
         val compilerOptions = Compiler.Options()
@@ -182,6 +184,10 @@ object Main {
       }
     }
 
+    /**
+     * Runs the instrumenter, which evaluates instrumentation annotations on a TeSSLa specification and
+     * instruments a provided C program accordingly.
+     * */
     def runInstrumenter(config: CLIParser.InstrumenterConfig): Unit = {
       val compilerOptions = Compiler.Options()
       val core = unwrapResult(Compiler.compile(config.specSource, compilerOptions))

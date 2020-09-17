@@ -13,7 +13,7 @@ object StreamEngine {
 import de.uni_luebeck.isp.tessla.interpreter.StreamEngine._
 
 /**
- * Evaluates a stream graph synchrously.
+ * Evaluates a stream graph synchronously.
  * In each evaluation cycle inputs are supplied with values.
  * Then.input and delay nodes are triggered to initiate the propagation of values.
  * Listeners can be registered to receive results at output streams.

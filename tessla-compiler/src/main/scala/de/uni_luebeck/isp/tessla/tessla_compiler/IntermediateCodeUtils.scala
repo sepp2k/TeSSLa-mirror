@@ -13,7 +13,7 @@ import scala.language.{implicitConversions, postfixOps}
 object IntermediateCodeUtils {
 
   /**
-   * Folds an [[ImpLanExpr]] including all sub-expressions and sub-statements.
+   * Folds an [[IntermediateCode.ImpLanExpr]] including all sub-expressions and sub-statements.
    * Sub-statements/sub-expressions are traversed prior their parent expressions
    * @param exp The sequence of statements to be folded
    * @param n The start value
@@ -106,7 +106,7 @@ object IntermediateCodeUtils {
   }
 
   /**
-   * Maps f on all subexpressions and g on all sub-statements of an [[ImpLanExpr]]
+   * Maps f on all subexpressions and g on all sub-statements of an [[IntermediateCode.ImpLanExpr]]
    * @param exp The expression to be mapped
    * @param f Function to map expressions
    * @param g Function to map statements
@@ -163,7 +163,7 @@ object IntermediateCodeUtils {
   }
 
   /**
-   * Converts TeSSLa type to corresponding [[ImpLanType]]
+   * Converts TeSSLa type to corresponding [[IntermediateCode.ImpLanType]]
    * @param t Type to be converted. If type is Events[t] the result is equal to calling the function with t.
    * @return The converted type
    */
@@ -294,7 +294,7 @@ object IntermediateCodeUtils {
 
   /**
    * Generates an or (||) expression
-   * @param ops parameter sub-expressions, must be of type [[BoolType]]
+   * @param ops parameter sub-expressions, must be of type [[IntermediateCode.BoolType]]
    * @return Or expression
    */
   implicit def BitwiseOr(ops: Seq[ImpLanExpr]): ImpLanExpr =
@@ -302,7 +302,7 @@ object IntermediateCodeUtils {
 
   /**
    * Generates an and (&&) expression
-   * @param ops parameter sub-expressions, must be of type [[BoolType]]
+   * @param ops parameter sub-expressions, must be of type [[IntermediateCode.BoolType]]
    * @return And expression
    */
   implicit def And(ops: Seq[ImpLanExpr]): ImpLanExpr =

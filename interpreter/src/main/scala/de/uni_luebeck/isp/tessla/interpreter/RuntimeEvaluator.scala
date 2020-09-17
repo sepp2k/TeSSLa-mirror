@@ -16,7 +16,7 @@ object RuntimeEvaluator {
 }
 
 /**
- * An evaluator for [[TesslaAST.Core.Expression]]s, given implementations for externs.
+ * An evaluator for core expressions, given implementations for externs.
  *
   * @param externs definitions of externs, as mapping from their name to their definition
  */

@@ -70,7 +70,7 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
   }
 
   /**
-   * Translates a TeSSLa Core [[FunctionExpression]] to an ImpLan [[LambdaExpression]]
+   * Translates a TeSSLa Core FunctionExpression to an ImpLan [[IntermediateCode.LambdaExpression]]
    * @param e The function to be translated
    * @param tm The [[TypeArgManagement]] to resolve type parameters
    * @param defContext Definition context depicting all var names in the current scope to their definition expression
@@ -94,12 +94,12 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
   }
 
   /**
-   * Translates a block of statements with return expression (i.e. the body of a lambda) to [[ImpLanStmt]]s
+   * Translates a block of statements with return expression (i.e. the body of a lambda) to [[IntermediateCode.ImpLanStmt]]s
    * @param body The sequence of statements to be translated
    * @param ret The return expression of the block
    * @param tm The [[TypeArgManagement]] to resolve type parameters
    * @param defContext Definition context depicting all var names in the current scope to their definition expression
-   * @return The translated block. Contains a [[ReturnStatement]] at the end
+   * @return The translated block. Contains a [[IntermediateCode.ReturnStatement]] at the end
    */
   def translateBody(
     body: Map[Identifier, DefinitionExpression],
@@ -117,11 +117,11 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
 
   /**
    *
-   * @param e Translates an [[ExternExpression]]. If the extern is of function type a lambda expression is wrapped around it.
-   *          If the extern is directly applied this lambda is most likely unnecessary and this function should not be
-   *          used for translation of the called extern.
-   * @param tm The [[TypeArgManagement]] to resolve type parameters
-   * @param defContext  Definition context depicting all var names in the current scope to their definition expression
+   * @param e          Translates an ExternExpression. If the extern is of function type a lambda expression is wrapped around it.
+   *                   If the extern is directly applied this lambda is most likely unnecessary and this function should not be
+   *                   used for translation of the called extern.
+   * @param tm         The [[TypeArgManagement]] to resolve type parameters
+   * @param defContext Definition context depicting all var names in the current scope to their definition expression
    * @return The translated expression
    */
   def translateExtern(
@@ -153,7 +153,7 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
   }
 
   /**
-   * Translates a TeSSLa AST [[ExpressionArg]] to a corresponding [[ImpLanExpr]]
+   * Translates an ExpressionArg to a corresponding [[IntermediateCode.ImpLanExpr]]
    * @param e The expression to be translated
    * @param tm The [[TypeArgManagement]] to resolve type parameters
    * @param defContext Definition context depicting all var names in the current scope to their definition expression

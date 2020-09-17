@@ -2,7 +2,11 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend
 
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.BackendInterface
-import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference, IntermediateCodeUtils}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{
+  IntermediateCode,
+  IntermediateCodeTypeInference,
+  IntermediateCodeUtils
+}
 
 /**
  * [[BackendInterface]] implementation for the translation to Scala code
@@ -37,7 +41,7 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
   }
 
   /**
-   * Translates a sequence of [[ImpLanStmt]] to the corresponding code in Scala.
+   * Translates a sequence of [[IntermediateCode.ImpLanStmt]] to the corresponding code in Scala.
    *
    * @param stmts The sequence of statements to be translated.
    * @return The generated code in Scala
