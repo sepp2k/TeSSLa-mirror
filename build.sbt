@@ -1,3 +1,6 @@
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+
 import sbt.Keys.artifact
 
 // Resolvers
@@ -68,7 +71,12 @@ lazy val commonSettings = Seq(
   buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
   Antlr4 / antlr4Version := "4.7.2",
   Antlr4 / antlr4GenListener := false,
-  Antlr4 / antlr4GenVisitor := true
+  Antlr4 / antlr4GenVisitor := true,
+  headerLicense := Some(
+    HeaderLicense.Custom(
+      Files.readString(Paths.get("LICENSE-HEADER"), StandardCharsets.UTF_8)
+    )
+  )
 )
 
 // Task to copy the scala-library as managed dependency
