@@ -1,9 +1,9 @@
-TeSSLa Interpreter
+TeSSLa Docs
 
 Copyright (c) 2020 Institute of Software Engineering and Programming Languages, 
 University of Lübeck, Germany
 
-TeSSLa Interpreter is licensed under the following license (modified MIT 
+TeSSLa Docs is licensed under the following license (modified MIT
 license):
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -23,7 +23,7 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-TeSSLa Interpreter links directly or indirectly the following works:
+TeSSLa Docs links directly or indirectly the following works:
 
 antlr (BSD License)
 cats (MIT License) 
@@ -41,7 +41,6 @@ scala-compiler (Apache License, Version 2.0)
 scala-library (Apache License, Version 2.0)
 scala-reflect (Apache License, Version 2.0)
 scalatest (Apache License, Version 2.0)
-scopt (MIT License)
 spray-json (Apache License, Version 2.0)
 
 
@@ -52,8 +51,6 @@ cats: Copyright (c) 2015 Cats Contributors.
 checkerframework: Copyright 2004-present by the Checker Framework developers
 plume-lib: Copyright (c) 2017 plume-lib
 scala: Copyright (c) 2002-2020 EPFL, Copyright (c) 2011-2020 Lightbend, Inc.
-sexyopt: Copyright (c) 2017 Sebastian Hungerecker
-txtmark: Copyright (C) 2011-2015 René Jeschke rene_jeschke@yahoo.de
 
 # Jackson JSON processor
 
