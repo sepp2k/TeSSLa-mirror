@@ -292,8 +292,9 @@ object Errors {
     override def message = s"""Key "$key" not found"""
   }
 
-  case class InstrUnsupportedPlatform(os: String, arch: String, platforms: Set[(String, String)]) extends TesslaError {
-    override def message = s"""Unsupported platform $os-$arch for C code instrumentation.
+  case class InstrUnsupportedPlatform(platforms: Set[(String, String)]) extends TesslaError {
+    override def message =
+      s"""Unsupported platform ${sys.props("os.name")}-${sys.props("os.arch")} for C code instrumentation.
                               |Supported platforms are
                               |${platforms.map(p => p._1 + "-" + p._2).mkString("\n")}""".stripMargin
     val loc = Location.unknown

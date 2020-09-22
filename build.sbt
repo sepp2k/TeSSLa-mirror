@@ -53,8 +53,13 @@ lazy val commonDependencies = Seq(
   "org.typelevel" %% "cats-core" % "2.0.0"
 )
 
+// Need to transform to absolute path first to find all files. Perhaps a bug in sbt?
+lazy val commonResources = file(file("resources").getAbsolutePath)
+
 lazy val commonSettings = Seq(
   libraryDependencies ++= commonDependencies,
+  Test / unmanagedResourceDirectories += commonResources,
+  Test / testOptions += Tests.Argument("-oF"),
   scalacOptions ++= Seq(
     "-feature",
     "-unchecked",
@@ -132,7 +137,7 @@ lazy val root = (project in file("."))
     )
   )
   .dependsOn(
-    core,
+    core % "test->test;compile->compile",
     interpreter,
     docs,
     tesslac,
@@ -170,7 +175,7 @@ lazy val interpreter = (project in file("interpreter"))
     buildInfoPackage := s"$rootPackage.interpreter"
   )
   .dependsOn(
-    core
+    core % "test->test;compile->compile"
   )
 
 lazy val instrumenter = (project in file("instrumenter"))
@@ -188,7 +193,7 @@ lazy val instrumenter = (project in file("instrumenter"))
     )
   )
   .dependsOn(
-    core
+    core % "test->test;compile->compile"
   )
 
 lazy val docs = (project in file("docs"))
@@ -203,7 +208,7 @@ lazy val docs = (project in file("docs"))
     buildInfoPackage := s"$rootPackage.docs"
   )
   .dependsOn(
-    core
+    core % "test->test;compile->compile"
   )
 
 lazy val tesslac = (project in file("tessla-compiler"))
@@ -220,5 +225,5 @@ lazy val tesslac = (project in file("tessla-compiler"))
     )
   )
   .dependsOn(
-    core
+    core % "test->test;compile->compile"
   )

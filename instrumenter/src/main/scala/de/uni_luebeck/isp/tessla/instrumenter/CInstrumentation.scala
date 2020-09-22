@@ -39,6 +39,18 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 object CInstrumentation {
+  val supportedPlatforms = Set(
+    ("linux", "amd64"),
+    ("windows", "amd64")
+  )
+
+  def isPlatformSupported = {
+    val (os, arch) = (sys.props("os.name").toLowerCase(), sys.props("os.arch").toLowerCase())
+    supportedPlatforms.exists {
+      case (supportedOs, supportedArch) => supportedArch == arch && os.startsWith(supportedOs)
+    }
+  }
+
   sealed abstract class Pattern
   final case class Variable(functionName: Option[String], name: String) extends Pattern {
     override def toString: String = functionName match {
@@ -68,11 +80,6 @@ object CInstrumentation {
 
     type Annotation = (String, Core.ExpressionArg)
     type InStream = (Core.Identifier, Core.Type)
-
-    val supportedPlatforms = Set(
-      ("linux", "amd64"),
-      ("windows", "amd64")
-    )
 
     val threadIdInStreams = spec.in.filter {
       case (_, (_, annotations)) => annotations.keySet.contains("ThreadId")
@@ -364,13 +371,8 @@ object CInstrumentation {
     }
 
     override protected def translateSpec(): Unit = {
-      val (os, arch) = (sys.props("os.name").toLowerCase(), sys.props("os.arch").toLowerCase())
-      if (
-        !supportedPlatforms.exists {
-          case (supportedOs, supportedArch) => supportedArch == arch && os.startsWith(supportedOs)
-        }
-      )
-        throw Errors.InstrUnsupportedPlatform(os, arch, supportedPlatforms)
+      if (!isPlatformSupported)
+        throw Errors.InstrUnsupportedPlatform(supportedPlatforms)
 
       assertUnit("InstFunctionCall")
       assertUnit("InstFunctionCalled")
