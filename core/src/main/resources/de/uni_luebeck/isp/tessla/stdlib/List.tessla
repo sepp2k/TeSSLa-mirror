@@ -10,8 +10,7 @@ module List {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## out list
   ## ~~~
   ##
@@ -38,8 +37,8 @@ module List {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.prepend(x, old), List.empty[Int])
+  ## def list: Events[List[Int]] =
+  ##   fold(x, List.empty[Int], (acc: List[Int], v: Int) => List.prepend(v, acc))
   ## out list
   ## ~~~
   ##
@@ -65,12 +64,13 @@ module List {
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[Int] # elements to preprend
+  ## in x: Events[Int] # elements to prepend
   ## in y: Events[Int] # index of the requested element
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.prepend(x, old), List.empty[Int])
+  ## import List
+  ## def list: Events[List[Int]] =
+  ##   fold(x, List.empty[Int], (acc: List[Int], v: Int) => List.prepend(v, acc))
   ## def element = List.get(list, y)
-  ## out list
+  ## out element
   ## ~~~
   ##
   ## **Trace example:**
@@ -102,11 +102,10 @@ module List {
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[String] # element to set
-  ## in y: Events[Int] # index in the list
+  ## in x: Events[(Int, String)]
   ## def init = List.append(List.append(List.empty[String], "A"), "B")
-  ## def old = last(list, mergeUnit(x, y))
-  ## def list: Events[List[String]] = merge(List.set(old, y, x), init)
+  ## def list: Events[List[String]] =
+  ##   fold(x, init, (acc: List[String], op: (Int, String)) => List.set(acc, op._1, op._2))
   ## out list
   ## ~~~
   ##
@@ -119,12 +118,11 @@ module List {
   ## stream list: signal
   ## ---
   ## 0: list = [A, B]
-  ## 1: x = C
-  ## 3: y = 0
+  ## 3: x = (0, C)
   ## 3: list = [C, B]
-  ## 5: x = D
+  ## 5: x = (0, D)
   ## 5: list = [D, B]
-  ## 8: y = 1
+  ## 8: x = (1, D)
   ## 8: list = [D, D]
   ## ~~~
   liftable def set[T](list: strict List[T], index: strict Int, value: strict T): List[T] = extern("List_set")
@@ -135,8 +133,7 @@ module List {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def size = List.size(list)
   ## out size
   ## ~~~
@@ -169,8 +166,7 @@ module List {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def empty = List.isEmpty(list)
   ## out empty
   ## ~~~
@@ -203,8 +199,7 @@ module List {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def tail = filter(List.tail(list), !(List.isEmpty(list)))
   ## out tail
   ## ~~~
@@ -236,8 +231,7 @@ module List {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def init = filter(List.init(list), !(List.isEmpty(list)))
   ## out init
   ## ~~~
@@ -270,8 +264,7 @@ module List {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def head = filter(List.head(list), !(List.isEmpty(list)))
   ## out head
   ## ~~~
@@ -303,8 +296,7 @@ module List {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def l = filter(List.last(list), !(List.isEmpty(list)))
   ## out l
   ## ~~~
@@ -337,8 +329,7 @@ module List {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(list, x)
-  ## def list: Events[List[Int]] = merge(List.append(old, x), List.empty[Int])
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def s = List.fold(list, 0, (a:Int, b:Int) => a + b)
   ## out s
   ## ~~~

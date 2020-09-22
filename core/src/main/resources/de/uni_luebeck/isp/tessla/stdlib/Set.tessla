@@ -35,8 +35,7 @@ module Set {
   ##
   ## ~~~ruby
   ## in x: Events[Int] # elements to add
-  ## def old = last(set, x)
-  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
   ## out set
   ## ~~~
   ##
@@ -66,8 +65,7 @@ module Set {
   ## ~~~ruby
   ## in x: Events[Int] # elements to add
   ## in y: Events[Int] # items to check
-  ## def old = last(set, x)
-  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
   ## def contains = Set.contains(set,y)
   ## out contains
   ## ~~~
@@ -101,8 +99,7 @@ module Set {
   ## ~~~ruby
   ## in x: Events[Int] # elements to remove
   ## def filledSet = Set.add(Set.add(Set.add(Set.empty[Int], 1), 2), 3)
-  ## def old = last(set, x)
-  ## def set: Events[Set[Int]] = merge(Set.remove(old, x), filledSet)
+  ## def set: Events[Set[Int]] = fold(x, filledSet, Set.remove)
   ## out set
   ## ~~~
   ##
@@ -129,8 +126,7 @@ module Set {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(set, x)
-  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
   ## def size = Set.size(set)
   ## out size
   ## ~~~
@@ -168,10 +164,8 @@ module Set {
   ## ~~~ruby
   ## in x: Events[Int] # elements to add to set1
   ## in y: Events[Int] # elements to add to set2
-  ## def old = last(set1, x)
-  ## def set1: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
-  ## def old2 = last(set2, y)
-  ## def set2: Events[Set[Int]] = merge(Set.add(old2, y), Set.empty[Int])
+  ## def set1: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
+  ## def set2: Events[Set[Int]] = fold(y, Set.empty[Int], Set.add)
   ## def union = Set.union(set1, set2)
   ## out union
   ## ~~~
@@ -214,10 +208,8 @@ module Set {
   ## ~~~ruby
   ## in x: Events[Int] # elements to add to set1
   ## in y: Events[Int] # elements to add to set2
-  ## def old = last(set1, x)
-  ## def set1: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
-  ## def old2 = last(set2, y)
-  ## def set2: Events[Set[Int]] = merge(Set.add(old2, y), Set.empty[Int])
+  ## def set1: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
+  ## def set2: Events[Set[Int]] = fold(y, Set.empty[Int], Set.add)
   ## def intersection = Set.intersection(set1, set2)
   ## out intersection
   ## ~~~
@@ -259,10 +251,8 @@ module Set {
   ## ~~~ruby
   ## in x: Events[Int] # elements to add to set1
   ## in y: Events[Int] # elements to add to set2
-  ## def old = last(set1, x)
-  ## def set1: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
-  ## def old2 = last(set2, y)
-  ## def set2: Events[Set[Int]] = merge(Set.add(old2, y), Set.empty[Int])
+  ## def set1: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
+  ## def set2: Events[Set[Int]] = fold(y, Set.empty[Int], Set.add)
   ## def minus = Set.minus(set1, set2)
   ## out minus
   ## ~~~
@@ -306,8 +296,7 @@ module Set {
   ##
   ## ~~~ruby
   ## in x: Events[Int]
-  ## def old = last(set, x)
-  ## def set: Events[Set[Int]] = merge(Set.add(old, x), Set.empty[Int])
+  ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
   ## def result = Set.fold(set, 0, (a:Int, b:Int) => a + b)
   ## out result
   ## ~~~

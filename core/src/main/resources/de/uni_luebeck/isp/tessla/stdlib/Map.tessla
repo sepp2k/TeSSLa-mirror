@@ -10,8 +10,10 @@ module Map {
   ##
   ## ~~~ruby
   ## in x: Events[(String, Int)]
-  ## def old = last(map, x)
-  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
   ## out map
   ## ~~~
   ##
@@ -39,8 +41,10 @@ module Map {
   ## ~~~ruby
   ## in x: Events[(String, Int)]
   ## in y: Events[String]
-  ## def old = last(map, x)
-  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
   ## def contains = Map.contains(map, y)
   ## out contains
   ## ~~~
@@ -76,8 +80,10 @@ module Map {
   ## ~~~ruby
   ## in x: Events[(String, Int)]
   ## in y: Events[String]
-  ## def old = last(map, x)
-  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
   ## def value = Map.get(map, y)
   ## out value
   ## ~~~
@@ -113,8 +119,7 @@ module Map {
   ## ~~~ruby
   ## in x: Events[String]
   ## def filledMap = Map.add(Map.add(Map.empty[String, Int], "A", 2), "B", 4)
-  ## def old = last(map, x)
-  ## def map: Events[Map[String, Int]] = merge(Map.remove(old, x), filledMap)
+  ## def map: Events[Map[String, Int]] = fold(x, filledMap, Map.remove)
   ## out map
   ## ~~~
   ##
@@ -139,8 +144,10 @@ module Map {
   ##
   ## ~~~ruby
   ## in x: Events[(String, Int)]
-  ## def old = last(map, x)
-  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
   ## def size = Map.size(map)
   ## out size
   ## ~~~
@@ -173,8 +180,10 @@ module Map {
   ##
   ## ~~~ruby
   ## in x: Events[(String, Int)]
-  ## def old = last(map, x)
-  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
   ## def keys = Map.keys(map)
   ## out keys
   ## ~~~
@@ -206,8 +215,10 @@ module Map {
   ##
   ## ~~~ruby
   ## in x: Events[(String, Int)]
-  ## def old = last(map, x)
-  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
   ## def sum = Map.fold(map, 0, (r: Int, k: String, v: Int) => r + v)
   ## out sum
   ## ~~~
@@ -242,8 +253,10 @@ module Map {
   ## ~~~ruby
   ## in x: Events[(String, Int)]
   ## in y: Events[String]
-  ## def old = last(map, x)
-  ## def map: Events[Map[String, Int]] = merge(Map.add(old, x._1, x._2), Map.empty[String, Int])
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
   ## def result = Map.getOrElse(map, y, 42)
   ## out result
   ## ~~~
@@ -278,9 +291,8 @@ module Map {
   ## **Usage example:**
   ##
   ## ~~~ruby
-  ## in x: Events[Int]
-  ## def old = last(map, x)
-  ## def map: Events[Map[String, Int]] = merge(Map.inc(old, x), Map.empty[String, Int])
+  ## in x: Events[String]
+  ## def map: Events[Map[String, Int]] = fold(x, Map.empty[String, Int], Map.inc)
   ## out map
   ## ~~~
   ##
