@@ -288,12 +288,12 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         (mkID(sig.name), translateType(sig.`type`))
       }
       checkForDuplicates(memberTypes.map(_._1).toSeq)
-      Tessla.ObjectType(memberTypes.toMap, isOpen = typ.DOTDOT != null, Location.fromNode(typ))
+      Tessla.ObjectType(memberTypes.toMap, Location.fromNode(typ))
     }
 
     override def visitTupleType(typ: TesslaSyntax.TupleTypeContext) = {
       val types = typ.elementTypes.asScala.map(translateType)
-      Tessla.ObjectType(tupleToObject(types.toSeq), isOpen = false, Location.fromNode(typ))
+      Tessla.ObjectType(tupleToObject(types.toSeq), Location.fromNode(typ))
     }
   }
 

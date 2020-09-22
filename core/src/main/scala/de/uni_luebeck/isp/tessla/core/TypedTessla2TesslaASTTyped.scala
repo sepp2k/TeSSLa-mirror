@@ -245,8 +245,7 @@ class TypedTessla2TesslaASTTypedWorker(
         }.toList,
         toType(returnType)
       )
-    case TypedTessla.ObjectType(memberTypes, isOpen) =>
-      if (isOpen) throw Errors.UnsupportedOpenTypes(location)
+    case TypedTessla.ObjectType(memberTypes) =>
       Typed.RecordType(memberTypes.map(x => (x._1, (toType(x._2), Location.unknown))))
     case TypedTessla.TypeParameter(id, loc) => Typed.TypeParam(toIdentifier(id, loc), loc)
   }

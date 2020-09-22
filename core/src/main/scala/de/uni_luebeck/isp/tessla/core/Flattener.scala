@@ -536,7 +536,7 @@ class Flattener(spec: Tessla.Specification)
           case (id, t) =>
             id.name -> translateType(t, defs, env)
         }
-        FlatTessla.ObjectType(memberTypes, ot.isOpen)
+        FlatTessla.ObjectType(memberTypes)
     }
 
   def translateExpression(

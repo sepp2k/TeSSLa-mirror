@@ -322,12 +322,9 @@ object Tessla {
     override def toString = s"(${parameterTypes.mkString(", ")}) => $returnType]"
   }
 
-  case class ObjectType(memberTypes: Map[Identifier, Type], isOpen: Boolean, loc: Location) extends Type {
+  case class ObjectType(memberTypes: Map[Identifier, Type], loc: Location) extends Type {
     override def toString = {
-      var members = memberTypes.toSeq.map { case (name, t) => s"$name : $t" }
-      if (isOpen) {
-        members :+= ".."
-      }
+      val members = memberTypes.toSeq.map { case (name, t) => s"$name : $t" }
       members.mkString("{", ", ", "}")
     }
   }

@@ -63,7 +63,7 @@ type
     : name=ID #SimpleType
     | name=ID '[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']' #TypeApplication
     | '(' NL* parameterTypes+=evalType (',' NL* parameterTypes+=evalType)* NL* ')' '=>' NL* resultType=type #FunctionType
-    | ('${' | '{') NL* (memberSigs+=memberSig (',' NL* memberSigs+=memberSig)* (',' '..'?)?)? NL* '}' #ObjectType
+    | ('${' | '{') NL* (memberSigs+=memberSig (',' NL* memberSigs+=memberSig)* (',')?)? NL* '}' #ObjectType
     | '(' NL* (elementTypes+=type (',' NL* elementTypes+=type)* )? NL* ')' #TupleType
     ;
 

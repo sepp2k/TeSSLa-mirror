@@ -5,14 +5,14 @@
 ### Breaking Changes
 * The CLI has fundamentally changed. Refer to the [README](README.md) for more details.
 * Remove the deprecated `print` keyword. Use `@raw out` instead.
-* Remove event ranges and the associated `--flatten-inputs` CLI flag.
+* Dropped support for event ranges and the associated `--flatten-inputs` CLI flag.
+* Dropped support for open record types (e.g. `{a: Int, ..}`) 
 * Annotations are no longer allowed on `def`.
 * The `__builtin__` keyword has been replaced with `extern`. Additionally, the `extern` keyword expects a string literal, such that `__builtin__(foo)` would now be `extern("foo")`.
 * The annotation `@liftable` has been replaced by a new keyword `liftable`.
 * The TeSSLa documentation does not produce Markdown output any more. Instead, the generated documentation is in Json format which can then be processed further according to your needs.
 * Line breaks *before* the `:` on the type of an input stream are no longer allowed. The same restriction applies to line breaks *before* the `=>` on a function type.
 * The `--observations` feature, which generated a json configuration to use with the C instrumentation, has been removed. Instead, the `instrumenter` command can now be used to instrument C code directly.
-* Due to the refactoring of the AST, open record types (e.g. `{a: Int, ..}`) are not yet supported in this version.
 
 ### Additions and Fixes
 * The `@raw` annotation is now properly defined as an anntation in the standard library, instead of being hard coded.
@@ -31,7 +31,7 @@ If no evaluation strategy is defined, it is inferred from the type of that param
 * Fixed type checker using the full type of a record to infer the type of a member access, causing expressions like `foo = (x, foo._1)` to fail, due to being detected as an infinite recursion. (See [#137](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/137))
 * Fixed implementations of `since0` and `sinceInfinity` in the `MITL` module.
 * Fixed `nodoc` documentation tags not being applied within a module scope.
-* Add `inmodule` documentation tags to attach type or annotation definitions to a specific module, even when declared outside of the module (at least currently, type and annotations cannot be defined within a module, but only in the global scope)
+* Add `inmodule` documentation tags to attach type or annotation definitions to a specific module, even when declared outside of the module (at least currently, type and annotations cannot be defined within a module, but only in the global scope).
 * Add proper linking of other documentation entries to the documentation generation, instead of using markdown, using the syntax `@[<module>#<member>]`, e.g. `@[Types#true]`.
 * Add implicit lifting to member accesses, which allows to use member access directly on streams of records (e.g. `foo._1` where `foo: Events[(Int, Int)]`)
 * Several changes to the printed TeSSLa Core format:

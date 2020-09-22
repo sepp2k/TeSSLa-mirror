@@ -114,7 +114,7 @@ class TypeChecker(spec: FlatTessla.Specification)
         f.isLiftable
       )
     case o: FlatTessla.ObjectType =>
-      TypedTessla.ObjectType(mapValues(o.memberTypes)(translateType(_, env)), o.isOpen)
+      TypedTessla.ObjectType(mapValues(o.memberTypes)(translateType(_, env)))
     case tvar: FlatTessla.TypeParameter =>
       val newTvar = env.getOrElse(
         tvar.id,
@@ -406,7 +406,7 @@ class TypeChecker(spec: FlatTessla.Specification)
               .map(typeSubst(expectedMemberType, _, substitutions))
               .getOrElse(expectedMemberType)
         }
-        TypedTessla.ObjectType(members, expected.isOpen)
+        TypedTessla.ObjectType(members)
       case (expectedType: TypedTessla.BuiltInType, actualType: TypedTessla.BuiltInType) =>
         assert(expectedType.name != actualType.name)
         expected
@@ -511,7 +511,7 @@ class TypeChecker(spec: FlatTessla.Specification)
             child.memberTypes
               .get(name)
               .exists(childTyp => isSubtypeOrEqual(parent = typ, child = childTyp))
-        } && (parent.isOpen || !child.isOpen && parent.memberTypes.keySet == child.memberTypes.keySet)
+        } && (parent.memberTypes.keySet == child.memberTypes.keySet)
       case _ =>
         parent == child
     }
@@ -677,7 +677,7 @@ class TypeChecker(spec: FlatTessla.Specification)
         val members = mapValues(o.members)(member => TypedTessla.IdLoc(env(member.id), member.loc))
         val memberTypes = mapValues(members)(member => typeMap(member.id))
         TypedTessla
-          .ObjectLiteral(members, o.loc) -> TypedTessla.ObjectType(memberTypes, isOpen = false)
+          .ObjectLiteral(members, o.loc) -> TypedTessla.ObjectType(memberTypes)
 
       case acc: FlatTessla.MemberAccess if resolvedMemberAccesses.contains((acc.receiver.id, acc.member)) =>
         val receiver = env(acc.receiver.id)

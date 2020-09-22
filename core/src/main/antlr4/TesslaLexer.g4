@@ -31,7 +31,6 @@ LIFTABLE: 'liftable';
 COMMA: ',';
 SEMI: ';';
 DOT: '.';
-DOTDOT: '..';
 COLONEQ: ':=';
 ROCKET: '=>';
 DOLLAR_BRACE: '${';
