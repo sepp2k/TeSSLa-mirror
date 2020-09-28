@@ -24,6 +24,8 @@ object ScalaConstants {
       case ImmutableMapType(keyType, valType) => s"Map[${typeTranslation(keyType)}, ${typeTranslation(valType)}]"
       case MutableListType(valType) => s"scala.collection.mutable.ArrayBuffer[${typeTranslation(valType)}]"
       case ImmutableListType(valType) => s"List[${typeTranslation(valType)}]"
+      case MutableQueueType(valType) => s"scala.collection.mutable.Queue[${typeTranslation(valType)}]"
+      case ImmutableQueueType(valType) => s"scala.collection.immutable.Queue[${typeTranslation(valType)}]"
       case FunctionType(argsTypes, retType) => {
         val ret = ((if (argsTypes.isEmpty) "" else ", ") + typeTranslation(retType))
         s"scala.Function${argsTypes.size}[${argsTypes.map(typeTranslation).mkString(", ")}${ret}]"
@@ -49,6 +51,8 @@ object ScalaConstants {
       case EmptyImmutableMap(_, _) => "Map()"
       case EmptyMutableList(t) => typeTranslation(MutableListType(t)) + "()"
       case EmptyImmutableList(_) => "List()"
+      case EmptyMutableQueue(_) => "scala.collection.mutable.Queue()"
+      case EmptyImmutableQueue(_) => "scala.collection.immutable.Queue()"
       case StructValue(vals) => s"(${vals.toSeq.sortWith{case ((n1,_),(n2,_)) => n1 < n2}.map{case (_, v) => valueTranslation(v)}.mkString(", ")})"
     }
   }
@@ -151,6 +155,14 @@ object ScalaConstants {
       case "__List_set__" if typeHint.retType.isInstanceOf[MutableListType] => s"${args(0)}.update(${args(1)}.asInstanceOf[Int], ${args(2)})"
       case "__List_set__" => s"${args(0)}.updated(${args(1)}.asInstanceOf[Int], ${args(2)})"
       case "__List_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
+
+      case "__Queue_empty__" if typeHint.retType.isInstanceOf[MutableQueueType] => "scala.collection.mutable.Queue()"
+      case "__Queue_empty__" => "scala.collection.immutable.Queue()"
+      case "__Queue_enq__" => s"${args(0)}.enqueue(${args(1)})"
+      case "__Queue_deq__" if typeHint.retType.isInstanceOf[MutableQueueType]=> s"${args(0)}.dropInPlace(1)"
+      case "__Queue_deq__" => s"${args(0)}.drop(1)"
+      case "__Queue_first__" => s"${args(0)}.front"
+      case "__Queue_size__" => s"${args(0)}.size"
 
       case "__getStruct__" => {
         typeHint match {

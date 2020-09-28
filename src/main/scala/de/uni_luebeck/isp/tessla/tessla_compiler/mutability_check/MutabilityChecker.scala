@@ -349,7 +349,8 @@ object MutabilityChecker extends
     tpe match {
       case InstantiatedType("Map", _, _) |
            InstantiatedType("Set", _, _) |
-           InstantiatedType("List", _, _) => true
+           InstantiatedType("List", _, _) |
+           InstantiatedType("Queue", _, _) => true
       case InstantiatedType("Option", Seq(t), _) => mutabilityCheckRelevantType(t)
       case _ => false
     }
@@ -361,6 +362,7 @@ object MutabilityChecker extends
       case InstantiatedType("Option", List(t), l) => InstantiatedType("Option", List(mkTypeMutable(t)), l)
       case InstantiatedType("Set", t, l) => InstantiatedType("MutSet", t, l)
       case InstantiatedType("Map", t, l) => InstantiatedType("MutMap", t, l)
+      case InstantiatedType("Queue", t, l) => InstantiatedType("MutQueue", t, l)
       case InstantiatedType("List", t, l) => InstantiatedType("MutList", t, l)
       case _ : TypeParam => t
       //TODO: Add Error

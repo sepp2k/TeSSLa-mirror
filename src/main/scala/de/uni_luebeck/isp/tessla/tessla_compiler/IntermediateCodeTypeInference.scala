@@ -31,6 +31,8 @@ object IntermediateCodeTypeInference {
       case EmptyImmutableMap(keyType, valType) => ImmutableMapType(keyType, valType)
       case EmptyMutableList(valType) => MutableListType(valType)
       case EmptyImmutableList(valType) => ImmutableListType(valType)
+      case EmptyMutableQueue(valType) => MutableQueueType(valType)
+      case EmptyImmutableQueue(valType) => ImmutableQueueType(valType)
       case FunctionCall(_, _, typeHint) => typeHint.retType
       case TernaryExpression(_, e1, e2) => getLeastCommonType(typeInference(e1, varTypes), typeInference(e2, varTypes))
       case Equal(_, _) => BoolType

@@ -103,6 +103,14 @@ object IntermediateCode {
     override def toString = s"ImmutList<$valType>"
   }
 
+  final case class MutableQueueType(valType: ImpLanType) extends GenericImpLanType(Seq(valType)) {
+    override def toString = s"MutQueue<$valType>"
+  }
+
+  final case class ImmutableQueueType(valType: ImpLanType) extends GenericImpLanType(Seq(valType)) {
+    override def toString = s"ImmutQueue<$valType>"
+  }
+
   final case class FunctionType(argsTypes: Seq[ImpLanType], retType: ImpLanType) extends GenericImpLanType(argsTypes :+ retType) {
     override def toString = s"${argsTypes.mkString(" x ")} -> $retType"
   }
@@ -167,6 +175,14 @@ object IntermediateCode {
 
   final case class EmptyImmutableList(valType: ImpLanType) extends ImpLanVal {
     override def toString = s"ImmutList<$valType>{}"
+  }
+
+  final case class EmptyMutableQueue(valType: ImpLanType) extends ImpLanVal {
+    override def toString = s"MutQueue<$valType>{}"
+  }
+
+  final case class EmptyImmutableQueue(valType: ImpLanType) extends ImpLanVal {
+    override def toString = s"ImmutQueue<$valType>{}"
   }
 
   final case class EmptyFunction(typeHint: ImpLanType) extends ImpLanVal {

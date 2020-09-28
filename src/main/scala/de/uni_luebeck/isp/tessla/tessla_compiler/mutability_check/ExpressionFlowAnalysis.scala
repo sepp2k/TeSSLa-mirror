@@ -180,15 +180,19 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
         getLiftFlow(resID, e, argExps, scope, fixedPoints)
       case ExternExpression(_, _, _, "Set_empty", _) |
            ExternExpression(_, _, _, "Map_empty", _) |
-           ExternExpression(_, _, _, "List_empty", _) =>
+           ExternExpression(_, _, _, "List_empty", _) |
+           ExternExpression(_, _, _, "Queue_empty", _)=>
         IdentifierDependencies.empty
       case ExternExpression(_, _, _, "Map_add", _) =>
         IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(args(1), args(2)), Set())
       case ExternExpression(_, _, _, "Set_add", _) |
+           ExternExpression(_, _, _, "Queue_enq", _) |
            ExternExpression(_, _, _, "Map_remove", _) |
            ExternExpression(_, _, _, "Set_remove", _) |
            ExternExpression(_, _, _, "List_append", _) =>
         IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(args(1)), Set())
+      case ExternExpression(_, _, _, "Queue_deq", _) =>
+        IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(), Set())
       case ExternExpression(_, _, _, "List_set", _) =>
         IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(args(2)), Set())
       case ExternExpression(_, _, _, "List_prepend", _) =>
@@ -201,6 +205,8 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
            ExternExpression(_, _, _, "List_fold", _) |
            ExternExpression(_, _, _, "Map_size", _) |
            ExternExpression(_, _, _, "Set_size", _) |
+           ExternExpression(_, _, _, "Queue_size", _) |
+           ExternExpression(_, _, _, "Queue_first", _) |
            ExternExpression(_, _, _, "List_size", _) |
            ExternExpression(_, _, _, "List_tail", _) | //TODO: Pass???
            ExternExpression(_, _, _, "List_init", _) =>

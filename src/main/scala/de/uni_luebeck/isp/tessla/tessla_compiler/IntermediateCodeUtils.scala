@@ -125,6 +125,8 @@ object IntermediateCodeUtils {
       case InstantiatedType("MutMap", Seq(t1, t2), _) => MutableMapType(t1, t2)
       case InstantiatedType("List", Seq(t), _) => ImmutableListType(t)
       case InstantiatedType("MutList", Seq(t), _) => MutableListType(t)
+      case InstantiatedType("Queue", Seq(t), _) => ImmutableQueueType(t)
+      case InstantiatedType("MutQueue", Seq(t), _) => MutableQueueType(t)
       case TesslaAST.Core.FunctionType(_, paramTypes, resultType, _) => IntermediateCode.FunctionType(paramTypes.map{case (_,t) => typeConversion(t)}, typeConversion(resultType)) //TODO: Type params
       case RecordType(entries, _) => {
         def comp(s1: String, s2: String) : Boolean = {
@@ -162,6 +164,8 @@ object IntermediateCodeUtils {
       case InstantiatedType("MutMap", Seq(t1, t2), _) => EmptyMutableMap(t1, t2)
       case InstantiatedType("List", Seq(t), _) => EmptyImmutableList(t)
       case InstantiatedType("MutList", Seq(t), _) => EmptyMutableList(t)
+      case InstantiatedType("Queue", Seq(t), _) => EmptyImmutableQueue(t)
+      case InstantiatedType("MutQueue", Seq(t), _) => EmptyMutableQueue(t)
       case TesslaAST.Core.FunctionType(_, _, _, _) => EmptyFunction(t)
       case TypeParam(_, _) => GeneralValue //TODO: Introduce GenericType in Intermediate Code for Rust translation
       case i: InstantiatedType => throw tessla_compiler.Errors.CommandNotSupportedError(s"Default value for type $i not supported")
