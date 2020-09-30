@@ -63,8 +63,14 @@ object TesslaDoc {
     isLiftable: Boolean
   ) extends TesslaDoc
 
-  case class AnnotationDoc(name: String, parameters: Seq[Param], doc: String, inModule: Option[String], loc: Location)
-      extends TesslaDoc
+  case class AnnotationDoc(
+    name: String,
+    parameters: Seq[Param],
+    global: Boolean,
+    doc: String,
+    inModule: Option[String],
+    loc: Location
+  ) extends TesslaDoc
 
   case class TypeDoc(name: String, typeParameters: Seq[String], doc: String, inModule: Option[String], loc: Location)
       extends TesslaDoc
@@ -188,12 +194,14 @@ object TesslaDoc {
         annotationDef: TesslaSyntax.AnnotationDefinitionContext
       ): Seq[AnnotationDoc] = {
         val (inModule, doc) = getInModule(getDoc(annotationDef.tessladoc.asScala.toSeq))
+        val isGlobal = annotationDef.AT() == null
         Seq(
           AnnotationDoc(
             name = annotationDef.ID().getText,
             parameters = annotationDef.parameters.asScala
               .map(p => Param(p.ID.getText, translateEvalType(p.parameterType)))
               .toSeq,
+            global = isGlobal,
             doc = doc,
             inModule = inModule,
             loc = Location.fromNode(annotationDef)
