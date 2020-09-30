@@ -260,23 +260,21 @@ object TesslaDoc {
 
   def extract(
     sources: Seq[CharStream],
-    includeResolver: Option[String => Option[CharStream]],
-    includeStdlib: Boolean
+    options: Compiler.Options,
+    includeStdlib: Boolean,
+    withIncludes: Boolean
   ): Result[Docs] = {
-    Result
-      .runSequentially(sources) { src =>
-        val results =
-          includeResolver.map(new TesslaParser.WithIncludes(_).translate(src)).getOrElse {
-            TesslaParser.SingleFile.translate(src).map(Seq(_))
-          }
-        results.andThen(new Extractor(_).translate())
-      }
+    resolveIncludes(sources, Option.when(withIncludes)(options.includeResolver))
       .andThen { docsForFiles =>
-        if (includeStdlib) {
-          forStdlib.map(_ +: docsForFiles)
+        val stdlib = if (includeStdlib) {
+          options
+            .stdlibIncludeResolver(options.stdlibPath)
+            .map(predef => resolveIncludes(Seq(predef), Some(options.stdlibIncludeResolver)))
+            .getOrElse { Failure(Seq(InternalError("Could not find standard library")), Seq()) }
         } else {
-          Success(docsForFiles, Seq())
+          Success(Seq(), Seq())
         }
+        stdlib.map(_ ++ docsForFiles)
       }
       .map(docs => Docs(docs.flatMap(_.items), docs.flatMap(_.imports)))
       .map(docs => (Docs.apply _).tupled(qualifyImports(docs.items, docs.imports, Map(), Nil)))
@@ -303,12 +301,16 @@ object TesslaDoc {
     (newItems, newImports)
   }
 
-  private def forStdlib: Result[Docs] = {
-    IncludeResolvers
-      .fromStdlibResource("stdlib.tessla")
-      .map { predef =>
-        extract(Seq(predef), Some(IncludeResolvers.fromStdlibResource), includeStdlib = false)
-      }
-      .getOrElse { Failure(Seq(InternalError("Could not find standard library")), Seq()) }
+  private def resolveIncludes(
+    sources: Seq[CharStream],
+    includeResolver: Option[String => Option[CharStream]]
+  ): Result[Seq[Docs]] = {
+    Result.runSequentially(sources) { src =>
+      val results = includeResolver
+        .map(new TesslaParser.WithIncludes(_).translate(src))
+        .getOrElse(TesslaParser.SingleFile.translate(src).map(Seq(_)))
+      results.andThen(new Extractor(_).translate())
+    }
   }
+
 }

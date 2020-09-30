@@ -46,7 +46,8 @@ object CLIParser {
     stdLib: Boolean = false,
     includes: Boolean = false,
     outfile: Option[File] = None,
-    sources: Seq[CharStream] = Seq()
+    sources: Seq[CharStream] = Seq(),
+    compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
   case class CoreConfig(
@@ -78,13 +79,15 @@ object CLIParser {
     specSource: CharStream = null,
     optimise: Boolean = true,
     outFile: Option[File] = None,
-    jarFile: Option[File] = None
+    jarFile: Option[File] = None,
+    compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
   case class InstrumenterConfig(
     specSource: CharStream = null,
     cFile: File = null,
-    includes: Seq[File] = Seq()
+    includes: Seq[File] = Seq(),
+    compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
   case class GlobalConfig(
@@ -103,22 +106,16 @@ object CLIParser {
     note(programDescription)
     opt[String]('t', "base-time")
       .foreach(s => compilerOptions = compilerOptions.copy(baseTimeString = Some(s)))
-      .text(
-        "Use the given time constant (including a unit) as the reference time for time literals" +
-          "(only in 'interpreter' and 'compile-core'"
-      )
+      .text("Use the given time constant (including a unit) as the reference time for time literals")
     opt[File]('s', "stdlib")
       .valueName("<file>")
-      .foreach(f =>
+      .foreach(f => {
         compilerOptions = compilerOptions.copy(
-          stdlibPath = f.getPath,
-          stdlibIncludeResolver = IncludeResolvers.fromFile
+          stdlibPath = f.getName,
+          stdlibIncludeResolver = (s: String) => IncludeResolvers.fromFile(f.toPath.resolveSibling(s).toString)
         )
-      )
-      .text(
-        "Provide a standard library to use instead of the default one." +
-          "(only in 'interpreter' and 'compile-core'"
-      )
+      })
+      .text("Provide a standard library to use instead of the default one.")
 
     opt[Unit]("no-diagnostics")
       .foreach(_ => global = global.copy(diagnostics = false))
@@ -235,9 +232,9 @@ object CLIParser {
     note("")
     cmd("doc")
       .text("Generate documentation for Tessla code")
-      .foreach(_ => tasks += (() => Task("doc", config)))
+      .foreach(_ => tasks += (() => Task("doc", config.copy(compilerOptions = compilerOptions))))
       .children(
-        opt[Unit]('s', "stdlib")
+        opt[Unit]("include-stdlib")
           .foreach(_ => config = config.copy(stdLib = true))
           .text("Include documentation for definitions from the standard library"),
         opt[Unit]('i', "includes")
@@ -261,7 +258,7 @@ object CLIParser {
 
     note("")
     cmd("compile")
-      .foreach(_ => tasks += (() => Task("compile", config)))
+      .foreach(_ => tasks += (() => Task("compile", config.copy(compilerOptions = compilerOptions))))
       .text("Compile TeSSLa specifications to Scala")
       .children(
         arg[File]("<tessla-file>")
@@ -285,7 +282,7 @@ object CLIParser {
 
     note("")
     cmd("instrumenter")
-      .foreach(_ => tasks += (() => Task("instrumenter", config)))
+      .foreach(_ => tasks += (() => Task("instrumenter", config.copy(compilerOptions = compilerOptions))))
       .text("Instrument C code based on the provided annotations (linux-amd64 only)")
       .children(
         arg[File]("<tessla-file>")

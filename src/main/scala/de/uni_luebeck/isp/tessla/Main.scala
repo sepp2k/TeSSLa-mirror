@@ -93,9 +93,13 @@ object Main {
      *
      */
     def runDoc(docConfig: DocConfig): Unit = {
-      val includeResolver = Option.when(docConfig.includes)(IncludeResolvers.fromFile _)
       val output = unwrapResult(
-        TesslaDoc.extract(docConfig.sources, includeResolver, includeStdlib = docConfig.stdLib)
+        TesslaDoc.extract(
+          docConfig.sources,
+          docConfig.compilerOptions,
+          includeStdlib = docConfig.stdLib,
+          withIncludes = docConfig.includes
+        )
       ).toString
 
       docConfig.outfile match {
@@ -175,10 +179,8 @@ object Main {
      */
     def runTesslaCompiler(config: CLIParser.TesslacConfig): Unit = {
       try {
-        val compilerOptions = Compiler.Options()
-
         val sourceStr = unwrapResult(
-          Compiler.compile(config.specSource, compilerOptions)
+          Compiler.compile(config.specSource, config.compilerOptions)
             andThen UsageAnalysis
             andThen Laziness
             andThen new TesslaCoreToIntermediate(consoleInterface = true)
@@ -217,8 +219,7 @@ object Main {
      * instruments a provided C program accordingly.
      * */
     def runInstrumenter(config: CLIParser.InstrumenterConfig): Unit = {
-      val compilerOptions = Compiler.Options()
-      val core = unwrapResult(Compiler.compile(config.specSource, compilerOptions))
+      val core = unwrapResult(Compiler.compile(config.specSource, config.compilerOptions))
       unwrapResult(
         new CInstrumentation.Instrumenter(
           config.cFile.getAbsolutePath,

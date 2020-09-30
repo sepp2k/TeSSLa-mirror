@@ -3,11 +3,13 @@
 ## Version 1.2.1
 
 ### Breaking Changes
-/
+* The `--stdlib` flag on the `doc` command has been renamed to `--include-stdlib`, in order to be able to use `doc` together with custom standard libraries (See [#144](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/144))
 
 ### Additions and Fixes
 * It is now possible to define and use global annotations, which act as annotation for the specification itself, using the prefix `@@`. (See [#140](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/140))
-* Annotation information can now be exported in a Json format using the `--export-annotations` (or short `-a`) option on the `compile-core` command.
+* Annotation information can now be exported in a Json format using the `--export-annotations` (or short `-a`) option on the `compile-core` command. (See [#143](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/143))
+* `compile`, `doc` and `instrumenter` are now using `--stdlib` and `--base-time` options, if set. (See [#144](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/144))
+* Fix include paths on custom standard libraries not getting resolved properly
  
 ### API Changes
 * The `printAnnotations` method of `TesslaAST` now has an additional parameter `global`, which is used to differentiate between the two existing kinds of annotations. 
