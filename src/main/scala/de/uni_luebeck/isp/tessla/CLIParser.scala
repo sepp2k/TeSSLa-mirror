@@ -58,6 +58,7 @@ object CLIParser {
     printAllTypes: Boolean = false,
     listOutStreams: Boolean = false,
     listInStreams: Boolean = false,
+    exportAnnotations: Option[File] = None,
     compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
@@ -219,7 +220,10 @@ object CLIParser {
           .text("Print a list of the output streams defined in the given Tessla specification and then exit"),
         opt[Unit]("list-in-streams")
           .foreach(_ => config = config.copy(listInStreams = true))
-          .text("Print a list of the input streams defined in the given Tessla specification and then exit")
+          .text("Print a list of the input streams defined in the given Tessla specification and then exit"),
+        opt[File]('a', "export-annotations")
+          .foreach(f => config = config.copy(exportAnnotations = Some(f)))
+          .text("Generate a Json file containing the annotation information of the specification")
       )
   }
 

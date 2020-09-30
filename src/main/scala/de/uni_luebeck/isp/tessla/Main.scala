@@ -32,7 +32,7 @@ import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.core.util.Lazy
-import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TesslaAST}
+import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, IncludeResolvers, TesslaAST}
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentation
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
@@ -127,6 +127,10 @@ object Main {
         config.printAllTypes,
         paramTypes = true,
         config.printLocations
+      )
+
+      config.exportAnnotations.foreach(f =>
+        Files.writeString(f.toPath, AnnotationsToJson(core), StandardCharsets.UTF_8)
       )
 
       // All those options are mutually exclusive, only apply the first one in this list

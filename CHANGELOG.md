@@ -7,6 +7,7 @@
 
 ### Additions and Fixes
 * It is now possible to define and use global annotations, which act as annotation for the specification itself, using the prefix `@@`. (See [#140](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/140))
+* Annotation information can now be exported in a Json format using the `--export-annotations` (or short `-a`) option on the `compile-core` command.
  
 ### API Changes
 * The `printAnnotations` method of `TesslaAST` now has an additional parameter `global`, which is used to differentiate between the two existing kinds of annotations. 
