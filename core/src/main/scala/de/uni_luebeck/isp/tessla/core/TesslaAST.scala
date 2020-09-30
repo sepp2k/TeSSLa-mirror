@@ -107,7 +107,8 @@ object TesslaAST {
   abstract class WithAnnotations[T[_]: CommutativeApplicative] extends TesslaAST[T] {
     override type Annotations = Map[String, ArraySeq[ExpressionArg]]
 
-    override def printAnnotations(annotations: Annotations, options: PrintOptions): List[String] =
+    override def printAnnotations(annotations: Annotations, global: Boolean, options: PrintOptions): List[String] = {
+      val prefix = if (global) "@@" else "@"
       annotations.toList
         .sortBy(_._1)
         .flatMap {
@@ -119,8 +120,9 @@ object TesslaAST {
               case rec: RecordConstructorExpression if rec.entries.isEmpty => ""
               case e                                                       => e.print(options, mayNeedParens = false)
             }
-            s"@$name($expStr)"
+            s"$prefix$name($expStr)"
         }
+    }
   }
 
   def printWithLocation(s: Boolean => String, options: PrintOptions, mayNeedParens: Boolean, location: Location) =
@@ -180,12 +182,12 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   def getOutputName(annotations: Annotations): Option[String] = None
 
-  def printAnnotationString(annotations: Annotations, options: PrintOptions): String = {
-    val as = printAnnotations(annotations, options)
+  def printAnnotationString(annotations: Annotations, global: Boolean, options: PrintOptions): String = {
+    val as = printAnnotations(annotations, global, options)
     if (as.nonEmpty) as.mkString("", "\n", "\n") else ""
   }
 
-  def printAnnotations(annotations: Annotations, options: PrintOptions): List[String] = Nil
+  def printAnnotations(annotations: Annotations, global: Boolean, options: PrintOptions): List[String] = Nil
 
   def printWithTypeAndLocation(
     s: Boolean => String,
@@ -207,6 +209,7 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
     (if (s.endsWith("\n")) "\n" else "")
 
   case class Specification(
+    annotations: Annotations,
     in: Map[Identifier, (TypeAnnotation[Type], Annotations)],
     definitions: Map[Identifier, DefinitionExpression],
     out: List[(ExpressionRef, Annotations)],
@@ -214,10 +217,11 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
   ) {
 
     def print(options: PrintOptions): String = {
+      val a = printAnnotationString(annotations, global = true, options)
       val i = in
         .map {
           case (id, (typ, ann)) =>
-            val annotations = printAnnotationString(ann, options)
+            val annotations = printAnnotationString(ann, global = false, options)
             val inStr = printWithTypeAndLocation(
               _ => s"in $id",
               typ,
@@ -235,7 +239,7 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       val o = out
         .map {
           case (ref, ann) =>
-            val annotations = printAnnotationString(ann, options)
+            val annotations = printAnnotationString(ann, global = false, options)
             val outStr = printWithLocation(_ => s"out $ref", options, mayNeedParens = false, ref.location)
 
             annotations + outStr
@@ -260,7 +264,7 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
         }
         .mkString("\n")
 
-      s"$i\n\n$o\n\n$d"
+      s"$a\n\n$i\n\n$o\n\n$d"
     }
 
     override def toString: String = print(PrintOptions())

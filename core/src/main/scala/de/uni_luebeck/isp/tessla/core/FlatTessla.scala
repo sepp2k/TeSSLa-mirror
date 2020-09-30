@@ -40,6 +40,7 @@ import scala.collection.mutable
 
 abstract class FlatTessla extends HasUniqueIdentifiers {
   case class Specification(
+    annotations: Seq[Annotation],
     globalDefs: Definitions,
     outStreams: Seq[OutStream],
     outAll: Option[OutAll],
@@ -47,7 +48,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   ) {
     override def toString = {
       val outAllString = outAll.map(_.toString).getOrElse("")
-      s"$globalDefs\n${outStreams.mkString("\n")}$outAllString"
+      s"${annotations.mkString("\n")}\n$globalDefs\n${outStreams.mkString("\n")}$outAllString"
     }
 
     def hasOutAll = outAll.isDefined

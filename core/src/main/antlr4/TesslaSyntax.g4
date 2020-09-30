@@ -4,7 +4,12 @@ options {
     tokenVocab = 'TesslaLexer';
 }
 
-spec: NL* includes+=include* entries+=entry* EOF;
+spec:
+    NL*
+    globalAnnotations+=globalAnnotation*
+    includes+=include*
+    entries+=entry*
+    EOF;
 
 eos: NL+ | ';' | EOF;
 
@@ -14,7 +19,7 @@ entry: statement eos;
 
 statement
     : def #Definition
-    | tessladoc+=DOCLINE* NL* 'def' NL* '@' ID ( '(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')' )? #AnnotationDefinition
+    | tessladoc+=DOCLINE* NL* 'def' NL* ('@' | '@@') ID ( '(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')' )? #AnnotationDefinition
     | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' NL* typeParameters+=ID (',' NL* typeParameters+=ID)* NL* ']')? (':='|'=') NL* typeBody #TypeDefinition
     | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=entry* NL* '}' #ModuleDefinition
     | 'import' path+=ID ('.' path+=ID)* #ImportStatement
@@ -37,7 +42,10 @@ definitionHeader:
     ('(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')')?
     (':' NL* resultType=type)?;
 
-annotation: '@' ID ( '(' NL* arguments+=annotationArg (',' NL* arguments+=annotationArg)* NL* ')' )? NL*;
+annotation: '@' annotationInner;
+globalAnnotation: '@@' annotationInner;
+
+annotationInner: ID ( '(' NL* arguments+=annotationArg (',' NL* arguments+=annotationArg)* NL* ')' )? NL*;
 
 annotationArg: (name=ID '=' NL*)? constantExpression;
 

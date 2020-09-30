@@ -62,14 +62,14 @@ class Flattener(spec: Tessla.Specification)
 
   private def getName(statement: Tessla.Statement): Option[String] = Tessla.getId(statement).map(_.name)
 
-  private val annotationDefs: Map[String, Tessla.AnnotationDefinition] = spec.statements.collect {
+  private val annotationDefs: Map[(String, Boolean), Tessla.AnnotationDefinition] = spec.statements.collect {
     case annotationDef: Tessla.AnnotationDefinition =>
       annotationDef.parameters.foreach { param =>
         if (param.parameterType.isEmpty) {
           error(MissingTypeAnnotationParam(param.name, param.loc))
         }
       }
-      annotationDef.id.name -> annotationDef
+      (annotationDef.id.name, annotationDef.global) -> annotationDef
   }.toMap
 
   private val globalDefs = new FlatTessla.Definitions(None)
@@ -82,7 +82,8 @@ class Flattener(spec: Tessla.Specification)
   private val errorExpression: FlatTessla.Variable = FlatTessla.Variable(makeIdentifier("<<error>>"), Location.unknown)
 
   override def translateSpec(): FlatTessla.Specification = {
-    val emptySpec = FlatTessla.Specification(globalDefs, Seq(), outAll = None, globalVariableIdMap)
+    val globalAnnotations = spec.annotations.map(translateAnnotation(_, global = true))
+    val emptySpec = FlatTessla.Specification(globalAnnotations, globalDefs, Seq(), outAll = None, globalVariableIdMap)
 
     spec.statements.collect {
       case module: Tessla.Module => addModuleEnv(module, globalEnv)
@@ -93,7 +94,9 @@ class Flattener(spec: Tessla.Specification)
     spec.statements.sorted.foldLeft(emptySpec) {
       case (result, outAll: Tessla.OutAll) =>
         if (result.hasOutAll) warn(ConflictingOut(outAll.loc, previous = result.outAll.get.loc))
-        result.copy(outAll = Some(FlatTessla.OutAll(outAll.annotations.map(translateAnnotation), outAll.loc)))
+        result.copy(outAll =
+          Some(FlatTessla.OutAll(outAll.annotations.map(translateAnnotation(_, global = false)), outAll.loc))
+        )
 
       case (result, out: Tessla.Out) =>
         result.outStreams.find(_.name == out.name).foreach { previous =>
@@ -101,7 +104,7 @@ class Flattener(spec: Tessla.Specification)
         }
         val id = expToId(translateExpression(out.expr, globalDefs, globalEnv, imports), globalDefs)
         val newOut =
-          FlatTessla.OutStream(id, out.name, out.annotations.map(translateAnnotation), out.loc)
+          FlatTessla.OutStream(id, out.name, out.annotations.map(translateAnnotation(_, global = false)), out.loc)
         result.copy(outStreams = result.outStreams :+ newOut)
 
       case (result, definition: Tessla.Definition) =>
@@ -139,7 +142,7 @@ class Flattener(spec: Tessla.Specification)
   def addInStream(in: Tessla.In, defs: FlatTessla.Definitions, env: Env): Unit = {
     val streamType = translateType(in.streamType, defs, env)
     val inputStream = FlatTessla.InputStream(in.id.name, streamType, in.streamType.loc, in.loc)
-    val annotations = in.annotations.map(translateAnnotation)
+    val annotations = in.annotations.map(translateAnnotation(_, global = false))
     val entry = FlatTessla.VariableEntry(
       env.variables(in.id.name),
       inputStream,
@@ -469,8 +472,8 @@ class Flattener(spec: Tessla.Specification)
     FlatTessla.Parameter(param, typ, idMap(param.id.name))
   }
 
-  def translateAnnotation(annotation: Tessla.Annotation): FlatTessla.Annotation = {
-    annotationDefs.get(annotation.name) match {
+  def translateAnnotation(annotation: Tessla.Annotation, global: Boolean): FlatTessla.Annotation = {
+    annotationDefs.get(annotation.name, global) match {
       case Some(annotationDef) =>
         if (annotationDef.parameters.size != annotation.arguments.size) {
           error(

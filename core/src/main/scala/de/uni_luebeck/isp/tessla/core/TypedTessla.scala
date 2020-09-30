@@ -27,13 +27,14 @@ package de.uni_luebeck.isp.tessla.core
 object TypedTessla extends FlatTessla {
 
   case class TypedSpecification(
+    annotations: Seq[Annotation],
     globalDefs: Definitions,
     outStreams: Seq[OutStream],
     outAllLocation: Option[Location]
   ) {
     override def toString = {
       val outAllString = if (outAll) "\nout *" else ""
-      s"$globalDefs\n${outStreams.mkString("\n")}$outAllString"
+      s"${annotations.mkString("\n")}\n$globalDefs\n${outStreams.mkString("\n")}$outAllString"
     }
 
     def outAll = outAllLocation.isDefined

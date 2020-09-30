@@ -28,8 +28,9 @@ import de.uni_luebeck.isp.tessla.core.Errors.ParserError
 
 object Tessla {
 
-  case class Specification(statements: Seq[Statement]) {
-    override def toString = statements.mkString("\n")
+  case class Specification(annotations: Seq[Annotation], statements: Seq[Statement]) {
+    override def toString =
+      s"${annotations.mkString("\n")}\n${statements.mkString("\n")}"
   }
 
   case class Identifier(name: String, loc: Location) extends Location.HasLoc {
@@ -68,6 +69,8 @@ object Tessla {
 
   case class Annotation(id: Identifier, arguments: Seq[Argument[ConstantExpression]], loc: Location) {
     def name: String = id.name
+
+    override def toString: String = s"@$id(${arguments.mkString(", ")})"
   }
 
   sealed abstract class Body extends Location.HasLoc {
@@ -96,7 +99,12 @@ object Tessla {
     override def toString = s"import ${path.mkString(".")}"
   }
 
-  case class AnnotationDefinition(id: Identifier, parameters: Seq[Parameter], loc: Location) extends Statement
+  case class AnnotationDefinition(
+    id: Identifier,
+    parameters: Seq[Parameter],
+    global: Boolean,
+    loc: Location
+  ) extends Statement
 
   case class TypeDefinition(
     id: Identifier,

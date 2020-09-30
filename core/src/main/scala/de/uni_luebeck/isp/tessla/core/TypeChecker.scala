@@ -63,7 +63,8 @@ class TypeChecker(spec: FlatTessla.Specification)
         entry.id.nameOpt.map(name => TypedTessla.OutStream(entry.id, name, annotations, entry.loc))
       }
     }
-    TypedTessla.TypedSpecification(defs, outputStreams, spec.outAll.map(_.loc))
+    val globalAnnotations = spec.annotations.map(translateAnnotation)
+    TypedTessla.TypedSpecification(globalAnnotations, defs, outputStreams, spec.outAll.map(_.loc))
   }
 
   def translateOutStream(

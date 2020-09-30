@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 1.3.0
+
+### Breaking Changes
+/
+
+### Additions and Fixes
+* It is now possible to define and use global annotations, which act as annotation for the specification itself, using the prefix `@@`. (See [#140](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/140))
+ 
+### API Changes
+* The `printAnnotations` method of `TesslaAST` now has an additional parameter `global`, which is used to differentiate between the two existing kinds of annotations.
+
 ## Version 1.2.0
 
 ### Breaking Changes

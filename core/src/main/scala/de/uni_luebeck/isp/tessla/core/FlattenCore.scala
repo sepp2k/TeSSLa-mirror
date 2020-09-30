@@ -118,8 +118,9 @@ object FlattenCore extends TranslationPhase[Core.Specification, Core.Specificati
       addDefs ++ flattened
     }
 
+    val defs = flattenDefinitions(spec.definitions).toMap
     Success(
-      Core.Specification(spec.in, flattenDefinitions(spec.definitions).toMap, spec.out, IdentifierFactory.count),
+      Core.Specification(spec.annotations, spec.in, defs, spec.out, IdentifierFactory.count),
       Seq()
     )
   }

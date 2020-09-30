@@ -33,7 +33,7 @@ import scala.jdk.CollectionConverters._
 import scala.collection.mutable.ArrayBuffer
 
 object TesslaSyntaxToTessla extends TranslationPhase[Seq[TesslaParser.ParseResult], Tessla.Specification] {
-  override def translate(spec: Seq[TesslaParser.ParseResult]) = {
+  override def translate(spec: Seq[TesslaParser.ParseResult]): TranslationPhase.Result[Tessla.Specification] = {
     new TesslaSyntaxToTessla(spec).translate()
   }
 }
@@ -47,15 +47,16 @@ object TesslaSyntaxToTessla extends TranslationPhase[Seq[TesslaParser.ParseResul
 class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     extends TranslationPhase.Translator[Tessla.Specification]
     with TesslaParser.CanParseConstantString {
-  override def translateSpec() = {
+  override def translateSpec(): Tessla.Specification = {
+    val annotations = spec.flatMap(res => res.tree.globalAnnotations.asScala.map(translateGlobalAnnotation))
     val statements =
       spec.flatMap(res => res.tree.entries.asScala.map(_.statement).map(translateStatement(_, res.tokens)))
     checkForDuplicates(statements.flatMap(Tessla.getId))
     checkForDuplicates(statements.flatMap(getTypeDefID))
-    Tessla.Specification(statements)
+    Tessla.Specification(annotations, statements)
   }
 
-  def getTypeDefID(stat: Tessla.Statement) = stat match {
+  def getTypeDefID(stat: Tessla.Statement): Option[Tessla.Identifier] = stat match {
     case typeDef: Tessla.TypeDefinition => Some(typeDef.id)
     case _                              => None
   }
@@ -69,10 +70,11 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
   }
 
-  def translateStatement(
-    stat: TesslaSyntax.StatementContext,
-    tokens: CommonTokenStream
-  ): Tessla.Statement = {
+  def translateGlobalAnnotation(ctx: TesslaSyntax.GlobalAnnotationContext): Tessla.Annotation = {
+    translateAnnotationInner(ctx.annotationInner(), ctx)
+  }
+
+  def translateStatement(stat: TesslaSyntax.StatementContext, tokens: CommonTokenStream): Tessla.Statement = {
     new StatementVisitor(tokens).visit(stat)
   }
 
@@ -147,14 +149,21 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
   }
 
   def translateAnnotation(annotation: TesslaSyntax.AnnotationContext): Tessla.Annotation = {
-    val args = annotation.arguments.asScala.map { arg =>
+    translateAnnotationInner(annotation.annotationInner(), annotation)
+  }
+
+  def translateAnnotationInner(
+    inner: TesslaSyntax.AnnotationInnerContext,
+    parent: ParserRuleContext
+  ): Tessla.Annotation = {
+    val args = inner.arguments.asScala.map { arg =>
       if (arg.name != null) {
         Tessla.NamedArgument(mkID(arg.name), translateConstantExpression(arg.constantExpression))
       } else {
         Tessla.PositionalArgument(translateConstantExpression(arg.constantExpression))
       }
     }
-    Tessla.Annotation(mkID(annotation.ID), args.toSeq, Location.fromNode(annotation))
+    Tessla.Annotation(mkID(inner.ID), args.toSeq, Location.fromNode(parent))
   }
 
   def translateBody(body: TesslaSyntax.BodyContext): Tessla.Body = body match {
@@ -186,7 +195,8 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       val endLoc = Location.fromToken(Option(annotationDef.RPAR).getOrElse(annotationDef.ID))
       val loc = Location.fromToken(annotationDef.DEF).merge(endLoc)
       val params = annotationDef.parameters.asScala.map(translateParameter)
-      Tessla.AnnotationDefinition(mkID(annotationDef.ID), params.toSeq.map(_._2), loc)
+      val isGlobal = annotationDef.AT() == null
+      Tessla.AnnotationDefinition(mkID(annotationDef.ID), params.toSeq.map(_._2), isGlobal, loc)
     }
 
     override def visitOut(out: TesslaSyntax.OutContext) = {

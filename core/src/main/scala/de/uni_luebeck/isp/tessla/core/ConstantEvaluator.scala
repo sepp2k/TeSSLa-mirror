@@ -27,6 +27,7 @@ package de.uni_luebeck.isp.tessla.core
 import cats._
 import cats.data.Ior
 import cats.implicits._
+import de.uni_luebeck.isp.tessla.core.ConstantEvaluator.lazyWithStack
 import de.uni_luebeck.isp.tessla.core.Errors.{InfiniteRecursion, InternalError, WithStackTrace}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{Core, Typed}
 import de.uni_luebeck.isp.tessla.core.util.LazyWithStack
@@ -183,13 +184,13 @@ object ConstantEvaluator {
       Translatable(_ => TranslationResult[A, Option](Lazy(Some(x)), Lazy(None)))
   }
 
-  def getExpressionArgStrict(result: TranslationResult[Any, Some]) =
+  def getExpressionArgStrict(result: TranslationResult[Any, Some]): lazyWithStack.StackLazy[Core.ExpressionArg] =
     result.expression.flatMap(_.value match {
       case Left(expression)      => expression
       case Right(expresssionRef) => expresssionRef.translateStrict
     })
 
-  def mkLiteralResult(value: Option[Any], expression: Core.Expression) =
+  def mkLiteralResult(value: Option[Any], expression: Core.Expression): TranslationResult[Any, Some] =
     TranslationResult[Any, Some](
       Lazy(value),
       Lazy(Some(Right(StrictOrLazy(Lazy(expression), Lazy(expression)))))
@@ -236,10 +237,10 @@ object ConstantEvaluator {
               r <- reified
             } yield
               if (
-                r.isInstanceOf[Core.IntLiteralExpression] || r
-                  .isInstanceOf[Core.FloatLiteralExpression] ||
-                r.isInstanceOf[Core.StringLiteralExpression] || r
-                  .isInstanceOf[Core.ExternExpression]
+                r.isInstanceOf[Core.IntLiteralExpression] ||
+                r.isInstanceOf[Core.FloatLiteralExpression] ||
+                r.isInstanceOf[Core.StringLiteralExpression] ||
+                r.isInstanceOf[Core.ExternExpression]
               ) {
                 Right(StrictOrLazy(Lazy(r), Lazy(r)))
               } else {
@@ -293,7 +294,7 @@ object ConstantEvaluator {
     )
   )
 
-  def mkErrorResult(error: RuntimeError, tpe: Core.Type) = {
+  def mkErrorResult(error: RuntimeError, tpe: Core.Type): TranslationResult[Any, Some] = {
     val expression = Core.ApplicationExpression(
       Core.TypeApplicationExpression(errorExtern, List(tpe)),
       ArraySeq(Core.StringLiteralExpression(error.msg))
@@ -325,7 +326,7 @@ object ConstantEvaluator {
 }
 
 class ConstantEvaluator extends TranslationPhase[Typed.Specification, Core.Specification] {
-  override def translate(spec: Typed.Specification) = {
+  override def translate(spec: Typed.Specification): TranslationPhase.Result[Core.Specification] = {
     new ConstantEvaluatorWorker(spec).translate()
   }
 }
@@ -338,9 +339,10 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
   override def translateSpec(): Core.Specification = try {
     val translatedExpressions = new TranslatedExpressions
 
-    val inputs: Env = spec.in.map { i =>
-      val ref = Lazy(Core.ExpressionRef(translateIdentifier(i._1), translateType(i._2._1, Map())))
-      i._1 -> TranslationResult[Any, Some](Lazy(None), Lazy(Some(Right(StrictOrLazy(ref, ref)))))
+    val inputs: Env = spec.in.map {
+      case (id, (typ, _)) =>
+        val ref = Lazy(Core.ExpressionRef(translateIdentifier(id), translateType(typ, Map())))
+        id -> TranslationResult[Any, Some](Lazy(None), Lazy(Some(Right(StrictOrLazy(ref, ref)))))
     }
 
     lazy val env: Env = inputs ++ spec.definitions.map { entry =>
@@ -378,54 +380,55 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
       )
     }
 
-    val outputs = spec.out.map { x =>
-      val annotations = x._2.view
-        .mapValues(
-          _.map(a =>
-            getExpressionArgStrict(
-              translateExpressionArg(a, env, Map(), None).translate(translatedExpressions)
-            ).get(Nil)
-          )
-        )
-        .toMap
-      (
-        env(x._1.id).expression.get(List(x._1.location)).get match {
+    val outputs = spec.out.map {
+      case (outRef, typedAnnotations) =>
+        val annotations = translateAnnotations(typedAnnotations, env, translatedExpressions)
+        val translatedRef = env(outRef.id).expression.get(List(outRef.location)).get match {
           case Left(expression) =>
-            val id = translateIdentifier(x._1.id)
-            translatedExpressions.expressions += id -> expression.get(List(x._1.location))
-            Core.ExpressionRef(id, expression.get(List(x._1.location)).tpe, x._1.location)
+            val id = translateIdentifier(outRef.id)
+            translatedExpressions.expressions += id -> expression.get(List(outRef.location))
+            Core.ExpressionRef(id, expression.get(List(outRef.location)).tpe, outRef.location)
           case Right(ref) =>
-            ref.translateStrict.get(List(x._1.location)) match {
+            ref.translateStrict.get(List(outRef.location)) match {
               case Core.ExpressionRef(id, tpe, _) =>
-                Core.ExpressionRef(id, tpe, x._1.location)
+                Core.ExpressionRef(id, tpe, outRef.location)
               case expression: Core.Expression =>
-                val id = translateIdentifier(x._1.id)
+                val id = translateIdentifier(outRef.id)
                 translatedExpressions.expressions += id -> expression
-                Core.ExpressionRef(id, expression.tpe, x._1.location)
+                Core.ExpressionRef(id, expression.tpe, outRef.location)
             }
-        },
-        annotations
-      )
+        }
+        (translatedRef, annotations)
     }
 
-    val ins = spec.in.map { x =>
-      val annotations = x._2._2.view
-        .mapValues(
-          _.map(a =>
-            getExpressionArgStrict(
-              translateExpressionArg(a, env, Map(), None).translate(translatedExpressions)
-            ).get(Nil)
-          )
-        )
-        .toMap
-      (translateIdentifier(x._1), (translateType(x._2._1, Map()), annotations))
+    val ins = spec.in.map {
+      case (id, (typ, typedAnnotations)) =>
+        val annotations = translateAnnotations(typedAnnotations, env, translatedExpressions)
+        (translateIdentifier(id), (translateType(typ, Map()), annotations))
     }
 
     translatedExpressions.complete()
-    Core.Specification(ins, translatedExpressions.expressions.toMap, outputs, counter)
+    val globalAnnotations = translateAnnotations(spec.annotations, env, translatedExpressions)
+    Core.Specification(globalAnnotations, ins, translatedExpressions.expressions.toMap, outputs, counter)
   } catch {
     case e: ClassCastException =>
       throw InternalError(e.toString + "\n" + e.getStackTrace.mkString("\n"))
+  }
+
+  def translateAnnotations(
+    annotations: Typed.Annotations,
+    env: Env,
+    translatedExpressions: TranslatedExpressions
+  ): Core.Annotations = {
+    annotations.view
+      .mapValues(
+        _.map(arg =>
+          getExpressionArgStrict(
+            translateExpressionArg(arg, env, Map(), None).translate(translatedExpressions)
+          ).get(Nil)
+        )
+      )
+      .toMap
   }
 
   def translateExpressionArg(
@@ -502,12 +505,13 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
                             params,
                             args
                               .zip(params)
-                              .map(a =>
-                                reified(
-                                  a._1.translate(translatedExpressions),
-                                  translateType(a._2._2, innerTypeEnv)
-                                )
-                              ),
+                              .map {
+                                case (translatable, (_, typ)) =>
+                                  reified(
+                                    translatable.translate(translatedExpressions),
+                                    translateType(typ, innerTypeEnv)
+                                  )
+                              },
                             innerTypeEnv,
                             stack,
                             translatedExpressions,

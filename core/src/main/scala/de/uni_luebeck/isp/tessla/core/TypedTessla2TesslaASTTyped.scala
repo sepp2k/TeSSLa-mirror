@@ -62,6 +62,7 @@ class TypedTessla2TesslaASTTypedWorker(
   private val ins = mutable.Map[Typed.Identifier, (Typed.Type, Typed.Annotations)]()
 
   override protected def translateSpec(): TesslaAST.Typed.Specification = {
+    val globalAnnotations = translateAnnotations(spec.annotations)
     val outs = spec.outStreams.map { out =>
       val annotations = translateAnnotations(out.annotations)
       val name = Map("$name" -> ArraySeq(Typed.StringLiteralExpression(out.name)))
@@ -76,7 +77,7 @@ class TypedTessla2TesslaASTTypedWorker(
     }.toList
     val defs: Map[Typed.Identifier, Typed.ExpressionArg] = translateEnv(spec.globalDefs)
 
-    Typed.Specification(ins.toMap, defs, outs, defs.flatMap(_._1.idOrName.right).max)
+    Typed.Specification(globalAnnotations, ins.toMap, defs, outs, defs.flatMap(_._1.idOrName.right).max)
   }
 
   def lookupType(id: TypedTessla.Identifier, env: TypedTessla.Definitions): Typed.Type = {
