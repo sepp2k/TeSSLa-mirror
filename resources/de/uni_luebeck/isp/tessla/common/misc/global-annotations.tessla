@@ -1,0 +1,6 @@
+@@foo
+
+def @@foo
+
+in x: Events[Int]
+out x

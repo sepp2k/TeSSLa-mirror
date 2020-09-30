@@ -1,0 +1,2 @@
+errors/annotations/global-annotations-as-annotation.tessla(1,3 - 1,6): Undefined annotation: foo
+errors/annotations/global-annotations-as-annotation.tessla(9,2 - 9,5): Undefined annotation: bar

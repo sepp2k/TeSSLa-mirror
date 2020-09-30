@@ -1,0 +1,6 @@
+@@foo(5, 42, "Hello World")
+
+def @@foo(a: Int, b: Int, s: String)
+
+in x: Events[Int]
+out x
