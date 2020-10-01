@@ -53,12 +53,20 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       spec.flatMap(res => res.tree.entries.asScala.map(_.statement).map(translateStatement(_, res.tokens)))
     checkForDuplicates(statements.flatMap(Tessla.getId))
     checkForDuplicates(statements.flatMap(getTypeDefID))
+    checkForDuplicates(statements.flatMap(getAnnotationID(_, global = false)))
+    checkForDuplicates(statements.flatMap(getAnnotationID(_, global = true)))
     Tessla.Specification(annotations, statements)
   }
 
   def getTypeDefID(stat: Tessla.Statement): Option[Tessla.Identifier] = stat match {
     case typeDef: Tessla.TypeDefinition => Some(typeDef.id)
     case _                              => None
+  }
+
+  def getAnnotationID(stat: Tessla.Statement, global: Boolean): Option[Tessla.Identifier] = stat match {
+    case annoDef: Tessla.AnnotationDefinition if annoDef.global == global =>
+      Some(annoDef.id)
+    case _ => None
   }
 
   trait TesslaVisitor[T] extends TesslaSyntaxBaseVisitor[T] {

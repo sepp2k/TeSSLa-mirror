@@ -10,6 +10,7 @@
 * Annotation information can now be exported in a Json format using the `--export-annotations` (or short `-a`) option on the `compile-core` command. (See [#143](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/143))
 * `compile`, `doc` and `instrumenter` are now using `--stdlib` and `--base-time` options, if set. (See [#144](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/144))
 * Fix include paths on custom standard libraries not getting resolved properly
+* Fix duplicate definitions on annotations not being detected. (See [#142](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/142))
  
 ### API Changes
 * The `printAnnotations` method of `TesslaAST` now has an additional parameter `global`, which is used to differentiate between the two existing kinds of annotations. 

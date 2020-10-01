@@ -1,0 +1,2 @@
+errors/multiple-definitions-annotation.tessla(2,6 - 2,9): Multiple definitions of "foo" in same scope
+    Previous definition at: errors/multiple-definitions-annotation.tessla(1,6 - 1,9)
