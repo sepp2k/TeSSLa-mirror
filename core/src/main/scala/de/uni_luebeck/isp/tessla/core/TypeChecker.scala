@@ -24,7 +24,10 @@
 
 package de.uni_luebeck.isp.tessla.core
 
+import de.uni_luebeck.isp.tessla
+import de.uni_luebeck.isp.tessla.core
 import de.uni_luebeck.isp.tessla.core.Errors._
+import de.uni_luebeck.isp.tessla.core.FlatTessla.AnnotationEntry
 import de.uni_luebeck.isp.tessla.core.util._
 
 import scala.annotation.tailrec
@@ -57,13 +60,13 @@ class TypeChecker(spec: FlatTessla.Specification)
     val (defs, env) = translateDefsWithParents(spec.globalDefs)
     var outputStreams = spec.outStreams.map(translateOutStream(_, defs, env))
     if (spec.hasOutAll) {
-      val annotations = spec.outAll.get.annotations.map(translateAnnotation)
+      val annotations = spec.outAll.get.annotations.map(translateAnnotation(_, defs, spec.globalDefs, env))
       val streams = defs.variables.values.filter(entry => entry.typeInfo.isStreamType)
       outputStreams ++= streams.flatMap { entry =>
         entry.id.nameOpt.map(name => TypedTessla.OutStream(entry.id, name, annotations, entry.loc))
       }
     }
-    val globalAnnotations = spec.annotations.map(translateAnnotation)
+    val globalAnnotations = spec.annotations.map(translateAnnotation(_, defs, spec.globalDefs, env))
     TypedTessla.TypedSpecification(globalAnnotations, defs, outputStreams, spec.outAll.map(_.loc))
   }
 
@@ -72,7 +75,7 @@ class TypeChecker(spec: FlatTessla.Specification)
     defs: TypedTessla.Definitions,
     env: Env
   ): TypedTessla.OutStream = {
-    val annotations = stream.annotations.map(translateAnnotation)
+    val annotations = stream.annotations.map(translateAnnotation(_, defs, spec.globalDefs, env))
     val id = env(stream.id)
     typeMap(id) match {
       case b: TypedTessla.BuiltInType if b.isStreamType =>
@@ -187,70 +190,71 @@ class TypeChecker(spec: FlatTessla.Specification)
         arg.typeInfo.isEmpty || isBuiltIn(arg.expression)
       }
     }
-    entry.expression match {
-      case v: FlatTessla.Variable =>
-        resolve(v.id)
-      case _: FlatTessla.Literal | _: FlatTessla.InputStream | _: FlatTessla.Parameter =>
-        Seq()
+    entry.annotations.flatMap(_.arguments.map(_.id)).flatMap(resolve) ++
+      (entry.expression match {
+        case v: FlatTessla.Variable =>
+          resolve(v.id)
+        case _: FlatTessla.Literal | _: FlatTessla.InputStream | _: FlatTessla.Parameter =>
+          Seq()
 
-      case builtIn: FlatTessla.Extern =>
-        builtIn.referenceImplementation.toSeq.flatMap(resolve)
+        case builtIn: FlatTessla.Extern =>
+          builtIn.referenceImplementation.toSeq.flatMap(resolve)
 
-      case call: FlatTessla.MacroCall =>
-        // Since we invoke requiredEntries* with an outer defs in the macro case (see below), we might encounter
-        // identifiers that aren't defined in the defs we see, so we use flatMap to discard the Nones.
-        val args = call.args.flatMap(arg => resolve(arg.id))
-        resolve(call.macroID) ++ args
+        case call: FlatTessla.MacroCall =>
+          // Since we invoke requiredEntries* with an outer defs in the macro case (see below), we might encounter
+          // identifiers that aren't defined in the defs we see, so we use flatMap to discard the Nones.
+          val args = call.args.flatMap(arg => resolve(arg.id))
+          resolve(call.macroID) ++ args
 
-      case mac: FlatTessla.Macro =>
-        // Since identifiers used in the macro may either be defined inside or outside the
-        // macro (and we only want the outside ones), we need to filter them out afterwards.
-        // We still need to use the inner scope to find the required entries, so that the
-        // dependencies of inner definitions are still considered.
-        // Note that identifiers are unique at this stage, so we won't run into a situation
-        // where the macro contains a local identifier that shadows an outer one.
-        resolve(mac.result.id) ++ mac.body.variables.values
-          .flatMap(requiredEntries(mac.body, _))
-          .filter { definition =>
-            defs.resolveVariable(definition.id).isDefined
-          }
+        case mac: FlatTessla.Macro =>
+          // Since identifiers used in the macro may either be defined inside or outside the
+          // macro (and we only want the outside ones), we need to filter them out afterwards.
+          // We still need to use the inner scope to find the required entries, so that the
+          // dependencies of inner definitions are still considered.
+          // Note that identifiers are unique at this stage, so we won't run into a situation
+          // where the macro contains a local identifier that shadows an outer one.
+          resolve(mac.result.id) ++ mac.body.variables.values
+            .flatMap(requiredEntries(mac.body, _))
+            .filter { definition =>
+              defs.resolveVariable(definition.id).isDefined
+            }
 
-      case obj: FlatTessla.ObjectLiteral =>
-        obj.members.values.flatMap(member => resolve(member.id)).toSeq
+        case obj: FlatTessla.ObjectLiteral =>
+          obj.members.values.flatMap(member => resolve(member.id)).toSeq
 
-      case acc: FlatTessla.MemberAccess =>
-        @tailrec
-        def resolveMA(id: FlatTessla.Identifier, accs: List[String]): List[FlatTessla.VariableEntry] = {
-          defs.resolveVariable(id) match {
-            case None => Nil
-            case Some(arg) =>
-              val required = arg.typeInfo.isEmpty || isLiftableMacro(arg.expression) || isBuiltIn(arg.expression)
+        case acc: FlatTessla.MemberAccess =>
+          @tailrec
+          def resolveMA(id: FlatTessla.Identifier, accs: List[String]): List[FlatTessla.VariableEntry] = {
+            defs.resolveVariable(id) match {
+              case None => Nil
+              case Some(arg) =>
+                val required = arg.typeInfo.isEmpty || isLiftableMacro(arg.expression) || isBuiltIn(arg.expression)
 
-              arg.expression match {
-                case obj: FlatTessla.ObjectLiteral if accs.size == 1 && obj.members.contains(accs.head) =>
-                  resolvedMemberAccesses.update((acc.receiver.id, acc.member), obj.members(accs.head).id)
-                case _ if accs.isEmpty =>
-                  resolvedMemberAccesses.update((acc.receiver.id, acc.member), arg.id)
-                case _ => resolvedMemberAccesses.remove((acc.receiver.id, acc.member))
-              }
-
-              if (required) {
                 arg.expression match {
-                  case obj: FlatTessla.ObjectLiteral if accs.nonEmpty && obj.members.contains(accs.head) =>
-                    resolveMA(obj.members(accs.head).id, accs.tail)
-                  case acc: FlatTessla.MemberAccess =>
-                    resolveMA(acc.receiver.id, acc.member +: accs)
-                  case _ if accs.isEmpty => List(arg)
-                  case _                 => resolve(acc.receiver.id)
+                  case obj: FlatTessla.ObjectLiteral if accs.size == 1 && obj.members.contains(accs.head) =>
+                    resolvedMemberAccesses.update((acc.receiver.id, acc.member), obj.members(accs.head).id)
+                  case _ if accs.isEmpty =>
+                    resolvedMemberAccesses.update((acc.receiver.id, acc.member), arg.id)
+                  case _ => resolvedMemberAccesses.remove((acc.receiver.id, acc.member))
                 }
-              } else {
-                Nil
-              }
-          }
-        }
 
-        resolveMA(acc.receiver.id, acc.member :: Nil)
-    }
+                if (required) {
+                  arg.expression match {
+                    case obj: FlatTessla.ObjectLiteral if accs.nonEmpty && obj.members.contains(accs.head) =>
+                      resolveMA(obj.members(accs.head).id, accs.tail)
+                    case acc: FlatTessla.MemberAccess =>
+                      resolveMA(acc.receiver.id, acc.member +: accs)
+                    case _ if accs.isEmpty => List(arg)
+                    case _                 => resolve(acc.receiver.id)
+                  }
+                } else {
+                  Nil
+                }
+            }
+          }
+
+          resolveMA(acc.receiver.id, acc.member :: Nil)
+      })
   }
 
   /**
@@ -268,7 +272,9 @@ class TypeChecker(spec: FlatTessla.Specification)
     parent: Option[TypedTessla.Definitions],
     parentEnv: Env
   ): (TypedTessla.Definitions, Env) = {
-    val env = parentEnv ++ mapValues(defs.variables)(entry => makeIdentifier(entry.id.nameOpt))
+    val env = parentEnv ++
+      mapValues(defs.variables)(entry => makeIdentifier(entry.id.nameOpt)) ++
+      mapValues(defs.annotations)(entry => makeIdentifier(entry.id.nameOpt))
     val resultingDefs = new TypedTessla.Definitions(parent)
     defs.variables.values.foreach(processTypeAnnotation(_, env))
 
@@ -283,6 +289,11 @@ class TypeChecker(spec: FlatTessla.Specification)
           resultingDefs.addVariable(translateEntry(entry, resultingDefs, defs, env))
         }
     }
+
+    defs.annotations.foreach {
+      case (id, FlatTessla.AnnotationEntry(_, parameters, global, loc)) =>
+        resultingDefs.addAnnotation(TypedTessla.AnnotationEntry(env(id), parameters, global, loc))
+    }
     (resultingDefs, env)
   }
 
@@ -295,12 +306,39 @@ class TypeChecker(spec: FlatTessla.Specification)
     val id = env(entry.id)
     val (exp, typ) = translateExpression(entry.expression, typeMap.get(id), defs, flatDefs, env)
     insertInferredType(id, typ, exp.loc)
-    val annotations = entry.annotations.map(translateAnnotation)
+    val annotations = entry.annotations.map(translateAnnotation(_, defs, flatDefs, env))
     TypedTessla.VariableEntry(id, exp, typ, annotations, entry.loc)
   }
 
-  def translateAnnotation(annotation: FlatTessla.Annotation): TypedTessla.Annotation = {
-    TypedTessla.Annotation(annotation.name, annotation.arguments, annotation.loc)
+  def translateAnnotation(
+    annotation: FlatTessla.Annotation,
+    defs: TypedTessla.Definitions,
+    flatDefs: FlatTessla.Definitions,
+    env: Env
+  ): TypedTessla.Annotation = {
+    val id = env(annotation.id)
+    val annotationDef = flatDefs.resolveAnnotation(annotation.id).get
+
+    val args = resolveNamedArgs(annotation.arguments, annotationDef.parameters, annotation.loc)
+    val parameterTypes = annotationDef.parameters.map(_.parameterType)
+
+    if (args.size != parameterTypes.size) {
+      error(ArityMismatch(annotationDef.id.nameOpt.get, parameterTypes.size, args.size, annotation.loc))
+    }
+    TypedTessla.Annotation(
+      id,
+      args.zip(parameterTypes).map {
+        case ((arg, loc), expected) =>
+          val id = env(arg.id)
+          val exp = translateType(expected, env)
+          val act = typeMap(id)
+          if (!isSubtypeOrEqual(act, exp)) {
+            error(TypeMismatch(exp, act, loc))
+          }
+          TypedTessla.PositionalArgument(id, loc)
+      },
+      annotation.loc
+    )
   }
 
   private def condense(substitutions: mutable.Map[TypedTessla.Identifier, TypedTessla.Type]): Unit = {
@@ -593,27 +631,15 @@ class TypeChecker(spec: FlatTessla.Specification)
             val parameters = lookupParameterNames(flatDefs, call.macroID) match {
               case Some((p, _)) =>
                 val parameters = p.map(_._2)
-                val positions = parameters.map(p => p.name).zipWithIndex.toMap
-                var allowPosArg = true
-                call.args.zipWithIndex
-                  .map {
-                    case (arg: FlatTessla.NamedArgument, idx) =>
-                      val pos = positions.getOrElse(arg.name, throw Errors.UndefinedNamedArg(arg.name, arg.idLoc.loc))
-                      allowPosArg &= pos == idx
-                      (pos, (arg.idLoc.id, call.loc))
-                    case (arg: FlatTessla.PositionalArgument, idx) =>
-                      if (!allowPosArg) throw Errors.PosArgAfterNamedArg(arg.loc)
-                      (idx, (arg.id, arg.loc))
-                  }
-                  .sortBy(_._1)
-                  .map(_._2)
+                resolveNamedArgs(call.args, parameters, call.loc).map {
+                  case (arg, loc) => (arg.id, loc)
+                }
               case None =>
                 if (call.args.exists(_.isInstanceOf[FlatTessla.NamedArgument])) {
                   throw Errors.InternalError("Unsupported use of named argument", call.loc)
                 }
                 call.args.map(arg => (arg.id, arg.loc))
             }
-
             val typeSubstitutions = mutable.Map(t.typeParameters.zip(typeArgs): _*)
             val typeParams = t.typeParameters.toSet
             val args = parameters.zip(possiblyLiftedType.parameterTypes).map {
@@ -811,6 +837,27 @@ class TypeChecker(spec: FlatTessla.Specification)
           mac.isLiftable
         ) -> macroType
     }
+  }
+
+  def resolveNamedArgs(
+    args: Seq[FlatTessla.Argument],
+    parameters: Seq[FlatTessla.Parameter],
+    loc: Location
+  ): Seq[(FlatTessla.Argument, Location)] = {
+    val positions = parameters.map(p => p.name).zipWithIndex.toMap
+    var allowPosArg = true
+    args.zipWithIndex
+      .map {
+        case (arg: FlatTessla.NamedArgument, idx) =>
+          val pos = positions.getOrElse(arg.name, throw Errors.UndefinedNamedArg(arg.name, arg.idLoc.loc))
+          allowPosArg &= pos == idx
+          (pos, (arg, loc))
+        case (arg: FlatTessla.PositionalArgument, idx) =>
+          if (!allowPosArg) throw Errors.PosArgAfterNamedArg(arg.loc)
+          (idx, (arg, arg.loc))
+      }
+      .sortBy(_._1)
+      .map(_._2)
   }
 
   def lookup(env: FlatTessla.Definitions, id: FlatTessla.Identifier): FlatTessla.VariableEntry =

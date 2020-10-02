@@ -24,7 +24,9 @@
 
 package de.uni_luebeck.isp.tessla.core
 
+import de.uni_luebeck.isp.tessla.core
 import de.uni_luebeck.isp.tessla.core.Errors._
+import de.uni_luebeck.isp.tessla.core.FlatTessla.AnnotationEntry
 import de.uni_luebeck.isp.tessla.core.Warnings.ConflictingOut
 
 import scala.annotation.unused
@@ -50,72 +52,87 @@ class Flattener(spec: Tessla.Specification)
     extends FlatTessla.IdentifierFactory
     with TranslationPhase.Translator[FlatTessla.Specification] {
   type IdMap = Map[String, FlatTessla.Identifier]
+  type AnnotationIdMap = Map[(String, Boolean), FlatTessla.Identifier]
   type Imports = Map[String, FlatTessla.Identifier]
 
-  private case class Env(variables: IdMap, types: IdMap) {
-    def ++(other: Env): Env = Env(variables ++ other.variables, types ++ other.types)
+  private case class Env(variables: IdMap, types: IdMap, annotations: AnnotationIdMap) {
+    def ++(other: Env): Env = Env(
+      variables ++ other.variables,
+      types ++ other.types,
+      annotations ++ other.annotations
+    )
   }
 
   private def createIdMap(names: Iterable[String]): IdMap = {
     names.map(name => name -> makeIdentifier(name)).toMap
   }
 
-  private def getName(statement: Tessla.Statement): Option[String] = Tessla.getId(statement).map(_.name)
+  private def createAnnotationIdMap(names: Iterable[(String, Boolean)]): AnnotationIdMap = {
+    names.map {
+      case (name, isGlobal) => (name, isGlobal) -> makeIdentifier(name)
+    }.toMap
+  }
 
-  private val annotationDefs: Map[(String, Boolean), Tessla.AnnotationDefinition] = spec.statements.collect {
-    case annotationDef: Tessla.AnnotationDefinition =>
-      annotationDef.parameters.foreach { param =>
-        if (param.parameterType.isEmpty) {
-          error(MissingTypeAnnotationParam(param.name, param.loc))
-        }
-      }
-      (annotationDef.id.name, annotationDef.global) -> annotationDef
-  }.toMap
+  private def createEnv(
+    varNames: Iterable[String],
+    typeNames: Iterable[String],
+    annotationEntries: Iterable[(String, Boolean)]
+  ): Env = {
+    Env(createIdMap(varNames), createIdMap(typeNames), createAnnotationIdMap(annotationEntries))
+  }
+
+  private def getName(statement: Tessla.Statement): Option[String] = Tessla.getId(statement).map(_.name)
 
   private val globalDefs = new FlatTessla.Definitions(None)
   private val globalVariableIdMap = createIdMap(spec.statements.flatMap(getName))
   private val globalTypeIdMap = createIdMap(spec.statements.collect {
     case typeDef: Tessla.TypeDefinition => typeDef.id.name
   })
+
+  private val globalAnnotationIdMap = createAnnotationIdMap(spec.statements.collect {
+    case annotationDef: Tessla.AnnotationDefinition => (annotationDef.id.name, annotationDef.global)
+  })
+
   private var moduleEnvs = Map[FlatTessla.Identifier, Env]()
-  private val globalEnv = Env(globalVariableIdMap, globalTypeIdMap)
+  private var globalImports = Map[String, FlatTessla.Identifier]()
+  private val globalEnv = Env(globalVariableIdMap, globalTypeIdMap, globalAnnotationIdMap)
+
   private val errorExpression: FlatTessla.Variable = FlatTessla.Variable(makeIdentifier("<<error>>"), Location.unknown)
 
   override def translateSpec(): FlatTessla.Specification = {
-    val globalAnnotations = spec.annotations.map(translateAnnotation(_, global = true))
-    val emptySpec = FlatTessla.Specification(globalAnnotations, globalDefs, Seq(), outAll = None, globalVariableIdMap)
+    val emptySpec = FlatTessla.Specification(Seq(), globalDefs, Seq(), outAll = None, globalVariableIdMap)
 
     spec.statements.collect {
       case module: Tessla.Module => addModuleEnv(module, globalEnv)
     }
 
-    var imports = Map[String, FlatTessla.Identifier]()
-
-    spec.statements.sorted.foldLeft(emptySpec) {
+    val withDefs = spec.statements.sorted.foldLeft(emptySpec) {
       case (result, outAll: Tessla.OutAll) =>
         if (result.hasOutAll) warn(ConflictingOut(outAll.loc, previous = result.outAll.get.loc))
-        result.copy(outAll =
-          Some(FlatTessla.OutAll(outAll.annotations.map(translateAnnotation(_, global = false)), outAll.loc))
-        )
+        val annotations = outAll.annotations.map(translateAnnotation(_, global = false))
+        result.copy(outAll = Some(FlatTessla.OutAll(annotations, outAll.loc)))
 
       case (result, out: Tessla.Out) =>
         result.outStreams.find(_.name == out.name).foreach { previous =>
           warn(ConflictingOut(out.loc, previous = previous.loc))
         }
-        val id = expToId(translateExpression(out.expr, globalDefs, globalEnv, imports), globalDefs)
-        val newOut =
-          FlatTessla.OutStream(id, out.name, out.annotations.map(translateAnnotation(_, global = false)), out.loc)
+        val id = expToId(translateExpression(out.expr, globalDefs, globalEnv, globalImports), globalDefs)
+        val annotations = out.annotations.map(
+          translateAnnotation(_, global = false)
+        )
+        val newOut = FlatTessla.OutStream(id, out.name, annotations, out.loc)
         result.copy(outStreams = result.outStreams :+ newOut)
 
       case (result, definition: Tessla.Definition) =>
-        addDefinition(definition, globalDefs, globalEnv, imports)
+        addDefinition(definition, globalDefs, globalEnv, globalImports)
         result
 
       case (result, typeDef: Tessla.TypeDefinition) =>
-        addTypeDefinition(typeDef, globalDefs, globalEnv, imports)
+        addTypeDefinition(typeDef, globalDefs, globalEnv, globalImports)
         result
 
-      case (result, _: Tessla.AnnotationDefinition) =>
+      case (result, annotationDef: Tessla.AnnotationDefinition) =>
+        addAnnotationDefinition(annotationDef, globalDefs, globalEnv)
         result
 
       case (result, in: Tessla.In) =>
@@ -123,13 +140,17 @@ class Flattener(spec: Tessla.Specification)
         result
 
       case (result, module: Tessla.Module) =>
-        addModule(module, globalDefs, globalEnv, imports)
+        addModule(module, globalDefs, globalEnv, globalImports)
         result
 
       case (result, imprt: Tessla.Import) =>
-        imports = addImport(imports, imprt, globalDefs, moduleEnvs, globalEnv)
-        result.copy(globalNames = result.globalNames ++ imports)
+        globalImports = addImport(globalImports, imprt, globalDefs, moduleEnvs, globalEnv)
+        result.copy(globalNames = result.globalNames ++ globalImports)
     }
+
+    val globalAnnotations = spec.annotations.map(translateAnnotation(_, global = true))
+
+    withDefs.copy(annotations = globalAnnotations)
   }
 
   /**
@@ -153,17 +174,33 @@ class Flattener(spec: Tessla.Specification)
     defs.addVariable(entry)
   }
 
+  def addAnnotationDefinition(annoDef: Tessla.AnnotationDefinition, defs: FlatTessla.Definitions, env: Env): Unit = {
+    val paramIdMap = createIdMap(annoDef.parameters.map(_.id.name))
+    defs.addAnnotation(
+      AnnotationEntry(
+        env.annotations((annoDef.id.name, annoDef.global)),
+        annoDef.parameters.map(translateParameter(_, paramIdMap, defs, env)),
+        annoDef.global,
+        annoDef.loc
+      )
+    )
+  }
+
   /**
    * Create the environment for the given module
    * @param module the module
    * @param outerEnv the current environment
    */
   def addModuleEnv(module: Tessla.Module, outerEnv: Env): Unit = {
-    val variableIdMap = createIdMap(module.contents.flatMap(getName))
-    val typeIdMap = createIdMap(module.contents.collect {
-      case typeDef: Tessla.TypeDefinition => typeDef.id.name
-    })
-    val env = Env(variableIdMap, typeIdMap)
+    val env = createEnv(
+      module.contents.flatMap(getName),
+      module.contents.collect {
+        case typeDef: Tessla.TypeDefinition => typeDef.id.name
+      },
+      module.contents.collect {
+        case annoDef: Tessla.AnnotationDefinition => annoDef.id.name -> annoDef.global
+      }
+    )
     moduleEnvs += outerEnv.variables(module.name) -> env
 
     module.contents.collect {
@@ -285,7 +322,7 @@ class Flattener(spec: Tessla.Specification)
       // For parameterless definitions, inner definitions become part of the global defs in flat tessla.
       // Flat tessla only has distinct defs for macros with parameters (as those need to be instantiated
       // multiple times)
-      val innerEnv = env ++ Env(variables = createIdMap(blockDefs.map(_.id.name)), types = Map())
+      val innerEnv = env ++ Env(variables = createIdMap(blockDefs.map(_.id.name)), types = Map(), annotations = Map())
       blockDefs.foreach { blockDef =>
         addDefinition(blockDef, defs, innerEnv, imports)
       }
@@ -309,9 +346,9 @@ class Flattener(spec: Tessla.Specification)
       // Environment that contains the macro's parameters and type parameters, but not any of its inner definitions
       // This is used to process the type signature as we want to be able to use type arguments there,
       // but not any type definitions that are inside the macro (once we have those)
-      val paramEnv = env ++ Env(variables = paramIdMap, types = typeParamIdMap)
+      val paramEnv = env ++ Env(variables = paramIdMap, types = typeParamIdMap, annotations = Map())
       val innerEnv =
-        paramEnv ++ Env(variables = createIdMap(blockDefs.map(_.id.name)), types = Map())
+        paramEnv ++ Env(variables = createIdMap(blockDefs.map(_.id.name)), types = Map(), annotations = Map())
       definition.typeParameters.foreach { typeParameter =>
         val tp = FlatTessla.TypeParameter(typeParamIdMap(typeParameter.name), typeParameter.loc)
         innerDefs.addType(FlatTessla.TypeEntry(tp.id, 0, _ => tp, tp.loc))
@@ -405,7 +442,7 @@ class Flattener(spec: Tessla.Specification)
     def constructType(typeArgs: Seq[FlatTessla.Type]) = {
       val innerDefs = new FlatTessla.Definitions(Some(defs))
       val typeParamIdMap = createIdMap(definition.typeParameters.map(_.name))
-      val innerEnv = env ++ Env(variables = Map(), types = typeParamIdMap)
+      val innerEnv = env ++ Env(variables = Map(), types = typeParamIdMap, annotations = Map())
       definition.typeParameters.zip(typeArgs).foreach {
         case (typeParameter, typeArg) =>
           val id = typeParamIdMap(typeParameter.name)
@@ -473,37 +510,22 @@ class Flattener(spec: Tessla.Specification)
   }
 
   def translateAnnotation(annotation: Tessla.Annotation, global: Boolean): FlatTessla.Annotation = {
-    annotationDefs.get(annotation.name, global) match {
-      case Some(annotationDef) =>
-        if (annotationDef.parameters.size != annotation.arguments.size) {
-          error(
-            ArityMismatch(
-              name = annotation.name,
-              expected = annotationDef.parameters.size,
-              actual = annotation.arguments.size,
-              loc = annotation.loc
-            )
-          )
-          FlatTessla.Annotation(annotation.name, Map(), annotation.loc)
-        } else {
-          var posArgIdx = 0
-          val args: Map[String, Tessla.ConstantExpression] = annotation.arguments.map {
-            case arg: Tessla.PositionalArgument[Tessla.ConstantExpression] =>
-              val param = annotationDef.parameters(posArgIdx)
-              posArgIdx += 1
-              param.name -> arg.expr
-            case arg: Tessla.NamedArgument[Tessla.ConstantExpression] =>
-              annotationDef.parameters.find(_.name == arg.name) match {
-                case Some(param) => param.name -> arg.expr
-                case None        => throw UndefinedNamedArg(arg.name, arg.id.loc)
-              }
-          }.toMap
-          FlatTessla.Annotation(annotation.name, args, annotation.loc)
-        }
-      case None =>
+    val id = globalEnv.annotations.getOrElse(
+      (annotation.name, global), {
         error(UndefinedAnnotation(annotation.id))
-        FlatTessla.Annotation(annotation.name, Map(), annotation.loc)
+        makeIdentifier(annotation.name)
+      }
+    )
+
+    val args: Seq[FlatTessla.Argument] = annotation.arguments.map {
+      case arg: Tessla.NamedArgument[Tessla.Expression] =>
+        val id = expToId(translateExpression(arg.expr, globalDefs, globalEnv, globalImports), globalDefs)
+        FlatTessla.NamedArgument(arg.id.name, FlatTessla.IdLoc(id, arg.id.loc), arg.loc)
+      case arg: Tessla.PositionalArgument[Tessla.Expression] =>
+        val id = expToId(translateExpression(arg.expr, globalDefs, globalEnv, globalImports), globalDefs)
+        FlatTessla.PositionalArgument(id, arg.loc)
     }
+    FlatTessla.Annotation(id, args, annotation.loc)
   }
 
   def translateType(typ: Tessla.Type, defs: FlatTessla.Definitions, env: Env): FlatTessla.Type =
@@ -574,7 +596,7 @@ class Flattener(spec: Tessla.Specification)
 
     case block: Tessla.Block =>
       val innerEnv =
-        env ++ Env(variables = createIdMap(block.definitions.map(_.id.name)), types = Map())
+        env ++ Env(variables = createIdMap(block.definitions.map(_.id.name)), types = Map(), annotations = Map())
       block.definitions.foreach { definition =>
         addDefinition(definition, defs, innerEnv, imports)
       }
@@ -583,7 +605,7 @@ class Flattener(spec: Tessla.Specification)
 
     case objectLit: Tessla.ObjectLiteral =>
       val innerEnv =
-        env ++ Env(variables = createIdMap(objectLit.members.keys.map(_.name)), types = Map())
+        env ++ Env(variables = createIdMap(objectLit.members.keys.map(_.name)), types = Map(), annotations = Map())
       val members = objectLit.members.map {
         case (id, exp) =>
           // Use env instead of innerEnv here because for `{x=x, y=y}` or just `{x, y}` we specifically want to look
@@ -618,7 +640,7 @@ class Flattener(spec: Tessla.Specification)
       val innerDefs = new FlatTessla.Definitions(Some(defs))
       val paramIdMap = createIdMap(lambda.parameters.map(_._2.id.name))
       val innerEnv =
-        env ++ Env(variables = paramIdMap ++ createIdMap(blockDefs.map(_.id.name)), types = Map())
+        env ++ Env(variables = paramIdMap ++ createIdMap(blockDefs.map(_.id.name)), types = Map(), annotations = Map())
       val parameters = lambda.parameters.map(p => p._1 -> translateParameter(p._2, paramIdMap, innerDefs, innerEnv))
       parameters.map(_._2).foreach { param =>
         val typ = param.parameterType

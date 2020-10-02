@@ -26,7 +26,7 @@ package de.uni_luebeck.isp.tessla.core
 
 import cats.data.Ior
 import de.uni_luebeck.isp.tessla.core.Errors.UndefinedBaseTime
-import de.uni_luebeck.isp.tessla.core.Tessla.{ConstantExpression, FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
+import de.uni_luebeck.isp.tessla.core.Tessla.{FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Typed
 import de.uni_luebeck.isp.tessla.core.TranslationPhase._
 
@@ -62,9 +62,9 @@ class TypedTessla2TesslaASTTypedWorker(
   private val ins = mutable.Map[Typed.Identifier, (Typed.Type, Typed.Annotations)]()
 
   override protected def translateSpec(): TesslaAST.Typed.Specification = {
-    val globalAnnotations = translateAnnotations(spec.annotations)
+    val globalAnnotations = translateAnnotations(spec.annotations, spec.globalDefs)
     val outs = spec.outStreams.map { out =>
-      val annotations = translateAnnotations(out.annotations)
+      val annotations = translateAnnotations(out.annotations, spec.globalDefs)
       val name = Map("$name" -> ArraySeq(Typed.StringLiteralExpression(out.name)))
       (
         Typed.ExpressionRef(
@@ -88,113 +88,134 @@ class TypedTessla2TesslaASTTypedWorker(
   def translateEnv(env: TypedTessla.Definitions): Map[Typed.Identifier, Typed.ExpressionArg] =
     env.variables.toMap.map {
       case (id, definition) =>
-        (
-          toIdentifier(id, definition.loc),
-          definition.expression match {
-            case InputStream(name, streamType, typeLoc, loc) =>
-              ins += (Typed.Identifier(Ior.Left(name), loc) -> (toType(
-                streamType
-              ), translateAnnotations(definition.annotations)))
-              Typed.ExpressionRef(
-                Typed.Identifier(Ior.Left(name), loc),
-                toType(streamType, typeLoc),
-                loc
-              )
-            case Parameter(param, parameterType, _) =>
-              Typed.ExpressionRef(
-                Typed.Identifier(Ior.Left(param.id.name), param.id.loc),
-                toType(parameterType),
-                param.loc
-              )
-            case Macro(typeParameters, parameters, body, _, _, result, loc, _) =>
-              Typed.FunctionExpression(
-                typeParameters.map(toIdentifier(_, Location.unknown)).toList,
-                parameters.map {
-                  case (eval, typ) =>
-                    (
-                      Typed.Identifier(Ior.Left(typ.param.id.name), typ.loc),
-                      eval.getOrElse(
-                        if (typ.parameterType.isStreamType) TesslaAST.LazyEvaluation
-                        else TesslaAST.StrictEvaluation
-                      ),
-                      toType(typ.parameterType)
-                    )
-                }.toList,
-                translateEnv(body),
-                Typed.ExpressionRef(
-                  toIdentifier(result.id, Location.unknown),
-                  lookupType(result.id, body),
-                  result.loc
-                ),
-                loc
-              )
-            case Variable(id, loc) =>
-              Typed.ExpressionRef(toIdentifier(id, lookup(env, id).loc), lookupType(id, env), loc)
-            case MacroCall(macroID, macroLoc, typeArgs, args, loc) =>
-              val callable = Typed.TypeApplicationExpression(
-                Typed.ExpressionRef(toIdentifier(macroID, macroLoc), lookupType(macroID, env)),
-                typeArgs.map(x => toType(x)).toList
-              )
-
-              Typed.ApplicationExpression(
-                callable,
-                args
-                  .zip(callable.tpe.asInstanceOf[Typed.FunctionType].paramTypes)
-                  .map {
-                    case (arg, (_, t)) =>
-                      val tpe = lookupType(arg.id, env)
-                      val ref = Typed.ExpressionRef(toIdentifier(arg.id, lookup(env, arg.id).loc), tpe, arg.loc)
-                      if (t == tpe) ref
-                      else {
-                        val typeArgs = determineTypeArguments(t, tpe).withDefaultValue(unknownType)
-                        val typeArgList =
-                          tpe.asInstanceOf[Typed.FunctionType].typeParams.map(typeArgs)
-                        Typed.TypeApplicationExpression(ref, typeArgList)
-                      }
-                  }
-                  .to(ArraySeq),
-                loc
-              )
-
-            case Extern(name, _, _, _, loc) => // TODO: support reference implementation
-              Typed.ExternExpression(
-                name,
-                toType(definition.typeInfo),
-                loc
-              )
-            case MemberAccess(receiver, member, memberLoc, loc) =>
-              Typed.RecordAccessorExpression(
-                member,
-                Typed.ExpressionRef(
-                  toIdentifier(receiver.id, receiver.loc),
-                  lookupType(receiver.id, env)
-                ),
-                memberLoc,
-                loc
-              )
-            case ObjectLiteral(members, loc) =>
-              Typed.RecordConstructorExpression(
-                members.map(x =>
-                  (
-                    x._1,
-                    (Typed.ExpressionRef(toIdentifier(x._2.id, x._2.loc), lookupType(x._2.id, env)), Location.unknown)
-                  )
-                ),
-                loc
-              )
-            case Literal(value, loc) => translateLiteralValue(value, loc)
-          }
-        )
+        definition.expression match {
+          case InputStream(name, streamType, typeLoc, loc) =>
+            ins += (Typed.Identifier(Ior.Left(name), loc) -> (toType(
+              streamType
+            ), translateAnnotations(definition.annotations, env)))
+          case _ =>
+        }
+        val exp = translateExpression(definition.expression, definition.typeInfo, env)
+        val ident = toIdentifier(id, definition.loc)
+        (ident, exp)
     }
 
-  def translateAnnotations(annotations: Seq[Annotation]): Map[String, ArraySeq[Typed.RecordConstructorExpression]] =
+  def translateExpression(
+    exp: TypedTessla.Expression,
+    typeInfo: TypedTessla.TypeAnnotation,
+    env: TypedTessla.Definitions
+  ): Typed.ExpressionArg = {
+    exp match {
+      case InputStream(name, streamType, typeLoc, loc) =>
+        Typed.ExpressionRef(
+          Typed.Identifier(Ior.Left(name), loc),
+          toType(streamType, typeLoc),
+          loc
+        )
+      case Parameter(param, parameterType, _) =>
+        Typed.ExpressionRef(
+          Typed.Identifier(Ior.Left(param.id.name), param.id.loc),
+          toType(parameterType),
+          param.loc
+        )
+      case Macro(typeParameters, parameters, body, _, _, result, loc, _) =>
+        Typed.FunctionExpression(
+          typeParameters.map(toIdentifier(_, Location.unknown)).toList,
+          parameters.map {
+            case (eval, typ) =>
+              (
+                Typed.Identifier(Ior.Left(typ.param.id.name), typ.loc),
+                eval.getOrElse(
+                  if (typ.parameterType.isStreamType) TesslaAST.LazyEvaluation
+                  else TesslaAST.StrictEvaluation
+                ),
+                toType(typ.parameterType)
+              )
+          }.toList,
+          translateEnv(body),
+          Typed.ExpressionRef(
+            toIdentifier(result.id, Location.unknown),
+            lookupType(result.id, body),
+            result.loc
+          ),
+          loc
+        )
+      case Variable(id, loc) =>
+        Typed.ExpressionRef(toIdentifier(id, lookup(env, id).loc), lookupType(id, env), loc)
+      case MacroCall(macroID, macroLoc, typeArgs, args, loc) =>
+        val callable = Typed.TypeApplicationExpression(
+          Typed.ExpressionRef(toIdentifier(macroID, macroLoc), lookupType(macroID, env)),
+          typeArgs.map(x => toType(x)).toList
+        )
+
+        Typed.ApplicationExpression(
+          callable,
+          args
+            .zip(callable.tpe.asInstanceOf[Typed.FunctionType].paramTypes)
+            .map {
+              case (arg, (_, t)) =>
+                val tpe = lookupType(arg.id, env)
+                val ref = Typed.ExpressionRef(toIdentifier(arg.id, lookup(env, arg.id).loc), tpe, arg.loc)
+                if (t == tpe) ref
+                else {
+                  val typeArgs = determineTypeArguments(t, tpe).withDefaultValue(unknownType)
+                  val typeArgList =
+                    tpe.asInstanceOf[Typed.FunctionType].typeParams.map(typeArgs)
+                  Typed.TypeApplicationExpression(ref, typeArgList)
+                }
+            }
+            .to(ArraySeq),
+          loc
+        )
+
+      case Extern(name, _, _, _, loc) => // TODO: support reference implementation
+        Typed.ExternExpression(
+          name,
+          toType(typeInfo),
+          loc
+        )
+      case MemberAccess(receiver, member, memberLoc, loc) =>
+        Typed.RecordAccessorExpression(
+          member,
+          Typed.ExpressionRef(
+            toIdentifier(receiver.id, receiver.loc),
+            lookupType(receiver.id, env)
+          ),
+          memberLoc,
+          loc
+        )
+      case ObjectLiteral(members, loc) =>
+        Typed.RecordConstructorExpression(
+          members.map(x =>
+            (
+              x._1,
+              (Typed.ExpressionRef(toIdentifier(x._2.id, x._2.loc), lookupType(x._2.id, env)), Location.unknown)
+            )
+          ),
+          loc
+        )
+      case Literal(value, loc) => translateLiteralValue(value, loc)
+    }
+  }
+
+  def translateAnnotations(
+    annotations: Seq[Annotation],
+    env: TypedTessla.Definitions
+  ): Map[String, ArraySeq[Typed.RecordConstructorExpression]] =
     mapValues(
       annotations
         .map { annotation =>
-          val translatedArguments = annotation.arguments.map { arg =>
-            arg._1 -> (translateConstantExpression(arg._2), Location.unknown)
-          }
-          annotation.name -> Typed.RecordConstructorExpression(translatedArguments)
+          val names = env.resolveAnnotation(annotation.id).get.parameters.map(_.id.nameOpt.get)
+          val entries = annotation.arguments
+            .zip(names)
+            .map {
+              case (arg, name) =>
+                val tpe = lookupType(arg.id, env)
+                val ref = Typed.ExpressionRef(toIdentifier(arg.id, lookup(env, arg.id).loc), tpe, arg.loc)
+                name -> (ref, arg.loc)
+            }
+            .toMap
+          annotation.id.nameOpt.get -> Typed.RecordConstructorExpression(entries, annotation.loc)
         }
         .groupBy(_._1)
     )(_.map(_._2).to(ArraySeq))
@@ -219,14 +240,6 @@ class TypedTessla2TesslaASTTypedWorker(
           error(UndefinedBaseTime(tu.loc))
           Typed.IntLiteralExpression(x, loc)
       }
-  }
-
-  def translateConstantExpression(exp: ConstantExpression): Typed.ExpressionArg = exp match {
-    case ConstantExpression.Object(members, loc) =>
-      val translatedMembers =
-        members.map(x => (x._1.name, (translateConstantExpression(x._2), x._1.loc)))
-      Typed.RecordConstructorExpression(translatedMembers, loc)
-    case ConstantExpression.Literal(value, loc) => translateLiteralValue(value, loc)
   }
 
   def toType(tpe: TypedTessla.Type, location: Location = Location.unknown): Typed.Type = tpe match {

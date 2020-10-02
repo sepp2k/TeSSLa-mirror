@@ -224,7 +224,13 @@ object Errors {
   case class UndefinedAnnotation(id: Tessla.Identifier) extends TesslaError {
     override def message = s"Undefined annotation: $id"
 
-    override def loc = id.loc
+    override def loc: Location = id.loc
+  }
+
+  case class NonLiteralAnnotationParameter(name: String, exp: Core.ExpressionArg) extends TesslaError {
+    override def message = s"Annotation $name has non-literal parameter $exp."
+
+    override def loc: Location = exp.location
   }
 
   case class LiftableOnNonMacro(loc: Location, defName: String) extends TesslaError {

@@ -46,20 +46,20 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     outAll: Option[OutAll],
     globalNames: Map[String, Identifier]
   ) {
-    override def toString = {
+    override def toString: String = {
       val outAllString = outAll.map(_.toString).getOrElse("")
       s"${annotations.mkString("\n")}\n$globalDefs\n${outStreams.mkString("\n")}$outAllString"
     }
 
-    def hasOutAll = outAll.isDefined
+    def hasOutAll: Boolean = outAll.isDefined
   }
 
   type TypeAnnotation
   def typeAnnotationToString(typeAnnotation: TypeAnnotation): String
 
   case class Annotation(
-    name: String,
-    arguments: Map[String, Tessla.ConstantExpression],
+    id: Identifier,
+    arguments: Seq[Argument],
     loc: Location
   )
 
@@ -70,6 +70,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     annotations: Seq[Annotation],
     loc: Location
   )
+
   case class TypeEntry(
     id: Identifier,
     arity: Int,
@@ -77,9 +78,17 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     loc: Location
   )
 
+  case class AnnotationEntry(
+    id: Identifier,
+    parameters: Seq[FlatTessla.Parameter],
+    global: Boolean,
+    loc: Location
+  )
+
   class Definitions(val parent: Option[Definitions]) {
     val variables = mutable.Map[Identifier, VariableEntry]()
     val types = mutable.Map[Identifier, TypeEntry]()
+    val annotations = mutable.Map[Identifier, AnnotationEntry]()
 
     def addVariable(entry: VariableEntry): Unit = {
       variables(entry.id) = entry
@@ -87,6 +96,10 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
     def addType(entry: TypeEntry): Unit = {
       types(entry.id) = entry
+    }
+
+    def addAnnotation(entry: AnnotationEntry): Unit = {
+      annotations(entry.id) = entry
     }
 
     def resolveVariable(id: Identifier): Option[VariableEntry] = {
@@ -97,21 +110,35 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
       types.get(id).orElse(parent.flatMap(_.resolveType(id)))
     }
 
-    override def toString = {
-      s"-- Definitions $hashCode\n" + variables
-        .map {
-          case (id, entry) =>
-            val typeAnnotation = typeAnnotationToString(entry.typeInfo)
-            s"def $id$typeAnnotation = ${entry.expression}"
-        }
-        .mkString("\n") + types
-        .map {
-          case (id, entry) =>
-            s"type $id[${entry.arity}] = ${entry.id}"
-        }
-        .mkString("\n") + parent
-        .map(p => s"\n-- Parent = Definitions ${p.hashCode}\n")
-        .getOrElse("") ++ "-- /Definitions"
+    def resolveAnnotation(id: Identifier): Option[AnnotationEntry] = {
+      annotations.get(id).orElse(parent.flatMap(_.resolveAnnotation(id)))
+    }
+
+    override def toString: String = {
+      s"-- Definitions $hashCode\n" +
+        variables
+          .map {
+            case (id, entry) =>
+              val typeAnnotation = typeAnnotationToString(entry.typeInfo)
+              val annotations = entry.annotations.mkString("\n")
+              s"$annotations\ndef $id$typeAnnotation = ${entry.expression}"
+          }
+          .mkString("\n") +
+        types
+          .map {
+            case (id, entry) =>
+              s"type $id[${entry.arity}] = ${entry.id}"
+          }
+          .mkString("\n") +
+        annotations
+          .map {
+            case (id, entry) =>
+              s"def @$id(${entry.parameters.mkString(", ")}) = ${entry.id}"
+          }
+          .mkString("\n") +
+        parent
+          .map(p => s"\n-- Parent = Definitions ${p.hashCode}\n")
+          .getOrElse("") ++ "-- /Definitions"
     }
   }
 
@@ -129,7 +156,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     loc: Location,
     isLiftable: Boolean
   ) extends Expression {
-    override def toString = {
+    override def toString: String = {
       val liftable = if (isLiftable) "liftable " else ""
       s"$liftable[${typeParameters.mkString(", ")}](${parameters.mkString(", ")}) => {\n$body\n$result\n}"
     }
@@ -150,19 +177,19 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   }
 
   case class Parameter(param: Tessla.Parameter, parameterType: Type, id: Identifier) extends Expression {
-    def name = param.id.name
+    def name: String = param.id.name
 
-    def nameWithLoc = param.id
+    def nameWithLoc: Tessla.Identifier = param.id
 
     def idLoc: IdLoc = IdLoc(id, loc)
 
-    override def loc = param.loc
+    override def loc: Location = param.loc
 
     override def toString = s"param $name: $parameterType"
   }
 
   case class Variable(id: Identifier, loc: Location) extends Expression {
-    override def toString = id.toString
+    override def toString: String = id.toString
   }
 
   case class MacroCall(
@@ -172,7 +199,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     args: Seq[Argument],
     loc: Location
   ) extends Expression {
-    override def toString = args.mkString(s"$macroID(", ", ", ")")
+    override def toString: String = args.mkString(s"$macroID(", ", ", ")")
   }
 
   case class IdLoc(id: Identifier, loc: Location)
@@ -182,7 +209,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   case class MemberAccess(receiver: IdLoc, member: String, memberLoc: Location, loc: Location) extends Expression
 
   case class Literal(value: LiteralValue, loc: Location) extends Expression {
-    override def toString = value.toString
+    override def toString: String = value.toString
   }
 
   type LiteralValue = Tessla.LiteralValue
@@ -195,20 +222,20 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 
   case class BuiltInType(name: String, typeArgs: Seq[Type]) extends Type {
     //TODO: Make this less stupid
-    override def isValueType = name != "Events"
+    override def isValueType: Boolean = name != "Events"
 
-    override def isStreamType = name == "Events"
+    override def isStreamType: Boolean = name == "Events"
 
-    override def toString = {
+    override def toString: String = {
       if (typeArgs.isEmpty) name
       else typeArgs.mkString(s"$name[", ", ", "]")
     }
   }
 
   case class ObjectType(memberTypes: Map[String, Type]) extends Type {
-    override def isValueType = memberTypes.values.forall(_.isValueType)
+    override def isValueType: Boolean = memberTypes.values.forall(_.isValueType)
 
-    override def toString = {
+    override def toString: String = {
       val tupleKeys = (1 to memberTypes.keys.size).map(i => s"_$i")
       if (memberTypes.keys.toSet == tupleKeys.toSet) {
         memberTypes.toList.sortBy(_._1).map(_._2).mkString("(", ", ", ")")
@@ -227,9 +254,9 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   ) extends Type {
     override def isValueType = false
 
-    override def isLiftableFunctionType = isLiftable
+    override def isLiftableFunctionType: Boolean = isLiftable
 
-    override def toString = {
+    override def toString: String = {
       val liftableString = if (isLiftable) "liftable " else ""
       val typeParamString =
         typeParameters.map(id => id.nameOpt.getOrElse(id.toString)).mkString(", ")
@@ -249,14 +276,14 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
     //       where the type environment is available
     override def isValueType = true
 
-    override def toString = id.nameOpt.getOrElse(id.toString)
+    override def toString: String = id.nameOpt.getOrElse(id.toString)
 
-    override def equals(other: Any) = other match {
+    override def equals(other: Any): Boolean = other match {
       case tvar: TypeParameter => id == tvar.id
       case _                   => false
     }
 
-    override def hashCode() = id.hashCode()
+    override def hashCode(): Int = id.hashCode()
   }
 
   case class OutStream(id: Identifier, name: String, annotations: Seq[Annotation], loc: Location) {
@@ -273,11 +300,11 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
   }
 
   case class PositionalArgument(id: Identifier, loc: Location) extends Argument {
-    override def toString = id.toString
+    override def toString: String = id.toString
   }
 
   case class NamedArgument(name: String, idLoc: IdLoc, loc: Location) extends Argument {
-    def id = idLoc.id
+    def id: Identifier = idLoc.id
 
     override def toString = s"$name = $id"
   }
@@ -286,7 +313,7 @@ abstract class FlatTessla extends HasUniqueIdentifiers {
 object FlatTessla extends FlatTessla {
   type TypeAnnotation = Option[Type]
 
-  override def typeAnnotationToString(typeAnnotation: TypeAnnotation) = typeAnnotation match {
+  override def typeAnnotationToString(typeAnnotation: TypeAnnotation): String = typeAnnotation match {
     case None    => ""
     case Some(t) => s" : $t"
   }

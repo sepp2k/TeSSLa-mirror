@@ -1,0 +1,5 @@
+def @foo(a: Int)
+
+@foo("Foo")
+in x: Events[Int]
+out x

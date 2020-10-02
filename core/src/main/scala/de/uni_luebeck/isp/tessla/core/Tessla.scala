@@ -67,7 +67,7 @@ object Tessla {
     }
   }
 
-  case class Annotation(id: Identifier, arguments: Seq[Argument[ConstantExpression]], loc: Location) {
+  case class Annotation(id: Identifier, arguments: Seq[Argument[Expression]], loc: Location) {
     def name: String = id.name
 
     override def toString: String = s"@$id(${arguments.mkString(", ")})"
@@ -268,26 +268,6 @@ object Tessla {
 
   case class StringLiteral(value: String) extends LiteralValue {
     override def toString = s""""$value""""
-  }
-
-  sealed abstract class ConstantExpression extends Location.HasLoc
-
-  object ConstantExpression {
-
-    case class Literal(value: LiteralValue, loc: Location) extends ConstantExpression {
-      override def toString = value.toString
-    }
-
-    case class Object(members: Map[Identifier, ConstantExpression], loc: Location) extends ConstantExpression {
-      override def toString = {
-        members
-          .map {
-            case (name, value) => s"$name = $value"
-          }
-          .mkString("{", ", ", "}")
-      }
-    }
-
   }
 
   abstract class Argument[T <: Location.HasLoc] extends Location.HasLoc {

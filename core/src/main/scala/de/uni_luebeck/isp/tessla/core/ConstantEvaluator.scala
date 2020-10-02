@@ -345,13 +345,12 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
         id -> TranslationResult[Any, Some](Lazy(None), Lazy(Some(Right(StrictOrLazy(ref, ref)))))
     }
 
-    lazy val env: Env = inputs ++ spec.definitions.map { entry =>
-      val result = translateExpressionArg(entry._2, env, Map(), entry._1.idOrName.left)
-        .translate(translatedExpressions)
-      lazy val id = translateIdentifier(entry._1)
-      (
-        entry._1,
-        pushStack(
+    lazy val env: Env = inputs ++ spec.definitions.map {
+      case (defId, exp) =>
+        val result = translateExpressionArg(exp, env, Map(), defId.idOrName.left)
+          .translate(translatedExpressions)
+        lazy val id = translateIdentifier(defId)
+        defId -> pushStack(
           TranslationResult[Any, Some](
             result.value,
             StackLazy { stack =>
@@ -361,13 +360,13 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
                     StrictOrLazy(
                       StackLazy { stack =>
                         translatedExpressions.expressions += id -> expression.get(stack)
-                        Core.ExpressionRef(id, translateType(entry._2.tpe, Map()))
+                        Core.ExpressionRef(id, translateType(exp.tpe, Map()))
                       },
                       StackLazy { stack =>
                         translatedExpressions.deferredQueue += (() =>
                           translatedExpressions.expressions += id -> expression.get(stack)
                         )
-                        Core.ExpressionRef(id, translateType(entry._2.tpe, Map()))
+                        Core.ExpressionRef(id, translateType(exp.tpe, Map()))
                       }
                     )
                   )
@@ -375,9 +374,8 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
               })
             }
           ),
-          entry._1.location
+          defId.location
         )
-      )
     }
 
     val outputs = spec.out.map {

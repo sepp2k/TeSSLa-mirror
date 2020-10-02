@@ -47,16 +47,7 @@ globalAnnotation: '@@' annotationInner;
 
 annotationInner: ID ( '(' NL* arguments+=annotationArg (',' NL* arguments+=annotationArg)* NL* ')' )? NL*;
 
-annotationArg: (name=ID '=' NL*)? constantExpression;
-
-constantExpression
-    : (stringLit | DECINT | HEXINT | FLOAT) #ConstantLiteral
-    | '(' NL* (elems+=constantExpression (',' NL* elems+=constantExpression)*)?  NL* ')' #ConstantTuple
-    | '{' NL* (members+=constantMemberDefinition (',' NL* members+=constantMemberDefinition)*)?  NL* '}' #ConstantObject
-    ;
-
-constantMemberDefinition: name=ID ((':'|'=') NL* value=constantExpression)?;
-
+annotationArg: (name=ID '=' NL*)? expression;
 
 param: ID (':' NL* parameterType=evalType)?;
 

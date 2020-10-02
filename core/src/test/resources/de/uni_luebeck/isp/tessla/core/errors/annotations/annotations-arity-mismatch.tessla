@@ -1,0 +1,5 @@
+def @foo(a: Int)
+
+@foo(5 * 3 + 27, 42)
+in x: Events[Int]
+out x

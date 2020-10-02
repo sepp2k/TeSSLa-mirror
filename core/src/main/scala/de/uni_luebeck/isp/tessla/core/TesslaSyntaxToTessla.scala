@@ -128,34 +128,6 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
   }
 
-  def translateConstantExpression(
-    exp: TesslaSyntax.ConstantExpressionContext
-  ): Tessla.ConstantExpression = exp match {
-    case lit: TesslaSyntax.ConstantLiteralContext =>
-      val translatedLit = if (lit.stringLit != null) {
-        Tessla.StringLiteral(getConstantString(lit.stringLit))
-      } else if (lit.DECINT != null) {
-        Tessla.IntLiteral(BigInt(lit.DECINT.getText))
-      } else if (lit.HEXINT != null) {
-        require(lit.HEXINT.getText.startsWith("0x"))
-        Tessla.IntLiteral(BigInt(lit.HEXINT.getText.substring(2), 16))
-      } else if (lit.FLOAT != null) {
-        Tessla.FloatLiteral(lit.FLOAT.getText.toDouble)
-      } else {
-        throw InternalError("Unexpected type of literal", Location.fromNode(lit))
-      }
-      Tessla.ConstantExpression.Literal(translatedLit, Location.fromNode(lit))
-    case obj: TesslaSyntax.ConstantObjectContext =>
-      val members = obj.members.asScala.map { member =>
-        mkID(member.name) -> translateConstantExpression(member.value)
-      }
-      checkForDuplicates(members.map(_._1).toSeq)
-      Tessla.ConstantExpression.Object(members.toMap, Location.fromNode(obj))
-    case tup: TesslaSyntax.ConstantTupleContext =>
-      val elements = tup.elems.asScala.map(translateConstantExpression)
-      Tessla.ConstantExpression.Object(tupleToObject(elements.toSeq), Location.fromNode(tup))
-  }
-
   def translateAnnotation(annotation: TesslaSyntax.AnnotationContext): Tessla.Annotation = {
     translateAnnotationInner(annotation.annotationInner(), annotation)
   }
@@ -165,10 +137,11 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     parent: ParserRuleContext
   ): Tessla.Annotation = {
     val args = inner.arguments.asScala.map { arg =>
+      val a = translateExpression(arg.expression)
       if (arg.name != null) {
-        Tessla.NamedArgument(mkID(arg.name), translateConstantExpression(arg.constantExpression))
+        Tessla.NamedArgument(mkID(arg.name), a)
       } else {
-        Tessla.PositionalArgument(translateConstantExpression(arg.constantExpression))
+        Tessla.PositionalArgument(a)
       }
     }
     Tessla.Annotation(mkID(inner.ID), args.toSeq, Location.fromNode(parent))
