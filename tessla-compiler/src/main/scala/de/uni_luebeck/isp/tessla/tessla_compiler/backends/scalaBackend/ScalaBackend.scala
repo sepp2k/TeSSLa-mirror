@@ -26,8 +26,12 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{
 
 /**
  * [[BackendInterface]] implementation for the translation to Scala code
+ *
+ * @param userIncludes Additional user-specific code which is included on top of the generated scala source.
+ *                     Can be used e.g. for additional includes
  */
-class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeleton.scala") {
+class ScalaBackend(userIncludes: String = "")
+    extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeleton.scala", userIncludes) {
 
   /**
    * Translates a map of variables with base information (type, default value, lazy assignment) to corresponding

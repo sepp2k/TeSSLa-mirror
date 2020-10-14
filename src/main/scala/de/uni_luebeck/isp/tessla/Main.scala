@@ -178,7 +178,7 @@ object Main {
             andThen Laziness
             andThen new TesslaCoreToIntermediate(consoleInterface = true)
             andThen UnusedVarRemove
-            andThen new ScalaBackend
+            andThen new ScalaBackend(config.additionalSource)
         )
 
         config.jarFile.map { file =>

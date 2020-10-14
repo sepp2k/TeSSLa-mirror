@@ -76,6 +76,7 @@ object CLIParser {
     optimise: Boolean = true,
     outFile: Option[File] = None,
     jarFile: Option[File] = None,
+    additionalSource: String = "",
     compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
@@ -253,6 +254,12 @@ object CLIParser {
     import parser._
     var config = TesslacConfig()
 
+    def getFileContent(file: File): String = {
+      val addIncludeFile = Source.fromFile(file)
+      try addIncludeFile.mkString
+      finally addIncludeFile.close
+    }
+
     note("")
     cmd("compile")
       .foreach(_ => tasks += (() => Task("compile", config.copy(compilerOptions = compilerOptions))))
@@ -260,7 +267,10 @@ object CLIParser {
       .children(
         arg[File]("<tessla-file>")
           .foreach(f => config = config.copy(specSource = CharStreams.fromFileName(f.getPath)))
-          .text("The file containing the TeSSLa specification"),
+          .text("The file containing the Tessla specification"),
+        opt[File]('a', "add-source")
+          .foreach(f => config = config.copy(additionalSource = getFileContent(f)))
+          .text("Additional source file included on top of the generated source"),
         opt[File]('o', "out-file")
           .foreach(f => config = config.copy(outFile = Some(f)))
           .text("Place the generated Scala source code at this location."),

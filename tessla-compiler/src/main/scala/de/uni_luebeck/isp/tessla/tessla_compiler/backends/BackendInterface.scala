@@ -29,9 +29,13 @@ import scala.io.Source
 
 /**
  * Abstract base class for the translation from intermediate code to real source code
+ *
  * @param sourceTemplate Resource path of the template code, where generated code is inserted
+ * @param userIncludes Additional user-specific code which is inserted at the //USERINCLUDES comment in the source template.
+ *                     Can be used e.g. for additional includes.
  */
-abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase[SourceListing, String] {
+abstract class BackendInterface(sourceTemplate: String, userIncludes: String)
+    extends TranslationPhase[SourceListing, String] {
 
   protected var variables: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map()
 
@@ -86,6 +90,7 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
         generateVariableDeclarations(IntermediateCodeUtils.getVariableMap(listing.staticSource)).mkString("\n") +
           "\n\n" + generateCode(listing.staticSource)
       )
+      .replace("//USERINCLUDES", userIncludes)
 
     Success(rewrittenSource, Seq())
   }
