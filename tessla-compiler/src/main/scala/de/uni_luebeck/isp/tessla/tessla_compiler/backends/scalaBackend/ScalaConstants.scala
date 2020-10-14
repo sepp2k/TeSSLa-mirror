@@ -206,6 +206,8 @@ object ScalaConstants {
         }
       case "__mkStruct__" => s"(${args.mkString(", ")})"
 
+      case s if s.startsWith("__native:") => s"${s.stripPrefix("__native:").stripSuffix("__")}(${args.mkString(", ")})"
+
       case _ => throw Diagnostics.CommandNotSupportedError(s"Unsupported built-in function for Scala backend: $name")
     }
   }
