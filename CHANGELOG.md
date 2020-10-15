@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 1.2.2
+
+### Breaking Changes
+/
+
+### Additions and Fixes
+- `out` can now also be used on records of streams, which then gets separated into `out` statements for each member. If the record has non-stream members, they get lifted to a stream. (See [#92](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/92))
+
+### API Changes
+/
+
 ## Version 1.2.1
 
 ### Breaking Changes

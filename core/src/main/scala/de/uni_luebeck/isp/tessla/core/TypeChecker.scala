@@ -24,6 +24,7 @@
 
 package de.uni_luebeck.isp.tessla.core
 
+import de.uni_luebeck.isp
 import de.uni_luebeck.isp.tessla
 import de.uni_luebeck.isp.tessla.core
 import de.uni_luebeck.isp.tessla.core.Errors._
@@ -58,7 +59,7 @@ class TypeChecker(spec: FlatTessla.Specification)
 
   override def translateSpec(): TypedTessla.TypedSpecification = {
     val (defs, env) = translateDefsWithParents(spec.globalDefs)
-    var outputStreams = spec.outStreams.map(translateOutStream(_, defs, env))
+    var outputStreams = spec.outStreams.flatMap(translateOutStream(_, defs, env))
     if (spec.hasOutAll) {
       val annotations = spec.outAll.get.annotations.map(translateAnnotation(_, defs, spec.globalDefs, env))
       val streams = defs.variables.values.filter(entry => entry.typeInfo.isStreamType)
@@ -74,22 +75,70 @@ class TypeChecker(spec: FlatTessla.Specification)
     stream: FlatTessla.OutStream,
     defs: TypedTessla.Definitions,
     env: Env
-  ): TypedTessla.OutStream = {
+  ): List[TypedTessla.OutStream] = {
     val annotations = stream.annotations.map(translateAnnotation(_, defs, spec.globalDefs, env))
     val id = env(stream.id)
-    typeMap(id) match {
+
+    def translateOutStreamInner(id: TypedTessla.Identifier, typ: TypedTessla.Type, name: String) = typ match {
       case b: TypedTessla.BuiltInType if b.isStreamType =>
-        TypedTessla.OutStream(id, stream.name, annotations, stream.loc)
+        TypedTessla.OutStream(id, name, annotations, stream.loc)
       case t if t.isValueType =>
         TypedTessla.OutStream(
           liftConstant(id, defs, env, stream.loc),
-          stream.name,
+          name,
           annotations,
           stream.loc
         )
       case other =>
         error(TypeMismatch(expected = "stream or value type", other, stream.loc))
         TypedTessla.OutStream(id, "<error>", annotations, stream.loc)
+    }
+
+    typeMap(id) match {
+      case t @ TypedTessla.ObjectType(memberTypes) if !t.isValueType =>
+        val memberAccesses = mutable.HashMap[List[String], TypedTessla.Identifier]()
+
+        type Path = List[(String, TypedTessla.Type)]
+
+        // Recursively collect members to generate output streams for
+        def collectMembers(path: Path, members: Map[String, TypedTessla.Type]): Set[Path] = {
+          val hasStreamMember = members.exists {
+            case (name, t: TypedTessla.ObjectType) => !t.isValueType
+            case (_, typ)                          => typ.isStreamType
+          }
+
+          if (hasStreamMember) {
+            members.flatMap {
+              case (name, typ: TypedTessla.ObjectType) if !typ.isValueType =>
+                collectMembers(path :+ (name, typ), typ.memberTypes)
+              case (name, typ) => List(path :+ (name, typ))
+            }.toSet
+          } else Set()
+        }
+
+        val members = collectMembers(Nil, memberTypes)
+        members.map { path =>
+          val finalId = path
+            .foldLeft((id, List[String]())) {
+              case ((previousId, accpath), (member, memberType)) =>
+                val memberAccess = memberAccesses.getOrElseUpdate(
+                  accpath :+ member, {
+                    val maId = makeIdentifier()
+                    val loc = stream.loc
+                    val ma = TypedTessla.MemberAccess(TypedTessla.IdLoc(previousId, loc), member, loc, loc)
+                    defs.addVariable(TypedTessla.VariableEntry(maId, ma, memberType, Seq(), loc))
+                    typeMap.put(maId, memberType)
+                    maId
+                  }
+                )
+                (memberAccess, accpath :+ member)
+            }
+            ._1
+          val typ = path.last._2
+          val name = s"${stream.name}.${path.map(_._1).mkString(".")}"
+          translateOutStreamInner(finalId, typ, name)
+        }.toList
+      case other => translateOutStreamInner(id, other, stream.name) :: Nil
     }
   }
 
@@ -100,7 +149,7 @@ class TypeChecker(spec: FlatTessla.Specification)
   /**
    * Translate the provided type by resolving type parameters using the environment.
    *
-    * @param typ the type to translate
+   * @param typ the type to translate
    * @param env the environment
    * @return the resulting type
    */
@@ -130,10 +179,10 @@ class TypeChecker(spec: FlatTessla.Specification)
   /**
    * Insert an inferred type into the type map.
    *
-    * If the map already contains an entry with this id and the inferred type is not a subtype of the existing entry,
+   * If the map already contains an entry with this id and the inferred type is not a subtype of the existing entry,
    * a type mismatch error is produced.
    *
-    * @param id the identifier the type was inferred for
+   * @param id the identifier the type was inferred for
    * @param inferredType the inferred type
    * @param loc the location
    */
@@ -178,7 +227,7 @@ class TypeChecker(spec: FlatTessla.Specification)
    * Return all the entries that need to be type inferred before the current entry, i.e.
    * all the entries that are used by this entry and do not have an explicit type annotation.
    *
-    * @param defs the scope of definitions
+   * @param defs the scope of definitions
    * @param entry the entry to infer the type of
    */
   def requiredEntries(
@@ -260,9 +309,9 @@ class TypeChecker(spec: FlatTessla.Specification)
   /**
    * Translate an instance of [[FlatTessla.Definitions]].
    *
-    * This generates a local environment, and processes all definition entries.
+   * This generates a local environment, and processes all definition entries.
    *
-    * @param defs the definitions to translate
+   * @param defs the definitions to translate
    * @param parent the parent definitions, will be the parent of the resulting translated definitions
    * @param parentEnv the current environment
    * @return the translated definitions and the new environment
@@ -357,10 +406,10 @@ class TypeChecker(spec: FlatTessla.Specification)
   /**
    * Perform type substitution, using an expected and an actual type, as well known substitutions.
    *
-    * Known type parameters are substituted, and the substitutions are potentially expanded by new entries which
+   * Known type parameters are substituted, and the substitutions are potentially expanded by new entries which
    * could be deduced from the given actual and expected types.
    *
-    * @param expected the expected type
+   * @param expected the expected type
    * @param actual the actual type
    * @param substitutions the currently known substitutions
    * @return the substituted actual type
@@ -472,7 +521,7 @@ class TypeChecker(spec: FlatTessla.Specification)
    * Lift a constant to a stream by wrapping it in a `default(nil, x)` and adds those newly generated definitions
    * to the known definitions.
    *
-    * @param constant the constant value to lift
+   * @param constant the constant value to lift
    * @param defs the current definitions
    * @param env the current environment
    * @param loc the location
@@ -519,9 +568,9 @@ class TypeChecker(spec: FlatTessla.Specification)
   /**
    * Checks if two types are subtypes of one another or equal.
    *
-    * For function types this check not only checks for compatible types but also if they are liftable or not.
+   * For function types this check not only checks for compatible types but also if they are liftable or not.
    *
-    * @param parent the parent type
+   * @param parent the parent type
    * @param child the child type
    * @return the result of the check
    */
@@ -565,13 +614,13 @@ class TypeChecker(spec: FlatTessla.Specification)
   /**
    * Translate an expression to a typed expression and infer its type.
    *
-    * On macro calls, this also lifts expressions if necessary, and adds the new definitions accordingly.
+   * On macro calls, this also lifts expressions if necessary, and adds the new definitions accordingly.
    * Named arguments are translated into positional arguments.
    * Type parameters are inferred from their usage in call parameters, if possible.
    *
-    * Member accesses on streams of records are lifted as well.
+   * Member accesses on streams of records are lifted as well.
    *
-    * @param expression the expression to translate
+   * @param expression the expression to translate
    * @param declaredType the declared type, if existing
    * @param defs the known definitions
    * @param flatDefs the already translated definitions
@@ -867,7 +916,7 @@ class TypeChecker(spec: FlatTessla.Specification)
    * Look up the parameter names of the macro with the given identifier. This is used to be able to resolve
    * named arguments.
    *
-    * @param env the environment
+   * @param env the environment
    * @param macroID the macro id
    * @return the parameter names and locations
    */
