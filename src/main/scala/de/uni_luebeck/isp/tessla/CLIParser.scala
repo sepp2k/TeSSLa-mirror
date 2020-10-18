@@ -125,6 +125,7 @@ object CLIParser {
       .text("Print stack traces for errors and provide more verbose output")
     note("") // Spacer
     help("help")
+      .abbr("h")
       .text("Prints this help message and exit.")
     version("version")
       .text("Print the version and exit.")
