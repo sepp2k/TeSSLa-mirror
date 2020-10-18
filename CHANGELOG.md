@@ -9,6 +9,7 @@
 - `out` can now also be used on records of streams, which then gets separated into `out` statements for each member. If the record has non-stream members, they get lifted to a stream. (See [#92](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/92))
 - Add a short option `-h` for the `--help` command line option.
 - Function parameters now have globally unique names (See [#146](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/146))
+- Block expressions can now be used without any definitions (See [#148](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/148))
 
 ### API Changes
 /

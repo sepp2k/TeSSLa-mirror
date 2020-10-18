@@ -74,7 +74,7 @@ expression
     | (DECINT | HEXINT) timeUnit=ID? #IntLiteral
     | FLOAT #FloatLiteral
     | '(' NL* (elems+=expression (',' NL* elems+=expression)*)? lastComma=','? NL* ')' #TupleExpression
-    | '{' NL* (definitions+=def eos)+ RETURN? expression NL* '}' #Block
+    | '{' NL* (definitions+=def eos)* RETURN? expression NL* '}' #Block
     | ('${' | '{') NL* (members+=memberDefinition (',' NL* members+=memberDefinition)* ','? NL*)? '}' #ObjectLiteral
     | function=expression (
         ('[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']')? '(' NL* arguments+=arg (',' NL* arguments+=arg)* NL* ')'
