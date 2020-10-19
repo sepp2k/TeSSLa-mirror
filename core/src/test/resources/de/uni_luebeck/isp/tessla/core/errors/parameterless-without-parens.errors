@@ -1,1 +1,1 @@
-errors/annotations/parameterless-without-parens.tessla(4,5 - 4,8): Type mismatch: Expected function, found Int
+errors/parameterless-without-parens.tessla(4,5 - 4,8): Type mismatch: Expected function, found Int
