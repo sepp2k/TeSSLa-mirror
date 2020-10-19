@@ -109,6 +109,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       typeParameters.toSeq,
       parameters.toSeq,
       Option(definition.header.resultType).map(translateType),
+      definition.header.paren != null,
       Location.fromNode(definition.header),
       body,
       loc,
@@ -315,7 +316,8 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       val typeArgs = funCall.typeArguments.asScala.map(translateType)
       val args = funCall.arguments.asScala.map(translateArgument)
       val loc = Location.fromNode(funCall)
-      Tessla.MacroCall(translateExpression(funCall.function), typeArgs.toSeq, args.toSeq, loc)
+      val func = translateExpression(funCall.function)
+      Tessla.MacroCall(func, typeArgs.toSeq, args.toSeq, loc)
     }
 
     def translateArgument(arg: TesslaSyntax.ArgContext): Tessla.Argument[Tessla.Expression] = {

@@ -169,6 +169,7 @@ class Flattener(spec: Tessla.Specification)
       inputStream,
       Some(streamType),
       annotations,
+      false,
       in.loc
     )
     defs.addVariable(entry)
@@ -250,7 +251,7 @@ class Flattener(spec: Tessla.Specification)
     }.toMap
     val obj = FlatTessla.ObjectLiteral(valueMembers, module.loc)
     defs.addVariable(
-      FlatTessla.VariableEntry(outerEnv.variables(module.name), obj, None, Seq(), module.loc)
+      FlatTessla.VariableEntry(outerEnv.variables(module.name), obj, None, Seq(), false, module.loc)
     )
   }
 
@@ -337,7 +338,7 @@ class Flattener(spec: Tessla.Specification)
       }
       defs.addVariable(
         FlatTessla
-          .VariableEntry(env.variables(definition.id.name), exp, typ, Seq(), definition.headerLoc)
+          .VariableEntry(env.variables(definition.id.name), exp, typ, Seq(), definition.parens, definition.headerLoc)
       )
     } else {
       val innerDefs = new FlatTessla.Definitions(Some(defs))
@@ -357,7 +358,7 @@ class Flattener(spec: Tessla.Specification)
       parameters.map(_._2).foreach { param =>
         val typ = param.parameterType
         innerDefs.addVariable(
-          FlatTessla.VariableEntry(paramIdMap(param.name), param, Some(typ), Seq(), param.loc)
+          FlatTessla.VariableEntry(paramIdMap(param.name), param, Some(typ), Seq(), false, param.loc)
         )
       }
       blockDefs.foreach { innerDef =>
@@ -387,7 +388,7 @@ class Flattener(spec: Tessla.Specification)
             mac.isLiftable
           )
         }
-        defs.addVariable(FlatTessla.VariableEntry(id, mac, typ, Seq(), definition.headerLoc))
+        defs.addVariable(FlatTessla.VariableEntry(id, mac, typ, Seq(), definition.parens, definition.headerLoc))
       }
       defBody match {
         case b: Tessla.ExpressionBody =>
@@ -419,6 +420,7 @@ class Flattener(spec: Tessla.Specification)
               builtIn,
               typ,
               Seq(),
+              definition.parens,
               definition.headerLoc
             )
           )
@@ -486,7 +488,7 @@ class Flattener(spec: Tessla.Specification)
     case v: FlatTessla.Variable => v.id
     case _ =>
       val id = makeIdentifier()
-      defs.addVariable(FlatTessla.VariableEntry(id, exp, typeAnnotation, Seq(), exp.loc))
+      defs.addVariable(FlatTessla.VariableEntry(id, exp, typeAnnotation, Seq(), false, exp.loc))
       id
   }
 
@@ -613,7 +615,7 @@ class Flattener(spec: Tessla.Specification)
           // to infinite recursion.
           val body = translateExpression(exp, defs, env, imports)
           defs.addVariable(
-            FlatTessla.VariableEntry(innerEnv.variables(id.name), body, None, Seq(), id.loc)
+            FlatTessla.VariableEntry(innerEnv.variables(id.name), body, None, Seq(), false, id.loc)
           )
           id.name -> FlatTessla.IdLoc(innerEnv.variables(id.name), exp.loc)
       }
@@ -645,7 +647,7 @@ class Flattener(spec: Tessla.Specification)
       parameters.map(_._2).foreach { param =>
         val typ = param.parameterType
         innerDefs.addVariable(
-          FlatTessla.VariableEntry(paramIdMap(param.name), param, Some(typ), Seq(), param.loc)
+          FlatTessla.VariableEntry(paramIdMap(param.name), param, Some(typ), Seq(), true, param.loc)
         )
       }
       blockDefs.foreach { innerDef =>

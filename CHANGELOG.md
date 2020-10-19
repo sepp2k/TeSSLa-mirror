@@ -10,6 +10,7 @@
 - Add a short option `-h` for the `--help` command line option.
 - Function parameters now have globally unique names (See [#146](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/146))
 - Block expressions can now be used without any definitions (See [#148](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/148))
+- Annotations, definitions and lambda expressions can now be declared and used with empty parameter lists `()` (See [#149](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/149))
 
 ### API Changes
 /

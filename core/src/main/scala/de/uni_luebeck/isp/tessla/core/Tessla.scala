@@ -46,6 +46,7 @@ object Tessla {
     typeParameters: Seq[Identifier],
     parameters: Seq[(Option[TesslaAST.RuntimeEvaluation], Parameter)],
     returnType: Option[Type],
+    parens: Boolean,
     headerLoc: Location,
     body: Body,
     loc: Location,

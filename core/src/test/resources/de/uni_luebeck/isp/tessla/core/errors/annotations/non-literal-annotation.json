@@ -1,5 +1,4 @@
 {
   "spec": "_.tessla",
-  "input": "_.input",
   "expectedErrors": "_.errors"
 }

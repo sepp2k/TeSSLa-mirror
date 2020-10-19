@@ -1,0 +1,3 @@
+in x: Events[Int]
+
+out (() => 42) + 5

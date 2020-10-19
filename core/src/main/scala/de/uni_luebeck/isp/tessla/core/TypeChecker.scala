@@ -126,7 +126,7 @@ class TypeChecker(spec: FlatTessla.Specification)
                     val maId = makeIdentifier()
                     val loc = stream.loc
                     val ma = TypedTessla.MemberAccess(TypedTessla.IdLoc(previousId, loc), member, loc, loc)
-                    defs.addVariable(TypedTessla.VariableEntry(maId, ma, memberType, Seq(), loc))
+                    defs.addVariable(TypedTessla.VariableEntry(maId, ma, memberType, Seq(), false, loc))
                     typeMap.put(maId, memberType)
                     maId
                   }
@@ -356,7 +356,7 @@ class TypeChecker(spec: FlatTessla.Specification)
     val (exp, typ) = translateExpression(entry.expression, typeMap.get(id), defs, flatDefs, env)
     insertInferredType(id, typ, exp.loc)
     val annotations = entry.annotations.map(translateAnnotation(_, defs, flatDefs, env))
-    TypedTessla.VariableEntry(id, exp, typ, annotations, entry.loc)
+    TypedTessla.VariableEntry(id, exp, typ, annotations, entry.parens, entry.loc)
   }
 
   def translateAnnotation(
@@ -539,7 +539,7 @@ class TypeChecker(spec: FlatTessla.Specification)
     val nilCall =
       TypedTessla.MacroCall(findPredef("nil", env), loc, Seq(typeOfConstant), Seq(), loc)
     val nilId = makeIdentifier()
-    val nilEntry = TypedTessla.VariableEntry(nilId, nilCall, liftedType, Seq(), loc)
+    val nilEntry = TypedTessla.VariableEntry(nilId, nilCall, liftedType, Seq(), false, loc)
     defs.addVariable(nilEntry)
     val defaultArgs = Seq(
       TypedTessla.PositionalArgument(nilId, loc),
@@ -547,7 +547,7 @@ class TypeChecker(spec: FlatTessla.Specification)
     )
     val defaultCall =
       TypedTessla.MacroCall(findPredef("default", env), loc, Seq(typeOfConstant), defaultArgs, loc)
-    val entry = TypedTessla.VariableEntry(liftedId, defaultCall, liftedType, Seq(), loc)
+    val entry = TypedTessla.VariableEntry(liftedId, defaultCall, liftedType, Seq(), true, loc)
     defs.addVariable(entry)
     liftedId
   }
@@ -659,96 +659,103 @@ class TypeChecker(spec: FlatTessla.Specification)
         val t = typeMap(id)
         TypedTessla.Parameter(param.param, t, id) -> t
       case call: FlatTessla.MacroCall =>
-        typeMap(env(call.macroID)) match {
-          case t: TypedTessla.FunctionType =>
-            val name = call.macroID.nameOpt.getOrElse("<macro>")
-            if (call.args.length != t.parameterTypes.length) {
-              throw ArityMismatch(name, t.parameterTypes.length, call.args.length, call.loc)
-            }
-            val typeArgs = call.typeArgs.map(translateType(_, env))
-            if (typeArgs.nonEmpty && typeArgs.length != t.typeParameters.length) {
-              throw TypeArityMismatch(name, t.typeParameters.length, call.typeArgs.length, call.loc)
-            }
-            var macroID = env(call.macroID)
-            var possiblyLiftedType = t
-            var lastArgs: Seq[TypedTessla.Argument] = Seq()
-            if (t.isLiftable && call.args.exists(arg => typeMap(env(arg.id)).isStreamType)) {
-              possiblyLiftedType = liftFunctionType(t)
-              lastArgs = Seq(TypedTessla.PositionalArgument(macroID, call.macroLoc))
-              macroID = findPredef(s"slift${call.args.length}", env, call.macroLoc)
-            }
-            val parameters = lookupParameterNames(flatDefs, call.macroID) match {
-              case Some((p, _)) =>
-                val parameters = p.map(_._2)
-                resolveNamedArgs(call.args, parameters, call.loc).map {
-                  case (arg, loc) => (arg.id, loc)
-                }
-              case None =>
-                if (call.args.exists(_.isInstanceOf[FlatTessla.NamedArgument])) {
-                  throw Errors.InternalError("Unsupported use of named argument", call.loc)
-                }
-                call.args.map(arg => (arg.id, arg.loc))
-            }
-            val typeSubstitutions = mutable.Map(t.typeParameters.zip(typeArgs): _*)
-            val typeParams = t.typeParameters.toSet
-            val args = parameters.zip(possiblyLiftedType.parameterTypes).map {
-              case ((argId, argLoc), (_, genericExpected)) =>
-                val id = env(argId)
-                val actual = typeMap(id)
-                val expected = typeSubst(genericExpected, actual, typeSubstitutions)
-                val possiblyLifted =
-                  if (isSubtypeOrEqual(parent = expected, child = actual)) {
-                    id
-                  } else if (streamType(actual) == expected) {
-                    liftConstant(id, defs, env, argLoc)
-                  } else {
-                    (actual, expected) match {
-                      case (a: TypedTessla.FunctionType, e: TypedTessla.FunctionType)
-                          if a.isLiftable && isSubtypeOrEqual(
-                            parent = e,
-                            child = liftFunctionType(a)
-                          ) =>
-                        val sliftId =
-                          findPredef(s"slift${a.parameterTypes.length}_curried", env, argLoc)
-                        val typeArgs = a.parameterTypes.map(_._2) :+ a.returnType
-                        val sliftArgs = Seq(TypedTessla.PositionalArgument(id, argLoc))
-                        val sliftCall =
-                          TypedTessla.MacroCall(sliftId, argLoc, typeArgs, sliftArgs, argLoc)
-                        val liftedId = makeIdentifier()
-                        defs.addVariable(
-                          TypedTessla.VariableEntry(liftedId, sliftCall, e, Seq(), argLoc)
-                        )
-                        liftedId
-                      case _ =>
-                        error(TypeMismatch(expected, actual, argLoc))
-                        id
-                    }
-                  }
-
-                TypedTessla.PositionalArgument(possiblyLifted, argLoc)
-            } ++ lastArgs
-            val leftOverTypeParameters = typeParams.diff(typeSubstitutions.keySet)
-            if (leftOverTypeParameters.nonEmpty) {
-              throw TypeArgumentsNotInferred(name, call.macroLoc)
-            }
-            val calculatedTypeArgs = t.typeParameters.map(typeSubstitutions)
-            val returnType = typeSubst(
-              possiblyLiftedType.returnType,
-              possiblyLiftedType.returnType,
-              typeSubstitutions
-            )
-            val newTypeArgs =
-              if (t.isLiftable && call.args.exists(arg => typeMap(env(arg.id)).isStreamType)) {
-                t.parameterTypes.map(p => typeSubst(p._2, p._2, typeSubstitutions)) :+
-                  typeSubst(t.returnType, t.returnType, typeSubstitutions)
-              } else {
-                calculatedTypeArgs
-              }
-            TypedTessla.MacroCall(macroID, call.macroLoc, newTypeArgs, args, call.loc) -> returnType
+        var liftedToFunctionType = false
+        val t = typeMap(env(call.macroID)) match {
+          case typ: TypedTessla.FunctionType                => typ
+          case typ if lookup(flatDefs, call.macroID).parens =>
+            // If the definition uses an empty parameter list, like `def x() = ...`, implicitly convert to a function type
+            liftedToFunctionType = true
+            TypedTessla.FunctionType(Seq(), Seq(), typ, isLiftable = false)
           case other =>
             throw TypeMismatch("function", other, call.macroLoc)
         }
+        val name = call.macroID.nameOpt.getOrElse("<macro>")
+        if (call.args.length != t.parameterTypes.length) {
+          throw ArityMismatch(name, t.parameterTypes.length, call.args.length, call.loc)
+        }
+        val typeArgs = call.typeArgs.map(translateType(_, env))
+        if (typeArgs.nonEmpty && typeArgs.length != t.typeParameters.length) {
+          throw TypeArityMismatch(name, t.typeParameters.length, call.typeArgs.length, call.loc)
+        }
+        var macroID = env(call.macroID)
+        var possiblyLiftedType = t
+        var lastArgs: Seq[TypedTessla.Argument] = Seq()
+        if (t.isLiftable && call.args.exists(arg => typeMap(env(arg.id)).isStreamType)) {
+          possiblyLiftedType = liftFunctionType(t)
+          lastArgs = Seq(TypedTessla.PositionalArgument(macroID, call.macroLoc))
+          macroID = findPredef(s"slift${call.args.length}", env, call.macroLoc)
+        }
+        val parameters = lookupParameterNames(flatDefs, call.macroID) match {
+          case Some((p, _)) =>
+            val parameters = p.map(_._2)
+            resolveNamedArgs(call.args, parameters, call.loc).map {
+              case (arg, loc) => (arg.id, loc)
+            }
+          case None =>
+            if (call.args.exists(_.isInstanceOf[FlatTessla.NamedArgument])) {
+              throw Errors.InternalError("Unsupported use of named argument", call.loc)
+            }
+            call.args.map(arg => (arg.id, arg.loc))
+        }
+        val typeSubstitutions = mutable.Map(t.typeParameters.zip(typeArgs): _*)
+        val typeParams = t.typeParameters.toSet
+        val args = parameters.zip(possiblyLiftedType.parameterTypes).map {
+          case ((argId, argLoc), (_, genericExpected)) =>
+            val id = env(argId)
+            val actual = typeMap(id)
+            val expected = typeSubst(genericExpected, actual, typeSubstitutions)
+            val possiblyLifted =
+              if (isSubtypeOrEqual(parent = expected, child = actual)) {
+                id
+              } else if (streamType(actual) == expected) {
+                liftConstant(id, defs, env, argLoc)
+              } else {
+                (actual, expected) match {
+                  case (a: TypedTessla.FunctionType, e: TypedTessla.FunctionType)
+                      if a.isLiftable && isSubtypeOrEqual(
+                        parent = e,
+                        child = liftFunctionType(a)
+                      ) =>
+                    val sliftId =
+                      findPredef(s"slift${a.parameterTypes.length}_curried", env, argLoc)
+                    val typeArgs = a.parameterTypes.map(_._2) :+ a.returnType
+                    val sliftArgs = Seq(TypedTessla.PositionalArgument(id, argLoc))
+                    val sliftCall =
+                      TypedTessla.MacroCall(sliftId, argLoc, typeArgs, sliftArgs, argLoc)
+                    val liftedId = makeIdentifier()
+                    defs.addVariable(
+                      TypedTessla.VariableEntry(liftedId, sliftCall, e, Seq(), true, argLoc)
+                    )
+                    liftedId
+                  case _ =>
+                    error(TypeMismatch(expected, actual, argLoc))
+                    id
+                }
+              }
 
+            TypedTessla.PositionalArgument(possiblyLifted, argLoc)
+        } ++ lastArgs
+        val leftOverTypeParameters = typeParams.diff(typeSubstitutions.keySet)
+        if (leftOverTypeParameters.nonEmpty) {
+          throw TypeArgumentsNotInferred(name, call.macroLoc)
+        }
+        val calculatedTypeArgs = t.typeParameters.map(typeSubstitutions)
+        val returnType = typeSubst(
+          possiblyLiftedType.returnType,
+          possiblyLiftedType.returnType,
+          typeSubstitutions
+        )
+        val newTypeArgs =
+          if (t.isLiftable && call.args.exists(arg => typeMap(env(arg.id)).isStreamType)) {
+            t.parameterTypes.map(p => typeSubst(p._2, p._2, typeSubstitutions)) :+
+              typeSubst(t.returnType, t.returnType, typeSubstitutions)
+          } else {
+            calculatedTypeArgs
+          }
+        if (liftedToFunctionType)
+          TypedTessla.Variable(macroID, call.macroLoc) -> returnType
+        else
+          TypedTessla.MacroCall(macroID, call.macroLoc, newTypeArgs, args, call.loc) -> returnType
       case o: FlatTessla.ObjectLiteral =>
         val members = mapValues(o.members)(member => TypedTessla.IdLoc(env(member.id), member.loc))
         val memberTypes = mapValues(members)(member => typeMap(member.id))
@@ -792,13 +799,13 @@ class TypeChecker(spec: FlatTessla.Specification)
             )
             val macroDefs = new TypedTessla.Definitions(Some(defs))
             macroDefs.addVariable(
-              TypedTessla.VariableEntry(param.id, param, ot, Seq(), acc.receiver.loc)
+              TypedTessla.VariableEntry(param.id, param, ot, Seq(), false, acc.receiver.loc)
             )
             val resultId = makeIdentifier()
             val resultExp =
               TypedTessla.MemberAccess(param.idLoc, acc.member, acc.memberLoc, acc.loc)
             macroDefs.addVariable(
-              TypedTessla.VariableEntry(resultId, resultExp, memberType, Seq(), acc.loc)
+              TypedTessla.VariableEntry(resultId, resultExp, memberType, Seq(), false, acc.loc)
             )
             val mac = TypedTessla.Macro(
               Seq(),
@@ -816,6 +823,7 @@ class TypeChecker(spec: FlatTessla.Specification)
                 mac,
                 TypedTessla.FunctionType(Seq(), Seq(None -> ot), memberType, true),
                 Seq(),
+                true,
                 acc.loc
               )
             )

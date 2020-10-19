@@ -19,7 +19,7 @@ entry: statement eos;
 
 statement
     : def #Definition
-    | tessladoc+=DOCLINE* NL* 'def' NL* ('@' | '@@') ID ( '(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')' )? #AnnotationDefinition
+    | tessladoc+=DOCLINE* NL* 'def' NL* ('@' | '@@') ID ( '(' NL* (parameters+=param (',' NL* parameters+=param)* )? NL* ')' )? #AnnotationDefinition
     | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' NL* typeParameters+=ID (',' NL* typeParameters+=ID)* NL* ']')? (':='|'=') NL* typeBody #TypeDefinition
     | tessladoc+=DOCLINE* NL* 'module' NL* name=ID NL* '{' NL* contents+=entry* NL* '}' #ModuleDefinition
     | 'import' path+=ID ('.' path+=ID)* #ImportStatement
@@ -39,13 +39,13 @@ definitionHeader:
     liftable='liftable'? NL*
     'def' NL* name=ID
     ('[' NL* typeParameters+=ID (',' NL* typeParameters+=ID)* NL* ']')?
-    ('(' NL* parameters+=param (',' NL* parameters+=param)* NL* ')')?
+    (paren='(' NL* (parameters+=param (',' NL* parameters+=param)* )? NL* ')')?
     (':' NL* resultType=type)?;
 
 annotation: '@' annotationInner;
 globalAnnotation: '@@' annotationInner;
 
-annotationInner: ID ( '(' NL* arguments+=annotationArg (',' NL* arguments+=annotationArg)* NL* ')' )? NL*;
+annotationInner: ID ( '(' NL* (arguments+=annotationArg (',' NL* arguments+=annotationArg)* )? NL* ')' )? NL*;
 
 annotationArg: (name=ID '=' NL*)? expression;
 
@@ -77,7 +77,7 @@ expression
     | '{' NL* (definitions+=def eos)* RETURN? expression NL* '}' #Block
     | ('${' | '{') NL* (members+=memberDefinition (',' NL* members+=memberDefinition)* ','? NL*)? '}' #ObjectLiteral
     | function=expression (
-        ('[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']')? '(' NL* arguments+=arg (',' NL* arguments+=arg)* NL* ')'
+        ('[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']')? '(' (NL* arguments+=arg (',' NL* arguments+=arg)* )? NL* ')'
       | ('[' NL* typeArguments+=type (',' NL* typeArguments+=type)* NL* ']')
       )  #FunctionCall
     | '__root__' '.' NL* fieldName=ID #RootMemberAccess
@@ -93,7 +93,7 @@ expression
     | lhs=expression op='||' NL* rhs=expression #InfixExpression
     | ifToken='if' condition=expression NL* 'then' NL* thenCase=expression NL* 'else' NL* elseCase=expression #ITE
     | 'static' 'if' condition=expression NL* 'then' NL* thenCase=expression NL* 'else' NL* elseCase=expression #ITE
-    | openingParen='(' NL* params+=param (',' NL* params+=param)* NL* closingParen=')' '=>' NL* expression #Lambda
+    | openingParen='(' NL* (params+=param (',' NL* params+=param)* )? NL* closingParen=')' '=>' NL* expression #Lambda
     ;
 
 memberDefinition: name=ID ((':'|'=') NL* value=expression)?;

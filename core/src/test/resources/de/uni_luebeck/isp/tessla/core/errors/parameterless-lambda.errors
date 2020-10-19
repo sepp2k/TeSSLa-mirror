@@ -1,0 +1,1 @@
+errors/annotations/parameterless-lambda.tessla(3,6 - 3,14): Type mismatch: Expected Int, found []() => Int
