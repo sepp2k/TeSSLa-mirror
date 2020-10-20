@@ -17,6 +17,7 @@
 ### API Changes
 * The `printAnnotations` method of `TesslaAST` now has an additional parameter `global`, which is used to differentiate between the two existing kinds of annotations. 
 * The generated documentation Json has a new field `global` on `AnnotationDoc` items.
+* Removed the unused classes `DepthChecker`, `NodeCounter` and `RecursiveDepthChecker`.
 
 ## Version 1.2.0
 

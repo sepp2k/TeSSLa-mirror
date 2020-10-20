@@ -33,7 +33,19 @@ import org.eclipse.tracecompass.ctf.core.event.types.{
   StringDefinition
 }
 
+/**
+ * Helper functions for use with CTF traces.
+ * */
 object Ctf {
+
+  /**
+   * Find the value addressed by the given key and return it as a String (if valid).
+   *
+   * @param event the event definition
+   * @param key the key to search
+   * @param loc the location
+   * @return
+   */
   def getString(event: IEventDefinition, key: String, loc: Location): String = {
     getDefinition(event, key, loc) match {
       case Some(str: StringDefinition) => str.getValue
@@ -41,7 +53,14 @@ object Ctf {
       case _                           => throw CtfKeyNotFound(key, loc)
     }
   }
-
+  /**
+   * Find the value addressed by the given key and return it as a BigInt (if valid).
+   *
+   * @param event the event definition
+   * @param key the key to search
+   * @param loc the location
+   * @return
+   */
   def getInt(event: IEventDefinition, key: String, loc: Location): BigInt = {
     getDefinition(event, key, loc) match {
       case Some(i: IntegerDefinition) => BigInt(i.getIntegerValue)
@@ -50,6 +69,16 @@ object Ctf {
     }
   }
 
+  /**
+   * Find a definition for a given key name. The key can address a specific part of the event definition by
+   * using a prefix:suffix notation. Valid prefixes are "context", "eventcontext", "eventheader", "packetcontext" and
+   * "fields".
+   *
+   * @param event the event definition
+   * @param key the key to search
+   * @param loc the location
+   * @return
+   */
   def getDefinition(event: IEventDefinition, key: String, loc: Location): Option[IDefinition] = {
     if (key.contains(":")) {
       val Array(prefix, suffix) = key.split(":", 2)
@@ -67,6 +96,13 @@ object Ctf {
     }
   }
 
+  /**
+   * Find the definition for a given key name, where the path is separated by dots.
+   *
+   * @param composite the composite definition containing the fields
+   * @param key the key to search
+   * @return
+   */
   def getDefinition(composite: ICompositeDefinition, key: String): Option[IDefinition] = {
     if (composite.getFieldNames.contains(key)) {
       Some(composite.getDefinition(key))

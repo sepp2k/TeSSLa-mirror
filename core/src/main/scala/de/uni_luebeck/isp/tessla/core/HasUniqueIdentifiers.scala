@@ -24,6 +24,9 @@
 
 package de.uni_luebeck.isp.tessla.core
 
+/**
+ * Provides an implementation for Identifiers and a factory for them, ensuring that they are unique.
+ */
 trait HasUniqueIdentifiers {
 
   class Identifier private[HasUniqueIdentifiers] (val uid: Long, val nameOpt: Option[String]) {
@@ -40,6 +43,11 @@ trait HasUniqueIdentifiers {
     }
   }
 
+  /**
+   * A factory for identifiers, which can create identifiers from a given name or without any name, appending them with
+   * a UUID.
+   * @param counter
+   */
   abstract class IdentifierFactory(private var counter: Long = 0L) {
     protected def identifierCounter = counter
 

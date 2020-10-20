@@ -26,13 +26,29 @@ package de.uni_luebeck.isp.tessla.core
 
 import de.uni_luebeck.isp.tessla.core.Errors.UnknownTimeUnit
 
+/**
+ * An abstract time unit. Provides functionality for comparison with and conversion to other time units.
+ */
 sealed abstract class TimeUnit {
+  /**
+   * The factor used to provide a common base unit for all time units, used for conversion and comparison.
+   */
   val factor: BigInt
 
   def loc: Location
 
+  /**
+   * Compare the time unit to the provided one
+   * @param that the time unit to compare to
+   * @return true if the provided time unit is larger
+   */
   def <(that: TimeUnit): Boolean = factor < that.factor
 
+  /**
+   * Calculate a conversion factor to convert numeric values from one time unit to another
+   * @param that the time unit to convert to
+   * @return the factor to use
+   */
   def convertTo(that: TimeUnit): Option[BigInt] = {
     if (factor >= that.factor) Some(factor / that.factor)
     else None
@@ -41,6 +57,12 @@ sealed abstract class TimeUnit {
 
 object TimeUnit {
 
+  /**
+   * Generate a time unit from a provided String. (E.g. "fs", "ms" or "d")
+   * @param str the time unit as String.
+   * @param loc the location
+   * @return the parsed time unit.
+   */
   def fromString(str: String, loc: Location): TimeUnit = {
     str.replaceAll("\"", "") match {
       case "fs"  => Femtos(loc)
