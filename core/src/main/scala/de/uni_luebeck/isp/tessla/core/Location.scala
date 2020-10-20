@@ -32,6 +32,7 @@ import org.antlr.v4.runtime.tree.TerminalNode
  * Describes a location in a source
  */
 sealed abstract class Location {
+
   /**
    * Merge two locations into one.
    * @param other the location to merge with

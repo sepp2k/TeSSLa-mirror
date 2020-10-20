@@ -30,6 +30,7 @@ import de.uni_luebeck.isp.tessla.core.Errors.UnknownTimeUnit
  * An abstract time unit. Provides functionality for comparison with and conversion to other time units.
  */
 sealed abstract class TimeUnit {
+
   /**
    * The factor used to provide a common base unit for all time units, used for conversion and comparison.
    */

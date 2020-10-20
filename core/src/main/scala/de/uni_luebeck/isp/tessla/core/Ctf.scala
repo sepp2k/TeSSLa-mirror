@@ -53,6 +53,7 @@ object Ctf {
       case _                           => throw CtfKeyNotFound(key, loc)
     }
   }
+
   /**
    * Find the value addressed by the given key and return it as a BigInt (if valid).
    *
