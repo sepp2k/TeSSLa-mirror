@@ -115,6 +115,10 @@ object IntermediateCode {
     override def toString: String = s"Lazy[$subType]"
   }
 
+  final case object VoidType extends ImpLanType {
+    override def toString = "Void"
+  }
+
   final case class LongValue(value: Long) extends ImpLanVal {
     override def toString: String = value.toString
   }
@@ -182,9 +186,14 @@ object IntermediateCode {
     override def toString: String = s"Try: \n${tr.mkString("\n")}\nCATCH var_err: \n${cat.mkString("\n")}\nEndTry"
   }
 
-  final case class Assignment(lhs: Variable, rexpr: ImpLanExpr, defVal: Option[ImpLanExpr], typ: ImpLanType)
-      extends ImpLanStmt {
-    override def toString: String = s"$lhs = $rexpr (default: $defVal)"
+  final case class Assignment(
+    lhs: Variable,
+    rexpr: ImpLanExpr,
+    defVal: Option[ImpLanExpr],
+    typ: ImpLanType,
+    glob: Boolean
+  ) extends ImpLanStmt {
+    override def toString: String = s"$lhs = $rexpr (default: $defVal ${if (glob) ", global scope" else ""})"
   }
 
   final case class FinalAssignment(lhs: Variable, defVal: ImpLanExpr, typ: ImpLanType, lazyVar: Boolean)

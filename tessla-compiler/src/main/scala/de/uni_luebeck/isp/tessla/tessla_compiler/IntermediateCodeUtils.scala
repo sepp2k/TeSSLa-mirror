@@ -71,12 +71,12 @@ object IntermediateCodeUtils {
     stmts.foldLeft[A](n) {
       case (currN, stmt) => {
         val subStmts = stmt match {
-          case _: ImpLanExpr                    => Seq()
-          case If(guard, stmts, elseStmts)      => guard.flatten ++ stmts ++ elseStmts
-          case TryCatchBlock(tr, cat)           => tr ++ cat
-          case Assignment(_, rexpr, defVal, _)  => Seq(rexpr) ++ (if (defVal.isDefined) Seq(defVal.get) else Seq())
-          case FinalAssignment(_, defVal, _, _) => Seq(defVal)
-          case ReturnStatement(expr)            => Seq(expr)
+          case _: ImpLanExpr                      => Seq()
+          case If(guard, stmts, elseStmts)        => guard.flatten ++ stmts ++ elseStmts
+          case TryCatchBlock(tr, cat)             => tr ++ cat
+          case Assignment(_, rexpr, defVal, _, _) => Seq(rexpr) ++ (if (defVal.isDefined) Seq(defVal.get) else Seq())
+          case FinalAssignment(_, defVal, _, _)   => Seq(defVal)
+          case ReturnStatement(expr)              => Seq(expr)
         }
 
         stmt match {
@@ -106,12 +106,13 @@ object IntermediateCodeUtils {
           case If(guard, stmts, elseStmts) =>
             If(guard.map(_.map(mapAST(_, f, g))), mapAST(stmts, f, g), mapAST(elseStmts, f, g))
           case TryCatchBlock(tr, cat) => TryCatchBlock(mapAST(tr, f, g), mapAST(cat, f, g))
-          case Assignment(lhs, rexpr, defVal, typ) =>
+          case Assignment(lhs, rexpr, defVal, typ, glob) =>
             Assignment(
               lhs,
               mapAST(rexpr, f, g),
               if (defVal.isDefined) Some(mapAST(defVal.get, f, g)) else None,
-              typ
+              typ,
+              glob
             )
           case FinalAssignment(lhs, defVal, typ, ld) => FinalAssignment(lhs, mapAST(defVal, f, g), typ, ld)
           case ReturnStatement(expr)                 => ReturnStatement(mapAST(expr, f, g))
@@ -145,34 +146,52 @@ object IntermediateCodeUtils {
   }
 
   /**
-   * Builds map containing type/default/lazyness information for all variables defined in stmts.
+   * Builds map containing type/default/lazyness/global-definition information for all variables defined in stmts.
    * If unsound information (e.g. multiple declarations) are found an error is thrown.
    * @param stmts The sequence of statements to be examined
    * @param baseMap The base map to be extended
+   * @param global Include global definitions in sub-expressions (e.g. functions)
    * @return Map containing variable information.
    */
   def getVariableMap(
     stmts: Seq[ImpLanStmt],
-    baseMap: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map()
+    baseMap: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map(),
+    global: Boolean
   ): Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = {
 
-    def extractAssignments(stmt: ImpLanStmt): Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = stmt match {
-      case Assignment(lhs, _, defVal, typ)       => Seq((lhs.name, typ, defVal, false))
-      case FinalAssignment(lhs, defVal, typ, ld) => Seq((lhs.name, typ, Some(defVal), ld))
-      case If(_, stmts, elseStmts)               => stmts.concat(elseStmts).flatMap(extractAssignments)
-      case TryCatchBlock(tr, cat)                => tr.concat(cat).flatMap(extractAssignments)
+    def extractAssignments(
+      topLevel: Boolean
+    )(stmt: ImpLanStmt): Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = stmt match {
+      case Assignment(lhs, rhs, defVal, typ, globVar) =>
+        (if (global && globVar || topLevel && !globVar) Seq((lhs.name, typ, defVal, false)) else Seq()) ++
+          (if (global) extractAssignmentsFromExp(rhs) else Seq())
+      case FinalAssignment(lhs, defVal, typ, ld) => Seq((lhs.name, typ, scala.Some(defVal), ld))
+      case If(_, stmts, elseStmts)               => stmts.concat(elseStmts).flatMap(extractAssignments(topLevel))
+      case TryCatchBlock(tr, cat)                => tr.concat(cat).flatMap(extractAssignments(topLevel))
       case _                                     => Seq()
     }
 
-    val varDefs: Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = baseMap.toSeq.map {
+    def extractAssignmentsFromExp(exp: ImpLanExpr): Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] =
+      exp match {
+        case CastingExpression(e, _, _) => extractAssignmentsFromExp(e)
+        case FunctionCall(_, params, _) => params.flatMap(extractAssignmentsFromExp)
+        case LambdaApplication(exp, _)  => extractAssignmentsFromExp(exp)
+        case TernaryExpression(guard, e1, e2) =>
+          guard.flatMap(_.flatMap(extractAssignmentsFromExp)) ++ extractAssignmentsFromExp(
+            e1
+          ) ++ extractAssignmentsFromExp(e2)
+        case Equal(e1, e2)                   => extractAssignmentsFromExp(e1) ++ extractAssignmentsFromExp(e2)
+        case LambdaExpression(_, _, _, body) => body.flatMap(extractAssignments(false))
+        case _                               => Seq()
+      }
+
+    val varDefs: Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = (baseMap.toSeq.map {
       case (a, (b, c, d)) => (a, b, c, d)
-    } ++ stmts.flatMap(extractAssignments).distinct
+    } ++ stmts.flatMap(extractAssignments(true))).distinct
     val duplicates = varDefs.groupBy { case (n, _, _, _) => n }.collect { case (x, List(_, _, _*)) => x }
 
     if (duplicates.nonEmpty) {
-      throw Diagnostics.DSLError(
-        s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}"
-      )
+      throw Diagnostics.DSLError(s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}")
     }
 
     varDefs.map { case (name, typ, default, lazyDef) => (name, (typ, default, lazyDef)) }.toMap
@@ -463,10 +482,17 @@ class IntermediateCodeUtils(
    *                Must match the default value from other assignments to this variable.
    * @param typ The type of the assigned identifier.
    *            Must match the type from other assignments to this variable.
+   * @param glob Whether the variable must be declared in the global space.
    * @return [[IntermediateCodeUtils]] representing the new state
    */
-  def Assignment(lhs: Variable, rhs: ImpLanExpr, default: ImpLanExpr, typ: ImpLanType): IntermediateCodeUtils = {
-    Assignment(lhs, rhs, Some(default), typ)
+  def Assignment(
+    lhs: Variable,
+    rhs: ImpLanExpr,
+    default: ImpLanExpr,
+    typ: ImpLanType,
+    glob: Boolean = false
+  ): IntermediateCodeUtils = {
+    Assignment(lhs, rhs, Some(default), typ, glob)
   }
 
   /**
@@ -478,15 +504,17 @@ class IntermediateCodeUtils(
    *                Optional.
    * @param typ The type of the assigned identifier.
    *            Must match the type from other assignments to this variable.
+   * @param glob Whether the variable must be declared in the global space.
    * @return [[IntermediateCodeUtils]] representing the new state
    */
   def Assignment(
     lhs: Variable,
     rhs: ImpLanExpr,
     default: Option[ImpLanExpr],
-    typ: ImpLanType
+    typ: ImpLanType,
+    glob: Boolean
   ): IntermediateCodeUtils = {
-    val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.Assignment(lhs, rhs, default, typ))
+    val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.Assignment(lhs, rhs, default, typ, glob))
     new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
   }
 

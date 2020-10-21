@@ -77,6 +77,7 @@ object CLIParser {
     outFile: Option[File] = None,
     jarFile: Option[File] = None,
     additionalSource: String = "",
+    ioInterface: Boolean = true,
     compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
@@ -276,7 +277,10 @@ object CLIParser {
           .text("Place the generated Scala source code at this location."),
         opt[File]('j', "jar-file")
           .foreach(f => config = config.copy(jarFile = Some(f)))
-          .text("Compile TeSSLa specification to an executable jar file which is created at the given location.")
+          .text("Compile TeSSLa specification to an executable jar file which is created at the given location."),
+        opt[Unit]('n', "no-io")
+          .foreach(_ => config = config.copy(ioInterface = false))
+          .text("Replaces I/O Handling in generated source with simple API interface")
       )
   }
 

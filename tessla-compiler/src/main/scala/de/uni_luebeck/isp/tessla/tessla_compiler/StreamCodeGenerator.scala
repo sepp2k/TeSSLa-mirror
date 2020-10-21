@@ -407,7 +407,8 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
         s"${o}_fval",
         nonStreamCodeGenerator.translateFunctionCall(function, params, nonStreamCodeGenerator.TypeArgManagement.empty),
         None,
-        OptionType(ot)
+        OptionType(ot),
+        false
       )
       .Assignment(s"${o}_unknown", BoolValue(false), BoolValue(false), BoolType)
       .If(
@@ -592,7 +593,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    * __[TC]output__ gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
    * current timestamp) and has to be translated accordingly in the final code generation
    *
-    * @param id The id of the stream to be printed
+   * @param id The id of the stream to be printed
    * @param t id's type. Must be Events[...]
    * @param nameOpt The alias name of id for printing. Optional.
    * @param raw If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
@@ -600,7 +601,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the tailSource section.
    * @return The modified source listing
    */
-  def produceOutputCode(
+  def produceOutputToConsoleCode(
     id: Identifier,
     t: Type,
     nameOpt: Option[String],
@@ -620,6 +621,54 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       .EndIf()
 
     SourceListing(currSrc.stepSource, newTail, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+  }
+
+  /**
+   * Add code for output generation (calling of __[TC]output__) to the source listing.
+   * __[TC]output__ gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
+   * current timestamp) and has to be translated accordingly in the final code generation
+   *
+   * @param id The id of the stream to be printed
+   * @param t id's type. Must be Events[...]
+   * @param nameOpt The alias name of id for printing. Optional.
+   * @param raw If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the tailSource section.
+   * @return The modified source listing
+   */
+  def produceOutputToAPICode(
+    id: Identifier,
+    t: Type,
+    nameOpt: Option[String],
+    currSrc: SourceListing,
+    raw: Boolean
+  ): SourceListing = {
+    val s = s"var_${id.fullName}"
+    val nameID = id.idOrName.left.getOrElse(id.fullName)
+    val name = nameOpt.getOrElse(nameID)
+    val ft = IntermediateCode.FunctionType(
+      Seq(t, LongType, StringType, ErrorType),
+      VoidType
+    )
+
+    val newStaticSource = currSrc.staticSource
+      .Assignment(s"out_$nameID", EmptyFunction(ft), EmptyFunction(ft), ft)
+
+    val newTailSource = currSrc.tailSource
+      .If(Seq(Seq(s"${s}_changed", s"${s}_init")))
+      .LambdaApplication(
+        s"out_$nameID",
+        Seq(s"${s}_value", "currTs", StringValue(name), s"${s}_error")
+      )
+      .EndIf()
+
+    SourceListing(
+      currSrc.stepSource,
+      newTailSource,
+      currSrc.tsGenSource,
+      currSrc.inputProcessing,
+      newStaticSource
+    )
   }
 
   /**
@@ -673,4 +722,50 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     SourceListing(currSrc.stepSource, currSrc.tailSource, currSrc.tsGenSource, newInputProcessing, currSrc.staticSource)
   }
 
+  /**
+   * Produces code reading the std input (variable inputStream and value) and passes it to the _value variable
+   * of an input stream. For parsing the input string to an exact value a function __[TC]inputParse__ is called
+   * which has to be translated in the following phases.
+   *
+   * @param inStream The input stream to be handled
+   * @param typ      The input stream's type. Must be Events[...].
+   * @param currSrc  The source listing the generated block is added to.
+   *                 There is code attached to the inputProcessing section.
+   * @return The modified source listing
+   */
+  def produceInputFromAPICode(inStream: Identifier, typ: Type, currSrc: SourceListing): SourceListing = {
+    val s = s"var_${inStream.fullName}"
+    val ft = IntermediateCode.FunctionType(Seq(typ, LongType), VoidType)
+
+    val stmts = Seq()
+      .If(Seq(Seq(NotEqual("currTs", "ts"))))
+      .Assignment("newInputTs", "ts", LongValue(0), typ)
+      .FunctionCall("step", Seq("ts"), IntermediateCode.FunctionType(Seq(LongType), VoidType))
+      .EndIf()
+      .Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForStreamType(typ), typ, true)
+      .Assignment(s"${s}_lastInit", s"${s}_init", BoolValue(false), BoolType, true)
+      .Assignment(s"${s}_value", "value", defaultValueForStreamType(typ), typ, true)
+      .Assignment(s"${s}_init", BoolValue(true), BoolValue(false), BoolType, true)
+      .Assignment(s"${s}_ts", "ts", LongValue(0), LongType, true)
+      .Assignment(s"${s}_changed", BoolValue(true), BoolValue(false), BoolType, true)
+
+    val newStaticSource = currSrc.staticSource
+      .FinalAssignment(s"${s}_lastError", LongValue(0), LongType)
+      .FinalAssignment(s"${s}_error", LongValue(0), LongType)
+      .FinalAssignment(s"${s}_unknown", BoolValue(false), BoolType)
+      .Assignment(
+        s"set_$s",
+        LambdaExpression(Seq("value", "ts"), Seq(typ, LongType), VoidType, stmts),
+        EmptyFunction(ft),
+        ft
+      )
+
+    SourceListing(
+      currSrc.stepSource,
+      currSrc.tailSource,
+      currSrc.tsGenSource,
+      currSrc.inputProcessing,
+      newStaticSource
+    )
+  }
 }

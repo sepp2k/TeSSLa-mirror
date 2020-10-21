@@ -30,8 +30,15 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{
  * @param userIncludes Additional user-specific code which is included on top of the generated scala source.
  *                     Can be used e.g. for additional includes
  */
-class ScalaBackend(userIncludes: String = "")
-    extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeleton.scala", userIncludes) {
+
+class ScalaBackend(ioInterface: Boolean, userIncludes: String = "")
+    extends BackendInterface(
+      if (ioInterface)
+        "de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeleton.scala"
+      else
+        "de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeletonNoIO.scala",
+      userIncludes
+    ) {
 
   /**
    * Translates a map of variables with base information (type, default value, lazy assignment) to corresponding
@@ -40,13 +47,13 @@ class ScalaBackend(userIncludes: String = "")
    * @param vars Map of variables to be translated: Name -> (Type x Default value x Lazy assignment)
    * @return Sequence of variable definitions in Scala
    */
-  def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)]): Seq[String] = {
+  def generateVariableDeclarations(vars: Set[(String, ImpLanType, Option[ImpLanExpr], Boolean)]): Seq[String] = {
     def prefix(lazyDef: Boolean) = if (lazyDef) "lazy val" else "var"
 
-    vars.toSeq.sortWith { case (_, b) => b._2._3 }.map {
-      case (name, (typ, Some(default), lazyDef)) =>
+    vars.toSeq.sortWith { case (_, b) => b._4 }.map {
+      case (name, typ, Some(default), lazyDef) =>
         s"${prefix(lazyDef)} $name : ${ScalaConstants.typeTranslation(typ)} = ${translateExpression(default)}"
-      case (name, (typ, None, lazyDef)) =>
+      case (name, typ, None, lazyDef) =>
         s"${prefix(lazyDef)} $name : ${ScalaConstants.typeTranslation(typ)} = null"
     }
   }
@@ -80,7 +87,7 @@ class ScalaBackend(userIncludes: String = "")
         case TryCatchBlock(tr, cat) =>
           s"try {\n${generateCode(tr)}\n} catch {\ncase var_err : Throwable => {\n${generateCode(cat)}\n}\n}"
 
-        case Assignment(lhs, rexpr, _, _) =>
+        case Assignment(lhs, rexpr, _, _, _) =>
           s"$lhs = " + s"${translateExpression(rexpr)}"
         case FinalAssignment(_, _, _, _) => ""
 
@@ -121,7 +128,8 @@ class ScalaBackend(userIncludes: String = "")
     case LambdaExpression(argNames, argsTypes, _, body) =>
       val args =
         argsTypes.zip(argNames).map { case (t, n) => s"$n : ${ScalaConstants.typeTranslation(t)}" }.mkString(", ")
-      s"(($args) => {\n${generateVariableDeclarations(IntermediateCodeUtils.getVariableMap(body)).mkString("\n")}\n${generateCode(body)}\n})"
+      s"(($args) => {\n${generateVariableDeclarations(varMaptoSeq(IntermediateCodeUtils.getVariableMap(body, global = false)))
+        .mkString("\n")}\n${generateCode(body)}\n})"
     case Variable(name) => name
 
     case CastingExpression(e, f, t) if f == t => translateExpression(e)

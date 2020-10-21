@@ -96,23 +96,20 @@ object IntermediateCodeTypeInference {
   ): Seq[ImpLanStmt] = {
     stmts.map {
       case expr: ImpLanExpr => castExpression(expr, None, varTypes)
-      case If(guard, stmts, elseStmts) =>
-        If(
-          guard.map { _.map(e => castExpression(e, Some(BoolType), varTypes)) },
-          generateCodeWithCasts(stmts, varTypes, retType),
-          generateCodeWithCasts(elseStmts, varTypes, retType)
+      case i: If =>
+        i.copy(
+          guard = i.guard.map { _.map(e => castExpression(e, Some(BoolType), varTypes)) },
+          stmts = generateCodeWithCasts(i.stmts, varTypes, retType),
+          elseStmts = generateCodeWithCasts(i.elseStmts, varTypes, retType)
         )
-      case TryCatchBlock(tr, cat) =>
-        TryCatchBlock(
-          generateCodeWithCasts(tr, varTypes, retType),
-          generateCodeWithCasts(cat, varTypes + ("var_err" -> ErrorType), retType)
+      case t: TryCatchBlock =>
+        t.copy(
+          tr = generateCodeWithCasts(t.tr, varTypes, retType),
+          cat = generateCodeWithCasts(t.cat, varTypes + ("var_err" -> ErrorType), retType)
         )
-      case Assignment(lhs, rexpr, defVal, typ) =>
-        Assignment(lhs, castExpression(rexpr, Some(typ), varTypes), defVal, typ)
-      case FinalAssignment(lhs, defVal, typ, ld) =>
-        FinalAssignment(lhs, castExpression(defVal, Some(typ), varTypes), typ, ld)
-      case ReturnStatement(expr) if retType.isDefined =>
-        ReturnStatement(castExpression(expr, retType, varTypes))
+      case a: Assignment                           => a.copy(rexpr = castExpression(a.rexpr, Some(a.typ), varTypes))
+      case f: FinalAssignment                      => f.copy(defVal = castExpression(f.defVal, Some(f.typ), varTypes))
+      case r: ReturnStatement if retType.isDefined => r.copy(expr = castExpression(r.expr, retType, varTypes))
     }
   }
 
@@ -168,7 +165,8 @@ object IntermediateCodeTypeInference {
                 varTypes.view.mapValues { a => (a, None, false) }.toMap ++ argNames
                   .zip(argsTypes)
                   .map { case (a, b) => (a, (b, None, false)) }
-                  .toMap
+                  .toMap,
+                false
               )
               .view
               .mapValues { case (a, _, _) => a }

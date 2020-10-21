@@ -28,18 +28,22 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
  * is not possible.
  */
 
-object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
+object UnusedVarRemove extends TranslationPhase[(SourceListing, Set[String]), SourceListing] {
 
   /**
    * Function triggering the translation from a SourceListing to a SourceListing without unused variables
-   * @param listing The input source listing
+   * @param extSource The input source listing and a set of variables which are not removed even if they are unused
    * @return A source listing without unused variables
    */
-  override def translate(listing: SourceListing): Result[SourceListing] = {
+  override def translate(extSource: (SourceListing, Set[String])): Result[SourceListing] = {
+    val listing = extSource._1
+    val fixedUsages = extSource._2
+
     val outerStmts =
       listing.stepSource ++ listing.tailSource ++ listing.tsGenSource ++ listing.inputProcessing ++ listing.staticSource
 
-    val usages = getUsageMap(outerStmts, Map())
+    val usages = getUsageMap(outerStmts, Map("*" -> fixedUsages))
+
     var usedIn = usages.foldLeft[Map[String, Set[String]]](Map()) {
       case (map, (k, v)) => v.foldLeft(map) { case (map, e) => map + (e -> (map.getOrElse(e, Set()) + k)) }
     }
@@ -68,7 +72,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
 
     val f = (stmt: ImpLanStmt) => {
       stmt match {
-        case Assignment(lhs, _, _, _) if del.contains(lhs.name)      => None
+        case Assignment(lhs, _, _, _, _) if del.contains(lhs.name)   => None
         case FinalAssignment(lhs, _, _, _) if del.contains(lhs.name) => None
         case _                                                       => Some(stmt)
       }
@@ -110,7 +114,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
       case If(guard, stmts, elseStmts) =>
         getUsageMap(stmts, getUsageMap(elseStmts, getUsageMap(guard.flatten, currMap)))
       case TryCatchBlock(tr, cat) => getUsageMap(tr, getUsageMap(cat, currMap))
-      case Assignment(lhs, rexpr, defExpr, _) =>
+      case Assignment(lhs, rexpr, defExpr, _, _) =>
         currMap + (lhs.name -> currMap
           .getOrElse(lhs.name, Set())
           .union(getUsagesInExpr(rexpr))
@@ -122,7 +126,7 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
     }
 
     val subScopeVar = stmt match {
-      case Assignment(lhs, _, _, _)      => lhs.name
+      case Assignment(lhs, _, _, _, _)   => lhs.name
       case FinalAssignment(lhs, _, _, _) => lhs.name
       case _                             => scopeVar
     }
@@ -157,11 +161,11 @@ object UnusedVarRemove extends TranslationPhase[SourceListing, SourceListing] {
       .map[Set[String]] {
         case If(_, stmts, elseStmts)       => getDefines(stmts) ++ getDefines(elseStmts)
         case TryCatchBlock(tr, cat)        => getDefines(tr) ++ getDefines(cat)
-        case Assignment(lhs, _, _, _)      => Set(lhs.name)
+        case Assignment(lhs, _, _, _, _)   => Set(lhs.name)
         case FinalAssignment(lhs, _, _, _) => Set(lhs.name)
         case _                             => Set()
       }
-      .reduce(_ ++ _)
+      .fold(Set())(_ ++ _)
   }
 
   /**

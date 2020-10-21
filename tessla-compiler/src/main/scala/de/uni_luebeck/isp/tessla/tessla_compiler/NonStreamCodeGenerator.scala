@@ -81,7 +81,13 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
     if (extSpec.lazyVars.get.contains(id)) {
       FinalAssignment(s"var_$id", translateExpressionArg(e, tm, defContext), resTpe, lazyVar = true)
     } else {
-      Assignment(s"var_$id", translateExpressionArg(e, tm, defContext), Some(defaultValueForType(resTpe)), resTpe)
+      Assignment(
+        s"var_$id",
+        translateExpressionArg(e, tm, defContext),
+        Some(defaultValueForType(resTpe)),
+        resTpe,
+        false
+      )
     }
   }
 

@@ -37,6 +37,7 @@ object ScalaConstants {
    */
   def typeTranslation(t: ImpLanType): String = {
     t match {
+      case VoidType                  => "Unit"
       case LongType                  => "Long"
       case DoubleType                => "Double"
       case BoolType                  => "Boolean"

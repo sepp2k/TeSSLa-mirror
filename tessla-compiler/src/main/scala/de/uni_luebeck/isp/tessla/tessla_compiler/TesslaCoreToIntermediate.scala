@@ -28,21 +28,25 @@ import scala.annotation.tailrec
  * abstract imperative code
  * The translation of stream functions is performed in StreamCodeGenerator
  * The translation of other expressions in NonStreamCodeGenerator
+ * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
  */
-
-class TesslaCoreToIntermediate(consoleInterface: Boolean)
-    extends TranslationPhase[ExtendedSpecification, SourceListing] {
+class TesslaCoreToIntermediate(ioInterface: Boolean)
+    extends TranslationPhase[ExtendedSpecification, (SourceListing, Set[String])] {
 
   /**
    * Function triggering the translation from a TeSSLa AST to a SourceListing of ImpLan statements
+   *
    * @param extSpec The TeSSLa Core AST to be translated
    * @return A SourceListing containing imperative code to be translated into concrete syntax and included in a source
    *         skeleton
    */
-  override def translate(extSpec: ExtendedSpecification): Result[SourceListing] =
+  override def translate(extSpec: ExtendedSpecification): Result[(SourceListing, Set[String])] =
     new Translator(extSpec).translate()
 
-  class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[SourceListing] {
+  class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[(SourceListing, Set[String])] {
+
+    val nonStreamCodeGenerator = new NonStreamCodeGenerator(extSpec)
+    val streamCodeGenerator = new StreamCodeGenerator(nonStreamCodeGenerator)
 
     private val spec = extSpec.spec
     private val in = spec.in
@@ -70,11 +74,9 @@ class TesslaCoreToIntermediate(consoleInterface: Boolean)
       }
     }
 
-    override protected def translateSpec(): SourceListing = {
-      val nonStreamCodeGenerator = new NonStreamCodeGenerator(extSpec)
-      val streamCodeGenerator = new StreamCodeGenerator(nonStreamCodeGenerator)
-
+    override protected def translateSpec(): (SourceListing, Set[String]) = {
       var currSrc = SourceListing(Seq(), Seq(), Seq(), Seq(), Seq())
+      var noRemove = Set[String]()
 
       //Produce calculation section
       DefinitionOrdering.order(definitions).foreach {
@@ -106,30 +108,37 @@ class TesslaCoreToIntermediate(consoleInterface: Boolean)
       out.foreach { o =>
         val name = TesslaAST.Core.getOutputName(o._2)
 
-        if (consoleInterface) {
-          currSrc =
-            streamCodeGenerator.produceOutputCode(o._1.id, getStreamType(o._1.id), name, currSrc, o._2.contains("raw"))
+        if (ioInterface) {
+          currSrc = streamCodeGenerator.produceOutputToConsoleCode(
+            o._1.id,
+            getStreamType(o._1.id),
+            name,
+            currSrc,
+            o._2.contains("raw")
+          )
         } else {
-          error(Diagnostics.NotYetImplementedError("Translation without value output to stdout", o._1.location))
+          currSrc = streamCodeGenerator.produceOutputToAPICode(
+            o._1.id,
+            getStreamType(o._1.id),
+            name,
+            currSrc,
+            o._2.contains("raw")
+          )
         }
       }
 
       //Produce input consumption
       in.foreach { i =>
-        if (consoleInterface) {
+        currSrc = streamCodeGenerator.produceInputUnchangeCode(i._1, currSrc)
+        if (ioInterface) {
           currSrc = streamCodeGenerator.produceInputFromConsoleCode(i._1, i._2._1, currSrc)
         } else {
-          error(
-            Diagnostics.NotYetImplementedError(
-              "Translation without value consumption from stdin",
-              i._1.location
-            )
-          )
+          currSrc = streamCodeGenerator.produceInputFromAPICode(i._1, i._2._1, currSrc)
+          noRemove += s"set_var_${i._1.fullName}"
         }
-        currSrc = streamCodeGenerator.produceInputUnchangeCode(i._1, currSrc)
       }
 
-      currSrc
+      (currSrc, noRemove)
     }
 
   }

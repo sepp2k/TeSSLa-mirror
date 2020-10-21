@@ -176,9 +176,9 @@ object Main {
           Compiler.compile(config.specSource, config.compilerOptions)
             andThen UsageAnalysis
             andThen Laziness
-            andThen new TesslaCoreToIntermediate(consoleInterface = true)
+            andThen new TesslaCoreToIntermediate(config.ioInterface)
             andThen UnusedVarRemove
-            andThen new ScalaBackend(config.additionalSource)
+            andThen new ScalaBackend(config.ioInterface, config.additionalSource)
         )
 
         config.jarFile.map { file =>
