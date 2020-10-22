@@ -29,6 +29,9 @@ import cats._
 import scala.annotation.tailrec
 import scala.collection.immutable.ArraySeq
 
+/**
+ * Provides an implicit value for a cats Monad for ArraySeqs.
+ * */
 object ArraySeqMonad {
 
   implicit val instance: Monad[ArraySeq] with Traverse[ArraySeq] =

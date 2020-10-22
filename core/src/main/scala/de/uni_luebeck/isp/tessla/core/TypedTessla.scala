@@ -24,6 +24,9 @@
 
 package de.uni_luebeck.isp.tessla.core
 
+/**
+ * An extension of the flattened Tessla AST, with all expressions annotated with their respective type.
+ */
 object TypedTessla extends FlatTessla {
 
   case class TypedSpecification(

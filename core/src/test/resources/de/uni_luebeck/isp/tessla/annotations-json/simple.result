@@ -1,0 +1,26 @@
+{
+  "global": [],
+  "inputs": [{
+    "annotations": [{
+      "args": {
+
+      },
+      "name": "Foo"
+    }],
+    "name": "x",
+    "type": "Events[Int]"
+  }],
+  "outputs": [{
+    "annotations": [{
+      "args": {
+        "value": {
+          "type": "String",
+          "value": "x"
+        }
+      },
+      "name": "$name"
+    }],
+    "name": "x",
+    "type": "Events[Int]"
+  }]
+}

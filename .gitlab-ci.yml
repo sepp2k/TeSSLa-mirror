@@ -16,6 +16,8 @@ test:
   only:
     - master
     - development
+    - /^mr-.*$/
+    - /^issue-.*$/
   tags:
     - docker
   script:
@@ -25,6 +27,8 @@ deploy:
   only:
     - master
     - development
+    - /^mr-.*$/
+    - /^issue-.*$/
   tags:
     - docker
   script:

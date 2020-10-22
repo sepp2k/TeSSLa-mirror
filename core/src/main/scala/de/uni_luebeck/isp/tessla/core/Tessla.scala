@@ -26,13 +26,27 @@ package de.uni_luebeck.isp.tessla.core
 
 import de.uni_luebeck.isp.tessla.core.Errors.ParserError
 
+/**
+ * Contains data structures for the Tessla AST. This is the first AST generated from the parsed result, thus very
+ * close to the parsed structure.
+ */
 object Tessla {
 
-  case class Specification(annotations: Seq[Annotation], statements: Seq[Statement]) {
+  /**
+   * Describes a Tessla specification.
+   *
+   * @param statements the statements of the specification
+   */
+  case class Specification(statements: Seq[Statement]) {
     override def toString =
-      s"${annotations.mkString("\n")}\n${statements.mkString("\n")}"
+      s"${statements.mkString("\n")}"
   }
 
+  /**
+   * A Tessla identifier.
+   * @param name the name of the identifier
+   * @param loc the location
+   */
   case class Identifier(name: String, loc: Location) extends Location.HasLoc {
     override def toString = name
   }
@@ -41,6 +55,17 @@ object Tessla {
     def loc: Location
   }
 
+  /**
+   * A Tessla 'def' statement.
+   * @param id the name of the definition
+   * @param typeParameters the type parameters declared by the definition
+   * @param parameters the parameters declared by the definition
+   * @param returnType the return type
+   * @param headerLoc the location of the definition header
+   * @param body the body of the definition
+   * @param loc the location of the definition itself
+   * @param isLiftable a flag denoting if the definition is liftable or not
+   */
   case class Definition(
     id: Identifier,
     typeParameters: Seq[Identifier],
@@ -68,38 +93,78 @@ object Tessla {
     }
   }
 
+  /**
+   * A Tessla annotation.
+   * @param id the name of the annotation
+   * @param arguments the arguments declared with it
+   * @param loc the location
+   */
   case class Annotation(id: Identifier, arguments: Seq[Argument[Expression]], loc: Location) {
     def name: String = id.name
 
     override def toString: String = s"@$id(${arguments.mkString(", ")})"
   }
 
+  /**
+   * Wraps an annotation as a statement for globally scoped annotations.
+   * @param annotation the annotation to use as global annotation
+   */
+  case class GlobalAnnotation(annotation: Annotation) extends Statement {
+    override def loc: Location = annotation.loc
+  }
+
   sealed abstract class Body extends Location.HasLoc {
     def loc: Location
   }
 
+  /**
+   * A wrapper for an expression used as a body.
+   */
   case class ExpressionBody(exp: Expression) extends Body {
     override def toString = exp.toString
 
     override def loc = exp.loc
   }
 
+  /**
+   * An extern definition.
+   * @param id the name of the defined extern
+   * @param referenceImplementation the reference implementation, if provided.
+   */
   case class Extern(id: Identifier, referenceImplementation: Option[Expression]) extends Body {
     override def toString = s"extern($id)"
 
     override def loc = id.loc
   }
 
+  /**
+   * A Tessla module.
+   * @param id the name of the module
+   * @param contents the statements the module contains
+   * @param loc the location
+   */
   case class Module(id: Identifier, contents: Seq[Statement], loc: Location) extends Statement {
     override def toString = contents.mkString(s"module $id {\n", "\n", "\n}")
 
     def name: String = id.name
   }
 
+  /**
+   * An import statement.
+   * @param path the path describing the module to import
+   * @param loc the location of the statement
+   */
   case class Import(path: List[Identifier], loc: Location) extends Statement {
     override def toString = s"import ${path.mkString(".")}"
   }
 
+  /**
+   * A definition of an annotation
+   * @param id the name of the annotation
+   * @param parameters the declaration of its parameters
+   * @param global a flag denoting if it is a global or stream annotation
+   * @param loc the location
+   */
   case class AnnotationDefinition(
     id: Identifier,
     parameters: Seq[Parameter],
@@ -107,6 +172,13 @@ object Tessla {
     loc: Location
   ) extends Statement
 
+  /**
+   * A definition of a type
+   * @param id the name of the type
+   * @param typeParameters its type parameters
+   * @param body the body of the definition
+   * @param loc the location
+   */
   case class TypeDefinition(
     id: Identifier,
     typeParameters: Seq[Identifier],
@@ -123,24 +195,51 @@ object Tessla {
 
   sealed abstract class TypeBody
 
+  /**
+   * A type body which is a type alias of another existing type.
+   * @param typ the type to alias
+   */
   case class TypeAlias(typ: Type) extends TypeBody {
     override def toString = typ.toString
   }
 
+  /**
+   * An externally defined type.
+   * @param id the name of the type
+   */
   case class ExternType(id: Identifier) extends TypeBody {
     override def toString = s"extern($id)"
   }
 
+  /**
+   * An input stream.
+   * @param id the name of the stream
+   * @param streamType the type
+   * @param annotations the annotations
+   * @param loc the location
+   */
   case class In(id: Identifier, streamType: Type, annotations: Seq[Annotation], loc: Location) extends Statement {
     override def toString = s"in $id: $streamType"
   }
 
+  /**
+   * An output stream.
+   * @param expr the expression of this stream
+   * @param id the name of the output stream
+   * @param annotations the annotations
+   * @param loc the location
+   */
   case class Out(expr: Expression, id: Identifier, annotations: Seq[Annotation], loc: Location) extends Statement {
     def name = id.name
 
     override def toString = s"out $expr as $name"
   }
 
+  /**
+   * An 'out *' statement.
+   * @param annotations the annotations used
+   * @param loc the location
+   */
   case class OutAll(annotations: Seq[Annotation], loc: Location) extends Statement {
     override def toString = "out *"
   }
@@ -152,6 +251,11 @@ object Tessla {
     case _                             => None
   }
 
+  /**
+   * A parameter
+   * @param id the name of the parameter
+   * @param parameterType the type
+   */
   case class Parameter(id: Identifier, parameterType: Option[Type]) extends Location.HasLoc {
     override def toString = parameterType match {
       case Some(t) => s"${id.name}: $t"
@@ -174,18 +278,34 @@ object Tessla {
     override def toString: String = toString(false)
   }
 
+  /**
+   * A variable.
+   * @param id the name of the variable
+   */
   case class Variable(id: Identifier) extends Expression {
     def loc = id.loc
 
     override def toString(inner: Boolean) = id.name
   }
 
+  /**
+   * Member access to a member on root scope.
+   * @param member the member to access
+   * @param loc the location
+   */
   case class RootMemberAccess(member: Identifier, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"__root__.$member"
   }
 
   private val ID_PATTERN = "^[a-zA-Z0-9_]+$".r
 
+  /**
+   * Call of a macro expression
+   * @param mac the macro to call
+   * @param typeArgs the type arguments used
+   * @param args the arguments used
+   * @param loc the location
+   */
   case class MacroCall(mac: Expression, typeArgs: Seq[Type], args: Seq[Argument[Expression]], loc: Location)
       extends Expression {
     override def toString(inner: Boolean) = {
@@ -213,16 +333,34 @@ object Tessla {
     }
   }
 
+  /**
+   * A block expression
+   * @param definitions the definitions contained by the block
+   * @param expression the result expression for the block
+   * @param loc the location
+   */
   case class Block(definitions: Seq[Definition], expression: Expression, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"{\n${definitions.mkString("\n")}\n$expression\n}"
   }
 
+  /**
+   * A record creation literal.
+   * @param members the members of this record, as a mapping from identifiers to expressions
+   * @param loc the location
+   */
   case class ObjectLiteral(members: Map[Identifier, Expression], loc: Location) extends Expression {
     override def toString(inner: Boolean) = {
       members.mkString("${", ", ", "}")
     }
   }
 
+  /**
+   * A lambda expression.
+   * @param parameters the parameters of the lambda
+   * @param headerLoc the location of the header
+   * @param body the body
+   * @param loc the location
+   */
   case class Lambda(
     parameters: Seq[(Option[TesslaAST.RuntimeEvaluation], Parameter)],
     headerLoc: Location,
@@ -235,10 +373,21 @@ object Tessla {
     }
   }
 
+  /**
+   * An accessor to a record expression.
+   * @param receiver the object to access a member of
+   * @param member the name of the member to access
+   * @param loc the location
+   */
   case class MemberAccess(receiver: Expression, member: Identifier, loc: Location) extends Expression {
     override def toString(inner: Boolean) = s"${receiver.toString(inner = true)}.$member"
   }
 
+  /**
+   * A wrapper for literal values, extending them with location information.
+   * @param value the literal value
+   * @param loc the location
+   */
   case class Literal(value: LiteralValue, loc: Location) extends Expression {
     override def toString(inner: Boolean) = value.toString
   }
@@ -249,8 +398,16 @@ object Tessla {
     override def toString = value.toString
   }
 
+  /**
+   * An integer literal.
+   */
   case class IntLiteral(value: BigInt) extends LiteralValue
 
+  /**
+   * A time literal.
+   * @param value the numeric time value of the literal
+   * @param unit the unit associated with this literal
+   */
   case class TimeLiteral(value: BigInt, unit: TimeUnit) extends LiteralValue {
     override def toString = s"$value $unit"
   }
@@ -265,8 +422,14 @@ object Tessla {
     }
   }
 
+  /**
+   * A float literal.
+   */
   case class FloatLiteral(value: Double) extends LiteralValue
 
+  /**
+   * A string literal.
+   */
   case class StringLiteral(value: String) extends LiteralValue {
     override def toString = s""""$value""""
   }
@@ -275,12 +438,23 @@ object Tessla {
     def loc: Location
   }
 
+  /**
+   * A positional argument, which is a wrapper of an expression.
+   * @param expr the value of the argument
+   * @tparam T the type of the argument
+   */
   case class PositionalArgument[T <: Location.HasLoc](expr: T) extends Argument[T] {
     override def toString = expr.toString
 
     def loc = expr.loc
   }
 
+  /**
+   * A named argument.
+   * @param id the name of the argument
+   * @param expr the value of the argument
+   * @tparam T the type of the argument
+   */
   case class NamedArgument[T <: Location.HasLoc](id: Identifier, expr: T) extends Argument[T] {
     override def toString = s"$id = $expr"
 
@@ -293,16 +467,32 @@ object Tessla {
     def loc: Location
   }
 
+  /**
+   * A primitive type defined only by a name.
+   * @param id the name of the type
+   */
   case class SimpleType(id: Identifier) extends Type {
     def loc = id.loc
 
     override def toString = id.name
   }
 
+  /**
+   * A type application.
+   * @param id the identifier affected by the type application
+   * @param args the types to apply
+   * @param loc the location
+   */
   case class TypeApplication(id: Identifier, args: Seq[Type], loc: Location) extends Type {
     override def toString = s"$id[${args.mkString(", ")}]"
   }
 
+  /**
+   * A function type.
+   * @param parameterTypes the types of the parameter list
+   * @param returnType the return type
+   * @param loc the location
+   */
   case class FunctionType(
     parameterTypes: Seq[(Option[TesslaAST.RuntimeEvaluation], Type)],
     returnType: Type,
@@ -311,6 +501,11 @@ object Tessla {
     override def toString = s"(${parameterTypes.mkString(", ")}) => $returnType]"
   }
 
+  /**
+   * An object type.
+   * @param memberTypes the types of its members
+   * @param loc the location
+   */
   case class ObjectType(memberTypes: Map[Identifier, Type], loc: Location) extends Type {
     override def toString = {
       val members = memberTypes.toSeq.map { case (name, t) => s"$name : $t" }
@@ -318,6 +513,9 @@ object Tessla {
     }
   }
 
+  /**
+   * A mapping from unary operator symbols to their Tessla operator names
+   */
   val unaryOperators = Map(
     "!" -> "not",
     "-" -> "negate",
@@ -325,6 +523,9 @@ object Tessla {
     "~" -> "bitflip"
   )
 
+  /**
+   * A mapping from binary operator symbols to their Tessla operator names
+   */
   val binaryOperators = Map(
     "&&" -> "and",
     "||" -> "or",

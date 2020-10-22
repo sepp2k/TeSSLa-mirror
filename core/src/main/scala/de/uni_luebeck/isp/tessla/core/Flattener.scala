@@ -30,6 +30,7 @@ import de.uni_luebeck.isp.tessla.core.FlatTessla.AnnotationEntry
 import de.uni_luebeck.isp.tessla.core.Warnings.ConflictingOut
 
 import scala.annotation.unused
+import scala.collection.mutable.ArrayBuffer
 
 object Flattener extends TranslationPhase[Tessla.Specification, FlatTessla.Specification] {
   override def translate(spec: Tessla.Specification): TranslationPhase.Result[FlatTessla.Specification] = {
@@ -95,6 +96,7 @@ class Flattener(spec: Tessla.Specification)
 
   private var moduleEnvs = Map[FlatTessla.Identifier, Env]()
   private var globalImports = Map[String, FlatTessla.Identifier]()
+  private val globalAnnotations = ArrayBuffer[FlatTessla.Annotation]()
   private val globalEnv = Env(globalVariableIdMap, globalTypeIdMap, globalAnnotationIdMap)
 
   private val errorExpression: FlatTessla.Variable = FlatTessla.Variable(makeIdentifier("<<error>>"), Location.unknown)
@@ -146,11 +148,13 @@ class Flattener(spec: Tessla.Specification)
       case (result, imprt: Tessla.Import) =>
         globalImports = addImport(globalImports, imprt, globalDefs, moduleEnvs, globalEnv)
         result.copy(globalNames = result.globalNames ++ globalImports)
+
+      case (result, annotation: Tessla.GlobalAnnotation) =>
+        globalAnnotations += translateAnnotation(annotation)
+        result
     }
 
-    val globalAnnotations = spec.annotations.map(translateAnnotation(_, global = true))
-
-    withDefs.copy(annotations = globalAnnotations)
+    withDefs.copy(annotations = globalAnnotations.toSeq)
   }
 
   /**
@@ -243,6 +247,9 @@ class Flattener(spec: Tessla.Specification)
 
       case typeDef: Tessla.TypeDefinition =>
         addTypeDefinition(typeDef, defs, env, imports)
+
+      case annotation: Tessla.GlobalAnnotation =>
+        globalAnnotations += translateAnnotation(annotation)
     }
     val valueMembers = module.contents.flatMap { stat =>
       getName(stat).map { name =>
@@ -511,7 +518,11 @@ class Flattener(spec: Tessla.Specification)
     FlatTessla.Parameter(param, typ, idMap(param.id.name))
   }
 
-  def translateAnnotation(annotation: Tessla.Annotation, global: Boolean): FlatTessla.Annotation = {
+  def translateAnnotation(annotation: Tessla.GlobalAnnotation): FlatTessla.Annotation = {
+    translateAnnotation(annotation.annotation, global = true)
+  }
+
+  def translateAnnotation(annotation: Tessla.Annotation, global: Boolean = false): FlatTessla.Annotation = {
     val id = globalEnv.annotations.getOrElse(
       (annotation.name, global), {
         error(UndefinedAnnotation(annotation.id))

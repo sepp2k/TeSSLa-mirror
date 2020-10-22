@@ -29,6 +29,9 @@ import de.uni_luebeck.isp.tessla.core.Location.SourceRange
 import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc._
 import spray.json._
 
+/**
+ * A Json protocol containing all formats required to generate the Tessla documentation in Json format.
+ */
 object DocJsonProtocol extends DefaultJsonProtocol {
   implicit val docsFormat: JsonFormat[Docs] = lazyFormat(jsonFormat2(Docs))
 

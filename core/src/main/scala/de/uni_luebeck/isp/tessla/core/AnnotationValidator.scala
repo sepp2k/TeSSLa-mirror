@@ -59,8 +59,9 @@ object AnnotationValidator extends TranslationPhase[Core.Specification, Core.Spe
       case exp: Core.Expression =>
         exp match {
           case _: Core.StringLiteralExpression | _: Core.IntLiteralExpression | _: Core.FloatLiteralExpression => true
-          case record: Core.RecordConstructorExpression                                                        => record.entries.values.map(_._1).forall(checkExpressionArg)
-          case _                                                                                               => false
+          case record: Core.RecordConstructorExpression =>
+            record.entries.values.map(_._1).forall(checkExpressionArg)
+          case _ => false
         }
       case _: Core.ExpressionRef => false
     }

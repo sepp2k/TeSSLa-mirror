@@ -1,0 +1,20 @@
+@@GlobalFoo
+
+def @@GlobalFoo
+def @Foo
+def @Bar(a: Int)
+def @Baz(a: Int, b: String)
+
+@Foo
+@Bar(5)
+@Bar(42)
+in x: Events[Int]
+
+@Baz(-3, "Hello world")
+in y: Events[Int]
+
+def result = x + y
+
+@Foo
+@Bar(5 * 3)
+out result

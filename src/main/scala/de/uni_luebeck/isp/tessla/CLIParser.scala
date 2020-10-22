@@ -33,6 +33,10 @@ import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers}
 import scala.collection.mutable
 import scala.io.{Codec, Source}
 
+/**
+ * Parser of the command line interface of the Tessla front-end. This also generates the different configuration
+ * data structures for each of the existing commands.
+ */
 object CLIParser {
   val programName: String = BuildInfo.name
   val programVersion: String = BuildInfo.version

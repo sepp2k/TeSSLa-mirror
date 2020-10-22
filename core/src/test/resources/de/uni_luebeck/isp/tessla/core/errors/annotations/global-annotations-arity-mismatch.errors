@@ -1,1 +1,1 @@
-errors/annotations/global-annotations-arity-mismatch.tessla(1,1 - 3,0): Wrong number of arguments for foo. Expected: 0, actual: 1
+errors/annotations/global-annotations-arity-mismatch.tessla(1,1 - 2,0): Wrong number of arguments for foo. Expected: 0, actual: 1

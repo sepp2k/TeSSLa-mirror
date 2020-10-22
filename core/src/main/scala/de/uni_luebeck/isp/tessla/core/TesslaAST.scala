@@ -32,8 +32,16 @@ import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 import scala.util.Try
 import de.uni_luebeck.isp.tessla.core.util._
+
+/**
+ * A parametrized data structure for Tessla ASTs. This allows to define different ASTs used in the translation pipeline
+ * using this structure as foundation.
+ */
 object TesslaAST {
 
+  /**
+   * A container for printing options, defining how expressions should be printed.
+   */
   case class PrintOptions(
     defTypes: Boolean = true,
     expTypes: Boolean = false,
@@ -65,6 +73,10 @@ object TesslaAST {
       printWithLocation(s, options, mayNeedParens, location)
   }
 
+  /**
+   * Untyped Tessla, where expressions are not fully typed yet, and thus not necessarily have a type info attached
+   * to them.
+   */
   object Untyped extends WithAnnotations[Option] {
     override type DefinitionExpression = ExpressionArg
 
@@ -80,6 +92,9 @@ object TesslaAST {
 
   }
 
+  /**
+   * Typed Tessla. Here, all expressions are accompanied by type info.
+   */
   object Typed extends WithAnnotations[Id] {
     override type DefinitionExpression = ExpressionArg
 
@@ -90,6 +105,9 @@ object TesslaAST {
 
   }
 
+  /**
+   * Core Tessla. This is the AST used as final result of the compiler.
+   */
   object Core extends WithAnnotations[Id] {
     override type DefinitionExpression = Expression
 
@@ -104,6 +122,10 @@ object TesslaAST {
 
   }
 
+  /**
+   * An abstract class describing a Tessla AST with annotations, providing a generalized way of printing annotations
+   * without restricting the generic TesslaAST itself on a specific annotation type.
+   */
   abstract class WithAnnotations[T[_]: CommutativeApplicative] extends TesslaAST[T] {
     override type Annotations = Map[String, ArraySeq[ExpressionArg]]
 
@@ -163,6 +185,10 @@ object TesslaAST {
 
 }
 
+/**
+ * A parametrized data structure for Tessla ASTs. This allows to define different ASTs used in the translation pipeline
+ * using this structure as foundation.
+ */
 abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   import TesslaAST._
@@ -174,10 +200,19 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
     mayNeedParens: Boolean
   ): String
 
+  /**
+   * The type of definition expressions.
+   */
   type DefinitionExpression <: ExpressionArg
 
+  /**
+   * The type of evaluation strategies.
+   */
   type Evaluation >: StrictEvaluation.type
 
+  /**
+   * The type of annotations.
+   */
   type Annotations
 
   def getOutputName(annotations: Annotations): Option[String] = None
@@ -208,6 +243,14 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
   def indent(s: String): String = s.linesIterator.map(s => "  " + s).mkString("\n") +
     (if (s.endsWith("\n")) "\n" else "")
 
+  /**
+   * Describes a specification.
+   * @param annotations the annotations of this specification
+   * @param in the input streams
+   * @param definitions the definitions
+   * @param out the output streams
+   * @param maxIdentifier the numeric value of the maximum identifier
+   */
   case class Specification(
     annotations: Annotations,
     in: Map[Identifier, (TypeAnnotation[Type], Annotations)],
@@ -273,6 +316,11 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
   // Identifiers can either have a globally unique id or locally unique name or both.
   // For TeSSLa Core only external names, i.e. input streams do not carry a id.
   // TODO: currently also generated type parameters may not carry an id, this should be fixed once all externs are declared in the standard library.
+  /**
+   * An identifier.
+   * @param idOrName the numeric id, name, or both
+   * @param location the location
+   */
   final class Identifier(val idOrName: Ior[String, Long], override val location: Location = Location.unknown)
       extends Locatable {
     override def hashCode: Int = idOrName.hashCode
@@ -303,6 +351,9 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
     )
   }
 
+  /**
+   * An expression argument. This is either a normal expression or a reference.
+   */
   sealed trait ExpressionArg extends Locatable {
     def tpe: TypeAnnotation[Type]
 
@@ -340,6 +391,12 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       )
   }
 
+  /**
+   * A reference to another identifier.
+   * @param id the identifier to reference
+   * @param tpe the type of this expression
+   * @param location the location
+   */
   case class ExpressionRef(id: Identifier, tpe: TypeAnnotation[Type], location: Location = Location.unknown)
       extends ExpressionArg {
 
@@ -348,6 +405,14 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   }
 
+  /**
+   * A function expression
+   * @param typeParams the type parameters of this function
+   * @param params the parameters of this function
+   * @param body the body
+   * @param result the result expression
+   * @param location the location
+   */
   case class FunctionExpression(
     typeParams: List[Identifier],
     params: List[(Identifier, Evaluation, TypeAnnotation[Type])],
@@ -394,6 +459,12 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   }
 
+  /**
+   * An extern expression
+   * @param name the name of the extern
+   * @param tpe the type of this expression
+   * @param location the location
+   */
   case class ExternExpression(name: String, tpe: TypeAnnotation[Type], location: Location = Location.unknown)
       extends Expression {
 
@@ -404,6 +475,12 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
 
   }
 
+  /**
+   * An application of arguments to an applicable component.
+   * @param applicable the expression to apply the arguments to
+   * @param args the arguments to apply
+   * @param location the location
+   */
   case class ApplicationExpression(
     applicable: ExpressionArg,
     args: ArraySeq[ExpressionArg],
@@ -428,6 +505,12 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       )
   }
 
+  /**
+   * An application of type arguments.
+   * @param applicable the expression to apply the type arguments to
+   * @param typeArgs the type arguments to apply
+   * @param location the location
+   */
   case class TypeApplicationExpression(
     applicable: ExpressionArg,
     typeArgs: List[Type],
@@ -458,6 +541,11 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
     }
   }
 
+  /**
+   * Creation of a record value.
+   * @param entries the entries of the record, as mapping from member names to their value and location
+   * @param location the location
+   */
   case class RecordConstructorExpression(
     entries: Map[String, (ExpressionArg, Location)],
     location: Location = Location.unknown
@@ -477,6 +565,13 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       )
   }
 
+  /**
+   * Accessor to a member of a record.
+   * @param name the member to access
+   * @param target the target expression to apply the accessor to
+   * @param nameLocation the location of the member name
+   * @param location the location
+   */
   case class RecordAccessorExpression(
     name: String,
     target: ExpressionArg,
@@ -496,6 +591,11 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       )
   }
 
+  /**
+   * A string literal.
+   * @param value the literal value
+   * @param location the location
+   */
   case class StringLiteralExpression(value: String, location: Location = Location.unknown) extends Expression {
     override def tpe: TypeAnnotation[Type] = Applicative[TypeAnnotation].pure(StringType)
 
@@ -503,6 +603,11 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       withTypeAndLocation(_ => s""""$value"""", options, mayNeedParens)
   }
 
+  /**
+   * A int literal.
+   * @param value the literal value
+   * @param location the location
+   */
   case class IntLiteralExpression(value: BigInt, location: Location = Location.unknown) extends Expression {
     override def tpe: TypeAnnotation[Type] = Applicative[TypeAnnotation].pure(IntType)
 
@@ -510,6 +615,11 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       withTypeAndLocation(_ => value.toString, options, mayNeedParens)
   }
 
+  /**
+   * A float literal.
+   * @param value the literal value
+   * @param location the location
+   */
   case class FloatLiteralExpression(value: Double, location: Location = Location.unknown) extends Expression {
     override def tpe: TypeAnnotation[Type] = Applicative[TypeAnnotation].pure(FloatType)
 
@@ -521,6 +631,13 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
     def resolve(args: Map[Identifier, Type]): Type
   }
 
+  /**
+   * A function type.
+   * @param typeParams the declared type parameters
+   * @param paramTypes the declared parameters
+   * @param resultType the type of the resulting value
+   * @param location the location
+   */
   case class FunctionType(
     typeParams: List[Identifier],
     paramTypes: List[(Evaluation, Type)],
@@ -550,6 +667,11 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       name + (if (typeArgs.nonEmpty) "[" + typeArgs.mkString(", ") + "]" else "")
   }
 
+  /**
+   * A type for a record expression.
+   * @param entries the type of its members, as mapping from member names to their type and location
+   * @param location the location
+   */
   case class RecordType(entries: Map[String, (Type, Location)], location: Location = Location.unknown) extends Type {
     override def resolve(args: Map[Identifier, Type]): Type = RecordType(
       mapValues(entries)(x => (x._1.resolve(args), x._2))
@@ -559,6 +681,11 @@ abstract class TesslaAST[TypeAnnotation[_]: CommutativeApplicative] {
       printRecord(entries, ": ", (x: (Type, Location)) => x._1.toString, "Unit")
   }
 
+  /**
+   * A type parameter.
+   * @param name the name of the type
+   * @param location the location
+   */
   case class TypeParam(name: Identifier, location: Location = Location.unknown) extends Type {
     override def resolve(args: Map[Identifier, Type]): Type = args.getOrElse(name, this)
 

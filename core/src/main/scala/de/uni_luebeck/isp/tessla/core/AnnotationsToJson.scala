@@ -42,6 +42,9 @@ object AnnotationsToJson {
     outputs: Seq[Stream]
   )
 
+  /**
+   * The Json Protocol containing implicit formats for the data structures.
+   * */
   object JsonProtocol extends DefaultJsonProtocol {
     implicit val annotationFormat: JsonFormat[Annotation] = lazyFormat(jsonFormat2(Annotation))
     implicit val annotationValueFormat: JsonFormat[AnnotationValue] = jsonFormat2(AnnotationValue)
