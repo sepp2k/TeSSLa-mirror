@@ -52,7 +52,7 @@ The CLI of TeSSLa follows a command based structure. The following commands are 
 
 For detailed usage information, take a look at the following help text.
 ```
-tessla 1.2.0
+tessla 1.2.1
 Usage: tessla [interpreter|compile-core|doc|compile|instrumenter] [options] <args>...
 
 Compile Tessla specifications and evaluate them on provided input streams.
