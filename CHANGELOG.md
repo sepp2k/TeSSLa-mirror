@@ -6,7 +6,7 @@
 * The `--stdlib` flag on the `doc` command has been renamed to `--include-stdlib`, in order to be able to use `doc` together with custom standard libraries (See [#144](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/144))
 
 ### Additions and Fixes
-* It is now possible to define and use global annotations, which act as annotation for the specification itself, using the prefix `@@`. (See [#140](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/140))
+* It is now possible to define and use global annotations, which act as annotation for the specification itself, using the prefix `@@`. (See [#140](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/140) and [#151](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/151))
 * Annotation information can now be exported in a Json format using the `--export-annotations` (or short `-a`) option on the `compile-core` command. (See [#143](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/143))
 * `compile`, `doc` and `instrumenter` are now using `--stdlib` and `--base-time` options, if set. (See [#144](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/144))
 * Annotations now support arbitrary expressions, as long as they can be evaluated to a constant by the constant folding phase. (See [#141](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/141))

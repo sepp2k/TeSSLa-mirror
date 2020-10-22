@@ -48,14 +48,13 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     extends TranslationPhase.Translator[Tessla.Specification]
     with TesslaParser.CanParseConstantString {
   override def translateSpec(): Tessla.Specification = {
-    val annotations = spec.flatMap(res => res.tree.globalAnnotations.asScala.map(translateGlobalAnnotation))
     val statements =
       spec.flatMap(res => res.tree.entries.asScala.map(_.statement).map(translateStatement(_, res.tokens)))
     checkForDuplicates(statements.flatMap(Tessla.getId))
     checkForDuplicates(statements.flatMap(getTypeDefID))
     checkForDuplicates(statements.flatMap(getAnnotationID(_, global = false)))
     checkForDuplicates(statements.flatMap(getAnnotationID(_, global = true)))
-    Tessla.Specification(annotations, statements)
+    Tessla.Specification(statements)
   }
 
   def getTypeDefID(stat: Tessla.Statement): Option[Tessla.Identifier] = stat match {
@@ -76,10 +75,6 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         Location.fromNode(node.asInstanceOf[ParserRuleContext])
       )
     }
-  }
-
-  def translateGlobalAnnotation(ctx: TesslaSyntax.GlobalAnnotationContext): Tessla.Annotation = {
-    translateAnnotationInner(ctx.annotationInner(), ctx)
   }
 
   def translateStatement(stat: TesslaSyntax.StatementContext, tokens: CommonTokenStream): Tessla.Statement = {
@@ -219,6 +214,10 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
 
     override def visitImportStatement(imprt: TesslaSyntax.ImportStatementContext): Tessla.Statement = {
       Tessla.Import(imprt.path.asScala.map(mkID).toList, Location.fromNode(imprt))
+    }
+
+    override def visitGlobalAnnotationStatement(annotation: TesslaSyntax.GlobalAnnotationStatementContext) = {
+      Tessla.GlobalAnnotation(translateAnnotationInner(annotation.globalAnnotation().annotationInner(), annotation))
     }
   }
 

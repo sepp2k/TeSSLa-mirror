@@ -6,7 +6,6 @@ options {
 
 spec:
     NL*
-    globalAnnotations+=globalAnnotation*
     includes+=include*
     entries+=entry*
     EOF;
@@ -15,7 +14,7 @@ eos: NL+ | ';' | EOF;
 
 include: 'include' file=stringLit eos;
 
-entry: statement eos;
+entry:statement eos;
 
 statement
     : def #Definition
@@ -25,6 +24,7 @@ statement
     | 'import' path+=ID ('.' path+=ID)* #ImportStatement
     | annotations+=annotation* 'in' NL* ID ':' NL* type #In
     | annotations+=annotation* 'out' NL* (expression ('as' NL* ID)? | star='*') #Out
+    | globalAnnotation #GlobalAnnotationStatement
     ;
 
 def: header=definitionHeader (':='|'=') NL* body;

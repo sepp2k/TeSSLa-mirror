@@ -35,12 +35,11 @@ object Tessla {
   /**
    * Describes a Tessla specification.
    *
-   * @param annotations the global annotations of the specification
    * @param statements the statements of the specification
    */
-  case class Specification(annotations: Seq[Annotation], statements: Seq[Statement]) {
+  case class Specification(statements: Seq[Statement]) {
     override def toString =
-      s"${annotations.mkString("\n")}\n${statements.mkString("\n")}"
+      s"${statements.mkString("\n")}"
   }
 
   /**
@@ -103,6 +102,14 @@ object Tessla {
     def name: String = id.name
 
     override def toString: String = s"@$id(${arguments.mkString(", ")})"
+  }
+
+  /**
+   * Wraps an annotation as a statement for globally scoped annotations.
+   * @param annotation the annotation to use as global annotation
+   */
+  case class GlobalAnnotation(annotation: Annotation) extends Statement {
+    override def loc: Location = annotation.loc
   }
 
   sealed abstract class Body extends Location.HasLoc {
