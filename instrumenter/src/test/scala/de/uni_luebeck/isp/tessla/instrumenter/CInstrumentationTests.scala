@@ -11,5 +11,5 @@ class CInstrumentationTests extends AbstractTestRunner[Core.Specification]("CIns
 
   override def translation: TranslationPhase[Core.Specification, Core.Specification] = TranslationPhase.IdentityPhase()
 
-  override def shouldIgnoreTest(t: (String, (String, String))): Boolean = !CInstrumentation.isPlatformSupported
+  override def shouldIgnoreTest(t: (String, (String, String))): Boolean = !CInstrumentationBridge.isPlatformSupported
 }

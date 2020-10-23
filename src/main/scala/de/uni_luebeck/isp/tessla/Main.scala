@@ -33,7 +33,7 @@ import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.core.util.Lazy
 import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, IncludeResolvers, TesslaAST}
-import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentation
+import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
@@ -221,7 +221,7 @@ object Main {
     def runInstrumenter(config: CLIParser.InstrumenterConfig): Unit = {
       val core = unwrapResult(Compiler.compile(config.specSource, config.compilerOptions))
       unwrapResult(
-        new CInstrumentation.Instrumenter(
+        new CInstrumentationBridge.Instrumenter(
           config.cFile.getAbsolutePath,
           config.includes.map(_.getAbsolutePath)
         ).translate(core)
