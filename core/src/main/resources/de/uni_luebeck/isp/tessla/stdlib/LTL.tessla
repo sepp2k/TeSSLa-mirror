@@ -9,7 +9,7 @@ module MITL {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Bool]
   ## in b: Events[Bool]
   ## def d = since0(3, a, b)
@@ -56,7 +56,7 @@ module MITL {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Bool]
   ## in b: Events[Bool]
   ## def d = sinceInfinity(3, a, b)
@@ -110,7 +110,7 @@ module MITL {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Bool]
   ## def d = once0(3,a)
   ## out d
@@ -140,7 +140,7 @@ module MITL {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Bool]
   ## def d = onceInfinity(3,a)
   ## out d
@@ -169,7 +169,7 @@ module MITL {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Bool]
   ## def d = historically0(3,a)
   ## out d
@@ -199,7 +199,7 @@ module MITL {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Bool]
   ## def d = historicallyInfinity(3,a)
   ## out d
@@ -233,7 +233,7 @@ module LTL {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Bool]
   ## in b: Events[Bool]
   ## def d = since(a, b)
@@ -273,7 +273,7 @@ module LTL {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Bool]
   ## def d = once(a)
   ## out d
@@ -302,7 +302,7 @@ module LTL {
   ##
   ## **Usage example:**
   ## 
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Bool]
   ## def d = historically(a)
   ## out d

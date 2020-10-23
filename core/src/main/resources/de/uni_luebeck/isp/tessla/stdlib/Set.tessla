@@ -7,7 +7,7 @@ module Set {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def set = Set.singleton(x)
   ## out set
@@ -33,7 +33,7 @@ module Set {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int] # elements to add
   ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
   ## out set
@@ -62,7 +62,7 @@ module Set {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int] # elements to add
   ## in y: Events[Int] # items to check
   ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
@@ -96,7 +96,7 @@ module Set {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int] # elements to remove
   ## def filledSet = Set.add(Set.add(Set.add(Set.empty[Int], 1), 2), 3)
   ## def set: Events[Set[Int]] = fold(x, filledSet, Set.remove)
@@ -124,7 +124,7 @@ module Set {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
   ## def size = Set.size(set)
@@ -161,7 +161,7 @@ module Set {
   ##
   ## **Usage example:**x
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int] # elements to add to set1
   ## in y: Events[Int] # elements to add to set2
   ## def set1: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
@@ -205,7 +205,7 @@ module Set {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int] # elements to add to set1
   ## in y: Events[Int] # elements to add to set2
   ## def set1: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
@@ -248,7 +248,7 @@ module Set {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int] # elements to add to set1
   ## in y: Events[Int] # elements to add to set2
   ## def set1: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
@@ -294,7 +294,7 @@ module Set {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
   ## def result = Set.fold(set, 0, (a:Int, b:Int) => a + b)
@@ -327,7 +327,7 @@ module Set {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def result = Set.collect(x)
   ## out result
@@ -357,7 +357,7 @@ module Set {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int] # elements to collect
   ## in y: Events[Int] # elements to remove
   ## def result = Set.collectWithRemove(x, y)

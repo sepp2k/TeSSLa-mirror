@@ -6,7 +6,7 @@ module OptionUtils {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Option[Int]]
   ## def f(a: Int) = a * 2
   ## def mapped := slift1(x, (opt: Option[Int]) => Option.map(opt, f))
@@ -41,7 +41,7 @@ module OptionUtils {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Option[Int]]
   ## def f(a: Int) = if a < 5 then Some(a * 2) else None[Int]
   ## def mapped := slift1(x, (opt: Option[Int]) => Option.flatMap(opt, f))
@@ -77,7 +77,7 @@ module OptionUtils {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## in y: Events[Int]
   ## def f(a: Int, b: Int) = a + b
