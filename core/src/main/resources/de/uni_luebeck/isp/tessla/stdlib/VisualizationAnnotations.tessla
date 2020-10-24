@@ -1,0 +1,267 @@
+## Annotations giving display hints for streams. These annotations are considered by the visualizer in the web IDE.
+module VisualizationAnnotations {}
+
+##inmodule VisualizationAnnotations
+## Draws events as a cross on the timeline with the event's value displayed above the event. This
+## is the default style which is applied to all streams without any annotation.
+##
+## **Usage example:**
+##
+## ~~~tessla
+## in temperature: Events[Int]
+## @VisEvents
+## out temperature
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0,6]
+## stream temperature: events
+## ---
+## 1: temperature = 6
+## 2: temperature = 2
+## 3: temperature = 1
+## 4: temperature = 5
+## 5: temperature = 9
+## ~~~
+def @VisEvents
+
+##inmodule VisualizationAnnotations
+## This style is similar to `@VisEvents`, but without values above the crosses. This style can be used to
+## decrease the vertical distance above this steam's timeline.
+##
+## **Usage example:**
+##
+## ~~~tessla
+## in temperature: Events[Int]
+## @VisUnitEvents
+## out temperature
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0,6]
+## stream temperature: unit events
+## ---
+## 1: temperature = 6
+## 2: temperature = 2
+## 3: temperature = 1
+## 4: temperature = 5
+## 5: temperature = 9
+## ~~~
+def @VisUnitEvents
+
+##inmodule VisualizationAnnotations
+## Draws events as a round bubble with the event's value inside.
+##
+## **Usage example:**
+##
+## ~~~tessla
+## in temperature: Events[Int]
+## @VisBubbles
+## out temperature
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0,6]
+## stream temperature: bubbles
+## ---
+## 1: temperature = 6
+## 2: temperature = 2
+## 3: temperature = 1
+## 4: temperature = 5
+## 5: temperature = 9
+## ~~~
+def @VisBubbles
+
+##inmodule VisualizationAnnotations
+## Draws events as a dot whose vertical position above the timeline indicates the event's value.
+##
+## **Usage example:**
+##
+## ~~~tessla
+## in temperature: Events[Int]
+## @VisDots
+## out temperature
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0,6]
+## stream temperature: dots
+## ---
+## 1: temperature = 6
+## 2: temperature = 2
+## 3: temperature = 1
+## 4: temperature = 5
+## 5: temperature = 9
+## ~~~
+def @VisDots
+
+##inmodule VisualizationAnnotations
+## Draws events similar to `@VisDots` as a dot whose vertical position above the timeline indicates the event's value.
+## Additionally a line connecting the dots indicates a piece-wise linear function.
+##
+## **Usage example:**
+##
+## ~~~tessla
+## in temperature: Events[Int]
+## @VisGraph
+## out temperature
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0,6]
+## stream temperature: graph
+## ---
+## 1: temperature = 6
+## 2: temperature = 2
+## 3: temperature = 1
+## 4: temperature = 5
+## 5: temperature = 9
+## ~~~
+def @VisGraph
+
+##inmodule VisualizationAnnotations
+## This style is similar to `@VisGraph` but without the dots.
+##
+## **Usage example:**
+##
+## ~~~tessla
+## in temperature: Events[Int]
+## @VisSlimGraph
+## out temperature
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0,6]
+## stream temperature: slim graph
+## ---
+## 1: temperature = 6
+## 2: temperature = 2
+## 3: temperature = 1
+## 4: temperature = 5
+## 5: temperature = 9
+## ~~~
+def @VisSlimGraph
+
+##inmodule VisualizationAnnotations
+## Draws events similar to `@VisDots` as a dot whose vertical position above the timeline indicates the event's value.
+## Additionally a horizontal line after each dot until the next event indicates a piece-wise constant function.
+##
+## **Usage example:**
+##
+## ~~~tessla
+## in temperature: Events[Int]
+## @VisPlot
+## out temperature
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0,6]
+## stream temperature: plot
+## ---
+## 1: temperature = 6
+## 2: temperature = 2
+## 3: temperature = 1
+## 4: temperature = 5
+## 5: temperature = 9
+## ~~~
+def @VisPlot
+
+##inmodule VisualizationAnnotations
+## This style is similar to `@VisPlot` but without the dots.
+##
+## **Usage example:**
+##
+## ~~~tessla
+## in temperature: Events[Int]
+## @VisSlimPlot
+## out temperature
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0,6]
+## stream temperature: slim plot
+## ---
+## 1: temperature = 6
+## 2: temperature = 2
+## 3: temperature = 1
+## 4: temperature = 5
+## 5: temperature = 9
+## ~~~
+def @VisSlimPlot
+
+##inmodule VisualizationAnnotations
+## This style is known from the visualization of digital signal buses. The value of an event is shown
+## between this and the next event and a stretched rhombus is drawn around the event's value.
+##
+## **Usage example:**
+##
+## ~~~tessla
+## in temperature: Events[Int]
+## @VisSignal
+## out temperature
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0,6]
+## stream temperature: signal
+## ---
+## 1: temperature = 6
+## 2: temperature = 2
+## 3: temperature = 1
+## 4: temperature = 5
+## 5: temperature = 9
+## ~~~
+def @VisSignal
+
+##inmodule VisualizationAnnotations
+## This is a special style for boolean signals. Similar to `@VisSignal` the events are not interpreted as
+## discrete points in time but as continuous signals changing their values at the events. True is shown as
+## a thick bar and false as a thin bar.
+##
+## **Usage example:**
+##
+## ~~~tessla
+## in b: Events[Bool]
+## @VisBool
+## out b
+## ~~~
+##
+## **Trace example:**
+##
+## ~~~trace
+## option axis: true
+## option timeDomain: [0,6]
+## stream b: bool
+## ---
+## 2: b = false
+## 3: b = true
+## 5: b = false
+## ~~~
+def @VisBool

@@ -9,6 +9,7 @@ include "Map"
 include "String"
 include "LTL"
 include "InstrumentationAnnotations"
+include "VisualizationAnnotations"
 include "Tessla"
 include "CTF"
 
