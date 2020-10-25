@@ -8,7 +8,7 @@ module List {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## out list
@@ -35,7 +35,7 @@ module List {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def list: Events[List[Int]] =
   ##   fold(x, List.empty[Int], (acc: List[Int], v: Int) => List.prepend(v, acc))
@@ -63,7 +63,7 @@ module List {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int] # elements to prepend
   ## in y: Events[Int] # index of the requested element
   ## import List
@@ -101,7 +101,7 @@ module List {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[(Int, String)]
   ## def init = List.append(List.append(List.empty[String], "A"), "B")
   ## def list: Events[List[String]] =
@@ -131,7 +131,7 @@ module List {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def size = List.size(list)
@@ -164,7 +164,7 @@ module List {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def empty = List.isEmpty(list)
@@ -197,7 +197,7 @@ module List {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def tail = filter(List.tail(list), !(List.isEmpty(list)))
@@ -229,7 +229,7 @@ module List {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def init = filter(List.init(list), !(List.isEmpty(list)))
@@ -262,7 +262,7 @@ module List {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def head = filter(List.head(list), !(List.isEmpty(list)))
@@ -294,7 +294,7 @@ module List {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def l = filter(List.last(list), !(List.isEmpty(list)))
@@ -327,7 +327,7 @@ module List {
   ## of `list` with the last result and the current elements’s value as arguments.
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
   ## def s = List.fold(list, 0, (a:Int, b:Int) => a + b)
