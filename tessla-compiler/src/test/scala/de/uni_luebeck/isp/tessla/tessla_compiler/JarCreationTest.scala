@@ -30,11 +30,11 @@ class JarCreationTest extends AbstractTestRunner[Unit]("Jar") with BeforeAndAfte
     inputFile: String,
     testCase: TestConfig,
     resolver: PathResolver
-  ): (Set[String], Set[String]) = {
+  ): (String, String) = {
 
     val input = resolver.inStream(inputFile)
     val (output, errors) = TesslacTests.execute(fsPath.resolve("monitor.jar"), input)
-    (output.toSet, errors.toSet)
+    (output.mkString("\n"), errors.mkString("\n"))
   }
 
   override def afterAll(): Unit = {

@@ -73,7 +73,7 @@ object CInstrumentationBridge {
       extends TranslationPhase[Core.Specification, Unit] {
 
     override def translate(spec: Core.Specification): TranslationPhase.Result[Unit] = {
-      new CInstrumentation.LibraryInterfaceFactory(spec).translate().map { iLib =>
+      CInstrumentation.LibraryInterfaceFactory.translate(spec).map { iLib =>
         val libraryInterface: CPPBridge.LibraryInterface = new CPPBridge.LibraryInterface {
 
           override def checkInstrumentationRequiredFuncReturn(

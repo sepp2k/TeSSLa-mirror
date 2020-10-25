@@ -33,7 +33,7 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
   // Called after unwrapping the compiler result if an 'input' is defined
   // should run the input on the specification
   // and return a tuple of (output, errors)
-  def run(spec: T, inputFile: String, testCase: TestConfig, resolver: PathResolver): (Set[String], Set[String]) =
+  def run(spec: T, inputFile: String, testCase: TestConfig, resolver: PathResolver): (String, String) =
     throw new UnsupportedOperationException
 
   // Gets called if a 'expectedCompilerResult' is defined, override to implement
@@ -119,21 +119,29 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
     testCase.input match {
       case Some(input) =>
         val (output, errors) = run(spec, input, testCase, resolver)
-        val expectedOutput = testCase.expectedOutput.map(source(_)(_.getLines().toSet)).getOrElse(Set())
-        val expectedErrors = testCase.expectedRuntimeErrors.toSet.flatMap(grouped)
-
-        assertTrue(!(errors.isEmpty && expectedErrors.nonEmpty), "Expected: Runtime error. Actual: success")
-        assertTrue(
-          !(errors.nonEmpty && expectedErrors.isEmpty),
-          s"Expected: success, Actual: Runtime error:\n${errors.mkString("\n")}"
-        )
-
-        assertEqualSets(errors, expectedErrors)
-
-        // TODO: Check partial result on runtime errors?
-        if (errors.isEmpty) assertEqualSets(output.map(splitOutput), expectedOutput.map(splitOutput), unsplitOutput)
+        val expectedOutput = testCase.expectedOutput.map(string).getOrElse("")
+        val expectedErrors = testCase.expectedRuntimeErrors.map(string).getOrElse("")
+        compareRunResult(output, errors, expectedOutput, expectedErrors)
       case None =>
     }
+  }
+
+  def compareRunResult(actualOut: String, actualErr: String, expectedOut: String, expectedErr: String): Unit = {
+    val expectedOutput = expectedOut.linesIterator.toSet
+    val expectedErrors = expectedErr.split("\n(?! )").toSet
+    val output = actualOut.linesIterator.toSet
+    val errors = actualErr.split("\n(?! )").toSet
+
+    assertTrue(!(errors.isEmpty && expectedErrors.nonEmpty), "Expected: Runtime error. Actual: success")
+    assertTrue(
+      !(errors.nonEmpty && expectedErrors.isEmpty),
+      s"Expected: success, Actual: Runtime error:\n${errors.mkString("\n")}"
+    )
+
+    assertEqualSets(errors, expectedErrors)
+
+    // TODO: Check partial result on runtime errors?
+    if (errors.isEmpty) assertEqualSets(output.map(splitOutput), expectedOutput.map(splitOutput), unsplitOutput)
   }
 
   def splitOutput(line: String): (BigInt, String) = {

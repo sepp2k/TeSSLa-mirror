@@ -34,11 +34,10 @@ class TesslacTests extends AbstractTestRunner[String]("Tessla Compiler") with Be
     inputFile: String,
     testCase: TestCase.TestConfig,
     resolver: TestCase.PathResolver
-  ): (Set[String], Set[String]) = {
+  ): (String, String) = {
     TesslacTests.compile(fsPath, spec)
     val (output, errors) = TesslacTests.execute(fsPath, resolver.inStream(inputFile))
-    val err = if (errors.isEmpty) Set[String]() else errors.mkString("\n").split("\n(?! )").toSet
-    (output.toSet, err)
+    (output.mkString("\n"), errors.mkString("\n"))
   }
 
   override def afterAll(): Unit = {

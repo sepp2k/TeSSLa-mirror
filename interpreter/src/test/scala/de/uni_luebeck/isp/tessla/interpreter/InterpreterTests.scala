@@ -15,16 +15,16 @@ class InterpreterTests extends AbstractTestRunner[Core.Specification]("Interpret
     inputFile: String,
     testCase: TestConfig,
     resolver: PathResolver
-  ): (Set[String], Set[String]) = {
+  ): (String, String) = {
     import resolver._
     try {
       val result = source(inputFile) { src =>
         val trace = Trace.fromSource(src, resolve(inputFile), testCase.abortAt.map(BigInt(_)))
         Interpreter.run(spec, trace, None, rejectUndeclaredInputs = true).toSet
       }
-      (result.map(_.toString), Set())
+      (result.map(_.toString).mkString("\n"), "")
     } catch {
-      case ex: TesslaError => (Set[String](), Set(ex.toString))
+      case ex: TesslaError => ("", ex.toString)
     }
   }
 

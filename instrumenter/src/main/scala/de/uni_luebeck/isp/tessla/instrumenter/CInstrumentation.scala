@@ -13,7 +13,7 @@ import de.uni_luebeck.isp.tessla.core.CPatternParser.{
 }
 import de.uni_luebeck.isp.tessla.core.Errors.{InternalError, ParserError}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import de.uni_luebeck.isp.tessla.core.{CPatternLexer, CPatternParser, Errors, Location, TranslationPhase}
+import de.uni_luebeck.isp.tessla.core.{CPatternLexer, CPatternParser, Errors, Location, TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge.{isPlatformSupported, supportedPlatforms}
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token}
 
@@ -25,6 +25,11 @@ object CInstrumentation {
 
   trait IFullFunDesc extends IFunDesc {
     def parName(i: Int): String
+
+    override def toString: String = {
+      val args = (1 to parNum()).map(i => s"${parName(i - 1)}: ${parType(i - 1)}").mkString(", ")
+      s"${name()}: ($args) => ${retType()}"
+    }
   }
 
   trait IFunDesc {
@@ -35,6 +40,11 @@ object CInstrumentation {
     def parNum(): Int
     def parNum(parNum: Int): Unit
     def parType(i: Int): String
+
+    override def toString: String = {
+      val args = (1 to parNum()).map(i => parType(i - 1)).mkString(", ")
+      s"${name()}: ($args) => ${retType()}"
+    }
   }
 
   trait ILibraryInterface {
@@ -73,7 +83,12 @@ object CInstrumentation {
     override def toString: String = s"*($base)"
   }
 
-  class LibraryInterfaceFactory(spec: Core.Specification) extends TranslationPhase.Translator[ILibraryInterface] {
+  object LibraryInterfaceFactory extends TranslationPhase[Core.Specification, ILibraryInterface] {
+    override def translate(spec: Core.Specification): TranslationPhase.Result[ILibraryInterface] =
+      new LibraryInterfaceFactoryWorker(spec).translate()
+  }
+
+  class LibraryInterfaceFactoryWorker(spec: Core.Specification) extends TranslationPhase.Translator[ILibraryInterface] {
 
     type Annotation = (String, Core.ExpressionArg)
     type InStream = (Core.Identifier, Core.Type)
@@ -405,11 +420,11 @@ object CInstrumentation {
 
       new ILibraryInterface {
         def assertFuncTypes(f: IFunDesc, assertions: Map[String, Seq[(Int, InStream)]]): Unit = {
-          assertions.get(f.name).foreach { seq =>
+          assertions.get(f.name()).foreach { seq =>
             seq.foreach {
               case (argIndex, inStream) =>
                 if (argIndex >= f.parNum()) {
-                  error(Errors.InstArgDoesNotExist(f.name, argIndex, inStream._1.location))
+                  error(Errors.InstArgDoesNotExist(f.name(), argIndex, inStream._1.location))
                 } else if (argIndex < 0) {
                   assertSameType(f.retType(), inStream)
                 } else {
@@ -426,6 +441,7 @@ object CInstrumentation {
           assertFuncTypes(f, functionTypeAssertions)
           val cbName = f.name + suffix
           Option.when(callbacks.contains(cbName))(cbName) getOrElse ""
+          // println(s"${suffix.drop(1).toUpperCase} $f")
         }
 
         override def checkInstFuncReturn(f: IFullFunDesc, file: String, line: Int, col: Int): String =
@@ -451,6 +467,7 @@ object CInstrumentation {
           val cbName = patternCb(pat) + suffix
           assertPatternTypes(cbName, typ, patternTypeAssertions)
           Option.when(callbacks.contains(cbName))(cbName)
+          // println(s"${suffix.drop(1).toUpperCase} $typ $pattern")
         }
 
         override def checkInstWrite(
@@ -477,9 +494,7 @@ object CInstrumentation {
 
         override def getUserCbPrefix: String = prefix
 
-        override def getCallbackCode(cbName: String): String = {
-          callbacks.getOrElse(cbName, "")
-        }
+        override def getCallbackCode(cbName: String): String = callbacks.getOrElse(cbName, "")
 
         override def reportDiagnostic(typ: String, message: String, file: String, line: Int, col: Int): Unit = {
           System.err.println(s"""$typ: $message in $file:$line:$col""")
