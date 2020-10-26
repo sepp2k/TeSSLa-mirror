@@ -1,0 +1,10 @@
+@InstFunctionCalledArg("add", 0)
+in addX: Events[Float]
+
+@InstFunctionCalledArg("add", 1)
+in addY: Events[Int]
+
+@InstFunctionReturn("add")
+in add: Events[Float]
+
+out *

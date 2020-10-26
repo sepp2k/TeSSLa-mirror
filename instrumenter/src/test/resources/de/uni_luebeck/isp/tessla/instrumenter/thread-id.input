@@ -1,0 +1,50 @@
+CALLED add: (x: int, y: int) => int
+RETURN add: (x: int, y: int) => int
+READ int add::x
+READ int add::y
+CALLED sub: (x: int, y: int) => int
+RETURN sub: (x: int, y: int) => int
+READ int sub::x
+READ int sub::y
+CALLED task1: (input: void *) => void *
+WRITE int * task1::sum
+READ void * task1::input
+WRITE int task1::i
+READ int task1::i
+WRITE int task1::i
+WRITE int *task1::sum
+READ int * task1::sum
+RETURNED add: (int, int) => int
+CALL add: (int, int) => int
+READ int *task1::sum
+READ int * task1::sum
+RETURNED sub: (int, int) => int
+CALL sub: (int, int) => int
+READ int task1::i
+CALLED task2: (input: void *) => void *
+WRITE int * task2::sum
+READ void * task2::input
+WRITE int task2::i
+READ int task2::i
+WRITE int task2::i
+WRITE int *task2::sum
+READ int * task2::sum
+RETURNED add: (int, int) => int
+CALL add: (int, int) => int
+READ int *task2::sum
+READ int * task2::sum
+RETURNED sub: (int, int) => int
+CALL sub: (int, int) => int
+READ int task2::i
+CALLED main: () => int
+WRITE int main::sum
+WRITE int main::sum
+RETURNED add: (int, int) => int
+CALL add: (int, int) => int
+READ int main::sum
+RETURNED add: (int, int) => int
+CALL add: (int, int) => int
+RETURNED printf: (const char *, int) => int
+CALL printf: (const char *, int) => int
+READ int main::sum
+RETURN main: () => int

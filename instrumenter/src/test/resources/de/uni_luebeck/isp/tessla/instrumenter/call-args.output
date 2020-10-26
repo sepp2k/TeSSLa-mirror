@@ -1,0 +1,11 @@
+CALLED add: (x: double, y: int) => double
+add_called
+uint8_t* events = trace_create_events(2);
+trace_push_float(events, "addX", (double) arg0);
+trace_push_int(events, "addY", (int64_t) arg1);
+trace_write(events);
+RETURN add: (x: double, y: int) => double
+add_return
+uint8_t* events = trace_create_events(1);
+trace_push_float(events, "add", (double) value);
+trace_write(events);

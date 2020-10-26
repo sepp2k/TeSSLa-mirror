@@ -1,0 +1,37 @@
+CALLED add: (x: int, y: int) => int
+RETURN add: (x: int, y: int) => int
+READ int add::x
+READ int add::y
+CALLED sub: (x: int, y: int) => int
+RETURN sub: (x: int, y: int) => int
+READ int sub::x
+READ int sub::y
+CALLED bar: () => void
+RETURN bar: () => void
+WRITE int bar::i
+WRITE int * bar::foo
+READ int * &bar::i
+WRITE int *bar::foo
+READ int * bar::foo
+READ int *bar::foo
+READ int * bar::foo
+CALLED main: () => int
+WRITE int main::sum
+WRITE int main::sum
+RETURNED sub: (int, int) => int
+CALL sub: (int, int) => int
+RETURNED add: (int, int) => int
+CALL add: (int, int) => int
+RETURNED bar: () => void
+CALL bar: () => void
+WRITE int arr[]
+RETURNED printf: (const char *, int) => int
+CALL printf: (const char *, int) => int
+READ int arr[]
+WRITE int *&thing[][].foo
+READ int * &thing[][].foo
+RETURNED printf: (const char *, int) => int
+CALL printf: (const char *, int) => int
+READ int *&thing[][].foo
+READ int * &thing[][].foo
+RETURN main: () => int
