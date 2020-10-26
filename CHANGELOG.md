@@ -13,7 +13,7 @@
 - Annotations, definitions and lambda expressions can now be declared and used with empty parameter lists `()` (See [#149](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/149))
 
 ### API Changes
-/
+- The `CInstrumentation` class has been split into `CInstrumentation` and `CInstrumentationBridge`. This decouples the instrumentation callbacks from the specific caller, in this case the `clang-instrumentation` library, and allows it to be used with other backends. (See [#152](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/152))
 
 ## Version 1.2.1
 
