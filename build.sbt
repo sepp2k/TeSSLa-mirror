@@ -19,6 +19,7 @@ val versionPattern = "def\\s+version(?:\\s*:\\s*String)?\\s*=\\s*\"([^\"]+)\"".r
 // Global settings
 Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / cancelable := true
+Global / coverageEnabled := true
 
 // ThisBuild scoped settings
 val compilerVersion = "2.13.3"

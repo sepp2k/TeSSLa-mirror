@@ -22,6 +22,13 @@ test:
     - docker
   script:
     - sbt clean test
+    - sbt coverageReport
+    - sbt coverageAggregate
+  artifacts:
+    paths:
+      - target/scala-2.13/scoverage-report
+    reports:
+      - target/scala-2.13/coverage-report/cobertura.xml
 
 deploy:
   only:
