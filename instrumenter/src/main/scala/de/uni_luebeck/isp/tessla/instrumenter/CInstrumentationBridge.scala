@@ -24,6 +24,8 @@
 
 package de.uni_luebeck.isp.tessla.instrumenter
 
+import scala.language.implicitConversions
+
 import java.nio.file.Paths
 
 import de.uni_luebeck.isp.clang_instrumentation.CPPBridge
@@ -31,12 +33,25 @@ import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core._
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentation.{IFullFunDesc, IFunDesc}
 
+/**
+ * A bridge class, used to connect a library produced by the [[CInstrumentation]] to the native library provided by the
+ * clang-instrumentation project.
+ */
 object CInstrumentationBridge {
+
+  /**
+   * The supported platforms of the clang-instrumentation library
+   */
+  // TODO: This should rather be in clang-instrumentation itself.
   val supportedPlatforms = Set(
     ("linux", "amd64"),
     ("windows", "amd64")
   )
 
+  /**
+   * Checks if the current platform is supported by the native library.
+   * @return true if the platform is supported
+   */
   def isPlatformSupported: Boolean = {
     val (os, arch) = (sys.props("os.name").toLowerCase(), sys.props("os.arch").toLowerCase())
     supportedPlatforms.exists {
@@ -44,31 +59,46 @@ object CInstrumentationBridge {
     }
   }
 
+  /**
+   * Define an [[IFullFunDesc]] by the given native function description.
+   * @param f the native function description
+   */
   class FullFunctionDesc(f: CPPBridge.FullFunctionDesc) extends FunctionDesc(f) with IFullFunDesc {
     override def parName(i: Int): String = f.parName(i)
   }
 
+  /**
+   * Define an [[IFunDesc]] by the given native function description
+   * @param f the native function description
+   */
   class FunctionDesc(f: CPPBridge.FunctionDesc) extends IFunDesc {
-    override def name(): String = f.name()
+    override def name: String = f.name()
 
-    override def name(name: String): Unit = f.name(name)
+    override def retType: String = f.retType()
 
-    override def retType(): String = f.retType()
-
-    override def retType(retType: String): Unit = f.retType(retType)
-
-    override def parNum(): Int = f.parNum()
-
-    override def parNum(parNum: Int): Unit = f.parNum(parNum)
+    override def parNum: Int = f.parNum()
 
     override def parType(i: Int): String = f.parType(i)
   }
 
+  /**
+   * Implicit conversion from a native to a non-native full function description
+   */
   implicit def fullFunctionDescToIFullFunctionDesc(f: CPPBridge.FullFunctionDesc): IFullFunDesc =
     new FullFunctionDesc(f)
-  implicit def functionDescToIFunctionDesc(f: CPPBridge.FunctionDesc): IFunDesc =
-    new FunctionDesc(f)
 
+  /**
+   * Implicit conversion from a native to a non-native function description
+   */
+  implicit def functionDescToIFunctionDesc(f: CPPBridge.FunctionDesc): IFunDesc = new FunctionDesc(f)
+
+  /**
+   * The instrumenter uses the [[CInstrumentation]] to generate a library interface, which it then binds to the
+   * native library by extending the interface provided by the library, and delegating the calls. Finally, it then runs
+   * the instrumentation process
+   * @param cFileName the C file to instrument
+   * @param inclPath the include paths to use
+   */
   class Instrumenter(cFileName: String, inclPath: Seq[String] = Seq())
       extends TranslationPhase[Core.Specification, Unit] {
 

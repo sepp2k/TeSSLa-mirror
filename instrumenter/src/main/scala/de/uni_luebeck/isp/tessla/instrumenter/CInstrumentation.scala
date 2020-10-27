@@ -21,51 +21,143 @@ import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.util.Try
 
+/**
+ * Contains data structures and a functionality used to instrument C code depending on the provided annotated
+ * TeSSLa specification. This makes use of the annotations defined in the standard library InstrumentationAnnotations module,
+ * which denote which parts of the code should be instrumented and which events should be produced at those locations.
+ */
 object CInstrumentation {
 
-  trait IFullFunDesc extends IFunDesc {
-    def parName(i: Int): String
-
-    override def toString: String = {
-      val args = (1 to parNum()).map(i => s"${parName(i - 1)}: ${parType(i - 1)}").mkString(", ")
-      s"${name()}: ($args) => ${retType()}"
-    }
-  }
-
+  /**
+   * Describes a C function
+   */
   trait IFunDesc {
-    def name(): String
-    def name(name: String): Unit
-    def retType(): String
-    def retType(retType: String): Unit
-    def parNum(): Int
-    def parNum(parNum: Int): Unit
+
+    /**
+     * The name of the function
+     */
+    def name: String
+
+    /**
+     * The return type of the function
+     */
+    def retType: String
+
+    /**
+     * The amount of parameters the function declares
+     */
+    def parNum: Int
+
+    /**
+     * The type of the i-th parameter
+     * @param i the index of the parameter
+     * @return the type of the parameter
+     */
     def parType(i: Int): String
 
     override def toString: String = {
-      val args = (1 to parNum()).map(i => parType(i - 1)).mkString(", ")
-      s"${name()}: ($args) => ${retType()}"
+      val args = (1 to parNum).map(i => parType(i - 1)).mkString(", ")
+      s"$name: ($args) => $retType"
     }
   }
 
+  /**
+   * Extension of a function description by parameter names
+   */
+  trait IFullFunDesc extends IFunDesc {
+
+    /**
+     * The name of the i-th parameter of this function
+     * @param i the index of the parameter
+     * @return the name of the parameter
+     */
+    def parName(i: Int): String
+
+    override def toString: String = {
+      val args = (1 to parNum).map(i => s"${parName(i - 1)}: ${parType(i - 1)}").mkString(", ")
+      s"$name: ($args) => $retType"
+    }
+  }
+
+  /**
+   * Defines the callbacks an instrumentation library has to define. The `check` callbacks are called whenever their
+   * respective action (e.g. call, return) occurs in the source code, returning the name of the callback function to
+   * be generated in C code, or an empty String if no callback should be generated for this action.
+   */
   trait ILibraryInterface {
+
+    /**
+     * Called when the function returns.
+     * @return the name of the callback to generate, or an empty String.
+     */
     def checkInstFuncReturn(f: IFullFunDesc, file: String, line: Int, col: Int): String
+
+    /**
+     * Called when the function returned.
+     * @return the name of the callback to generate, or an empty String.
+     */
     def checkInstFuncReturned(f: IFunDesc, parent: IFullFunDesc, file: String, line: Int, col: Int): String
+
+    /**
+     * Called when the function gets called.
+     * @return the name of the callback to generate, or an empty String.
+     */
     def checkInstFuncCall(f: IFunDesc, parent: IFullFunDesc, file: String, line: Int, col: Int): String
+
+    /**
+     * Called when the function got called.
+     * @return the name of the callback to generate, or an empty String.
+     */
     def checkInstFuncCalled(f: IFullFunDesc, file: String, line: Int, col: Int): String
+
+    /**
+     * Called when a write operation with this pattern occurs.
+     * @return the name of the callback to generate, or an empty String.
+     */
     def checkInstWrite(pattern: String, `type`: String, parent: IFullFunDesc, file: String, line: Int, col: Int): String
+
+    /**
+     * Called when a read operation with this pattern occurs.
+     * @return the name of the callback to generate, or an empty String.
+     */
     def checkInstRead(pattern: String, `type`: String, parent: IFullFunDesc, file: String, line: Int, col: Int): String
+
+    /**
+     * Used to define a code prefix, e.g. for includes.
+     */
     def getUserCbPrefix: String
+
+    /**
+     * Return the code to use for the provided callback function name.
+     * @param cbName the name of the callback function
+     * @return the body of the callback function in C code.
+     */
     def getCallbackCode(cbName: String): String
+
+    /**
+     * Reports warnings or errors which occurred during the instrumentation.
+     */
     def reportDiagnostic(`type`: String, message: String, file: String, line: Int, col: Int): Unit
   }
 
+  /**
+   * Describes an arbitrary C pattern.
+   */
   sealed abstract class Pattern
+
+  /**
+   * Describes a variable, optionally prepended by a function name. E.g. foo::x or y.
+   */
   final case class Variable(functionName: Option[String], name: String) extends Pattern {
     override def toString: String = functionName match {
       case Some(value) => s"$value::$name"
       case None        => name
     }
   }
+
+  /**
+   * Describes access of a field on a C struct, e.g. foo.a or foo->a.
+   */
   final case class StructUnionAccess(base: Pattern, fieldName: String, isArrow: Boolean = false) extends Pattern {
     override def toString: String = if (isArrow) {
       s"$base->$fieldName"
@@ -73,30 +165,63 @@ object CInstrumentation {
       s"$base.$fieldName"
     }
   }
+
+  /**
+   * Describes accessing an array, e.g. foo[].
+   * @param base
+   */
   final case class ArrayAccess(base: Pattern) extends Pattern {
     override def toString: String = s"$base[]"
   }
+
+  /**
+   * Describes a reference `&`
+   */
   final case class Reference(base: Pattern) extends Pattern {
     override def toString: String = s"&($base)"
   }
+
+  /**
+   * Describes a de-reference `*`
+   */
   final case class Dereference(base: Pattern) extends Pattern {
     override def toString: String = s"*($base)"
   }
 
+  /**
+   * Translation phase which creates a library interface from a given specification.
+   * This means that the interface already takes into consideration which annotations are used in the specification,
+   * to only return callback function names where callbacks should be generated, and type-checking the generated events
+   * versus the declared event stream in TeSSLa.
+   */
   object LibraryInterfaceFactory extends TranslationPhase[Core.Specification, ILibraryInterface] {
     override def translate(spec: Core.Specification): TranslationPhase.Result[ILibraryInterface] =
       new LibraryInterfaceFactoryWorker(spec).translate()
   }
 
+  /**
+   * The translator class associated with [[LibraryInterfaceFactory]].
+   * @param spec the specification to use
+   */
   class LibraryInterfaceFactoryWorker(spec: Core.Specification) extends TranslationPhase.Translator[ILibraryInterface] {
 
     type Annotation = (String, Core.ExpressionArg)
     type InStream = (Core.Identifier, Core.Type)
 
+    /**
+     * A collection of input streams which use the `ThreadId` annotation, since those will have events generated in
+     * every instrumentation callback.
+     */
     val threadIdInStreams = spec.in.filter {
       case (_, (_, annotations)) => annotations.keySet.contains("ThreadId")
     }
 
+    /**
+     * Parses the given String to its corresponding C pattern.
+     * @param str the String to translate
+     * @param loc the location
+     * @return the resulting C pattern
+     */
     def parsePattern(str: String, loc: Location): Pattern = {
       val src = CharStreams.fromString(str, loc.path)
       val lexer = new CPatternLexer(src)
@@ -173,7 +298,7 @@ object CInstrumentation {
         case _                                   => Map()
       }
 
-    protected def encloseInstrumentationCode(code: String): String = {
+    private def encloseInstrumentationCode(code: String): String = {
       val lines = code.split("\n") ++
         threadIdInStreams.map { in => s"""trace_push_thread_id(events, "${in._1.fullName}");""" }
       s"uint8_t* events = trace_create_events(${lines.length});\n" +
@@ -192,10 +317,10 @@ object CInstrumentation {
       case (key, seq) => key -> seq.flatMap(_._2)
     }
 
-    def createFunctionCbName(cbSuffix: String)(annotation: Annotation): String =
+    private def createFunctionCbName(cbSuffix: String)(annotation: Annotation): String =
       argumentAsString(annotation, "name") + cbSuffix
 
-    def createPatternCbName(cbSuffix: String)(annotation: Annotation): String = {
+    private def createPatternCbName(cbSuffix: String)(annotation: Annotation): String = {
       val function = Try(argumentAsString(annotation, "function")).toOption
       val lvalue = argumentAsString(annotation, "lvalue")
       def scoped(p: Pattern): Pattern = p match {
@@ -235,7 +360,7 @@ object CInstrumentation {
       )
     }
 
-    def createObservations(
+    private def createObservations(
       createCbName: Annotation => String
     )(annotationName: String, createCode: (Annotation, InStream) => String): Seq[(String, String)] = {
       annotationsByName(annotationName).map {
@@ -294,7 +419,7 @@ object CInstrumentation {
       )
     }
 
-    def annotationsByName(annotationName: String): Seq[(Annotation, InStream)] = {
+    private def annotationsByName(annotationName: String): Seq[(Annotation, InStream)] = {
       spec.in.toSeq.flatMap {
         case (id, (streamType, annotations)) =>
           annotations
@@ -304,6 +429,12 @@ object CInstrumentation {
       }
     }
 
+    /**
+     * Produces code to generate an event for the provided input stream, with the given value.
+     * @param in the input stream to push the event to
+     * @param value the value of the event
+     * @return the resulting C code
+     */
     protected def printEvent(in: InStream, value: String): String = {
       val name = in._1.fullName
 
@@ -320,17 +451,26 @@ object CInstrumentation {
       }
     }
 
+    /**
+     * Produces code to print the event value to the provided input stream.
+     */
     protected def printEventValue(in: InStream): String = printEvent(in, "value")
 
+    /**
+     * Produces code to print the argument name of the specified index to the provided input stream.
+     */
     protected def printEventArgument(in: InStream, index: Int): String = printEvent(in, s"arg$index")
 
+    /**
+     * Produces code to print the event index to the provided input stream.
+     */
     protected def printEventIndex(in: InStream, index: Int): String = printEvent(in, s"index$index")
 
     protected val prefix = "#include \"logging.h\"\n"
 
     val alreadyTypeAssertedStreams = mutable.Set.empty[InStream]
 
-    protected def assertSameType(cType: String, stream: InStream): Unit = {
+    private def assertSameType(cType: String, stream: InStream): Unit = {
       if (alreadyTypeAssertedStreams(stream)) return;
 
       alreadyTypeAssertedStreams.add(stream)
@@ -420,13 +560,13 @@ object CInstrumentation {
 
       new ILibraryInterface {
         def assertFuncTypes(f: IFunDesc, assertions: Map[String, Seq[(Int, InStream)]]): Unit = {
-          assertions.get(f.name()).foreach { seq =>
+          assertions.get(f.name).foreach { seq =>
             seq.foreach {
               case (argIndex, inStream) =>
-                if (argIndex >= f.parNum()) {
-                  error(Errors.InstArgDoesNotExist(f.name(), argIndex, inStream._1.location))
+                if (argIndex >= f.parNum) {
+                  error(Errors.InstArgDoesNotExist(f.name, argIndex, inStream._1.location))
                 } else if (argIndex < 0) {
-                  assertSameType(f.retType(), inStream)
+                  assertSameType(f.retType, inStream)
                 } else {
                   assertSameType(f.parType(argIndex), inStream)
                 }

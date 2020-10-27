@@ -24,17 +24,11 @@ class CInstrumentationTests extends AbstractTestRunner[ILibraryInterface]("CInst
   }
 
   class FunctionDesc(id: String, parameters: Vector[String], returnType: String) extends IFunDesc {
-    override def name(): String = id
+    override def name: String = id
 
-    override def name(name: String): Unit = ???
+    override def retType: String = returnType
 
-    override def retType(): String = returnType
-
-    override def retType(retType: String): Unit = ???
-
-    override def parNum(): Int = parameters.size
-
-    override def parNum(parNum: Int): Unit = ???
+    override def parNum: Int = parameters.size
 
     override def parType(i: Int): String = parameters(i)
   }
