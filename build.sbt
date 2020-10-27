@@ -20,6 +20,27 @@ val versionPattern = "def\\s+version(?:\\s*:\\s*String)?\\s*=\\s*\"([^\"]+)\"".r
 Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / cancelable := true
 Global / coverageEnabled := true
+Global / coverageExcludedPackages := "<empty>;" +
+  ".*CLIParser;" +
+  ".*Main;" +
+  ".*BuildInfo;" +
+  ".*HasUniqueIdentifiers;" +
+  ".*Tessla;" +
+  ".*FlatTessla;" +
+  ".*TypedTessla;" +
+  ".*TesslaAST;" +
+  ".*WithDebugOutput;" +
+  ".*Diagnostics;" +
+  ".*IntermediateCode;" +
+  ".*TesslaCompilerReporter;" +
+  ".*ArraySeqMonad;" +
+  ".*Lazy;" +
+  ".*LazyWithStack;" +
+  ".*IncludeResolvers;" +
+  ".*CInstrumentation\\.IFullFunDesc;" +
+  ".*CInstrumentation\\.IFunDesc;" +
+  ".*CInstrumentationBridge;" +
+  ".*JavaApi;"
 
 // ThisBuild scoped settings
 val compilerVersion = "2.13.3"
