@@ -13,6 +13,8 @@ import scala.jdk.CollectionConverters._
 import java.nio.file.FileSystems
 import java.nio.file.PathMatcher
 
+import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
+
 import scala.io.Source
 import scala.util.Using
 
@@ -83,7 +85,16 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
         val spec = charStream(testCase.spec)
         val expErr = testCase.expectedErrors.toSet.flatMap(grouped)
         val expWarn = testCase.expectedWarnings.toSet.flatMap(grouped)
-        val result = Compiler.compile(spec, options).andThen(translation)
+        val result =
+          try {
+            Compiler.compile(spec, options).andThen(translation)
+          } catch {
+            // Tessla errors may be thrown outside of translation phases, e.g. when evaluating the base time
+            // Catch and wrap those into the result here
+            case e: TesslaError => Failure(Seq(e), Seq())
+            case e              => throw e
+          }
+
         val expCompilerResult = testCase.expectedCompilerResult.map(string)
 
         handleCompilerResult(result, expErr, expWarn, expCompilerResult)(

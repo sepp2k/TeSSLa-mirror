@@ -523,8 +523,6 @@ object CInstrumentation {
     }
 
     override protected def translateSpec(): ILibraryInterface = {
-      if (!isPlatformSupported)
-        throw Errors.InstrUnsupportedPlatform(supportedPlatforms)
 
       assertUnit("InstFunctionCall")
       assertUnit("InstFunctionCalled")

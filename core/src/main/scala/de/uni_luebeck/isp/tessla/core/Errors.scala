@@ -177,10 +177,6 @@ object Errors {
     override def message = s"Cannot represent $value in terms of base time $base."
   }
 
-  case class DivideByZero(loc: Location) extends TesslaError {
-    override def message = "Division by zero"
-  }
-
   case class ParserError(m: String, loc: Location) extends TesslaError {
     override def message = s"Invalid syntax: $m"
   }
@@ -218,7 +214,7 @@ object Errors {
   }
 
   case class StackOverflow(loc: Location) extends TesslaError {
-    override def message = "Stack overflow"
+    override def message = "Stack overflows"
   }
 
   case class UndefinedAnnotation(id: Tessla.Identifier) extends TesslaError {
@@ -252,7 +248,7 @@ object Errors {
 
   case class StringInterpolationOrFormatInConstantString(loc: Location) extends TesslaError {
     override def message =
-      "String interpolation or format specifiers are not allowed in include statements and annotation arguments"
+      "String interpolation or format specifiers are not allowed in include statements"
   }
 
   case class StringFormatError(error: IllegalFormatException, loc: Location) extends TesslaError {

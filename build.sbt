@@ -40,7 +40,9 @@ Global / coverageExcludedPackages := "<empty>;" +
   ".*CInstrumentation\\.IFullFunDesc;" +
   ".*CInstrumentation\\.IFunDesc;" +
   ".*CInstrumentationBridge;" +
-  ".*JavaApi;"
+  ".*JavaApi;" +
+  ".*Ctf;" +
+  ".*CtfEventIterator;"
 
 // ThisBuild scoped settings
 val compilerVersion = "2.13.3"

@@ -1,0 +1,2 @@
+errors/inout-in-modules.tessla(2,3 - 2,20): Input and output statements are not allowed inside of modules
+errors/inout-in-modules.tessla(3,7 - 3,8): Input and output statements are not allowed inside of modules

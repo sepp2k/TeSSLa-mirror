@@ -102,8 +102,11 @@ object CInstrumentationBridge {
   class Instrumenter(cFileName: String, inclPath: Seq[String] = Seq())
       extends TranslationPhase[Core.Specification, Unit] {
 
-    override def translate(spec: Core.Specification): TranslationPhase.Result[Unit] = {
-      CInstrumentation.LibraryInterfaceFactory.translate(spec).map { iLib =>
+    private class Worker(iLib: CInstrumentation.ILibraryInterface) extends TranslationPhase.Translator[Unit] {
+      override protected def translateSpec(): Unit = {
+        if (!isPlatformSupported)
+          throw Errors.InstrUnsupportedPlatform(supportedPlatforms)
+
         val libraryInterface: CPPBridge.LibraryInterface = new CPPBridge.LibraryInterface {
 
           override def checkInstrumentationRequiredFuncReturn(
@@ -172,6 +175,12 @@ object CInstrumentationBridge {
         libraryInterface.runClang(cFile.getParent.toString, cFile.getFileName.toString)
       }
 
+    }
+
+    override def translate(spec: Core.Specification): TranslationPhase.Result[Unit] = {
+      CInstrumentation.LibraryInterfaceFactory
+        .translate(spec)
+        .andThen(new Worker(_).translate())
     }
 
   }

@@ -64,14 +64,7 @@ object CompiletimeExterns {
   def reify(value: Any, tpe: Core.Type): StackLazy[WithError[Core.Expression]] =
     value match {
       case error: ConstantEvaluator.RuntimeError =>
-        Lazy(
-          Right(
-            Core.ApplicationExpression(
-              Core.TypeApplicationExpression(errorExtern, List(tpe)),
-              ArraySeq(Core.StringLiteralExpression(error.msg))
-            )
-          )
-        )
+        Lazy(Right(ConstantEvaluator.mkErrorExpression(error, tpe)))
       case _ =>
         tpe match {
           case Core.InstantiatedType(name, typeArgs, _) =>

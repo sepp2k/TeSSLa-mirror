@@ -294,11 +294,18 @@ object ConstantEvaluator {
     )
   )
 
-  def mkErrorResult(error: RuntimeError, tpe: Core.Type): TranslationResult[Any, Some] = {
-    val expression = Core.ApplicationExpression(
+  /**
+   * Creates an expression from a runtime error.
+   */
+  def mkErrorExpression(error: ConstantEvaluator.RuntimeError, tpe: Core.Type): Core.ApplicationExpression = {
+    Core.ApplicationExpression(
       Core.TypeApplicationExpression(errorExtern, List(tpe)),
       ArraySeq(Core.StringLiteralExpression(error.msg))
     )
+  }
+
+  def mkErrorResult(error: RuntimeError, tpe: Core.Type): TranslationResult[Any, Some] = {
+    val expression = mkErrorExpression(error, tpe)
     TranslationResult[Any, Some](Lazy(Some(error)), Lazy(Some(Left(Lazy(expression)))))
   }
 
