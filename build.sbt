@@ -42,7 +42,11 @@ Global / coverageExcludedPackages := "<empty>;" +
   ".*CInstrumentationBridge;" +
   ".*JavaApi;" +
   ".*Ctf;" +
-  ".*CtfEventIterator;"
+  ".*CtfEventIterator;" +
+  ".*Errors;" +
+  ".*Location;" +
+  ".*TimeUnit;" +
+  ".*TesslaDoc;"
 
 // ThisBuild scoped settings
 val compilerVersion = "2.13.3"

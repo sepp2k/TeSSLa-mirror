@@ -43,8 +43,8 @@ object IncludeResolvers {
   }
 
   def fromResource(klass: Class[_], basePath: String)(fileName: String): Option[CharStream] = {
-    val fullPath = s"$basePath/$fileName"
-    Option(klass.getResourceAsStream(fullPath.toString)).map { stream =>
+    val fullPath = if (basePath.isEmpty) fileName else s"$basePath/$fileName"
+    Option(klass.getResourceAsStream(fullPath)).map { stream =>
       val channel = Channels.newChannel(stream)
       CharStreams.fromChannel(
         channel,

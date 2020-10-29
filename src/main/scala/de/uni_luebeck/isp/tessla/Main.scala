@@ -38,7 +38,7 @@ import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
-import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc
+import de.uni_luebeck.isp.tessla.tessladoc.{DocGenerator, TesslaDoc}
 
 import scala.Option.when
 import scala.io.Source
@@ -94,7 +94,7 @@ object Main {
      */
     def runDoc(docConfig: DocConfig): Unit = {
       val output = unwrapResult(
-        TesslaDoc.extract(
+        DocGenerator(
           docConfig.sources,
           docConfig.compilerOptions,
           includeStdlib = docConfig.stdLib,

@@ -1,0 +1,319 @@
+{
+  "imports": [],
+  "items": [{
+    "doc": "",
+    "global": false,
+    "kind": "AnnotationDoc",
+    "loc": {
+      "path": "foo.tessla",
+      "range": {
+        "fromColumn": 1,
+        "fromLine": 1,
+        "toColumn": 20,
+        "toLine": 1
+      }
+    },
+    "name": "Foo",
+    "parameters": [{
+      "name": "s",
+      "typ": {
+        "eval": "",
+        "typ": {
+          "kind": "SimpleType",
+          "name": "String"
+        }
+      }
+    }]
+  }, {
+    "doc": "",
+    "global": true,
+    "kind": "AnnotationDoc",
+    "loc": {
+      "path": "foo.tessla",
+      "range": {
+        "fromColumn": 1,
+        "fromLine": 2,
+        "toColumn": 20,
+        "toLine": 2
+      }
+    },
+    "name": "Foo",
+    "parameters": [{
+      "name": "a",
+      "typ": {
+        "eval": "",
+        "typ": {
+          "kind": "SimpleType",
+          "name": "Float"
+        }
+      }
+    }]
+  }, {
+    "doc": "This is documentation",
+    "isLiftable": false,
+    "kind": "DefDoc",
+    "loc": {
+      "path": "foo.tessla",
+      "range": {
+        "fromColumn": 1,
+        "fromLine": 4,
+        "toColumn": 21,
+        "toLine": 5
+      }
+    },
+    "name": "foo",
+    "parameters": [{
+      "name": "a",
+      "typ": {
+        "eval": "",
+        "typ": {
+          "kind": "SimpleType",
+          "name": "Int"
+        }
+      }
+    }],
+    "src": "def foo(a: Int) := 5",
+    "typeParameters": []
+  }, {
+    "doc": "",
+    "kind": "TypeDoc",
+    "loc": {
+      "path": "foo.tessla",
+      "range": {
+        "fromColumn": 1,
+        "fromLine": 10,
+        "toColumn": 33,
+        "toLine": 10
+      }
+    },
+    "name": "Ternary",
+    "typeParameters": []
+  }, {
+    "doc": "Primitives for ternary",
+    "imports": [],
+    "kind": "ModuleDoc",
+    "loc": {
+      "path": "foo.tessla",
+      "range": {
+        "fromColumn": 1,
+        "fromLine": 12,
+        "toColumn": 2,
+        "toLine": 31
+      }
+    },
+    "members": [{
+      "doc": "True value",
+      "isLiftable": false,
+      "kind": "DefDoc",
+      "loc": {
+        "path": "foo.tessla",
+        "range": {
+          "fromColumn": 3,
+          "fromLine": 14,
+          "toColumn": 35,
+          "toLine": 15
+        }
+      },
+      "name": "top",
+      "parameters": [],
+      "returnType": {
+        "kind": "SimpleType",
+        "name": "Ternary"
+      },
+      "src": "def top: Ternary = extern(\"top\")",
+      "typeParameters": []
+    }, {
+      "doc": "False value",
+      "isLiftable": false,
+      "kind": "DefDoc",
+      "loc": {
+        "path": "foo.tessla",
+        "range": {
+          "fromColumn": 3,
+          "fromLine": 17,
+          "toColumn": 41,
+          "toLine": 18
+        }
+      },
+      "name": "bottom",
+      "parameters": [],
+      "returnType": {
+        "kind": "SimpleType",
+        "name": "Ternary"
+      },
+      "src": "def bottom: Ternary = extern(\"bottom\")",
+      "typeParameters": []
+    }, {
+      "doc": "Unknown value",
+      "isLiftable": false,
+      "kind": "DefDoc",
+      "loc": {
+        "path": "foo.tessla",
+        "range": {
+          "fromColumn": 3,
+          "fromLine": 20,
+          "toColumn": 43,
+          "toLine": 21
+        }
+      },
+      "name": "unknown",
+      "parameters": [],
+      "returnType": {
+        "kind": "SimpleType",
+        "name": "Ternary"
+      },
+      "src": "def unknown: Ternary = extern(\"unknown\")",
+      "typeParameters": []
+    }, {
+      "doc": "Conjunction",
+      "isLiftable": true,
+      "kind": "DefDoc",
+      "loc": {
+        "path": "foo.tessla",
+        "range": {
+          "fromColumn": 3,
+          "fromLine": 23,
+          "toColumn": 59,
+          "toLine": 24
+        }
+      },
+      "name": "and",
+      "parameters": [{
+        "name": "a",
+        "typ": {
+          "eval": "",
+          "typ": {
+            "kind": "SimpleType",
+            "name": "Ternary"
+          }
+        }
+      }, {
+        "name": "b",
+        "typ": {
+          "eval": "",
+          "typ": {
+            "kind": "SimpleType",
+            "name": "Ternary"
+          }
+        }
+      }],
+      "src": "liftable def and(a: Ternary, b: Ternary) = extern(\"and\")",
+      "typeParameters": []
+    }, {
+      "doc": "Disjunction",
+      "isLiftable": true,
+      "kind": "DefDoc",
+      "loc": {
+        "path": "foo.tessla",
+        "range": {
+          "fromColumn": 3,
+          "fromLine": 26,
+          "toColumn": 57,
+          "toLine": 27
+        }
+      },
+      "name": "or",
+      "parameters": [{
+        "name": "a",
+        "typ": {
+          "eval": "",
+          "typ": {
+            "kind": "SimpleType",
+            "name": "Ternary"
+          }
+        }
+      }, {
+        "name": "b",
+        "typ": {
+          "eval": "",
+          "typ": {
+            "kind": "SimpleType",
+            "name": "Ternary"
+          }
+        }
+      }],
+      "src": "liftable def or(a: Ternary, b: Ternary) = extern(\"or\")",
+      "typeParameters": []
+    }, {
+      "doc": "Negation",
+      "isLiftable": true,
+      "kind": "DefDoc",
+      "loc": {
+        "path": "foo.tessla",
+        "range": {
+          "fromColumn": 3,
+          "fromLine": 29,
+          "toColumn": 47,
+          "toLine": 30
+        }
+      },
+      "name": "not",
+      "parameters": [{
+        "name": "a",
+        "typ": {
+          "eval": "",
+          "typ": {
+            "kind": "SimpleType",
+            "name": "Ternary"
+          }
+        }
+      }],
+      "src": "liftable def not(a: Ternary) = extern(\"not\")",
+      "typeParameters": []
+    }],
+    "name": "Tern"
+  }, {
+    "doc": "",
+    "isLiftable": false,
+    "kind": "DefDoc",
+    "loc": {
+      "path": "foo.tessla",
+      "range": {
+        "fromColumn": 1,
+        "fromLine": 33,
+        "toColumn": 73,
+        "toLine": 33
+      }
+    },
+    "name": "complex",
+    "parameters": [],
+    "returnType": {
+      "kind": "FunctionType",
+      "parameters": [{
+        "eval": "",
+        "typ": {
+          "kind": "SimpleType",
+          "name": "T"
+        }
+      }],
+      "result": {
+        "kind": "ObjectType",
+        "members": {
+          "a": {
+            "kind": "TupleType",
+            "members": [{
+              "kind": "SimpleType",
+              "name": "Int"
+            }, {
+              "kind": "SimpleType",
+              "name": "Int"
+            }]
+          },
+          "b": {
+            "arguments": [{
+              "kind": "SimpleType",
+              "name": "T"
+            }],
+            "constructor": {
+              "kind": "SimpleType",
+              "name": "Option"
+            },
+            "kind": "TypeApplication"
+          }
+        }
+      }
+    },
+    "src": "def complex[T]: (T) => {a: (Int, Int), b: Option[T]} = extern(\"complex\")",
+    "typeParameters": ["T"]
+  }]
+}
