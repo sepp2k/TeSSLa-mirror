@@ -38,7 +38,7 @@ class LocationTests extends AnyFunSuite {
         |""".stripMargin,
       "lipsum"
     )
-    assert(loc1 == Location(0, 0, 3, 111, "lipsum"))
+    assert(loc1 == Location(0, 0, 3, 110, "lipsum"))
   }
 
   test("testBuiltIn") {

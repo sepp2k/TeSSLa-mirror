@@ -140,7 +140,7 @@ object Location {
    * @return the resulting location
    */
   def forWholeFile(fileContents: String, path: String): Location = {
-    val lines = fileContents.split("\\n")
+    val lines = fileContents.split("\\r?\\n")
     Location(
       fromLine = 0,
       fromColumn = 0,
