@@ -49,7 +49,7 @@ object Diagnostics {
    * @param loc Location which code section in the original TeSSLa spec caused the error
    */
   case class NotYetImplementedError(m: String, loc: Location = Location.unknown) extends Errors.TesslaError {
-    override def message = s"The translation of the given command is not supported, yet.\nDetails: $m"
+    override def message = s"$m is not yet implemented."
   }
 
   /**

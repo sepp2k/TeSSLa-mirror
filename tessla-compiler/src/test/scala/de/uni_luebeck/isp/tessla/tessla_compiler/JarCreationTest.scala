@@ -4,6 +4,7 @@ import java.nio.file.{Files, Path}
 
 import de.uni_luebeck.isp.tessla.AbstractTestRunner
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaCompiler
 import org.scalatest.BeforeAndAfterAll
@@ -19,11 +20,13 @@ class JarCreationTest extends AbstractTestRunner[Unit]("Jar") with BeforeAndAfte
 
   override def roots: Seq[String] = Seq("jar/")
 
-  override def translation: TranslationPhase[TesslaAST.Core.Specification, Unit] =
-    TesslacTests.pipeline.andThen(new ScalaCompiler(fsPath, "monitor.jar", false)(s => {
-      s.usejavacp.value = false
-      s.classpath.value = Predef.getClass.getProtectionDomain.getCodeSource.getLocation.getPath
-    }))
+  override def translation(testCase: TestConfig): TranslationPhase[Core.Specification, Unit] =
+    TesslacTests
+      .pipeline(testCase)
+      .andThen(new ScalaCompiler(fsPath, "monitor.jar", false)(s => {
+        s.usejavacp.value = false
+        s.classpath.value = Predef.getClass.getProtectionDomain.getCodeSource.getLocation.getPath
+      }))
 
   override def run(
     spec: Unit,

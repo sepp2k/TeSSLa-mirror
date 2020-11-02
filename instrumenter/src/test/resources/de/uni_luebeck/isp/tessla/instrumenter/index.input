@@ -1,0 +1,8 @@
+CALLED main: () => int
+WRITE int *&thing[][].foo
+READ int * &thing[][].foo
+RETURNED printf: (const char *, int) => int
+CALL printf: (const char *, int) => int
+READ int &thing[][]->foo
+READ Thing * &thing[][]
+RETURN main: () => int

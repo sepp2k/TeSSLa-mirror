@@ -30,7 +30,7 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
   def roots = Seq("common/")
 
   // The translation phase to apply after the core compiler
-  def translation: TranslationPhase[Core.Specification, T]
+  def translation(testCase: TestConfig): TranslationPhase[Core.Specification, T]
 
   // Called after unwrapping the compiler result if an 'input' is defined
   // should run the input on the specification
@@ -87,12 +87,11 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
         val expWarn = testCase.expectedWarnings.toSet.flatMap(grouped)
         val result =
           try {
-            Compiler.compile(spec, options).andThen(translation)
+            Compiler.compile(spec, options).andThen(translation(testCase))
           } catch {
             // Tessla errors may be thrown outside of translation phases, e.g. when evaluating the base time
             // Catch and wrap those into the result here
             case e: TesslaError => Failure(Seq(e), Seq())
-            case e              => throw e
           }
 
         val expCompilerResult = testCase.expectedCompilerResult.map(string)
@@ -138,10 +137,10 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
   }
 
   def compareRunResult(actualOut: String, actualErr: String, expectedOut: String, expectedErr: String): Unit = {
-    val expectedOutput = expectedOut.linesIterator.toSet
-    val expectedErrors = expectedErr.split("\n(?! )").toSet
-    val output = actualOut.linesIterator.toSet
-    val errors = actualErr.split("\n(?! )").toSet
+    val expectedOutput = expectedOut.linesIterator.toSet.filterNot(_.isBlank)
+    val expectedErrors = expectedErr.split("\n(?! )").toSet.filterNot(_.isBlank)
+    val output = actualOut.linesIterator.toSet.filterNot(_.isBlank)
+    val errors = actualErr.split("\n(?! )").toSet.filterNot(_.isBlank)
 
     assertTrue(!(errors.isEmpty && expectedErrors.nonEmpty), "Expected: Runtime error. Actual: success")
     assertTrue(
@@ -150,9 +149,7 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
     )
 
     assertEqualSets(errors, expectedErrors)
-
-    // TODO: Check partial result on runtime errors?
-    if (errors.isEmpty) assertEqualSets(output.map(splitOutput), expectedOutput.map(splitOutput), unsplitOutput)
+    assertEqualSets(output.map(splitOutput), expectedOutput.map(splitOutput), unsplitOutput)
   }
 
   def splitOutput(line: String): (BigInt, String) = {

@@ -32,7 +32,7 @@ import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.core.util.Lazy
-import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, IncludeResolvers, TesslaAST}
+import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, FlattenCore, IncludeResolvers, TesslaAST}
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
@@ -181,6 +181,7 @@ object Main {
       try {
         val sourceStr = unwrapResult(
           Compiler.compile(config.specSource, config.compilerOptions)
+            andThen FlattenCore
             andThen UsageAnalysis
             andThen Laziness
             andThen new TesslaCoreToIntermediate(consoleInterface = true)

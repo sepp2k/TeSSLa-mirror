@@ -22,7 +22,8 @@ object TestCase {
     expectedCompilerResult: Option[String],
     abortAt: Option[Int],
     baseTime: Option[String],
-    skip: Boolean
+    skip: Boolean,
+    options: List[String]
   )
 
   class PathResolver(root: String, path: String, name: String)(implicit clazz: Class[_] = this.getClass) {
@@ -48,7 +49,11 @@ object TestCase {
       case Seq(JsBoolean(true)) => JsObject(o.fields + ("spec" -> JsString("")))
       case _                    => JsObject(o.fields + ("skip" -> JsBoolean(false)))
     }
-    jsonFormat10(TestConfig).read(filled)
+    val withOptions = filled.copy(filled.fields.updatedWith("options") {
+      case None => Some(JsArray())
+      case e    => e
+    })
+    jsonFormat11(TestConfig).read(withOptions)
   }
 
   def fromString(s: String): TestConfig = s.parseJson.convertTo[TestConfig]

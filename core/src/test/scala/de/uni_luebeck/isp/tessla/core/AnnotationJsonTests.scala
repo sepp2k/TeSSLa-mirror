@@ -1,6 +1,7 @@
 package de.uni_luebeck.isp.tessla.core
 
 import de.uni_luebeck.isp.tessla.AbstractTestRunner
+import de.uni_luebeck.isp.tessla.TestCase.TestConfig
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 import org.scalactic.Prettifier
@@ -8,7 +9,7 @@ import spray.json._
 
 class AnnotationJsonTests extends AbstractTestRunner[String]("Annotations-Json") {
   override def roots: Seq[String] = Seq("annotations-json/")
-  override def translation: TranslationPhase[Core.Specification, String] =
+  override def translation(testCase: TestConfig): TranslationPhase[Core.Specification, String] =
     (spec: Core.Specification) => Success(AnnotationsToJson(spec), Seq())
 
   implicit val prettifier: Prettifier = {

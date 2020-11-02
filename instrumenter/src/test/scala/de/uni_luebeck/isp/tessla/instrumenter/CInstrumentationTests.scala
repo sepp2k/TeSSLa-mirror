@@ -10,7 +10,9 @@ class CInstrumentationTests extends AbstractTestRunner[ILibraryInterface]("CInst
 
   override def roots: Seq[String] = Seq("instrumenter/")
 
-  override def translation: TranslationPhase[Core.Specification, ILibraryInterface] =
+  override def translation(
+    testCase: TestConfig
+  ): TranslationPhase[Core.Specification, CInstrumentation.ILibraryInterface] =
     CInstrumentation.LibraryInterfaceFactory
 
   val Line = """^([A-Z]+)\s+(.*)$""".r

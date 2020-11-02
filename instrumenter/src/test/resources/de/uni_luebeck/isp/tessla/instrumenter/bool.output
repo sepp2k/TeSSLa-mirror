@@ -1,0 +1,5 @@
+RETURN foo: () => _Bool
+foo_return
+uint8_t* events = trace_create_events(1);
+trace_push_bool(events, "foo", (bool) value);
+trace_write(events);

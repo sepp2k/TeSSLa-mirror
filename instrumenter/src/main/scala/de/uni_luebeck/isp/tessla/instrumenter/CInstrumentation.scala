@@ -405,11 +405,11 @@ object CInstrumentation {
         .groupMap(_._1)(_._2)
 
     private var c = 0
-    private val memoize = mutable.HashMap[Pattern, String]()
+    private val memoize = mutable.HashMap[String, String]()
     def patternCb(pattern: Pattern) = {
+      val patStr = pattern.toString.replaceAll("""[\(|\)]""", "")
       memoize.getOrElseUpdate(
-        pattern, {
-          val patStr = pattern.toString
+        patStr, {
           if (patStr.matches("""^[a-zA-Z_][\w_]*$""")) patStr
           else {
             c += 1
@@ -557,8 +557,8 @@ object CInstrumentation {
       val callbacks = (functionObservations ++ patternObservations).reduce(_ ++ _)
 
       new ILibraryInterface {
-        def assertFuncTypes(f: IFunDesc, assertions: Map[String, Seq[(Int, InStream)]]): Unit = {
-          assertions.get(f.name).foreach { seq =>
+        def assertFuncTypes(f: IFunDesc, cbName: String, assertions: Map[String, Seq[(Int, InStream)]]): Unit = {
+          assertions.get(cbName).foreach { seq =>
             seq.foreach {
               case (argIndex, inStream) =>
                 if (argIndex >= f.parNum) {
@@ -576,10 +576,10 @@ object CInstrumentation {
           assertions.get(cb).foreach(assertSameType(typ, _))
 
         def checkFunc(f: IFunDesc, suffix: String) = {
-          assertFuncTypes(f, functionTypeAssertions)
-          val cbName = f.name + suffix
-          Option.when(callbacks.contains(cbName))(cbName) getOrElse ""
           // println(s"${suffix.drop(1).toUpperCase} $f")
+          val cbName = f.name + suffix
+          assertFuncTypes(f, cbName, functionTypeAssertions)
+          Option.when(callbacks.contains(cbName))(cbName) getOrElse ""
         }
 
         override def checkInstFuncReturn(f: IFullFunDesc, file: String, line: Int, col: Int): String =
@@ -601,11 +601,11 @@ object CInstrumentation {
           checkFunc(f, "_called")
 
         def checkPattern(pattern: String, suffix: String, typ: String): Option[String] = {
+          // println(s"${suffix.drop(1).toUpperCase} $typ $pattern")
           val pat = parsePattern(pattern, Location.unknown)
           val cbName = patternCb(pat) + suffix
           assertPatternTypes(cbName, typ, patternTypeAssertions)
           Option.when(callbacks.contains(cbName))(cbName)
-          // println(s"${suffix.drop(1).toUpperCase} $typ $pattern")
         }
 
         override def checkInstWrite(

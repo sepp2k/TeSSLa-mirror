@@ -1,0 +1,4 @@
+@InstFunctionCall("sub")
+in call: Events[Int]
+
+out *

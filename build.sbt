@@ -46,7 +46,9 @@ Global / coverageExcludedPackages := "<empty>;" +
   ".*Errors;" +
   ".*Location;" +
   ".*TimeUnit;" +
-  ".*TesslaDoc;"
+  ".*TesslaDoc;" +
+  ".*Trace;" +
+  ".*DocJsonProtocol;"
 
 // ThisBuild scoped settings
 val compilerVersion = "2.13.3"
