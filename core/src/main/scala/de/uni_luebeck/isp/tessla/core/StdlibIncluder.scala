@@ -44,7 +44,9 @@ class StdlibIncluder(resolveInclude: String => Option[CharStream], path: String)
         }
       }
       .getOrElse {
+        // $COVERAGE-OFF$
         TranslationPhase.Failure(Seq(InternalError("Could not find stdlib")), Seq())
+        // $COVERAGE-ON$
       }
   }
 }

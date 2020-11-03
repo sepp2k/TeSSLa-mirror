@@ -34,8 +34,4 @@ package object util {
   implicit class RichMap[K, +V](map: Map[K, V]) {
     def mapVals[W](f: V => W): Map[K, W] = map.view.mapValues(f).toMap
   }
-
-  implicit class RichMMap[K, +V](map: MMap[K, V]) {
-    def mapVals[W](f: V => W): MMap[K, W] = map.view.mapValues(f).to(MMap)
-  }
 }

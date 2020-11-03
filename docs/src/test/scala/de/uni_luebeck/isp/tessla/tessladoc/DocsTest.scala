@@ -11,7 +11,7 @@ import scala.util.Using
 import spray.json._
 import DocJsonProtocol._
 import org.antlr.v4.runtime.CharStreams
-import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers}
+import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 
 class DocsTest extends AnyFunSuite {
@@ -21,8 +21,15 @@ class DocsTest extends AnyFunSuite {
       Source.fromInputStream(getClass.getResourceAsStream("doc.json"))
     )(_.getLines().mkString("\n")).get.parseJson.convertTo[Docs]
 
-    val charStream = IncludeResolvers.fromResource(getClass, "")("foo.tessla").get
-    val result = DocGenerator(Seq(charStream), Compiler.Options(), includeStdlib = false, withIncludes = false)
+    val resolver = IncludeResolvers.fromResource(getClass, "") _
+    val charStream = resolver("foo.tessla").get
+    val options = Compiler.Options(
+      baseTimeString = None,
+      includeResolver = resolver,
+      stdlibIncludeResolver = resolver,
+      stdlibPath = "stdlib.tessla"
+    )
+    val result = DocGenerator(Seq(charStream), options, includeStdlib = true, withIncludes = true)
     assert(result.isInstanceOf[Success[TesslaDoc.Docs]])
 
     val Success(actual, _) = result

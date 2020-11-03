@@ -154,7 +154,9 @@ object TraceExpressionEvaluator {
     }
 
     final override def visitChildren(node: RuleNode): Any = {
+      // $COVERAGE-OFF$
       throw InternalError("Undefined visitor method", Location.fromNode(node.asInstanceOf[ParserRuleContext]))
+      // $COVERAGE-ON$
     }
   }
 

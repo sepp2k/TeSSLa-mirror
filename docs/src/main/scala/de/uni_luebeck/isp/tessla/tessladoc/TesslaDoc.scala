@@ -24,15 +24,8 @@
 
 package de.uni_luebeck.isp.tessla.tessladoc
 
-import de.uni_luebeck.isp.tessla.core.Errors.InternalError
 import de.uni_luebeck.isp.tessla.tessladoc.DocJsonProtocol._
-import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.core._
-import org.antlr.v4.runtime.misc.Interval
-import org.antlr.v4.runtime.tree.RuleNode
-import org.antlr.v4.runtime.{CharStream, ParserRuleContext, Token}
-
-import scala.jdk.CollectionConverters._
 import spray.json._
 
 sealed trait Statement
@@ -75,7 +68,7 @@ object TesslaDoc {
       extends TesslaDoc
 
   case class ModuleDoc(name: String, doc: String, members: Seq[TesslaDoc], imports: Seq[Import], loc: Location)
-      extends TesslaDoc {}
+      extends TesslaDoc
 
   case class Import(path: Seq[String]) extends Statement
 

@@ -1,8 +1,10 @@
+include "bar"
+
 def @Foo(s: String)
 def @@Foo(a: Float)
 
 ## This is documentation
-def foo(a: Int) := 5
+def foo(a: Int) = 5
 
 # This isn't.
 -- Neither is this
@@ -30,4 +32,10 @@ module Tern {
   liftable def not(a: Ternary) = extern("not")
 }
 
+## A definition with a rather complex type signature
 def complex[T]: (T) => {a: (Int, Int), b: Option[T]} = extern("complex")
+
+## nodoc
+def top_secret(a: Int) = a + 42
+
+import Bar

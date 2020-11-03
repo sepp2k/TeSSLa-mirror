@@ -4,14 +4,14 @@ import de.uni_luebeck.isp.tessla.AbstractTestRunner
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
+import de.uni_luebeck.isp.tessla.core.{FlattenCore, TesslaAST, TranslationPhase}
 
 import scala.collection.mutable
 
 class InterpreterTests extends AbstractTestRunner[Core.Specification]("Interpreter") {
 
   override def translation(testCase: TestConfig): TranslationPhase[Core.Specification, Core.Specification] =
-    TranslationPhase.IdentityPhase()
+    FlattenCore
 
   override def run(
     spec: TesslaAST.Core.Specification,
