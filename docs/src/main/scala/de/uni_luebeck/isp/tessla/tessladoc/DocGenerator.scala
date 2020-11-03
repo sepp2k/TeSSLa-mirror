@@ -187,7 +187,7 @@ object DocGenerator {
         val source = definition.start.getInputStream.getText(interval)
         val leadingWhitespaces = source.segmentLength(_ == ' ')
         val unindented = source
-          .split("\n")
+          .split("\r?\n")
           .map(s => {
             val n = s.segmentLength(_ == ' ')
             s.drop(if (leadingWhitespaces > n) n else leadingWhitespaces)

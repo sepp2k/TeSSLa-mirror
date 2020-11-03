@@ -64,7 +64,7 @@
         "kind": "SimpleType",
         "name": "Int"
       },
-      "src": "def bar(a: Int): Int = {\r\n    -- But those within a block are not\r\n    def baz = a * 42\r\n    baz + 5\r\n}",
+      "src": "def bar(a: Int): Int = {\n    -- But those within a block are not\n    def baz = a * 42\n    baz + 5\n}",
       "typeParameters": []
     }],
     "name": "Bar"
