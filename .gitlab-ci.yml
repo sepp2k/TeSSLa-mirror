@@ -10,7 +10,7 @@ check:
   tags:
     - docker
   script:
-    - sbt scalafmtCheckAll scalafmtSbtCheck
+    - sbt scalafmtCheckAll scalafmtSbtCheck headerCheck
 
 test:
   only:

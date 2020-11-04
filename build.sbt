@@ -20,6 +20,8 @@ val versionPattern = "def\\s+version(?:\\s*:\\s*String)?\\s*=\\s*\"([^\"]+)\"".r
 Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / cancelable := true
 Global / coverageEnabled := true
+Global / coverageMinimum := 80
+Global / coverageFailOnMinimum := true
 Global / coverageExcludedPackages := "<empty>;" +
   ".*CLIParser;" +
   ".*Main;" +
