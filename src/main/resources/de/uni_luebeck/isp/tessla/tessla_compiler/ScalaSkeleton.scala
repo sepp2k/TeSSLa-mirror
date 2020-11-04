@@ -68,7 +68,7 @@ object Main {
 
   def main(args: Array[String]) = {
 
-    val inputSize = args(0).toInt
+    val inputSize = args(0).toLong
 
     //JVM warmup
     runTest(1000, 0)
@@ -79,7 +79,7 @@ object Main {
     println(s"Runtime: $time ns")
   }
 
-  def runTest(size: Int, offset: Int): (Long, Long) = {
+  def runTest(size: Long, offset: Long): (Long, Long) = {
 
     var cumRes: Long = 0
 
@@ -89,12 +89,13 @@ object Main {
       cumRes = cumRes + (value + ts)
     }
 
-    (1 to size).foreach { i =>
-      val ts = offset + 3 * i + (i % 3)
-      val input = (i % 233) + (ts % 17) - (i % 9)
+    var i = 0L
+    while(i < size) {
+      val ts = offset + i
 
       //println(s"$ts: $input")
-      set_var_x.apply(input, ts)
+      set_var_x.apply(i, ts)
+      i+=1
     }
 
     val stop: Long = System.nanoTime()
