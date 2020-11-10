@@ -52,16 +52,16 @@ The CLI of TeSSLa follows a command based structure. The following commands are 
 
 For detailed usage information, take a look at the following help text.
 ```
-tessla 1.2.1
+tessla 1.2.2
 Usage: tessla [interpreter|compile-core|doc|compile|instrumenter] [options] <args>...
 
 Compile Tessla specifications and evaluate them on provided input streams.
-  -t, --base-time <value>  Use the given time constant (including a unit) as the reference time for time literals(only in 'interpreter' and 'compile-core'
-  -s, --stdlib <file>      Provide a standard library to use instead of the default one.(only in 'interpreter' and 'compile-core'
+  -t, --base-time <value>  Use the given time constant (including a unit) as the reference time for time literals
+  -s, --stdlib <file>      Provide a standard library to use instead of the default one.
   --no-diagnostics         Suppress error messages and warnings
   --debug                  Print stack traces for errors and provide more verbose output
 
-  --help                   Prints this help message and exit.
+  -h, --help               Prints this help message and exit.
   --version                Print the version and exit.
   -l, --license            Print the legal information for this software and exit.
 
@@ -87,10 +87,12 @@ Compile the provided specification to Tessla Core
   --print-all-types        Print ASTs with all types
   --list-out-streams       Print a list of the output streams defined in the given Tessla specification and then exit
   --list-in-streams        Print a list of the input streams defined in the given Tessla specification and then exit
+  -a, --export-annotations <value>
+                           Generate a Json file containing the annotation information of the specification
 
 Command: doc [options] [<files>]
 Generate documentation for Tessla code
-  -s, --stdlib             Include documentation for definitions from the standard library
+  --include-stdlib         Include documentation for definitions from the standard library
   -i, --includes           Include documentation from included files
   -o, --outfile <value>    Write the generated docs to the given file instead of stdout
   <files>                  The TeSSLa files for which to generate documentation
