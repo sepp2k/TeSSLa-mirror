@@ -1,5 +1,22 @@
 # Changelog
 
+## Version 1.2.2
+
+### Breaking Changes
+/
+
+### Additions and Fixes
+- `out` can now also be used on records of streams, which then gets separated into `out` statements for each member. If the record has non-stream members, they get lifted to a stream. (See [#92](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/92))
+- Add a short option `-h` for the `--help` command line option.
+- Function parameters now have globally unique names (See [#146](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/146))
+- Block expressions can now be used without any definitions (See [#148](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/148))
+- Annotations, definitions and lambda expressions can now be declared and used with empty parameter lists `()` (See [#149](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/149))
+- Fix type assertions in C instrumentation being ignored
+- Fix pattern callback generation in C instrumentation not properly matching when pattern used parentheses
+
+### API Changes
+- The `CInstrumentation` class has been split into `CInstrumentation` and `CInstrumentationBridge`. This decouples the instrumentation callbacks from the specific caller, in this case the `clang-instrumentation` library, and allows it to be used with other backends. (See [#152](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/152))
+
 ## Version 1.2.1
 
 ### Breaking Changes

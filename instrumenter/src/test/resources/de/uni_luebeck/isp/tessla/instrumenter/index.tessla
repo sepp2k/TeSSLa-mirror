@@ -1,0 +1,4 @@
+@GlobalReadIndex("(&thing[][])->foo", 0)
+in thingRead: Events[Int]
+
+out *

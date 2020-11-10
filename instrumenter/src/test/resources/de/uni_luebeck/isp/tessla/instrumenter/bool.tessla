@@ -1,0 +1,3 @@
+@InstFunctionReturn("foo")
+in foo: Events[Bool]
+out *

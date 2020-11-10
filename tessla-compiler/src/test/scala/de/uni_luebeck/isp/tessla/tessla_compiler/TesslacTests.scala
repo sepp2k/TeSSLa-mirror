@@ -5,8 +5,9 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 
+import de.uni_luebeck.isp.tessla.TestCase.TestConfig
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import de.uni_luebeck.isp.tessla.core.TranslationPhase
+import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.tessla_compiler.NoExitSecurityManager.SystemExitException
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{
   ScalaBackend,
@@ -27,18 +28,18 @@ class TesslacTests extends AbstractTestRunner[String]("Tessla Compiler") with Be
 
   override def roots = Seq("common/", "tesslac/")
 
-  override def translation: TranslationPhase[Core.Specification, String] = TesslacTests.pipeline
+  override def translation(testCase: TestConfig): TranslationPhase[Core.Specification, String] =
+    TesslacTests.pipeline(testCase)
 
   override def run(
     spec: String,
     inputFile: String,
     testCase: TestCase.TestConfig,
     resolver: TestCase.PathResolver
-  ): (Set[String], Set[String]) = {
+  ): (String, String) = {
     TesslacTests.compile(fsPath, spec)
     val (output, errors) = TesslacTests.execute(fsPath, resolver.inStream(inputFile))
-    val err = if (errors.isEmpty) Set[String]() else errors.mkString("\n").split("\n(?! )").toSet
-    (output.toSet, err)
+    (output.mkString("\n"), errors.mkString("\n"))
   }
 
   override def afterAll(): Unit = {
@@ -48,12 +49,14 @@ class TesslacTests extends AbstractTestRunner[String]("Tessla Compiler") with Be
 }
 
 object TesslacTests {
-  def pipeline: TranslationPhase[Core.Specification, String] =
+  def pipeline(testCase: TestConfig): TranslationPhase[Core.Specification, String] = {
+    val consoleInterface = !testCase.options.contains("no-console")
     UsageAnalysis
       .andThen(Laziness)
-      .andThen(new TesslaCoreToIntermediate(true))
+      .andThen(new TesslaCoreToIntermediate(consoleInterface))
       .andThen(UnusedVarRemove)
       .andThen(new ScalaBackend)
+  }
 
   // Redirect both Scala and Java Console IO to the provided streams, and revert afterwards
   // TODO: This is required since the tessla-compiler currently only supports IO through stdin/stdout/stderr

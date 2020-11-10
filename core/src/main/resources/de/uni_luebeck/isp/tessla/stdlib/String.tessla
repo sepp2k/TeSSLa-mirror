@@ -4,7 +4,7 @@ module String {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[String]
   ## in y: Events[String]
   ## def result := String.concat(x, y)
@@ -64,7 +64,7 @@ module String {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def result := String.format("%#05x", x)
   ## out result

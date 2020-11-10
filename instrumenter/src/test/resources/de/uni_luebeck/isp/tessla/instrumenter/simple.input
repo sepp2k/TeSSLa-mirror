@@ -1,0 +1,47 @@
+CALLED add: (x: int, y: int) => int
+RETURN add: (x: int, y: int) => int
+READ int add::x
+READ int add::x
+READ int add::y
+READ int add::y
+CALLED sub: (x: int, y: int) => int
+RETURN sub: (x: int, y: int) => int
+READ int sub::x
+READ int sub::x
+READ int sub::y
+READ int sub::y
+CALLED main: () => int
+WRITE int main::sum
+WRITE int main::sum
+WRITE int main::i
+WRITE int main::i
+READ int main::i
+READ int main::i
+WRITE int main::i
+WRITE int main::i
+WRITE int main::sum
+RETURNED add: (int, int) => int
+CALL add: (int, int) => int
+READ int main::sum
+RETURNED sub: (int, int) => int
+CALL sub: (int, int) => int
+READ int main::i
+WRITE int main::sum
+RETURNED add: (int, int) => int
+CALL add: (int, int) => int
+READ int main::sum
+RETURNED add: (int, int) => int
+CALL add: (int, int) => int
+WRITE int main::i
+READ int main::i
+WRITE int main::sum
+RETURNED add: (int, int) => int
+CALL add: (int, int) => int
+READ int main::sum
+RETURNED sub: (int, int) => int
+CALL sub: (int, int) => int
+READ int main::i
+RETURNED printf: (const char *, int) => int
+CALL printf: (const char *, int) => int
+READ int main::sum
+RETURN main: () => int

@@ -13,6 +13,8 @@ import scala.jdk.CollectionConverters._
 import java.nio.file.FileSystems
 import java.nio.file.PathMatcher
 
+import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
+
 import scala.io.Source
 import scala.util.Using
 
@@ -28,12 +30,12 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
   def roots = Seq("common/")
 
   // The translation phase to apply after the core compiler
-  def translation: TranslationPhase[Core.Specification, T]
+  def translation(testCase: TestConfig): TranslationPhase[Core.Specification, T]
 
   // Called after unwrapping the compiler result if an 'input' is defined
   // should run the input on the specification
   // and return a tuple of (output, errors)
-  def run(spec: T, inputFile: String, testCase: TestConfig, resolver: PathResolver): (Set[String], Set[String]) =
+  def run(spec: T, inputFile: String, testCase: TestConfig, resolver: PathResolver): (String, String) =
     throw new UnsupportedOperationException
 
   // Gets called if a 'expectedCompilerResult' is defined, override to implement
@@ -83,7 +85,15 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
         val spec = charStream(testCase.spec)
         val expErr = testCase.expectedErrors.toSet.flatMap(grouped)
         val expWarn = testCase.expectedWarnings.toSet.flatMap(grouped)
-        val result = Compiler.compile(spec, options).andThen(translation)
+        val result =
+          try {
+            Compiler.compile(spec, options).andThen(translation(testCase))
+          } catch {
+            // Tessla errors may be thrown outside of translation phases, e.g. when evaluating the base time
+            // Catch and wrap those into the result here
+            case e: TesslaError => Failure(Seq(e), Seq())
+          }
+
         val expCompilerResult = testCase.expectedCompilerResult.map(string)
 
         handleCompilerResult(result, expErr, expWarn, expCompilerResult)(
@@ -119,21 +129,27 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
     testCase.input match {
       case Some(input) =>
         val (output, errors) = run(spec, input, testCase, resolver)
-        val expectedOutput = testCase.expectedOutput.map(source(_)(_.getLines().toSet)).getOrElse(Set())
-        val expectedErrors = testCase.expectedRuntimeErrors.toSet.flatMap(grouped)
-
-        assertTrue(!(errors.isEmpty && expectedErrors.nonEmpty), "Expected: Runtime error. Actual: success")
-        assertTrue(
-          !(errors.nonEmpty && expectedErrors.isEmpty),
-          s"Expected: success, Actual: Runtime error:\n${errors.mkString("\n")}"
-        )
-
-        assertEqualSets(errors, expectedErrors)
-
-        // TODO: Check partial result on runtime errors?
-        if (errors.isEmpty) assertEqualSets(output.map(splitOutput), expectedOutput.map(splitOutput), unsplitOutput)
+        val expectedOutput = testCase.expectedOutput.map(string).getOrElse("")
+        val expectedErrors = testCase.expectedRuntimeErrors.map(string).getOrElse("")
+        compareRunResult(output, errors, expectedOutput, expectedErrors)
       case None =>
     }
+  }
+
+  def compareRunResult(actualOut: String, actualErr: String, expectedOut: String, expectedErr: String): Unit = {
+    val expectedOutput = expectedOut.linesIterator.toSet.filterNot(_.isBlank)
+    val expectedErrors = expectedErr.split("\n(?! )").toSet.filterNot(_.isBlank)
+    val output = actualOut.linesIterator.toSet.filterNot(_.isBlank)
+    val errors = actualErr.split("\n(?! )").toSet.filterNot(_.isBlank)
+
+    assertTrue(!(errors.isEmpty && expectedErrors.nonEmpty), "Expected: Runtime error. Actual: success")
+    assertTrue(
+      !(errors.nonEmpty && expectedErrors.isEmpty),
+      s"Expected: success, Actual: Runtime error:\n${errors.mkString("\n")}"
+    )
+
+    assertEqualSets(errors, expectedErrors)
+    assertEqualSets(output.map(splitOutput), expectedOutput.map(splitOutput), unsplitOutput)
   }
 
   def splitOutput(line: String): (BigInt, String) = {

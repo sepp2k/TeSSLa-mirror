@@ -1,0 +1,41 @@
+include "bar"
+
+def @Foo(s: String)
+def @@Foo(a: Float)
+
+## This is documentation
+def foo(a: Int) = 5
+
+# This isn't.
+-- Neither is this
+
+type Ternary = extern("Ternary")
+
+## Primitives for ternary
+module Tern {
+  ## True value
+  def top: Ternary = extern("top")
+
+  ## False value
+  def bottom: Ternary = extern("bottom")
+
+  ## Unknown value
+  def unknown: Ternary = extern("unknown")
+
+  ## Conjunction
+  liftable def and(a: Ternary, b: Ternary) = extern("and")
+
+  ## Disjunction
+  liftable def or(a: Ternary, b: Ternary) = extern("or")
+
+  ## Negation
+  liftable def not(a: Ternary) = extern("not")
+}
+
+## A definition with a rather complex type signature
+def complex[T]: (T) => {a: (Int, Int), b: Option[T]} = extern("complex")
+
+## nodoc
+def top_secret(a: Int) = a + 42
+
+import Bar

@@ -1,0 +1,5 @@
+module Foo {
+  in x: Events[Int]
+  out x
+}
+out Foo.x

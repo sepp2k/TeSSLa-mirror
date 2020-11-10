@@ -1,0 +1,3 @@
+in x: Events[Int]
+def o := {a = {b = x, c = {d = 34}}, e = 12}
+out o

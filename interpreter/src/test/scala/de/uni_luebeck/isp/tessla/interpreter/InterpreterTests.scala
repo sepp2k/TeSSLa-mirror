@@ -4,27 +4,33 @@ import de.uni_luebeck.isp.tessla.AbstractTestRunner
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
+import de.uni_luebeck.isp.tessla.core.{FlattenCore, TesslaAST, TranslationPhase}
+
+import scala.collection.mutable
 
 class InterpreterTests extends AbstractTestRunner[Core.Specification]("Interpreter") {
 
-  override def translation: TranslationPhase[Core.Specification, Core.Specification] = TranslationPhase.IdentityPhase()
+  override def translation(testCase: TestConfig): TranslationPhase[Core.Specification, Core.Specification] =
+    FlattenCore
 
   override def run(
     spec: TesslaAST.Core.Specification,
     inputFile: String,
     testCase: TestConfig,
     resolver: PathResolver
-  ): (Set[String], Set[String]) = {
+  ): (String, String) = {
     import resolver._
+    val result = mutable.HashSet[String]()
     try {
-      val result = source(inputFile) { src =>
+      source(inputFile) { src =>
         val trace = Trace.fromSource(src, resolve(inputFile), testCase.abortAt.map(BigInt(_)))
-        Interpreter.run(spec, trace, None, rejectUndeclaredInputs = true).toSet
+        Interpreter
+          .run(spec, trace, None, rejectUndeclaredInputs = true)
+          .foreach(event => result += event.toString)
       }
-      (result.map(_.toString), Set())
+      (result.mkString("\n"), "")
     } catch {
-      case ex: TesslaError => (Set[String](), Set(ex.toString))
+      case ex: TesslaError => (result.mkString("\n"), ex.toString)
     }
   }
 

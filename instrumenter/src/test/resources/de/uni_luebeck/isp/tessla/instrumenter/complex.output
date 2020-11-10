@@ -1,0 +1,54 @@
+CALLED add: (x: int, y: int) => int
+add_called
+uint8_t* events = trace_create_events(3);
+trace_push_int(events, "calledX", (int64_t) arg0);
+trace_push_int(events, "calledY", (int64_t) arg1);
+trace_push_unit(events, "called");
+trace_write(events);
+RETURN sub: (x: int, y: int) => int
+sub_return
+uint8_t* events = trace_create_events(1);
+trace_push_int(events, "ret", (int64_t) value);
+trace_write(events);
+WRITE int *bar::foo
+_3_localWrite
+uint8_t* events = trace_create_events(1);
+trace_push_int(events, "localWrite", (int64_t) value);
+trace_write(events);
+READ int *bar::foo
+_3_localRead
+uint8_t* events = trace_create_events(1);
+trace_push_int(events, "localRead", (int64_t) value);
+trace_write(events);
+CALL sub: (int, int) => int
+sub_call
+uint8_t* events = trace_create_events(3);
+trace_push_int(events, "callX", (int64_t) arg0);
+trace_push_int(events, "callY", (int64_t) arg1);
+trace_push_unit(events, "call");
+trace_write(events);
+RETURNED add: (int, int) => int
+add_returned
+uint8_t* events = trace_create_events(1);
+trace_push_int(events, "returned", (int64_t) value);
+trace_write(events);
+WRITE int arr[]
+_1_globalWrite
+uint8_t* events = trace_create_events(1);
+trace_push_int(events, "globalWrite", (int64_t) value);
+trace_write(events);
+READ int arr[]
+_1_globalRead
+uint8_t* events = trace_create_events(1);
+trace_push_int(events, "globalRead", (int64_t) value);
+trace_write(events);
+WRITE int *&thing[][].foo
+_2_globalWrite
+uint8_t* events = trace_create_events(1);
+trace_push_int(events, "thingWrite", (int64_t) value);
+trace_write(events);
+READ int *&thing[][].foo
+_2_globalRead
+uint8_t* events = trace_create_events(1);
+trace_push_int(events, "thingRead", (int64_t) value);
+trace_write(events);

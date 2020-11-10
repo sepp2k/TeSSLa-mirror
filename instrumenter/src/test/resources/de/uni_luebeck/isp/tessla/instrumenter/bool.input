@@ -1,0 +1,6 @@
+CALLED main: () => int
+CALLED foo: () => _Bool
+RETURN foo: () => _Bool
+RETURNED foo: () => _Bool
+CALL foo: () => _Bool
+RETURN main: () => int

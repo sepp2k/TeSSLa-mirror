@@ -9,7 +9,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## def d = default(a, 42)
   ## out d
@@ -53,7 +53,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in v: Events[Int]
   ## in x: Events[Int]
   ## def d = defaultFrom(v, x)
@@ -103,7 +103,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## def f(a: Option[Int]) =
   ##   if getSome(a) > 5 then a else None[Int]
@@ -147,7 +147,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## in b: Events[Int]
   ## def f(a: Option[Int], b: Option[Int]) =
@@ -189,7 +189,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## in b: Events[Int]
   ## in c: Events[Int]
@@ -235,7 +235,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## in b: Events[Int]
   ## in c: Events[Int]
@@ -298,7 +298,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in values: Events[Int]
   ## in trigger: Events[Unit]
   ## def result = last(values,trigger)
@@ -333,7 +333,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## def b = prev(a)
   ## out b
@@ -360,7 +360,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def y = time(x)
   ## out y
@@ -390,7 +390,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in values: Events[Int]
   ## in resets: Events[Unit]
   ## def result = delay(values, resets)
@@ -428,7 +428,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def y = const(42, x)
   ## out y
@@ -460,7 +460,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## in y: Events[Int]
   ## def z = first(x, y)
@@ -495,7 +495,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## def b = slift1(a, (x: Int) => x + 1)
   ## out b
@@ -529,7 +529,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## in b: Events[Int]
   ## def z = slift(a, b, (v1: Int, v2: Int) => (v1 + v2) / 2)
@@ -573,7 +573,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## in b: Events[Int]
   ## in c: Events[Int]
@@ -619,7 +619,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## in b: Events[Int]
   ## in c: Events[Int]
@@ -705,7 +705,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## in b: Events[Int]
   ## def z = merge(a,b)
@@ -741,7 +741,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in a: Events[Int]
   ## in b: Events[Int]
   ## in c: Events[Int]
@@ -817,7 +817,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## in y: Events[Bool]
   ## def z = mergeUnit(x, y)
@@ -865,7 +865,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in e: Events[String]
   ## in c: Events[Bool]
   ## def r = filter(e, c)
@@ -893,7 +893,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def y = pure(x)
   ## out y
@@ -940,7 +940,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def f = isFirst(x)
   ## out f
@@ -968,7 +968,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def y = firstEvent(x)
   ## out y
@@ -992,7 +992,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def f = defined(x)
   ## out f
@@ -1023,7 +1023,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in call: Events[Unit]
   ## in ret: Events[Unit]
   ## def rt = runtime(call, ret)
@@ -1074,7 +1074,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def m = maximum(x)
   ## out m
@@ -1103,7 +1103,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def m = minimum(x)
   ## out m
@@ -1134,7 +1134,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Unit]
   ## def y = count(x)
   ## out y
@@ -1164,7 +1164,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def y = sum(x)
   ## out y
@@ -1252,7 +1252,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in events: Events[Unit]
   ## in resets: Events[Unit]
   ## def result = resetCount(events, resets)
@@ -1308,7 +1308,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in send: Events[Unit]
   ## def property :=
   ##   bursts(send, burstLength = 3s,
@@ -1349,7 +1349,7 @@ module StreamFunctions {
   ##
   ## exceeded `burstAmount`
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in send: Events[Unit]
   ## def property :=
   ##   bursts(send, burstLength = 6,
@@ -1396,7 +1396,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in reset: Events[Unit]
   ## in e: Events[Unit]
   ## def p := burstsSince(e, burstLength = 2s,
@@ -1450,7 +1450,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in reset: Events[Unit]
   ## in e: Events[Unit]
   ## def p := noEvent(e, since = reset)
@@ -1502,7 +1502,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in condition: Events[Bool]
   ## def result = constIf(42, condition)
   ## out result
@@ -1529,7 +1529,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in condition: Events[Bool]
   ## def result = unitIf(condition)
   ## out result
@@ -1555,7 +1555,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in b: Events[Bool]
   ## def result = boolFilter(b)
   ## out result
@@ -1581,7 +1581,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in condition: Events[Bool]
   ## def result = rising(condition)
   ## out result
@@ -1610,7 +1610,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in condition: Events[Bool]
   ## def result = falling(condition)
   ## out result
@@ -1638,7 +1638,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in trigger: Events[Unit]
   ## in stream: Events[Int]
   ## def result = on(trigger, stream)
@@ -1680,7 +1680,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in stream: Events[Int]
   ## def result = average(stream)
   ## out result
@@ -1711,7 +1711,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in progress: Events[Unit]
   ## def output = period(3)
   ## out output
@@ -1755,7 +1755,7 @@ module StreamFunctions {
   ##
   ## **Usage example:**
   ##
-  ## ~~~ruby
+  ## ~~~tessla
   ## in x: Events[Int]
   ## def y = sample(x, 5)
   ## out y

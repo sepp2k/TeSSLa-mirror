@@ -1,0 +1,1 @@
+errors/annotationdef-in-module.tessla(2,3 - 2,11): Annotation definitions are not allowed inside of modules

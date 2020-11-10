@@ -1,0 +1,3 @@
+in x: Events[String]
+def r = default(x, "\r\n\t\a")
+out r

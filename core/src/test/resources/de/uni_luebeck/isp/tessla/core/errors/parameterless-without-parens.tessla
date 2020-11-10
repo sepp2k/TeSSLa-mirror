@@ -1,0 +1,4 @@
+in x: Events[Int]
+
+def foo = 42
+out foo()

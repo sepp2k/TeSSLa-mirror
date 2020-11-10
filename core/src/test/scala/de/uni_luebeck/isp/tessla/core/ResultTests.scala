@@ -1,11 +1,16 @@
 package de.uni_luebeck.isp.tessla.core
 
-import de.uni_luebeck.isp.tessla.core.Errors.{DivideByZero, IndexOutOfRange}
+import de.uni_luebeck.isp.tessla.core.Errors.{IndexOutOfRange, TesslaError}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, SimpleWarning, Success}
 import org.scalatest.funsuite.AnyFunSuite
 
 class ResultTests extends AnyFunSuite {
   def w(msgs: String*) = msgs.toList.map(SimpleWarning(Location.unknown, _))
+
+  case class DivideByZero(loc: Location) extends TesslaError {
+    override def message = "Division by zero"
+  }
+
   val dbz = DivideByZero(Location.unknown)
   val ioor = IndexOutOfRange(42, IndexedSeq(), Location.unknown)
 

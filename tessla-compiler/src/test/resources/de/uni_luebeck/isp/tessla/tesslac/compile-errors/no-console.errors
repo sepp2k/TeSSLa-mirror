@@ -1,0 +1,2 @@
+compile-errors/no-console.tessla(1,1 - 1,18): Translation without value consumption from stdin is not yet implemented.
+compile-errors/no-console.tessla(2,5 - 2,6): Translation without value output to stdout is not yet implemented.
