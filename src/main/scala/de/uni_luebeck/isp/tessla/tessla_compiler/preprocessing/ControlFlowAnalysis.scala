@@ -5,6 +5,12 @@ import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 
 import scala.collection.mutable
 
+/**
+  * Perform control flow analysis of specification.
+  * Provide information which streams are only evaluated if a certain condition is true and provide information
+  * which identifiers cannot be inlined (parameter ids and input streams)
+  * @param spec The specification which is examined
+  */
 class ControlFlowAnalysis(spec: Specification) {
 
   val usages: mutable.Map[TesslaAST.Core.Identifier, Set[TesslaAST.Core.Identifier]] = (new UsageMapCreation(spec)).getUsages
@@ -80,7 +86,7 @@ class ControlFlowAnalysis(spec: Specification) {
   }
 
   def addIfCondId(cond: Identifier, neg: Boolean, id: Identifier, scope: Map[Identifier, DefinitionExpression]): Unit = {
-    if (usages(id).size == 1 && !spec.out.exists(_._1 == id)) {
+    if (usages(id).size == 1 && !spec.out.exists(_._1.id == id)) {
       val preCond : (Set[Identifier], Set[Identifier])= conditions.getOrElse(id, (Set(), Set()))
       val newCond = if (neg) {
         (preCond._1, preCond._2 + cond)

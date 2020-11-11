@@ -40,7 +40,7 @@ object ScalaConstants {
       case DoubleValue(value) => s"${value}d"
       case BoolValue(value) => value.toString()
       case UnitValue => "true"
-      case StringValue(value) => s""""${value.replaceAllLiterally("\"", "\\\"")}"""" //TODO: Find better solution, re-escaping all special chars
+      case StringValue(value) => s""""${value.replaceAllLiterally("\"", "\\\"")}""""
       case GeneralValue => "null"
       case EmptyFunction(_) => "null"
       case None(_) => "None"
@@ -167,7 +167,7 @@ object ScalaConstants {
       case "__getStruct__" => {
         typeHint match {
           case FunctionType(Seq(StructType(_, fieldNames), IntermediateCode.StringType), _) => {
-            s"${args(0)}._${fieldNames.indexOf(args(1).replace("\"", "")) + 1}" //TODO: Somehow unclean solution
+            s"${args(0)}._${fieldNames.indexOf(args(1).replace("\"", "")) + 1}"
           }
           case _ => throw Errors.DSLError(s"__getStruct__ call has wrong type hint $typeHint")
         }

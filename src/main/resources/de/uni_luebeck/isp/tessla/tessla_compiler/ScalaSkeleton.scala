@@ -14,26 +14,6 @@ object Main {
       case _                                   => 2048
     }
   }
-
-  def outputVar(output: String,
-                trueName: String,
-                errorCode: Long,
-                ts: Long): Unit = {
-    var outputWithError: String =
-      if (errorCode != 0)
-        "FATAL: " + trueName + " evaluation encountered an Error: "
-      else ""
-
-    errorCode match {
-      case 0 => outputWithError = trueName + " = " + output
-      case 1 => outputWithError += "Division by zero"
-      case 2 => outputWithError += "Map access to non existing key"
-      case _ => outputWithError += "Unknown error code " + errorCode
-    }
-    println(s"$ts: $outputWithError")
-    if (errorCode != 0) System.exit(errorCode.toInt)
-  }
-
 //STATIC
 
 //VARDEF
@@ -66,6 +46,10 @@ object Main {
     }
   }
 
+
+  //Methods included solely for benchmark creation
+  //Comment out for other examples
+
   def main(args: Array[String]) = {
 
     val inputSize = args(0).toLong
@@ -75,7 +59,7 @@ object Main {
 
     val (res, time) = runTest(inputSize, 3100)
 
-    println(s"$res")
+    println(s"Result: $res")
     println(s"Runtime: $time ns")
   }
 

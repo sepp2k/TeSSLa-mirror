@@ -5,20 +5,30 @@ import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.ExpressionFlowAnalysis.IdentifierDependencies
 import de.uni_luebeck.isp.tessla.util.Lazy
 
+/**
+  * Class for analysis which functions modify which parameters in which way (write/read/pass access...)
+  */
+
 object ExpressionFlowAnalysis {
 
 
-  //TODO: --> STDLIB Annotations ?!
-  //TODO: Set[Set] ...
-
-  final case class IdentifierDependencies(reads: Set[Identifier],                   // Variable is read
-                                          writes: Set[Identifier],                  // Variable is written
-                                          reps: Set[Identifier],                    // Variable is replicated
-                                          pass: Set[Identifier],                    // Variable is passed through command
-                                          deps: Set[Identifier],                    // Variable in ancestor in usage graph
-                                          immut: Set[Identifier],                   // Must be immutable for other reason, e.g inserted into set
-                                          calls: Set[(Identifier, Identifier)])     // Ties together vars which get values passe (function calls, returns...)
-  {
+  /**
+    * Information which identifiers are used in which way
+    * @param reads Set of identifiers with read access
+    * @param writes Set of identifiers with write access
+    * @param reps Set of identifiers whose last value is used
+    * @param pass Set of identifiers which are passed unchanged
+    * @param deps All identifiers the expression depends on
+    * @param immut Set of identifiers which have to be immutable in every case, e.g. because they are added to a set etc.
+    * @param calls Pair of identifiers which have to be both mutable or immutable though no pass edge between them exists
+    */
+  final case class IdentifierDependencies(reads: Set[Identifier] = Set(),
+                                          writes: Set[Identifier] = Set(),
+                                          reps: Set[Identifier] = Set(),
+                                          pass: Set[Identifier] = Set(),
+                                          deps: Set[Identifier] = Set(),
+                                          immut: Set[Identifier] = Set(),
+                                          calls: Set[(Identifier, Identifier)] = Set()) {
 
     def ++(o: IdentifierDependencies): IdentifierDependencies = {
       IdentifierDependencies(
@@ -175,7 +185,7 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
                                transDeps.immut, transDeps.calls ++ depsPerParam.toSet + (feResID -> resID))
 
       case _ : ExpressionRef /*Function is param*/ =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(), args.toSet + resID, Set())
+        IdentifierDependencies(immut = args.toSet + resID)
       case TypeApplicationExpression(e, _, _) =>
         getLiftFlow(resID, e, argExps, scope, fixedPoints)
       case ExternExpression(_, _, _, "Set_empty", _) |
@@ -184,19 +194,19 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
            ExternExpression(_, _, _, "Queue_empty", _)=>
         IdentifierDependencies.empty
       case ExternExpression(_, _, _, "Map_add", _) =>
-        IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(args(1), args(2)), Set())
+        IdentifierDependencies(writes = Set(args(0)), deps = args.toSet, immut = Set(args(1), args(2)))
       case ExternExpression(_, _, _, "Set_add", _) |
            ExternExpression(_, _, _, "Queue_enq", _) |
            ExternExpression(_, _, _, "Map_remove", _) |
            ExternExpression(_, _, _, "Set_remove", _) |
            ExternExpression(_, _, _, "List_append", _) =>
-        IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(args(1)), Set())
+        IdentifierDependencies(writes = Set(args(0)), deps = args.toSet, immut = Set(args(1)))
       case ExternExpression(_, _, _, "Queue_deq", _) =>
-        IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(), Set())
+        IdentifierDependencies(writes = Set(args(0)), deps = args.toSet)
       case ExternExpression(_, _, _, "List_set", _) =>
-        IdentifierDependencies(Set(), Set(args(0)), Set(), Set(), args.toSet, Set(args(2)), Set())
+        IdentifierDependencies(writes = Set(args(0)), deps = args.toSet, immut = Set(args(2)))
       case ExternExpression(_, _, _, "List_prepend", _) =>
-        IdentifierDependencies(Set(), Set(args(1)), Set(), Set(), args.toSet, Set(args(0)), Set())
+        IdentifierDependencies(writes =  Set(args(1)), deps =  args.toSet, immut = Set(args(0)))
       case ExternExpression(_, _, _, "Map_contains", _) |
            ExternExpression(_, _, _, "Map_keys", _) |
            ExternExpression(_, _, _, "Set_contains", _) |
@@ -208,27 +218,27 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
            ExternExpression(_, _, _, "Queue_size", _) |
            ExternExpression(_, _, _, "Queue_first", _) |
            ExternExpression(_, _, _, "List_size", _) |
-           ExternExpression(_, _, _, "List_tail", _) | //TODO: Pass???
+           ExternExpression(_, _, _, "List_tail", _) |
            ExternExpression(_, _, _, "List_init", _) =>
-        IdentifierDependencies(Set(args(0)), Set(), Set(), Set(), args.toSet, Set(), Set())
+        IdentifierDependencies(reads = Set(args(0)), deps = args.toSet)
       case ExternExpression(_, _, _, "Map_get", _) |
            ExternExpression(_, _, _, "List_get", _) =>
-        IdentifierDependencies(Set(args(0)), Set(), Set(), Set(), args.toSet, Set(resID), Set())
+        IdentifierDependencies(reads = Set(args(0)), deps = args.toSet, immut = Set(resID))
       case ExternExpression(_, _, _, "Set_minus", _) |
            ExternExpression(_, _, _, "Set_union", _) |
            ExternExpression(_, _, _, "Set_intersection", _) =>
-        IdentifierDependencies(Set(args(1)), Set(args(0)), Set(), Set(), args.toSet, Set(), Set())
+        IdentifierDependencies(reads = Set(args(1)), writes = Set(args(0)), deps = args.toSet)
 
       case ExternExpression(_, _, _, "nil", _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(), Set(), Set())
+        IdentifierDependencies.empty
       case ExternExpression(_, _, _, "default", _) |
            ExternExpression(_, _, _, "defaultFrom", _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(args(0), args(1)), Set(args(0), args(1)), Set(), Set())
+        IdentifierDependencies(pass = Set(args(0), args(1)), deps = Set(args(0), args(1)))
       case ExternExpression(_, _, _, "last", _) =>
         if (MutabilityChecker.mutabilityCheckRelevantStreamType(argExps(0).tpe)) {
-          IdentifierDependencies(Set(), Set(), Set(args(0)), Set(), Set(args(1)), Set(), Set((resID, args(0))))
+          IdentifierDependencies(reps = Set(args(0)), deps = Set(args(1)), calls = Set((resID, args(0))))
         } else {
-          IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(1)), Set(), Set())
+          IdentifierDependencies(deps = Set(args(1)))
         }
       case ExternExpression(_, _, _, "lift", _) =>
         getLiftFlow(resID, argExps.last, argExps.dropRight(1), scope, fixedPoints)
@@ -237,22 +247,22 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
         val addReps = (dep.reads ++ dep.writes ++ dep.pass).filter(i => !impCheck.freqImplication(resID, i, true))
           IdentifierDependencies(dep.reads, dep.writes, dep.reps ++ addReps, dep.pass, dep.deps, dep.immut, dep.calls)
       case ExternExpression(_, _, _, "merge", _) =>
-        IdentifierDependencies(Set(), Set(), Set(), args.toSet, args.toSet, Set(), Set())
+        IdentifierDependencies(pass = args.toSet, deps = args.toSet)
       case ExternExpression(_, _, _, "time", _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(0)), Set(), Set())
+        IdentifierDependencies(deps = Set(args(0)))
       case ExternExpression(_,  _, _, "delay",  _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(), Set(args(0), args(1)), Set(), Set())
+        IdentifierDependencies(deps = Set(args(1)))
       case ExternExpression(_,  _, _, "getSome",  _) |
            ExternExpression(_,  _, _, "Some",  _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(args(0)), Set(args(0)), Set(), Set())
+        IdentifierDependencies(pass = Set(args(0)), deps = Set(args(0)))
       case ExternExpression(_,  _, _, "ite",  _) |
            ExternExpression(_,  _, _, "staticite",  _) =>
-        IdentifierDependencies(Set(), Set(), Set(), Set(args(1), args(2)), args.toSet, Set(), Set())
+        IdentifierDependencies(pass = Set(args(1), args(2)), deps = args.toSet)
       case _: ExternExpression =>
         //Fallback
-        IdentifierDependencies(Set(), Set(), Set(), Set(), args.toSet, Set(), Set())
+        IdentifierDependencies(deps = args.toSet)
       case _: ApplicationExpression |
-           _: RecordAccessorExpression => ??? //TODO: In WC every identifier of the specification could be used
+           _: RecordAccessorExpression => ???
       case _ => ???
     }
   }

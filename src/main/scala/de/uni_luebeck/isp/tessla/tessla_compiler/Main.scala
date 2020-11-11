@@ -21,24 +21,15 @@ import sexyopt.SexyOpt
   */
 object Main extends SexyOpt {
   override val programName = "tessla-compiler"
-  override val version: Option[String] = Some("0.0.1")
+  override val version: Option[String] = Some("0.1.0-SNAPSHOT")
   override val programDescription =
     "Generate Java/Rust code from a TeSSLa specification"
 
   val tesslaFile: Main.Argument[String] =
     posArg("tessla-file", "The file containing the Tessla specification")
-  val target: Main.Argument[String] = option(
-    "target",
-    't',
-    "Target language: java (default), javascript, rust or rust-bare",
-    "java"
-  )
   val debug: Main.Argument[Boolean] =
     flag("debug", "Print stack traces for runtime errors")
-  val noDiagnostics: Main.Argument[Boolean] =
-    flag("no-diagnostics", "Don't print error messages and warnings")
-  val noOptimization: Main.Argument[Boolean] =
-    flag("no-optimization", "Produce non-optimized output code")
+
   val noMutability: Main.Argument[Boolean] = flag(
     "no-mutability",
     "Produce code with exclusively immutable datastructures"
@@ -48,22 +39,21 @@ object Main extends SexyOpt {
   val verbose: Main.Argument[Boolean] =
     flag("verbose", 'v', "Produce a lot of output")
 
-  def diagnostics: Boolean = !noDiagnostics.value
-  def mutability: Boolean = !noOptimization.value && !noMutability.value
+  def mutability: Boolean = !noMutability.value
 
   def main(args: Array[String]): Unit = {
 
     def unwrapResult[T](result: Result[T]): T = result match {
       case Success(res, warnings) =>
-        if (diagnostics)
+        if (debug)
           warnings.foreach(w => System.err.println(s"Warning: $w"))
         res
       case Failure(errors, warnings) =>
-        if (diagnostics) {
+        if (debug) {
           warnings.foreach(w => System.err.println(s"Warning: $w"))
           errors.foreach { e =>
             System.err.println(s"Error: $e")
-            if (debug) e.printStackTrace()
+            e.printStackTrace()
           }
           System.err.println(
             s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors"
@@ -81,14 +71,8 @@ object Main extends SexyOpt {
         stdlibIncludeResolver = IncludeResolvers.fromStdlibResource,
         stdlibPath = "stdlib.tessla"
       )
-      val (backend, stdinRead): (backends.BackendInterface, Boolean) =
-        target.value match {
-          case "java" => (new ScalaBackend, true)
-          case "javascript" => throw new Errors.NotYetImplementedError("Javascript translation not implemented yet")
-          case "rust" => throw new Errors.NotYetImplementedError("Rust translation not implemented yet")
-          case "rust-bare" => throw new Errors.NotYetImplementedError("Bare metal Rust translation not implemented yet")
-          case _=> throw new Errors.CLIError(s"Unvalid option for target: ${target.value}")
-        }
+
+      val (backend, stdinRead): (backends.BackendInterface, Boolean) = (new ScalaBackend, true)
 
         val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
         val core = unwrapResult((new StreamDefFlattener).translate(unflatCore).andThen(new ASTPreprocessor(mutability)).andThen(new ASTRemoveUnused))

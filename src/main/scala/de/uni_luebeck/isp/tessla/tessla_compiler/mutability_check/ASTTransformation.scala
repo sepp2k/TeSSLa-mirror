@@ -6,16 +6,16 @@ import de.uni_luebeck.isp.tessla.TranslationPhase.Success
 
 import scala.collection.immutable.ArraySeq
 
+/**
+  * Changes types e.g. Map to MutMap etc. to indicate translation as mutable data structure
+  */
 object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, TesslaCoreWithMutabilityInfo] {
-
-  //TODO: May be extended
-  //TODO: Record handling
 
   @scala.annotation.tailrec
   def isInlineExpression(e: ExpressionArg, scope: Map[Identifier, DefinitionExpression]) : Boolean = {
     e match {
       case ApplicationExpression(TypeApplicationExpression(ExternExpression(_, _, _, name, _), _, _), _, _) =>
-        Set("Set_empty", "Map_empty", "List_empty").contains(name)
+        Set("Set_empty", "Map_empty", "List_empty", "Queue_empty").contains(name)
       case ExpressionRef(id, _, _) =>
         scope.contains(id) /*otherwiese inputs*/ && isInlineExpression(scope(id), scope)
       case _ =>
@@ -70,8 +70,6 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
     val spec = tcMut.spec
     val idTypes = tcMut.idTypes
 
-    //TODO: Inlining of mutable vars
-
     def barkEvents(t: Type) : Type = {
       t match {
         case InstantiatedType("Events", Seq(t), _) => t
@@ -85,12 +83,10 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
       }
     }
 
-    //FIXME: Result type?
     def typeArgInference(fType: FunctionType, argTypes: Seq[Type], wrappedInOption: Boolean): List[Type] = {
       val types: collection.mutable.Map[Identifier, Type] = collection.mutable.Map()
 
       def calcTypeParams(t1: Type, t2: Type, wrappedInOption: Boolean = false) : Unit = {
-        //TODO: Better solution
         val t1n = if (wrappedInOption) barkOption(barkEvents(t1)) else barkEvents(t1)
         val t2n = barkEvents(t2)
 
@@ -168,7 +164,6 @@ object ASTTransformation extends TranslationPhase[TesslaCoreWithMutabilityInfo, 
     val in = spec.in.map{case (id, (_, anno)) => (id, (idTypes(id, spec.definitions), anno))}
     val defs = transformDefs(spec.definitions, spec.definitions)
 
-    //TODO: Plain specification sufficient?
     Success(new TesslaCoreWithMutabilityInfo(TesslaAST.Core.Specification(in, inlineMutableConstructors(defs, defs), spec.out, spec.maxIdentifier), tcMut.idTypes, tcMut.addDeps, tcMut.impCheck), Seq())
   }
 

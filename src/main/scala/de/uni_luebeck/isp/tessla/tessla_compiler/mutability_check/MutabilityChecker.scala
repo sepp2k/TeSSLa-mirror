@@ -12,6 +12,9 @@ class TesslaCoreWithMutabilityInfo(val spec: TesslaAST.Core.Specification,
   override def toString = s"${spec}"
 }
 
+/**
+  * Class performing main analysis which data structures can be implemented in a mutable way
+  */
 object MutabilityChecker extends
   TranslationPhase[TesslaAST.Core.Specification, TesslaCoreWithMutabilityInfo] {
 
@@ -21,7 +24,6 @@ object MutabilityChecker extends
     val definitions = spec.definitions
     val out = spec.out
 
-    //TODO: Only create once
     val cfAnalysis = new ControlFlowAnalysis(spec)
 
     val edges: collection.mutable.HashSet[(Identifier, Identifier)] = collection.mutable.HashSet()
@@ -32,7 +34,6 @@ object MutabilityChecker extends
       transEdges.mapValuesInPlace{case (_, s) => if (s.contains(i)) s + j else s}
     }
 
-    //TODO: Get rid of some maps
     val nodes: collection.mutable.HashSet[Identifier] = collection.mutable.HashSet()
     val immutVars: collection.mutable.HashSet[Identifier] = collection.mutable.HashSet()
 
@@ -47,7 +48,6 @@ object MutabilityChecker extends
     val variableFamilies : UnionFind[Identifier] = new UnionFind()
     val allMutableRelevantVars: collection.mutable.HashSet[Identifier] = collection.mutable.HashSet()
 
-    //TODO: Find better solution
     val paramTypes: collection.mutable.Map[Identifier, Type] = collection.mutable.Map()
 
     val impCheck = new ImplicationChecker(spec)
@@ -154,6 +154,11 @@ object MutabilityChecker extends
       }
     }
 
+
+
+    //Start of algorithm
+
+    //Note: Pass edges are condensed with other types
     processDefinitions(DefinitionOrdering.order(spec.definitions, Map()), spec.definitions)
 
     val repsMap : Map[Identifier, Set[(Identifier, Identifier)]] = invRepsMap.flatMap{case (k,v) =>
@@ -163,12 +168,16 @@ object MutabilityChecker extends
     //No IDs belonging to already immutable vars
     immutVars ++= immutVars.flatMap(variableFamilies.equivalenceClass)
 
+    //Start Functions for Tree Climbing
 
     def cleanParent(node: Identifier, beat: Seq[Identifier], caller: Identifier, origWrite: Identifier) : (Set[Identifier], Boolean) = {
 
       //println(s"cleanParent: $node")
+
+      //Get write nodes on this level which are not incompatible because they are in another if-branch at the same moment
       val writes = if (beat.isEmpty) writeMap.getOrElse(node, Set()).filter(!incompatibleVars(_, caller)) else writeMap.getOrElse(node, Set())
 
+      //If there are writes or replicating lasts return false, else climb down over children
       if (writes.size > (if (beat.isEmpty) 1 else 0) ||
           (beat.nonEmpty && !repsMap.getOrElse(node, Set()).filter(_._1 == beat.head).exists(c => impCheck.freqImplication(beat.head, c._2, false)))) {
         //println(s"cleanParent: $node : false")
@@ -179,12 +188,14 @@ object MutabilityChecker extends
         //println(s"cleanParent: $node --> childR/C $childReads $childClean")
 
         if (childClean) {
+          //If children are clean further climb up to parents
+
           val repParents = repsMap.flatMap{case (k, v) => if (v.exists(_._1 == node)) Some(k) else None}
           val ret = repParents.map(cleanParent(_, node +: beat, node, origWrite)).foldLeft[(Set[Identifier], Boolean)]((childReads, childClean)) { case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2) }
           //println(s"cleanParent: $node : $ret")
           ret
         } else {
-          //println(s"cleanParent: $node : false2")
+          //println(s"cleanParent: $node : false #2")
           (Set(), false)
         }
 
@@ -195,7 +206,10 @@ object MutabilityChecker extends
 
       //println(s"cleanChild: $node $origWrite")
 
+      //child is left out in aliasing analysis and function run recursively
       val cr : (Set[Identifier], Boolean) = if (beat.nonEmpty) cleanChild(node, beat.drop(1), caller, origWrite) else (Set(), false)
+
+      //check if aliasing constraint is fulfilled and go down recursively otherwise
       val pr : (Set[Identifier], Boolean) = if (beat.isEmpty || writeMap.getOrElse(node, Set()).nonEmpty ||
                  repsMap.getOrElse(caller, Set()).filter(_._1 == node).exists(c => !impCheck.freqImplication(beat.head, c._2, false))) {
         (Set(), false)
@@ -221,10 +235,14 @@ object MutabilityChecker extends
       } - caller
 
       if (childs.nonEmpty) {
+        // Go recursively down if children exist
         childs.map(c => cleanChild(c, beat, caller, origWrite)).reduce[(Set[Identifier], Boolean)]{case ((s1, b1), (s2, b2)) => (s1.union(s2), b1 && b2)}
       } else if (beat.isEmpty) {
+        //If no further children exist, we are in the same level as the original write node and add all read node children of
+        //the currently examined node to our set, but only if beat is empty
         (readMap.getOrElse(node, Set()).filter(!incompatibleVars(_, origWrite)), true)
       } else {
+        //Otherwise the reads take place in a previous timestamp and we don't have to care the reads
         (Set(), true)
       }
     }
@@ -235,6 +253,11 @@ object MutabilityChecker extends
 
       c1._1.intersect(c2._2).nonEmpty || c1._2.intersect(c2._1).nonEmpty
     }
+
+    // End functions for tree climbing
+
+
+
 
     //No double writes, replicating lasts  and collect Read-Before-Writes
     val readBeforeWrites : collection.mutable.ArrayBuffer[(Identifier, Identifier, Identifier)] = collection.mutable.ArrayBuffer()
@@ -264,6 +287,7 @@ object MutabilityChecker extends
       }
     }
 
+    //Find optimal order
     if (readBeforeWrites.nonEmpty) {
       val z3H = new Z3Handler(edges.toSet ++ cfAnalysis.getAddOrderingConstraints, readBeforeWrites.toSet, inlinings.toMap, variableFamilies)
       immutVars ++= z3H.getImmutableVars
@@ -343,7 +367,7 @@ object MutabilityChecker extends
 
   @scala.annotation.tailrec
   def mutabilityCheckRelevantType(tpe: Type) : Boolean = {
-    //TODO: TypeArg
+    //TODO: TypeArgs
     //TODO: Option[Set] ...
     //TODO: Make Record types also mutable under circumstances --> Problem: Inlining
     tpe match {
@@ -365,7 +389,6 @@ object MutabilityChecker extends
       case InstantiatedType("Queue", t, l) => InstantiatedType("MutQueue", t, l)
       case InstantiatedType("List", t, l) => InstantiatedType("MutList", t, l)
       case _ : TypeParam => t
-      //TODO: Add Error
     }
   }
 

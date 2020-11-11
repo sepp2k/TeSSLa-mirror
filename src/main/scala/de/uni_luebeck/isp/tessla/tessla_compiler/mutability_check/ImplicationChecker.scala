@@ -6,6 +6,10 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
 
 final case class Activation(base: Set[Identifier], init: Set[Identifier])
 
+/**
+  * Class for checking if an event on one stream always indicates an event on another stream
+  * @param spec The specification to examine
+  */
 class ImplicationChecker(spec: TesslaAST.Core.Specification) {
 
   val activationMap : collection.mutable.Map[Identifier, (Set[Activation], Boolean)] = collection.mutable.Map()
@@ -40,9 +44,9 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
     def processStreamDefExp(id: Identifier, defExp: ExternExpression, args: Seq[ExpressionArg], stack: Set[Identifier]) : (Set[Activation], Boolean) = { //Activates, Always Init
       defExp.name match {
 
-        case "defaultFrom" => (Set(Activation(Set(id), Set())), false) //TODO: Two colorings???
+        case "defaultFrom" => (Set(Activation(Set(id), Set())), false)
 
-        case "lift" => (Set(Activation(Set(id), Set())), false) //TODO: Only-Value-Lifts --> Tree climbing
+        case "lift" => (Set(Activation(Set(id), Set())), false)
 
         case "nil" => (Set(), false)
 
@@ -59,7 +63,7 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
 
           (addCond(colt._1, v), false)
 
-        case "slift" => //TODO: Here lies NP-completeness
+        case "slift" =>
           val argIDs = args.dropRight(1).map(ExpressionFlowAnalysis.getExpArgID)
           val argIDCols = argIDs.map(i => (i -> processStreamDef(i, stack))).toMap
           val cols =
@@ -81,6 +85,16 @@ class ImplicationChecker(spec: TesslaAST.Core.Specification) {
       cols.map{case Activation(base, init) => Activation(base, init + id)}
     }
 
+  /**
+    * Checks implication i -> j, with caching
+    * @param i Identifier i
+    * @param j Identifier j
+    * @param secondChance Allow necessary identifiers not to be initialized for the first event of j
+    *                     (Useful for signal lift handling)
+    * @param notInit Identifiers which are known to be uninitialized
+    * @param jInit Check if j is initialized instead of implicated
+    * @return Whether i -> j
+    */
   def freqImplication(i: Identifier, j: Identifier, secondChance : Boolean, notInit: Set[Identifier] = Set(), jInit: Boolean = false) : Boolean = {
 
     if (i == j) {

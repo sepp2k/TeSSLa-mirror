@@ -8,6 +8,9 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{Errors, IntermediateCodeUtils}
  * cannot be generated. Replacing tuples internally by Seq[Any] would be a solution but isn't nice at all
  */
 
+/**
+  * Class containing methods for parsing inputs from command line
+  */
 object ScalaIOHandling {
 
   def getInputParseExpression(to: ImpLanType, exp: String, freshVarCount : Int = 0) : String = {

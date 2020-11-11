@@ -493,7 +493,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
     }
     val fargs = args.map { arg =>
       Variable(s"${streamNameAndTypeFromExpressionArg(arg)._1}_value")
-    } //TODO: Sufficient?
+    }
 
     val fcall =
       myNonStreamCodeGenerator.translateFunctionCall(function, fargs, Seq())
