@@ -174,7 +174,6 @@ object Main {
       try {
         val sourceStr = unwrapResult(
           Compiler.compile(config.specSource, config.compilerOptions)
-            andThen FlattenCore
             andThen UsageAnalysis
             andThen Laziness
             andThen new TesslaCoreToIntermediate(consoleInterface = true)
