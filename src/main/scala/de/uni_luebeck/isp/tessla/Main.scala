@@ -18,7 +18,7 @@ package de.uni_luebeck.isp.tessla
 
 import java.io.IOException
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
+import java.nio.file.{Files, Paths}
 
 import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
@@ -34,6 +34,7 @@ import de.uni_luebeck.isp.tessla.tessladoc.{DocGenerator, TesslaDoc}
 
 import scala.Option.when
 import scala.io.Source
+import java.io.File
 
 /**
  * Entry point of the application.
@@ -182,7 +183,7 @@ object Main {
         )
 
         config.jarFile.map { file =>
-          val p = file.toPath
+          val p = Paths.get(file.getAbsolutePath)
           val (dirPath, name) = if (file.isDirectory) {
             (p, "monitor.jar")
           } else {
@@ -192,12 +193,11 @@ object Main {
           new ScalaCompiler(dirPath, name, false)().translate(sourceStr)
         }
 
-        config.outFile match {
-          case Some(f) if config.jarFile.isEmpty =>
-            Files.createDirectories(f.toPath.getParent)
-            Files.write(f.toPath, sourceStr.getBytes(StandardCharsets.UTF_8))
-          case None if config.jarFile.isEmpty => println(sourceStr)
-          case _                              =>
+        val f = config.outFile.getOrElse(new File("out.scala"))
+
+        if (config.outFile.isDefined || config.jarFile.isEmpty) {
+          Files.createDirectories(Paths.get(f.getAbsolutePath).getParent)
+          Files.write(f.toPath, sourceStr.getBytes(StandardCharsets.UTF_8))
         }
 
       } catch {

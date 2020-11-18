@@ -260,15 +260,13 @@ object CLIParser {
       .children(
         arg[File]("<tessla-file>")
           .foreach(f => config = config.copy(specSource = CharStreams.fromFileName(f.getPath)))
-          .text("The file containing the Tessla specification"),
+          .text("The file containing the TeSSLa specification"),
         opt[File]('o', "out-file")
           .foreach(f => config = config.copy(outFile = Some(f)))
-          .text("Path to the output file. If not specified source is printed to stdout."),
+          .text("Place the generated Scala source code at this location."),
         opt[File]('j', "jar-file")
           .foreach(f => config = config.copy(jarFile = Some(f)))
-          .text(
-            "Compiles Scala code to a jar file which is created at the given location. No source output is generated"
-          )
+          .text("Compile TeSSLa specification to an executable jar file which is created at the given location.")
       )
   }
 
