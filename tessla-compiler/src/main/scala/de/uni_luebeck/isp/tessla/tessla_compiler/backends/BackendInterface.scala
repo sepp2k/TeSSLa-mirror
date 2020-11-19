@@ -83,7 +83,8 @@ abstract class BackendInterface(sourceTemplate: String) extends TranslationPhase
       .replace("//INPUTPROCESSING", generateCode(listing.inputProcessing))
       .replace(
         "//STATIC",
-        generateVariableDeclarations(staticVars).mkString("\n") + "\n\n" + generateCode(listing.staticSource)
+        generateVariableDeclarations(IntermediateCodeUtils.getVariableMap(listing.staticSource)).mkString("\n") +
+          "\n\n" + generateCode(listing.staticSource)
       )
 
     Success(rewrittenSource, Seq())

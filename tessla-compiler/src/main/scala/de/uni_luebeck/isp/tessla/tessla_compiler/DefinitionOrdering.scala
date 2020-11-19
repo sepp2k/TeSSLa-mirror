@@ -19,6 +19,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.DefinitionExpression
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 /**
@@ -37,11 +38,21 @@ object DefinitionOrdering {
 
     val ordered: mutable.ArrayBuffer[(Identifier, DefinitionExpression)] = mutable.ArrayBuffer()
 
+    @tailrec
+    def isLastOrDelay(exp: ExpressionArg): Boolean = {
+      //Note. Expressions themself are not evaluated this should have already happened during Constant-Folding
+      exp match {
+        case ExternExpression("last", _, _)                => true
+        case ExternExpression("delay", _, _)               => true
+        case TypeApplicationExpression(applicable, _, _)   => isLastOrDelay(applicable)
+        case ExpressionRef(id, _, _) if input.contains(id) => isLastOrDelay(input(id))
+        case _                                             => false
+      }
+    }
+
     def calcExpressionDependencies(exp: ExpressionArg, ignore: Set[Identifier]): Unit = {
       exp match {
-        case ApplicationExpression(TypeApplicationExpression(ExternExpression("last", _, _), _, _), args, _) =>
-          calcExpressionDependencies(args(1), ignore)
-        case ApplicationExpression(TypeApplicationExpression(ExternExpression("delay", _, _), _, _), args, _) =>
+        case ApplicationExpression(app, args, _) if isLastOrDelay(app) =>
           calcExpressionDependencies(args(1), ignore)
         case ApplicationExpression(app, args, _) =>
           args.appended(app).foreach(exp => calcExpressionDependencies(exp, ignore))

@@ -120,8 +120,11 @@ class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_co
       s"(($args) => {\n${generateVariableDeclarations(IntermediateCodeUtils.getVariableMap(body)).mkString("\n")}\n${generateCode(body)}\n})"
     case Variable(name) => name
 
-    case CastingExpression(e, LazyContainer(_), _) => s"(${translateExpression(e)})()"
-    case CastingExpression(e, _, LazyContainer(_)) => s"() => {${translateExpression(e)}}"
+    case CastingExpression(e, f, t) if f == t => translateExpression(e)
+    case CastingExpression(e, LazyContainer(f), t) =>
+      s"(${translateExpression(e)})()" +
+        (if (f != t) s".asInstanceOf[${ScalaConstants.typeTranslation(t)}]" else "")
+    case CastingExpression(e, f, LazyContainer(t)) => s"() => {${translateExpression(CastingExpression(e, f, t))}}"
     case CastingExpression(e, _, t)                => s"(${translateExpression(e)}).asInstanceOf[${ScalaConstants.typeTranslation(t)}]"
   }
 
