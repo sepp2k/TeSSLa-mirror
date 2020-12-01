@@ -1,0 +1,8 @@
+{
+  "spec": "_.tessla",
+  "externalSource": "_.scala"
+  "input": "_.input",
+  "output": "_.output",
+  "options": [ "no-console" ]
+}
+            

@@ -71,7 +71,7 @@ object TesslacTests {
       .andThen(Laziness)
       .andThen(new TesslaCoreToIntermediate(consoleInterface))
       .andThen(UnusedVarRemove)
-      .andThen(new ScalaBackend)
+      .andThen(new ScalaBackend(true))
   }
 
   // Redirect both Scala and Java Console IO to the provided streams, and revert afterwards

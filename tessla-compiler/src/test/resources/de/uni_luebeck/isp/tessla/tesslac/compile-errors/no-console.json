@@ -1,6 +1,0 @@
-{
-  "spec": "_.tessla",
-  "expectedErrors": "_.errors",
-  "options": [ "no-console" ]
-}
-            
