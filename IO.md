@@ -35,6 +35,10 @@ Note:
  - Between two terminal symbols there may be arbitrarily many whitespaces, except inside `FLOAT` and `INT`
  - Timestamps may not decrease
  - An input with an unknown stream ID is ignored
+<<<<<<< HEAD:IO.md
+=======
+ - A second input to the same stream at the same timestamp is ignored
+>>>>>>> b92b1dd4 (Compiler Avoid errors if two events arrive on same stream at the same time):tessla-compiler/doc/IO.md
  - For inputs on unit streams the part after `STREAM_ID` is fully ignored
 
  Example Input:
