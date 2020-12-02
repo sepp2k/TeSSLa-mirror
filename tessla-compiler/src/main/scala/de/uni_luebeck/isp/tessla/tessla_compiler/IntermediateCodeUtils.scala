@@ -316,7 +316,7 @@ object IntermediateCodeUtils {
    * @param op2 Second parameter sub-expression, must be of [[IntermediateCode.LongType]]
    * @return Addition expression
    */
-  implicit def Addition(op1: ImpLanExpr, op2: ImpLanExpr): ImpLanExpr =
+  def Addition(op1: ImpLanExpr, op2: ImpLanExpr): ImpLanExpr =
     FunctionCall("__add__", Seq(op1, op2), IntermediateCode.FunctionType(Seq(LongType, LongType), LongType))
 
   /**
@@ -325,7 +325,7 @@ object IntermediateCodeUtils {
    * @param op2 Second parameter sub-expression, must be of [[IntermediateCode.LongType]]
    * @return Subtraction expression
    */
-  implicit def Subtraction(op1: ImpLanExpr, op2: ImpLanExpr): ImpLanExpr =
+  def Subtraction(op1: ImpLanExpr, op2: ImpLanExpr): ImpLanExpr =
     FunctionCall("__sub__", Seq(op1, op2), IntermediateCode.FunctionType(Seq(LongType, LongType), LongType))
 
   /**
@@ -333,7 +333,7 @@ object IntermediateCodeUtils {
    * @param ops parameter sub-expressions, must be of type [[IntermediateCode.BoolType]]
    * @return Or expression
    */
-  implicit def BitwiseOr(ops: Seq[ImpLanExpr]): ImpLanExpr =
+  def BitwiseOr(ops: Seq[ImpLanExpr]): ImpLanExpr =
     FunctionCall("__bitor__", ops, IntermediateCode.FunctionType(ops.map { _ => LongType }, LongType))
 
   /**
@@ -341,7 +341,7 @@ object IntermediateCodeUtils {
    * @param ops parameter sub-expressions, must be of type [[IntermediateCode.BoolType]]
    * @return And expression
    */
-  implicit def And(ops: Seq[ImpLanExpr]): ImpLanExpr =
+  def And(ops: Seq[ImpLanExpr]): ImpLanExpr =
     FunctionCall("__and__", ops, IntermediateCode.FunctionType(ops.map { _ => BoolType }, BoolType))
 
   /**
@@ -350,7 +350,7 @@ object IntermediateCodeUtils {
    * @param b Second parameter sub-expression
    * @return Not equal expression
    */
-  implicit def NotEqual(a: ImpLanExpr, b: ImpLanExpr): ImpLanExpr =
+  def NotEqual(a: ImpLanExpr, b: ImpLanExpr): ImpLanExpr =
     Negation(Equal(a, b))
 
   /**
@@ -359,7 +359,7 @@ object IntermediateCodeUtils {
    * @param b Second parameter sub-expression, must be of [[IntermediateCode.LongType]]
    * @return Greater expression
    */
-  implicit def Greater(a: ImpLanExpr, b: ImpLanExpr): ImpLanExpr =
+  def Greater(a: ImpLanExpr, b: ImpLanExpr): ImpLanExpr =
     FunctionCall("__gt__", Seq(a, b), IntermediateCode.FunctionType(Seq(LongType, LongType), BoolType))
 
   /**
@@ -368,7 +368,7 @@ object IntermediateCodeUtils {
    * @param b Second parameter sub-expression, must be of [[IntermediateCode.LongType]]
    * @return Greater equal expression
    */
-  implicit def GreaterEqual(a: ImpLanExpr, b: ImpLanExpr): ImpLanExpr =
+  def GreaterEqual(a: ImpLanExpr, b: ImpLanExpr): ImpLanExpr =
     FunctionCall("__geq__", Seq(a, b), IntermediateCode.FunctionType(Seq(LongType, LongType), BoolType))
 
   /**
@@ -376,7 +376,7 @@ object IntermediateCodeUtils {
    * @param a Sub-expression to be negated
    * @return Negate expression
    */
-  implicit def Negation(a: ImpLanExpr): ImpLanExpr =
+  def Negation(a: ImpLanExpr): ImpLanExpr =
     FunctionCall("__not__", Seq(a), IntermediateCode.FunctionType(Seq(BoolType), BoolType))
 
   /**
@@ -385,7 +385,7 @@ object IntermediateCodeUtils {
    * @param forType Type which should be returned inst
    * @return Expression throwing an error
    */
-  implicit def Throw(e: ImpLanExpr, forType: ImpLanType): ImpLanExpr =
+  def Throw(e: ImpLanExpr, forType: ImpLanType): ImpLanExpr =
     FunctionCall("__[TC]throw__", Seq(e), IntermediateCode.FunctionType(Seq(IntermediateCode.ErrorType), forType))
 
   /**
@@ -394,7 +394,7 @@ object IntermediateCodeUtils {
    * @param targetType The type of the struct to be generated
    * @return Expression building a struct
    */
-  implicit def MkStruct(content: Seq[(String, ImpLanExpr)], targetType: ImpLanType): ImpLanExpr = {
+  def MkStruct(content: Seq[(String, ImpLanExpr)], targetType: ImpLanType): ImpLanExpr = {
     targetType match {
       case castedTargetType: StructType => {
         val sortedContent = content.sortBy { case (n1, _) => castedTargetType.fieldNames.indexOf(n1) }
@@ -415,7 +415,7 @@ object IntermediateCodeUtils {
    * @param structType The type of the struct
    * @return Expression accessing the struct
    */
-  implicit def GetStruct(struct: ImpLanExpr, fieldName: String, structType: ImpLanType): ImpLanExpr = {
+  def GetStruct(struct: ImpLanExpr, fieldName: String, structType: ImpLanType): ImpLanExpr = {
     structType match {
       case castedStructType: StructType => {
         FunctionCall(
