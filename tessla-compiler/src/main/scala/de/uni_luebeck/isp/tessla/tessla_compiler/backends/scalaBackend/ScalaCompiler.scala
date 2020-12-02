@@ -112,7 +112,10 @@ object ScalaCompiler {
     // Create manifest and its attributes
     val manifest = new java.util.jar.Manifest
     val attributes = manifest.getMainAttributes.asScala
-    attributes.put(Attributes.Name.MAIN_CLASS, mainClass)
+
+    if (mainClass != "")
+      attributes.put(Attributes.Name.MAIN_CLASS, mainClass)
+
     attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0")
 
     val out = new JarOutputStream(Files.newOutputStream(outPath), manifest)
@@ -153,8 +156,12 @@ object ScalaCompiler {
  *               All temporary files will aslo be created in this directory.
  *               This directory has to exist.
  * @param jarName The name of the generated jar file
+ * @param debug Make compilation more verbose
+ * @param executeableCode Indicates whether passed source contains a Main.main method which is added to the jar's
+ *                        manifest
+ * @param settingsModifier Function adjusting the settings for compilation
  */
-class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean)(
+class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean, executeableCode: Boolean)(
   settingsModifier: Settings => Unit = _ => ()
 ) extends TranslationPhase[String, Unit] {
 
@@ -189,9 +196,9 @@ class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean)(
 
     //println(s"Unzip scala library to $compileDir ...")
     unzipScalaLibrary(compileDir)
-    println(s"Pack $compileDir into jar ...")
+    //println(s"Pack $compileDir into jar ...")
     val jar = outDir.resolve(jarName)
-    makeJar(compileDir, jar, "Main")
+    makeJar(compileDir, jar, if (executeableCode) "Main" else "")
     //println(s"Successfully generated jar file at $jar.")
 
     Success((), Seq())

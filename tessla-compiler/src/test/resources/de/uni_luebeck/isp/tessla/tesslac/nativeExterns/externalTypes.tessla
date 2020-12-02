@@ -1,0 +1,17 @@
+type JavaInt = extern("native:Int")
+type MyObject[A] = extern("native:MyObject")
+
+def myObject[A](x: A) : MyObject[A] = extern("native:new MyObject")
+liftable def myObject_func[A](o: MyObject[A], y:Int) : JavaInt = extern("native:MyObject.func")
+liftable def myObject_func2(o: MyObject[Int], y:Int) : Int = extern("native:MyObject.func2")
+
+liftable def javaIntToTesslaInt(x: JavaInt): Int = extern("native:MyObject.javaIntToTesslaInt")
+
+in a: Events[Int]
+
+def obj : MyObject[Int] = myObject(5)
+def o = javaIntToTesslaInt(myObject_func(obj, a))
+def p = myObject_func2(obj, a)
+
+out o
+out p

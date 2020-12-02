@@ -189,7 +189,7 @@ object Main {
             val n = file.getName
             (p.getParent, if (n.contains(".")) n else s"$n.jar")
           }
-          new ScalaCompiler(dirPath, name, false)().translate(sourceStr)
+          new ScalaCompiler(dirPath, name, false, config.ioInterface)().translate(sourceStr)
         }
 
         val f = config.outFile.getOrElse(new File("out.scala"))
