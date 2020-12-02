@@ -253,7 +253,8 @@ lazy val tesslac = (project in file("tessla-compiler"))
     Compile / resourceGenerators += libCopy.taskValue,
     libraryDependencies ++= Seq(
       scalac
-    )
+    ),
+    excludeFilter.in(headerResources) := HiddenFileFilter || "*ScalaSkeleton*.scala"
   )
   .dependsOn(
     core % "test->test;compile->compile"
