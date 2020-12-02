@@ -120,7 +120,9 @@ object UnusedVarRemove extends TranslationPhase[(SourceListing, Set[String]), So
           .union(getUsagesInExpr(rexpr))
           .union(if (defExpr.isDefined) getUsagesInExpr(defExpr.get) else Set()))
       case FinalAssignment(lhs, defExp, _, _) =>
-        currMap + (lhs.name -> currMap.getOrElse(lhs.name, Set()).union(getUsagesInExpr(defExp)))
+        currMap + (lhs.name -> currMap
+          .getOrElse(lhs.name, Set())
+          .union(if (defExp.isDefined) getUsagesInExpr(defExp.get) else Set()))
       case e: ImpLanExpr      => currMap + (scopeVar -> currMap.getOrElse(scopeVar, Set()).union(getUsagesInExpr(e)))
       case ReturnStatement(e) => currMap + (scopeVar -> currMap.getOrElse(scopeVar, Set()).union(getUsagesInExpr(e)))
     }

@@ -79,12 +79,12 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
   ): ImpLanStmt = {
     val resTpe = e.tpe.resolve(tm.resMap)
     if (extSpec.lazyVars.get.contains(id)) {
-      FinalAssignment(s"var_$id", translateExpressionArg(e, tm, defContext), resTpe, lazyVar = true)
+      FinalAssignment(s"var_$id", Some(translateExpressionArg(e, tm, defContext)), resTpe, lazyVar = true)
     } else {
       Assignment(
         s"var_$id",
         translateExpressionArg(e, tm, defContext),
-        Some(defaultValueForType(resTpe)),
+        defaultValueForType(resTpe),
         resTpe,
         false
       )

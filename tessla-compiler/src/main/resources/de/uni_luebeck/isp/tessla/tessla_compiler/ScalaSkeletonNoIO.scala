@@ -1,6 +1,8 @@
 //This Scala code was automatically created by tessla-compiler from a TeSSLa Specification
 
-object Main {
+//USERINCLUDES
+
+object TesslaMonitor {
 
 //STATIC
 

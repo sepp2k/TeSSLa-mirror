@@ -56,8 +56,9 @@ object ScalaConstants {
       case FunctionType(argsTypes, retType) =>
         val ret = (if (argsTypes.isEmpty) "" else ", ") + typeTranslation(retType)
         s"scala.Function${argsTypes.size}[${argsTypes.map(typeTranslation).mkString(", ")}$ret]"
-      case StructType(types, _) => s"(${types.map(typeTranslation).mkString(", ")})"
-      case LazyContainer(typ)   => s"Function0[${typeTranslation(typ)}]"
+      case StructType(types, _)       => s"(${types.map(typeTranslation).mkString(", ")})"
+      case LazyContainer(typ)         => s"Function0[${typeTranslation(typ)}]"
+      case NativeType(name, subTypes) => s"$name" + (if (subTypes.nonEmpty) s"[${subTypes.mkString(",")}]" else "")
     }
   }
 

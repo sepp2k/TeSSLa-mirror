@@ -54,7 +54,9 @@ class ScalaBackend(ioInterface: Boolean, userIncludes: String = "")
       case (name, typ, Some(default), lazyDef) =>
         s"${prefix(lazyDef)} $name : ${ScalaConstants.typeTranslation(typ)} = ${translateExpression(default)}"
       case (name, typ, None, lazyDef) =>
-        s"${prefix(lazyDef)} $name : ${ScalaConstants.typeTranslation(typ)} = null"
+        val typRep = ScalaConstants.typeTranslation(typ)
+        s"${prefix(lazyDef)} $name : $typRep = null" + (if (typ.isInstanceOf[NativeType]) s".asInstanceOf[$typRep]"
+                                                        else "")
     }
   }
 

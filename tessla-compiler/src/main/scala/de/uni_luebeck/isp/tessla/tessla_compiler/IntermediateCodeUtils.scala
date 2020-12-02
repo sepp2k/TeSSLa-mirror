@@ -75,7 +75,7 @@ object IntermediateCodeUtils {
           case If(guard, stmts, elseStmts)        => guard.flatten ++ stmts ++ elseStmts
           case TryCatchBlock(tr, cat)             => tr ++ cat
           case Assignment(_, rexpr, defVal, _, _) => Seq(rexpr) ++ (if (defVal.isDefined) Seq(defVal.get) else Seq())
-          case FinalAssignment(_, defVal, _, _)   => Seq(defVal)
+          case FinalAssignment(_, value, _, _)    => (if (value.isDefined) Seq(value.get) else Seq())
           case ReturnStatement(expr)              => Seq(expr)
         }
 
@@ -114,8 +114,8 @@ object IntermediateCodeUtils {
               typ,
               glob
             )
-          case FinalAssignment(lhs, defVal, typ, ld) => FinalAssignment(lhs, mapAST(defVal, f, g), typ, ld)
-          case ReturnStatement(expr)                 => ReturnStatement(mapAST(expr, f, g))
+          case FinalAssignment(lhs, value, typ, ld) => FinalAssignment(lhs, value.map(mapAST(_, f, g)), typ, ld)
+          case ReturnStatement(expr)                => ReturnStatement(mapAST(expr, f, g))
         }
         g(mappedStmt)
       }
@@ -165,10 +165,10 @@ object IntermediateCodeUtils {
       case Assignment(lhs, rhs, defVal, typ, globVar) =>
         (if (global && globVar || topLevel && !globVar) Seq((lhs.name, typ, defVal, false)) else Seq()) ++
           (if (global) extractAssignmentsFromExp(rhs) else Seq())
-      case FinalAssignment(lhs, defVal, typ, ld) => Seq((lhs.name, typ, scala.Some(defVal), ld))
-      case If(_, stmts, elseStmts)               => stmts.concat(elseStmts).flatMap(extractAssignments(topLevel))
-      case TryCatchBlock(tr, cat)                => tr.concat(cat).flatMap(extractAssignments(topLevel))
-      case _                                     => Seq()
+      case FinalAssignment(lhs, value, typ, ld) => Seq((lhs.name, typ, value, ld))
+      case If(_, stmts, elseStmts)              => stmts.concat(elseStmts).flatMap(extractAssignments(topLevel))
+      case TryCatchBlock(tr, cat)               => tr.concat(cat).flatMap(extractAssignments(topLevel))
+      case _                                    => Seq()
     }
 
     def extractAssignmentsFromExp(exp: ImpLanExpr): Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] =
@@ -214,6 +214,8 @@ object IntermediateCodeUtils {
       case InstantiatedType("Set", Seq(t), _)        => ImmutableSetType(t)
       case InstantiatedType("Map", Seq(t1, t2), _)   => ImmutableMapType(t1, t2)
       case InstantiatedType("List", Seq(t), _)       => ImmutableListType(t)
+      case InstantiatedType(n, tps, _) if n.startsWith("native:") =>
+        NativeType(n.stripPrefix("native:"), tps.map(typeConversion))
       case Core.FunctionType(_, paramTypes, resultType, _) =>
         IntermediateCode.FunctionType(
           paramTypes.map {
@@ -239,24 +241,23 @@ object IntermediateCodeUtils {
    * @param t Type whose default value shall be determined. May not be Events[...]
    * @return Default value for given type
    */
-  def defaultValueForType(t: Type): ImpLanVal = {
+  def defaultValueForType(t: Type): Option[ImpLanVal] = {
     t match {
-      case RecordType(entries, _) if entries.isEmpty => UnitValue
-      case InstantiatedType("Bool", Seq(), _)        => BoolValue(false)
-      case InstantiatedType("Int", Seq(), _)         => LongValue(0)
-      case InstantiatedType("Float", Seq(), _)       => DoubleValue(0)
-      case InstantiatedType("String", Seq(), _)      => StringValue("")
-      case InstantiatedType("Option", Seq(t), _)     => NoneValue(t)
-      case InstantiatedType("Set", Seq(t), _)        => EmptyImmutableSet(t)
-      case InstantiatedType("Map", Seq(t1, t2), _)   => EmptyImmutableMap(t1, t2)
-      case InstantiatedType("List", Seq(t), _)       => EmptyImmutableList(t)
-      case Core.FunctionType(_, _, _, _)             => EmptyFunction(t)
-      case TypeParam(_, _)                           => GeneralValue
+      case RecordType(entries, _) if entries.isEmpty => Some(UnitValue)
+      case InstantiatedType("Bool", Seq(), _)        => Some(BoolValue(false))
+      case InstantiatedType("Int", Seq(), _)         => Some(LongValue(0))
+      case InstantiatedType("Float", Seq(), _)       => Some(DoubleValue(0))
+      case InstantiatedType("String", Seq(), _)      => Some(StringValue(""))
+      case InstantiatedType("Option", Seq(t), _)     => Some(NoneValue(t))
+      case InstantiatedType("Set", Seq(t), _)        => Some(EmptyImmutableSet(t))
+      case InstantiatedType("Map", Seq(t1, t2), _)   => Some(EmptyImmutableMap(t1, t2))
+      case InstantiatedType("List", Seq(t), _)       => Some(EmptyImmutableList(t))
+      case Core.FunctionType(_, _, _, _)             => Some(EmptyFunction(t))
+      case TypeParam(_, _)                           => Some(GeneralValue)
       case RecordType(entries, _) =>
-        StructValue(entries.map {
-          case (n, t) => (n.name, defaultValueForType(t._1))
-        })
-      case _ => throw Diagnostics.CommandNotSupportedError(s"Default value for type $t not supported")
+        val subVals = entries.map { case (n, t) => (n.name, defaultValueForType(t._1)) }
+        if (subVals.exists(v => v._2.isEmpty)) None else Some(StructValue(subVals.map { case (n, t) => (n, t.get) }))
+      case _ => None
     }
   }
 
@@ -265,7 +266,7 @@ object IntermediateCodeUtils {
    * @param t Type whose default value shall be determined. Must be Events[...]
    * @return Default value for given type
    */
-  def defaultValueForStreamType(t: Type): ImpLanVal = {
+  def defaultValueForStreamType(t: Type): Option[ImpLanVal] = {
     t match {
       case InstantiatedType("Events", Seq(t), _) => defaultValueForType(t)
       case _                                     => throw Diagnostics.CoreASTError(s"Stream type required but non-stream type $t passed.")
@@ -480,19 +481,37 @@ class IntermediateCodeUtils(
    * @param rhs The right hand side of the assignment
    * @param default The default value the variable has until the assignment .
    *                Must match the default value from other assignments to this variable.
+   *                Optional.
    * @param typ The type of the assigned identifier.
    *            Must match the type from other assignments to this variable.
-   * @param glob Whether the variable must be declared in the global space.
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
+  def Assignment(
+    lhs: Variable,
+    rhs: ImpLanExpr,
+    default: Option[ImpLanExpr],
+    typ: ImpLanType
+  ): IntermediateCodeUtils = {
+    Assignment(lhs, rhs, default, typ, false)
+  }
+
+  /**
+   * Add assignment to the code
+   * @param lhs The left hand side of the assignment
+   * @param rhs The right hand side of the assignment
+   * @param default The default value the variable has until the assignment .
+   *                Must match the default value from other assignments to this variable.
+   * @param typ The type of the assigned identifier.
+   *            Must match the type from other assignments to this variable.
    * @return [[IntermediateCodeUtils]] representing the new state
    */
   def Assignment(
     lhs: Variable,
     rhs: ImpLanExpr,
     default: ImpLanExpr,
-    typ: ImpLanType,
-    glob: Boolean = false
+    typ: ImpLanType
   ): IntermediateCodeUtils = {
-    Assignment(lhs, rhs, Some(default), typ, glob)
+    Assignment(lhs, rhs, Some(default), typ, false)
   }
 
   /**
@@ -521,18 +540,37 @@ class IntermediateCodeUtils(
   /**
    * Add a final assignment to the code. May be called twice for the same lhs but only with exactly the same params.
    * @param lhs The left hand side of the assignment
-   * @param default The value the variable has.
+   * @param value The value the variable has.
+   *                Optional.
    * @param typ The type of the assigned identifier.
    * @param lazyDef Flag indicating if the variable is of type lazy
    * @return [[IntermediateCodeUtils]] representing the new state
    */
   def FinalAssignment(
     lhs: Variable,
-    default: ImpLanVal,
+    value: ImpLanVal,
     typ: ImpLanType,
     lazyDef: Boolean = false
   ): IntermediateCodeUtils = {
-    val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FinalAssignment(lhs, default, typ, lazyDef))
+    FinalAssignmentWithOptionalValue(lhs, Some(value), typ, lazyDef)
+  }
+
+  /**
+   * Add a final assignment to the code. May be called twice for the same lhs but only with exactly the same params.
+   * @param lhs The left hand side of the assignment
+   * @param value The value the variable has.
+   *                Optional. Note: Only in rare cases it makes sense to have a final assignment without value.
+   * @param typ The type of the assigned identifier.
+   * @param lazyDef Flag indicating if the variable is of type lazy
+   * @return [[IntermediateCodeUtils]] representing the new state
+   */
+  def FinalAssignmentWithOptionalValue(
+    lhs: Variable,
+    value: Option[ImpLanVal],
+    typ: ImpLanType,
+    lazyDef: Boolean = false
+  ): IntermediateCodeUtils = {
+    val (newStmts, newIfStack, newElseStack) = addStmt(IntermediateCode.FinalAssignment(lhs, value, typ, lazyDef))
     new IntermediateCodeUtils(newStmts, blockState, newIfStack, newElseStack, condStack)
   }
 

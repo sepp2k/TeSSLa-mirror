@@ -99,12 +99,13 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    */
   private def produceNilStepCode(id: Identifier, ot: Type, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
+    val default = defaultValueForStreamType(ot)
 
     val newStmt = currSrc.stepSource
-      .FinalAssignment(s"${o}_lastValue", defaultValueForStreamType(ot), ot)
+      .FinalAssignmentWithOptionalValue(s"${o}_lastValue", default, ot)
       .FinalAssignment(s"${o}_lastInit", BoolValue(false), BoolType)
       .FinalAssignment(s"${o}_lastError", NoError, ErrorType)
-      .FinalAssignment(s"${o}_value", defaultValueForStreamType(ot), ot)
+      .FinalAssignmentWithOptionalValue(s"${o}_value", default, ot)
       .FinalAssignment(s"${o}_init", BoolValue(false), BoolType)
       .FinalAssignment(s"${o}_ts", LongValue(0), LongType)
       .FinalAssignment(s"${o}_error", NoError, ErrorType)
@@ -743,11 +744,11 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       .FunctionCall("step", Seq("ts"), IntermediateCode.FunctionType(Seq(LongType), VoidType))
       .EndIf()
       .Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForStreamType(typ), typ, true)
-      .Assignment(s"${s}_lastInit", s"${s}_init", BoolValue(false), BoolType, true)
+      .Assignment(s"${s}_lastInit", s"${s}_init", Option(BoolValue(false)), BoolType, true)
       .Assignment(s"${s}_value", "value", defaultValueForStreamType(typ), typ, true)
-      .Assignment(s"${s}_init", BoolValue(true), BoolValue(false), BoolType, true)
-      .Assignment(s"${s}_ts", "ts", LongValue(0), LongType, true)
-      .Assignment(s"${s}_changed", BoolValue(true), BoolValue(false), BoolType, true)
+      .Assignment(s"${s}_init", BoolValue(true), Option(BoolValue(false)), BoolType, true)
+      .Assignment(s"${s}_ts", "ts", Option(LongValue(0)), LongType, true)
+      .Assignment(s"${s}_changed", BoolValue(true), Option(BoolValue(false)), BoolType, true)
 
     val newStaticSource = currSrc.staticSource
       .FinalAssignment(s"${s}_lastError", LongValue(0), LongType)

@@ -108,7 +108,7 @@ object IntermediateCodeTypeInference {
           cat = generateCodeWithCasts(t.cat, varTypes + ("var_err" -> ErrorType), retType)
         )
       case a: Assignment                           => a.copy(rexpr = castExpression(a.rexpr, Some(a.typ), varTypes))
-      case f: FinalAssignment                      => f.copy(defVal = castExpression(f.defVal, Some(f.typ), varTypes))
+      case f: FinalAssignment                      => f.copy(defVal = f.defVal.map(castExpression(_, Some(f.typ), varTypes)))
       case r: ReturnStatement if retType.isDefined => r.copy(expr = castExpression(r.expr, retType, varTypes))
     }
   }

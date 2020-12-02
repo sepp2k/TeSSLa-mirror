@@ -16,6 +16,8 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{GenericImpLanType, ImpLanType}
+
 /**
  * Class containing subclasses for the representation of abstract imperative code which can afterwards be
  * transduced into Scala/Java/Rust/... code
@@ -119,6 +121,12 @@ object IntermediateCode {
     override def toString = "Void"
   }
 
+  final case class NativeType(name: String, subTypes: Seq[ImpLanType]) extends GenericImpLanType(subTypes) {
+    override def toString = s"native:$name" + (if (subTypes.nonEmpty) s"[${subTypes.mkString(",")}]" else "")
+  }
+
+  /* Values */
+
   final case class LongValue(value: Long) extends ImpLanVal {
     override def toString: String = value.toString
   }
@@ -146,8 +154,6 @@ object IntermediateCode {
   final case class SomeValue(content: ImpLanVal) extends ImpLanVal {
     override def toString: String = s"Some($content)"
   }
-
-  /* Values */
 
   final case class EmptyMutableSet(valType: ImpLanType) extends ImpLanVal {
     override def toString: String = s"MutSet<$valType>{}"
@@ -196,7 +202,7 @@ object IntermediateCode {
     override def toString: String = s"$lhs = $rexpr (default: $defVal ${if (glob) ", global scope" else ""})"
   }
 
-  final case class FinalAssignment(lhs: Variable, defVal: ImpLanExpr, typ: ImpLanType, lazyVar: Boolean)
+  final case class FinalAssignment(lhs: Variable, defVal: Option[ImpLanExpr], typ: ImpLanType, lazyVar: Boolean)
       extends ImpLanStmt {
     override def toString: String = (if (lazyVar) "lazy " else "") + s"$lhs = $defVal (final)"
   }
