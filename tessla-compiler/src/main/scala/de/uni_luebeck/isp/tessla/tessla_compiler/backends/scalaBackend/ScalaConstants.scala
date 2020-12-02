@@ -210,7 +210,8 @@ object ScalaConstants {
 
       case s if s.startsWith("__native:") => s"${s.stripPrefix("__native:").stripSuffix("__")}(${args.mkString(", ")})"
 
-      case _ => throw Diagnostics.CommandNotSupportedError(s"Unsupported built-in function for Scala backend: $name")
+      case "__error__" => "(throw new java.lang.Exception(\"Runtime error: \" + " + args(0) + "))"
+      case _           => throw Diagnostics.CommandNotSupportedError(s"Unsupported built-in function for Scala backend: $name")
     }
   }
 

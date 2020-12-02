@@ -116,24 +116,27 @@ object TesslacTests {
     val secMan = System.getSecurityManager
     val out = new ByteArrayOutputStream()
     val err = new ByteArrayOutputStream()
-    try {
-      System.setSecurityManager(new NoExitSecurityManager())
-      withRedirectedIO(inputTrace, new PrintStream(out), new PrintStream(err))(
-        method.invoke(obj.instance, Array.empty[String])
-      )
-    } catch {
-      case e: InvocationTargetException =>
-        // Since the main method which calls the system exit is invoked through reflection, the
-        // thrown exit exception will be wrapped inside of an InvocationTargetException.
-        e.getTargetException match {
-          case SystemExitException(_) => // Suppress
-          case t                      => throw t
-        }
-    } finally {
-      System.setSecurityManager(secMan)
-    }
 
-    val errors = err.toString(StandardCharsets.UTF_8).linesIterator.toSeq
+    val uncaughtRuntimeErrors =
+      try {
+        System.setSecurityManager(new NoExitSecurityManager())
+        withRedirectedIO(inputTrace, new PrintStream(out), new PrintStream(err))(
+          method.invoke(obj.instance, Array.empty[String])
+        )
+        Seq()
+      } catch {
+        case e: InvocationTargetException =>
+          // Since the main method which calls the system exit is invoked through reflection, the
+          // thrown exit exception will be wrapped inside of an InvocationTargetException.
+          e.getTargetException match {
+            case SystemExitException(_) => Seq() // Suppress
+            case t                      => Seq(t.getMessage)
+          }
+      } finally {
+        System.setSecurityManager(secMan)
+      }
+
+    val errors = err.toString(StandardCharsets.UTF_8).linesIterator.toSeq ++ uncaughtRuntimeErrors
     val output = out.toString(StandardCharsets.UTF_8).linesIterator.toSeq
 
     // A bit of a workaround. Since the exception from the security manager is thrown while the redirected

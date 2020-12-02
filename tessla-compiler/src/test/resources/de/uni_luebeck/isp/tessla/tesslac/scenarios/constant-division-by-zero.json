@@ -1,1 +1,6 @@
-{ "skip": true }
+{
+  "spec": "_.tessla",
+  "input": "_.input",
+  "expectedOutput": "_.output",
+  "expectedRuntimeErrors": "_.runtime-errors"
+}
