@@ -26,7 +26,10 @@ import scala.collection.mutable
 
 class InterpreterTests extends AbstractTestRunner[Core.Specification]("Interpreter") {
 
-  override def translation(testCase: TestConfig): TranslationPhase[Core.Specification, Core.Specification] =
+  override def translation(
+    testCase: TestConfig,
+    resolver: PathResolver
+  ): TranslationPhase[Core.Specification, Core.Specification] =
     FlattenCore
 
   override def run(

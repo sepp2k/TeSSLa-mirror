@@ -21,9 +21,9 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 
-import de.uni_luebeck.isp.tessla.TestCase.TestConfig
+import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
+import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.tessla_compiler.NoExitSecurityManager.SystemExitException
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{
   ScalaBackend,
@@ -44,8 +44,8 @@ class TesslacTests extends AbstractTestRunner[String]("Tessla Compiler") with Be
 
   override def roots = Seq("common/", "tesslac/")
 
-  override def translation(testCase: TestConfig): TranslationPhase[Core.Specification, String] =
-    TesslacTests.pipeline(testCase)
+  override def translation(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, String] =
+    TesslacTests.pipeline(testCase, resolver)
 
   override def run(
     spec: String,
@@ -65,13 +65,15 @@ class TesslacTests extends AbstractTestRunner[String]("Tessla Compiler") with Be
 }
 
 object TesslacTests {
-  def pipeline(testCase: TestConfig): TranslationPhase[Core.Specification, String] = {
+  def pipeline(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, String] = {
     val consoleInterface = !testCase.options.contains("no-console")
+    val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
+
     UsageAnalysis
       .andThen(Laziness)
       .andThen(new TesslaCoreToIntermediate(consoleInterface))
       .andThen(UnusedVarRemove)
-      .andThen(new ScalaBackend(true))
+      .andThen(new ScalaBackend(consoleInterface, additionalSource))
   }
 
   // Redirect both Scala and Java Console IO to the provided streams, and revert afterwards

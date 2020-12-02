@@ -1,0 +1,7 @@
+liftable def add5(a: Int) : Int =  extern("native:(new Adder(5)).add")
+liftable def abs(a: Int) : Int = extern("native:abs")
+
+in a: Events[Int]
+
+out add5(a)
+out abs(a)

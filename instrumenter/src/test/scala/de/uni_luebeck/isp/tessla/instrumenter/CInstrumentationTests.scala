@@ -27,7 +27,8 @@ class CInstrumentationTests extends AbstractTestRunner[ILibraryInterface]("CInst
   override def roots: Seq[String] = Seq("instrumenter/")
 
   override def translation(
-    testCase: TestConfig
+    testCase: TestConfig,
+    resolver: PathResolver
   ): TranslationPhase[Core.Specification, CInstrumentation.ILibraryInterface] =
     CInstrumentation.LibraryInterfaceFactory
 

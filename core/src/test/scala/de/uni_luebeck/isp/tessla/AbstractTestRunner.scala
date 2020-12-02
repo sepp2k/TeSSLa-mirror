@@ -46,7 +46,7 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
   def roots = Seq("common/")
 
   // The translation phase to apply after the core compiler
-  def translation(testCase: TestConfig): TranslationPhase[Core.Specification, T]
+  def translation(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, T]
 
   // Called after unwrapping the compiler result if an 'input' is defined
   // should run the input on the specification
@@ -103,7 +103,7 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
         val expWarn = testCase.expectedWarnings.toSet.flatMap(grouped)
         val result =
           try {
-            Compiler.compile(spec, options).andThen(translation(testCase))
+            Compiler.compile(spec, options).andThen(translation(testCase, pathResolver))
           } catch {
             // Tessla errors may be thrown outside of translation phases, e.g. when evaluating the base time
             // Catch and wrap those into the result here

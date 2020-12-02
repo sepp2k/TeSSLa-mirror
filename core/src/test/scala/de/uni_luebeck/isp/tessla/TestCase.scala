@@ -39,6 +39,7 @@ object TestCase {
     abortAt: Option[Int],
     baseTime: Option[String],
     skip: Boolean,
+    externalSource: Option[String],
     options: List[String]
   )
 
@@ -69,7 +70,7 @@ object TestCase {
       case None => Some(JsArray())
       case e    => e
     })
-    jsonFormat11(TestConfig).read(withOptions)
+    jsonFormat12(TestConfig).read(withOptions)
   }
 
   def fromString(s: String): TestConfig = s.parseJson.convertTo[TestConfig]

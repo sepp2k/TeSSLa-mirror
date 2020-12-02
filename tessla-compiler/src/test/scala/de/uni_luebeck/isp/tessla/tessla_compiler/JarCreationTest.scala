@@ -36,10 +36,10 @@ class JarCreationTest extends AbstractTestRunner[Unit]("Jar") with BeforeAndAfte
 
   override def roots: Seq[String] = Seq("jar/")
 
-  override def translation(testCase: TestConfig): TranslationPhase[Core.Specification, Unit] =
+  override def translation(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, Unit] =
     TesslacTests
-      .pipeline(testCase)
-      .andThen(new ScalaCompiler(fsPath, "monitor.jar", false)(s => {
+      .pipeline(testCase, resolver)
+      .andThen(new ScalaCompiler(fsPath, "monitor.jar", false, true)(s => {
         s.usejavacp.value = false
         s.classpath.value = Predef.getClass.getProtectionDomain.getCodeSource.getLocation.getPath
       }))
