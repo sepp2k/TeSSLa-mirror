@@ -16,8 +16,6 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{GenericImpLanType, ImpLanType}
-
 /**
  * Class containing subclasses for the representation of abstract imperative code which can afterwards be
  * transduced into Scala/Java/Rust/... code
