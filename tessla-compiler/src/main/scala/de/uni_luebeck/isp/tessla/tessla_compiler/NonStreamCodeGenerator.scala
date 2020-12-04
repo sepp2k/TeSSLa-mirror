@@ -30,6 +30,13 @@ import scala.language.{implicitConversions, postfixOps}
 class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
 
   /**
+   * Set of identifiers which are assigned with final assignments.
+   * If an assignment uses exclusively existing assignments it can also be finally assigned
+   * Otherwise (in case of recursion) it must be assigned with a dummy default value first
+   */
+  private var definedIdentifiers: Map[Identifier, DeclarationType] = Map()
+
+  /**
    * Translates a function application to ImpLan
    * @param e The function expression which is applied
    * @param args The argument expressions of the application
@@ -78,9 +85,12 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
     defContext: Map[Identifier, DefinitionExpression]
   ): ImpLanStmt = {
     val resTpe = e.tpe.resolve(tm.resMap)
-    if (extSpec.lazyVars.get.contains(id)) {
-      FinalAssignment(s"var_$id", Some(translateExpressionArg(e, tm, defContext)), resTpe, lazyVar = true)
+    val lazyVar = extSpec.lazyVars.get.contains(id)
+    if (lazyVar || finalAssignmentPossible(e)) {
+      definedIdentifiers += (id -> (if (lazyVar) FinalLazyDeclaration else FinalDeclaration))
+      FinalAssignment(s"var_$id", Some(translateExpressionArg(e, tm, defContext)), resTpe, lazyVar)
     } else {
+      definedIdentifiers += (id -> VariableDeclaration)
       Assignment(
         s"var_$id",
         translateExpressionArg(e, tm, defContext),
@@ -103,6 +113,7 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
     tm: TypeArgManagement,
     defContext: Map[Identifier, DefinitionExpression]
   ): ImpLanExpr = {
+    definedIdentifiers ++= e.params.map(_._1 -> FinalDeclaration)
     val newTm = tm.parsKnown(e.typeParams)
     LambdaExpression(
       e.params.map { case (id, _, _) => if (id.fullName == "_") "_" else s"var_$id" },
@@ -299,6 +310,34 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
         }
       case _ => e
     }
+  }
+
+  /**
+   * Checks whether a given expression only uses identifiers from [[definedIdentifiers]], i.e. those already defined
+   * @param e Expression to be examined
+   * @return  Whether all subexpressions are already defined and and the expression can hence be evaluated
+   */
+  private def finalAssignmentPossible(e: ExpressionArg): Boolean = {
+    //Boolean parameter indicates whether variable already has to be evaluateable
+    def getSubIDs(e: ExpressionArg, ignore: Set[Identifier] = Set()): Set[(Identifier, Boolean)] = e match {
+      case FunctionExpression(_, params, body, result, _) =>
+        (body.values.toSeq :+ result)
+          .map(getSubIDs(_, ignore ++ params.map(_._1) ++ body.keys))
+          .reduce(_ ++ _)
+          .map(e => (e._1, false))
+      case ApplicationExpression(applicable, args, _) =>
+        (args :+ applicable).map(getSubIDs(_, ignore)).reduce(_ ++ _)
+      case TypeApplicationExpression(applicable, _, _) => getSubIDs(applicable, ignore)
+      case RecordConstructorExpression(entries, _) =>
+        entries.map(e => getSubIDs(e._2._1, ignore)).fold(Set()) { case (x, y) => x ++ y }
+      case RecordAccessorExpression(_, target, _, _)       => getSubIDs(target, ignore)
+      case ExpressionRef(id, _, _) if !ignore.contains(id) => Set((id, true))
+      case _                                               => Set()
+    }
+
+    getSubIDs(e).forall(d =>
+      definedIdentifiers.contains(d._1) && (!d._2 || definedIdentifiers(d._1) != VariableDeclaration)
+    )
   }
 
   /**
