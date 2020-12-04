@@ -17,6 +17,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.VariableDeclaration
 
 /**
  * Class containing code for determining the type of ImpLan expressions and adding casts.
@@ -160,16 +161,13 @@ object IntermediateCodeTypeInference {
           generateCodeWithCasts(
             body,
             IntermediateCodeUtils
-              .getVariableMap(
+              .getVariableSeq(
                 body,
-                varTypes.view.mapValues { a => (a, None, false) }.toMap ++ argNames
-                  .zip(argsTypes)
-                  .map { case (a, b) => (a, (b, None, false)) }
-                  .toMap,
+                (varTypes.view.mapValues { a => (a, None, VariableDeclaration) }.toMap ++
+                  argNames.zip(argsTypes).map { case (a, b) => (a, (b, None, VariableDeclaration)) }.toMap).toSeq,
                 false
               )
-              .view
-              .mapValues { case (a, _, _) => a }
+              .map { case (n, d) => (n, d._1) }
               .toMap,
             Some(retType)
           )

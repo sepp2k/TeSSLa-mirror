@@ -29,6 +29,26 @@ import scala.language.{implicitConversions, postfixOps}
 object IntermediateCodeUtils {
 
   /**
+   * Represents the types of declared variables
+   */
+  sealed trait DeclarationType
+
+  /**
+   * Variable can be assigned and evaluated at declaration and is never changed again
+   */
+  case object FinalDeclaration extends DeclarationType
+
+  /**
+   * Variable can be assigned at declaration and is never changed again, the evaluation has to be lazy
+   */
+  case object FinalLazyDeclaration extends DeclarationType
+
+  /**
+   * The variable is reassigned in the generated code
+   */
+  case object VariableDeclaration extends DeclarationType
+
+  /**
    * Folds an [[IntermediateCode.ImpLanExpr]] including all sub-expressions and sub-statements.
    * Sub-statements/sub-expressions are traversed prior their parent expressions
    * @param exp The sequence of statements to be folded
@@ -146,32 +166,35 @@ object IntermediateCodeUtils {
   }
 
   /**
-   * Builds map containing type/default/lazyness/global-definition information for all variables defined in stmts.
+   * Builds a sequence containing type/default/lazyness/global-definition information for all variables defined in stmts.
    * If unsound information (e.g. multiple declarations) are found an error is thrown.
+   * The order is the one of the corresponding assignments.
    * @param stmts The sequence of statements to be examined
-   * @param baseMap The base map to be extended
+   * @param baseSeq The base sequence to be extended
    * @param global Include global definitions in sub-expressions (e.g. functions)
    * @return Map containing variable information.
    */
-  def getVariableMap(
+  def getVariableSeq(
     stmts: Seq[ImpLanStmt],
-    baseMap: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map(),
+    baseSeq: Seq[(String, (ImpLanType, Option[ImpLanExpr], DeclarationType))] = Seq(),
     global: Boolean
-  ): Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = {
+  ): Seq[(String, (ImpLanType, Option[ImpLanExpr], DeclarationType))] = {
 
     def extractAssignments(
       topLevel: Boolean
-    )(stmt: ImpLanStmt): Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = stmt match {
+    )(stmt: ImpLanStmt): Seq[(String, ImpLanType, Option[ImpLanExpr], DeclarationType)] = stmt match {
       case Assignment(lhs, rhs, defVal, typ, globVar) =>
-        (if (global && globVar || topLevel && !globVar) Seq((lhs.name, typ, defVal, false)) else Seq()) ++
+        (if (global && globVar || topLevel && !globVar) Seq((lhs.name, typ, defVal, VariableDeclaration)) else Seq()) ++
           (if (global) extractAssignmentsFromExp(rhs) else Seq())
-      case FinalAssignment(lhs, value, typ, ld) => Seq((lhs.name, typ, value, ld))
-      case If(_, stmts, elseStmts)              => stmts.concat(elseStmts).flatMap(extractAssignments(topLevel))
-      case TryCatchBlock(tr, cat)               => tr.concat(cat).flatMap(extractAssignments(topLevel))
-      case _                                    => Seq()
+      case FinalAssignment(lhs, value, typ, ld) if topLevel =>
+        val decType = if (ld) FinalLazyDeclaration else FinalDeclaration
+        Seq((lhs.name, typ, value, decType))
+      case If(_, stmts, elseStmts) => stmts.concat(elseStmts).flatMap(extractAssignments(topLevel))
+      case TryCatchBlock(tr, cat)  => tr.concat(cat).flatMap(extractAssignments(topLevel))
+      case _                       => Seq()
     }
 
-    def extractAssignmentsFromExp(exp: ImpLanExpr): Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] =
+    def extractAssignmentsFromExp(exp: ImpLanExpr): Seq[(String, ImpLanType, Option[ImpLanExpr], DeclarationType)] =
       exp match {
         case CastingExpression(e, _, _) => extractAssignmentsFromExp(e)
         case FunctionCall(_, params, _) => params.flatMap(extractAssignmentsFromExp)
@@ -185,7 +208,7 @@ object IntermediateCodeUtils {
         case _                               => Seq()
       }
 
-    val varDefs: Seq[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = (baseMap.toSeq.map {
+    val varDefs: Seq[(String, ImpLanType, Option[ImpLanExpr], DeclarationType)] = (baseSeq.map {
       case (a, (b, c, d)) => (a, b, c, d)
     } ++ stmts.flatMap(extractAssignments(true))).distinct
     val duplicates = varDefs.groupBy { case (n, _, _, _) => n }.collect { case (x, List(_, _, _*)) => x }
@@ -194,7 +217,7 @@ object IntermediateCodeUtils {
       throw Diagnostics.DSLError(s"Variable(s) with unsound type/default information: ${duplicates.mkString(", ")}")
     }
 
-    varDefs.map { case (name, typ, default, lazyDef) => (name, (typ, default, lazyDef)) }.toMap
+    varDefs.map { case (name, typ, default, lazyDef) => (name, (typ, default, lazyDef)) }
   }
 
   /**

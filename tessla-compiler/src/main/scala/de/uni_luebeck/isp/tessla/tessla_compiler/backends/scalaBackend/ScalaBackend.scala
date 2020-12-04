@@ -17,6 +17,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend
 
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.DeclarationType
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.BackendInterface
 import de.uni_luebeck.isp.tessla.tessla_compiler.{
   IntermediateCode,
@@ -47,15 +48,21 @@ class ScalaBackend(ioInterface: Boolean, userIncludes: String = "")
    * @param vars Map of variables to be translated: Name -> (Type x Default value x Lazy assignment)
    * @return Sequence of variable definitions in Scala
    */
-  def generateVariableDeclarations(vars: Set[(String, ImpLanType, Option[ImpLanExpr], Boolean)]): Seq[String] = {
-    def prefix(lazyDef: Boolean) = if (lazyDef) "lazy val" else "var"
+  def generateVariableDeclarations(
+    vars: Seq[(String, (ImpLanType, Option[ImpLanExpr], DeclarationType))]
+  ): Seq[String] = {
+    def prefix(defType: DeclarationType) = defType match {
+      case IntermediateCodeUtils.FinalDeclaration     => "val"
+      case IntermediateCodeUtils.FinalLazyDeclaration => "lazy val"
+      case IntermediateCodeUtils.VariableDeclaration  => "var"
+    }
 
-    vars.toSeq.sortWith { case (_, b) => b._4 }.map {
-      case (name, typ, Some(default), lazyDef) =>
-        s"${prefix(lazyDef)} $name : ${ScalaConstants.typeTranslation(typ)} = ${translateExpression(default)}"
-      case (name, typ, None, lazyDef) =>
+    vars.map {
+      case (name, (typ, Some(default), defType)) =>
+        s"${prefix(defType)} $name : ${ScalaConstants.typeTranslation(typ)} = ${translateExpression(default)}"
+      case (name, (typ, None, defType)) =>
         val typRep = ScalaConstants.typeTranslation(typ)
-        s"${prefix(lazyDef)} $name : $typRep = null" + (if (typ.isInstanceOf[NativeType]) s".asInstanceOf[$typRep]"
+        s"${prefix(defType)} $name : $typRep = null" + (if (typ.isInstanceOf[NativeType]) s".asInstanceOf[$typRep]"
                                                         else "")
     }
   }
@@ -120,7 +127,7 @@ class ScalaBackend(ioInterface: Boolean, userIncludes: String = "")
     case Equal(a, b) =>
       if (
         needsObjectCompare(
-          IntermediateCodeTypeInference.typeInference(a, variables.view.mapValues { case (typ, _, _) => typ }.toMap)
+          IntermediateCodeTypeInference.typeInference(a, variables.map { case (n, d) => (n, d._1) }.toMap)
         )
       ) {
         s"${translateExpression(a)}.equals(${translateExpression(b)})"
@@ -130,7 +137,7 @@ class ScalaBackend(ioInterface: Boolean, userIncludes: String = "")
     case LambdaExpression(argNames, argsTypes, _, body) =>
       val args =
         argsTypes.zip(argNames).map { case (t, n) => s"$n : ${ScalaConstants.typeTranslation(t)}" }.mkString(", ")
-      s"(($args) => {\n${generateVariableDeclarations(varMaptoSeq(IntermediateCodeUtils.getVariableMap(body, global = false)))
+      s"(($args) => {\n${generateVariableDeclarations(IntermediateCodeUtils.getVariableSeq(body, global = false))
         .mkString("\n")}\n${generateCode(body)}\n})"
     case Variable(name) => name
 

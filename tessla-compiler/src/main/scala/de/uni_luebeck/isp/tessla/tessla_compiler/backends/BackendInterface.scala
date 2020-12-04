@@ -19,6 +19,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
 import de.uni_luebeck.isp.tessla.tessla_compiler.{
   IntermediateCode,
   IntermediateCodeTypeInference,
@@ -37,7 +38,7 @@ import scala.io.Source
 abstract class BackendInterface(sourceTemplate: String, userIncludes: String)
     extends TranslationPhase[SourceListing, String] {
 
-  protected var variables: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)] = Map()
+  protected var variables: Seq[(String, (ImpLanType, Option[ImpLanExpr], DeclarationType))] = Seq()
 
   /**
    * Function triggering the translation from a [[IntermediateCode.SourceListing]] to real-world source code as String.
@@ -57,34 +58,37 @@ abstract class BackendInterface(sourceTemplate: String, userIncludes: String)
    * @return The source code of the generated monitor program
    */
   def translate(orgListing: SourceListing): Result[String] = {
-    val nonStaticVars = IntermediateCodeUtils.getVariableMap(
+    val nonStaticVars = IntermediateCodeUtils.getVariableSeq(
       orgListing.tsGenSource
         .concat(orgListing.stepSource)
         .concat(orgListing.inputProcessing)
         .concat(orgListing.tailSource),
-      Map(
-        "inputStream" -> (StringType, Some(StringValue("")), false),
-        "value" -> (StringType, Some(StringValue("")), false),
-        "currTs" -> (LongType, Some(LongValue(0)), false),
-        "lastProcessedTs" -> (LongType, Some(LongValue(0)), false),
-        "newInputTs" -> (LongType, Some(LongValue(0)), false)
+      Seq(
+        "inputStream" -> (StringType, Some(StringValue("")), VariableDeclaration),
+        "value" -> (StringType, Some(StringValue("")), VariableDeclaration),
+        "currTs" -> (LongType, Some(LongValue(0)), VariableDeclaration),
+        "lastProcessedTs" -> (LongType, Some(LongValue(0)), VariableDeclaration),
+        "newInputTs" -> (LongType, Some(LongValue(0)), VariableDeclaration)
       ),
       true
     )
-    var staticVars = IntermediateCodeUtils.getVariableMap(orgListing.staticSource, global = true)
+    var staticVars = IntermediateCodeUtils.getVariableSeq(orgListing.staticSource, global = true)
 
     variables = nonStaticVars ++ staticVars
 
     val listing =
-      IntermediateCodeTypeInference.generateCodeWithCasts(orgListing, variables.map { case (n, (t, _, _)) => (n, t) })
+      IntermediateCodeTypeInference.generateCodeWithCasts(
+        orgListing,
+        variables.map { case (n, (t, _, _)) => (n, t) }.toMap
+      )
 
-    staticVars = IntermediateCodeUtils.getVariableMap(listing.staticSource, global = true)
+    staticVars = IntermediateCodeUtils.getVariableSeq(listing.staticSource, global = true)
 
     val source = Source.fromResource(sourceTemplate).mkString
     val rewrittenSource = source
       .replace(
         "//VARDEF",
-        generateVariableDeclarations(varMaptoSeq(nonStaticVars) -- varMaptoSeq(staticVars)).mkString("\n")
+        generateVariableDeclarations(nonStaticVars.diff(staticVars)).mkString("\n")
       )
       .replace("//TRIGGER", generateCode(listing.tsGenSource))
       .replace("//STEP", generateCode(listing.stepSource))
@@ -92,7 +96,7 @@ abstract class BackendInterface(sourceTemplate: String, userIncludes: String)
       .replace("//INPUTPROCESSING", generateCode(listing.inputProcessing))
       .replace(
         "//STATIC",
-        generateVariableDeclarations(varMaptoSeq(staticVars)).mkString("\n") + "\n\n" + generateCode(
+        generateVariableDeclarations(staticVars).mkString("\n") + "\n\n" + generateCode(
           listing.staticSource
         )
       )
@@ -102,13 +106,13 @@ abstract class BackendInterface(sourceTemplate: String, userIncludes: String)
   }
 
   /**
-   * Translates a set of variables with base information (type, default value, lazy assignment) to corresponding
+   * Translates a set of variables with base information (type, default value, declaration type) to corresponding
    * variable declarations in the target source code.
    * Has to be implemented by Backend-Implementations.
-   * @param vars Set of variables to be translated: Name -> (Type x Default value x Lazy assignment)
+   * @param vars Sequence of variables to be translated: Name -> (Type x Default value x Declaration type)
    * @return Sequence of variable definitions
    */
-  def generateVariableDeclarations(vars: Set[(String, ImpLanType, Option[ImpLanExpr], Boolean)]): Seq[String]
+  def generateVariableDeclarations(vars: Seq[(String, (ImpLanType, Option[ImpLanExpr], DeclarationType))]): Seq[String]
 
   /**
    * Translates a sequence of [[IntermediateCode.ImpLanStmt]] to the corresponding code in the target language.
@@ -117,15 +121,4 @@ abstract class BackendInterface(sourceTemplate: String, userIncludes: String)
    * @return The generated code in the target language
    */
   def generateCode(stmts: Seq[ImpLanStmt]): String
-
-  /**
-   * Helper function converting Map {(a,(b,c,d)), (e,(f,g,h))} to Set {(a,b,c,d), (e,f,g,h)}
-   * @param in Map to be converted
-   * @return The resulting set
-   */
-  protected def varMaptoSeq(
-    in: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)]
-  ): Set[(String, ImpLanType, Option[ImpLanExpr], Boolean)] = {
-    in.map { case (n, (t, e, l)) => (n, t, e, l) }.toSet
-  }
 }
