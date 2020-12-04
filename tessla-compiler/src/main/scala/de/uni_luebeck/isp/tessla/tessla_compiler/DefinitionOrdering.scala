@@ -50,29 +50,47 @@ object DefinitionOrdering {
       }
     }
 
-    def calcExpressionDependencies(exp: ExpressionArg, ignore: Set[Identifier]): Unit = {
+    def calcExpressionDependencies(
+      exp: ExpressionArg,
+      ignore: Set[Identifier],
+      scope: Map[Identifier, DefinitionExpression]
+    ): Unit = {
       exp match {
         case ApplicationExpression(app, args, _) if isLastOrDelay(app) =>
-          calcExpressionDependencies(args(1), ignore)
+          calcExpressionDependencies(args(1), ignore, scope)
         case ApplicationExpression(app, args, _) =>
-          args.appended(app).foreach(exp => calcExpressionDependencies(exp, ignore))
-        case ExpressionRef(id, _, _) if input.contains(id) => calcMissingDependencies(id, input(id), ignore)
-        case TypeApplicationExpression(e, _, _)            => calcExpressionDependencies(e, ignore)
+          args.appended(app).foreach(exp => calcExpressionDependencies(exp, ignore, scope))
+        case ExpressionRef(id, _, _) if input.contains(id) => calcMissingDependencies(id, scope(id), ignore, scope)
+        case TypeApplicationExpression(e, _, _)            => calcExpressionDependencies(e, ignore, scope)
         case RecordConstructorExpression(entries, _) =>
-          entries.foreach { case (_, (exp, _)) => calcExpressionDependencies(exp, ignore) }
-        case RecordAccessorExpression(_, target, _, _) => calcExpressionDependencies(target, ignore)
-        case _                                         => ()
+          entries.foreach { case (_, (exp, _)) => calcExpressionDependencies(exp, ignore, scope) }
+        case RecordAccessorExpression(_, target, _, _) => calcExpressionDependencies(target, ignore, scope)
+        case FunctionExpression(_, _, body, result, _) =>
+          (body.values ++ Seq(result)).foreach(calcExpressionDependencies(_, ignore, scope ++ body))
+        case _ =>
       }
     }
 
-    def calcMissingDependencies(id: Identifier, dExp: DefinitionExpression, ignore: Set[Identifier]): Unit = {
+    def calcMissingDependencies(
+      id: Identifier,
+      dExp: DefinitionExpression,
+      ignore: Set[Identifier],
+      scope: Map[Identifier, DefinitionExpression]
+    ): Unit = {
       if (!ignore.contains(id) && !ordered.contains((id, dExp))) {
-        calcExpressionDependencies(dExp, ignore + id)
-        ordered += ((id, dExp))
+        calcExpressionDependencies(dExp, ignore + id, scope)
+        if (input.contains(id)) {
+          ordered += ((id, dExp))
+        }
       }
     }
 
-    input.foreach { case (i, d) => calcMissingDependencies(i, d, Set()) }
+    //Starting with functions assures that functions are always defied prior usage
+    input.toSeq
+      .sortWith {
+        case ((_, e1), _) => e1.tpe.isInstanceOf[FunctionType]
+      }
+      .foreach { case (i, d) => calcMissingDependencies(i, d, Set(), input) }
 
     ordered.toSeq
   }
