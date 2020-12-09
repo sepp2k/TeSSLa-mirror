@@ -1,9 +1,0 @@
-in tick: Events[Unit]
-
-@liftable
-def double(💩: String) = "$💩$💩"
-
-def exponential💩: Events[String] = default(last(double(exponential💩), tick), "💩")
-
-@raw
-out exponential💩

@@ -1,9 +1,6 @@
-in event: Events[String]
-in id: Events[Int]
 in model: Events[Int]
-in taskset: Events[Int]
 
-@liftable
+liftable
 def max2(x: Int, y: Int) := if x >= y then x else y
 
 def mymax(s: Events[Int]) := m where {
