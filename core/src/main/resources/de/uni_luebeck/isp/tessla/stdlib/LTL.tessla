@@ -42,12 +42,12 @@ module MITL {
   ##
   ##
   def since0(x: Int, a: Events[Bool], b: Events[Bool]): Events[Bool] =
-    merge4(
+    pure(merge4(
       constIf(true, a&&b),
       constIf(false, !a),
       on(delay(constIf(x, !b), boolFilter(!b)), false),
 	  false
-    )
+    ))
 
   ## Expects @[streamfunctions#pure] input streams which are initialized (have an event at timestamp 0).
   ## Returns a stream which gets `true` every time both input streams are `true` at a point which lies `x` time units in the past and the first input stream did not get `false` in between. The output stream gets `false` every time the first input stream gets `false`.
@@ -88,6 +88,7 @@ module MITL {
   ##
   ##
   def sinceInfinity(x: Int, a: Events[Bool], b: Events[Bool]): Events[Bool] =
+    pure(
     static if x == 0
     then merge3(
         constIf(true, a&&b),
@@ -103,6 +104,7 @@ module MITL {
 		false
       )
     }
+    )
 
   ## Expects a @[streamfunctions#pure] input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `true` the when the input stream gets `true`. The output stream gets `false` if the input stream is `false` for `x` time units.
   ##
