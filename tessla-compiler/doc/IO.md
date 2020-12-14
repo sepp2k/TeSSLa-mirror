@@ -9,7 +9,7 @@ Input Syntax
 
 ```
     INPUT     ::= TIMESTAMP ':' STREAM_ID ('=' VALUE)?
-    VALUE     ::= UNIT | BOOL | INT | FLOAT | STRING | SET | MAP | LIST | TUPLE | RECORD
+    VALUE     ::= UNIT | BOOL | INT | FLOAT | STRING | SET | MAP | LIST | TUPLE | RECORD | OPTION
     UNIT      ::= '()'
     BOOL      ::= 'true' | 'false'
     INT       ::= [1-9][0-9]* | '0'
@@ -20,6 +20,7 @@ Input Syntax
     MAP       ::= 'Map(' (VALUE '->' VALUE)*, ')'
     TUPLE     ::= '(' VALUE*, ')'
     RECORD    ::= '{' (FIELD_ID '=' VALUE)+, '}'
+    OPTION    ::= 'None' | 'Some(' VALUE ')'
 
     TIMESTAMP ::= INT
 ```
@@ -59,7 +60,7 @@ Output Syntax
 
 ```
     OUTPUT    ::= TIMESTAMP ':' OUT_NAME ('=' VALUE)?
-    VALUE     ::= UNIT | BOOL | INT | FLOAT | STRING | SET | MAP | LIST | TUPLE | RECORD
+    VALUE     ::= UNIT | BOOL | INT | FLOAT | STRING | SET | MAP | LIST | TUPLE | RECORD | OPTION
     UNIT      ::= '()'
     BOOL      ::= 'true' | 'false'
     INT       ::= [1-9][0-9]* | '0'
@@ -70,6 +71,7 @@ Output Syntax
     MAP       ::= 'Map(' (VALUE '->' VALUE)*, ')'
     TUPLE     ::= '(' VALUE*, ')'
     RECORD    ::= '{' (FIELD_ID '=' VALUE)+, '}'
+    OPTION    ::= 'None' | 'Some(' VALUE ')'
 
     TIMESTAMP ::= INT
 ```
