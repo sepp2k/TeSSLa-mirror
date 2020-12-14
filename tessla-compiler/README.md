@@ -5,9 +5,33 @@ Currently, only the translation to Scala is implemented.
 
 The translation to Scala supports generation of a `.scala` source code file, or generation of a fully ready to use `.jar` file.
 
+## Usage
+
+The TeSSLa compiler can be run in the following way:
+
+```
+java -jar tessla.jar compile [options] <tessla-file>
+```
+
+Following options are available:
+
+```
+-o, --out-file <value>      Place the generated Scala source code at this location.
+-j, --jar-file <value>      Compile TeSSLa specification to an executable jar file which is created at the given location.
+```
+
+## Stdio monitor generation
+
+With the parameter `-o` TeSSLa compiler generates a file `<name>.scala` which can be compiled with `scalac` and executed as monitor.
+This monitor accepts events via stdio (see section below).
+
+Instead of compiling to Scala source one can directly compile to an executeable jar file by using the `-j` parameter followed by the
+path of the jar archive that shall be created. The generated jar file can directly be launched via `java -jar ...` and behaves exactly
+like the monitor generated from source.
+
 ##  Event format
 
-Events can then be passed to the Monitor via `stdin` in the following format:
+Events can then be passed to the monitor via `stdin` in the following format:
 
 ```
 timestamp: streamname=value
