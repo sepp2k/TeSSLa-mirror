@@ -5,47 +5,12 @@ Currently, only the translation to Scala is implemented.
 
 The translation to Scala supports generation of a `.scala` source code file, or generation of a fully ready to use `.jar` file.
 
-## Usage
+##  Usage
 
-The TeSSLa compiler can be run in the following way:
+TeSSLa Compiler can be used to create a Scala monitor either as source or jar archive.
+One can further choose whether to include an I/O interface in the monitor to read and write events from and to stdio or generate API code accessable from another Scala/Java application.
 
-```
-java -jar tessla.jar compile [options] <tessla-file>
-```
-
-Following options are available:
-
-```
--o, --out-file <value>      Place the generated Scala source code at this location.
--j, --jar-file <value>      Compile TeSSLa specification to an executable jar file which is created at the given location.
-```
-
-## Stdio monitor generation
-
-With the parameter `-o` TeSSLa compiler generates a file `<name>.scala` which can be compiled with `scalac` and executed as monitor.
-This monitor accepts events via stdio (see section below).
-
-Instead of compiling to Scala source one can directly compile to an executeable jar file by using the `-j` parameter followed by the
-path of the jar archive that shall be created. The generated jar file can directly be launched via `java -jar ...` and behaves exactly
-like the monitor generated from source.
-
-##  Event format
-
-Events can then be passed to the monitor via `stdin` in the following format:
-
-```
-timestamp: streamname=value
-```
-or in case of unit streams
-
-```
-timestamp: streamname
-```
-
-The timestamps have to arrive in an ordered way. Events for passed timestamps will be printed in the same format, the first time a greater timestamp arrives or when the input ends (Ctrl+D/EOF).
-Additional infos on the input/output format can be found in [the I/O documentation](../IO.md)
-
-A second input to the same stream at the same timestamp overrides the previous value.
+For detailed usage information see this [documentation](doc/Usage.md).
 
 ## Architecture
 
