@@ -1,7 +1,7 @@
 Input-/Output-Format Documentation
 ==================================
 
-In this document the input and output syntax of the TeSSLa compiler is specified.
+In this document the input and output syntax of the TeSSLa compiler/interpreter is specified.
 Details on the notation can be found at the end of this document.
 
 Input Syntax
@@ -35,7 +35,6 @@ Note:
  - Between two terminal symbols there may be arbitrarily many whitespaces, except inside `FLOAT` and `INT`
  - Timestamps may not decrease
  - An input with an unknown stream ID is ignored
- - A second input to the same stream at the same timestamp overrides the previous value
  - For inputs on unit streams the part after `STREAM_ID` is fully ignored
 
  Example Input:
@@ -89,6 +88,7 @@ the `','` of enumerations (e.g. in `SET`).
 
 - Tuples and records with field names \_1, \_2... are exclusively handled as tuples (also in the input)
 - Tuples and records with no fields are handled as empty tuples (also in the input)
+- With the @raw annotation outputs without timestamp and streamname can be generated
 
 Notation
 ----------------------------------

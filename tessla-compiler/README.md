@@ -43,7 +43,9 @@ timestamp: streamname
 ```
 
 The timestamps have to arrive in an ordered way. Events for passed timestamps will be printed in the same format, the first time a greater timestamp arrives or when the input ends (Ctrl+D/EOF).
-Additional infos on the input/output format can be found in [the I/O documentation](doc/IO.md)
+Additional infos on the input/output format can be found in [the I/O documentation](../IO.md)
+
+A second input to the same stream at the same timestamp overrides the previous value.
 
 ## Architecture
 

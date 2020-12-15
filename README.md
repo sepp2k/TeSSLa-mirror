@@ -24,7 +24,7 @@ TeSSLa is also available as part of the [TeSSLa docker image](https://gitlab.isp
 This project consists of several submodules:
 
 - [Core](core/README.md):                    Sub-folder `core/`                Common Compiler Frontend, translating TeSSLa to TeSSLa Core
-- Interpreter:                               Sub-folder `interpreter/`         Interactive Shell for evaluation of TeSSLa specifications
+- [Interpreter](interpreter/README.md):      Sub-folder `interpreter/`         Interactive Shell for evaluation of TeSSLa specifications
 - [Compiler](tessla-compiler/README.md):     Sub-folder `tessla-compiler/`     Efficient compilation of TeSSLa Core to a Scala monitor
 - [Doc](docs/README.md):                     Sub-folder `docs/`                Generation of documentation from comments in a TeSSLa specification (Tessladoc)
 - [Instrumenter](instrumenter/README.md):    Sub-folder `instrumenter/`        Instrumentation of C code to generate traces for a TeSSLa specification (linux-amd64 only)
