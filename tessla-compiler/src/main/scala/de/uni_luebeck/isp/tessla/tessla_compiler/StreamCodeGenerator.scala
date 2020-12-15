@@ -708,7 +708,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     }
 
     val newInputProcessing = currSrc.inputProcessing
-      .If(Seq(Seq(Equal("inputStream", StringValue(inStream.idOrName.left.get)))))
+      .If(Seq(Seq(Equal("inputStream", StringValue(inStream.idOrName.left.get)), Negation(s"${s}_changed"))))
       .Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForStreamType(typ), typ)
       .Assignment(s"${s}_lastInit", s"${s}_init", BoolValue(false), BoolType)
       .FinalAssignment(s"${s}_lastError", NoError, ErrorType)
@@ -743,12 +743,14 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       .Assignment("newInputTs", "ts", LongValue(0), typ)
       .FunctionCall("step", Seq("ts"), IntermediateCode.FunctionType(Seq(LongType), VoidType))
       .EndIf()
+      .If(Seq(Seq(Negation(s"${s}_changed"))))
       .Assignment(s"${s}_lastValue", s"${s}_value", defaultValueForStreamType(typ), typ, true)
       .Assignment(s"${s}_lastInit", s"${s}_init", Option(BoolValue(false)), BoolType, true)
       .Assignment(s"${s}_value", "value", defaultValueForStreamType(typ), typ, true)
       .Assignment(s"${s}_init", BoolValue(true), Option(BoolValue(false)), BoolType, true)
       .Assignment(s"${s}_ts", "ts", Option(LongValue(0)), LongType, true)
       .Assignment(s"${s}_changed", BoolValue(true), Option(BoolValue(false)), BoolType, true)
+      .EndIf()
 
     val newStaticSource = currSrc.staticSource
       .FinalAssignment(s"${s}_lastError", LongValue(0), LongType)

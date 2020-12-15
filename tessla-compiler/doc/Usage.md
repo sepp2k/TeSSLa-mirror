@@ -19,8 +19,9 @@ Following options are available:
 
 Without further options the TeSSLa compiler generates a file `out.scala` which can be compiled with `scalac` and executed as monitor.
 This monitor accepts events via stdio. More detailed information about the input/output format see [here](../../IO.md).
+Note: If the monitor receives more than one input for the same stream at the same timestamp, the later ones are ignored.
 
-Instead of compiling to Scala source one can directly compile to an executeable jar file by using the `-j` parameter followed by the
+Instead of compiling to Scala source one can directly compile to an executable jar file by using the `-j` parameter followed by the
 path of the jar archive that shall be created. The generated jar file can directly be launched via `java -jar ...` and behaves exactly
 like the monitor generated from source.
 
@@ -28,7 +29,7 @@ like the monitor generated from source.
 
 It is also possible to generate a monitor with an API interface and without I/O handling. This may especially be useful if one wants
 to access the monitor from another Java or Scala application. The compilation to API code can be achieved with the `-n` flag.
-The Api monitor can be generated as scala code and as (non-executeable) jar archive as well. Details about how the API can be accessed
+The Api monitor can be generated as Scala code and as (non-executable) jar archive as well. Details about how the API can be accessed
 can be found [here](API.md).
 
 ## Connecting TeSSLa to external functions
