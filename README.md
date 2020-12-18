@@ -7,7 +7,7 @@ This project provides the core functionalities for the TeSSLa language.
 # Usage
 ## Download
 
-You can get the latest version of TeSSLa from the [Gitlab Artifact Browser](https://gitlab.isp.uni-luebeck.de/tessla/tessla/builds/artifacts/development/browse/target/scala-2.13?job=deploy).
+You can get the latest version of TeSSLa from the [Gitlab Artifact Browser](https://git.tessla.io/tessla/tessla/builds/artifacts/development/browse/target/scala-2.13?job=deploy).
 
 ## Building
 
@@ -17,7 +17,7 @@ If you want to build only a specific sub-project, run `sbt <project>/assembly` i
 
 ## Docker Image
 
-TeSSLa is also available as part of the [TeSSLa docker image](https://gitlab.isp.uni-luebeck.de/tessla/tessla-docker), which is especially useful if you want to use TeSSLa on instrumented C code.
+TeSSLa is also available as part of the TeSSLa docker image, which is especially useful if you want to use TeSSLa on instrumented C code. See [https://www.tessla.io/rv-tutorial](https://www.tessla.io/rv-tutorial) for more infos.
 
 ## Project Structure
 
@@ -112,4 +112,4 @@ Instrument C code based on the provided annotations (linux-amd64 only)
 
 ## Examples
 
-Example tessla and input files can be found in the [tests directory](src/test/resources/de/uni_luebeck/isp/tessla/common) and in the [TeSSLa examples repository](https://gitlab.isp.uni-luebeck.de/tessla/rv-examples).
+Example tessla and input files can be found in the [tests directory](src/test/resources/de/uni_luebeck/isp/tessla/common) and in the [TeSSLa examples repository](https://git.tessla.io/tessla/examples).
