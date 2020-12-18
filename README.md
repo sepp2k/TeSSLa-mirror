@@ -1,4 +1,4 @@
-[![pipeline](https://gitlab.isp.uni-luebeck.de/tessla/tessla/badges/development/pipeline.svg)](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/jobs)
+[![pipeline](https://git.tessla.io/tessla/tessla/badges/development/pipeline.svg)](https://git.tessla.io/tessla/tessla/-/jobs)
 
 # TeSSLa Compiler and Backends
 
