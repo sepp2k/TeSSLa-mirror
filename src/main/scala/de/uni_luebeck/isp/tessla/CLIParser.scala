@@ -1,6 +1,5 @@
 /*
- * Copyright 2020 Institute of Software Engineering and Programming Languages,
- *                University of Lübeck, Germany
+ * Copyright 2020 The TeSSLa Community
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +34,7 @@ object CLIParser {
   val programVersion: String = BuildInfo.version
   val programDescription =
     "Compile Tessla specifications and evaluate them on provided input streams."
-  val licenseLocation = "LICENSE"
+  val licenseLocation = "LICENSE_NOTE"
 
   sealed trait Config
 
