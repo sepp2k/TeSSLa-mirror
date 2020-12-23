@@ -7,7 +7,7 @@ This project provides the core functionalities for the TeSSLa language.
 # Usage
 ## Download
 
-You can get the latest version of TeSSLa from the [Gitlab Artifact Browser](https://git.tessla.io/tessla/tessla/builds/artifacts/development/browse/target/scala-2.13?job=deploy).
+You can get the latest version of TeSSLa from the [Gitlab Artifact Browser](https://git.tessla.io/tessla/tessla/builds/artifacts/master/browse/target/scala-2.13?job=deploy).
 
 ## Building
 
