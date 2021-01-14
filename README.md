@@ -112,4 +112,4 @@ Instrument C code based on the provided annotations (linux-amd64 only)
 
 ## Examples
 
-Example tessla and input files can be found in the [tests directory](src/test/resources/de/uni_luebeck/isp/tessla/common) and in the [TeSSLa examples repository](https://git.tessla.io/tessla/examples).
+Example tessla and input files can be found in the [tests directory](resources/de/uni_luebeck/isp/tessla/common) and in the [TeSSLa examples repository](https://git.tessla.io/tessla/examples).
