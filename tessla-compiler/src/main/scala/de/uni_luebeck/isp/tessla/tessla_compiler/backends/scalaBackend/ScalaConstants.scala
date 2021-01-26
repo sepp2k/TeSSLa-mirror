@@ -161,7 +161,7 @@ object ScalaConstants {
       case "__isSome__"  => s"${args(0)}.isDefined"
       case "__isNone__"  => s"${args(0)}.isEmpty"
 
-      case "__toString__"      => s"${args(0)}.toString"
+      case "__toString__"      => ScalaIOHandling.getParseExpressionToString(typeHint.argsTypes.head, args(0))
       case "__String_format__" => s"${args(0)}.formatLocal(java.util.Locale.ROOT, ${args(1)})"
 
       case "__Map_empty__" => "Map()"
