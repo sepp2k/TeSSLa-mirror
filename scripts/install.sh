@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Note: depreciated!
+
 # set -x # @echo on
 
 cd target/scala-2.13/ || {
