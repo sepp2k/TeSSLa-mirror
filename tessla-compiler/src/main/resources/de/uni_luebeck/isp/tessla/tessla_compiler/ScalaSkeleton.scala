@@ -111,16 +111,18 @@ object Main {
       while (true) {
 
         if ({ line = br.readLine(); line != null }) {
-          val col = line.indexOf(':')
-          newInputTs = java.lang.Long.parseLong(line.substring(0, col).strip)
-          val rightPart: String = line.substring(col + 1, line.length).strip
-          val eq = rightPart.indexOf('=')
-          if (eq != -1) {
-            inputStream = rightPart.substring(0, eq).strip
-            value = rightPart.substring(eq + 1, rightPart.length).strip
-          } else {
-            inputStream = rightPart
-            value = ""
+          if (line != "") {
+            val col = line.indexOf(':')
+            newInputTs = java.lang.Long.parseLong(line.substring(0, col).strip)
+            val rightPart: String = line.substring(col + 1, line.length).strip
+            val eq = rightPart.indexOf('=')
+            if (eq != -1) {
+              inputStream = rightPart.substring(0, eq).strip
+              value = rightPart.substring(eq + 1, rightPart.length).strip
+            } else {
+              inputStream = rightPart
+              value = ""
+            }
           }
         } else {
           inputEndReached = true
@@ -155,7 +157,10 @@ object Main {
           System.err.println(s"$currTs: FATAL: decreasing timestamp received")
           System.exit(128)
         }
+
+        if (line != "") {
 //INPUTPROCESSING
+        }
       }
     } catch {
       case e: Exception => {
