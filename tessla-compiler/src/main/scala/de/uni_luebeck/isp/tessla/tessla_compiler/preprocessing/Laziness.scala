@@ -69,18 +69,20 @@ object Laziness extends TranslationPhase[ExtendedSpecification, ExtendedSpecific
       scope: Map[Identifier, DefinitionExpression],
       stack: Set[Identifier] = Set()
     ): Unit = {
-      if (stack.contains(id)) {
-        lazyByInlining -= id
-        lazyIds += id
-      } else {
-        if (extSpec.usageInfo.get.getOrElse(id, Set()).size <= 1 && !lazyIds.contains(id)) {
-          //TODO one could use a better heuristic here to decide when to inline
-          lazyByInlining += id
-        } else {
+      if (!lazyIds.contains(id)) {
+        if (stack.contains(id)) {
+          lazyByInlining -= id
           lazyIds += id
-        }
-        if (scope.contains(id)) {
-          examineLazynessCandidate(scope(id), scope, stack + id)
+        } else {
+          if (extSpec.usageInfo.get.getOrElse(id, Set()).size <= 1 && !lazyIds.contains(id)) {
+            //TODO one could use a better heuristic here to decide when to inline
+            lazyByInlining += id
+          } else {
+            lazyIds += id
+          }
+          if (scope.contains(id)) {
+            examineLazynessCandidate(scope(id), scope, stack + id)
+          }
         }
       }
     }
@@ -113,6 +115,7 @@ object Laziness extends TranslationPhase[ExtendedSpecification, ExtendedSpecific
     }
 
     mapDefinitionsForLazyness(spec.definitions, spec.definitions)
+
     Success(ExtendedSpecification(spec, extSpec.usageInfo, Some(lazyIds.toSet), Some(lazyByInlining.toSet)), Seq())
 
   }
