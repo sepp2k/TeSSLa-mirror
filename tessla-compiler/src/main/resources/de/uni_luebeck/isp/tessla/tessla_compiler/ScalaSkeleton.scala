@@ -96,11 +96,11 @@ object Main {
     }
   }
 
+  //STATIC
+
+  //VARDEF
+
   def main(args: Array[String]): Unit = {
-
-//STATIC
-
-//VARDEF
 
     try {
       val br: BufferedReader = new BufferedReader(new InputStreamReader(System.in))

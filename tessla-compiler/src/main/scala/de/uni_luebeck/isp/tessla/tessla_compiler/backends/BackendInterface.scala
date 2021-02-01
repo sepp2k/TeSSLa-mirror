@@ -39,6 +39,7 @@ abstract class BackendInterface(sourceTemplate: String, userIncludes: String)
     extends TranslationPhase[SourceListing, String] {
 
   protected var variables: Seq[(String, (ImpLanType, Option[ImpLanExpr], DeclarationType))] = Seq()
+  protected val chunkSize = Integer.MAX_VALUE
 
   /**
    * Function triggering the translation from a [[IntermediateCode.SourceListing]] to real-world source code as String.
@@ -84,14 +85,20 @@ abstract class BackendInterface(sourceTemplate: String, userIncludes: String)
 
     staticVars = IntermediateCodeUtils.getVariableSeq(listing.staticSource, global = true)
 
+    val (chunks, chuckCalls) = if (listing.stepSource.size > chunkSize) {
+      generateChunkCode(listing.stepSource)
+    } else {
+      ("", generateCode(listing.stepSource))
+    }
+
     val source = Source.fromResource(sourceTemplate).mkString
     val rewrittenSource = source
       .replace(
         "//VARDEF",
-        generateVariableDeclarations(nonStaticVars.diff(staticVars)).mkString("\n")
+        generateVariableDeclarations(nonStaticVars.diff(staticVars)).mkString("\n") + "\n\n" + chunks
       )
       .replace("//TRIGGER", generateCode(listing.tsGenSource))
-      .replace("//STEP", generateCode(listing.stepSource))
+      .replace("//STEP", chuckCalls)
       .replace("//TAIL", generateCode(listing.tailSource))
       .replace("//INPUTPROCESSING", generateCode(listing.inputProcessing))
       .replace(
@@ -121,4 +128,14 @@ abstract class BackendInterface(sourceTemplate: String, userIncludes: String)
    * @return The generated code in the target language
    */
   def generateCode(stmts: Seq[ImpLanStmt]): String
+
+  /**
+   * Translates a sequence of [[IntermediateCode.ImpLanStmt]] to the corresponding code in the target language.
+   * In difference to [[generateCode]] it splits the statements into groups of size [[chunkSize]] and
+   * creates an own method for each of them. This is useful for the generation of Scala code to give the JIT
+   * compiler better opportunities to optimize.
+   * @param stmts The sequence of statements to be translated.
+   * @return Tuple with the chunk methods as first parameter and chunk method calls as second parameter.
+   */
+  def generateChunkCode(stmts: Seq[ImpLanStmt]): (String, String)
 }

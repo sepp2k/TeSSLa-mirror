@@ -41,6 +41,8 @@ class ScalaBackend(ioInterface: Boolean, userIncludes: String = "")
       userIncludes
     ) {
 
+  override val chunkSize = 300;
+
   /**
    * Translates a map of variables with base information (type, default value, lazy assignment) to corresponding
    * variable declarations in Scala.
@@ -159,5 +161,25 @@ class ScalaBackend(ioInterface: Boolean, userIncludes: String = "")
       case LongType | DoubleType | BoolType | UnitType | ErrorType => false
       case _                                                       => true
     }
+  }
+
+  /**
+   * Translates a sequence of [[IntermediateCode.ImpLanStmt]] to the corresponding code in the target language.
+   * In difference to [[generateCode]] it splits the statements into groups of size [[chunkSize]] and
+   * creates an own method for each of them.
+   * @param stmts The sequence of statements to be translated.
+   * @return Tuple with the chunk methods as first parameter and chunk method calls as second parameter.
+   */
+  def generateChunkCode(stmts: Seq[ImpLanStmt]): (String, String) = {
+    val chunks = (stmts.size / chunkSize) + 1
+    var chunkCode = ""
+    var callCode = ""
+
+    (1 to chunks).foreach { i =>
+      chunkCode += s"def chunk${i}() = {\n${generateCode(stmts.slice((i - 1) * chunkSize, i * chunkSize))}\n}\n"
+      callCode += s"chunk${i}()\n"
+    }
+
+    (chunkCode, callCode)
   }
 }
