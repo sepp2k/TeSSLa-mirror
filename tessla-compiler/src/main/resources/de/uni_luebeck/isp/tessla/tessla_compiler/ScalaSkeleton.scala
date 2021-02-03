@@ -111,7 +111,7 @@ object Main {
       while (true) {
 
         if ({ line = br.readLine(); line != null }) {
-          if (line != "") {
+          if (line != "" && !line.startsWith("#")) {
             val col = line.indexOf(':')
             newInputTs = java.lang.Long.parseLong(line.substring(0, col).strip)
             val rightPart: String = line.substring(col + 1, line.length).strip
