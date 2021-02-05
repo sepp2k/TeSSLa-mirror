@@ -45,20 +45,17 @@ object Main extends SexyOpt {
 
     def unwrapResult[T](result: Result[T]): T = result match {
       case Success(res, warnings) =>
-        if (debug)
-          warnings.foreach(w => System.err.println(s"Warning: $w"))
+        warnings.foreach(w => System.err.println(s"Warning: $w"))
         res
       case Failure(errors, warnings) =>
-        if (debug) {
           warnings.foreach(w => System.err.println(s"Warning: $w"))
           errors.foreach { e =>
             System.err.println(s"Error: $e")
-            e.printStackTrace()
+            if (debug) e.printStackTrace()
           }
           System.err.println(
             s"Compilation failed with ${warnings.length} warnings and ${errors.length} errors"
           )
-        }
         sys.exit(1)
     }
 

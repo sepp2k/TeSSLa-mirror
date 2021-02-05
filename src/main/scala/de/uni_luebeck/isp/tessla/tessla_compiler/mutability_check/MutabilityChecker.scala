@@ -297,7 +297,6 @@ object MutabilityChecker extends
       if (!immutVars.contains(mut)) inlinings.getOrElse(from, Set()).map(to -> _) + (to -> from) else None
     }.groupBy(_._1).view.mapValues(e => e.map(x => x._2).toSet).toMap
 
-
     /*
     println("========================")
     println(nodes)
