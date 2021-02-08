@@ -9,7 +9,7 @@ module OptionUtils {
   ## ~~~tessla
   ## in x: Events[Option[Int]]
   ## def f(a: Int) = a * 2
-  ## def mapped := slift1(x, (opt: Option[Int]) => Option.map(opt, f))
+  ## def mapped := slift1(x, (opt: Option[Int]) => OptionUtils.map(opt, f))
   ## out mapped
   ## ~~~
   ##
@@ -44,7 +44,7 @@ module OptionUtils {
   ## ~~~tessla
   ## in x: Events[Option[Int]]
   ## def f(a: Int) = if a < 5 then Some(a * 2) else None[Int]
-  ## def mapped := slift1(x, (opt: Option[Int]) => Option.flatMap(opt, f))
+  ## def mapped := slift1(x, (opt: Option[Int]) => OptionUtils.flatMap(opt, f))
   ## out mapped
   ## ~~~
   ##
@@ -81,7 +81,7 @@ module OptionUtils {
   ## in x: Events[Int]
   ## in y: Events[Int]
   ## def f(a: Int, b: Int) = a + b
-  ## def mapped := lift(x, y, (opt1: Option[Int], opt2: Option[Int]) => Option.map2(opt1, opt2, f))
+  ## def mapped := lift(x, y, (opt1: Option[Int], opt2: Option[Int]) => OptionUtils.map2(opt1, opt2, f))
   ## out mapped
   ## ~~~
   ##
@@ -105,6 +105,8 @@ module OptionUtils {
   def map2[T,U,V](opt1: Option[T], opt2: Option[U], f: (T, U) => V): Option[V] =
     flatMap(opt1, (v1: T) => map(opt2, (v2: U) => f(v1, v2)))
 
+  ## Converts an option value to a Set. In case of @[Option#Some] a set of size one containing only the value of the
+  ## option is returned. In the case of @[Option#None] an empty set is returned.
   liftable def toSet[T](option: Option[T]): Set[T] = __private__Option_toSet(option)
 }
 
