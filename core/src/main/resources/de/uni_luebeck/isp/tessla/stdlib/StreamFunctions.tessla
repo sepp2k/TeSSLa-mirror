@@ -1792,4 +1792,99 @@ module StreamFunctions {
    def result: Events[A] =
      merge(filter(e, time(e) - last(time(result), e) >= rate), firstEvent(e))
   }
+
+  ## `zip` is an alias for [`zip2`](#zip2).
+  def zip = zip2
+
+  ## Zips together two streams to a single stream. The events of the resulting stream are tuples with two options.
+  ## The options are variant of @[Option#Some] if the corresponding stream has an event, otherwise @[Option#None].
+  ## If none of the argument streams has an event also the resulting stream has no event.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## def y = zip(a, b)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [0,8.5]
+  ## option axis: true
+  ## stream a: events
+  ## stream b: events
+  ## stream y: events
+  ## ---
+  ## 1: a = 5
+  ## 1: y = (Some(5), None)
+  ## 5: b = 4
+  ## 5: y = (None, Some(4))
+  ## 8: a = 2
+  ## 8: b = -1
+  ## 8: y = (Some(2), Some(-1))
+  ## ~~~
+  def zip2[A,B](a: Events[A], b: Events[B]) : Events[(Option[A], Option[B])] := r where {
+    def r := lift(a, b, (a: Option[A], b: Option[B]) => Some((a, b)))
+  }
+
+  ## Zips together three streams to a single stream. The events of the resulting stream are tuples with three options.
+  ## The options are variant of @[Option#Some] if the corresponding stream has an event, otherwise @[Option#None].
+  ## If none of the argument streams has an event also the resulting stream has no event.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## in c: Events[Int]
+  ## def y = zip(a, b, c)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [0,10.5]
+  ## option axis: true
+  ## stream a: events
+  ## stream b: events
+  ## stream c: events
+  ## stream y: events
+  ## ---
+  ## 1: a = 5
+  ## 1: y = (Some(5), None, None)
+  ## 5: b = 4
+  ## 5: y = (None, Some(4), None)
+  ## 8: a = 2
+  ## 8: b = -1
+  ## 8: y = (Some(2), Some(-1), None)
+  ## 10: a = 2
+  ## 10: b = 4
+  ## 10: c = 8
+  ## 10: y = (Some(2), Some(4), Some(8))
+  ## ~~~
+  def zip3[A,B,C](a: Events[A], b: Events[B], c: Events[C]) : Events[(Option[A], Option[B], Option[C])] := r where {
+    def r := lift3(a, b, c, (a: Option[A], b: Option[B], c: Option[C]) => Some((a, b, c)))
+  }
+
+  ## Zips together four streams to a single stream. The events of the resulting stream are tuples with four options.
+  ## The options are variant of @[Option#Some] if the corresponding stream has an event, otherwise @[Option#None].
+  ## If none of the argument streams has an event also the resulting stream has no event.
+  ##
+  ## See [`zip3`](#zip3) for a usage example.
+  def zip4[A,B,C,D](a: Events[A], b: Events[B], c: Events[C], d: Events[D]) : Events[(Option[A], Option[B], Option[C], Option[D])] := r where {
+    def r := lift4(a, b, c, d, (a: Option[A], b: Option[B], c: Option[C], d: Option[D]) => Some((a, b, c, d)))
+  }
+
+  ## Zips together five streams to a single stream. The events of the resulting stream are tuples with five options.
+  ## The options are variant of @[Option#Some] if the corresponding stream has an event, otherwise @[Option#None].
+  ## If none of the argument streams has an event also the resulting stream has no event.
+  ##
+  ## See [`zip3`](#zip3) for a usage example.
+  def zip5[A,B,C,D,E](a: Events[A], b: Events[B], c: Events[C], d: Events[D], e: Events[E]) : Events[(Option[A], Option[B], Option[C], Option[D], Option[E])] := r where {
+    def r := lift5(a, b, c, d, e, (a: Option[A], b: Option[B], c: Option[C], d: Option[D], e: Option[E]) => Some((a, b, c, d, e)))
+  }
 }
