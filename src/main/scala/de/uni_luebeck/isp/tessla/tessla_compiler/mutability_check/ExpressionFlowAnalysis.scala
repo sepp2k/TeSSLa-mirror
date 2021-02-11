@@ -11,13 +11,14 @@ object ExpressionFlowAnalysis {
   //TODO: --> STDLIB Annotations ?!
   //TODO: Set[Set] ...
 
-  final case class IdentifierDependencies(reads: Set[Identifier],
-                                          writes: Set[Identifier],
-                                          reps: Set[Identifier],
-                                          pass: Set[Identifier],
-                                          deps: Set[Identifier],
-                                          immut: Set[Identifier],
-                                          calls: Set[(Identifier, Identifier)]) {
+  final case class IdentifierDependencies(reads: Set[Identifier],                   // Variable is read
+                                          writes: Set[Identifier],                  // Variable is written
+                                          reps: Set[Identifier],                    // Variable is replicated
+                                          pass: Set[Identifier],                    // Variable is passed through command
+                                          deps: Set[Identifier],                    // Variable in ancestor in usage graph
+                                          immut: Set[Identifier],                   // Must be immutable for other reason, e.g inserted into set
+                                          calls: Set[(Identifier, Identifier)])     // Ties together vars which get values passe (function calls, returns...)
+  {
 
     def ++(o: IdentifierDependencies): IdentifierDependencies = {
       IdentifierDependencies(
