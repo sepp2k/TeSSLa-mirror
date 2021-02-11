@@ -1,9 +1,9 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import java.io.{File, PrintWriter}
-
 import de.uni_luebeck.isp.tessla.{Compiler, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.Errors.TesslaError
+import de.uni_luebeck.isp.tessla.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaBackend
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{ASTPreprocessor, ASTRemoveUnused, StreamDefFlattener}
@@ -81,7 +81,12 @@ object Main extends SexyOpt {
         val coreWithMutInf = if (mutability) {
           unwrapResult(MutabilityChecker.translate(core).andThen(ASTTransformation))
         } else {
-          ??? //TODO: new TesslaCoreWithMutabilityInfo(core, Set(), Map())
+          new TesslaCoreWithMutabilityInfo(
+                    core,
+                    (id, idMap: Map[Identifier, DefinitionExpression]) => idMap(id).tpe,
+                    Map(),
+                    new ImplicationChecker(core)
+                  )
         }
 
         //println(coreWithMutInf)
