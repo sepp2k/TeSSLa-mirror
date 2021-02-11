@@ -76,11 +76,17 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
 
   //TODO: Maybe duplicate exists somewhere else
   def getExpsFlow(exps: Set[(Identifier, ExpressionArg)], scope: Map[Identifier, DefinitionExpression],
-                  fixedPoints: Map[Identifier, IdentifierDependencies]): IdentifierDependencies = {
+                  fixedPoints: Map[Identifier, IdentifierDependencies], resId: Identifier): IdentifierDependencies = {
     if (exps.isEmpty) {
       IdentifierDependencies.empty
     } else {
-      exps.map{case (i, e) => getExpFlow(i, e, scope, fixedPoints)}.reduce(_ ++ _)
+      val allExpFlows = exps.map{case (i, e) => (i, getExpFlow(i, e, scope, fixedPoints))}.toMap
+      def extendPass(id: Identifier, pass: Set[Identifier]): Set[Identifier] = {
+        val newPass = allExpFlows.getOrElse(id, IdentifierDependencies.empty).pass.diff(pass)
+        val extPass = pass ++ newPass
+        if (newPass.isEmpty) extPass else extPass ++ newPass.map(i => extendPass(i, extPass)).reduce(_ ++ _)
+      }
+      allExpFlows.values.reduce(_ ++ _).copy(pass = extendPass(resId, Set()))
     }
   }
 
@@ -90,12 +96,12 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
     val idDeps = e match {
       case FunctionExpression(_, params, body, result, _) =>
         val exps = body.toSeq :+ (resID, result)
-        val deps = getExpsFlow(exps.toSet, scope ++ body, fixedPoints)
-          if (onlyParams) {
-            deps.mapAll(_.intersect(params.map(_._1).toSet))
-          } else {
-            deps.removeAll(body.keys.toSet ++ params.map(_._1))
-          }
+        val deps = getExpsFlow(exps.toSet, scope ++ body, fixedPoints, result.asInstanceOf[ExpressionRef].id)
+        if (onlyParams) {
+          deps.mapAll(_.intersect(params.map(_._1).toSet))
+        } else {
+          deps.removeAll(body.keys.toSet ++ params.map(_._1))
+        }
       case ApplicationExpression(applicable, args, _) =>
         getLiftFlow(resID, applicable, args, scope, fixedPoints)
       case TypeApplicationExpression(applicable, _, _) => getExpFlow(resID, applicable, scope, fixedPoints)
@@ -120,6 +126,7 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
     do {
       oldFixedPoint = newFixedPoint
       newFixedPoint = oldFixedPoint ++ getExpFlow(resID, scope(liftID), scope, fixedPoints + (liftID -> oldFixedPoint), true)
+
     } while (newFixedPoint != oldFixedPoint)
 
     newFixedPoint

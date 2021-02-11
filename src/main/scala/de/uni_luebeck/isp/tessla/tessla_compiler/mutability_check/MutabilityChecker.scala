@@ -163,6 +163,7 @@ object MutabilityChecker extends
     //No IDs belonging to already immutable vars
     immutVars ++= immutVars.flatMap(variableFamilies.equivalenceClass)
 
+
     def cleanParent(node: Identifier, beat: Seq[Identifier], caller: Identifier, origWrite: Identifier) : (Set[Identifier], Boolean) = {
 
       //println(s"cleanParent: $node")
@@ -272,7 +273,8 @@ object MutabilityChecker extends
       if (!immutVars.contains(mut)) inlinings.getOrElse(from, Set()).map(to -> _) + (to -> from) else None
     }.groupBy(_._1).view.mapValues(e => e.map(x => x._2).toSet).toMap
 
-   /*
+
+    /*
     println("========================")
     println(nodes)
     println("-READS-")
@@ -295,7 +297,8 @@ object MutabilityChecker extends
     println(readBeforeWrites)
     println("-Z3-IMMUT-")
     println(immutVars)
-  */
+    */
+
 
     def targetVarType(id: Identifier, scope: Map[Identifier, DefinitionExpression]) : Type = {
       val origType = if (spec.in.contains(id)) {
