@@ -455,6 +455,43 @@ module Map {
         empty[A, Int])
     map
   }
+
+  # TODO: Make extern
+  ## Applies a function to all elements in the map and returns a new map with the mapped elements.
+  ## The applied function `f` is able to map key and value. The order in which the mapping function is applied
+  ## to the elements is non-deterministic. If `f` maps several entries to the same key, the later mappings overwrite
+  ## the previous ones.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## liftable def add1(l: Map[Int, Int]) = Map.map(l, (a: Int, b: Int) => (a + 1, b + 1))
+  ## in x: Events[Map[Int, Int]]
+  ## def y: Events[Map[Int, Int]] = add1(x)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,7]
+  ## stream x: signal
+  ## stream y: signal
+  ## ---
+  ## 0: x = 1 → 2, 2 → 3
+  ## 0: y = 2 → 3, 3 → 4
+  ## 2: x = 1 → 0, 1 → 3
+  ## 2: y = 2 → 1
+  ## 4: x = 1 → 0, 1 → 3
+  ## 4: y = 2 → 4
+  ## 6: x = —
+  ## 6: y = —
+  ## ~~~
+  def map[A, B, C, D](m: strict Map[A, B], f: strict (strict A, strict B) => (C, D)) : Map[C, D] = {
+      fold(m, empty[C, D], (c: Map[C, D], a: A, b: B) => {
+        def n = f(a,b)
+        add(c, n._1, n._2)
+      })
+  }
 }
 
 ## inmodule Map

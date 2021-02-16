@@ -329,7 +329,7 @@ module List {
   ##
   ## ~~~tessla
   ## in x: Events[Int]
-  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
+  ## def list: Events[List[Int]] = List.fold(x, List.empty[Int], List.append)
   ## def s = List.fold(list, 0, (a:Int, b:Int) => a + b)
   ## out s
   ## ~~~
@@ -355,6 +355,112 @@ module List {
   ## 6: x = 3
   ## ~~~
   liftable def fold[T, U](list: strict List[T], start: lazy U, f: strict (strict U, strict T) => U): U = extern("List_fold")
+
+
+  ## Zips the elements of a list together with their index.
+  ## The resulting list bears tuples of the index starting with 0 and the value
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[List[Int]]
+  ## def zList: Events[List[Int]] = List.zipWithIndex(x)
+  ## out zList
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,5]
+  ## stream x: signal
+  ## stream zList: signal
+  ## ---
+  ## 0: x = [1, 2, 3]
+  ## 0: zList = [(0,1), (1,2), (2,3)]
+  ## 2: x = [5]
+  ## 2: zList = [(0, 5)]
+  ## 4: x = []
+  ## 4: zList = []
+  ## ~~~
+  liftable def zipWithIndex[A](x: List[A]) : List[(Int, A)]= {
+    def idxs = fold(x, (0, List.empty[Int]), (curr: (Int, List[Int]), _: A) =>
+      (curr._1 + 1, append(curr._2, curr._1)))._2
+
+    map(idxs, (i: Int) => (i, get(x, i)))
+  }
+
+
+  ## Zips together two lists.
+  ## The resulting list contains tuples of the corresponding elements of the two input lists.
+  ## The resulting list has the size of the shorter one of the two input lists.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[List[Int]]
+  ## in y: Events[List[String]]
+  ## def z: Events[List[(Int, String)]] = List.zip(x, y)
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,5]
+  ## stream x: signal
+  ## stream y: signal
+  ## stream z: signal
+  ## ---
+  ## 0: x = [1, 2]
+  ## 0: y = ["a", "b"]
+  ## 0: z = [(1,"a"), (2,"b")]
+  ## 2: x = [5]
+  ## 2: y = ["a", "b"]
+  ## 2: z = [(5, "a")]
+  ## 4: x = [2,3]
+  ## 4: y = []
+  ## 4: z = []
+  ## ~~~
+  liftable def zip[A,B](x: List[A], y: List[B]) : List[(A, B)]= {
+    def addIfPossible(curr: (Int, List[(A, B)]), a: A) = {
+        if (List.size(y) > curr._1) then {
+            (curr._1 + 1, List.append(curr._2, (a, List.get(y, curr._1))))
+        } else {
+            curr
+        }
+    }
+
+    fold(x, (0, empty[(A,B)]), addIfPossible)._2
+  }
+
+
+  # TODO: Make extern
+  ## Applies a function to all elements in the list and returns a new list with the mapped elements.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## liftable def add1(l: List[Int]) = List.map(l, (a: Int) => a + 1)
+  ## in x: Events[List[Int]]
+  ## def y: Events[List[Int]] = add1(x)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,5]
+  ## stream x: signal
+  ## stream y: signal
+  ## ---
+  ## 0: x = [1, 2, 3]
+  ## 0: y = [2, 3, 4]
+  ## 2: x = [5]
+  ## 2: y = [6]
+  ## 4: x = []
+  ## 4: y = []
+  ## ~~~
+  def map[A, B](l: strict List[A], f: strict (strict A) => B) : List[B] = {
+    fold(l, List.empty[B], (c: List[B], a: A) => append(c, f(a)))
+  }
+
 }
 
 ## inmodule List

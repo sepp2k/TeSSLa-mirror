@@ -394,6 +394,35 @@ module Set {
     def set = default(operation, empty[T])
     set
   }
+
+  # TODO: Make extern
+  ## Applies a function to all elements in the set and returns a new set with the mapped elements.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## liftable def add1(l: Set[Int]) = Set.map(l, (a: Int) => a + 1)
+  ## in x: Events[Set[Int]]
+  ## def y: Events[Set[Int]] = add1(x)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,5]
+  ## stream x: signal
+  ## stream y: signal
+  ## ---
+  ## 0: x = {1, 2, 3}
+  ## 0: y = {2, 3, 4}
+  ## 2: x = {5}
+  ## 2: y = {6}
+  ## 4: x = {}
+  ## 4: y = {}
+  ## ~~~
+  def map[A, B](l: strict Set[A], f: strict (strict A) => B) : Set[B] = {
+     fold(l, empty[B], (c: Set[B], a: A) => add(c, f(a)))
+  }
 }
 
 ## inmodule Set
