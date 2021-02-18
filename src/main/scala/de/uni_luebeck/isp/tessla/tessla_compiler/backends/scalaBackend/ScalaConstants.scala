@@ -42,11 +42,11 @@ object ScalaConstants {
       case EmptyFunction(_) => "null"
       case None(_) => "None"
       case Some(content) => s"Option(${valueTranslation(content)})"
-      case EmptyMutableSet(_) => s"scala.collection.mutable.HashSet()"
+      case EmptyMutableSet(t) => typeTranslation(MutableSetType(t)) + "()"
       case EmptyImmutableSet(_) => s"Set()"
-      case EmptyMutableMap(_, _) => s"scala.collection.mutable.HashMap()"
+      case EmptyMutableMap(t1, t2) => typeTranslation(MutableMapType(t1, t2)) + "()"
       case EmptyImmutableMap(_, _) => "Map()"
-      case EmptyMutableList(_) => "scala.collection.mutable.ArrayBuffer()"
+      case EmptyMutableList(t) => typeTranslation(MutableListType(t)) + "()"
       case EmptyImmutableList(_) => "List()"
       case StructValue(vals) => s"(${vals.toSeq.sortWith{case ((n1,_),(n2,_)) => n1 < n2}.map{case (_, v) => valueTranslation(v)}.mkString(", ")})"
     }
@@ -111,7 +111,7 @@ object ScalaConstants {
       case "__toString__" =>  s"${args(0)}.toString"
       case "__String_format__" => s"${args(0)}.formatLocal(java.util.Locale.ROOT, ${args(1)})"
 
-      case "__Map_empty__" if typeHint.retType.isInstanceOf[MutableMapType] => "scala.collection.mutable.HashMap()"
+      case "__Map_empty__" if typeHint.retType.isInstanceOf[MutableMapType] => typeTranslation(typeHint.retType) + "()"
       case "__Map_empty__" => "Map()"
       case "__Map_add__" if typeHint.retType.isInstanceOf[MutableMapType] => s"${args(0)} += ((${args(1)}) -> (${args(2)}))"
       case "__Map_add__" => s"${args(0)} + ((${args(1)}) -> (${args(2)}))"
@@ -123,7 +123,7 @@ object ScalaConstants {
       case "__Map_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
       case "__Map_keys__" => s"${args(0)}.keys"
 
-      case "__Set_empty__" if typeHint.retType.isInstanceOf[MutableSetType] => "scala.collection.mutable.HashSet()"
+      case "__Set_empty__" if typeHint.retType.isInstanceOf[MutableSetType] => typeTranslation(typeHint.retType) + "()"
       case "__Set_empty__" => "Set()"
       case "__Set_add__" if typeHint.retType.isInstanceOf[MutableSetType] => s"${args(0)} += (${args(1)})"
       case "__Set_add__" => s"${args(0)} + (${args(1)})"
@@ -137,7 +137,7 @@ object ScalaConstants {
       case "__Set_minus__" => s"${args(0)} -- ${args(1)}"
       case "__Set_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
 
-      case "__List_empty__" if typeHint.retType.isInstanceOf[MutableListType] => "scala.collection.mutable.ArrayBuffer()"
+      case "__List_empty__" if typeHint.retType.isInstanceOf[MutableListType] => typeTranslation(typeHint.retType) + "()"
       case "__List_empty__" => s"List()"
       case "__List_size__" => s"${args(0)}.size"
       case "__List_append__" if typeHint.retType.isInstanceOf[MutableListType] => s"${args(0)} += ${args(1)}"
