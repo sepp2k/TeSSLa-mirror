@@ -75,20 +75,33 @@ object ExpressionFlowAnalysis {
 
 class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
 
-  //TODO: Maybe duplicate exists somewhere else
   def getExpsFlow(exps: Set[(Identifier, ExpressionArg)], scope: Map[Identifier, DefinitionExpression],
                   fixedPoints: Map[Identifier, IdentifierDependencies], resId: Identifier): IdentifierDependencies = {
-    if (exps.isEmpty) {
-      IdentifierDependencies.empty
-    } else {
-      val allExpFlows = exps.map{case (i, e) => (i, getExpFlow(i, e, scope, fixedPoints))}.toMap
-      def extendPass(id: Identifier, pass: Set[Identifier]): Set[Identifier] = {
-        val newPass = allExpFlows.getOrElse(id, IdentifierDependencies.empty).pass.diff(pass)
-        val extPass = pass ++ newPass
-        if (newPass.isEmpty) extPass else extPass ++ newPass.map(i => extendPass(i, extPass)).reduce(_ ++ _)
-      }
-      allExpFlows.values.reduce(_ ++ _).copy(pass = extendPass(resId, Set()))
+    val expMap : Map[Identifier, ExpressionArg] = exps.toMap
+    var expFlows : Map[Identifier, IdentifierDependencies] = Map()
+
+    def getWithPass(stack: Set[Identifier])(s: Set[Identifier]) : Set[Identifier] = {
+      s  ++ s.flatMap{i => recGetExpFlow(i, stack).pass}
     }
+
+    def recGetExpFlow(id: Identifier, stack: Set[Identifier] = Set()) : IdentifierDependencies = {
+      if (stack.contains(id)) {
+        IdentifierDependencies.empty
+      } else if (expFlows.contains(id)) {
+        expFlows(id)
+      } else if (expMap.contains(id)) {
+        val flow = getExpFlow(id, expMap(id), scope, fixedPoints)
+        val deps = flow.mapAll(getWithPass(stack + id))
+        expFlows += (id -> deps)
+
+        deps
+      } else {
+        IdentifierDependencies.empty
+      }
+    }
+
+    expMap.keys.foreach(i => recGetExpFlow(i))
+    expFlows.values.reduce(_ ++ _).copy(pass = expFlows(resId).pass)
   }
 
   def getExpFlow(resID: Identifier, e: ExpressionArg, scope: Map[Identifier, DefinitionExpression],
