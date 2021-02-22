@@ -39,6 +39,10 @@ object Main extends SexyOpt {
   val verbose: Main.Argument[Boolean] =
     flag("verbose", 'v', "Produce a lot of output")
 
+  val userCode: Main.Argument[Option[String]] =
+    option("user-include", 'u', "User-specific code to be included"
+  )
+
   def mutability: Boolean = !noMutability.value
 
   def main(args: Array[String]): Unit = {
@@ -69,7 +73,7 @@ object Main extends SexyOpt {
         stdlibPath = "stdlib.tessla"
       )
 
-      val (backend, stdinRead): (backends.BackendInterface, Boolean) = (new ScalaBackend, true)
+      val (backend, stdinRead): (backends.BackendInterface, Boolean) = (new ScalaBackend(userCode.getOrElse("")), true)
 
         val unflatCore = unwrapResult(unwrapResult((new Compiler).compile(specSource, compilerOptions))._2)
         val core = unwrapResult((new StreamDefFlattener).translate(unflatCore).andThen(new ASTPreprocessor(mutability)).andThen(new ASTRemoveUnused))

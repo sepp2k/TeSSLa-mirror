@@ -7,7 +7,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{IntermediateCodeTypeInference,
 /**
   * BackendInterface implementation for the translation to Java code
   */
-class ScalaBackend extends BackendInterface("de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeleton.scala") {
+class ScalaBackend(userInclude: String) extends BackendInterface(userInclude, "de/uni_luebeck/isp/tessla/tessla_compiler/ScalaSkeleton.scala") {
 
   override def generateVariableDeclarations(vars: Map[String, (ImpLanType, Option[ImpLanExpr], Boolean)]): Seq[String] = {
     generateVariableDeclarationsWithScopeInfo(vars)
