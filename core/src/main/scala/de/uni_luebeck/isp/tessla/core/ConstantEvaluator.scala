@@ -314,13 +314,14 @@ object ConstantEvaluator {
   val callableExterns: Map[String, TypeExtern] = RuntimeExterns
     .commonCallableExterns[TranslatableMonad]
     .view
-    .mapValues {
-      f: Extern => (_: List[Typed.Type]) => f
+    .mapValues { f: Extern => (_: List[Typed.Type]) =>
+      f
     }
-    .toMap.withDefaultValue(noExtern)
+    .toMap
+    .withDefaultValue(noExtern)
 
-
-  val constantExterns: Map[String, Option[Any]] = RuntimeExterns.commonConstantExterns.view.mapValues(Some(_)).toMap.withDefaultValue(None)
+  val constantExterns: Map[String, Option[Any]] =
+    RuntimeExterns.commonConstantExterns.view.mapValues(Some(_)).toMap.withDefaultValue(None)
 }
 
 class ConstantEvaluator extends TranslationPhase[Typed.Specification, Core.Specification] {
