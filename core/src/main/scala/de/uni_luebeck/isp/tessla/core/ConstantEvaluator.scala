@@ -348,7 +348,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
       case (defId, exp) =>
         val result = translateExpressionArg(exp, env, Map(), defId.idOrName.left)
           .translate(translatedExpressions)
-        lazy val id = translateIdentifier(defId)
+        lazy val id = makeIdentifier(defId)
         defId -> pushStack(
           TranslationResult[Any, Some](
             result.value,
@@ -382,7 +382,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
         val annotations = translateAnnotations(typedAnnotations, env, translatedExpressions)
         val translatedRef = env(outRef.id).expression.get(List(outRef.location)).get match {
           case Left(expression) =>
-            val id = translateIdentifier(outRef.id)
+            val id = makeIdentifier(outRef.id)
             translatedExpressions.expressions += id -> expression.get(List(outRef.location))
             Core.ExpressionRef(id, expression.get(List(outRef.location)).tpe, outRef.location)
           case Right(ref) =>
@@ -390,7 +390,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
               case Core.ExpressionRef(id, tpe, _) =>
                 Core.ExpressionRef(id, tpe, outRef.location)
               case expression: Core.Expression =>
-                val id = translateIdentifier(outRef.id)
+                val id = makeIdentifier(outRef.id)
                 translatedExpressions.expressions += id -> expression
                 Core.ExpressionRef(id, expression.tpe, outRef.location)
             }
@@ -536,7 +536,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
             val innerTypeEnv = typeEnv -- typeParams
 
             val translatedParams = params.map { param =>
-              val paramId = makeIdentifier(param._1.idOrName.left, param._1.location)
+              val paramId = makeIdentifier(param._1)
               val tpe = translateType(param._3, innerTypeEnv)
               val ref = Lazy(Core.ExpressionRef(paramId, tpe))
               param._1 -> (paramId, translateEvaluation(param._2), tpe,
@@ -808,6 +808,9 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
   }
 
   private var counter = spec.maxIdentifier
+
+  def makeIdentifier(identifier: Typed.Identifier): Core.Identifier =
+    makeIdentifier(identifier.idOrName.left, identifier.location)
 
   def makeIdentifier(
     name: Option[String],
