@@ -63,14 +63,14 @@ object RuntimeExterns {
   type Extern[A[+_]] = ArraySeq[A[Any]] => A[Any]
   type RuntimeExtern = Extern[Lazy]
 
-  val runtimeCommonExterns = commonExterns[Lazy]
-
-  def commonExterns[A[+_]: Monad]: Map[String, Any] = Map(
+  val commonConstantExterns: Map[String, Any] = Map(
     "false" -> false,
     "true" -> true
-  ) ++ callableExterns[A]
+  )
 
-  def callableExterns[A[+_]: Monad]: Map[String, Extern[A]] = Map(
+  val runtimeCommonExterns = commonConstantExterns ++ commonCallableExterns[Lazy]
+
+  def commonCallableExterns[A[+_]: Monad]: Map[String, Extern[A]] = Map(
     "add" -> binIntOp(_ + _),
     "sub" -> binIntOp(_ - _),
     "mul" -> binIntOp(_ * _),

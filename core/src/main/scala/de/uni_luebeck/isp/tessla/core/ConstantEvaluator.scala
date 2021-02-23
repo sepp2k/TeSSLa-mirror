@@ -311,17 +311,16 @@ object ConstantEvaluator {
   /**
    * Convert runtime to compile time externs by ignoring type parameters.
    */
-  val valueExterns: Map[String, Any] = RuntimeExterns
-    .commonExterns[TranslatableMonad]
+  val callableExterns: Map[String, TypeExtern] = RuntimeExterns
+    .commonCallableExterns[TranslatableMonad]
     .view
     .mapValues {
-      case f: Extern => (_: List[Typed.Type]) => f
-      case v         => v
+      f: Extern => (_: List[Typed.Type]) => f
     }
-    .toMap
+    .toMap.withDefaultValue(noExtern)
 
-  val externs = valueExterns.withDefaultValue(noExtern)
 
+  val constantExterns: Map[String, Option[Any]] = RuntimeExterns.commonConstantExterns.view.mapValues(Some(_)).toMap.withDefaultValue(None)
 }
 
 class ConstantEvaluator extends TranslationPhase[Typed.Specification, Core.Specification] {
@@ -485,7 +484,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
                 val innerTypeEnv = typeEnv ++ typeParams.zip(typeArgs)
                 args =>
                   Translatable { translatedExpressions =>
-                    val extern = externs(name).asInstanceOf[TypeExtern]
+                    val extern = callableExterns(name).asInstanceOf[TypeExtern]
                     val result = tryReified(
                       extern(typeArgs)(args).translate(translatedExpressions),
                       translateType(resultType, innerTypeEnv)
@@ -521,7 +520,8 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
               }
               Some(if (typeParams.isEmpty) f(Nil) else f)
             }: StackLazy[Option[Any]]
-          case _ => Lazy(Some(externs(name)))
+          case _ =>
+            Lazy(constantExterns(name))
         }
         TranslationResult[Any, Some](
           value,
