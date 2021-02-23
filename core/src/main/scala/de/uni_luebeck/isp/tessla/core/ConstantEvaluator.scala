@@ -536,7 +536,7 @@ class ConstantEvaluatorWorker(spec: Typed.Specification) extends TranslationPhas
             val innerTypeEnv = typeEnv -- typeParams
 
             val translatedParams = params.map { param =>
-              val paramId = translateIdentifier(param._1)
+              val paramId = makeIdentifier(param._1.idOrName.left, param._1.location)
               val tpe = translateType(param._3, innerTypeEnv)
               val ref = Lazy(Core.ExpressionRef(paramId, tpe))
               param._1 -> (paramId, translateEvaluation(param._2), tpe,
