@@ -78,17 +78,17 @@ object ScalaConstants {
       case UnitValue          => "true"
       case StringValue(value) =>
         s""""${value.replace("\"", "\\\"")}"""" //TODO: Find better solution, re-escaping all special chars
-      case GeneralValue            => "null"
-      case EmptyFunction(_)        => "null"
-      case NoError                 => "null"
-      case NoneValue(_)            => "EONone()"
-      case SomeValue(content)      => s"EOSome(${valueTranslation(content)})"
-      case EmptyMutableSet(_)      => s"scala.collection.mutable.HashSet()"
-      case EmptyImmutableSet(_)    => s"Set()"
-      case EmptyMutableMap(_, _)   => s"scala.collection.mutable.HashMap()"
-      case EmptyImmutableMap(_, _) => "Map()"
-      case EmptyMutableList(_)     => "scala.collection.mutable.ArrayBuffer()"
-      case EmptyImmutableList(_)   => "List()"
+      case GeneralValue              => "null"
+      case EmptyFunction(_)          => "null"
+      case NoError                   => "null"
+      case NoneValue(_)              => "EONone()"
+      case SomeValue(content)        => s"EOSome(${valueTranslation(content)})"
+      case EmptyMutableSet(t)        => typeTranslation(MutableSetType(t)) + "()"
+      case EmptyImmutableSet(t)      => typeTranslation(ImmutableSetType(t)) + "()"
+      case EmptyMutableMap(t1, t2)   => typeTranslation(MutableMapType(t1, t2)) + "()"
+      case EmptyImmutableMap(t1, t2) => typeTranslation(ImmutableMapType(t1, t2)) + "()"
+      case EmptyMutableList(t)       => typeTranslation(MutableListType(t)) + "()"
+      case EmptyImmutableList(t)     => typeTranslation(ImmutableListType(t)) + "()"
       case StructValue(vals) =>
         s"(${vals.toSeq.sortWith { case ((n1, _), (n2, _)) => n1 < n2 }.map { case (_, v) => valueTranslation(v) }.mkString(", ")})"
     }
@@ -165,7 +165,7 @@ object ScalaConstants {
       case "__toString__"                                           => ScalaIOHandling.getParseExpressionToString(typeHint.argsTypes.head, args(0))
       case "__String_format__"                                      => s"${args(0)}.formatLocal(java.util.Locale.ROOT, ${args(1)})"
 
-      case "__Map_empty__" => "Map()"
+      case "__Map_empty__" => typeTranslation(typeHint.retType) + "()"
       case "__Map_add__" if typeHint.retType.isInstanceOf[MutableMapType] =>
         s"(${args(0)} += ((${args(1)}) -> (${args(2)})))"
       case "__Map_add__"      => s"(${args(0)} + ((${args(1)}) -> (${args(2)})))"
@@ -177,7 +177,7 @@ object ScalaConstants {
         s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)}){case (c, (k, v)) => val f = ${args(2)}; f(c, k, v)}"
       case "__Map_keys__" => s"${args(0)}.keys.toList"
 
-      case "__Set_empty__"        => "Set()"
+      case "__Set_empty__"        => typeTranslation(typeHint.retType) + "()"
       case "__Set_add__"          => s"(${args(0)} + (${args(1)}))"
       case "__Set_contains__"     => s"${args(0)}(${args(1)})"
       case "__Set_remove__"       => s"(${args(0)} - ${args(1)})"
@@ -187,7 +187,7 @@ object ScalaConstants {
       case "__Set_minus__"        => s"(${args(0)} -- ${args(1)})"
       case "__Set_fold__"         => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
 
-      case "__List_empty__"   => s"List()"
+      case "__List_empty__"   => typeTranslation(typeHint.retType) + "()"
       case "__List_size__"    => s"${args(0)}.size"
       case "__List_append__"  => s"(${args(0)} :+ ${args(1)})"
       case "__List_prepend__" => s"(${args(0)} +: ${args(1)})"
