@@ -645,7 +645,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     raw: Boolean
   ): SourceListing = {
     val s = s"var_${id.fullName}"
-    val nameID = id.idOrName.left.getOrElse(id.fullName)
+    val nameID = if (nameOpt.isDefined) nameOpt.get.replace(" ", "_") else id.idOrName.left.getOrElse(id.fullName)
     val name = nameOpt.getOrElse(nameID)
     val ft = IntermediateCode.FunctionType(
       Seq(t, LongType, StringType, ErrorType),
