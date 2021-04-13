@@ -753,8 +753,8 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       .EndIf()
 
     val newStaticSource = currSrc.staticSource
-      .FinalAssignment(s"${s}_lastError", LongValue(0), LongType)
-      .FinalAssignment(s"${s}_error", LongValue(0), LongType)
+      .FinalAssignment(s"${s}_lastError", NoError, ErrorType)
+      .FinalAssignment(s"${s}_error", NoError, ErrorType)
       .FinalAssignment(s"${s}_unknown", BoolValue(false), BoolType)
       .Assignment(
         s"set_$s",
