@@ -66,11 +66,11 @@ For detailed examples of using external Scala functions see this testcases
 
 * externalFunctionUse
     * [externalFunctionUse.tessla](../src/test/resources/de/uni_luebeck/isp/tessla/tesslac/nativeExterns/externalFunctionUse.tessla)
-    * [externalFunctionUse.scala](../src/test/resources/de/uni_luebeck/isp/tessla/tesslac/nativeExterns/externalFunctionUse.tessla)
+    * [externalFunctionUse.scala](../src/test/resources/de/uni_luebeck/isp/tessla/tesslac/nativeExterns/externalFunctionUse.scala)
     
 * externalTypes
     * [externalTypes.tessla](../src/test/resources/de/uni_luebeck/isp/tessla/tesslac/nativeExterns/externalTypes.tessla)
-    * [externalTypes.scala](../src/test/resources/de/uni_luebeck/isp/tessla/tesslac/nativeExterns/externalTypes.tessla)
+    * [externalTypes.scala](../src/test/resources/de/uni_luebeck/isp/tessla/tesslac/nativeExterns/externalTypes.scala)
     
 Note: 
 
