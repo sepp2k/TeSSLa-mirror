@@ -15,7 +15,7 @@ object Main {
     override def getMessage: String =
       "Uncertainty concerning the existence of an event" +
         (if (base != null)
-           s" due to the follwing base error:\n ${base.getMessage}"
+           s" due to the follwing base error:\n ${base}"
          else
            ".")
 
@@ -88,7 +88,7 @@ object Main {
 
   def outputVar(output: String, trueName: String, error: Throwable, ts: Long, raw: Boolean): Unit = {
     if (error != null) {
-      System.err.println(s"$ts: FATAL: $trueName evaluation encountered an Error:\n ${error.getMessage}")
+      System.err.println(s"$ts: FATAL: $trueName evaluation encountered an Error:\n ${error}")
       System.exit(1)
     } else {
       val prefix = if (raw) "" else s"$ts: $trueName = "

@@ -1,2 +1,2 @@
 2: FATAL: (x / y) + 1 evaluation encountered an Error:
- / by zero
+ java.lang.ArithmeticException: / by zero

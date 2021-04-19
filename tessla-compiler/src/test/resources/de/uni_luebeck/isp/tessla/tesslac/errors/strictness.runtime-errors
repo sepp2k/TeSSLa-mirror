@@ -1,2 +1,2 @@
 3: FATAL: y evaluation encountered an Error:
- / by zero
+ java.lang.ArithmeticException: / by zero

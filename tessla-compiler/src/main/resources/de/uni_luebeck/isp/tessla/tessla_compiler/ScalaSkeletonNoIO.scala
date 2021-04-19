@@ -12,7 +12,7 @@ object TesslaMonitor {
     override def getMessage: String =
       "Uncertainty concerning the existence of an event" +
         (if (base != null)
-           s" due to the follwing base error:\n ${base.getMessage}"
+           s" due to the follwing base error:\n ${base}"
          else
            ".")
   }
