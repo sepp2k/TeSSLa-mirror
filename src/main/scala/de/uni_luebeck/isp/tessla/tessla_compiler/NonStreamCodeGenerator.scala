@@ -69,7 +69,7 @@ class NonStreamCodeGenerator(val addDeps: Map[Identifier, Set[Identifier]], cfAn
       case RecordConstructorExpression(entries, _) if entries.isEmpty => UnitValue
       case RecordConstructorExpression(entries, _) => MkStruct(entries.toSeq.map{case (n, (ea, _)) => (n.name, translateExpressionArg(ea, defContext))}, e.tpe)
       case RecordAccessorExpression(name, target, _, _) => GetStruct(translateExpressionArg(target), name.name, target.tpe)
-      case _ => ???
+      case _ => println(e); ???
     }
   }
 

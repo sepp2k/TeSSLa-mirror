@@ -222,6 +222,7 @@ class ExpressionFlowAnalysis(val impCheck: ImplicationChecker) {
            ExternExpression(_, _, _, "List_init", _) =>
         IdentifierDependencies(reads = Set(args(0)), deps = args.toSet)
       case ExternExpression(_, _, _, "Map_get", _) |
+           ExternExpression(_, _, _, "Map_sortedKeys", _) |
            ExternExpression(_, _, _, "List_get", _) =>
         IdentifierDependencies(reads = Set(args(0)), deps = args.toSet, immut = Set(resID))
       case ExternExpression(_, _, _, "Set_minus", _) |

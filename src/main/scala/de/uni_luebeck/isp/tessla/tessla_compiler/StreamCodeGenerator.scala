@@ -662,7 +662,7 @@ class StreamCodeGenerator(val myNonStreamCodeGenerator: NonStreamCodeGenerator,
 
     val stmts = Seq()
       .If(Seq(Seq(NotEqual("currTs", "ts"))))
-      .Assignment(s"newInputTs", s"ts", LongValue(0), typ, true)
+      .Assignment(s"newInputTs", s"ts", LongValue(0), LongType, true)
       .FunctionCall(
         "run",
         Seq(),
