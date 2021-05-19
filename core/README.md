@@ -52,6 +52,14 @@ TesslaParser → TesslaSyntaxToTessla → Flattener → TypeChecker → TypedTes
 
 * Uses the externs defined in `RuntimeExterns` to evaluate constant expressions.
 
+### AnnotationValidator
+
+* Ensures that annotation parameters are only using constant values.
+
+### ConstantRecycler
+
+* Reduces the core AST by combining assignments of the same expression to different identifiers to a single assignment.
+
 → TesslaAST.Core
 
 ## Further Information

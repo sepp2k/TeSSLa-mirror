@@ -104,6 +104,7 @@ class Compiler(options: Options) {
   def typedToCore: TranslationPhase[Typed.Specification, Core.Specification] =
     (new ConstantEvaluator)
       .andThen(AnnotationValidator)
+      .andThen(ConstantRecycler)
 
   /** Creates an identity phase on [[TesslaAST.Core.Specification]], which takes the given core representation and
    * flattens it further.
