@@ -88,7 +88,8 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
     val lazyVar = extSpec.lazyVars.get.contains(id)
     if (lazyVar || finalAssignmentPossible(e)) {
       definedIdentifiers += (id -> (if (lazyVar) FinalLazyDeclaration else FinalDeclaration))
-      FinalAssignment(s"var_$id", Some(translateExpressionArg(e, tm, defContext)), resTpe, lazyVar)
+      val inlinedExp = if (lazyVar) inlineVars(e, defContext) else e
+      FinalAssignment(s"var_$id", Some(translateExpressionArg(inlinedExp, tm, defContext)), resTpe, lazyVar)
     } else {
       definedIdentifiers += (id -> VariableDeclaration)
       Assignment(
