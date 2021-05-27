@@ -113,7 +113,9 @@ object UnusedVarRemove extends TranslationPhase[(SourceListing, Set[String]), So
     val prevMap = stmt match {
       case If(guard, stmts, elseStmts) =>
         getUsageMap(stmts, getUsageMap(elseStmts, getUsageMap(guard.flatten, currMap)))
-      case TryCatchBlock(tr, cat) => getUsageMap(tr, getUsageMap(cat, currMap))
+      case TryCatchBlock(tr, cat) =>
+        getUsageMap(tr, getUsageMap(cat, currMap)) +
+          ("*" -> (currMap.getOrElse("*", Set()) ++ getDefines(tr)))
       case Assignment(lhs, rexpr, defExpr, _, _) =>
         currMap + (lhs.name -> currMap
           .getOrElse(lhs.name, Set())
