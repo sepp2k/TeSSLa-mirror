@@ -70,6 +70,20 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
         produceSignalLiftStepCode(id, typ.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
       case "merge" =>
         produceMergeStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
+      case "count" =>
+        produceCountStepCode(id, args(0), currSource)
+      case "const" =>
+        produceConstStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
+      case "filter" =>
+        produceFilterStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
+      case "fold" =>
+        produceFoldStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), args(2), currSource)
+      case "reduce" =>
+        produceReduceStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
+      case "unitIf" =>
+        produceUnitIfStepCode(id, args(0), currSource)
+      case "pure" =>
+        producePureStepCode(id, typ.resultType.resolve(typeParamMap), args(0), currSource)
       case _ => throw tessla_compiler.Diagnostics.CommandNotSupportedError(e.toString)
     }
   }
@@ -585,6 +599,348 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     }
 
     (1 to args.length + 1).foreach { _ => newStmt = newStmt.EndIf() }
+
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+  }
+
+  /**
+   * Produces ImpLan code for a x = count(...) expression
+   *
+   * @param id The id merge is assigned to
+   * @param cntStream Expression of the stream to be counted
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the stepSource section.
+   * @return The modified source listing
+   */
+  private def produceCountStepCode(id: Identifier, cntStream: ExpressionArg, currSrc: SourceListing) = {
+    val (s, _) = streamNameAndTypeFromExpressionArg(cntStream)
+    val o = s"var_${id.fullName}"
+
+    val newStmt = currSrc.stepSource
+      .If(Seq(Seq(NotEqual("currTs", LongValue(0)))))
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(true), BoolType)
+      .EndIf()
+      .If(Seq(Seq(s"${s}_changed")))
+      .Assignment(s"${o}_lastValue", s"${o}_value", LongValue(0), LongType)
+      .FinalAssignment(s"${o}_lastInit", BoolValue(true), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType)
+      .Assignment(s"${o}_value", Addition(s"${o}_value", LongValue(1)), LongValue(0), LongType)
+      .FinalAssignment(s"${o}_init", BoolValue(true), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_unknown", s"${s}_unknown", BoolValue(false), BoolType)
+      .If(Seq(Seq(NotEqual(s"${o}_error", NoError))))
+      .Assignment(s"${o}_error", s"${s}_error", NoError, ErrorType)
+      .EndIf()
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(true), BoolType)
+      .EndIf()
+
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+  }
+
+  /**
+   * Produces ImpLan code for a x = const(...) expression
+   *
+   * @param id The id merge is assigned to
+   *  @param ot Type of the output stream
+   * @param args Argument expressions for const (const value, triggering stream)
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the stepSource section.
+   * @return The modified source listing
+   */
+  private def produceConstStepCode(
+    id: Identifier,
+    ot: Type,
+    args: Seq[ExpressionArg],
+    currSrc: SourceListing
+  ): SourceListing = {
+
+    val o = s"var_${id.fullName}"
+    val (t, _) = streamNameAndTypeFromExpressionArg(args(1))
+    val constVal =
+      nonStreamCodeGenerator.translateExpressionArg(args(0), nonStreamCodeGenerator.TypeArgManagement.empty)
+
+    val newStmt = currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(Seq(Seq(s"${t}_changed")))
+      .Assignment(s"${o}_lastValue", constVal, defaultValueForStreamType(ot), ot)
+      .Assignment(s"${o}_lastInit", s"${t}_lastInit", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${t}_lastError", NoError, ErrorType)
+      .Assignment(s"${o}_value", constVal, defaultValueForStreamType(ot), ot)
+      .Assignment(s"${o}_init", s"${t}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", s"${t}_ts", LongValue(0), LongType)
+      .Assignment(s"${o}_error", s"${t}_error", NoError, ErrorType)
+      .Assignment(s"${o}_changed", s"${t}_changed", BoolValue(false), BoolType)
+      .Assignment(s"${o}_unknown", s"${t}_unknown", BoolValue(false), BoolType)
+      .EndIf()
+
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+  }
+
+  /**
+   * Produces ImpLan code for a x = filter(...) expression
+   *
+   * @param id The id merge is assigned to
+   * @param ot Type of the output stream
+   * @param args Argument expressions for filter (value stream, condition stream)
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the stepSource section.
+   * @return The modified source listing
+   */
+  private def produceFilterStepCode(
+    id: Identifier,
+    ot: Type,
+    args: Seq[ExpressionArg],
+    currSrc: SourceListing
+  ): SourceListing = {
+    val o = s"var_${id.fullName}"
+    val (v, _) = streamNameAndTypeFromExpressionArg(args(0))
+    val (f, _) = streamNameAndTypeFromExpressionArg(args(1))
+
+    val newStmt = currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(Seq(Seq(s"${f}_init", s"${v}_changed")))
+      .If(Seq(Seq(s"${f}_value"), Seq(NotEqual(s"${f}_error", NoError)), Seq(s"${f}_unknown")))
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType)
+      .Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot)
+      .If(Seq(Seq(NotEqual(s"${f}_error", NoError))))
+      .Assignment(s"${o}_error", s"${f}_error", NoError, ErrorType)
+      .Else()
+      .Assignment(s"${o}_error", s"${v}_error", NoError, ErrorType)
+      .EndIf()
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_value", s"${v}_value", defaultValueForStreamType(ot), ot)
+      .Assignment(s"${o}_init", s"${v}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", s"${v}_ts", LongValue(0), LongType)
+      .Assignment(s"${o}_unknown", Or(Seq(s"${v}_unknown", s"${f}_unknown")), BoolValue(false), BoolType)
+      .EndIf()
+      .EndIf()
+
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+  }
+
+  /**
+   * Produces ImpLan code for a x = fold(...) expression
+   *
+   * @param id The id merge is assigned to
+   * @param ot Type of the output stream
+   * @param stream Expression of the stream to be folded
+   * @param init Expression of the initial value for the folding
+   * @param function Expression of the function used for folding
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the stepSource section.
+   * @return The modified source listing
+   */
+  private def produceFoldStepCode(
+    id: Identifier,
+    ot: Type,
+    stream: ExpressionArg,
+    init: ExpressionArg,
+    function: ExpressionArg,
+    currSrc: SourceListing
+  ): SourceListing = {
+    val o = s"var_${id.fullName}"
+    val (s, st) = streamNameAndTypeFromExpressionArg(stream)
+
+    val fcall =
+      nonStreamCodeGenerator.translateFunctionCall(
+        function,
+        Seq(
+          TernaryExpression(
+            Seq(Seq(Equal(s"${o}_error", NoError))),
+            s"${o}_value",
+            Throw(Variable(s"${o}_error"), ot)
+          ),
+          TernaryExpression(
+            Seq(Seq(Equal(s"${s}_error", NoError))),
+            s"${s}_value",
+            Throw(Variable(s"${s}_error"), st)
+          )
+        ),
+        nonStreamCodeGenerator.TypeArgManagement.empty
+      )
+    val initVal = nonStreamCodeGenerator.translateExpressionArg(init, nonStreamCodeGenerator.TypeArgManagement.empty)
+    val ueError =
+      FunctionCall("__[TC]UnknownEventError__", Seq(NoError), IntermediateCode.FunctionType(Seq(ErrorType), ErrorType))
+
+    val newStmt = currSrc.stepSource
+      .If(Seq(Seq(NotEqual("currTs", LongValue(0)))))
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(true), BoolType)
+      .EndIf()
+      .If(Seq(Seq(s"${s}_changed")))
+      .Assignment(s"${o}_lastValue", s"${o}_value", initVal, ot)
+      .FinalAssignment(s"${o}_lastInit", BoolValue(true), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType)
+      .Assignment(s"${o}_unknown", s"${s}_unknown", BoolValue(false), BoolType)
+      .If(Seq(Seq(s"${o}_unknown")))
+      .Assignment(s"${o}_error", ueError, NoError, ErrorType)
+      .Else()
+      .Assignment(s"${o}_error", NoError, NoError, ErrorType)
+      .Try()
+      .Assignment(s"${o}_value", fcall, initVal, ot)
+      .Catch()
+      .Assignment(s"${o}_error", s"var_err", NoError, ErrorType)
+      .EndTry()
+      .EndIf()
+      .FinalAssignment(s"${o}_init", BoolValue(true), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(true), BoolType)
+      .EndIf()
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+  }
+
+  /**
+   * Produces ImpLan code for a x = reduce(...) expression
+   *
+   * @param id The id merge is assigned to
+   * @param ot Type of the output stream
+   * @param stream Expression of the stream to be reduced
+   * @param function Expression of the function used for reducing
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the stepSource section.
+   * @return The modified source listing
+   */
+  private def produceReduceStepCode(
+    id: Identifier,
+    ot: Type,
+    stream: ExpressionArg,
+    function: ExpressionArg,
+    currSrc: SourceListing
+  ): SourceListing = {
+    val o = s"var_${id.fullName}"
+    val (s, st) = streamNameAndTypeFromExpressionArg(stream)
+
+    val fcall =
+      nonStreamCodeGenerator.translateFunctionCall(
+        function,
+        Seq(
+          TernaryExpression(
+            Seq(Seq(Equal(s"${o}_error", NoError))),
+            s"${o}_value",
+            Throw(Variable(s"${o}_error"), ot)
+          ),
+          TernaryExpression(
+            Seq(Seq(Equal(s"${s}_error", NoError))),
+            s"${s}_value",
+            Throw(Variable(s"${s}_error"), st)
+          )
+        ),
+        nonStreamCodeGenerator.TypeArgManagement.empty
+      )
+    val ueError =
+      FunctionCall("__[TC]UnknownEventError__", Seq(NoError), IntermediateCode.FunctionType(Seq(ErrorType), ErrorType))
+
+    val newStmt = currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(Seq(Seq(s"${s}_changed")))
+      .Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot)
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType)
+      .Assignment(s"${o}_unknown", s"${s}_unknown", BoolValue(false), BoolType)
+      .If(Seq(Seq(s"${o}_unknown")))
+      .Assignment(s"${o}_error", ueError, NoError, ErrorType)
+      .Else()
+      .Assignment(s"${o}_error", NoError, NoError, ErrorType)
+      .If(Seq(Seq(s"${o}_init")))
+      .Try()
+      .Assignment(s"${o}_value", fcall, defaultValueForStreamType(ot), ot)
+      .Catch()
+      .Assignment(s"${o}_error", s"var_err", NoError, ErrorType)
+      .EndTry()
+      .Else()
+      .Assignment(s"${o}_value", s"${s}_value", defaultValueForStreamType(ot), ot)
+      .Assignment(s"${o}_error", s"${s}_error", NoError, ErrorType)
+      .EndIf()
+      .EndIf()
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", "currTs", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .EndIf()
+
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+  }
+
+  /**
+   * Produces ImpLan code for a x = unitIf(...) expression
+   *
+   * @param id The id merge is assigned to
+   * @param cond Expression of the stream with the condition for unitIf
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the stepSource section.
+   * @return The modified source listing
+   */
+  private def produceUnitIfStepCode(
+    id: Identifier,
+    cond: ExpressionArg,
+    currSrc: SourceListing
+  ): SourceListing = {
+    val o = s"var_${id.fullName}"
+    val (f, _) = streamNameAndTypeFromExpressionArg(cond)
+
+    val newStmt = currSrc.stepSource
+      .FinalAssignment(s"${o}_lastValue", UnitValue, UnitType)
+      .FinalAssignment(s"${o}_value", UnitValue, UnitType)
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(Seq(Seq(s"${f}_changed")))
+      .If(Seq(Seq(s"${f}_value"), Seq(NotEqual(s"${f}_error", NoError)), Seq(s"${f}_unknown")))
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType)
+      .Assignment(s"${o}_init", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", s"${f}_ts", LongValue(0), LongType)
+      .Assignment(s"${o}_error", s"${f}_error", NoError, ErrorType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_unknown", s"${f}_unknown", BoolValue(false), BoolType)
+      .EndIf()
+      .EndIf()
+
+    SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
+  }
+
+  /**
+   * Produces ImpLan code for a x = pure(...) expression
+   *
+   * @param id The id merge is assigned to
+   * @param ot Type of the output stream
+   * @param valStream Stream to be filtered
+   * @param currSrc The source listing the generated block is added to.
+   *                There is code attached to the stepSource section.
+   * @return The modified source listing
+   */
+  private def producePureStepCode(
+    id: Identifier,
+    ot: Type,
+    valStream: ExpressionArg,
+    currSrc: SourceListing
+  ): SourceListing = {
+    val o = s"var_${id.fullName}"
+    val (s, _) = streamNameAndTypeFromExpressionArg(valStream)
+
+    val newStmt = currSrc.stepSource
+      .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
+      .If(Seq(Seq(s"${s}_changed")))
+      .If(Seq(Seq(NotEqual(s"${s}_error", NoError)), Seq(s"${s}_unknown")))
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType)
+      .Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot)
+      .Assignment(s"${o}_error", s"${s}_error", NoError, ErrorType)
+      .Assignment(s"${o}_init", s"${s}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", s"${s}_ts", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_unknown", s"${s}_unknown", BoolValue(false), BoolType)
+      .Else()
+      .If(Seq(Seq(Negation(s"${o}_init")), Seq(NotEqual(s"${o}_value", s"${s}_value"))))
+      .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_lastError", s"${o}_error", NoError, ErrorType)
+      .Assignment(s"${o}_lastValue", s"${o}_value", defaultValueForStreamType(ot), ot)
+      .Assignment(s"${o}_value", s"${s}_value", defaultValueForStreamType(ot), ot)
+      .Assignment(s"${o}_init", s"${s}_init", BoolValue(false), BoolType)
+      .Assignment(s"${o}_ts", s"${s}_ts", LongValue(0), LongType)
+      .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
+      .Assignment(s"${o}_error", s"${s}_error", NoError, ErrorType)
+      .Assignment(s"${o}_unknown", s"${s}_unknown", BoolValue(false), BoolType)
+      .EndIf()
+      .EndIf()
+      .EndIf()
 
     SourceListing(newStmt, currSrc.tailSource, currSrc.tsGenSource, currSrc.inputProcessing, currSrc.staticSource)
   }

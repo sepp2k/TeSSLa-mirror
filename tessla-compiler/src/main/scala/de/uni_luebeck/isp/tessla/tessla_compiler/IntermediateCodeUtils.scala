@@ -352,12 +352,20 @@ object IntermediateCodeUtils {
     FunctionCall("__sub__", Seq(op1, op2), IntermediateCode.FunctionType(Seq(LongType, LongType), LongType))
 
   /**
-   * Generates an or (||) expression
-   * @param ops parameter sub-expressions, must be of type [[IntermediateCode.BoolType]]
+   * Generates an bitor (|) expression
+   * @param ops parameter sub-expressions, must be of type [[IntermediateCode.LongType]]
    * @return Or expression
    */
   def BitwiseOr(ops: Seq[ImpLanExpr]): ImpLanExpr =
     FunctionCall("__bitor__", ops, IntermediateCode.FunctionType(ops.map { _ => LongType }, LongType))
+
+  /**
+   * Generates an or (||) expression
+   * @param ops parameter sub-expressions, must be of type [[IntermediateCode.BoolType]]
+   * @return Or expression
+   */
+  def Or(ops: Seq[ImpLanExpr]): ImpLanExpr =
+    FunctionCall("__or__", ops, IntermediateCode.FunctionType(ops.map { _ => BoolType }, BoolType))
 
   /**
    * Generates an and (&&) expression

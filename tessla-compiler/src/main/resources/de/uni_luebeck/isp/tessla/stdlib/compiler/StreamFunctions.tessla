@@ -1013,7 +1013,7 @@ module StreamFunctions {
   ## 12: f = true
   ## 12: x = 4
   ## ~~~
-  def defined[T](x: Events[T]): Events[Bool] = extern("defined")
+  def defined[T](x: Events[T]): Events[Bool] = default(const(true, x), false)
 
   ## Compute the runtime of a function on every `ret` event.
   ## The runtime is the time passed between the last `call`
@@ -1561,7 +1561,7 @@ module StreamFunctions {
   ## 12: result = true
   ## 12: b = true
   ## ~~~
-  def boolFilter(b: Events[Bool]): Events[Bool] = extern("boolFilter")
+  def boolFilter(b: Events[Bool]): Events[Bool] = filter(b,b)
 
   ## Detect rising edge on `condition`
   ##
@@ -1687,7 +1687,10 @@ module StreamFunctions {
   ## 12: result = 2
   ## 12: stream = 4
   ## ~~~
-  def average(x: Events[Int]): Events[Int] = extern("average")
+  def average(x: Events[Int]): Events[Int] = {
+    def c = count(x)
+    filter(sum(x) / c, c != 0)
+  }
 
   ## Produce an event stream with a unit event every `delay` time units.
   ## Starting with an event at timestamp 0.
