@@ -17,7 +17,6 @@
 package de.uni_luebeck.isp.tessla
 
 import java.nio.file.{Files, Paths}
-
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
@@ -28,8 +27,8 @@ import org.scalatest.funsuite.AnyFunSuite
 import scala.jdk.CollectionConverters._
 import java.nio.file.FileSystems
 import java.nio.file.PathMatcher
-
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
+import org.antlr.v4.runtime.CharStream
 
 import scala.io.Source
 import scala.util.Using
@@ -63,6 +62,9 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
   // the Json configuration of a test case)
   def shouldIgnoreTest(t: TestSource): Boolean = false
 
+  def stdlibResolver: String => Option[CharStream] =
+    IncludeResolvers.fromStdlibResource
+
   final def testCases(): Seq[TestSource] = roots
     .map { root =>
       val rootPath = Paths.get(AbstractTestRunner.getClass.getResource(root).toURI)
@@ -94,6 +96,7 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
         import pathResolver._
 
         val options = Compiler.Options(
+          stdlibIncludeResolver = stdlibResolver,
           baseTimeString = testCase.baseTime,
           includeResolver = IncludeResolvers.fromResource(AbstractTestRunner.getClass, root)
         )

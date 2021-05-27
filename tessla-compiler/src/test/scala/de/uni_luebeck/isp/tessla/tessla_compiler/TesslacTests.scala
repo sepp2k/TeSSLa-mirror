@@ -20,7 +20,6 @@ import java.io.{ByteArrayOutputStream, InputStream, PrintStream}
 import java.lang.reflect.InvocationTargetException
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
-
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
@@ -32,6 +31,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{
 }
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
+import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
 
 import scala.reflect.internal.util.ScalaClassLoader.URLClassLoader
@@ -46,6 +46,9 @@ class TesslacTests extends AbstractTestRunner[String]("Tessla Compiler") with Be
 
   override def translation(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, String] =
     TesslacTests.pipeline(testCase, resolver)
+
+  override def stdlibResolver: String => Option[CharStream] =
+    CompilerStdLibIncludeResolver.fromCompilerStdlibResource
 
   override def run(
     spec: String,

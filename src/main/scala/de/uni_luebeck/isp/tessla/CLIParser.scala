@@ -17,10 +17,10 @@
 package de.uni_luebeck.isp.tessla
 
 import java.io.File
-
 import org.antlr.v4.runtime.{CharStream, CharStreams}
 import scopt.OptionParser
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers}
+import de.uni_luebeck.isp.tessla.tessla_compiler.CompilerStdLibIncludeResolver
 
 import scala.collection.mutable
 import scala.io.{Codec, Source}
@@ -89,6 +89,7 @@ object CLIParser {
   ) extends Config
 
   case class GlobalConfig(
+    userStdLib: Boolean = false,
     diagnostics: Boolean = true,
     debug: Boolean = false
   )
@@ -108,6 +109,7 @@ object CLIParser {
     opt[File]('s', "stdlib")
       .valueName("<file>")
       .foreach(f => {
+        global = global.copy(userStdLib = true)
         compilerOptions = compilerOptions.copy(
           stdlibPath = f.getName,
           stdlibIncludeResolver = (s: String) => IncludeResolvers.fromFile(f.toPath.resolveSibling(s).toString)
@@ -261,9 +263,15 @@ object CLIParser {
       finally addIncludeFile.close
     }
 
+    val myCompilerOptions =
+      if (!global.userStdLib)
+        compilerOptions.copy(stdlibIncludeResolver = CompilerStdLibIncludeResolver.fromCompilerStdlibResource)
+      else
+        compilerOptions
+
     note("")
     cmd("compile")
-      .foreach(_ => tasks += (() => Task("compile", config.copy(compilerOptions = compilerOptions))))
+      .foreach(_ => tasks += (() => Task("compile", config.copy(compilerOptions = myCompilerOptions))))
       .text("Compile TeSSLa specifications to Scala")
       .children(
         arg[File]("<tessla-file>")

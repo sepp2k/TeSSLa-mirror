@@ -34,6 +34,10 @@ object IncludeResolvers {
     }
   }
 
+  def fromResource(classPathSeq: Seq[(Class[_], String)])(fileName: String): Option[CharStream] = {
+    classPathSeq.flatMap { case (c, p) => fromResource(c, p)(fileName) }.headOption
+  }
+
   def fromResource(klass: Class[_], basePath: String)(fileName: String): Option[CharStream] = {
     val fullPath = if (basePath.isEmpty) fileName else s"$basePath/$fileName"
     Option(klass.getResourceAsStream(fullPath)).map { stream =>
