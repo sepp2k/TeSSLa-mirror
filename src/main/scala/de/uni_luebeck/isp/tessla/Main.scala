@@ -28,7 +28,7 @@ import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, FlattenCore,
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
 import de.uni_luebeck.isp.tessla.tessladoc.{DocGenerator, TesslaDoc}
 
@@ -175,7 +175,7 @@ object Main {
         val sourceStr = unwrapResult(
           Compiler.compile(config.specSource, config.compilerOptions)
             andThen UsageAnalysis
-            andThen Laziness
+            andThen InliningAnalysis
             andThen new TesslaCoreToIntermediate(config.ioInterface)
             andThen UnusedVarRemove
             andThen new ScalaBackend(config.ioInterface, config.additionalSource)

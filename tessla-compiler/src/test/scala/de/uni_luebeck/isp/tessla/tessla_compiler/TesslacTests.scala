@@ -29,7 +29,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{
   ScalaCompiler,
   TesslaCompilerReporter
 }
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{Laziness, UsageAnalysis}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
 import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
@@ -73,7 +73,7 @@ object TesslacTests {
     val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
 
     UsageAnalysis
-      .andThen(Laziness)
+      .andThen(InliningAnalysis)
       .andThen(new TesslaCoreToIntermediate(consoleInterface))
       .andThen(UnusedVarRemove)
       .andThen(new ScalaBackend(consoleInterface, additionalSource))

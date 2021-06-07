@@ -206,7 +206,7 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
       case ApplicationExpression(e, args, _) =>
         translateFunctionCall(
           e,
-          getInlinedArgs(e, args, defContext).map(translateExpressionArg(_, tm, defContext)),
+          getInlinedArgs(args, defContext).map(translateExpressionArg(_, tm, defContext)),
           tm,
           defContext
         )
@@ -232,25 +232,16 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
   }
 
   /**
-   * Inlines all references in a function application's lazy parameters
-   * @param e The applicable
+   * Inlines all references in a function application's parameters according to inlining information from [[ExtendedSpecification]]
    * @param args The arguments applied to e
    * @param defContext Definition context depicting all var names in the current scope to their definition expression
    * @return The modified parameter expressions
    */
   private def getInlinedArgs(
-    e: ExpressionArg,
     args: Seq[ExpressionArg],
     defContext: Map[Identifier, DefinitionExpression] = Map()
   ): Seq[ExpressionArg] = {
-    e.tpe match {
-      case Core.FunctionType(_, pars, _, _) =>
-        pars.map(_._1).zip(args).map {
-          case (StrictEvaluation, e) => e
-          case (LazyEvaluation, e)   => inlineVars(e, defContext)
-        }
-      case _ => args
-    }
+    args.map(e => inlineVars(e, defContext))
   }
 
   /**

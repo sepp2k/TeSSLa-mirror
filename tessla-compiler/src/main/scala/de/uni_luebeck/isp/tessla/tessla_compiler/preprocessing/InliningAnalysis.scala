@@ -23,21 +23,23 @@ import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.ExtendedSpecification
 
 /**
- * Adds laziness information to an [[ExtendedSpecification]], i.e. which variables have to be assigned in a
+ * Adds inlining/laziness information to an [[ExtendedSpecification]], i.e. which variables have to be assigned in a
  * lazy manner and which variables are inlined.
  * A variable is defined lazy if it is used as sub-expression of a lazy argument in a function call and not inlined.
- * It is inlined if there is no other usage.
+ * It is inlined if there is no other usage (even if if the usage is not lazy).
  */
-object Laziness extends TranslationPhase[ExtendedSpecification, ExtendedSpecification] {
+object InliningAnalysis extends TranslationPhase[ExtendedSpecification, ExtendedSpecification] {
 
   /**
    * Function triggering the translation from a [[ExtendedSpecification]] to another one
-   * with lazyness information i.e. which variables have to be assigned in a lazy manner and which variables
+   * with lazyness/inlining information i.e. which variables have to be assigned in a lazy manner and which variables
    * are inlined
    * @param extSpec The extended specification to be examined
-   * @return extSpec plus lazyness information
+   * @return extSpec plus lazyness/inlining information
    */
   override def translate(extSpec: ExtendedSpecification): Result[ExtendedSpecification] = {
+
+    var examined: Set[Identifier] = Set()
 
     val lazyIds: collection.mutable.Set[Identifier] = collection.mutable.HashSet()
     val lazyByInlining: collection.mutable.Set[Identifier] = collection.mutable.HashSet()
@@ -56,65 +58,69 @@ object Laziness extends TranslationPhase[ExtendedSpecification, ExtendedSpecific
       }
     }
 
-    def examineLazynessCandidate(
+    def examineInliningCandidate(
       e: ExpressionArg,
+      requiresLazy: Boolean,
       scope: Map[Identifier, DefinitionExpression],
       stack: Set[Identifier] = Set()
     ): Unit = {
-      extractSubIDs(e).foreach(examineLazynessCandidateID(_, scope, stack))
+      extractSubIDs(e).foreach(examineInliningCandidateID(_, requiresLazy, scope, stack))
     }
 
-    def examineLazynessCandidateID(
+    def examineInliningCandidateID(
       id: Identifier,
+      requiresLazy: Boolean,
       scope: Map[Identifier, DefinitionExpression],
       stack: Set[Identifier] = Set()
     ): Unit = {
-      if (!lazyIds.contains(id)) {
+      if (!lazyIds.contains(id) && (!examined.contains(id) || requiresLazy)) {
         if (stack.contains(id)) {
-          lazyByInlining -= id
-          lazyIds += id
+          if (requiresLazy) {
+            lazyByInlining -= id
+            lazyIds += id
+          }
         } else {
           if (extSpec.usageInfo.get.getOrElse(id, Set()).size <= 1 && !lazyIds.contains(id)) {
             //TODO one could use a better heuristic here to decide when to inline
             lazyByInlining += id
-          } else {
+          } else if (requiresLazy) {
             lazyIds += id
           }
           if (scope.contains(id)) {
-            examineLazynessCandidate(scope(id), scope, stack + id)
+            examineInliningCandidate(scope(id), requiresLazy, scope, stack + id)
           }
         }
       }
+      examined += id
     }
 
-    def mapExpressionsForLazyness(e: ExpressionArg, scope: Map[Identifier, DefinitionExpression]): Unit = {
+    def mapExpressionsForInlining(e: ExpressionArg, scope: Map[Identifier, DefinitionExpression]): Unit = {
       e match {
         case ApplicationExpression(applicable, args, _) =>
           args.zip(applicable.tpe.asInstanceOf[FunctionType].paramTypes).foreach {
-            case (arg, (LazyEvaluation, _)) => examineLazynessCandidate(arg, scope)
-            case _                          =>
+            case (arg, (ev, _)) => examineInliningCandidate(arg, ev == LazyEvaluation, scope)
           }
-          args.foreach(mapExpressionsForLazyness(_, scope))
+          args.foreach(mapExpressionsForInlining(_, scope))
         case FunctionExpression(_, _, body, result, _) =>
-          mapExpressionsForLazyness(result, scope ++ body); mapDefinitionsForLazyness(body, scope ++ body)
+          mapExpressionsForInlining(result, scope ++ body); mapDefinitionsForInlining(body, scope ++ body)
         case TypeApplicationExpression(applicable, _, _) =>
-          mapExpressionsForLazyness(applicable, scope)
+          mapExpressionsForInlining(applicable, scope)
         case RecordConstructorExpression(entries, _) =>
-          entries.foreach { case (_, (e, _)) => mapExpressionsForLazyness(e, scope) }
+          entries.foreach { case (_, (e, _)) => mapExpressionsForInlining(e, scope) }
         case RecordAccessorExpression(_, target, _, _) =>
-          mapExpressionsForLazyness(target, scope)
+          mapExpressionsForInlining(target, scope)
         case _ =>
       }
     }
 
-    def mapDefinitionsForLazyness(
+    def mapDefinitionsForInlining(
       m: Map[Identifier, DefinitionExpression],
       scope: Map[Identifier, DefinitionExpression]
     ): Unit = {
-      m.foreach { case (_, d) => mapExpressionsForLazyness(d, scope) }
+      m.foreach { case (_, d) => mapExpressionsForInlining(d, scope) }
     }
 
-    mapDefinitionsForLazyness(spec.definitions, spec.definitions)
+    mapDefinitionsForInlining(spec.definitions, spec.definitions)
 
     Success(ExtendedSpecification(spec, extSpec.usageInfo, Some(lazyIds.toSet), Some(lazyByInlining.toSet)), Seq())
 
