@@ -90,7 +90,9 @@ object ConstantRecycler extends TranslationPhase[Specification, Specification] {
           checkEquivalence(applicable, ta2.applicable, scope1, scope2, paramMapping, stack)
 
         case RecordConstructorExpression(entries, _) if e2.isInstanceOf[RecordConstructorExpression] =>
-          entries.forall {
+          val re2 = e2.asInstanceOf[RecordConstructorExpression]
+
+          re2.entries.size == entries.size && entries.forall {
             case (name, (exp, _)) =>
               val e2Entries = e2.asInstanceOf[RecordConstructorExpression].entries
               e2Entries.contains(name) && checkEquivalence(e2Entries(name)._1, exp, scope1, scope2, paramMapping, stack)
