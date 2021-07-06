@@ -612,7 +612,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def produceCountStepCode(id: Identifier, cntStream: ExpressionArg, currSrc: SourceListing) = {
+  private def produceCountStepCode(id: Identifier, cntStream: ExpressionArg, currSrc: SourceListing): SourceListing = {
     val (s, _) = streamNameAndTypeFromExpressionArg(cntStream)
     val o = s"var_${id.fullName}"
 
@@ -658,6 +658,12 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     val (t, _) = streamNameAndTypeFromExpressionArg(args(1))
     val constVal =
       nonStreamCodeGenerator.translateExpressionArg(args(0), nonStreamCodeGenerator.TypeArgManagement.empty)
+    val ueError =
+      FunctionCall(
+        "__[TC]UnknownEventError__",
+        Seq(s"${t}_error"),
+        IntermediateCode.FunctionType(Seq(ErrorType), ErrorType)
+      )
 
     val newStmt = currSrc.stepSource
       .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
@@ -668,7 +674,11 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       .Assignment(s"${o}_value", constVal, defaultValueForStreamType(ot), ot)
       .Assignment(s"${o}_init", s"${t}_init", BoolValue(false), BoolType)
       .Assignment(s"${o}_ts", s"${t}_ts", LongValue(0), LongType)
-      .Assignment(s"${o}_error", s"${t}_error", NoError, ErrorType)
+      .If(Seq(Seq(s"${t}_unknown")))
+      .Assignment(s"${o}_error", ueError, NoError, ErrorType)
+      .Else()
+      .Assignment(s"${o}_error", NoError, NoError, ErrorType)
+      .EndIf()
       .Assignment(s"${o}_changed", s"${t}_changed", BoolValue(false), BoolType)
       .Assignment(s"${o}_unknown", s"${t}_unknown", BoolValue(false), BoolType)
       .EndIf()
@@ -712,7 +722,12 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       .Assignment(s"${o}_value", s"${v}_value", defaultValueForStreamType(ot), ot)
       .Assignment(s"${o}_init", s"${v}_init", BoolValue(false), BoolType)
       .Assignment(s"${o}_ts", s"${v}_ts", LongValue(0), LongType)
-      .Assignment(s"${o}_unknown", Or(Seq(s"${v}_unknown", s"${f}_unknown")), BoolValue(false), BoolType)
+      .Assignment(
+        s"${o}_unknown",
+        Or(Seq(s"${v}_unknown", NotEqual(s"${f}_error", NoError))),
+        BoolValue(false),
+        BoolType
+      )
       .EndIf()
       .EndIf()
 
@@ -889,7 +904,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       .Assignment(s"${o}_ts", s"${f}_ts", LongValue(0), LongType)
       .Assignment(s"${o}_error", s"${f}_error", NoError, ErrorType)
       .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
-      .Assignment(s"${o}_unknown", s"${f}_unknown", BoolValue(false), BoolType)
+      .Assignment(s"${o}_unknown", NotEqual(s"${f}_error", NoError), BoolValue(false), BoolType)
       .EndIf()
       .EndIf()
 
@@ -926,7 +941,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
       .Assignment(s"${o}_init", s"${s}_init", BoolValue(false), BoolType)
       .Assignment(s"${o}_ts", s"${s}_ts", LongValue(0), LongType)
       .Assignment(s"${o}_changed", BoolValue(true), BoolValue(false), BoolType)
-      .Assignment(s"${o}_unknown", s"${s}_unknown", BoolValue(false), BoolType)
+      .Assignment(s"${o}_unknown", s"${o}_lastInit", BoolValue(false), BoolType)
       .Else()
       .If(Seq(Seq(Negation(s"${o}_init")), Seq(NotEqual(s"${o}_value", s"${s}_value"))))
       .Assignment(s"${o}_lastInit", s"${o}_init", BoolValue(false), BoolType)
