@@ -449,7 +449,7 @@ module StreamFunctions {
   ## 12: y = 42
   ## 12: x = 23
   ## ~~~
-  def const[T, U](value: T, stream: Events[U]): Events[T] = slift1(stream, (_: U) => value)
+  def const[T, U](value: T, stream: Events[U]): Events[T] = slift1(stream, (_: lazy U) => value)
 
   ## Returns a variant of `stream1` which has every original events of `stream1` and additional events with
   ## the last value of `stream1` for every event of `stream2`. `first` is defined as the signal lift of the
@@ -1243,8 +1243,8 @@ module StreamFunctions {
   ##
   ## See @[#minimum] for an example of reduce in action.
   ## `minimum` is defined as `reduce(x, min)`.
-  def reduce[T](stream: Events[T], f: (Events[T], Events[T]) => Events[T]): Events[T] = result where {
-    def result: Events[T] = defaultFrom(f(last(result, stream), stream), stream)
+  def reduce[T](stream: Events[T], f: (T, T) => T): Events[T] = result where {
+    def result: Events[T] = defaultFrom(slift(last(result, stream), stream, f), stream)
   }
 
   ## Count the number of events on `events`. Reset the output to 0
