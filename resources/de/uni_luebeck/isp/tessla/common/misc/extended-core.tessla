@@ -1,0 +1,18 @@
+# This test covers functions which are implemented as built-ins in the compiler backend
+
+in x: Events[Int]
+in y: Events[Int]
+
+def halfError = slift1(x, (x: Int) => x / 0)
+
+out pure(x)
+out unitIf(x > prev(x))
+out fold(x, 0, (c: Int, x: Int) => c * x + 12)
+out filter(x, y == 3)
+out const(42, x)
+out count(x + y)
+
+out time(fold(x, 0, (c: Int, x: Int) => c * x + 12))
+out fold(halfError, 0, (c: Int, _: lazy Int) => c + 1)
+out const(42, halfError)
+out count(halfError)
