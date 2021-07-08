@@ -1287,17 +1287,10 @@ module StreamFunctions {
   ## 15: events = ()
   ## 15: result = 2
   ## ~~~
-  def resetCount[A,B](events: Events[A], reset: Events[B]): Events[Int] = count where {
-    def count: Events[Int] = default(
-      # `reset` contains the latest event
-      if default(time(reset) > time(events), false)
-      then 0
-      # `reset` and `events` latest event happen simultaneously
-      else if default(time(reset) == time(events), false)
-      then 1
-      # `events` contains the latest event > increment counter
-      else last(count, events) + 1,
-      0)
+  def resetCount[A,B](events: Events[A], reset: Events[B]): Events[Int] = cnt where {
+      def curr : Events[Int] = merge3(on(reset, 0), last(cnt, events), 0)
+      def cnt : Events[Int] = lift(curr, events,
+                                  (c: Option[Int], e: Option[A]) => if (isSome(e)) then Some(getSome(c) + 1) else c)
   }
 
   ## Check if events on `e` follow the burst pattern:
