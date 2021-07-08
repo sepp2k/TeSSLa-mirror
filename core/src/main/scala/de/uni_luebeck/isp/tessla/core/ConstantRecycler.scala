@@ -80,7 +80,7 @@ object ConstantRecycler extends TranslationPhase[Specification, Specification] {
 
           args.size == ae2.args.size &&
           args.zip(ae2.args).forall(et => checkEquivalence(et._1, et._2, scope1, scope2, paramMapping, stack)) &&
-          checkEquivalence(ae2.applicable, applicable, scope1, scope2, paramMapping, stack)
+          checkEquivalence(applicable, ae2.applicable, scope1, scope2, paramMapping, stack)
 
         case TypeApplicationExpression(applicable, typeArgs, _) if e2.isInstanceOf[TypeApplicationExpression] =>
           val ta2 = e2.asInstanceOf[TypeApplicationExpression]
@@ -95,7 +95,7 @@ object ConstantRecycler extends TranslationPhase[Specification, Specification] {
           re2.entries.size == entries.size && entries.forall {
             case (name, (exp, _)) =>
               val e2Entries = e2.asInstanceOf[RecordConstructorExpression].entries
-              e2Entries.contains(name) && checkEquivalence(e2Entries(name)._1, exp, scope1, scope2, paramMapping, stack)
+              e2Entries.contains(name) && checkEquivalence(exp, e2Entries(name)._1, scope1, scope2, paramMapping, stack)
           }
 
         case RecordAccessorExpression(name, target, _, _) if e2.isInstanceOf[RecordAccessorExpression] =>
@@ -155,8 +155,8 @@ object ConstantRecycler extends TranslationPhase[Specification, Specification] {
         case RecordType(entries, _) if t2.isInstanceOf[RecordType] =>
           val rt2 = t2.asInstanceOf[RecordType]
           entries.size == rt2.entries.size &&
-          entries.zip(rt2.entries).forall {
-            case (t1, t2) => t1._1 == t2._1 && checkTypeEquivalence(t1._2._1, t2._2._1)
+          entries.forall { e1 =>
+            rt2.entries.contains(e1._1) && checkTypeEquivalence(e1._2._1, rt2.entries(e1._1)._1)
           }
 
         case _ => false
