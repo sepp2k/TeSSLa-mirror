@@ -463,8 +463,8 @@ module List {
   ## ~~~tessla
   ## in x: Events[List[Int]]
   ## in e: Events[Int]
-  ## def y: Events[List[Int]] = List.find(x, 5)
-  ## def z: Events[List[Int]] = List.find(x, e)
+  ## def y: Events[Int] = List.find(x, 5)
+  ## def z: Events[Int] = List.find(x, e)
   ## out y
   ## out z
   ## ~~~
