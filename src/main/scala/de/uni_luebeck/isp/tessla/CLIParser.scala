@@ -300,7 +300,7 @@ object CLIParser {
     note("")
     cmd("instrumenter")
       .foreach(_ => tasks += (() => Task("instrumenter", config.copy(compilerOptions = compilerOptions))))
-      .text("Instrument C code based on the provided annotations (linux-amd64 only)")
+      .text("Instrument C code based on the provided annotations (linux-amd64, windows-x64 only)")
       .children(
         arg[File]("<tessla-file>")
           .foreach(f => config = config.copy(specSource = CharStreams.fromFileName(f.getPath)))
