@@ -152,7 +152,7 @@ object ConstantEvaluator {
 
   type TranslatableMonad[+A] = Translatable[A, Option]
 
-  implicit val translatableMonad: Monad[TranslatableMonad] = new Monad[TranslatableMonad] {
+  implicit val translatableMonad: CommutativeMonad[TranslatableMonad] = new CommutativeMonad[TranslatableMonad] {
     override def flatMap[A, B](fa: TranslatableMonad[A])(f: A => TranslatableMonad[B]) =
       Translatable { translatedExpressions =>
         val result = fa

@@ -432,14 +432,12 @@ module List {
   }
 
 
-  # TODO: Make extern
   ## Applies a function to all elements in the list and returns a new list with the mapped elements.
   ## **Usage example:**
   ##
   ## ~~~tessla
-  ## liftable def add1(l: List[Int]) = List.map(l, (a: Int) => a + 1)
   ## in x: Events[List[Int]]
-  ## def y: Events[List[Int]] = add1(x)
+  ## def y: Events[List[Int]] = List.map(x, (a: Int) => a + 1)
   ## out y
   ## ~~~
   ##
@@ -457,9 +455,7 @@ module List {
   ## 4: x = []
   ## 4: y = []
   ## ~~~
-  def map[A, B](l: strict List[A], f: strict (strict A) => B) : List[B] = {
-    fold(l, List.empty[B], (c: List[B], a: A) => append(c, f(a)))
-  }
+  liftable def map[A, B](l: strict List[A], f: strict (strict A) => B) : List[B] = extern("List_map")
 
 }
 

@@ -30,7 +30,7 @@ class Lazy[+A](a: => A) {
 }
 
 object Lazy {
-  implicit def monadInstance: Monad[Lazy] = new Monad[Lazy] {
+  implicit def monadInstance: CommutativeMonad[Lazy] = new CommutativeMonad[Lazy] {
     override def pure[A](x: A) = Lazy(x)
 
     override def flatMap[A, B](fa: Lazy[A])(f: A => Lazy[B]) = f(fa.get)

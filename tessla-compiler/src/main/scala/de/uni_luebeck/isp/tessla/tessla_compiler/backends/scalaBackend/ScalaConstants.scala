@@ -175,6 +175,7 @@ object ScalaConstants {
       case "__Map_size__"     => s"${args(0)}.size"
       case "__Map_fold__" =>
         s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)}){case (c, (k, v)) => val f = ${args(2)}; f(c, k, v)}"
+      case "__Map_map__"  => s"${args(0)}.map{case (k, v) => val f = ${args(1)}; f(k, v)}"
       case "__Map_keys__" => s"${args(0)}.keys.toList"
 
       case "__Set_empty__"        => typeTranslation(typeHint.retType) + "()"
@@ -186,6 +187,7 @@ object ScalaConstants {
       case "__Set_intersection__" => s"${args(0)}.intersect(${args(1)})"
       case "__Set_minus__"        => s"(${args(0)} -- ${args(1)})"
       case "__Set_fold__"         => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
+      case "__Set_map__"          => s"${args(0)}.map(${args(1)})"
 
       case "__List_empty__"   => typeTranslation(typeHint.retType) + "()"
       case "__List_size__"    => s"${args(0)}.size"
@@ -198,6 +200,7 @@ object ScalaConstants {
         s"${args(0)}.update(${args(1)}.asInstanceOf[Int], ${args(2)})"
       case "__List_set__"  => s"${args(0)}.updated(${args(1)}.asInstanceOf[Int], ${args(2)})"
       case "__List_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
+      case "__List_map__"  => s"${args(0)}.map(${args(1)})"
 
       case "__getStruct__" =>
         typeHint match {
@@ -215,5 +218,4 @@ object ScalaConstants {
       case _           => throw Diagnostics.CommandNotSupportedError(s"Unsupported built-in function for Scala backend: $name")
     }
   }
-
 }

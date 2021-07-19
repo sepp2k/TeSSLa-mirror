@@ -17,13 +17,12 @@
 package de.uni_luebeck.isp.tessla.core
 
 import java.util.Locale
-
-import cats.Monad
+import cats.{CommutativeMonad, Monad}
 import de.uni_luebeck.isp.tessla.core.util.Lazy
 
 import scala.collection.immutable.ArraySeq
 import cats.implicits._
-import de.uni_luebeck.isp.tessla.core.ConstantEvaluator.RuntimeError
+import de.uni_luebeck.isp.tessla.core.ConstantEvaluator.{Record, RuntimeError}
 import de.uni_luebeck.isp.tessla.core.util.ArraySeqMonad._
 import org.eclipse.tracecompass.ctf.core.event.IEventDefinition
 
@@ -70,7 +69,7 @@ object RuntimeExterns {
 
   val runtimeCommonExterns = commonConstantExterns ++ commonCallableExterns[Lazy]
 
-  def commonCallableExterns[A[+_]: Monad]: Map[String, Extern[A]] = Map(
+  def commonCallableExterns[A[+_]: CommutativeMonad]: Map[String, Extern[A]] = Map(
     "add" -> binIntOp(_ + _),
     "sub" -> binIntOp(_ - _),
     "mul" -> binIntOp(_ * _),
@@ -180,6 +179,23 @@ object RuntimeExterns {
         })
       })
     ),
+    "Map_map" -> ((arguments: ArraySeq[A[Any]]) =>
+      arguments(0).flatMap(propagateSingle(_) { map =>
+        arguments(1).flatMap(propagateSingle(_) { f =>
+          map
+            .asInstanceOf[Map[Any, Any]]
+            .to(LazyList)
+            .traverse {
+              case (k, v) =>
+                f.asInstanceOf[Extern[A]](ArraySeq.untagged(k.pure[A], v.pure[A])).map { r =>
+                  val tmp = r.asInstanceOf[Record].entries
+                  (tmp("_1"), tmp("_2"))
+                }
+            }
+            .map(_.toMap)
+        })
+      })
+    ),
     "Set_empty" -> ((_: ArraySeq[A[Any]]) => Set().pure[A]),
     "Set_add" -> strict(propagate(_) { arguments =>
       (arguments(0).asInstanceOf[Set[Any]] + arguments(1)).pure[A]
@@ -211,6 +227,13 @@ object RuntimeExterns {
         })
       })
     ),
+    "Set_map" -> ((arguments: ArraySeq[A[Any]]) =>
+      arguments(0).flatMap(propagateSingle(_) { set =>
+        arguments(1).flatMap(propagateSingle(_) { f =>
+          set.asInstanceOf[Set[Any]].unorderedTraverse { a => f.asInstanceOf[Extern[A]](ArraySeq.untagged(a.pure[A])) }
+        })
+      })
+    ),
     "List_empty" -> ((_: ArraySeq[Any]) => Nil.pure[A]),
     "List_size" -> strict(propagate(_) { arguments =>
       BigInt(arguments(0).asInstanceOf[List[Any]].size).pure[A]
@@ -235,6 +258,13 @@ object RuntimeExterns {
           map.asInstanceOf[List[Any]].foldLeft(arguments(1)) { (a, b) =>
             f.asInstanceOf[Extern[A]](ArraySeq.untagged(a, b.pure[A]))
           }
+        })
+      })
+    ),
+    "List_map" -> ((arguments: ArraySeq[A[Any]]) =>
+      arguments(0).flatMap(propagateSingle(_) { list =>
+        arguments(1).flatMap(propagateSingle(_) { f =>
+          list.asInstanceOf[List[Any]].traverse { a => f.asInstanceOf[Extern[A]](ArraySeq.untagged(a.pure[A])) }
         })
       })
     ),

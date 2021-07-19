@@ -456,7 +456,6 @@ module Map {
     map
   }
 
-  # TODO: Make extern
   ## Applies a function to all elements in the map and returns a new map with the mapped elements.
   ## The applied function `f` is able to map key and value. The order in which the mapping function is applied
   ## to the elements is non-deterministic. If `f` maps several entries to the same key, the later mappings overwrite
@@ -464,9 +463,8 @@ module Map {
   ## **Usage example:**
   ##
   ## ~~~tessla
-  ## liftable def add1(l: Map[Int, Int]) = Map.map(l, (a: Int, b: Int) => (a + 1, b + 1))
   ## in x: Events[Map[Int, Int]]
-  ## def y: Events[Map[Int, Int]] = add1(x)
+  ## def y: Events[Map[Int, Int]] = Map.map(l, (a: Int, b: Int) => (a + 1, b + 1))
   ## out y
   ## ~~~
   ##
@@ -486,12 +484,7 @@ module Map {
   ## 6: x = —
   ## 6: y = —
   ## ~~~
-  def map[A, B, C, D](m: strict Map[A, B], f: strict (strict A, strict B) => (C, D)) : Map[C, D] = {
-      fold(m, empty[C, D], (c: Map[C, D], a: A, b: B) => {
-        def n = f(a,b)
-        add(c, n._1, n._2)
-      })
-  }
+  liftable def map[A, B, C, D](m: strict Map[A, B], f: strict (strict A, strict B) => (C, D)) : Map[C, D] = extern("Map_map")
 }
 
 ## inmodule Map
