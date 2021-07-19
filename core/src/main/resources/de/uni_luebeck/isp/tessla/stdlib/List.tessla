@@ -457,6 +457,38 @@ module List {
   ## ~~~
   liftable def map[A, B](l: strict List[A], f: strict (strict A) => B) : List[B] = extern("List_map")
 
+  ## Returns the first index of element e in the list. If e is not contained -1 is returned.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[List[Int]]
+  ## in e: Events[Int]
+  ## def y: Events[List[Int]] = List.find(x, 5)
+  ## def z: Events[List[Int]] = List.find(x, e)
+  ## out y
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,5]
+  ## stream x: signal
+  ## stream e: bubbles
+  ## stream y: signal
+  ## stream z: signal
+  ## ---
+  ## 0: x = [1, 5, 3]
+  ## 0: y = 1
+  ## 1: e = 7
+  ## 1: z = -1
+  ## 3: x = [7]
+  ## 3: y = -1
+  ## 3: z = 0
+  ## ~~~
+  liftable def find[A](l: strict List[A], e: strict A) : Int =
+    fold(zipWithIndex(l), -1, (c: Int, le: (Int, A)) => if c == -1 && e == le._2 then le._1 else c)
+
 }
 
 ## inmodule List
