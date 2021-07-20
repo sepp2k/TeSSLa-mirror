@@ -8,6 +8,8 @@
 ### Additions and Fixes
 
 - New compilation phase for reducing the generated TeSSLa Core by combining assignments of the same expression to a single assignment
+- New functions for Lists/Sets/Maps in stdlib
+- Additional externs for compiler to optimize translation
 
 ### API Changes
 - Compiler now accepts relative paths, places code to out.scala and no longer to stdout if no parameter is given and may generate jar and source in a single run.
