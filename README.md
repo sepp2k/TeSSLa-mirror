@@ -100,11 +100,14 @@ Generate documentation for Tessla code
 Command: compile [options] <tessla-file>
 Compile TeSSLa specifications to Scala
   <tessla-file>            The file containing the Tessla specification
-  -o, --out-file <value>   Path to the output file. If not specified source is printed to stdout.
-  -j, --jar-file <value>   Compiles Scala code to a jar file which is created at the given location. No source output is generated
+  -a, --add-source <value>
+                           Additional source file included on top of the generated source
+  -o, --out-file <value>   Place the generated Scala source code at this location.
+  -j, --jar-file <value>   Compile TeSSLa specification to an executable jar file which is created at the given location.
+  -n, --no-io              Replaces I/O Handling in generated source with simple API interface
 
 Command: instrumenter <tessla-file> <c-file> [<include-path>...]
-Instrument C code based on the provided annotations (linux-amd64 only)
+Instrument C code based on the provided annotations (linux-amd64, windows-x64 only)
   <tessla-file>            The file containing the Tessla specification, with annotations for the instrumentation.
   <c-file>                 Instrument the provided C file according to the specification
   <include-path>...        Include paths for the C compiler
