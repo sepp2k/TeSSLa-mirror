@@ -4,6 +4,8 @@ def @Foo(s: String)
 def @@Foo(a: Float)
 
 ## This is documentation
+
+## This is another line of the documentation
 def foo(a: Int) = 5
 
 # This isn't.

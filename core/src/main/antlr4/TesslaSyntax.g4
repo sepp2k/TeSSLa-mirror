@@ -12,11 +12,13 @@ spec:
 
 eos: NL+ | ';' | EOF;
 
-include: 'include' file=stringLit eos;
+include: tessladoc+=DOCLINE* 'include' file=stringLit eos;
 
-entry:statement eos;
+entry
+    : statemnt eos #Statement
+    | tessladoc+=DOCLINE+ NL* #LonelyTesslaDoc;
 
-statement
+statemnt
     : def #Definition
     | tessladoc+=DOCLINE* NL* 'def' NL* ('@' | '@@') ID ( '(' NL* (parameters+=param (',' NL* parameters+=param)* )? NL* ')' )? #AnnotationDefinition
     | tessladoc+=DOCLINE* NL* 'type' NL* name=ID ('[' NL* typeParameters+=ID (',' NL* typeParameters+=ID)* NL* ']')? (':='|'=') NL* typeBody #TypeDefinition

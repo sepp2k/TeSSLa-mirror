@@ -132,7 +132,7 @@
       }
     }]
   }, {
-    "doc": "This is documentation",
+    "doc": "This is documentation\n\nThis is another line of the documentation",
     "isLiftable": false,
     "kind": "DefDoc",
     "loc": {
@@ -141,7 +141,7 @@
         "fromColumn": 1,
         "fromLine": 6,
         "toColumn": 20,
-        "toLine": 7
+        "toLine": 9
       }
     },
     "name": "foo",
@@ -164,9 +164,9 @@
       "path": "foo.tessla",
       "range": {
         "fromColumn": 1,
-        "fromLine": 12,
+        "fromLine": 14,
         "toColumn": 33,
-        "toLine": 12
+        "toLine": 14
       }
     },
     "name": "Ternary",
@@ -179,9 +179,9 @@
       "path": "foo.tessla",
       "range": {
         "fromColumn": 1,
-        "fromLine": 14,
+        "fromLine": 16,
         "toColumn": 2,
-        "toLine": 33
+        "toLine": 35
       }
     },
     "members": [{
@@ -192,9 +192,9 @@
         "path": "foo.tessla",
         "range": {
           "fromColumn": 3,
-          "fromLine": 16,
+          "fromLine": 18,
           "toColumn": 35,
-          "toLine": 17
+          "toLine": 19
         }
       },
       "name": "top",
@@ -213,9 +213,9 @@
         "path": "foo.tessla",
         "range": {
           "fromColumn": 3,
-          "fromLine": 19,
+          "fromLine": 21,
           "toColumn": 41,
-          "toLine": 20
+          "toLine": 22
         }
       },
       "name": "bottom",
@@ -234,9 +234,9 @@
         "path": "foo.tessla",
         "range": {
           "fromColumn": 3,
-          "fromLine": 22,
+          "fromLine": 24,
           "toColumn": 43,
-          "toLine": 23
+          "toLine": 25
         }
       },
       "name": "unknown",
@@ -255,9 +255,9 @@
         "path": "foo.tessla",
         "range": {
           "fromColumn": 3,
-          "fromLine": 25,
+          "fromLine": 27,
           "toColumn": 59,
-          "toLine": 26
+          "toLine": 28
         }
       },
       "name": "and",
@@ -290,9 +290,9 @@
         "path": "foo.tessla",
         "range": {
           "fromColumn": 3,
-          "fromLine": 28,
+          "fromLine": 30,
           "toColumn": 57,
-          "toLine": 29
+          "toLine": 31
         }
       },
       "name": "or",
@@ -325,9 +325,9 @@
         "path": "foo.tessla",
         "range": {
           "fromColumn": 3,
-          "fromLine": 31,
+          "fromLine": 33,
           "toColumn": 47,
-          "toLine": 32
+          "toLine": 34
         }
       },
       "name": "not",
@@ -353,9 +353,9 @@
       "path": "foo.tessla",
       "range": {
         "fromColumn": 1,
-        "fromLine": 35,
+        "fromLine": 37,
         "toColumn": 73,
-        "toLine": 36
+        "toLine": 38
       }
     },
     "name": "complex",

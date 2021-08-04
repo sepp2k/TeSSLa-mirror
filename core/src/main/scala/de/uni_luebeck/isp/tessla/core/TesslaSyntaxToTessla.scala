@@ -41,12 +41,24 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     with TesslaParser.CanParseConstantString {
   override def translateSpec(): Tessla.Specification = {
     val statements =
-      spec.flatMap(res => res.tree.entries.asScala.map(_.statement).map(translateStatement(_, res.tokens)))
+      spec.flatMap { res =>
+        res.tree.includes.forEach { include =>
+          warnLonelyTesslaDoc(include.tessladoc)
+        }
+        res.tree.entries.asScala.flatMap(translateEntry(_, res.tokens))
+      }
     checkForDuplicates(statements.flatMap(Tessla.getId))
     checkForDuplicates(statements.flatMap(getTypeDefID))
     checkForDuplicates(statements.flatMap(getAnnotationID(_, global = false)))
     checkForDuplicates(statements.flatMap(getAnnotationID(_, global = true)))
     Tessla.Specification(statements)
+  }
+
+  private def warnLonelyTesslaDoc(tokens: java.util.List[Token]): Unit = {
+    if (tokens.size() > 0) {
+      val loc = tokens.asScala.map(Location.fromToken).reduce((a, b) => a.merge(b))
+      warn(loc, "Nothing to document here.")
+    }
   }
 
   def getTypeDefID(stat: Tessla.Statement): Option[Tessla.Identifier] = stat match {
@@ -69,8 +81,12 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
   }
 
+  def translateEntry(entry: TesslaSyntax.EntryContext, tokens: CommonTokenStream): Option[Tessla.Statement] = {
+    new EntryVisitor(tokens).visit(entry)
+  }
+
   def translateStatement(stat: TesslaSyntax.StatementContext, tokens: CommonTokenStream): Tessla.Statement = {
-    new StatementVisitor(tokens).visit(stat)
+    new StatementVisitor(tokens).visit(stat.statemnt())
   }
 
   def translateDefinition(definition: TesslaSyntax.DefContext): Tessla.Definition = {
@@ -153,6 +169,15 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
       Tessla.Extern(mkID(builtIn.name.content), Option(builtIn.expression).map(translateExpression))
   }
 
+  class EntryVisitor(tokens: CommonTokenStream) extends TesslaVisitor[Option[Tessla.Statement]] {
+    override def visitStatement(ctx: TesslaSyntax.StatementContext) = Some(translateStatement(ctx, tokens))
+
+    override def visitLonelyTesslaDoc(ctx: TesslaSyntax.LonelyTesslaDocContext) = {
+      warnLonelyTesslaDoc(ctx.tessladoc)
+      None
+    }
+  }
+
   class StatementVisitor(tokens: CommonTokenStream) extends TesslaVisitor[Tessla.Statement] {
     override def visitDefinition(definition: TesslaSyntax.DefinitionContext) = {
       translateDefinition(definition.`def`)
@@ -201,7 +226,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
     }
 
     override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext) = {
-      val contents = module.contents.asScala.map(_.statement).map(visit)
+      val contents = module.contents.asScala.flatMap(translateEntry(_, tokens))
       Tessla.Module(mkID(module.name), contents.toSeq, Location.fromNode(module))
     }
 

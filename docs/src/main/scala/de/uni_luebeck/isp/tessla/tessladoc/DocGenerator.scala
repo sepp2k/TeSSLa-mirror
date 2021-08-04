@@ -113,12 +113,12 @@ object DocGenerator {
 
   private class Extractor(spec: Seq[TesslaParser.ParseResult]) extends TranslationPhase.Translator[Docs] {
     override protected def translateSpec(): Docs = {
-      val (docs, imports) = translate(spec.flatMap(_.tree.entries.asScala.map(_.statement)))
+      val (docs, imports) = translate(spec.flatMap(_.tree.entries.asScala))
       Docs(docs, imports)
     }
 
-    def translate(statements: Seq[TesslaSyntax.StatementContext]): (Seq[TesslaDoc], Seq[Import]) = {
-      val (docs, imports) = statements.flatMap(StatementVisitor.visit).partitionMap {
+    def translate(statements: Seq[TesslaSyntax.EntryContext]): (Seq[TesslaDoc], Seq[Import]) = {
+      val (docs, imports) = statements.flatMap(EntryVisitor.visit).partitionMap {
         case doc: TesslaDoc => Left(doc)
         case imprt: Import  => Right(imprt)
       }
@@ -165,7 +165,14 @@ object DocGenerator {
       // $COVERAGE-ON$
     }
 
-    object StatementVisitor extends TesslaSyntaxBaseVisitor[Seq[Statement]] {
+    object EntryVisitor extends TesslaSyntaxBaseVisitor[Seq[Statement]] {
+
+      override def visitStatement(ctx: TesslaSyntax.StatementContext) = visit(ctx.statemnt())
+
+      override def visitLonelyTesslaDoc(ctx: TesslaSyntax.LonelyTesslaDocContext) = {
+        // ignore lonely tessladoc comments. The core parser issues a warning on those.
+        Seq.empty
+      }
 
       override def visitDef(definition: TesslaSyntax.DefContext): Seq[Statement] = {
         val header = definition.header
@@ -242,7 +249,7 @@ object DocGenerator {
       override def visitBlock(block: TesslaSyntax.BlockContext): Seq[Statement] = Seq()
 
       override def visitModuleDefinition(module: TesslaSyntax.ModuleDefinitionContext): Seq[ModuleDoc] = {
-        val (members, imports) = translate(module.contents.asScala.map(_.statement).toSeq)
+        val (members, imports) = translate(module.contents.asScala.toSeq)
         Seq(
           ModuleDoc(
             module.name.getText,

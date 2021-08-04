@@ -96,7 +96,7 @@ DECINT: [\p{Nd}]+;
 HEXINT: '0x'[\p{Nd}a-fA-F\uFF21-\uFF26\uFF41-\uFF46]+;
 FLOAT: [\p{Nd}]+ ('.' [\p{Nd}]+ ('e' ('+'|'-')? [\p{Nd}]+)? | 'e' ('+'|'-')? [\p{Nd}]+);
 
-DOCLINE: ('---' | '##') ~'\n'* ('\r'? '\n')+;
+DOCLINE: ('---' | '##') ~'\n'* NL+;
 // Skip the comment, but not the linebreak at the end of the comment. This way the parser will still see a
 // linebreak that terminates a statement when a comment is written on the same line as a statement.
 LINE_COMMENT: ('--' | '#') ~'\n'* -> channel(HIDDEN);
