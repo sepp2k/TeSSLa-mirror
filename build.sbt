@@ -52,7 +52,7 @@ Global / coverageExcludedPackages := "<empty>;" +
   ".*DocJsonProtocol;"
 
 // ThisBuild scoped settings
-val compilerVersion = "2.13.3"
+val compilerVersion = "2.13.6"
 ThisBuild / organization := "de.uni_luebeck.isp"
 ThisBuild / scalaVersion := compilerVersion
 ThisBuild / version := versionPattern.findFirstMatchIn(IO.read(versionFile)).get.group(1)
