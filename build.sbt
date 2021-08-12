@@ -105,14 +105,17 @@ lazy val commonSettings = Seq(
     case x                             => (assembly / assemblyMergeStrategy).value(x)
   },
   buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
-  Antlr4 / antlr4Version := "4.7.2",
-  Antlr4 / antlr4GenListener := false,
-  Antlr4 / antlr4GenVisitor := true,
   headerLicense := Some(
     HeaderLicense.Custom(
       Files.readString(Paths.get("LICENSE-HEADER"), StandardCharsets.UTF_8)
     )
   )
+)
+
+lazy val antlrSettings = Seq(
+  Antlr4 / antlr4Version := "4.7.2",
+  Antlr4 / antlr4GenListener := false,
+  Antlr4 / antlr4GenVisitor := true
 )
 
 // Task to copy the scala-library as managed dependency
@@ -188,6 +191,7 @@ lazy val core = (project in file("core"))
     Antlr4Plugin
   )
   .settings(commonSettings: _*)
+  .settings(antlrSettings: _*)
   .settings(
     name := "core",
     Antlr4 / antlr4PackageName := Some(s"$rootPackage.core"),
@@ -200,6 +204,7 @@ lazy val interpreter = (project in file("interpreter"))
     Antlr4Plugin
   )
   .settings(commonSettings: _*)
+  .settings(antlrSettings: _*)
   .settings(
     name := "interpreter",
     Antlr4 / antlr4PackageName := Some(s"$rootPackage.interpreter"),
@@ -215,6 +220,7 @@ lazy val instrumenter = (project in file("instrumenter"))
     Antlr4Plugin
   )
   .settings(commonSettings: _*)
+  .settings(antlrSettings: _*)
   .settings(
     name := "instrumenter",
     Antlr4 / antlr4PackageName := Some(s"$rootPackage.instrumenter"),
@@ -233,6 +239,7 @@ lazy val docs = (project in file("docs"))
     Antlr4Plugin
   )
   .settings(commonSettings: _*)
+  .settings(antlrSettings: _*)
   .settings(
     name := "docs",
     Antlr4 / antlr4PackageName := Some(s"$rootPackage.docs"),
@@ -254,7 +261,7 @@ lazy val tesslac = (project in file("tessla-compiler"))
     libraryDependencies ++= Seq(
       scalac
     ),
-    excludeFilter.in(headerResources) := HiddenFileFilter || "*ScalaSkeleton*.scala"
+    headerResources / excludeFilter := HiddenFileFilter || "*ScalaSkeleton*.scala"
   )
   .dependsOn(
     core % "test->test;compile->compile"
