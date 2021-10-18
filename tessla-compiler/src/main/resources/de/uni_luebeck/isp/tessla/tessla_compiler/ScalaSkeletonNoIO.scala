@@ -39,18 +39,19 @@ object TesslaMonitor {
     def isEmpty: Boolean = value.isEmpty && error.isEmpty
   }
 
-  def flush(): Unit = step(-1)
+  def flush(): Unit = step(currTs, true)
 
-  private def step(newInputTs: Long): Unit = {
+  private def step(newInputTs: Long, flush: Boolean = false): Unit = {
+    var flushReq = flush
 
-    if (newInputTs > currTs || newInputTs == -1) {
+    if (newInputTs > currTs || flushReq) {
 
       var doProcessing = true
       while (doProcessing) {
 
 //TRIGGER
 
-        if (currTs == newInputTs) {
+        if (currTs == newInputTs && !flushReq) {
           doProcessing = false
         } else {
 
@@ -58,6 +59,7 @@ object TesslaMonitor {
 
 //TAIL
 
+          flushReq = flush && (currTs != newInputTs)
           lastProcessedTs = currTs
           currTs = newInputTs
         }
