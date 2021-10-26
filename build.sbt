@@ -4,9 +4,7 @@ import java.nio.file.{Files, Paths}
 import sbt.Keys.artifact
 
 // Resolvers
-val nexus = "https://sourcecode.isp.uni-luebeck.de/nexus/"
-val snapshots = "ISP Snapshots" at nexus + "content/repositories/snapshots"
-val releases = "ISP Releases" at nexus + "content/repositories/releases"
+val gitlab = "ISP Gitlab" at "https://gitlab.isp.uni-luebeck.de/api/v4/projects/483/packages/maven"
 val playResolver = "Typesafe repository" at "https://repo.typesafe.com/typesafe/releases/"
 val validatorResolver = "emueller-bintray" at "https://dl.bintray.com/emueller/maven"
 val efficiosSnapshots = "efficios-snapshots" at "https://mvn.efficios.com/repository/snapshots"
@@ -57,14 +55,10 @@ ThisBuild / organization := "de.uni_luebeck.isp"
 ThisBuild / scalaVersion := compilerVersion
 ThisBuild / version := versionPattern.findFirstMatchIn(IO.read(versionFile)).get.group(1)
 
-ThisBuild / publishTo := { if (isSnapshot.value) Some(snapshots) else Some(releases) }
-ThisBuild / credentials += Credentials(
-  Path.userHome / ".ivy2" / ".isp-uni-luebeck-maven-repository-credentials"
-)
+ThisBuild / publishTo := Some(gitlab)
 
 ThisBuild / resolvers ++= Seq(
-  releases,
-  snapshots,
+  gitlab,
   playResolver,
   validatorResolver,
   efficiosSnapshots,
@@ -158,7 +152,8 @@ val libCopy = Def
 val rootPackage = "de.uni_luebeck.isp.tessla"
 lazy val root = (project in file("."))
   .enablePlugins(
-    BuildInfoPlugin
+    BuildInfoPlugin,
+    K8tyGitlabPlugin
   )
   .settings(commonSettings: _*)
   .settings(
