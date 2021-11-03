@@ -19,7 +19,6 @@ package de.uni_luebeck.isp.tessla
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
-
 import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
@@ -27,6 +26,7 @@ import de.uni_luebeck.isp.tessla.core.util.Lazy
 import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, FlattenCore, IncludeResolvers, TesslaAST}
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustCompiler
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
@@ -201,7 +201,7 @@ object Main {
             case "scala" =>
               new ScalaCompiler(dirPath, name, false, config.ioInterface)().translate(sourceStr)
             case "rust" =>
-              throw new Exception("Not implemented") // FIXME
+              new RustCompiler(dirPath, name).translate(sourceStr)
           }
         }
 
