@@ -74,7 +74,7 @@ ThisBuild / resolvers ++= Seq(
 // Module-specific dependencies
 lazy val clang = "de.uni_luebeck.isp" %% "clang-instrumentation" % "0.9.2"
 lazy val scalac = "org.scala-lang" % "scala-compiler" % compilerVersion
-lazy val scopt = "com.github.scopt" %% "scopt" % "4.0.0-RC2"
+lazy val scopt = "com.github.scopt" %% "scopt" % "4.0.1"
 
 // Shared dependencies and settings for all modules
 lazy val commonDependencies = Seq(
