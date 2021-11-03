@@ -75,10 +75,11 @@ object CLIParser {
     specSource: CharStream = null,
     optimise: Boolean = true,
     outFile: Option[File] = None,
-    jarFile: Option[File] = None,
+    binFile: Option[File] = None,
     additionalSource: String = "",
     ioInterface: Boolean = true,
-    compilerOptions: Compiler.Options = Compiler.Options()
+    compilerOptions: Compiler.Options = Compiler.Options(),
+    targetLanguage: String = "scala"
   ) extends Config
 
   case class InstrumenterConfig(
@@ -282,13 +283,20 @@ object CLIParser {
           .text("Additional source file included on top of the generated source"),
         opt[File]('o', "out-file")
           .foreach(f => config = config.copy(outFile = Some(f)))
-          .text("Place the generated Scala source code at this location."),
-        opt[File]('j', "jar-file")
-          .foreach(f => config = config.copy(jarFile = Some(f)))
+          .text("Place the generated source code at this location."),
+        opt[File]('b', "bin-file")
+          .foreach(f => config = config.copy(binFile = Some(f)))
           .text("Compile TeSSLa specification to an executable jar file which is created at the given location."),
         opt[Unit]('n', "no-io")
           .foreach(_ => config = config.copy(ioInterface = false))
-          .text("Replaces I/O Handling in generated source with simple API interface")
+          .text("Replaces I/O Handling in generated source with simple API interface"),
+        opt[String]('t', "target-language")
+          .foreach(s => config = config.copy(targetLanguage = s))
+          .validate {
+            case "scala" | "rust" => success
+            case _                => failure("Target language must be one of: scala, rust")
+          }
+          .text("Select the target language to compile to: (scala, rust)")
       )
   }
 

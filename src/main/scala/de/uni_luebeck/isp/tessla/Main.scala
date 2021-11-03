@@ -178,23 +178,41 @@ object Main {
             andThen InliningAnalysis
             andThen new TesslaCoreToIntermediate(config.ioInterface)
             andThen UnusedVarRemove
-            andThen new ScalaBackend(config.ioInterface, config.additionalSource)
+            andThen (config.targetLanguage match {
+              case "scala" => new ScalaBackend(config.ioInterface, config.additionalSource)
+              case "rust"  => throw new Exception("Not Implemented") // FIXME
+            })
         )
 
-        config.jarFile.map { file =>
-          val p = Paths.get(file.getAbsolutePath)
-          val (dirPath, name) = if (file.isDirectory) {
-            (p, "monitor.jar")
-          } else {
-            val n = file.getName
-            (p.getParent, if (n.contains(".")) n else s"$n.jar")
-          }
-          new ScalaCompiler(dirPath, name, false, config.ioInterface)().translate(sourceStr)
+        val binExt = config.targetLanguage match {
+          case "scala" => "jar"
+          case "rust"  => "out"
         }
 
-        val f = config.outFile.getOrElse(new File("out.scala"))
+        config.binFile.map { file =>
+          val p = Paths.get(file.getAbsolutePath)
+          val (dirPath, name) = if (file.isDirectory) {
+            (p, s"monitor.$binExt")
+          } else {
+            val n = file.getName
+            (p.getParent, if (n.contains(".")) n else s"$n.$binExt")
+          }
+          config.targetLanguage match {
+            case "scala" =>
+              new ScalaCompiler(dirPath, name, false, config.ioInterface)().translate(sourceStr)
+            case "rust" =>
+              throw new Exception("Not implemented") // FIXME
+          }
+        }
 
-        if (config.outFile.isDefined || config.jarFile.isEmpty) {
+        val srcExt = config.targetLanguage match {
+          case "scala" => "scala"
+          case "rust"  => "rs"
+        }
+
+        val f = config.outFile.getOrElse(new File(s"out.$srcExt"))
+
+        if (config.outFile.isDefined || config.binFile.isEmpty) {
           Files.createDirectories(Paths.get(f.getAbsolutePath).getParent)
           Files.write(f.toPath, sourceStr.getBytes(StandardCharsets.UTF_8))
         }
