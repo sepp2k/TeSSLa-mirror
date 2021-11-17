@@ -29,7 +29,7 @@ import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustCompiler
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
-import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, TesslaCoreToRust, UnusedVarRemove}
 import de.uni_luebeck.isp.tessla.tessladoc.{DocGenerator, TesslaDoc}
 
 import scala.Option.when
@@ -176,11 +176,13 @@ object Main {
           Compiler.compile(config.specSource, config.compilerOptions)
             andThen UsageAnalysis
             andThen InliningAnalysis
-            andThen new TesslaCoreToIntermediate(config.ioInterface)
-            andThen UnusedVarRemove
             andThen (config.targetLanguage match {
-              case "scala" => new ScalaBackend(config.ioInterface, config.additionalSource)
-              case "rust"  => throw new Exception("Not Implemented") // FIXME
+              case "rust" =>
+                new TesslaCoreToRust(config.ioInterface)
+              case "scala" =>
+                (new TesslaCoreToIntermediate(config.ioInterface)
+                  andThen UnusedVarRemove
+                  andThen new ScalaBackend(config.ioInterface, config.additionalSource))
             })
         )
 
