@@ -155,23 +155,27 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       srcSegments: SourceSegments
     ): Unit = {
       val output = s"var_${id.fullName}"
-      val stream = streamNameFromExpressionArg(args(0))
       e.name match {
         case "nil" => {} // TODO does this do anything ??
         case "default" =>
+          val stream = streamNameFromExpressionArg(args(0))
           val default = rustCodeGenerator.translateExpressionArg(args(1), rustCodeGenerator.TypeArgManagement.empty)
           srcSegments.computation.append(s"default($output, $stream, $default);")
         case "defaultFrom" =>
+          val stream = streamNameFromExpressionArg(args(0))
           val default = streamNameFromExpressionArg(args(1))
           srcSegments.computation.append(s"defaultFrom($output, $stream, $default);")
         case "time" =>
+          val stream = streamNameFromExpressionArg(args(0))
           srcSegments.computation.append(s"time($output, $stream);")
         case "last" =>
+          val stream = streamNameFromExpressionArg(args(0))
           val trigger = streamNameFromExpressionArg(args(1))
           srcSegments.computation.append(s"last($output, $stream, $trigger);")
           // TODO this will needs deduplication/different representation:
           srcSegments.store.append(s"update_last($output);")
         case "delay" =>
+          val stream = streamNameFromExpressionArg(args(0))
           val reset = streamNameFromExpressionArg(args(1))
           srcSegments.computation.append(s"delay($output, $stream, $reset);")
 
@@ -198,12 +202,12 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
           val function = args.last
           // TODO I think the lifted function expects the stream values to be wrapped in options?
           // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
-          srcSegments.computation.append(s"lift($output, vec![$arguments], $function);");
+          srcSegments.computation.append(s"lift($output, vec![$arguments], $function);")
         case "slift" =>
           val arguments = args.dropRight(1).map(streamNameFromExpressionArg).mkString(", ")
           val function = args.last
-          produceSignalLiftStepCode(id, typ.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
-        case "merge" =>
+          srcSegments.computation.append(s"slift($output, vec![$arguments], $function);")
+        /*case "merge" =>
           produceMergeStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
         case "count" =>
           produceCountStepCode(id, args(0), currSource)
@@ -248,10 +252,10 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       // FIXME better to string conversion??
 
       if (ioInterface) {
+        srcSegments.output.append(s"""output_stream($s, "$name", currTs, $raw)""")
+      } else {
         throw Diagnostics
           .NotYetImplementedError("Output via IOInterface")
-      } else {
-        srcSegments.output.append(s"""output_stream($s, "$name", currTs, $raw)""")
       }
     }
 
