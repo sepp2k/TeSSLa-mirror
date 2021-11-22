@@ -14,23 +14,15 @@
  * limitations under the License.
  */
 
-package de.uni_luebeck.isp.tessla.tessla_compiler
+package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.core.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
-import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success, Translator}
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.SourceListing
+import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Diagnostics, ExtendedSpecification}
 
 import scala.annotation.tailrec
 import scala.io.Source
-
-private case class SourceSegments(
-  variables: StringBuilder = new StringBuilder,
-  input: StringBuilder = new StringBuilder,
-  timestamp: StringBuilder = new StringBuilder,
-  computation: StringBuilder = new StringBuilder,
-  output: StringBuilder = new StringBuilder
-)
 
 /**
  * Class implementing TranslationPhase for the translation from TeSSLa Core to
@@ -48,6 +40,8 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     new Translator(extSpec).translate()
 
   class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[String] {
+
+    val rustCodeGenerator = new RustCodeGenerator(extSpec)
 
     @tailrec
     final protected def externResolution(e: ExpressionArg): ExternExpression = e match {
@@ -88,9 +82,15 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
                   throw Diagnostics
                     .CoreASTError("Non valid stream defining expression cannot be translated", e.location)
               }
-            case e =>
-              throw Diagnostics
-                .NotYetImplementedError("Failed to translate an expression without instantiated type", e.location)
+            case _ =>
+              srcSegments.static.append(
+                rustCodeGenerator
+                  .translateAssignment(
+                    id,
+                    definition,
+                    rustCodeGenerator.TypeArgManagement.empty
+                  )
+              )
           }
       }
 
