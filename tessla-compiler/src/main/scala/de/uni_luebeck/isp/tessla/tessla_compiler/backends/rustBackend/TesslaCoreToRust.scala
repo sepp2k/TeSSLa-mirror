@@ -154,24 +154,54 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       typeArgs: Seq[Type],
       srcSegments: SourceSegments
     ): Unit = {
+      val output = s"var_${id.fullName}"
+      val stream = streamNameFromExpressionArg(args(0))
       e.name match {
-        //case "nil" => TODO does this do anything ??
+        case "nil" => {} // TODO does this do anything ??
         case "default" =>
-          // TODO args(1) is the "default" value, do we need this elsewhere?
-          val s = streamNameFromExpressionArg(args.head)
-          val o = s"var_${id.fullName}"
-          srcSegments.computation.append(s"default(${o}, ${s})")
-        /*case "defaultFrom" =>
-          produceDefaultFromStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
+          val default = rustCodeGenerator.translateExpressionArg(args(1), rustCodeGenerator.TypeArgManagement.empty)
+          srcSegments.computation.append(s"default($output, $stream, $default);")
+        case "defaultFrom" =>
+          val default = streamNameFromExpressionArg(args(1))
+          srcSegments.computation.append(s"defaultFrom($output, $stream, $default);")
         case "time" =>
-          produceTimeStepCode(id, args(0), currSource)
+          srcSegments.computation.append(s"time($output, $stream);")
         case "last" =>
-          produceLastStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
+          val trigger = streamNameFromExpressionArg(args(1))
+          srcSegments.computation.append(s"last($output, $stream, $trigger);")
+          // TODO this will needs deduplication/different representation:
+          srcSegments.store.append(s"update_last($output);")
         case "delay" =>
-          produceDelayStepCode(id, args(0), args(1), currSource)
+          val reset = streamNameFromExpressionArg(args(1))
+          srcSegments.computation.append(s"delay($output, $stream, $reset);")
+
+          /** TODO needs additional rust data-structure/timestamp code
+           * This needs to do something like this:
+           * if ${output}_nextTs > lastProcessedTs && currTs > ${output}_nextTs {
+           *   currTs = ${output}_nextTs;
+           * }
+           */
+          srcSegments.timestamp.append(s"interrupt_for_delay($output);")
+
+          /** TODO is there a reason for this being put /after/ the processing part?
+           * if ${stream}_changed {
+           *   if ${output}_changed && ${reset}_changed {
+           *     ${output}_nextTs = currTs + ${stream}_value
+           *   } else if (${reset}_changed) {
+           *     ${output}_nextTs = -1 //TODO this is supposed to stop the delay?
+           *   }
+           * }
+           */
+          srcSegments.output.append(s"reset_delay($output, $stream, $reset);")
         case "lift" =>
-          produceLiftStepCode(id, typ.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
+          val arguments = args.dropRight(1).map(streamNameFromExpressionArg).mkString(", ")
+          val function = args.last
+          // TODO I think the lifted function expects the stream values to be wrapped in options?
+          // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
+          srcSegments.computation.append(s"lift($output, vec![$arguments], $function);");
         case "slift" =>
+          val arguments = args.dropRight(1).map(streamNameFromExpressionArg).mkString(", ")
+          val function = args.last
           produceSignalLiftStepCode(id, typ.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
         case "merge" =>
           produceMergeStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
@@ -188,7 +218,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
         case "unitIf" =>
           produceUnitIfStepCode(id, args(0), currSource)
         case "pure" =>
-          producePureStepCode(id, typ.resultType.resolve(typeParamMap), args(0), currSource)*/
+          producePureStepCode(id, typ.resultType.resolve(typeParamMap), args(0), currSource) */
         case _ => throw Diagnostics.CommandNotSupportedError(e.toString)
       }
     }
