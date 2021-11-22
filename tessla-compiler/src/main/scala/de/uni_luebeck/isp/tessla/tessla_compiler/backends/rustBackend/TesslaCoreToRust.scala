@@ -105,7 +105,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
         produceInputCode(i._1, i._2._1, srcSegments)
       }
 
-      insertSegments(srcSegments)
+      insertSegments(srcSegments).replace("$", "___") // Rust does not like $ in names
     }
 
     private def insertSegments(srcSegments: SourceSegments): String = {
@@ -156,25 +156,32 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     ): Unit = {
       val output = s"var_${id.fullName}"
       e.name match {
-        case "nil" => {} // TODO does this do anything ??
+        case "nil" =>
+          // TODO does this do anything ??
+          srcSegments.variables.append(s"const $output = init();")
         case "default" =>
-          val stream = streamNameFromExpressionArg(args(0))
           val default = rustCodeGenerator.translateExpressionArg(args(1), rustCodeGenerator.TypeArgManagement.empty)
-          srcSegments.computation.append(s"default($output, $stream, $default);")
+          srcSegments.variables.append(s"let $output = init_with_value($default);")
+          val stream = streamNameFromExpressionArg(args(0))
+          srcSegments.computation.append(s"default($output, $stream);")
         case "defaultFrom" =>
+          srcSegments.variables.append(s"let $output = init();")
           val stream = streamNameFromExpressionArg(args(0))
           val default = streamNameFromExpressionArg(args(1))
           srcSegments.computation.append(s"defaultFrom($output, $stream, $default);")
         case "time" =>
+          srcSegments.variables.append(s"let $output = init();")
           val stream = streamNameFromExpressionArg(args(0))
           srcSegments.computation.append(s"time($output, $stream);")
         case "last" =>
+          srcSegments.variables.append(s"let $output = init();")
           val stream = streamNameFromExpressionArg(args(0))
           val trigger = streamNameFromExpressionArg(args(1))
           srcSegments.computation.append(s"last($output, $stream, $trigger);")
           // TODO this will needs deduplication/different representation:
           srcSegments.store.append(s"update_last($output);")
         case "delay" =>
+          srcSegments.variables.append(s"let $output = init();")
           val stream = streamNameFromExpressionArg(args(0))
           val reset = streamNameFromExpressionArg(args(1))
           srcSegments.computation.append(s"delay($output, $stream, $reset);")
@@ -198,12 +205,14 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
            */
           srcSegments.output.append(s"reset_delay($output, $stream, $reset);")
         case "lift" =>
+          srcSegments.variables.append(s"let $output = init();")
           val arguments = args.dropRight(1).map(streamNameFromExpressionArg).mkString(", ")
           val function = args.last
           // TODO I think the lifted function expects the stream values to be wrapped in options?
           // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
           srcSegments.computation.append(s"lift($output, vec![$arguments], $function);")
         case "slift" =>
+          srcSegments.variables.append(s"let $output = init();")
           val arguments = args.dropRight(1).map(streamNameFromExpressionArg).mkString(", ")
           val function = args.last
           srcSegments.computation.append(s"slift($output, vec![$arguments], $function);")
@@ -252,7 +261,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       // FIXME better to string conversion??
 
       if (ioInterface) {
-        srcSegments.output.append(s"""output_stream($s, "$name", currTs, $raw)""")
+        srcSegments.output.append(s"""output_stream($s, "$name", currTs, $raw);""")
       } else {
         throw Diagnostics
           .NotYetImplementedError("Output via IOInterface")
@@ -272,9 +281,10 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     def produceInputCode(inStream: Identifier, typ: Type, srcSegments: SourceSegments): Unit = {
       val s = s"var_${inStream.fullName}"
 
-      srcSegments.input.append(s"if inputStream == ${inStream.idOrName.left.get} { get_value_from_input($s) }")
+      srcSegments.input.append(s"""if inputStream == "${inStream.idOrName.left.get}" { get_value_from_input($s) }""")
 
-      srcSegments.output.append(s"update_last($s)")
+      // TODO not necessary for all streams:
+      // srcSegments.output.append(s"update_last($s);")
     }
   }
 }
