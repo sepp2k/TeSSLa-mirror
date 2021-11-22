@@ -20,6 +20,7 @@ import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Diagnostics, ExtendedSpecification}
+import jdk.nashorn.api.tree.FunctionExpressionTree
 
 import scala.annotation.tailrec
 import scala.io.Source
@@ -82,15 +83,16 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
                   throw Diagnostics
                     .CoreASTError("Non valid stream defining expression cannot be translated", e.location)
               }
-            case _ =>
-              srcSegments.static.append(
-                rustCodeGenerator
-                  .translateAssignment(
-                    id,
-                    definition,
-                    rustCodeGenerator.TypeArgManagement.empty
-                  )
-              )
+            case FunctionType(_, _, _, _) =>
+              definition match {
+                case FunctionExpression(_, params, body, result, _) =>
+                  srcSegments.static.appendAll(translateStaticFunction(id, params, body, result))
+                case e =>
+                  throw Diagnostics.CoreASTError("Non valid function expression cannot be translated", e.location)
+              }
+            case e =>
+              throw Diagnostics
+                .NotYetImplementedError("Failed to translate an expression without instantiated type", e.location)
           }
       }
 
@@ -158,7 +160,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       e.name match {
         case "nil" =>
           // TODO does this do anything ??
-          srcSegments.variables.append(s"const $output = init();")
+          srcSegments.variables.append(s"let $output = init();")
         case "default" =>
           val default = rustCodeGenerator.translateExpressionArg(args(1), rustCodeGenerator.TypeArgManagement.empty)
           srcSegments.variables.append(s"let $output = init_with_value($default);")
@@ -234,6 +236,23 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
           producePureStepCode(id, typ.resultType.resolve(typeParamMap), args(0), currSource) */
         case _ => throw Diagnostics.CommandNotSupportedError(e.toString)
       }
+    }
+
+    /**
+     *
+     */
+    def translateStaticFunction(
+      id: Identifier,
+      params: List[(Identifier, Evaluation, Type)],
+      body: Map[Identifier, DefinitionExpression],
+      result: ExpressionArg
+    ): Set[String] = {
+      Set(
+        s"fn fun_$id(${params.map { case (id, _, tpe) => s"$id: ${RustUtils.convertType(tpe)}" }.mkString(", ")}) {",
+        rustCodeGenerator
+          .translateBody(body, result, rustCodeGenerator.TypeArgManagement.empty, extSpec.spec.definitions),
+        "}"
+      )
     }
 
     /**

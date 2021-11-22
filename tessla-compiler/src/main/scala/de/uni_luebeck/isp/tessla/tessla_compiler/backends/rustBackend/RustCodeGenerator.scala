@@ -2,7 +2,12 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.{FunctionType => _, _}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{Core, LazyEvaluation, StrictEvaluation}
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, ExtendedSpecification, IntermediateCodeUtils}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{
+  DefinitionOrdering,
+  Diagnostics,
+  ExtendedSpecification,
+  IntermediateCodeUtils
+}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
   DeclarationType,
   FinalDeclaration,
@@ -41,22 +46,24 @@ class RustCodeGenerator(extSpec: ExtendedSpecification) {
    * @param id The id which is assigned
    * @param e The expression assigned to id
    * @param tm The [[TypeArgManagement]] to resolve type parameters
+   * @param defContext Definition context depicting all var names in the current scope to their definition expression
    * @return The translated assignment
    */
   def translateAssignment(
     id: Identifier,
     e: ExpressionArg,
-    tm: TypeArgManagement
+    tm: TypeArgManagement,
+    defContext: Map[Identifier, DefinitionExpression]
   ): String = {
     val resTpe = e.tpe.resolve(tm.resMap)
     val lazyVar = extSpec.lazyVars.get.contains(id)
     if (lazyVar || finalAssignmentPossible(e)) {
       definedIdentifiers += (id -> (if (lazyVar) FinalLazyDeclaration else FinalDeclaration))
-      val inlinedExp = e //if (lazyVar) inlineVars(e, extSpec.spec.definitions) else e
-      s"const var_$id = ${translateExpressionArg(inlinedExp, tm, extSpec.spec.definitions)};"
+      val inlinedExp = e //if (lazyVar) inlineVars(e, defContext) else e
+      s"const var_$id = ${translateExpressionArg(inlinedExp, tm, defContext)};"
     } else {
       definedIdentifiers += (id -> VariableDeclaration)
-      s"let var_$id = ${translateExpressionArg(e, tm, extSpec.spec.definitions)};"
+      s"let var_$id = ${translateExpressionArg(e, tm, defContext)};"
     }
   }
 
@@ -72,7 +79,32 @@ class RustCodeGenerator(extSpec: ExtendedSpecification) {
     tm: TypeArgManagement,
     defContext: Map[Identifier, DefinitionExpression]
   ): String = {
-    ""
+    definedIdentifiers ++= e.params.map(_._1 -> FinalDeclaration)
+    val newTm = tm.parsKnown(e.typeParams)
+    val arguments = e.params.map { case (id, _, _) => if (id.fullName == "_") "_" else s"var_$id" }.mkString(", ")
+    s"|$arguments| {${translateBody(e.body, e.result, newTm, defContext)}}"
+  }
+
+  /**
+   * Translates a block of statements with return expression (i.e. the body of a lambda) to Rust
+   * @param body The sequence of statements to be translated
+   * @param ret The return expression of the block
+   * @param tm The [[TypeArgManagement]] to resolve type parameters
+   * @param defContext Definition context depicting all var names in the current scope to their definition expression
+   * @return The translated block.
+   */
+  def translateBody(
+    body: Map[Identifier, DefinitionExpression],
+    ret: ExpressionArg,
+    tm: TypeArgManagement,
+    defContext: Map[Identifier, DefinitionExpression]
+  ): String = {
+    val newDefContext = defContext ++ body
+
+    val translatedBody = DefinitionOrdering.order(body) map {
+      case (id, exp) => translateAssignment(id, exp, tm, newDefContext)
+    }
+    (translatedBody :+ s"return ${translateExpressionArg(ret, tm, newDefContext)};").mkString("\n")
   }
 
   /**
