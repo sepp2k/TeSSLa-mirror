@@ -3,11 +3,11 @@
 
 //USERINCLUDES
 
-//STATIC
-
 fn main() {
 
-//VARDEF
+//STATIC
+
+//VARIABLES
 
     loop {
         // get input
@@ -27,18 +27,20 @@ fn step(new_input_ts: i64, flush: bool) {
 
     if new_input_ts > currTs || flush_required {
 
+//STORE
+
         let mut do_processing = true;
         while do_processing {
 
-//TRIGGER
+//TIMESTAMP
 
             if currTs == new_input_ts && !flush_required {
                 do_processing = false;
             } else {
 
-//STEP
+//COMPUTATION
 
-//TAIL
+//OUTPUT
 
                 flush_required = flush && (currTs != new_input_ts);
                 lastProcessedTs = currTs;

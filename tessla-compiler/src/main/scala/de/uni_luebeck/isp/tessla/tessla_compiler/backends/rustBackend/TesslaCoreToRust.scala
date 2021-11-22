@@ -111,15 +111,14 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     private def insertSegments(srcSegments: SourceSegments): String = {
       val source = Source.fromResource(sourceTemplate).mkString
       val rewrittenSource = source
-        .replace(
-          "//VARDEF",
-          srcSegments.variables.mkString("\n")
-        ) /*
-        .replace("//TRIGGER", generateCode(listing.tsGenSource))
-        .replace("//STEP", chuckCalls)
-        .replace("//TAIL", generateCode(listing.tailSource))
-        .replace("//INPUTPROCESSING", generateCode(listing.inputProcessing))
-        .replace("//USERINCLUDES", srcSegments.userIncludes)*/
+        .replace("//USERINCLUDES", "") //TODO
+        .replace("//STATIC", srcSegments.static.mkString("\n"))
+        .replace("//VARIABLES", srcSegments.variables.mkString("\n"))
+        .replace("//STORE", srcSegments.store.mkString("\n"))
+        .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
+        .replace("//COMPUTATION", srcSegments.computation.mkString("\n"))
+        .replace("//OUTPUT", srcSegments.output.mkString("\n"))
+        .replace("//INPUT", srcSegments.input.mkString("\n"))
       rewrittenSource
     }
 

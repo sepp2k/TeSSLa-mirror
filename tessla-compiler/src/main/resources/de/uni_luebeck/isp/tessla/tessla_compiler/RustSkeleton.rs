@@ -6,15 +6,13 @@ use rust_stdlib::*;
 
 //USERINCLUDES
 
-//STATIC
-
 fn main() {
     let mut input_stream_name: String = String::new();
     let mut input_stream_value: String = String::new();
 
-//VARDEF
+//STATIC
 
-    rust_stdlib::test();
+//VARIABLES
 
     loop {
         let reached_eof = parse_input(&mut input_stream_name, &mut input_stream_value);
@@ -27,18 +25,20 @@ fn main() {
                 newInputTs += 1;
             }
 
+//STORE
+
             let mut do_processing = true;
             while do_processing {
 
-//TRIGGER
+//TIMESTAMP
 
                 if currTs == newInputTs {
                     do_processing = false;
                 } else {
 
-//STEP
+//COMPUTATION
 
-//TAIL
+//OUTPUT
 
                     lastProcessedTs = currTs;
                     currTs = newInputTs;
@@ -52,7 +52,7 @@ fn main() {
             panic!("{}: FATAL: decreasing timestamp received", currTs);
         }
 
-//INPUTPROCESSING
+//INPUT
 
     }
 }
