@@ -1,0 +1,139 @@
+## Optional values
+module OptionUtils {
+
+  ## Returns the function `f` applied to the value of `opt` wrapped in @[Option#Some] if `opt` is @[Option#Some],
+  ## or @[Option#None] otherwise
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Option[Int]]
+  ## def f(a: Int) = a * 2
+  ## def mapped := slift1(x, (opt: Option[Int]) => OptionUtils.map(opt, f))
+  ## out mapped
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: bubbles
+  ## stream mapped: signal
+  ## ---
+  ## 1: x = 2
+  ## 1: mapped = 4
+  ## 3: x = —
+  ## 3: mapped = —
+  ## 6: x = 1
+  ## 6: mapped = 2
+  ## 8: x = 4
+  ## 8: mapped = 8
+  ## ~~~
+  ##
+  ## Note that in this example, @[Option#Some] are represented as their value, and @[Option#None] as —
+  def map[T, U](opt: Option[T], f: (T) => U): Option[U] =
+    if isNone(opt)
+    then None[U]
+    else Some(f(getSome(opt)))
+
+  ## Returns the result of the function `f` applied to the value of `opt` if `opt` is @[Option#Some],
+  ## or @[Option#None] otherwise.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Option[Int]]
+  ## def f(a: Int) = if a < 5 then Some(a * 2) else None[Int]
+  ## def mapped := slift1(x, (opt: Option[Int]) => OptionUtils.flatMap(opt, f))
+  ## out mapped
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: bubbles
+  ## stream mapped: signal
+  ## ---
+  ## 1: x = 2
+  ## 1: mapped = 4
+  ## 3: x = —
+  ## 3: mapped = —
+  ## 6: x = 7
+  ## 6: mapped = —
+  ## 8: x = 4
+  ## 8: mapped = 8
+  ## ~~~
+  ##
+  ## Note that in this example, @[Option#Some] are represented as their value, and @[Option#None] as —
+  def flatMap[T, U](opt: Option[T], f: (T) => Option[U]): Option[U] =
+    if isNone(opt)
+    then None[U]
+    else f(getSome(opt))
+
+  ## Applies the function `f` to the value of `opt1` and `opt2` and wraps it in @[Option#Some]
+  ## if `opt1` and `opt2` are both @[Option#Some]
+  ## or @[Option#None] otherwise.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## in y: Events[Int]
+  ## def f(a: Int, b: Int) = a + b
+  ## def mapped := lift(x, y, (opt1: Option[Int], opt2: Option[Int]) => OptionUtils.map2(opt1, opt2, f))
+  ## out mapped
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## stream mapped: bubbles
+  ## ---
+  ## 1: x = 2
+  ## 1: y = 3
+  ## 1: mapped = 5
+  ## 3: x = 4
+  ## 5: y = 1
+  ## 8: x = 7
+  ## 8: y = 2
+  ## 8: mapped = 9
+  ## ~~~
+  def map2[T,U,V](opt1: Option[T], opt2: Option[U], f: (T, U) => V): Option[V] =
+    flatMap(opt1, (v1: T) => map(opt2, (v2: U) => f(v1, v2)))
+
+  ## Converts an option value to a Set. In case of @[Option#Some] a set of size one containing only the value of the
+  ## option is returned. In the case of @[Option#None] an empty set is returned.
+  liftable def toSet[T](option: Option[T]): Set[T] = __private__Option_toSet(option)
+}
+
+## nodoc
+def __private__Option_toSet[T](option: Option[T]): Set[T] =
+  if isSome(option) then Set.singleton(getSome(option)) else Set.empty[T]
+
+module Option {
+  ## Represents non-existent values of type `T`
+  def None[T]: Option[T] = extern("None")
+
+  ## Represents existing values of type `T`
+  liftable def Some[T](value: lazy T): Option[T] = extern("Some")
+
+  ## Returns @[Types#true] if the given option is a @[#None] or @[Types#false] if it is a @[#Some]
+  liftable def isNone[T](opt: strict Option[T]): Bool = extern("isNone")
+
+  ## Returns @[Types#true] if the given option is a @[#Some] or @[Types#false] if it is a @[#None]
+  liftable def isSome[T](opt: Option[T]): Bool = !isNone(opt)
+
+  ## Get the value contained in a @[#Some]. If the given option is a @[#None], a run-time error will occur
+  liftable def getSome[T](opt: strict Option[T]): T = extern("getSome")
+
+  ## Get the value contained in a @[#Some]. If the given option is a @[#None], the default value `value` will be returned
+  liftable def getSomeOrElse[T](opt: Option[T], value: T): T = if isSome(opt) then getSome(opt) else value
+}
+
+## inmodule Option
+## Represents optional values. Instances of `Option` are either an instance of @[#Some] or @[#None]
+type Option[T] = extern("Option")

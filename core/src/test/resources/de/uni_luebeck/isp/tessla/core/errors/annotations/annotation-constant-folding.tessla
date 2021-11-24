@@ -1,0 +1,9 @@
+def @IntFoo(a: Int)
+def @FloatFoo(a: Float)
+
+@IntFoo(5 * 3 + 27)
+in x: Events[Int]
+in y: Events[Int]
+
+@FloatFoo(-.5.4)
+out x

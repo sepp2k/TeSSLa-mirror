@@ -1,0 +1,329 @@
+## The module for MITL[S_{0,∞}] formulas. MITL[S_{0,∞}] is the past fragment of MITL (Metric Interval Temporal Logic), where either the lowest time bound is 0 or the highest time bound is ∞.
+##
+## In this case we view streams as signals with continuously existing values. The events denote only the change points of these values.
+module MITL {
+
+  ## Expects @[streamfunctions#pure] input streams which are initialized (have an event at timestamp 0). Returns a stream which gets `true` every time both input streams are `true`. The output stream gets `false` every time the first input stream gets `false` or the last point where both streams where `true` lies `x` time units in the past.
+  ##
+  ## It represents the formula `a S[0, x] b, x > 0`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Bool]
+  ## in b: Events[Bool]
+  ## def d = since0(3, a, b)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,10]
+  ## stream a: bool
+  ## stream b: bool
+  ## stream d: bool
+  ## ---
+  ## 0: a = false
+  ## 0: b = false
+  ## 0: d = false
+  ## 1: a = true
+  ## 1: b = true
+  ## 1: d = true
+  ## 2: b = false
+  ## 4: a = false
+  ## 4: d = false
+  ## 5: a = true
+  ## 5: b = true
+  ## 5: d = true
+  ## 6: b = false
+  ## 9: d = false
+  ## ~~~
+  ##
+  ##
+  def since0(x: Int, a: Events[Bool], b: Events[Bool]): Events[Bool] =
+    pure(merge4(
+      constIf(true, a&&b),
+      constIf(false, !a),
+      on(delay(constIf(x, !b), boolFilter(!b)), false),
+	  false
+    ))
+
+  ## Expects @[streamfunctions#pure] input streams which are initialized (have an event at timestamp 0).
+  ## Returns a stream which gets `true` every time both input streams are `true` at a point which lies `x` time units in the past and the first input stream did not get `false` in between. The output stream gets `false` every time the first input stream gets `false`.
+  ##
+  ## It represents the formula `a S[x, ∞] b, x ≥ 0`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Bool]
+  ## in b: Events[Bool]
+  ## def d = sinceInfinity(3, a, b)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,10]
+  ## stream a: bool
+  ## stream b: bool
+  ## stream d: bool
+  ## ---
+  ## 0: a = false
+  ## 0: b = false
+  ## 0: d = false
+  ## 1: a = true
+  ## 1: b = true
+  ## 2: b = false
+  ## 3: a = false
+  ## 3: d = false
+  ## 4: a = true
+  ## 5: b = true
+  ## 8: d = true
+  ## 9: a = false
+  ## 9: d = false
+  ## ~~~
+  ##
+  ##
+  def sinceInfinity(x: Int, a: Events[Bool], b: Events[Bool]): Events[Bool] =
+    pure(
+    static if x == 0
+    then merge3(
+        constIf(true, a&&b),
+        constIf(false, !a),
+		false
+      )
+    else {
+      def firstA: Events[Bool] = merge(boolFilter(a), last(firstA, b) && b)
+      def start = unitIf(on(b, firstA))
+      merge3(
+        on(delay(on(start, x), merge(start, unitIf(!a))), true),
+        constIf(false, !a),
+		false
+      )
+    }
+    )
+
+  ## Expects a @[streamfunctions#pure] input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `true` the when the input stream gets `true`. The output stream gets `false` if the input stream is `false` for `x` time units.
+  ##
+  ## It represents the formula `O[0, x] a = true S[0,x] a` and is equal to @[mitl#since0]`(x, true, a)`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Bool]
+  ## def d = once0(3,a)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,8]
+  ## stream a: bool
+  ## stream d: bool
+  ## ---
+  ## 0: a = false
+  ## 0: d = false
+  ## 2: a = true
+  ## 2: d = true
+  ## 4: a = false
+  ## 7: d = false
+  ## ~~~
+  ##
+  ##
+  def once0(x: Int, a: Events[Bool]) = since0(x, true, a)
+
+  ## Expects a @[streamfunctions#pure] input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `true` if the point the input stream gets `true` the first time lies `x` time units in the past.
+  ##
+  ## It represents the formula `O[x, ∞] a = true S[x,∞]` a and is equal to `sinceInfinity(x, true, a)`. (See also @[mitl#sinceInfinity])
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Bool]
+  ## def d = onceInfinity(3,a)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,8]
+  ## stream a: bool
+  ## stream d: bool
+  ## ---
+  ## 0: a = false
+  ## 0: d = false
+  ## 2: a = true
+  ## 5: d = true
+  ## 6: a = false
+  ## ~~~
+  ##
+  ##
+  def onceInfinity(x: Int, a: Events[Bool]) = sinceInfinity(x, true, a)
+
+  ## Expects a @[streamfunctions#pure] input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `false` every time the input stream gets `false`. The output stream gets `true` if the input stream was `true` for `x` time units.
+  ##
+  ## It represents the formula `H[0, x] a = !O[0, x] !a` and is equal to `!once0(x, !a)`. (See also @[mitl#once0])
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Bool]
+  ## def d = historically0(3,a)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,8]
+  ## stream a: bool
+  ## stream d: bool
+  ## ---
+  ## 0: a = true
+  ## 0: d = true
+  ## 2: a = false
+  ## 2: d = false
+  ## 3: a = true
+  ## 6: d = true
+  ## ~~~
+  ##
+  ##
+  def historically0(x: Int, a: Events[Bool]) = !once0(x, !a)
+
+  ## Expects a @[streamfunctions#pure] input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `false` the first time the input stream got `false` `x` time units ago.
+  ##
+  ## It represents the formula `H[x, ∞] a = !O[x, ∞] !a` and is equal to `!onceinfinity(x, !a)`. (See also @[mitl#onceinfinity])
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Bool]
+  ## def d = historicallyInfinity(3,a)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,8]
+  ## stream a: bool
+  ## stream d: bool
+  ## ---
+  ## 0: a = true
+  ## 0: d = true
+  ## 2: a = false
+  ## 5: d = false
+  ## 6: a = true
+  ## ~~~
+  ##
+  ##
+  def historicallyInfinity(x: Int, a: Events[Bool]) = !onceInfinity(x, !a)
+}
+
+## past-time LTL
+module LTL {
+
+  ## Expects @[streamfunctions#pure] input streams which are initialized (have an event at timestamp 0).
+  ## Returns a stream which gets `true` every time both input streams are `true`. The output stream gets `false` every time the first input stream gets `false`.
+  ##
+  ## It represents the formula `a S b`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Bool]
+  ## in b: Events[Bool]
+  ## def d = since(a, b)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,8]
+  ## stream a: bool
+  ## stream b: bool
+  ## stream d: bool
+  ## ---
+  ## 0: a = false
+  ## 0: b = false
+  ## 0: d = false
+  ## 1: a = true
+  ## 2: b = true
+  ## 2: d = true
+  ## 3: b = false
+  ## 4: a = true
+  ## 5: a = false
+  ## 5: d = false
+  ## 6: b = true
+  ## 7: a = true
+  ## 7: d = true
+  ## ~~~
+  ##
+  ##
+  def since(a: Events[Bool], b: Events[Bool]): Events[Bool] = MITL.sinceInfinity(0, a, b)
+
+
+  ## Expects a @[streamfunctions#pure] input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `true` the first time the input stream gets `true`.
+  ##
+  ## It represents the formula `O a = true S a` and is equal to `since(true, a)`. (See also @[ltl#since])
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Bool]
+  ## def d = once(a)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,6]
+  ## stream a: bool
+  ## stream d: bool
+  ## ---
+  ## 0: a = false
+  ## 0: d = false
+  ## 2: a = true
+  ## 2: d = true
+  ## 3: a = false
+  ## ~~~
+  ##
+  ##
+  def once(a: Events[Bool]): Events[Bool] = since(true, a)
+
+  ## Expects a @[streamfunctions#pure] input stream which is initialized (has an event at timestamp 0). Returns a stream which gets `false` the first time the input stream gets `false`.
+  ##
+  ## It represents the formula `H a = !O !a` and is equal to `!once(!a)`. (See also @[ltl#once])
+  ##
+  ## **Usage example:**
+  ## 
+  ## ~~~tessla
+  ## in a: Events[Bool]
+  ## def d = historically(a)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,6]
+  ## stream a: bool
+  ## stream d: bool
+  ## ---
+  ## 0: a = true
+  ## 0: d = true
+  ## 2: a = false
+  ## 2: d = false
+  ## 3: a = true
+  ## ~~~
+  ##
+  ##
+  def historically(a: Events[Bool]): Events[Bool] = !once(!a)
+}

@@ -1,0 +1,23 @@
+def Option_flatMap[T, U](opt: Option[T], f: (T) => Option[U]): Option[U] =
+  if isNone(opt)
+  then None[U]
+  else f(getSome(opt))
+
+def Option_map2[T,U,V](opt1: Option[T], opt2: Option[U], f: (T, U) => V) =
+  Option_flatMap(opt1, (v1: T) => OptionUtils.map(opt2, (v2: U) => f(v1, v2)))
+
+def Set_collectWithRemove[T](value: Events[T], removeValue: Events[T]) := set where {
+  def trigger := merge(value, removeValue)
+  def old := last(set, trigger)
+  def operation: Events[Set[T]] := lift3(value, removeValue, old, (v: Option[T], r: Option[T], o: Option[Set[T]]) =>
+    if isSome(v) then Option_map2(o, v, Set.add)
+    else if isSome(r) then Option_map2(o, r, Set.remove)
+    else o)
+  def set := default(operation, Set.empty[T])
+}
+
+
+in x: Events[Int]
+in y: Events[Int]
+
+out Set_collectWithRemove(x, y) as set

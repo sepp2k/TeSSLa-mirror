@@ -1,0 +1,6 @@
+{
+  "spec": "lonely-tessladoc.tessla",
+  "input": "lonely-tessladoc.input",
+  "expectedOutput": "lonely-tessladoc.output",
+  "expectedWarnings": "lonely-tessladoc.warnings"
+}

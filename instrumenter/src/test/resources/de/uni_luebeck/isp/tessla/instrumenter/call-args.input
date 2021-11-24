@@ -1,0 +1,12 @@
+CALLED add: (x: double, y: int) => double
+RETURN add: (x: double, y: int) => double
+READ double add::x
+READ int add::y
+CALLED main: () => int
+WRITE double main::sum
+RETURNED add: (double, int) => double
+CALL add: (double, int) => double
+RETURNED printf: (const char *, double) => int
+CALL printf: (const char *, double) => int
+READ double main::sum
+RETURN main: () => int

@@ -1,18 +1,35 @@
+/*
+ * Copyright 2021 The TeSSLa Community
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing
 
 import cats.data.Ior
-import de.uni_luebeck.isp.tessla.TesslaAST.Core
-import de.uni_luebeck.isp.tessla.TesslaAST.Core.{DefinitionExpression, _}
-import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.{DefinitionExpression, _}
+import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.ASTTransformation
-import de.uni_luebeck.isp.tessla.{Location, TranslationPhase}
+import de.uni_luebeck.isp.tessla.core.{Location, TranslationPhase}
 
 import scala.collection.mutable
 
 //TODO: Always pull out Set/Map/... constructor calls
 //TODO: Make all identifier unique
 
-class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPhase[Core.Specification, Core.Specification] {
+class ASTPreprocessor(duplicateInlineCandidates: Boolean)
+    extends TranslationPhase[Core.Specification, Core.Specification] {
 
   override def translate(spec: Core.Specification): Result[Core.Specification] = {
 
@@ -22,12 +39,12 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
 
     var warnings = Seq()
 
-    def nextIDNum : Long = {
+    def nextIDNum: Long = {
       maxId += 1
       maxId
     }
 
-    def newIDFromOld(id: Identifier, f: Option[Identifier]) : Identifier = {
+    def newIDFromOld(id: Identifier, f: Option[Identifier]): Identifier = {
       val newID = if (id.idOrName.left.isDefined) {
         Identifier(Ior.both(id.idOrName.left.get, nextIDNum))
       } else {
@@ -37,7 +54,7 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
       newID
     }
 
-    def freshId() : Identifier = {
+    def freshId(): Identifier = {
       Identifier(Ior.right(nextIDNum))
     }
 
@@ -45,12 +62,16 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
       newIDs.getOrElse((id, f), id)
     }
 
-    def getExpRef(exp: ExpressionArg, add: mutable.Map[Identifier, DefinitionExpression], scope: Map[Identifier, DefinitionExpression],
-                  fPars: Map[Identifier, Identifier]):  ExpressionArg = {
+    def getExpRef(
+      exp: ExpressionArg,
+      add: mutable.Map[Identifier, DefinitionExpression],
+      scope: Map[Identifier, DefinitionExpression],
+      fPars: Map[Identifier, Identifier]
+    ): ExpressionArg = {
       exp match {
         case TypeApplicationExpression(app, tArgs, loc) =>
           TypeApplicationExpression(getExpRef(app, add, scope, fPars), tArgs, loc)
-        case exp : Expression =>
+        case exp: Expression =>
           val newID = freshId()
           add += (newID -> flattenDefExp(exp, add, scope, fPars, newID))
           ExpressionRef(newID, exp.tpe, Location.unknown)
@@ -63,32 +84,49 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
       }
     }
 
-    def flattenDefExp(exp: DefinitionExpression, add: mutable.Map[Identifier, DefinitionExpression], scope: Map[Identifier, DefinitionExpression],
-                      fPars: Map[Identifier, Identifier], assignID: Identifier) : DefinitionExpression = {
+    def flattenDefExp(
+      exp: DefinitionExpression,
+      add: mutable.Map[Identifier, DefinitionExpression],
+      scope: Map[Identifier, DefinitionExpression],
+      fPars: Map[Identifier, Identifier],
+      assignID: Identifier
+    ): DefinitionExpression = {
       exp match {
         case FunctionExpression(typeParams, params, body, result, location) => {
-          val newFPars = fPars ++ params.map{case (id, _, _) => (id, assignID)}
+          val newFPars = fPars ++ params.map { case (id, _, _) => (id, assignID) }
           val newBody = mutable.Map.from(flattenDefs(body, scope ++ body, newFPars))
           val newResult = getExpRef(result, newBody, scope ++ body, newFPars)
-          FunctionExpression(typeParams, params.map{case (id, s, t) => (newIDFromOld(id, Some(assignID)), s, t)}, newBody.toMap, newResult, location)
+          FunctionExpression(
+            typeParams,
+            params.map { case (id, s, t) => (newIDFromOld(id, Some(assignID)), s, t) },
+            newBody.toMap,
+            newResult,
+            location
+          )
         }
         case ApplicationExpression(applicable, args, location) =>
           applicable match {
-            case ExternExpression(_, _, _, "lift", _)
-               | ExternExpression(_, _, _, "slift", _)
-               | TypeApplicationExpression(ExternExpression(_, _, _, "lift", _), _, _)
-               | TypeApplicationExpression(ExternExpression(_, _, _, "slift", _), _, _) =>
-              ApplicationExpression(applicable, args.dropRight(1).map(getExpRef(_, add, scope, fPars)) :+ args.last, location)
-            case _: ExternExpression |
-                 TypeApplicationExpression(_: ExternExpression, _, _) =>
+            case ExternExpression("lift", _, _) | ExternExpression("slift", _, _) |
+                TypeApplicationExpression(ExternExpression("lift", _, _), _, _) |
+                TypeApplicationExpression(ExternExpression("slift", _, _), _, _) =>
+              ApplicationExpression(
+                applicable,
+                args.dropRight(1).map(getExpRef(_, add, scope, fPars)) :+ args.last,
+                location
+              )
+            case _: ExternExpression | TypeApplicationExpression(_: ExternExpression, _, _) =>
               ApplicationExpression(applicable, args.map(getExpRef(_, add, scope, fPars)), location)
             case _ =>
-              ApplicationExpression(getExpRef(applicable, add, scope, fPars), args.map(getExpRef(_, add, scope, fPars)), location)
+              ApplicationExpression(
+                getExpRef(applicable, add, scope, fPars),
+                args.map(getExpRef(_, add, scope, fPars)),
+                location
+              )
           }
         case TypeApplicationExpression(applicable, typeArgs, location) =>
           TypeApplicationExpression(flattenExpArg(applicable, add, scope, fPars, assignID), typeArgs, location)
         case RecordConstructorExpression(entries, location) =>
-          val newEntries = entries.map{case (n, (e, l)) => (n, (getExpRef(e, add, scope, fPars), l))}
+          val newEntries = entries.map { case (n, (e, l)) => (n, (getExpRef(e, add, scope, fPars), l)) }
           RecordConstructorExpression(newEntries, location)
         case RecordAccessorExpression(name, target, nameLocation, location) =>
           RecordAccessorExpression(name, getExpRef(target, add, scope, fPars), nameLocation, location)
@@ -96,37 +134,61 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
       }
     }
 
-    def flattenExpArg(exp: ExpressionArg, add: mutable.Map[Identifier, DefinitionExpression], scope: Map[Identifier, DefinitionExpression],
-                      fPars: Map[Identifier, Identifier], assignID: Identifier) : ExpressionArg = {
+    def flattenExpArg(
+      exp: ExpressionArg,
+      add: mutable.Map[Identifier, DefinitionExpression],
+      scope: Map[Identifier, DefinitionExpression],
+      fPars: Map[Identifier, Identifier],
+      assignID: Identifier
+    ): ExpressionArg = {
       exp match {
-        case exp: Expression => flattenDefExp(exp, add, scope, fPars, assignID)
+        case exp: Expression    => flattenDefExp(exp, add, scope, fPars, assignID)
         case exp: ExpressionRef => getExpRef(exp, add, scope, fPars)
       }
     }
 
-    def flattenDefs(defs: Map[Identifier, DefinitionExpression], scope: Map[Identifier, DefinitionExpression],
-                    fPars: Map[Identifier, Identifier]): Map[Identifier, DefinitionExpression] = {
-      val newDefs : mutable.Map[Identifier, DefinitionExpression] = mutable.Map()
-      val transDefs = defs.map{case (id, defExp) => val nid = newIDFromOld(id, None); (nid -> flattenDefExp(defExp, newDefs, scope, fPars, nid))}
+    def flattenDefs(
+      defs: Map[Identifier, DefinitionExpression],
+      scope: Map[Identifier, DefinitionExpression],
+      fPars: Map[Identifier, Identifier]
+    ): Map[Identifier, DefinitionExpression] = {
+      val newDefs: mutable.Map[Identifier, DefinitionExpression] = mutable.Map()
+      val transDefs = defs.map {
+        case (id, defExp) =>
+          val nid = newIDFromOld(id, None); (nid -> flattenDefExp(defExp, newDefs, scope, fPars, nid))
+      }
       transDefs ++ newDefs.toMap
     }
 
-    def exchangeOldRefsDefExp(exp: DefinitionExpression, fPars: Map[Identifier, Identifier]) : DefinitionExpression = {
-      def invNewIDs(id: Identifier) : (Identifier, Identifier) = {
+    def exchangeOldRefsDefExp(exp: DefinitionExpression, fPars: Map[Identifier, Identifier]): DefinitionExpression = {
+      def invNewIDs(id: Identifier): (Identifier, Identifier) = {
         val entry = newIDs.map(_.swap)(id)
         (entry._1, entry._2.get)
       }
 
       exp match {
         case FunctionExpression(typeParams, params, body, result, location) =>
-          val newFPars = fPars ++ params.map{ case (id, _, _) => invNewIDs(id)}
-          FunctionExpression(typeParams, params, body.map{case (id, d) => (id -> exchangeOldRefsDefExp(d, newFPars))}, exchangeOldRefsExpArg(result, newFPars), location)
+          val newFPars = fPars ++ params.map { case (id, _, _) => invNewIDs(id) }
+          FunctionExpression(
+            typeParams,
+            params,
+            body.map { case (id, d) => (id -> exchangeOldRefsDefExp(d, newFPars)) },
+            exchangeOldRefsExpArg(result, newFPars),
+            location
+          )
         case ApplicationExpression(applicable, args, location) =>
-          ApplicationExpression(exchangeOldRefsExpArg(applicable, fPars), args.map(exchangeOldRefsExpArg(_, fPars)), location)
+          ApplicationExpression(
+            exchangeOldRefsExpArg(applicable, fPars),
+            args.map(exchangeOldRefsExpArg(_, fPars)),
+            location
+          )
         case TypeApplicationExpression(applicable, typeArgs, location) =>
           TypeApplicationExpression(exchangeOldRefsExpArg(applicable, fPars), typeArgs, location)
         case RecordConstructorExpression(entries, location) =>
-          RecordConstructorExpression(entries.view.mapValues{case (e,l) => (exchangeOldRefsExpArg(e, fPars), l)}.toMap, location)
+          RecordConstructorExpression(
+            entries.view.mapValues { case (e, l) => (exchangeOldRefsExpArg(e, fPars), l) }.toMap,
+            location
+          )
         case RecordAccessorExpression(name, target, nameLocation, location) =>
           RecordAccessorExpression(name, exchangeOldRefsExpArg(target, fPars), nameLocation, location)
         case _ =>
@@ -134,15 +196,18 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
       }
     }
 
-    def exchangeOldRefsExpArg(exp: ExpressionArg, fPars: Map[Identifier, Identifier]) : ExpressionArg = {
+    def exchangeOldRefsExpArg(exp: ExpressionArg, fPars: Map[Identifier, Identifier]): ExpressionArg = {
       exp match {
-        case e: Expression => exchangeOldRefsDefExp(e, fPars)
+        case e: Expression                    => exchangeOldRefsDefExp(e, fPars)
         case ExpressionRef(id, tpe, location) => ExpressionRef(getActID(id, fPars.get(id)), tpe, location)
       }
     }
 
-
-    def dupIfContentDefExp(e: DefinitionExpression, add: mutable.Map[Identifier, DefinitionExpression], scope: Map[Identifier, DefinitionExpression]): DefinitionExpression = {
+    def dupIfContentDefExp(
+      e: DefinitionExpression,
+      add: mutable.Map[Identifier, DefinitionExpression],
+      scope: Map[Identifier, DefinitionExpression]
+    ): DefinitionExpression = {
       e match {
         case FunctionExpression(typeParams, params, body, result, location) => {
           val newBody = dupIfContent(body, scope ++ body)
@@ -150,7 +215,8 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
         }
         case ApplicationExpression(applicable, args, location) =>
           applicable match {
-            case TypeApplicationExpression(ExternExpression(_, _, _, s, _), _, _) if Set("ite", "staticite", "and", "or").contains(s) =>
+            case TypeApplicationExpression(ExternExpression(s, _, _), _, _)
+                if Set("ite", "staticite", "and", "or").contains(s) =>
               val newArgs = args(0) +: args.drop(1).map(dupInlinedVars(_, add, scope))
               ApplicationExpression(applicable, newArgs, location)
             case _ => e
@@ -159,13 +225,20 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
       }
     }
 
-    def dupIfContent(defs: Map[Identifier, DefinitionExpression], scope: Map[Identifier, DefinitionExpression]): Map[Identifier, DefinitionExpression] = {
-      val newDefs : mutable.Map[Identifier, DefinitionExpression] = mutable.Map()
-      val transDefs = defs.map{case (id, defExp) => (id -> dupIfContentDefExp(defExp, newDefs, scope))}
+    def dupIfContent(
+      defs: Map[Identifier, DefinitionExpression],
+      scope: Map[Identifier, DefinitionExpression]
+    ): Map[Identifier, DefinitionExpression] = {
+      val newDefs: mutable.Map[Identifier, DefinitionExpression] = mutable.Map()
+      val transDefs = defs.map { case (id, defExp) => (id -> dupIfContentDefExp(defExp, newDefs, scope)) }
       transDefs ++ newDefs.toMap
     }
 
-    def dupInlinedVars(e: ExpressionArg, add: mutable.Map[Identifier, DefinitionExpression], scope: Map[Identifier, DefinitionExpression]): ExpressionArg = {
+    def dupInlinedVars(
+      e: ExpressionArg,
+      add: mutable.Map[Identifier, DefinitionExpression],
+      scope: Map[Identifier, DefinitionExpression]
+    ): ExpressionArg = {
       e match {
         case e: Expression => dupInlinedVarsDefExp(e, add, scope)
         case ExpressionRef(id, tpe, loc) if !tpe.isInstanceOf[FunctionType] && scope.contains(id) =>
@@ -176,30 +249,44 @@ class ASTPreprocessor(duplicateInlineCandidates: Boolean) extends TranslationPha
       }
     }
 
-    def dupInlinedVarsDefExp(e: DefinitionExpression, add: mutable.Map[Identifier, DefinitionExpression], scope: Map[Identifier, DefinitionExpression]): DefinitionExpression = {
+    def dupInlinedVarsDefExp(
+      e: DefinitionExpression,
+      add: mutable.Map[Identifier, DefinitionExpression],
+      scope: Map[Identifier, DefinitionExpression]
+    ): DefinitionExpression = {
       e match {
         case RecordAccessorExpression(name, target, nameLocation, location) =>
           RecordAccessorExpression(name, dupInlinedVars(target, add, scope), nameLocation, location)
         case ApplicationExpression(applicable, args, location) =>
-          ApplicationExpression(dupInlinedVars(applicable, add, scope), args.map(dupInlinedVars(_, add, scope)), location)
+          ApplicationExpression(
+            dupInlinedVars(applicable, add, scope),
+            args.map(dupInlinedVars(_, add, scope)),
+            location
+          )
         case TypeApplicationExpression(applicable, typeArgs, location) =>
           TypeApplicationExpression(dupInlinedVars(applicable, add, scope), typeArgs, location)
         case RecordConstructorExpression(entries, location) =>
-          RecordConstructorExpression(entries.map{case (n, (e,l)) => (n, (dupInlinedVars(e, add, scope), l))}, location)
+          RecordConstructorExpression(
+            entries.map { case (n, (e, l)) => (n, (dupInlinedVars(e, add, scope), l)) },
+            location
+          )
         case _ => e
       }
     }
 
-
-    val newDefs = flattenDefs(definitions, definitions, Map()).map{case (id, d) => (id -> exchangeOldRefsDefExp(d, Map()))}
+    val newDefs = flattenDefs(definitions, definitions, Map()).map {
+      case (id, d) => (id -> exchangeOldRefsDefExp(d, Map()))
+    }
     val dupInlines = dupIfContent(newDefs, newDefs)
 
-
-    Success(Core.Specification(spec.in.map{case (id, v) => (getActID(id, None), v)},
-                               dupInlines,
-                               spec.out.map{case (e, a) => (ExpressionRef(getActID(e.id, None), e.tpe, e.location), a)},
-                               maxId),
-            warnings)
+    Success(
+      spec.copy(
+        in = spec.in.map { case (id, v) => (getActID(id, None), v) },
+        definitions = dupInlines,
+        out = spec.out.map { case (e, a) => (ExpressionRef(getActID(e.id, None), e.tpe, e.location), a) }
+      ),
+      warnings
+    )
   }
 
 }

@@ -1,0 +1,10 @@
+in x: Events[Map[Int, String]]
+in y: Events[List[Int]]
+in z: Events[List[String]]
+in a: Events[Set[String]]
+
+out Map.map(x, (x: Int, y: String) => (x+1, String.concat(y, "_new"))) as xn
+out Set.map(a, (x: String) => String.concat(x, "_new"))
+out List.map(y, (x: Int) => x * 2 + 7) as yn
+out List.zip(y, z)
+out List.zipWithIndex(y)

@@ -1,0 +1,6 @@
+in x: Events[Int]
+
+def foo(c: Bool) = static if c then x + 42 else x + 5
+
+out foo(true) as a
+out foo(false) as b

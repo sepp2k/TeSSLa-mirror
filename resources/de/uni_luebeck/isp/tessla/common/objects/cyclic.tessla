@@ -1,0 +1,12 @@
+in v: Events[Int]
+def x = (v, x._1)
+def y = default(nil[(Int, Int)], (0, 1))
+
+def z = slift(x._2, v, (a: Int, b: Int) => {
+    def c = (a, c._1)
+    c
+})
+
+out y._1 as y1 -- 0
+out x._2 as x1 -- v
+out z._2 as z1 -- v

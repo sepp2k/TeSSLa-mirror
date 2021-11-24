@@ -1,0 +1,4 @@
+{
+  "spec": "missing-parameter-type.tessla",
+  "expectedErrors": "missing-parameter-type.errors"
+}

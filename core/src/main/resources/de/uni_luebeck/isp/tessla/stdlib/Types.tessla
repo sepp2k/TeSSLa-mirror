@@ -1,0 +1,41 @@
+## Fundamental types and primitive constants
+module Types {
+
+  ## A Boolean value representing that a given proposition is true
+  def true: Bool = extern("true")
+
+  ## A Boolean value representing that a given proposition is false
+  def false: Bool = extern("false")
+
+}
+
+## inmodule Types
+## An annotation used to specify that an output stream should be printed in a raw format, only
+## containing the event value without timestamp or stream name
+def @raw
+
+## inmodule Types
+## A Boolean can be either @[Types#true] or @[Types#false]
+type Bool = extern("Bool")
+
+## inmodule Types
+## Integer. The maximal and minimal values depend on the TeSSLa engine. The TeSSLa software backend uses
+## [BigInt](https://www.scala-lang.org/api/2.12.7/scala/math/BigInt$.html), i.e. every integer can be represented
+type Int = extern("Int")
+
+## inmodule Types
+## Float. The data range depends on the TeSSLa engine. The TeSSLa software backend uses a 64-bit IEEE-754 floating
+## point number
+type Float = extern("Float")
+
+## inmodule Types
+## String can store arbitrary long character sequences
+type String = extern("String")
+
+## inmodule Types
+## `()` is the only value of type `Unit`, i.e. this type can be used to represent events without values.
+type Unit = ()
+
+## inmodule Types
+## Basic type for streams
+type Events[T] = extern("Events")

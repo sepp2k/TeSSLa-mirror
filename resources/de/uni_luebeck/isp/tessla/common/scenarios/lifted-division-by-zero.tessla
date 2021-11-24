@@ -1,0 +1,7 @@
+def f(x: Option[Int]) : Option[Int] = Some(5/0)
+
+in x: Events[Int]
+
+def z : Events[Int] = lift1(x,f)
+
+out time(z)

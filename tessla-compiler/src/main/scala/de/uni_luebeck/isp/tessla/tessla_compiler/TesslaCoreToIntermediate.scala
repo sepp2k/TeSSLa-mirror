@@ -1,109 +1,149 @@
+/*
+ * Copyright 2021 The TeSSLa Community
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
+import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success, Translator}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.SourceListing
-import de.uni_luebeck.isp.tessla.TranslationPhase
-import de.uni_luebeck.isp.tessla.TranslationPhase.{Result, Success}
-import de.uni_luebeck.isp.tessla.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check.TesslaCoreWithMutabilityInfo
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.ControlFlowAnalysis
 
+import scala.annotation.tailrec
+
 /**
-  * Class implementing de.uni_luebeck.isp.tessla.TranslationPhase for the translation from TeSSLa Core to
-  * abstract imperative code
-  */
-class TesslaCoreToIntermediate(consoleInterface : Boolean) extends
-        TranslationPhase[TesslaCoreWithMutabilityInfo, SourceListing] {
+ * Class implementing TranslationPhase for the translation from TeSSLa Core to
+ * abstract imperative code
+ * The translation of stream functions is performed in StreamCodeGenerator
+ * The translation of other expressions in NonStreamCodeGenerator
+ * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
+ */
+class TesslaCoreToIntermediate(ioInterface: Boolean)
+    extends TranslationPhase[ExtendedSpecification, (SourceListing, Set[String])] {
 
+  /**
+   * Function triggering the translation from a TeSSLa AST to a SourceListing of ImpLan statements
+   *
+   * @param extSpec The TeSSLa Core AST to be translated
+   * @return A SourceListing containing imperative code to be translated into concrete syntax and included in a source
+   *         skeleton
+   */
+  override def translate(extSpec: ExtendedSpecification): Result[(SourceListing, Set[String])] =
+    new Translator(extSpec).translate()
 
-  override def translate(tcMut: TesslaCoreWithMutabilityInfo): Result[SourceListing] = {
-    val spec = tcMut.spec
+  class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[(SourceListing, Set[String])] {
 
-    val in = spec.in
-    val definitions = spec.definitions
-    val out = spec.out.groupBy(_._1.id).view.mapValues(e => e.map(x => x._2).toSet).toMap
+    val cfAnalysis = new ControlFlowAnalysis(extSpec)
 
-    //TODO: Only create once
-    val cfAnalysis = new ControlFlowAnalysis(spec)
+    val nonStreamCodeGenerator = new NonStreamCodeGenerator(extSpec)
+    val streamCodeGenerator = new StreamCodeGenerator(nonStreamCodeGenerator, cfAnalysis)
 
-    val myNonStreamCodeGenerator = new NonStreamCodeGenerator(tcMut.addDeps, cfAnalysis)
-    val myStreamCodeGenerator = new StreamCodeGenerator(myNonStreamCodeGenerator, cfAnalysis)
+    private val spec = extSpec.spec
+    private val in = spec.in
+    private val definitions = spec.definitions
+    private val out = spec.out
 
-    def getInStreamDefStreamType(id: Identifier) : Type = {
+    @tailrec
+    final protected def externResolution(e: ExpressionArg): ExternExpression = e match {
+      case e: ExternExpression                                 => e
+      case ExpressionRef(id, _, _) if definitions.contains(id) => externResolution(definitions(id))
+      case _ =>
+        throw Diagnostics.CoreASTError(
+          "No extern or reference to extern in function application with stream result",
+          e.location
+        )
+    }
+
+    protected def getStreamType(id: Identifier): Type = {
       if (definitions.contains(id)) {
         definitions(id).tpe
       } else if (in.contains(id)) {
         in(id)._1
       } else {
-        throw Errors.CoreASTError(s"Type of output stream $id cannot be found")
+        throw Diagnostics.CoreASTError(s"Type of stream $id cannot be found")
       }
     }
 
-    def translateExternSignalExpression(id: Identifier, e: ExternExpression, args: Seq[ExpressionArg], typeArgs: Seq[Type], currSource: SourceListing) : SourceListing = {
-      val typeParamMap = e.typeParams.zip(typeArgs).toMap
-      val newSrcLst = e.name match {
-        case "nil" =>
-          myStreamCodeGenerator.produceNilStepCode(id, e.resultType.resolve(typeParamMap), e.location, currSource)
-        case "default" =>
-          myStreamCodeGenerator.produceDefaultStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
-        case "defaultFrom" =>
-          myStreamCodeGenerator.produceDefaultFromStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
-        case "time" =>
-          myStreamCodeGenerator.produceTimeStepCode(id, args(0), e.location, currSource)
-        case "last" =>
-          myStreamCodeGenerator.produceLastStepCode(id, e.resultType.resolve(typeParamMap), args(0), args(1), e.location, currSource)
-        case "delay" =>
-          myStreamCodeGenerator.produceDelayStepCode(id, args(0), args(1), e.location, currSource)
-        case "lift" =>
-          myStreamCodeGenerator.produceLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, e.location, currSource)
-        case "slift" =>
-          myStreamCodeGenerator.produceSignalLiftStepCode(id, e.resultType.resolve(typeParamMap), args.dropRight(1), args.last, e.location, currSource)
-        case "merge" =>
-          myStreamCodeGenerator.produceMergeStepCode(id, e.resultType.resolve(typeParamMap), args, e.location, currSource)
-        case _ => throw Errors.CommandNotSupportedError(e.toString)
-      }
+    override protected def translateSpec(): (SourceListing, Set[String]) = {
+      var currSrc = SourceListing(Seq(), Seq(), Seq(), Seq(), Seq())
+      var noRemove = Set[String]()
 
-      generateOutputCode(id, newSrcLst)
-    }
-
-    def generateOutputCode(id: Identifier, scrLst : SourceListing) : SourceListing = {
-        out.getOrElse(id, Seq()).foldLeft[SourceListing](scrLst) { case(currSrc, anno) =>
-          val name = anno.get("name") match {
-            case Some(s) => s(0) match {
-              case StringLiteralExpression(n, _) => Some(n)
-              case _ => None
-            }
-            case None => None
+      //Produce calculation section
+      DefinitionOrdering.order(definitions).foreach {
+        case (id, definition) =>
+          currSrc = definition.tpe match {
+            case InstantiatedType("Events", _, _) =>
+              definition match {
+                case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) =>
+                  streamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, typeArgs, currSrc)
+                case ApplicationExpression(e, args, _) =>
+                  streamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, Seq(), currSrc)
+                case e =>
+                  throw Diagnostics
+                    .CoreASTError("Non valid stream defining expression cannot be translated", e.location)
+              }
+            case _ =>
+              SourceListing(
+                currSrc.stepSource,
+                currSrc.tailSource,
+                currSrc.tsGenSource,
+                currSrc.inputProcessing,
+                currSrc.staticSource :+ nonStreamCodeGenerator
+                  .translateAssignment(id, definition, nonStreamCodeGenerator.TypeArgManagement.empty, definitions)
+              )
           }
-          myStreamCodeGenerator.produceOutputCode(id, getInStreamDefStreamType(id), name, currSrc)
-        }
-    }
-
-    var currSource = SourceListing(Seq(), Seq(), Seq(), Seq(), Seq())
-    var warnings = Seq()
-
-    DefinitionOrdering.order(definitions, cfAnalysis.addOrderingConstraints(tcMut.addDeps)).foreach { case (id, definition) => {
-      currSource = definition.tpe match {
-        case InstantiatedType("Events", _, _) => definition match {
-          case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, typeArgs, _), args, _) => translateExternSignalExpression(id, e, args, typeArgs, currSource)
-          case ApplicationExpression(e: ExternExpression, args, _) => translateExternSignalExpression(id, e, args, Seq(), currSource) //TODO: Does this exist?
-          case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
-        }
-        case _ => SourceListing(currSource.stepSource, currSource.tailSource, currSource.tsGenSource, currSource.callbacks, currSource.staticSource :+ myNonStreamCodeGenerator.translateDefinition(id, definition, definitions))
       }
-    }
-    }
 
-    in.foreach {i =>
-      if (consoleInterface) {
-        currSource = myStreamCodeGenerator.produceInputCode(i._1, i._2._1, currSource)
-      } else {
-        throw Errors.NotYetImplementedError("Translation without value consumption from stdin is not implemented yet")
+      //Produce output generation
+      out.foreach { o =>
+        val name = TesslaAST.Core.getOutputName(o._2)
+
+        if (ioInterface) {
+          currSrc = streamCodeGenerator.produceOutputToConsoleCode(
+            o._1.id,
+            getStreamType(o._1.id),
+            name,
+            currSrc,
+            o._2.contains("raw")
+          )
+        } else {
+          currSrc = streamCodeGenerator.produceOutputToAPICode(
+            o._1.id,
+            getStreamType(o._1.id),
+            name,
+            currSrc,
+            o._2.contains("raw")
+          )
+        }
       }
-      val newSrc = myStreamCodeGenerator.produceInputUnchangeCode(i._1, currSource)
-      currSource = generateOutputCode(i._1, newSrc)
+
+      //Produce input consumption
+      in.foreach { i =>
+        currSrc = streamCodeGenerator.produceInputUnchangeCode(i._1, currSrc)
+        if (ioInterface) {
+          currSrc = streamCodeGenerator.produceInputFromConsoleCode(i._1, i._2._1, currSrc)
+        } else {
+          currSrc = streamCodeGenerator.produceInputFromAPICode(i._1, i._2._1, currSrc)
+          noRemove += s"set_var_${i._1.fullName}"
+        }
+      }
+
+      (currSrc, noRemove)
     }
 
-    Success(currSource, warnings)
   }
 
 }

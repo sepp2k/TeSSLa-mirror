@@ -1,0 +1,13 @@
+## The module Bar, containing definitions for bar.
+module Bar {
+    ## Definitions within a module are documented
+    def bar(a: Int): Int = {
+        -- But those within a block are not
+        def baz = a * 42
+        baz + 5
+    }
+}
+
+## inmodule Bar
+## This is a type with type parameters
+type FooType[T] = extern("FooType")

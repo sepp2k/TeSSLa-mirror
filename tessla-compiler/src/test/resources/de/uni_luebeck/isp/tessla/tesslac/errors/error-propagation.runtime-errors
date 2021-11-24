@@ -1,0 +1,2 @@
+2: FATAL: z evaluation encountered an Error:
+ java.lang.ArithmeticException: / by zero

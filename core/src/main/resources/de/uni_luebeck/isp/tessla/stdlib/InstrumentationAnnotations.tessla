@@ -1,0 +1,83 @@
+## Annotations controlling the instrumentation of C code
+module InstrumentationAnnotations {}
+
+## inmodule InstrumentationAnnotations
+## Add event generation to every call of the function before the actual function call
+def @InstFunctionCall(name: String)
+
+## inmodule InstrumentationAnnotations
+## Add event generation to every call of the function before the actual function call
+def @InstFunctionCallArg(name: String, index: Int)
+
+## inmodule InstrumentationAnnotations
+## Add event generation to the first line of the function
+def @InstFunctionCalled(name: String)
+
+## inmodule InstrumentationAnnotations
+## Add event generation to the first line of the function
+def @InstFunctionCalledArg(name: String, index: Int)
+
+## inmodule InstrumentationAnnotations
+## Add event generation to every return inside of the function. Generates unit events.
+def @InstFunctionReturn(name: String)
+
+## inmodule InstrumentationAnnotations
+## Add event generation to every return inside of the function. Generates events carrying the returned value as data.
+def @InstFunctionReturnValue(name: String)
+
+## inmodule InstrumentationAnnotations
+## Add event generation to every call of the function after the function returned. Generates unit events.
+def @InstFunctionReturned(name: String)
+
+## inmodule InstrumentationAnnotations
+## Add event generation to every call of the function after the function returned. Generates events carrying the
+## returned value as data.
+def @InstFunctionReturnedValue(name: String)
+
+## inmodule InstrumentationAnnotations
+## Instrument every reading access of a global variable with the given name.
+## Can handle more complex patterns, e.g. `*&bar[][].foo`
+def @GlobalRead(lvalue: String)
+
+## inmodule InstrumentationAnnotations
+## Instrument every reading access of a global variable with the given name.
+## Can handle more complex patterns, e.g. `*&bar[][].foo`
+## Get the index as event's value.
+def @GlobalReadIndex(lvalue: String, index: Int)
+
+## inmodule InstrumentationAnnotations
+## Instrument every reading access of a local variable with the given name inside the given function.
+## Can handle more complex patterns, e.g. `*&bar[][].foo`
+def @LocalRead(lvalue: String, function: String)
+
+## inmodule InstrumentationAnnotations
+## Instrument every reading access of a local variable with the given name inside the given function.
+## Can handle more complex patterns, e.g. `*&bar[][].foo`
+## Get the index as event's value.
+def @LocalReadIndex(lvalue: String, function: String, index: Int)
+
+## inmodule InstrumentationAnnotations
+## Instrument every writing access of a global variable with the given name.
+## Can handle more complex patterns, e.g. `*&bar[][].foo`
+def @GlobalWrite(lvalue: String)
+
+## inmodule InstrumentationAnnotations
+## Instrument every writing access of a global variable with the given name.
+## Can handle more complex patterns, e.g. `*&bar[][].foo`
+## Get the index as event's value.
+def @GlobalWriteIndex(lvalue: String, index: Int)
+
+## inmodule InstrumentationAnnotations
+## Instrument every writing access of a local variable with the given name inside the given function.
+## Can handle more complex patterns, e.g. `*&bar[][].foo`
+def @LocalWrite(lvalue: String, function: String)
+
+## inmodule InstrumentationAnnotations
+## Instrument every writing access of a local variable with the given name inside the given function.
+## Can handle more complex patterns, e.g. `*&bar[][].foo`
+## Get the index as event's value.
+def @LocalWriteIndex(lvalue: String, function: String, index: Int)
+
+## inmodule InstrumentationAnnotations
+## Writes the current thread ID to the annotated stream every time any other instrumentation produces any event
+def @ThreadId

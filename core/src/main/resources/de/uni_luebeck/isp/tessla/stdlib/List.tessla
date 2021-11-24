@@ -1,0 +1,496 @@
+## Lists
+module List {
+
+  ## Returns an empty list without any element of type `T`
+  def empty[T]: List[T] = extern("List_empty")
+
+  ## Appends the given `element` to the end of the given `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
+  ## out list
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## ---
+  ## 0: list = []
+  ## 2: list = [2]
+  ## 2: x = 2
+  ## 4: list = [2, 1]
+  ## 4: x = 1
+  ## 6: list = [2, 1, 2]
+  ## 6: x = 2
+  ## ~~~
+  liftable def append[T](list: strict List[T], element: strict T): List[T] = extern("List_append")
+
+  ## Prepends the given `element` to the begining of the given `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def list: Events[List[Int]] =
+  ##   fold(x, List.empty[Int], (acc: List[Int], v: Int) => List.prepend(v, acc))
+  ## out list
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## ---
+  ## 0: list = []
+  ## 2: list = [1]
+  ## 2: x = 1
+  ## 4: list = [2, 1]
+  ## 4: x = 2
+  ## 6: list = [3, 2, 1]
+  ## 6: x = 3
+  ## ~~~
+  liftable def prepend[T](element: strict T, list: strict List[T]): List[T] = extern("List_prepend")
+
+  ## Gets the element at the requested `index`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int] # elements to prepend
+  ## in y: Events[Int] # index of the requested element
+  ## import List
+  ## def list: Events[List[Int]] =
+  ##   fold(x, List.empty[Int], (acc: List[Int], v: Int) => List.prepend(v, acc))
+  ## def element = List.get(list, y)
+  ## out element
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: bubbles
+  ## stream y: signal
+  ## stream list: signal
+  ## stream element: signal
+  ## ---
+  ## 0: list = []
+  ## 1: x = 1
+  ## 1: list = [1]
+  ## 3: element = 1
+  ## 3: y = 0
+  ## 5: x = 3
+  ## 5: list = [3, 1]
+  ## 5: element = 3
+  ## 8: x = 2
+  ## 8: list = [2, 3, 1]
+  ## 8: element = 1
+  ## 8: y = 2
+  ## ~~~
+  liftable def get[T](list: strict List[T], index: strict Int): T = extern("List_get")
+
+  ## Sets the value at the given `index`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[(Int, String)]
+  ## def init = List.append(List.append(List.empty[String], "A"), "B")
+  ## def list: Events[List[String]] =
+  ##   fold(x, init, (acc: List[String], op: (Int, String)) => List.set(acc, op._1, op._2))
+  ## out list
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: signal
+  ## stream y: signal
+  ## stream list: signal
+  ## ---
+  ## 0: list = [A, B]
+  ## 3: x = (0, C)
+  ## 3: list = [C, B]
+  ## 5: x = (0, D)
+  ## 5: list = [D, B]
+  ## 8: x = (1, D)
+  ## 8: list = [D, D]
+  ## ~~~
+  liftable def set[T](list: strict List[T], index: strict Int, value: strict T): List[T] = extern("List_set")
+
+  ## Returns the number of elements in the given `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
+  ## def size = List.size(list)
+  ## out size
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream size: signal
+  ## ---
+  ## 0: size = 0
+  ## 0: list = []
+  ## 2: size = 1
+  ## 2: list = [1]
+  ## 2: x = 1
+  ## 4: size = 2
+  ## 4: list = [1, 2]
+  ## 4: x = 2
+  ## 6: size = 3
+  ## 6: list = [1, 2, 3]
+  ## 6: x = 3
+  ## ~~~
+  liftable def size[T](list: strict List[T]): Int = extern("List_size")
+
+  ## Returns @[Types#true] if the given `list` has a size of zero
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
+  ## def empty = List.isEmpty(list)
+  ## out empty
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream empty: signal
+  ## ---
+  ## 0: empty = true
+  ## 0: list = []
+  ## 2: empty = false
+  ## 2: list = [1]
+  ## 2: x = 1
+  ## 4: empty = false
+  ## 4: list = [1, 2]
+  ## 4: x = 2
+  ## 6: empty = false
+  ## 6: list = [1, 2, 3]
+  ## 6: x = 3
+  ## ~~~
+  liftable def isEmpty[T](list: List[T]): Bool = size(list) == 0
+
+  ## Selects all elements except the first
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
+  ## def tail = filter(List.tail(list), !(List.isEmpty(list)))
+  ## out tail
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream tail: signal
+  ## ---
+  ## 0: list = []
+  ## 2: tail = []
+  ## 2: list = [1]
+  ## 2: x = 1
+  ## 4: tail = [2]
+  ## 4: list = [1, 2]
+  ## 4: x = 2
+  ## 6: tail = [2, 3]
+  ## 6: list = [1, 2, 3]
+  ## 6: x = 3
+  ## ~~~
+  liftable def tail[T](list: strict List[T]): List[T] = extern("List_tail")
+
+  ## Selects all elements except the last
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
+  ## def init = filter(List.init(list), !(List.isEmpty(list)))
+  ## out init
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream init: signal
+  ## ---
+  ## 0: init = []
+  ## 0: list = []
+  ## 2: init = []
+  ## 2: list = [1]
+  ## 2: x = 1
+  ## 4: init = [1]
+  ## 4: list = [1, 2]
+  ## 4: x = 2
+  ## 6: init = [1, 2]
+  ## 6: list = [1, 2, 3]
+  ## 6: x = 3
+  ## ~~~
+  liftable def init[T](list: strict List[T]): List[T] = extern("List_init")
+
+  ## Selects the first element of the `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
+  ## def head = filter(List.head(list), !(List.isEmpty(list)))
+  ## out head
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream head: signal
+  ## ---
+  ## 0: list = []
+  ## 2: x = 1
+  ## 2: list = [1]
+  ## 2: head = 1
+  ## 4: x = 2
+  ## 4: list = [1, 2]
+  ## 4: head = 1
+  ## 6: x = 3
+  ## 6: list = [1, 2, 3]
+  ## 6: head = 1
+  ## ~~~
+  liftable def head[T](list: List[T]): T = get(list, 0)
+
+  ## Selects the last element of the `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def list: Events[List[Int]] = fold(x, List.empty[Int], List.append)
+  ## def l = filter(List.last(list), !(List.isEmpty(list)))
+  ## out l
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream l: signal
+  ## ---
+  ## 0: list = []
+  ## 2: x = 1
+  ## 2: list = [1]
+  ## 2: l = 1
+  ## 4: x = 2
+  ## 4: list = [1, 2]
+  ## 4: l = 2
+  ## 6: x = 3
+  ## 6: list = [1, 2, 3]
+  ## 6: l = 3
+  ## ~~~
+  liftable def last[T](list: List[T]): T = get(list, size(list)-1)
+
+  ## Fold a function `f` on all values of the `list`. Starting with
+  ## the initial value `start` the function `f` is called for every element
+  ## of `list` with the last result and the current elements’s value as arguments.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def list: Events[List[Int]] = List.fold(x, List.empty[Int], List.append)
+  ## def s = List.fold(list, 0, (a:Int, b:Int) => a + b)
+  ## out s
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream list: signal
+  ## stream s: signal
+  ## ---
+  ## 0: s = 0
+  ## 0: list = []
+  ## 2: s = 1
+  ## 2: list = [1]
+  ## 2: x = 1
+  ## 4: s = 3
+  ## 4: list = [1, 2]
+  ## 4: x = 2
+  ## 6: s = 6
+  ## 6: list = [1, 2, 3]
+  ## 6: x = 3
+  ## ~~~
+  liftable def fold[T, U](list: strict List[T], start: lazy U, f: strict (strict U, strict T) => U): U = extern("List_fold")
+
+
+  ## Zips the elements of a list together with their index.
+  ## The resulting list bears tuples of the index starting with 0 and the value
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[List[Int]]
+  ## def zList: Events[List[Int]] = List.zipWithIndex(x)
+  ## out zList
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,5]
+  ## stream x: signal
+  ## stream zList: signal
+  ## ---
+  ## 0: x = [1, 2, 3]
+  ## 0: zList = [(0,1), (1,2), (2,3)]
+  ## 2: x = [5]
+  ## 2: zList = [(0, 5)]
+  ## 4: x = []
+  ## 4: zList = []
+  ## ~~~
+  liftable def zipWithIndex[A](x: List[A]) : List[(Int, A)]= {
+    def idxs = fold(x, (0, List.empty[Int]), (curr: (Int, List[Int]), _: A) =>
+      (curr._1 + 1, append(curr._2, curr._1)))._2
+
+    map(idxs, (i: Int) => (i, get(x, i)))
+  }
+
+
+  ## Zips together two lists.
+  ## The resulting list contains tuples of the corresponding elements of the two input lists.
+  ## The resulting list has the size of the shorter one of the two input lists.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[List[Int]]
+  ## in y: Events[List[String]]
+  ## def z: Events[List[(Int, String)]] = List.zip(x, y)
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,5]
+  ## stream x: signal
+  ## stream y: signal
+  ## stream z: signal
+  ## ---
+  ## 0: x = [1, 2]
+  ## 0: y = ["a", "b"]
+  ## 0: z = [(1,"a"), (2,"b")]
+  ## 2: x = [5]
+  ## 2: y = ["a", "b"]
+  ## 2: z = [(5, "a")]
+  ## 4: x = [2,3]
+  ## 4: y = []
+  ## 4: z = []
+  ## ~~~
+  liftable def zip[A,B](x: List[A], y: List[B]) : List[(A, B)]= {
+    def addIfPossible(curr: (Int, List[(A, B)]), a: A) = {
+        if (List.size(y) > curr._1) then {
+            (curr._1 + 1, List.append(curr._2, (a, List.get(y, curr._1))))
+        } else {
+            curr
+        }
+    }
+
+    fold(x, (0, empty[(A,B)]), addIfPossible)._2
+  }
+
+
+  ## Applies a function to all elements in the list and returns a new list with the mapped elements.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[List[Int]]
+  ## def y: Events[List[Int]] = List.map(x, (a: Int) => a + 1)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,5]
+  ## stream x: signal
+  ## stream y: signal
+  ## ---
+  ## 0: x = [1, 2, 3]
+  ## 0: y = [2, 3, 4]
+  ## 2: x = [5]
+  ## 2: y = [6]
+  ## 4: x = []
+  ## 4: y = []
+  ## ~~~
+  liftable def map[A, B](l: strict List[A], f: strict (strict A) => B) : List[B] = extern("List_map")
+
+  ## Returns the first index of element e in the list. If e is not contained -1 is returned.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[List[Int]]
+  ## in e: Events[Int]
+  ## def y: Events[Int] = List.find(x, 5)
+  ## def z: Events[Int] = List.find(x, e)
+  ## out y
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,5]
+  ## stream x: signal
+  ## stream e: bubbles
+  ## stream y: signal
+  ## stream z: signal
+  ## ---
+  ## 0: x = [1, 5, 3]
+  ## 0: y = 1
+  ## 1: e = 7
+  ## 1: z = -1
+  ## 3: x = [7]
+  ## 3: y = -1
+  ## 3: z = 0
+  ## ~~~
+  liftable def find[A](l: strict List[A], e: strict A) : Int =
+    fold(zipWithIndex(l), -1, (c: Int, le: (Int, A)) => if c == -1 && e == le._2 then le._1 else c)
+
+}
+
+## inmodule List
+## Type List
+type List[T] = extern("List")

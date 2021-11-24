@@ -1,0 +1,4 @@
+{
+    "spec": "mutual-infinite-recursion-with-operators-streams.tessla",
+    "expectedErrors": "mutual-infinite-recursion-with-operators-streams.errors"
+}

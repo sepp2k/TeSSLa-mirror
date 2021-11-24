@@ -1,0 +1,12 @@
+def @FunctionCalled(name: String)
+def @Foo(x: Int)
+def @Bar(o: String, x: Int)
+
+@FunctionCalled("hallo")
+in x: Events[Unit]
+
+@Foo(42)
+in y: Events[Unit]
+
+@Bar(x = 42, o = "HalloWelt")
+in z: Events[Unit]

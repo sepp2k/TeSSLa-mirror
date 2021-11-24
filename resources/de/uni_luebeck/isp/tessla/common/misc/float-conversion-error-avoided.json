@@ -1,0 +1,5 @@
+{
+  "input": "float-conversion-error-avoided.input",
+  "expectedOutput": "float-conversion-error-avoided.output",
+  "spec": "float-conversion-error-avoided.tessla"
+}

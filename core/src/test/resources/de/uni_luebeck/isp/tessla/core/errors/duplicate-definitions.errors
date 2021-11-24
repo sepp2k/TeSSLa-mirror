@@ -1,0 +1,10 @@
+errors/duplicate-definitions.tessla(5,5 - 5,6): Multiple definitions of "y" in same scope
+    Previous definition at: errors/duplicate-definitions.tessla(4,5 - 4,6)
+errors/duplicate-definitions.tessla(6,5 - 6,6): Multiple definitions of "y" in same scope
+    Previous definition at: errors/duplicate-definitions.tessla(4,5 - 4,6)
+errors/duplicate-definitions.tessla(2,4 - 2,5): Multiple definitions of "x" in same scope
+    Previous definition at: errors/duplicate-definitions.tessla(1,4 - 1,5)
+errors/duplicate-definitions.tessla(8,17 - 8,18): Multiple definitions of "x" in same scope
+    Previous definition at: errors/duplicate-definitions.tessla(8,9 - 8,10)
+errors/duplicate-definitions.tessla(8,36 - 8,37): Multiple definitions of "x" in same scope
+    Previous definition at: errors/duplicate-definitions.tessla(8,29 - 8,30)

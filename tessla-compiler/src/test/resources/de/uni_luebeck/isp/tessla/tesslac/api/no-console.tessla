@@ -1,0 +1,5 @@
+in x: Events[Int]
+in y: Events[Int]
+
+def z = 2*x + y
+out z

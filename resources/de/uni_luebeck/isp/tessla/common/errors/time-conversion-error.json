@@ -1,0 +1,6 @@
+{
+  "spec": "time-conversion-error.tessla",
+  "input": "time-conversion-error.input",
+  "expectedErrors": "time-conversion-error.errors",
+  "baseTime": "33333 µs"
+}

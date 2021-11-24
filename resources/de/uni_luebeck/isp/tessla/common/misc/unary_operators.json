@@ -1,0 +1,5 @@
+{
+  "input": "unary_operators.input",
+  "expectedOutput": "unary_operators.output",
+  "spec": "unary_operators.tessla"
+}

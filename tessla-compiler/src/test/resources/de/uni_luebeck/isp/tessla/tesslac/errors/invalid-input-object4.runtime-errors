@@ -1,0 +1,2 @@
+ERROR parsing the input Stream
+ Main$InputError: Long input has invalid format: For input string: "${x = 42}"

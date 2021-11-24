@@ -1,0 +1,6 @@
+{
+  "input": "unknown-constant-extern.input",
+  "expectedOutput": "unknown-constant-extern.output",
+  "expectedRuntimeErrors": "unknown-constant-extern.runtime-errors",
+  "spec": "unknown-constant-extern.tessla"
+}

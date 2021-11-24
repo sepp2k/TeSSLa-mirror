@@ -1,0 +1,491 @@
+## Maps
+module Map {
+  ## Returns an empty `map` without any element of type `T`
+  def empty[K, V]: Map[K, V] = extern("Map_empty")
+
+  ## Associate a `key` to a `value` in this map, overriding the previous mapping for `key`
+  ## if existent.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[(String, Int)]
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 4: x = (B, 4)
+  ## 4: map = A → 2, B → 4
+  ## 7: x = (B, 8)
+  ## 7: map = A → 2, B → 8
+  ## ~~~
+  liftable def add[K, V](map: strict Map[K, V], key: strict K, value: strict V): Map[K, V] = extern("Map_add")
+
+  ## Returns true if the given `map` contains a mapping for the specified `key`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[(String, Int)]
+  ## in y: Events[String]
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
+  ## def contains = Map.contains(map, y)
+  ## out contains
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## stream y: signal
+  ## stream contains: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 1: y = B
+  ## 1: contains = false
+  ## 3: x = (B, 4)
+  ## 3: map = A → 2, B → 4
+  ## 3: contains = true
+  ## 7: x = (B, 8)
+  ## 7: map = A → 2, B → 8
+  ## 7: y = C
+  ## 7: contains = false
+  ## ~~~
+  liftable def contains[K, V](map: strict Map[K, V], key: strict K): Bool = extern("Map_contains")
+
+  ## Get the corresponding `value` for the given `key`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[(String, Int)]
+  ## in y: Events[String]
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
+  ## def value = Map.get(map, y)
+  ## out value
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## stream y: signal
+  ## stream value: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 2: y = A
+  ## 2: value = 2
+  ## 3: x = (B, 4)
+  ## 3: map = A → 2, B → 4
+  ## 3: y = B
+  ## 3: value = 4
+  ## 7: x = (B, 8)
+  ## 7: map = A → 2, B → 8
+  ## 7: value = 8
+  ## ~~~
+  liftable def get[K, V](map: strict Map[K, V], key: strict K): V = extern("Map_get")
+
+  ## Removes the entry matching the given `key`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[String]
+  ## def filledMap = Map.add(Map.add(Map.empty[String, Int], "A", 2), "B", 4)
+  ## def map: Events[Map[String, Int]] = fold(x, filledMap, Map.remove)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## ---
+  ## 0: map = A → 2, B → 4
+  ## 4: x = A
+  ## 4: map = B → 4
+  ## 7: x = C
+  ## 7: map = B → 4
+  ## ~~~
+  liftable def remove[K, V](map: strict Map[K, V], key: strict K): Map[K, V] = extern("Map_remove")
+
+  ## Returns the number of elements in the given `map`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[(String, Int)]
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
+  ## def size = Map.size(map)
+  ## out size
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## stream size: signal
+  ## ---
+  ## 0: map = —
+  ## 0: size = 0
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 1: size = 1
+  ## 4: x = B → 4
+  ## 4: map = A → 2, B → 4
+  ## 4: size = 2
+  ## 7: x = (B, 8)
+  ## 7: map = A → 2, B → 8
+  ## 7: size = 2
+  ## ~~~
+  liftable def size[K, V](map: strict Map[K, V]): Int = extern("Map_size")
+
+  ## Returns the `keys` of the elements in the given `map` as `list`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[(String, Int)]
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
+  ## def keys = Map.keys(map)
+  ## out keys
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## stream keys: signal
+  ## ---
+  ## 0: map = —
+  ## 0: keys = —
+  ## 3: x = (A, 2)
+  ## 3: map = A → 2
+  ## 3: keys = A
+  ## 7: x = (B, 4)
+  ## 7: map = A → 2, B → 4
+  ## 7: keys = A, B
+  ## ~~~
+  liftable def keys[K, V](map: strict Map[K, V]): List[K] = extern("Map_keys")
+
+  ## Applies a function `f` on all values of the `map`.
+  ## Starting with the initial value `start` the function `f` is called for every pair of the `map` with the
+  ## last result and the current element value as arguments.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[(String, Int)]
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
+  ## def sum = Map.fold(map, 0, (r: Int, k: String, v: Int) => r + v)
+  ## out sum
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## stream sum: signal
+  ## ---
+  ## 0: map = —
+  ## 0: sum = 0
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 1: sum = 2
+  ## 3: x = (B, 4)
+  ## 3: map = A → 2, B → 4
+  ## 3: sum = 6
+  ## 7: x = (B, 8)
+  ## 7: map = A → 2, B → 8
+  ## 7: sum = 10
+  ## ~~~
+  liftable def fold[K, V, R](map: strict Map[K, V], start: lazy R, f: strict (strict R, strict K, strict V) => R): R = extern("Map_fold")
+
+  ## Get the `value` associated with the `key` if it exists in the map,
+  ## and the default value otherwise.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[(String, Int)]
+  ## in y: Events[String]
+  ## def map: Events[Map[String, Int]] =
+  ##   fold(x, Map.empty[String, Int],
+  ##     (acc: Map[String, Int], v: (String, Int)) => Map.add(acc, v._1, v._2)
+  ##   )
+  ## def result = Map.getOrElse(map, y, 42)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## stream y: signal
+  ## stream result: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = (A, 2)
+  ## 1: map = A → 2
+  ## 1: y = A
+  ## 1: result = 2
+  ## 3: y = B
+  ## 3: result = 42
+  ## 5: x = (B, 4)
+  ## 5: map = A → 2, B → 4
+  ## 5: result = 4
+  ## ~~~
+  liftable def getOrElse[K, V](map: Map[K, V], key: K, default: V): V =
+    if contains(map, key)
+    then get(map, key)
+    else default
+
+  ## Increments the `value` of the given `key` by one, or add a new entry `key → 1` if the `key` does not exist.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[String]
+  ## def map: Events[Map[String, Int]] = fold(x, Map.empty[String, Int], Map.inc)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = A
+  ## 1: map = A → 1
+  ## 3: x = A
+  ## 3: map = A → 2
+  ## 6: x = C
+  ## 6: map = A → 2, C → 1
+  ## ~~~
+  liftable def inc[K](counts: Map[K, Int], key: K): Map[K, Int] =
+    add(counts, key, getOrElse(counts, key, 0) + 1)
+
+  ## Counts the occurrences of each value in `events` and returns a mapping of each value to its count.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[String]
+  ## def map = Map.collectCount(x)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = A
+  ## 1: map = A → 1
+  ## 3: x = A
+  ## 3: map = A → 2
+  ## 6: x = C
+  ## 6: map = A → 2, C → 1
+  ## ~~~
+  def collectCount[T](events: Events[T]): Events[Map[T, Int]] =
+    __root__.fold(events, empty[T, Int], inc)
+
+  ## Get the maximum of `value`, grouped by `key`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[String]
+  ## in y: Events[Int]
+  ## def map = Map.collectMax(x, y)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream y: events
+  ## stream map: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = A
+  ## 1: y = 5
+  ## 1: map = A → 5
+  ## 3: y = 2
+  ## 3: map = A → 5
+  ## 4: x = C
+  ## 5: y = 7
+  ## 5: map = A → 5, C → 7
+  ## ~~~
+  def collectMax[K](key: Events[K], value: Events[Int]): Events[Map[K, Int]] = {
+    def oldMap = last(map, value)
+    def maxValue: Events[Int] = max(getOrElse(oldMap, on(value, key), value), value)
+    def map: Events[Map[K, Int]] = default(add(oldMap, on(value, key), maxValue), empty[K, Int])
+    map
+  }
+
+  ## Get the minimum of `value`, grouped by `key`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[String]
+  ## in y: Events[Int]
+  ## def map = Map.collectMin(x, y)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: signal
+  ## stream y: events
+  ## stream map: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = A
+  ## 1: y = 5
+  ## 1: map = A → 5
+  ## 3: y = 2
+  ## 3: map = A → 2
+  ## 4: x = C
+  ## 5: y = 7
+  ## 5: map = A → 2, C → 7
+  ## ~~~
+  def collectMin[A](key: Events[A], value: Events[Int]) = {
+    def oldMap = last(map, value)
+    def minValue: Events[Int] = min(getOrElse(oldMap, on(value, key), value), value)
+    def map: Events[Map[A, Int]] = default(add(oldMap, on(value, key), minValue), empty[A, Int])
+    map
+  }
+
+  ## Map every new value of `events` to a unique integer ID
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[String]
+  ## def map = Map.counting(x)
+  ## out map
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1, 10]
+  ## stream x: events
+  ## stream map: signal
+  ## ---
+  ## 0: map = —
+  ## 1: x = A
+  ## 1: map = A → 1
+  ## 3: x = C
+  ## 3: map = A → 1, C → 2
+  ## 6: x = A
+  ## 6: map = A → 1, C → 2
+  ## ~~~
+  def counting[A](events: Events[A]) = {
+    def counter: Events[Int] =
+      default(
+        if !contains(last(map, events), events)
+        then last(counter, events) + 1
+        else last(counter, events),
+        0)
+
+    def map: Events[Map[A, Int]] =
+      default(
+        if !contains(last(map, events), events)
+        then add(last(map, events), events, counter)
+        else last(map, events),
+        empty[A, Int])
+    map
+  }
+
+  ## Applies a function to all elements in the map and returns a new map with the mapped elements.
+  ## The applied function `f` is able to map key and value. The order in which the mapping function is applied
+  ## to the elements is non-deterministic. If `f` maps several entries to the same key, the later mappings overwrite
+  ## the previous ones.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Map[Int, Int]]
+  ## def y: Events[Map[Int, Int]] = Map.map(l, (a: Int, b: Int) => (a + 1, b + 1))
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,7]
+  ## stream x: signal
+  ## stream y: signal
+  ## ---
+  ## 0: x = 1 → 2, 2 → 3
+  ## 0: y = 2 → 3, 3 → 4
+  ## 2: x = 1 → 0, 1 → 3
+  ## 2: y = 2 → 1
+  ## 4: x = 1 → 0, 1 → 3
+  ## 4: y = 2 → 4
+  ## 6: x = —
+  ## 6: y = —
+  ## ~~~
+  liftable def map[A, B, C, D](m: strict Map[A, B], f: strict (strict A, strict B) => (C, D)) : Map[C, D] = extern("Map_map")
+}
+
+## inmodule Map
+type Map[K, V] = extern("Map")

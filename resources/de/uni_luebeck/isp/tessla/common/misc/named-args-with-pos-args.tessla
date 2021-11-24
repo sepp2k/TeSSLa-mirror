@@ -1,0 +1,4 @@
+in x: Events[Int]
+liftable def div(a: Int, b: Int) = a / b
+
+out div(a = x, 10) as r

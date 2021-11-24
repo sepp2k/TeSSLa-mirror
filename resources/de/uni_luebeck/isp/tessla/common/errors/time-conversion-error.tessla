@@ -1,0 +1,5 @@
+out 1µs as µs1
+out 10µs as µs10
+out 100µs as µs100
+out 1ms as ms1
+out 10ms as ms10

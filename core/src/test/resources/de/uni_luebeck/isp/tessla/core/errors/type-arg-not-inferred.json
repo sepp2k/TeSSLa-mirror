@@ -1,0 +1,4 @@
+{
+  "spec": "type-arg-not-inferred.tessla",
+  "expectedErrors": "type-arg-not-inferred.errors"
+}

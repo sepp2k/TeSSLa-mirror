@@ -1,0 +1,23 @@
+## comment
+
+## more comment
+include "empty"
+
+## comment
+module Foo {
+  ## comment
+
+  # comment
+
+  --- doc comment
+  def x = 42
+}
+
+## comment
+--- more comment
+
+# comment
+
+## comment
+
+out 42

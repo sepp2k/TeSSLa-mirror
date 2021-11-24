@@ -1,0 +1,16 @@
+@InstFunctionCalled("add")
+in add: Events[Unit]
+
+@InstFunctionCalled("sub")
+in sub: Events[Unit]
+
+def addCount := count(add)
+def subCount := count(sub)
+def diff := addCount - subCount
+
+def error := diff >= 2
+
+out addCount # signal
+out subCount # signal
+out diff # signal
+out pure(error) as error # signal

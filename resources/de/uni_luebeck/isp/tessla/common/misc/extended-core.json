@@ -1,0 +1,5 @@
+{
+  "input": "extended-core.input",
+  "expectedOutput": "extended-core.output",
+  "spec": "extended-core.tessla"
+}

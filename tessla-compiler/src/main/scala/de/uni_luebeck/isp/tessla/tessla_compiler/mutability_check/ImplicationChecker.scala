@@ -1,129 +1,166 @@
+/*
+ * Copyright 2021 The TeSSLa Community
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package de.uni_luebeck.isp.tessla.tessla_compiler.mutability_check
 
-import de.uni_luebeck.isp.tessla.TesslaAST
-import de.uni_luebeck.isp.tessla.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.tessla_compiler.Errors
+import de.uni_luebeck.isp.tessla.core.TesslaAST
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
 
 final case class Activation(base: Set[Identifier], init: Set[Identifier])
 
 /**
-  * Class for checking if an event on one stream always indicates an event on another stream
-  * @param spec The specification to examine
-  */
+ * Class for checking if an event on one stream always indicates an event on another stream
+ * @param spec The specification to examine
+ */
 class ImplicationChecker(spec: TesslaAST.Core.Specification) {
 
-  val activationMap : collection.mutable.Map[Identifier, (Set[Activation], Boolean)] = collection.mutable.Map()
-  val knownImplications : collection.mutable.Map[(Identifier, Identifier, Set[Identifier], Boolean, Boolean), Boolean] = collection.mutable.Map()
+  val activationMap: collection.mutable.Map[Identifier, (Set[Activation], Boolean)] = collection.mutable.Map()
+  val knownImplications: collection.mutable.Map[(Identifier, Identifier, Set[Identifier], Boolean, Boolean), Boolean] =
+    collection.mutable.Map()
 
-  (spec.definitions.keys ++ spec.in.keys).toSet.foreach{id : Identifier =>
+  (spec.definitions.keys ++ spec.in.keys).toSet.foreach { id: Identifier =>
     activationMap += (id -> processStreamDef(id, Set()))
   }
 
-    def processStreamDef(id: Identifier, stack: Set[Identifier]) : (Set[Activation], Boolean) = { //Activates, Always Init
-      if (stack(id)) {
-        (Set(), false)
-      }
-      else if (activationMap.contains(id)) {
-        activationMap(id)
-      }
-      else if (spec.in.contains(id)) {
-        (Set(Activation(Set(id), Set())), false)
-      } else {
-        val defExpr = spec.definitions(id)
-        defExpr.tpe match {
-          case InstantiatedType("Events", _, _) => defExpr match {
-            case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, _, _), args, _) => processStreamDefExp(id, e, args, stack + id)
+  def processStreamDef(id: Identifier, stack: Set[Identifier]): (Set[Activation], Boolean) = { //Activates, Always Init
+    if (stack(id)) {
+      (Set(), false)
+    } else if (activationMap.contains(id)) {
+      activationMap(id)
+    } else if (spec.in.contains(id)) {
+      (Set(Activation(Set(id), Set())), false)
+    } else {
+      val defExpr = spec.definitions(id)
+      defExpr.tpe match {
+        case InstantiatedType("Events", _, _) =>
+          defExpr match {
+            case ApplicationExpression(TypeApplicationExpression(e: ExternExpression, _, _), args, _) =>
+              processStreamDefExp(id, e, args, stack + id)
             case ApplicationExpression(e: ExternExpression, args, _) => processStreamDefExp(id, e, args, stack + id)
-            case e => throw Errors.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
+            case e =>
+              throw Diagnostics.CoreASTError("Non valid stream defining expression cannot be translated", e.location)
           }
-          case _ => (Set(), false)
-        }
+        case _ => (Set(), false)
       }
     }
+  }
 
-    def processStreamDefExp(id: Identifier, defExp: ExternExpression, args: Seq[ExpressionArg], stack: Set[Identifier]) : (Set[Activation], Boolean) = { //Activates, Always Init
-      defExp.name match {
+  def processStreamDefExp(
+    id: Identifier,
+    defExp: ExternExpression,
+    args: Seq[ExpressionArg],
+    stack: Set[Identifier]
+  ): (Set[Activation], Boolean) = { //Activates, Always Init
+    defExp.name match {
 
-        case "defaultFrom" => (Set(Activation(Set(id), Set())), false)
+      case "defaultFrom" => (Set(Activation(Set(id), Set())), false)
 
-        case "lift" => (Set(Activation(Set(id), Set())), false)
+      case "lift" => (Set(Activation(Set(id), Set())), false)
 
-        case "nil" => (Set(), false)
+      case "nil" => (Set(), false)
 
-        case "time" => processStreamDef(ExpressionFlowAnalysis.getExpArgID(args(0)), stack)
+      case "time" => processStreamDef(ExpressionFlowAnalysis.getExpArgID(args(0)), stack)
 
-        case "default" => (processStreamDef(ExpressionFlowAnalysis.getExpArgID(args(0)), stack)._1, true)
+      case "default" => (processStreamDef(ExpressionFlowAnalysis.getExpArgID(args(0)), stack)._1, true)
 
-        case "delay" => (Set(Activation(Set(id), Set(ExpressionFlowAnalysis.getExpArgID(args(0))))), false)
+      case "delay" => (Set(Activation(Set(id), Set(ExpressionFlowAnalysis.getExpArgID(args(0))))), false)
 
-        case "last" =>
-          val v = ExpressionFlowAnalysis.getExpArgID(args(0))
-          val t = ExpressionFlowAnalysis.getExpArgID(args(1))
-          val colt = processStreamDef(t, stack)
+      case "last" =>
+        val v = ExpressionFlowAnalysis.getExpArgID(args(0))
+        val t = ExpressionFlowAnalysis.getExpArgID(args(1))
+        val colt = processStreamDef(t, stack)
 
-          (addCond(colt._1, v), false)
+        (addCond(colt._1, v), false)
 
-        case "slift" =>
-          val argIDs = args.dropRight(1).map(ExpressionFlowAnalysis.getExpArgID)
-          val argIDCols = argIDs.map(i => (i -> processStreamDef(i, stack))).toMap
-          val cols =
-            (1 to argIDs.size).flatMap(i => argIDs.combinations(i)).flatMap{ids =>
-              val combColor = ids.map(argIDCols(_)._1).reduce[Set[Activation]]{case (c,n) => c.flatMap(cc => n.map(nc => Activation(cc.base ++ nc.base, cc.init ++ nc.init)))}
-              combColor.map{col => Activation(col.base, col.init ++ (argIDs.toSet -- ids))}
+      case "slift" =>
+        val argIDs = args.dropRight(1).map(ExpressionFlowAnalysis.getExpArgID)
+        val argIDCols = argIDs.map(i => (i -> processStreamDef(i, stack))).toMap
+        val cols =
+          (1 to argIDs.size).flatMap(i => argIDs.combinations(i)).flatMap { ids =>
+            val combColor = ids.map(argIDCols(_)._1).reduce[Set[Activation]] {
+              case (c, n) => c.flatMap(cc => n.map(nc => Activation(cc.base ++ nc.base, cc.init ++ nc.init)))
             }
-          (cols.toSet, argIDCols.values.forall(_._2))
+            combColor.map { col => Activation(col.base, col.init ++ (argIDs.toSet -- ids)) }
+          }
+        (cols.toSet, argIDCols.values.forall(_._2))
 
-        case "merge" =>
-          val argIDs = args.map(ExpressionFlowAnalysis.getExpArgID)
-          argIDs.map(processStreamDef(_, stack)).reduce[(Set[Activation], Boolean)]{case ((s, b),(s2, b2)) => (s ++ s2, b || b2)}
+      case "merge" =>
+        val argIDs = args.map(ExpressionFlowAnalysis.getExpArgID)
+        argIDs.map(processStreamDef(_, stack)).reduce[(Set[Activation], Boolean)] {
+          case ((s, b), (s2, b2)) => (s ++ s2, b || b2)
+        }
 
-        case _ => throw Errors.CommandNotSupportedError(defExp.toString)
-      }
+      case _ => throw Diagnostics.CommandNotSupportedError(defExp.toString)
     }
+  }
 
-    def addCond(cols: Set[Activation], id: Identifier) : Set[Activation] = {
-      cols.map{case Activation(base, init) => Activation(base, init + id)}
-    }
+  def addCond(cols: Set[Activation], id: Identifier): Set[Activation] = {
+    cols.map { case Activation(base, init) => Activation(base, init + id) }
+  }
 
   /**
-    * Checks implication i -> j, with caching
-    * @param i Identifier i
-    * @param j Identifier j
-    * @param secondChance Allow necessary identifiers not to be initialized for the first event of j
-    *                     (Useful for signal lift handling)
-    * @param notInit Identifiers which are known to be uninitialized
-    * @param jInit Check if j is initialized instead of implicated
-    * @return Whether i -> j
-    */
-  def freqImplication(i: Identifier, j: Identifier, secondChance : Boolean, notInit: Set[Identifier] = Set(), jInit: Boolean = false) : Boolean = {
+   * Checks implication i -> j, with caching
+   * @param i Identifier i
+   * @param j Identifier j
+   * @param secondChance Allow necessary identifiers not to be initialized for the first event of j
+   *                     (Useful for signal lift handling)
+   * @param notInit Identifiers which are known to be uninitialized
+   * @param jInit Check if j is initialized instead of implicated
+   * @return Whether i -> j
+   */
+  def freqImplication(
+    i: Identifier,
+    j: Identifier,
+    secondChance: Boolean,
+    notInit: Set[Identifier] = Set(),
+    jInit: Boolean = false
+  ): Boolean = {
 
     if (i == j) {
       true
     } else {
-        if (!knownImplications.contains((i, j, notInit, jInit, secondChance))) {
-          val coli = activationMap(i)
-          val colj = activationMap(j)
+      if (!knownImplications.contains((i, j, notInit, jInit, secondChance))) {
+        val coli = activationMap(i)
+        val colj = activationMap(j)
 
-          val res = (!coli._2 || colj._2) && coli._1.forall { mandatoryColor =>
-            if (mandatoryColor.init.intersect(notInit).nonEmpty ||
-                (jInit && mandatoryColor.init.exists(c => freqImplication(c, j, false, notInit + c, true)))) {
-              true
-            } else {
-              colj._1.exists { possColor =>
-                if (possColor.base.subsetOf(mandatoryColor.base)) {
-                  possColor.init.forall(possImp =>
-                    !notInit(possImp) && (activationMap(possImp)._2 ||
+        val res = (!coli._2 || colj._2) && coli._1.forall { mandatoryColor =>
+          if (
+            mandatoryColor.init.intersect(notInit).nonEmpty ||
+            (jInit && mandatoryColor.init.exists(c => freqImplication(c, j, false, notInit + c, true)))
+          ) {
+            true
+          } else {
+            colj._1.exists { possColor =>
+              if (possColor.base.subsetOf(mandatoryColor.base)) {
+                possColor.init.forall(possImp =>
+                  !notInit(possImp) && (activationMap(possImp)._2 ||
                     (secondChance && freqImplication(i, possImp, false, notInit + possImp, true)) ||
-                    mandatoryColor.init.exists(mandImp =>  freqImplication(mandImp, possImp, false, notInit + possImp, true))))
-                } else {
-                  false
-                }
+                    mandatoryColor.init
+                      .exists(mandImp => freqImplication(mandImp, possImp, false, notInit + possImp, true)))
+                )
+              } else {
+                false
               }
             }
           }
-
-          knownImplications += ((i, j, notInit, jInit, secondChance) -> res)
         }
+
+        knownImplications += ((i, j, notInit, jInit, secondChance) -> res)
+      }
       knownImplications((i, j, notInit, jInit, secondChance))
     }
   }

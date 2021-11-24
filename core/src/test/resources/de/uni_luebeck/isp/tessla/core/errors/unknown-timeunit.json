@@ -1,0 +1,5 @@
+{
+  "spec": "_.tessla",
+  "expectedErrors": "_.errors",
+  "baseTime": "1foo"
+}

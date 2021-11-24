@@ -1,0 +1,5 @@
+{
+  "input": "tuple-input-streams.input",
+  "expectedOutput": "tuple-input-streams.output",
+  "spec": "tuple-input-streams.tessla"
+}

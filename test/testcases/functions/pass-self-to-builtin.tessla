@@ -1,3 +1,0 @@
-def f(x: Int): Int =
-  Set.fold(Set.empty[Int], 0, f)
-out f(2)

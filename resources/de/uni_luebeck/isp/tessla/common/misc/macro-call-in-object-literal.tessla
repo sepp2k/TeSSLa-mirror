@@ -1,0 +1,9 @@
+def foo(x: Int) := x
+
+def bar(x: Events[Int]) := {
+  def baz := foo(1)
+  {a = baz}
+}
+
+in i: Events[Int]
+out bar(i).a as x

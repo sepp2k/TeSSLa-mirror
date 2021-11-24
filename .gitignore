@@ -3,9 +3,12 @@
 .project
 .settings/
 target/
+gen/
 .history
 .idea
 *~
 main.aux
 *.synctex.gz
 *.log
+*.tokens
+*.iml

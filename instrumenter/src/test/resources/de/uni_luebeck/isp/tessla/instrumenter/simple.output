@@ -1,0 +1,10 @@
+CALLED add: (x: int, y: int) => int
+add_called
+uint8_t* events = trace_create_events(1);
+trace_push_unit(events, "add");
+trace_write(events);
+CALLED sub: (x: int, y: int) => int
+sub_called
+uint8_t* events = trace_create_events(1);
+trace_push_unit(events, "sub");
+trace_write(events);

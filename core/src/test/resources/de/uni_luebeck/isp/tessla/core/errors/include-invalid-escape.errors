@@ -1,0 +1,2 @@
+errors/include-invalid-escape.tessla(1,17 - 1,19): Invalid escape sequence '\f' in string
+errors/include-invalid-escape.tessla(1,9 - 1,29): Could not find a TeSSLa file named include\foo.tessla

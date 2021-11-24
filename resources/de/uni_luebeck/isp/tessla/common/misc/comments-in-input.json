@@ -1,0 +1,5 @@
+{
+  "input": "comments-in-input.input",
+  "expectedOutput": "comments-in-input.output",
+  "spec": "comments-in-input.tessla"
+}

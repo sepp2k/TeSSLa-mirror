@@ -1,0 +1,14 @@
+in x: Events[Int]
+
+liftable def f[T](x: T) := "<$x>"
+
+liftable def g[T, U](x: T, y: U) := "[$x${":"} ${y}]"
+
+def 💩 := x+1
+
+out f(x)
+out f(💩)
+out f("hallo")
+out f(42)
+out g("hallo", "welt")
+out g("x", x)

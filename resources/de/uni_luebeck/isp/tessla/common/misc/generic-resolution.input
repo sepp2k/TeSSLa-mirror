@@ -1,0 +1,5 @@
+1: c = true
+2: t = "foo"
+3: e = "bar"
+4: c = false
+5: e = "baz"

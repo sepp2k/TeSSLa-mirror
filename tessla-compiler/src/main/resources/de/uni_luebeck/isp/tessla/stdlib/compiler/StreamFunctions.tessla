@@ -1,0 +1,1869 @@
+## Built-in stream functions
+module StreamFunctions {
+
+  ## Returns an empty stream without any event of type `T`
+  def nil[T]: Events[T] = extern("nil")
+
+  ## Returns a stream which contains all the events of the given `stream`. If `stream` has no event at
+  ## timestamp 0, then an additional event with value `value` is added at timestamp 0.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## def d = default(a, 42)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,6]
+  ## stream a: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 0: d = 42
+  ## 2: a = 17
+  ## 2: d = 17
+  ## 5: a = 23
+  ## 5: d = 23
+  ## ~~~
+  ##
+  ## **Alternative trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-0.1,6]
+  ## stream a: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 0: a = 12
+  ## 0: d = 12
+  ## 2: a = 17
+  ## 2: d = 17
+  ## 5: a = 23
+  ## 5: d = 23
+  ## ~~~
+  ##
+  def default[T](stream: strict Events[T], value: strict T): Events[T] = extern("default")
+
+  ## Similar to @[#default], this operation returns a stream which contains
+  ## all the events of the given `valueStream`. If the first event on `defaultStream` happens
+  ## strictly before the first event on `valueStream` then this event is added. No events other
+  ## than the first event on `defaultStream` are considered.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in v: Events[Int]
+  ## in x: Events[Int]
+  ## def d = defaultFrom(v, x)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream v: bubbles
+  ## stream x: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 2: x = 5
+  ## 2: d = 5
+  ## 3: x = 3
+  ## 3: d = 2
+  ## 3: v = 2
+  ## 5: x = 7
+  ## 6: d = 4
+  ## 6: v = 4
+  ## ~~~
+  ##
+  ## **Alternative trace example:**
+  ##
+  ## ~~~trace
+  ## stream v: bubbles
+  ## stream x: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 1: d = 6
+  ## 1: v = 6
+  ## 2: x = 5
+  ## 3: x = 3
+  ## 3: d = 2
+  ## 3: v = 2
+  ## 5: x = 7
+  ## 6: d = 4
+  ## 6: v = 4
+  ## ~~~
+  def defaultFrom[T](valueStream: strict Events[T], defaultStream: strict Events[T]): Events[T] = extern("defaultFrom")
+
+  ## Lifts a unary function `f` which is defined on values to a function on a stream and applies it to the
+  ## given stream. The function `f` is called for every event on the streams. Because there is no
+  ## other stream, the argument of `f` will never be `None`. (`f` is never
+  ## called with all arguments being `None`.)
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## def f(a: Option[Int]) =
+  ##   if getSome(a) > 5 then a else None[Int]
+  ## def b = lift1(a,f)
+  ## out b
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## ---
+  ## 1: b = 7
+  ## 1: a = 7
+  ## 2: a = 5
+  ## 4: a = 3
+  ## 5: b = 9
+  ## 5: a = 9
+  ## ~~~
+  ##
+  ## **Alternative trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## ---
+  ## 1: a = 1
+  ## 2: a = 2
+  ## 4: a = 3
+  ## 5: b = 9
+  ## 5: a = 9
+  ## ~~~
+  def lift1[T, U](stream: strict Events[T], f: strict (strict Option[T]) => Option[U]): Events[U] = extern("lift")
+
+  ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
+  ## given streams. The function `f` is called for every event on any of the streams. If there is a
+  ## simultaneous event on the other stream, then the values of both events are passed to `f`. Otherwise
+  ## the other argument is `None` if there is no simultaneous event on the other stream. `f` is never
+  ## called with all arguments being `None`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## def f(a: Option[Int], b: Option[Int]) =
+  ##   if isSome(a) && getSome(a) > 5 then a else b
+  ## def c = lift(a,b,f)
+  ## out c
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## stream c: bubbles
+  ## ---
+  ## 1: c = 7
+  ## 1: a = 7
+  ## 2: a = 5
+  ## 3: b = 6
+  ## 3: c = 6
+  ## 4: b = 2
+  ## 4: c = 2
+  ## 4: a = 3
+  ## 5: b = 4
+  ## 5: c = 9
+  ## 5: a = 9
+  ## ~~~
+  def lift2[T, U, V](stream1: strict Events[T], stream2: strict Events[U], f: strict (strict Option[T], strict Option[U]) => Option[V]): Events[V] =
+    extern("lift")
+
+  ## `lift` is an alias for [`lift2`](#lift2).
+  def lift = lift2
+
+  ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
+  ## given streams. The function `f` is called for every event on any of the streams. If there is a
+  ## simultaneous event on the other stream, then the values of both events are passed to `f`. Otherwise
+  ## the other argument is `None` if there is no simultaneous event on the other stream. `f` is never
+  ## called with all arguments being `None`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## in c: Events[Int]
+  ## def f(a: Option[Int], b: Option[Int], c: Option[Int]) =
+  ##   if isSome(a) && getSome(a) > 5 then a
+  ##   else if isSome(b) then b
+  ##   else c
+  ## def d = lift3(a,b,c,f)
+  ## out d
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## stream c: bubbles
+  ## stream d: bubbles
+  ## ---
+  ## 1: d = 7
+  ## 1: a = 7
+  ## 2: a = 5
+  ## 3: b = 6
+  ## 3: d = 6
+  ## 4: b = 2
+  ## 4: d = 2
+  ## 4: a = 3
+  ## 5: c = 1
+  ## 5: d = 1
+  ## 6: b = 4
+  ## 6: c = 3
+  ## 6: d = 9
+  ## 6: a = 9
+  ## ~~~
+  def lift3[T1, T2, T3, T4](stream1: strict Events[T1], stream2: strict Events[T2], stream3: strict Events[T3],
+                            f: strict (strict Option[T1], strict Option[T2], strict Option[T3]) => Option[T4]): Events[T4] = extern("lift")
+
+  ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
+  ## given streams. The function `f` is called for every event on any of the streams. If there is a
+  ## simultaneous event on the other stream, then the values of both events are passed to `f`. Otherwise
+  ## the other argument is `None` if there is no simultaneous event on the other stream. `f` is never
+  ## called with all arguments being `None`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## in c: Events[Int]
+  ## in d: Events[Int]
+  ## def f(a: Option[Int], b: Option[Int], c: Option[Int], d: Option[Int]) =
+  ##   if isSome(a) && getSome(a) > 5 then a
+  ##   else if isSome(b) then b
+  ##   else if isSome(c) then c
+  ##   else d
+  ## def e = lift4(a,b,c,d,f)
+  ## out e
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## stream c: bubbles
+  ## stream d: bubbles
+  ## stream e: bubbles
+  ## ---
+  ## 1: a = 7
+  ## 1: e = 7
+  ## 2: a = 5
+  ## 3: b = 6
+  ## 3: e = 6
+  ## 4: b = 2
+  ## 4: a = 3
+  ## 4: e = 2
+  ## 5: e = 1
+  ## 5: c = 1
+  ## 6: d = 2
+  ## 6: e = 2
+  ## 7: b = 4
+  ## 7: a = 9
+  ## 7: d = 2
+  ## 7: e = 9
+  ## 7: c = 3
+  ## ~~~
+  def lift4[T1, T2, T3, T4, T5](stream1: strict Events[T1], stream2: strict Events[T2], stream3: strict Events[T3], stream4: strict Events[T4],
+                                f: strict (strict Option[T1], strict Option[T2], strict Option[T3], strict Option[T4]) => Option[T5]): Events[T5] = extern("lift")
+
+  ## Lifts a function `f` which is defined on values to a function on streams and applies it to the
+  ## given streams. The function `f` is called for every event on any of the streams. If there is a
+  ## simultaneous event on the other stream, then the values of both events are passed to `f`. Otherwise
+  ## the other argument is `None` if there is no simultaneous event on the other stream. `f` is never
+  ## called with all arguments being `None`.
+  ##
+  ## See [`lift4`](#lift4) for a usage example.
+  def lift5[T1, T2, T3, T4, T5, U](stream1: strict Events[T1], stream2: strict Events[T2], stream3: strict Events[T3], stream4: strict Events[T4], stream5: strict Events[T5],
+                                f: strict (strict Option[T1], strict Option[T2], strict Option[T3], strict Option[T4], strict Option[T5]) => Option[U]): Events[U] = extern("lift")
+
+  ## The last operator takes two streams and returns the previous
+  ## value of the first stream at the timestamps of the second.
+  ## Note that while TeSSLa is defined on event streams, last realizes some essential
+  ## aspects of the signal semantics: With this operator one can query the last known
+  ## value of an event stream at a specific time and hence interpret the events on this
+  ## stream as points where a piece-wise constant signal changes its value.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in values: Events[Int]
+  ## in trigger: Events[Unit]
+  ## def result = last(values,trigger)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream values: bubbles
+  ## stream trigger: unit events
+  ## stream result: bubbles
+  ## ---
+  ## 1: trigger = ()
+  ## 2: values = 5
+  ## 3: result = 5
+  ## 3: trigger = ()
+  ## 4: result = 5
+  ## 4: trigger = ()
+  ## 5: result = 5
+  ## 5: trigger = ()
+  ## 5: values = 3
+  ## 6: result = 3
+  ## 6: trigger = ()
+  ## ~~~
+  ##
+  def last[T, U](stream: lazy Events[T], trigger: strict Events[U]): Events[T] = extern("last")
+
+  ## Return the previous event of `a`, when the current event occurs. Does not work in recursive equations.
+  ## Use @[#last] with an explicit external trigger in recursive equations
+  ## instead.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## def b = prev(a)
+  ## out b
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option axis: true
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## ---
+  ## 1: a = 3
+  ## 3: b = 3
+  ## 3: a = 2
+  ## 7: b = 2
+  ## 7: a = 1
+  ## 8: b = 1
+  ## 8: a = 5
+  ## ~~~
+  def prev[A](a: Events[A]): Events[A] = last(a,a)
+
+  ## The time operator returns the stream of the timestamps of another stream
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def y = time(x)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option axis: true
+  ## option timeDomain: [0,14]
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## ---
+  ## 2: x = 5
+  ## 2: y = 2
+  ## 4: x = 3
+  ## 4: y = 4
+  ## 10: x = 42
+  ## 10: y = 10
+  ## ~~~
+  ##
+  def time[T](stream: strict Events[T]): Events[Int] = extern("time")
+
+  ## The delay operator takes delays as its first argument. After a
+  ## delay has passed, a unit event is emitted. A delay can only be set if a reset event
+  ## is received via the second argument, or if an event is emitted on the output.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in values: Events[Int]
+  ## in resets: Events[Unit]
+  ## def result = delay(values, resets)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option axis: true
+  ## stream values: bubbles
+  ## stream resets: unit events
+  ## stream result: unit events
+  ## ---
+  ## 1: resets = ()
+  ## 1: values = 2
+  ## 3: result = ()
+  ## 4: resets = ()
+  ## 4: values = 3
+  ## 7: result = ()
+  ## 7: values = 2
+  ## 9: result = ()
+  ## 9: resets = ()
+  ## 9: values = 2
+  ## 11: result = ()
+  ## 11: values = 4
+  ## 13: resets = ()
+  ## ~~~
+  ##
+  def delay[T](delays: lazy Events[Int], resets: strict Events[T]): Events[Unit] = extern("delay")
+
+  # More stream functions
+
+  ## Maps the event's values of a `stream` to given constant `value`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def y = const(42, x)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## ---
+  ## 1: y = 42
+  ## 1: x = 17
+  ## 6: y = 42
+  ## 6: x = 1
+  ## 8: y = 42
+  ## 8: x = 42
+  ## 12: y = 42
+  ## 12: x = 23
+  ## ~~~
+  def const[T, U](value: T, stream: Events[U]): Events[T] = extern("const")
+
+  ## Returns a variant of `stream1` which has every original events of `stream1` and additional events with
+  ## the last value of `stream1` for every event of `stream2`. `first` is defined as the signal lift of the
+  ## function _f(a,b) = a_.
+  ##
+  ## Note, the difference between `first(stream1, stream2)` and `merge(stream1, last(stream1, stream2))`. Since `first` is
+  ## defined via signal lift, it does not produce events before both input streams have been defined.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## in y: Events[Int]
+  ## def z = first(x, y)
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: signal
+  ## stream y: signal
+  ## stream z: signal
+  ## ---
+  ## 1: x = 17
+  ## 2: y = 23
+  ## 2: z = 17
+  ## 3: z = 1
+  ## 3: x = 1
+  ## 4: y = 3
+  ## 4: z = 1
+  ## 6: y = 34
+  ## 6: z = 42
+  ## 6: x = 42
+  ## 8: y = 12
+  ## 8: z = 42
+  ## ~~~
+  def first[T, U](stream1: Events[T], stream2: Events[U]): Events[T] = slift(stream1, stream2, (x: T, _: U) => x)
+
+  ## The unary signal lift is very similar to `lift1`. Since the lifted function is unary, there is no other
+  ## stream with which events are being synchronized. The only difference is that `slift1` takes a total
+  ## function which cannot remove events.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## def b = slift1(a, (x: Int) => x + 1)
+  ## out b
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: signal
+  ## stream b: signal
+  ## ---
+  ## 1: b = 3
+  ## 1: a = 2
+  ## 3: b = 6
+  ## 3: a = 5
+  ## 7: b = 4
+  ## 7: a = 3
+  ## ~~~
+  def slift1[T, U](stream: strict Events[T], f: strict (strict T) => U): Events[U] = extern("slift")
+
+  ## Takes a function `f` on values and lifts it to a function on streams
+  ## using signal semantics. The function is then applied to the given streams.
+  ## `f` is evaluated for every event on any of the given streams. If a stream
+  ## contains no simultaneous event with the same timestamp then `f` is
+  ## called with the last known value of that stream. `f` is not called
+  ## before every stream had at least one event.
+  ##
+  ## Note, that in comparison to @[#lift] `f` takes no @[Types#option]
+  ## type. `slift` cannot filter events. The generated event pattern is independent
+  ## of the lifted function `f`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## def z = slift(a, b, (v1: Int, v2: Int) => (v1 + v2) / 2)
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: signal
+  ## stream b: signal
+  ## stream z: signal
+  ## ---
+  ## 2: a = 2
+  ## 3: a = 3
+  ## 5: b = 1
+  ## 5: z = 2
+  ## 7: b = 4
+  ## 7: a = 5
+  ## 7: z = 4
+  ## 10: b = 7
+  ## 10: z = 6
+  ## 12: a = 6
+  ## 12: z = 6
+  ## ~~~
+  def slift2[T,U,V](a: strict Events[T], b: strict Events[U], f: strict (strict T, strict U) => V): Events[V] = extern("slift")
+
+  ## `slift` is an alias for @[#slift2]
+  def slift = slift2
+
+  ## Takes a function `f` on values and lifts it to a function on streams
+  ## using signal semantics. The function is then applied to the given streams.
+  ## `f` is evaluated for every event on any of the given streams. If a stream
+  ## contains no simultaneous event with the same timestamp then `f` is
+  ## called with the last known value of that stream. `f` is not called
+  ## before every stream had at least one event.
+  ##
+  ## Note, that in comparison to @[#lift3] `f` takes no @[Types#option]
+  ## type. `slift3` cannot filter events. The generated event pattern is independent
+  ## of the lifted function `f`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## in c: Events[Int]
+  ## def z = slift3(a, b, c, (v1: Int, v2: Int, v3: Int) => (v1 + v2 + v3) / 3)
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: signal
+  ## stream b: signal
+  ## stream c: signal
+  ## stream z: signal
+  ## ---
+  ## 2: a = 2
+  ## 3: a = 3
+  ## 5: b = 1
+  ## 6: c = 8
+  ## 6: z = 4
+  ## 7: b = 4
+  ## 7: a = 5
+  ## 7: z = 5
+  ## 10: b = 7
+  ## 10: z = 6
+  ## 12: b = 9
+  ## 12: c = 10
+  ## 12: a = 6
+  ## 12: z = 8
+  ## ~~~
+  def slift3[T1, T2, T3, T4](a: strict Events[T1], b: strict Events[T2], c: strict Events[T3], f: strict (strict T1, strict T2, strict T3) => T4): Events[T4] = extern("slift")
+
+  ## Takes a function `f` on values and lifts it to a function on streams
+  ## using signal semantics. The function is then applied to the given streams.
+  ## `f` is evaluated for every event on any of the given streams. If a stream
+  ## contains no simultaneous event with the same timestamp then `f` is
+  ## called with the last known value of that stream. `f` is not called
+  ## before every stream had at least one event.
+  ##
+  ## Note, that in comparison to @[#lift4] `f` takes no @[Types#option]
+  ## type. `slift4` cannot filter events. The generated event pattern is independent
+  ## of the lifted function `f`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## in c: Events[Int]
+  ## in d: Events[Int]
+  ## def z = slift4(a, b, c, d,
+  ##   (v1: Int, v2: Int, v3: Int, v4: Int) => (v1 + v2 + v3 + v4) / 4)
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: signal
+  ## stream b: signal
+  ## stream c: signal
+  ## stream d: signal
+  ## stream z: signal
+  ## ---
+  ## 1: d = 12
+  ## 2: a = 2
+  ## 3: a = 3
+  ## 5: b = 1
+  ## 6: z = 6
+  ## 6: c = 8
+  ## 7: a = 5
+  ## 7: b = 4
+  ## 7: z = 7
+  ## 10: b = 7
+  ## 10: z = 8
+  ## 12: a = 6
+  ## 12: d = 11
+  ## 12: b = 9
+  ## 12: z = 9
+  ## 12: c = 10
+  ## ~~~
+  def slift4[T1, T2, T3, T4, T5](s1: strict Events[T1],
+                                 s2: strict Events[T2],
+                                 s3: strict Events[T3],
+                                 s4: strict Events[T4],
+                                 f: strict (strict T1, strict T2, strict T3, strict T4) => T5): Events[T5] = extern("slift")
+
+  ## Takes a function `f` on values and lifts it to a function on streams
+  ## using signal semantics. The function is then applied to the given streams.
+  ## `f` is evaluated for every event on any of the given streams. If a stream
+  ## contains no simultaneous event with the same timestamp then `f` is
+  ## called with the last known value of that stream. `f` is not called
+  ## before every stream had at least one event.
+  ##
+  ## Note, that in comparison to @[#lift5] `f` takes no @[Types#option]
+  ## type. `slift5` cannot filter events. The generated event pattern is independent
+  ## of the lifted function `f`.
+  ##
+  ## See @[#slift4] for a usage example.
+  def slift5[T1, T2, T3, T4, T5, U](s1: strict Events[T1],
+                                    s2: strict Events[T2],
+                                    s3: strict Events[T3],
+                                    s4: strict Events[T4],
+                                    s5: strict Events[T5],
+                                    f: strict (strict T1, strict T2, strict T3, strict T4, strict T5) => U): Events[U] = extern("slift")
+
+  ## nodoc
+  def slift1_curried[T, U](f:  (T) => U) =
+    (s1: Events[T]) => slift1(s1, f)
+
+  ## nodoc
+  def slift2_curried[T1, T2, U](f: (T1, T2) => U) =
+    (s1: Events[T1], s2: Events[T2]) => slift2(s1, s2, f)
+
+  ## nodoc
+  def slift3_curried[T1, T2, T3, U](f: (T1, T2, T3) => U) =
+    (s1: Events[T1], s2: Events[T2], s3: Events[T3]) => slift3(s1, s2, s3, f)
+
+  ## nodoc
+  def slift4_curried[T1, T2, T3, T4, U](f: (T1, T2, T3, T4) => U) =
+    (s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4]) => slift4(s1, s2, s3, s4, f)
+
+  ## nodoc
+  def slift5_curried[T1, T2, T3, T4, T5, U](f:  (T1, T2, T3, T4, T5) => U) =
+    (s1: Events[T1], s2: Events[T2], s3: Events[T3], s4: Events[T4], s5: Events[T5]) => slift5(s1, s2, s3, s4, s5, f)
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## def z = merge(a,b)
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## stream z: bubbles
+  ## ---
+  ## 1: a = 3
+  ## 1: z = 3
+  ## 2: b = 4
+  ## 2: z = 4
+  ## 3: a = 2
+  ## 3: z = 2
+  ## 7: b = 6
+  ## 7: a = 1
+  ## 7: z = 1
+  ## 8: a = 5
+  ## 8: z = 5
+  ## ~~~
+  def merge2[T](stream1: strict Events[T], stream2: strict Events[T]): Events[T] = extern("merge")
+
+  ## `merge` is an alias for @[#merge2]
+  def merge = merge2
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## in c: Events[Int]
+  ## def z = merge3(a,b,c)
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream a: bubbles
+  ## stream b: bubbles
+  ## stream c: bubbles
+  ## stream z: bubbles
+  ## ---
+  ## 1: a = 3
+  ## 1: z = 3
+  ## 2: b = 4
+  ## 2: z = 4
+  ## 3: z = 5
+  ## 3: c = 5
+  ## 7: b = 6
+  ## 7: a = 1
+  ## 7: z = 1
+  ## 8: a = 5
+  ## 8: z = 5
+  ## 9: b = 10
+  ## 9: z = 10
+  ## 9: c = 11
+  ## 10: a = 6
+  ## 10: z = 6
+  ## 10: c = 9
+  ## ~~~
+  def merge3[T](a: strict Events[T], b: strict Events[T], c: strict Events[T]): Events[T] = extern("merge")
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  ##
+  ## See @[#merge] for a usage example.
+  def merge4[T](a: strict Events[T], b: strict Events[T], c: strict Events[T], d: strict Events[T]): Events[T] =
+    extern("merge")
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  ##
+  ## See @[#merge] for a usage example.
+  def merge5[T](a: strict Events[T], b: strict Events[T], c: strict Events[T], d: strict Events[T], e: strict Events[T]): Events[T] =
+    extern("merge")
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  ##
+  ## See @[#merge] for a usage example.
+  def merge6[T](a: strict Events[T], b: strict Events[T], c: strict Events[T], d: strict Events[T], e: strict Events[T],
+                f: strict Events[T]): Events[T] = extern("merge")
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  ##
+  ## See @[#merge] for a usage example.
+  def merge7[T](a: strict Events[T], b: strict Events[T], c: strict Events[T], d: strict Events[T], e: strict Events[T],
+                f: strict Events[T], g: strict Events[T]): Events[T] = extern("merge")
+
+  ## Merges the given event streams. Prioritizing the event streams
+  ## from the left to the right in case of simultaneous events.
+  ##
+  ## See @[#merge] for a usage example.
+  def merge8[T](a: strict Events[T], b: strict Events[T], c: strict Events[T], d: strict Events[T], e: strict Events[T],
+                f: strict Events[T], g: strict Events[T], h: strict Events[T]): Events[T] = extern("merge")
+
+  ## Merges streams of different types, resulting in a stream that contains a unit
+  ## event whenever any of the input streams produces an event.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## in y: Events[Bool]
+  ## def z = mergeUnit(x, y)
+  ## out z
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## stream z: unit events
+  ## ---
+  ## 1: x = 3
+  ## 1: z = ()
+  ## 2: y = false
+  ## 2: z = ()
+  ## 3: x = 2
+  ## 3: z = ()
+  ## 7: y = true
+  ## 7: x = 1
+  ## 7: z = ()
+  ## 8: x = 5
+  ## 8: z = ()
+  ## ~~~
+  def mergeUnit2[T, U](a: Events[T], b: Events[U]): Events[Unit] = merge(const((), a), const((), b))
+
+  ## `mergeUnit` is an alias for @[#mergeUnit2]
+  def mergeUnit = mergeUnit2
+
+  ## Merges streams of different types, resulting in a stream that contains a unit
+  ## event whenever any of the input streams produces an event.
+  ##
+  ## See @[#mergeunit] for a usage example.
+  def mergeUnit3[T, U, V](a: Events[T], b: Events[U], c: Events[V]): Events[Unit] = merge3(const((), a), const((), b), const((), c))
+
+  ## Merges streams of different types, resulting in a stream that contains a unit
+  ## event whenever any of the input streams produces an event.
+  ##
+  ## See @[#mergeunit] for a usage example.
+  def mergeUnit4[T, U, V, W](a: Events[T], b: Events[U], c: Events[V], d: Events[W]): Events[Unit] = merge4(const((), a), const((), b), const((), c), const((), d))
+
+  ## Filter the event stream `events` based on the last known value
+  ## of the boolean signal `condition`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in e: Events[String]
+  ## in c: Events[Bool]
+  ## def r = filter(e, c)
+  ## out r
+  ## ~~~
+  ##
+  ## ~~~trace
+  ## stream e: events
+  ## stream c: signal
+  ## stream r: events
+  ## ---
+  ## 1: e = "Hello"
+  ## 2: c = true
+  ## 3: e = "World"
+  ## 3: r = "World"
+  ## 7: c = false
+  ## 7: e = "Hey"
+  ## 8: e = "You"
+  ## ~~~
+  def filter[A](events: Events[A], condition: Events[Bool]): Events[A] = extern("filter")
+
+
+  ## Removes subsequent events with the same value
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def y = pure(x)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: signal
+  ## stream y: signal
+  ## ---
+  ## 2: y = 3
+  ## 2: x = 3
+  ## 4: x = 3
+  ## 5: x = 3
+  ## 6: y = 1
+  ## 6: x = 1
+  ## 8: y = 2
+  ## 8: x = 2
+  ## 10: x = 2
+  ## 12: y = 4
+  ## 12: x = 4
+  ## ~~~
+  ##
+  ## **Alternative trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: signal
+  ## stream y: signal
+  ## ---
+  ## 2: y = 1
+  ## 2: x = 1
+  ## 4: y = 2
+  ## 4: x = 2
+  ## 6: y = 1
+  ## 6: x = 1
+  ## 8: y = 2
+  ## 8: x = 2
+  ## ~~~ filter(x, merge(last(x,x) != x, true))
+  ## ~~~ extern("pure")
+  def pure[T](x: Events[T]): Events[T] = extern("pure")
+
+  ## Signal which is only true with first event on `x`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def f = isFirst(x)
+  ## out f
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: bubbles
+  ## stream f: signal
+  ## ---
+  ## 0: f = false
+  ## 2: f = true
+  ## 2: x = 3
+  ## 6: f = false
+  ## 6: x = 1
+  ## 8: f = false
+  ## 8: x = 2
+  ## 12: f = false
+  ## 12: x = 4
+  ## ~~~
+  def isFirst[A](x: Events[A]): Events[Bool] = merge3(const(false, last(x,x)), const(true, x), false)
+
+  ## Filters `x` such that only the first event on `x` remains
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def y = firstEvent(x)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## ---
+  ## 2: y = 3
+  ## 2: x = 3
+  ## 6: x = 1
+  ## 8: x = 2
+  ## 12: x = 4
+  ## ~~~
+  def firstEvent[A](x: Events[A]): Events[A] = filter(x, isFirst(x))
+
+  ## Signal, which becomes `true` with the first event on `x`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def f = defined(x)
+  ## out f
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: bubbles
+  ## stream f: signal
+  ## ---
+  ## 0: f = false
+  ## 2: f = true
+  ## 2: x = 3
+  ## 6: f = true
+  ## 6: x = 1
+  ## 8: f = true
+  ## 8: x = 2
+  ## 12: f = true
+  ## 12: x = 4
+  ## ~~~
+  def defined[T](x: Events[T]): Events[Bool] = default(const(true, x), false)
+
+  ## Compute the runtime of a function on every `ret` event.
+  ## The runtime is the time passed between the last `call`
+  ## event and the `ret` event. The values of the events are
+  ## ignored.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in call: Events[Unit]
+  ## in ret: Events[Unit]
+  ## def rt = runtime(call, ret)
+  ## out rt
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option axis: true
+  ## option timeDomain: [5,75]
+  ## stream call: unit events
+  ## stream ret: unit events
+  ## stream rt: events
+  ## ---
+  ## 10: call = ()
+  ## 17: ret = ()
+  ## 17: rt = 7
+  ## 25: call = ()
+  ## 35: ret = ()
+  ## 35: rt = 10
+  ## 57: call = ()
+  ## 69: ret = ()
+  ## 69: rt = 12
+  ## ~~~
+  ##
+  ## **Alternative trace example:**
+  ##
+  ## ~~~trace
+  ## option axis: true
+  ## option timeDomain: [5,20]
+  ## stream call: unit events
+  ## stream ret: unit events
+  ## stream rt: events
+  ## ---
+  ## 10: call = ()
+  ## 15: ret = ()
+  ## 15: rt = 5
+  ## 17: ret = ()
+  ## 17: rt = 7
+  ## ~~~
+  def runtime[A,B](call: Events[A], ret: Events[B]): Events[Int] =
+    on(ret, time(ret) - time(call))
+
+  ## Compute the maximum value of all events on `x`.
+  ## Provides for every input event and output event
+  ## whose value is the maximum up to this point.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def m = maximum(x)
+  ## out m
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: bubbles
+  ## stream m: signal
+  ## ---
+  ## 2: m = 4
+  ## 2: x = 4
+  ## 6: m = 4
+  ## 6: x = 2
+  ## 8: m = 5
+  ## 8: x = 5
+  ## 12: m = 5
+  ## 12: x = 3
+  ## ~~~
+  def maximum(x: Events[Int]): Events[Int] = reduce(x, max)
+
+  ## Compute the minimum value of all events on `x`.
+  ## Provides for every input event and output event
+  ## whose value is the minimum up to this point.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def m = minimum(x)
+  ## out m
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: bubbles
+  ## stream m: signal
+  ## ---
+  ## 2: m = 4
+  ## 2: x = 4
+  ## 6: m = 2
+  ## 6: x = 2
+  ## 8: m = 2
+  ## 8: x = 5
+  ## 12: m = 2
+  ## 12: x = 3
+  ## ~~~
+  def minimum(x: Events[Int]): Events[Int] = reduce(x, min)
+
+  ## Count the number of events on `x`. Provides for
+  ## every input event an output event whose value is
+  ## the number of events seen so far.
+  ## See @[#resetcount] for a counting macro with an
+  ## external reset.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Unit]
+  ## def y = count(x)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: unit events
+  ## stream y: signal
+  ## ---
+  ## 0: y = 0
+  ## 2: y = 1
+  ## 2: x = ()
+  ## 6: y = 2
+  ## 6: x = ()
+  ## 7: y = 3
+  ## 7: x = ()
+  ## 9: y = 4
+  ## 9: x = ()
+  ## ~~~
+  def count[T](x: Events[T]): Events[Int] = extern("count")
+
+  ## Sum up the values of all events on `x`. Provides
+  ## for every input event an output event whose value
+  ## is the sum of the values of all events seen so far.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def y = sum(x)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream x: bubbles
+  ## stream y: signal
+  ## ---
+  ## 0: y = 0
+  ## 2: y = 2
+  ## 2: x = 2
+  ## 6: y = 10
+  ## 6: x = 8
+  ## 7: y = 13
+  ## 7: x = 3
+  ## 9: y = 14
+  ## 9: x = 1
+  ## ~~~
+  def sum(x: Events[Int]): Events[Int] = fold(x, 0, Operators.add)
+
+  ## Fold a function on values over all events on `stream`. Starting with
+  ## the initial value `init` the function `f` is called for every event
+  ## on `stream` with the last result and the current event’s value as arguments.
+  ## So for the input stream `x`
+  ##
+  ## ~~~
+  ## 2: x = 2
+  ## 4: x = 6
+  ## 5: x = 1
+  ## ~~~
+  ##
+  ## the call `def y = fold(f, x, 0)` produces the following stream `y`:
+  ##
+  ## ~~~
+  ## 0: y = 0
+  ## 2: y = f(0,2)
+  ## 4: y = f(f(0,2),6)
+  ## 5: y = f(f(f(0,2),6),1)
+  ## ~~~
+  ##
+  ## See @[#count] for an example of `fold` in action.
+  ## `count` is defined as `fold(x, 0, inc)`.
+  def fold[T,R](stream: Events[T], init: R, f: (R, T) => R): Events[R] = extern("fold")
+
+  ## Fold a function on values over all events on `stream`. Starting with
+  ## the first event on `stream` as initial value, the function `f` is called for every later event
+  ## on `stream` with the last result and the current event’s value as arguments.
+  ## So for the input stream `x`
+  ##
+  ## ~~~
+  ## 2: x = 2
+  ## 4: x = 6
+  ## 5: x = 1
+  ## ~~~
+  ##
+  ## the call `def y = reduce(f, x)` produces the following stream `y`:
+  ##
+  ## ~~~
+  ## 2: y = 2
+  ## 4: y = f(2,6)
+  ## 5: y = f(f(2,6),1)
+  ## ~~~ Original
+  ## See @[#minimum] for an example of reduce in action.
+  ## `minimum` is defined as `reduce(x, min)`.
+  def reduce[T](stream: Events[T], f: (T, T) => T): Events[T] = extern("reduce")
+
+  ## Count the number of events on `events`. Reset the output to 0
+  ## on every event on `reset`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in events: Events[Unit]
+  ## in resets: Events[Unit]
+  ## def result = resetCount(events, resets)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream events: unit events
+  ## stream resets: unit events
+  ## stream result: signal
+  ## ---
+  ## 0: result = 0
+  ## 2: events = ()
+  ## 2: result = 1
+  ## 3: events = ()
+  ## 3: result = 2
+  ## 5: events = ()
+  ## 5: result = 3
+  ## 7: resets = ()
+  ## 7: events = ()
+  ## 7: result = 1
+  ## 9: events = ()
+  ## 9: result = 2
+  ## 10: events = ()
+  ## 10: result = 3
+  ## 12: resets = ()
+  ## 12: result = 0
+  ## 14: events = ()
+  ## 14: result = 1
+  ## 15: events = ()
+  ## 15: result = 2
+  ## ~~~
+  def resetCount[A,B](events: Events[A], reset: Events[B]): Events[Int] = cnt where {
+      def curr : Events[Int] = merge3(on(reset, 0), last(cnt, events), 0)
+      def cnt : Events[Int] = lift(curr, events,
+                                  (c: Option[Int], e: Option[A]) => if (isSome(e)) then Some(getSome(c) + 1) else c)
+  }
+
+  ## Check if events on `e` follow the burst pattern:
+  ## After first event on `e` only `burstAmount` many events allowed
+  ## during `burstLength` time. After `burstLength` during `waitingPeriod`
+  ## time no event is allowed. After `waitingPeriod` we wait for the next event
+  ## on `e`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in send: Events[Unit]
+  ## def property :=
+  ##   bursts(send, burstLength = 3s,
+  ##     waitingPeriod = 2s, burstAmount = 4)
+  ## out property
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option axis: true
+  ## option timeDomain: [0, 9000000000]
+  ## stream send: unit events
+  ## stream property: signal
+  ## ---
+  ## 0: property = true
+  ## 500191958: property = true
+  ## 500191958: send = ()
+  ## 1000275162: property = true
+  ## 1000275162: send = ()
+  ## 1500422455: property = true
+  ## 1500422455: send = ()
+  ## 2000525066: property = true
+  ## 2000525066: send = ()
+  ## 4500724637: property = false
+  ## 4500724637: send = ()
+  ## 5000822890: property = false
+  ## 5000822890: send = ()
+  ## 7501025420: property = true
+  ## 7501025420: send = ()
+  ## 8001141937: property = true
+  ## 8001141937: send = ()
+  ## 8501245567: property = true
+  ## 8501245567: send = ()
+  ## ~~~
+  ##
+  ## **Alternative usage example:**
+  ##
+  ## exceeded `burstAmount`
+  ##
+  ## ~~~tessla
+  ## in send: Events[Unit]
+  ## def property :=
+  ##   bursts(send, burstLength = 6,
+  ##     waitingPeriod = 2, burstAmount = 4)
+  ## out property
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option axis: true
+  ## option timeDomain: [0, 12]
+  ## stream send: unit events
+  ## stream property: signal
+  ## ---
+  ## 0: property = true
+  ## 1: property = true
+  ## 1: send = ()
+  ## 2: property = true
+  ## 2: send = ()
+  ## 3: property = true
+  ## 3: send = ()
+  ## 4: property = true
+  ## 4: send = ()
+  ## 5: property = false
+  ## 5: send = ()
+  ## 9: property = true
+  ## 9: send = ()
+  ## ~~~
+  def bursts[A](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int): Events[Bool] := {
+    def burstStarts: Events[A] :=
+      defaultFrom(
+        filter(e, time(e) - last(time(burstStarts), e) >= burstLength + waitingPeriod),
+        e)
+    resetCount(e, reset = burstStarts) <= burstAmount &&
+      default(time(e) < time(burstStarts) + burstLength, true)
+  }
+
+  ## Check if events on `e` follow the burst pattern since the last event on `since`:
+  ## After first event on `e` only `burstAmount` many events allowed
+  ## during `burstLength` time. After `burstLength` during `waitingPeriod`
+  ## time no event is allowed. After `waitingPeriod` we wait for the next event
+  ## on `e`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in reset: Events[Unit]
+  ## in e: Events[Unit]
+  ## def p := burstsSince(e, burstLength = 2s,
+  ##                         waitingPeriod = 1s,
+  ##                         burstAmount = 3,
+  ##                         since = reset)
+  ## out p
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option axis: true
+  ## option timeDomain: [0, 17000]
+  ## stream e: unit events
+  ## stream reset: unit events
+  ## stream p: signal
+  ## ---
+  ## 0: p = true
+  ## 3000: e = ()
+  ## 3000: p = true
+  ## 3500: e = ()
+  ## 3500: p = true
+  ## 4000: e = ()
+  ## 4000: p = true
+  ## 4500: e = ()
+  ## 4500: p = false
+  ## 6000: reset = ()
+  ## 7000: e = ()
+  ## 7000: p = true
+  ## 8000: e = ()
+  ## 8000: p = true
+  ## 12000: e = ()
+  ## 12000: p = true
+  ## 14500: e = ()
+  ## 14500: p = false
+  ## 16000: e = ()
+  ## 16000: p = true
+  ## ~~~
+  def burstsSince[A,B](e: Events[A], burstLength: Int, waitingPeriod: Int, burstAmount: Int, since: Events[B]): Events[Bool] = {
+    def burstStarts: Events[A] =
+      defaultFrom(
+        filter(e, last(time(burstStarts), e) < on(e, time(since)) ||
+          time(e) - last(time(burstStarts), e) >= burstLength + waitingPeriod),
+        e)
+    resetCount(e, reset = burstStarts) <= burstAmount &&
+      default(time(e) < time(burstStarts) + burstLength, true)
+  }
+
+  ## Check if no event happened on `on` after last event on `since`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in reset: Events[Unit]
+  ## in e: Events[Unit]
+  ## def p := noEvent(e, since = reset)
+  ## out p
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [0,16]
+  ## stream e: unit events
+  ## stream reset: unit events
+  ## stream p: signal
+  ## ---
+  ## 0: p = true
+  ## 2: e = ()
+  ## 2: p = false
+  ## 4: e = ()
+  ## 4: p = false
+  ## 6: reset = ()
+  ## 6: p = true
+  ## 12: e = ()
+  ## 12: p = false
+  ## ~~~
+  ##
+  ## **Alternative trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [0,16]
+  ## stream e: unit events
+  ## stream reset: unit events
+  ## stream p: signal
+  ## ---
+  ## 0: p = true
+  ## 2: e = ()
+  ## 2: p = false
+  ## 4: e = ()
+  ## 4: reset = ()
+  ## 4: p = false
+  ## 6: reset = ()
+  ## 6: p = true
+  ## 8: reset = ()
+  ## 8: p = true
+  ## ~~~
+  def noEvent[A,B](on: Events[A], since: Events[B]): Events[Bool] =
+    resetCount(on, reset = since) == 0
+
+  ## Produce an event with the given value every time that the condition is met
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in condition: Events[Bool]
+  ## def result = constIf(42, condition)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## 2: condition = false
+  ## 4: result = 42
+  ## 4: condition = true
+  ## 5: result = 42
+  ## 5: condition = true
+  ## 8: condition = false
+  ## 9: condition = false
+  ## 10: condition = false
+  ## 12: result = 42
+  ## 12: condition = true
+  ## ~~~
+  def constIf[T](value: T, condition: Events[Bool]): Events[T] =
+    filter(const(value, condition), condition)
+
+  ## Produces a unit event every time the condition is fulfilled
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in condition: Events[Bool]
+  ## def result = unitIf(condition)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## 2: condition = false
+  ## 4: result = ()
+  ## 4: condition = true
+  ## 5: result = ()
+  ## 5: condition = true
+  ## 8: condition = false
+  ## 9: condition = false
+  ## 10: condition = false
+  ## 12: result = ()
+  ## 12: condition = true
+  ## ~~~
+  def unitIf(cond: Events[Bool]): Events[Unit] = extern("unitIf")
+
+  ## Filter a boolean event stream for true events.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in b: Events[Bool]
+  ## def result = boolFilter(b)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## 2: b = false
+  ## 4: result = true
+  ## 4: b = true
+  ## 5: result = true
+  ## 5: b = true
+  ## 8: b = false
+  ## 9: b = false
+  ## 10: b = false
+  ## 12: result = true
+  ## 12: b = true
+  ## ~~~
+  def boolFilter(b: Events[Bool]): Events[Bool] = filter(b,b)
+
+  ## Detect rising edge on `condition`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in condition: Events[Bool]
+  ## def result = rising(condition)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream condition: plot
+  ## stream result: unit events
+  ## ---
+  ## 2: condition = false
+  ## 4: result = ()
+  ## 4: condition = true
+  ## 5: condition = true
+  ## 8: condition = false
+  ## 9: condition = false
+  ## 10: condition = false
+  ## 12: result = ()
+  ## 12: condition = true
+  ## ~~~
+  def rising(condition: Events[Bool]): Events[Unit] =
+    unitIf(condition && !prev(condition))
+
+  ## Detect falling edge on `condition`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in condition: Events[Bool]
+  ## def result = falling(condition)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream condition: plot
+  ## stream result: unit events
+  ## ---
+  ## 2: condition = false
+  ## 4: condition = true
+  ## 5: condition = true
+  ## 8: result = ()
+  ## 8: condition = false
+  ## 9: condition = false
+  ## 10: condition = false
+  ## 12: condition = true
+  ## ~~~
+  def falling(condition: Events[Bool]): Events[Unit] =
+    unitIf(!condition && prev(condition))
+
+  ## Produce the current or last value on `stream` for every `trigger`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in trigger: Events[Unit]
+  ## in stream: Events[Int]
+  ## def result = on(trigger, stream)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream stream: signal
+  ## stream trigger: unit events
+  ## stream result: signal
+  ## ---
+  ## 2: trigger = ()
+  ## 3: stream = 3
+  ## 5: trigger = ()
+  ## 5: result = 3
+  ## 7: stream = 2
+  ## 8: stream = 1
+  ## 10: trigger = ()
+  ## 10: result = 1
+  ## 12: stream = 4
+  ## 12: trigger = ()
+  ## 12: result = 4
+  ## 14: trigger = ()
+  ## 14: result = 4
+  ## ~~~
+  def on[A,B](trigger: Events[A], stream: Events[B]): Events[B] = {
+    def mergedStream = merge(stream, last(stream, trigger))
+    lift(trigger, mergedStream, (trig: Option[A], str: Option[B]) =>
+      if isNone(trig) then None[B] else str)
+    # Alternatively:
+    # filter(first(stream, trigger), time(trigger) >= time(stream))
+  }
+
+  ## Compute the average value of all events on `x`. For every input
+  ## event on `x` an output event is produced whose value is the average
+  ## of all values seen so far.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in stream: Events[Int]
+  ## def result = average(stream)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## stream stream: bubbles
+  ## stream result: bubbles
+  ## ---
+  ## 3: result = 3
+  ## 3: stream = 3
+  ## 7: result = 2
+  ## 7: stream = 2
+  ## 8: result = 2
+  ## 8: stream = 1
+  ## 12: result = 2
+  ## 12: stream = 4
+  ## ~~~
+  def average(x: Events[Int]): Events[Int] = {
+    def c = count(x)
+    filter(sum(x) / c, c != 0)
+  }
+
+  ## Produce an event stream with a unit event every `delay` time units.
+  ## Starting with an event at timestamp 0.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in progress: Events[Unit]
+  ## def output = period(3)
+  ## out output
+  ## ~~~
+  ##
+  ## The tessla interpreter calculates only until the timestamp of the last input event.
+  ## The progress event in the trace example is needed to calculate `period` until the time of 20.
+  ##
+  ## ~~~
+  ## 20: progress = ()
+  ## ~~~
+  ##
+  ## Without this input `period` would only create a single event at timestamp 0.
+  ##
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [0,20.5]
+  ## option axis: true
+  ## stream progress: unit events
+  ## stream output: unit events
+  ## ---
+  ## 0: output = ()
+  ## 3: output = ()
+  ## 6: output = ()
+  ## 9: output = ()
+  ## 12: output = ()
+  ## 15: output = ()
+  ## 18: output = ()
+  ## 20: progress = ()
+  ## ~~~
+  def period(freq: Int): Events[Unit] = {
+    def s: Events[Int] = const(freq, default(delay(s, ()), ()))
+    const((), s)
+  }
+
+  ## Filter out events to ensure a maximal event rate. Forwards the first event on `e` and
+  ## afterwards every event which is at least `rate` time units later then the last
+  ## forwarded event.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def y = sample(x, 5)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [0,25.5]
+  ## option axis: true
+  ## stream x: events
+  ## stream y: events
+  ## ---
+  ## 2: y = 5
+  ## 2: x = 5
+  ## 4: x = 3
+  ## 5: x = 4
+  ## 7: y = 2
+  ## 7: x = 2
+  ## 9: x = 1
+  ## 10: x = 8
+  ## 13: y = 3
+  ## 13: x = 3
+  ## 15: x = 9
+  ## 16: x = 7
+  ## 18: y = 6
+  ## 18: x = 6
+  ## 20: x = 2
+  ## 23: y = 4
+  ## 23: x = 4
+  ## 25: x = 9
+  ## ~~~
+  def sample[A](e: Events[A], rate: Int): Events[A] = result where {
+   def result: Events[A] =
+     merge(filter(e, time(e) - last(time(result), e) >= rate), firstEvent(e))
+  }
+
+  ## `zip` is an alias for [`zip2`](#zip2).
+  def zip = zip2
+
+  ## Zips together two streams to a single stream. The events of the resulting stream are tuples with two options.
+  ## The options are variant of @[Option#Some] if the corresponding stream has an event, otherwise @[Option#None].
+  ## If none of the argument streams has an event also the resulting stream has no event.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## def y = zip(a, b)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [0,8.5]
+  ## option axis: true
+  ## stream a: events
+  ## stream b: events
+  ## stream y: events
+  ## ---
+  ## 1: a = 5
+  ## 1: y = (Some(5), None)
+  ## 5: b = 4
+  ## 5: y = (None, Some(4))
+  ## 8: a = 2
+  ## 8: b = -1
+  ## 8: y = (Some(2), Some(-1))
+  ## ~~~
+  def zip2[A,B](a: Events[A], b: Events[B]) : Events[(Option[A], Option[B])] := r where {
+    def r := lift(a, b, (a: Option[A], b: Option[B]) => Some((a, b)))
+  }
+
+  ## Zips together three streams to a single stream. The events of the resulting stream are tuples with three options.
+  ## The options are variant of @[Option#Some] if the corresponding stream has an event, otherwise @[Option#None].
+  ## If none of the argument streams has an event also the resulting stream has no event.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in a: Events[Int]
+  ## in b: Events[Int]
+  ## in c: Events[Int]
+  ## def y = zip(a, b, c)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [0,10.5]
+  ## option axis: true
+  ## stream a: events
+  ## stream b: events
+  ## stream c: events
+  ## stream y: events
+  ## ---
+  ## 1: a = 5
+  ## 1: y = (Some(5), None, None)
+  ## 5: b = 4
+  ## 5: y = (None, Some(4), None)
+  ## 8: a = 2
+  ## 8: b = -1
+  ## 8: y = (Some(2), Some(-1), None)
+  ## 10: a = 2
+  ## 10: b = 4
+  ## 10: c = 8
+  ## 10: y = (Some(2), Some(4), Some(8))
+  ## ~~~
+  def zip3[A,B,C](a: Events[A], b: Events[B], c: Events[C]) : Events[(Option[A], Option[B], Option[C])] := r where {
+    def r := lift3(a, b, c, (a: Option[A], b: Option[B], c: Option[C]) => Some((a, b, c)))
+  }
+
+  ## Zips together four streams to a single stream. The events of the resulting stream are tuples with four options.
+  ## The options are variant of @[Option#Some] if the corresponding stream has an event, otherwise @[Option#None].
+  ## If none of the argument streams has an event also the resulting stream has no event.
+  ##
+  ## See [`zip3`](#zip3) for a usage example.
+  def zip4[A,B,C,D](a: Events[A], b: Events[B], c: Events[C], d: Events[D]) : Events[(Option[A], Option[B], Option[C], Option[D])] := r where {
+    def r := lift4(a, b, c, d, (a: Option[A], b: Option[B], c: Option[C], d: Option[D]) => Some((a, b, c, d)))
+  }
+
+  ## Zips together five streams to a single stream. The events of the resulting stream are tuples with five options.
+  ## The options are variant of @[Option#Some] if the corresponding stream has an event, otherwise @[Option#None].
+  ## If none of the argument streams has an event also the resulting stream has no event.
+  ##
+  ## See [`zip3`](#zip3) for a usage example.
+  def zip5[A,B,C,D,E](a: Events[A], b: Events[B], c: Events[C], d: Events[D], e: Events[E]) : Events[(Option[A], Option[B], Option[C], Option[D], Option[E])] := r where {
+    def r := lift5(a, b, c, d, e, (a: Option[A], b: Option[B], c: Option[C], d: Option[D], e: Option[E]) => Some((a, b, c, d, e)))
+  }
+}

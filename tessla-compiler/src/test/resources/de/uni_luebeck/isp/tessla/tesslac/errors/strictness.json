@@ -1,0 +1,6 @@
+{
+  "spec": "strictness.tessla",
+  "input": "strictness.input",
+  "expectedRuntimeErrors": "strictness.runtime-errors",
+  "expectedOutput": "_.output"
+}

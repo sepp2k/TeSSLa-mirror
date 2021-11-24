@@ -1,3 +1,6 @@
+//TODO: Remove this file and incorporate into the compiler bundle
+
+/*
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import java.io.{File, PrintWriter}
@@ -130,3 +133,4 @@ object Main extends SexyOpt {
   }
 
 }
+*/

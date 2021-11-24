@@ -1,0 +1,2 @@
+ERROR parsing the input Stream
+ Main$InputError: Map input has invalid format: Map(1 -> )

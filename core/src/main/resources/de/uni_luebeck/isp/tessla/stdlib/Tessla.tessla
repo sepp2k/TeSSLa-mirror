@@ -1,0 +1,5 @@
+## The Tessla module contains meta data about the used Tessla compiler and interpreter or engine.
+module Tessla {
+  ## The current TeSSLa version
+  def version: String = "1.2.3"
+}

@@ -1,0 +1,11 @@
+@@foo
+@@bar
+
+def @foo
+def @@bar
+
+in x: Events[Int]
+
+@bar
+@foo
+out x

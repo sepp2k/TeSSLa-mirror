@@ -1,0 +1,76 @@
+{
+  "global": [{
+    "args": {
+
+    },
+    "name": "GlobalFoo"
+  }],
+  "inputs": [{
+    "annotations": [{
+      "args": {
+        "a": {
+          "type": "Int",
+          "value": "-3"
+        },
+        "b": {
+          "type": "String",
+          "value": "Hello world"
+        }
+      },
+      "name": "Baz"
+    }],
+    "name": "y",
+    "type": "Events[Int]"
+  }, {
+    "annotations": [{
+      "args": {
+        "a": {
+          "type": "Int",
+          "value": "5"
+        }
+      },
+      "name": "Bar"
+    }, {
+      "args": {
+        "a": {
+          "type": "Int",
+          "value": "42"
+        }
+      },
+      "name": "Bar"
+    }, {
+      "args": {
+
+      },
+      "name": "Foo"
+    }],
+    "name": "x",
+    "type": "Events[Int]"
+  }],
+  "outputs": [{
+    "annotations": [{
+      "args": {
+        "a": {
+          "type": "Int",
+          "value": "15"
+        }
+      },
+      "name": "Bar"
+    }, {
+      "args": {
+
+      },
+      "name": "Foo"
+    }, {
+      "args": {
+        "value": {
+          "type": "String",
+          "value": "result"
+        }
+      },
+      "name": "$name"
+    }],
+    "name": "result$20",
+    "type": "Events[Int]"
+  }]
+}

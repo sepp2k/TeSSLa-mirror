@@ -1,0 +1,504 @@
+# Changelog
+
+## Version 1.2.3
+
+### Breaking Changes
+/
+
+### Additions and Fixes
+
+- New compilation phase for reducing the generated TeSSLa Core by combining assignments of the same expression to a single assignment
+- New functions for Lists/Sets/Maps in stdlib
+- Additional externs for compiler to optimize translation
+
+### API Changes
+- Compiler now accepts relative paths, places code to out.scala and no longer to stdout if no parameter is given and may generate jar and source in a single run.
+- Compiler is now able to include externally declared Scala functions via externs starting with native:...
+- Compiler can produce monitors with API interface
+
+## Version 1.2.2
+
+### Breaking Changes
+/
+
+### Additions and Fixes
+- `out` can now also be used on records of streams, which then gets separated into `out` statements for each member. If the record has non-stream members, they get lifted to a stream. (See [#92](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/92))
+- Add a short option `-h` for the `--help` command line option.
+- Function parameters now have globally unique names (See [#146](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/146))
+- Block expressions can now be used without any definitions (See [#148](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/148))
+- Annotations, definitions and lambda expressions can now be declared and used with empty parameter lists `()` (See [#149](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/149))
+- Fix type assertions in C instrumentation being ignored
+- Fix pattern callback generation in C instrumentation not properly matching when pattern used parentheses
+
+### API Changes
+- The `CInstrumentation` class has been split into `CInstrumentation` and `CInstrumentationBridge`. This decouples the instrumentation callbacks from the specific caller, in this case the `clang-instrumentation` library, and allows it to be used with other backends. (See [#152](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/152))
+
+## Version 1.2.1
+
+### Breaking Changes
+* The `--stdlib` flag on the `doc` command has been renamed to `--include-stdlib`, in order to be able to use `doc` together with custom standard libraries (See [#144](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/144))
+
+### Additions and Fixes
+* It is now possible to define and use global annotations, which act as annotation for the specification itself, using the prefix `@@`. (See [#140](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/140) and [#151](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/151))
+* Annotation information can now be exported in a Json format using the `--export-annotations` (or short `-a`) option on the `compile-core` command. (See [#143](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/143))
+* `compile`, `doc` and `instrumenter` are now using `--stdlib` and `--base-time` options, if set. (See [#144](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/144))
+* Annotations now support arbitrary expressions, as long as they can be evaluated to a constant by the constant folding phase. (See [#141](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/141))
+* Fix include paths on custom standard libraries not getting resolved properly
+* Fix duplicate definitions on annotations not being detected. (See [#142](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/142))
+* Fix annotations not being type checked (See [#145](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/145))
+ 
+### API Changes
+* The `printAnnotations` method of `TesslaAST` now has an additional parameter `global`, which is used to differentiate between the two existing kinds of annotations. 
+* The generated documentation Json has a new field `global` on `AnnotationDoc` items.
+* Removed the unused classes `DepthChecker`, `NodeCounter` and `RecursiveDepthChecker`.
+
+## Version 1.2.0
+
+### Breaking Changes
+* The CLI has fundamentally changed. Refer to the [README](README.md) for more details.
+* Remove the deprecated `print` keyword. Use `@raw out` instead.
+* Dropped support for event ranges and the associated `--flatten-inputs` CLI flag.
+* Dropped support for open record types (e.g. `{a: Int, ..}`) 
+* Annotations are no longer allowed on `def`.
+* The `__builtin__` keyword has been replaced with `extern`. Additionally, the `extern` keyword expects a string literal, such that `__builtin__(foo)` would now be `extern("foo")`.
+* The annotation `@liftable` has been replaced by a new keyword `liftable`.
+* The TeSSLa documentation does not produce Markdown output any more. Instead, the generated documentation is in Json format which can then be processed further according to your needs.
+* Line breaks *before* the `:` on the type of an input stream are no longer allowed. The same restriction applies to line breaks *before* the `=>` on a function type.
+* The `--observations` feature, which generated a json configuration to use with the C instrumentation, has been removed. Instead, the `instrumenter` command can now be used to instrument C code directly.
+
+### Additions and Fixes
+* The `@raw` annotation is now properly defined as an anntation in the standard library, instead of being hard coded.
+* Annotations on output streams are no longer limited to `@raw`.
+* Annotations on `out *` are now propagated to every resulting output stream.
+* It is now possible to use `strict` and `lazy` modifiers on macro parameters to define their evaluation strategy. This is propagated through the AST and can as such be used by backends.
+If no evaluation strategy is defined, it is inferred from the type of that parameter (`Event` types are `lazy`, value types are `strict`)
+* The parser now allows line breaks within any kinds of parameter lists, including type parameters and annotation parameters.
+* The `import` keyword can now be used to import modules into the current namespace. The standard library modules `StreamFunctions`, `Option` and `PrimitiveFunctions` are implicitly imported into the global namespace.
+* Added a CLI flag `reject-undeclared inputs` to the interpreter, which causes it to throw an error if an undeclared input stream occurs (See [#66](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/66))
+* Fixed type inference failing to partially concretize generic functions (See [#76](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/76))
+* Fixed named arguments not working on multiple scenarios (See also [#113](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/113))
+* Fixed arity mismatches on higher order functions not being caught properly (See [#121](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/121))
+* Fixed printing of traces ignoring `SIGPIPE` occurrences. (See [#132](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/132))
+* Fixed liftable functions not being allowed to be recursive. (See [#135](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/135))
+* Fixed type checker using the full type of a record to infer the type of a member access, causing expressions like `foo = (x, foo._1)` to fail, due to being detected as an infinite recursion. (See [#137](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/137))
+* Fixed implementations of `since0` and `sinceInfinity` in the `MITL` module.
+* Fixed `nodoc` documentation tags not being applied within a module scope.
+* Add `inmodule` documentation tags to attach type or annotation definitions to a specific module, even when declared outside of the module (at least currently, type and annotations cannot be defined within a module, but only in the global scope).
+* Add proper linking of other documentation entries to the documentation generation, instead of using markdown, using the syntax `@[<module>#<member>]`, e.g. `@[Types#true]`.
+* Add implicit lifting to member accesses, which allows to use member access directly on streams of records (e.g. `foo._1` where `foo: Events[(Int, Int)]`)
+* Several changes to the printed TeSSLa Core format:
+  * Tuple types are now printed as `(T1, T2)` instead of `(_1 -> T1, _2 -> T2)`
+  * Unit values are printed as `Unit` instead of `()`
+  * Input streams are no longer wrapped in `input(...)`
+  * Macros are replaced by their extern calls, e.g. `default(x, y)` becomes `extern("default")(x, y)`
+  * Type applications are now printed
+  * Expressions are no longer wrapped in `Lazy(...)`
+* Merge the `tessla-compiler` project as a module into this project, allowing to automatically generate a monitor in Scala from a TeSSLa specification. 
+* Add documentation to members of the standard library, and provide usage examples for most of them as well.
+
+
+### API Changes
+* Updated `Scala` version to 2.13
+* A parameterizable `TesslaAST` has been introduced, which is also used by the TeSSLa Core representation. As such `TesslaCore` has been replaced with `TesslaAST.Core`. The new translation pipeline is explained in more detail in [core/README](core/README.md). The following provides a rough overview of the differences to migrate from using `TesslaCore` to `TesslaAST.Core`:
+  * `Last`, `Delay`, `IfThenElse`, `Nil`, `TesslaOption`, `TesslaSet`, `TesslaMap`, `TesslaList` and `Ctf` are now represented as `extern`.
+  * `TesslaObject` is not needed any more, and instead represented as a Map of `String` keys to values.
+  * `Closure` has been removed, as it was only necessary for the evaluation of the interpreter, which is now simply using Scala closures instead.
+  * `StreamRef` is replaced by `ExpressionRef`, which references an `Identifier`, allowing to reference input streams and stream definitions in the same way. Hence no need for `Stream` and `InputStream`.
+  * `Application` is replaced by `ApplicationExpression` and `TypeApplicationExpression`.
+  * `CustomBuiltInCall` has been removed. Instead, `ExternExpression` represents an `extern` and can be used in `ApplicationExpression` / `TypeApplicationExpression`, just like any non-extern call.
+  * `Function` is replaced by `FunctionExpression`
+  * `ObjectCreation` and `MemberAccess` are replaced by `RecordConstructorExpression` and `RecordAccessorExpression` respectively.
+  * `IntValue` is replaced by `IntLiteralExpression`, similar for `FloatValue`, `BoolValue` and `StringValue`.
+* The project's structure was fundamentally revamped.  now separated into multiple modules `core`, `docs`, `instrumenter`, `interpreter`, `tessla-compiler`, which are all integrated into one root project providing a CLI for them. 
+  * The module `docs` is what previously was located under the package `tessladoc`.
+  * The modules `core` and `interpreter` now cleanly separate the compilation to TeSSLa Core from the interpreter back-end.
+  * The module `instrumenter` acts as a replacement to the `analyses/Observations`.
+  * The module `tessla-compiler` is an entirely new module.
+Details on the different modules can be found in the [README](README.md).
+* The `as` keyword is now implicitly translated to an internal annotation `$name` which carries the specified name. 
+* An additional (optional) translation phase `FlattenCore` has been added, which flattens the TeSSLa Core code even further, making it consistent with the language specification.
+* The static `if-then-else` is now defined in the standard library, making use of the newly introduced `strict` and `lazy` modifiers. (See [#123](https://gitlab.isp.uni-luebeck.de/tessla/tessla/-/issues/123))
+* The interpreter `Specification` has been renamed to `StreamEngine` to reflect its actual purpose better.
+
+## Version 1.1.0
+
+### Breaking Changes
+
+* The keyword `fun`, which has been deprecated since version 0.7.0, no longer exists. If you have code that still uses it, just remove the keyword and the code should work again.
+* Operator functions have been moved into the `Operators` module and the underscores have been removed from their names. So if you want to use, for example, the `+` operator as a function, you now write `Operators.add` instead of `__add__`.
+
+### Additions and Fixes
+
+* Assigning a liftable function to a variable and using that as a lifted function now works instead of producing an internal error
+* It is now possible to write `s.x` where `s` is a stream of objects and `x` is a member of the given object type.
+* Calling a `@liftable` function to a stream will now call `slift` to lift the function to streams.
+* Modules can be defined using the syntax `module ModuleName { defs }` where `defs` is a sequence of definitions. This will define an object named `ModuleName` that contains the given definitions as members.
+* The keyword `__root__` can be used to access the top-level namespace from within modules or inner scopes.
+* The `@raw` annotation has been introduced as a replacement for `print` to make `out` statements produce unformatted output
+* The `print` keyword is now deprecated.
+* Add `sample` to standard library.
+* Add MITL and LTL modules to standard library.
+* Predef was split up into several files and pseudo modules.
+* Documentation for the modules `Types`, `Operators`, `PrimitiveFunctions`, `Option` and `StreamFunctions` of the standard library was added.
+* All variants of `liftN`, `sliftN` and `mergeN` are defined as builtins in the standard library and implemented natively in the interpreter. This creates a speed up of more than factor 10 on some specification.
+* If the tessladoc comment consists solely of the word `nodoc` then the definition is excluded from the generated documentation.
+
+
+### New Limitations
+
+* Auto-lifted functions now have an implementation-/stdlib-defined maximum number of arguments, which is currently 5 in the interpreter. Specifically the number of allowed arguments corresponds to the number of sliftN and sliftN_curried macros in the standard library.
+
+### API Changes
+
+* `TesslaCore.SLift` no longer exists. Auto-lifted functions will now be lifted using the sliftN and sliftN_curried macros in the standard library
+** sliftN will be called with arbitrary functions.
+* The optimization that removed `default(nil, x)` on lifted functions and instead inserted `x` directly into the lifted function has been removed.
+* `TesslaCore.Lift`, `TesslaCore.Default`, `TesslaCore.DefaultFrom` and `TesslaCore.Time` no longer exist. They are represented as `TesslaCore.CustomBuiltInCall` now.
+  
+## Version 1.0.12
+
+### Additions and Fixes
+
+* Add license information and new flag `--license`
+
+## Version 1.0.11
+
+### Additions and Fixes
+
+* Add support for unary minus on floats (`-.`) in input traces.
+
+## Version 1.0.10
+
+### Additions and Fixes
+
+* Improved error messages related to CTF input traces
+* Added support for additional CTF event data beyond the payload field of the event's packet. The functions `CTF_getInt` and `CTF_getString` now support a colon separated prefix. The following prefix values are supported:
+  * `fields:` gets the payload field of the event's packet. This is the same as specifying a key without any prefix
+  * `context:` gets the context of this event within a stream
+  * `eventcontext:` gets the context of this event without the context of the stream
+  * `eventheader:` get the event header
+  * `packetcontext:` gets the context of packet the event is in
+
+
+## Version 1.0.9
+
+### Additions and Fixes
+
+* Fix bug regarding the name of the `CTF` type.
+
+
+## Version 1.0.8
+
+### Breaking Changes
+
+* The command line option `--timeunit` was replaced with the new option `--basetime` which takes a time literal instead of a time unit. The APIs were updated accordingly.
+
+
+## Version 1.0.7
+
+### Breaking Changes
+
+* Renamed `bursts(e, burstLength, waitingPeriod, burstAmount, since)` to `burstsSince` and added
+`bursts(e, burstLength, waitingPeriod, burstAmount)`.
+* Renamed `filterConst` to `constIf` and added `unitIf`.
+* `@InstFunctionReturn` and `@InstFunctionReturned` generate unit events without data. The new `@InstFunctionReturnValue` and `@InstFunctionReturnedValue` generate events carrying the returned values.  
+
+### Additions and Fixes
+
+* Add `Set_minus`, `Set_init`, `Set_collectWithRemove`, `getSomeOrElse`, `Option_flatMap`, `Option_map2`, and `Option_toSet`.
+
+## Version 1.0.6
+
+### Additions and Fixes
+
+* Remove setup and teardown callbacks from generated instrumentation configuration
+
+## Version 1.0.5
+
+### Breaking Changes
+
+* Rename `eventCount` to `resetCount` in the standard library.
+
+### Additions and Fixes
+
+* Fix definition of `on` in the standard library
+* Add `Map_keys` and `Map_fold` to the standard library.
+
+## Version 1.0.4
+
+### Additions and Fixes
+
+* Instrumentation code lines are now sorted to create a more stable output.
+* Fix an error which prevented calling builtins on unit values.
+* Converting NaN or infinity to `Int` now produces a proper TeSSLa error instead of aborting with an exception
+
+## Version 1.0.3
+
+### Additions and Fixes
+
+* The tessladoc tool now has the option `--outfile` (or `-o` for short) to write the generated documentation to a file instead of stdout
+* Fix observation configuration for `@InstFunctionReturn` and `@InstFunctionReturned` so that the generated events carry values
+* Add support for signed integers, floats and boolean to observation annotations
+* Add support for multi-threading to instrumentations generated by the observation annotations. The new annotation `@ThreadId` creates an event carrying the current pthread thread ID for every generated on any other stream.
+
+## Version 1.0.2
+
+### Additions and Fixes
+
+* A bug has been fixed where a closed object type would fail to reject objects with additional members if they went through a variable with an open object type first
+* The tessladoc tool can now generate documentation for the standard library using the `--stdlib` (or `-s`) option. It can also be told to only document global definitions using the `--globals-only` (or `-g` option)
+* The tessladoc tool can now generate HTML with the `--html` flag
+* The new instrumentation annotations have been added to the standard library. The new `--observations` option exports an instrumentation configuration generated from the instrumentation annotations placed at the input streams of the given TeSSLa specification. The following annotations have been added:
+  * `@InstFunctionCall(name: String)`
+  * `@InstFunctionCallArg(name: String, index: Int)`
+  * `@InstFunctionCalled(name: String)`
+  * `@InstFunctionCalledArg(name: String, index: Int)`
+  * `@InstFunctionReturn(name: String)`
+  * `@InstFunctionReturned(name: String)`
+  * `@GlobalRead(lvalue: String)`
+  * `@LocalRead(lvalue: String, function: String)`
+  * `@GlobalWrite(lvalue: String)`
+  * `@LocalWrite(lvalue: String, function: String)`
+
+## Version 1.0.1
+
+### Additions and Fixes
+
+* More spurious infinite-recursion errors have been fixed
+
+## Version 1.0.0
+
+### Breaking Changes
+
+* The following keywords have been added and can no longer be used as variable names: `module`, `__builtin__`, `import`, `imexport` (`module`, `import` and `imexport` have been added in preparation for 1.1.0 and aren't meant to be used yet)
+
+### API Changes
+
+* In the generated TeSSLa-Core many built-in operators are removed because they're defined in the standard library instead. Backend-defined built-ins are supported via the CustomBuiltIn class.
+* Most TeSSLa-Core types have been replaced by BuiltInType(name: String)
+* The `Compiler` methods now require additional options to select the used standard library and how to resolve includes
+
+### Additions and Fixes
+
+* Built-in macros and types can now be defined using `def ... = __builtin__(name)` and `type ... = __builtin__(name)` respectively
+* There is now a standard library that is included automatically into all TeSSLa specs
+* Types can now be used before their definition
+* Generic macros can be passed as arguments to other macros and the type arguments will be inferred when possible
+* Annotations can now be defined using `def @annotationName(arguments)`, applied to arbitratry streams and then queried in the generated TesslaCore
+* Certain bugs have been fixed that could cause KeyNotFound exceptions or spurious infinite recursion errors
+* A CSV input parser has been added
+
+## Version 0.7.6
+
+### Additions and Fixes
+
+* Allow more line breaks. For a detailed list of where line breaks can be used, see syntax.md.
+
+### API Changes
+
+* TesslaCore.Nil now has a member named `typ`
+
+## Version 0.7.5
+
+### Additions and Fixes
+
+* Brings back online monitoring, which was broken since 0.7.0.
+
+### API Changes
+
+* `Trace.fromSource` now no longer takes an ANTLR `CharStream` but a `scala.io.Source` and there is a new `Trace.fromLineIterator` which takes an iterator of the lines of the trace.
+
+## Version 0.7.4
+
+### Additions and Fixes
+
+* Fixed error handling for missing type annotations at input streams
+* Fixed error handling for syntax errors which were reported wrongly as runtime errors
+
+### API Changes
+
+* The interpreter is not longer a translation phase. `Interpreter.run` is now just a normal function.
+
+## Version 0.7.3
+
+### Breaking Changes
+
+* `tessla.version` is now `Tessla.version`
+* TesslaDoc is now invoked via the new `tessladoc` script rather than `tessla --doc`
+
+### Additions and Fixes
+* String literals can now contain dollar signs by escaping them with a backslash: `\$`
+* A bug has been fixed that prevented the use of non-empty tuples in input streams
+* TeSSLa now supports formatted string literals that start with `f"` instead of just `"` and allow printf-style format-specifiers after string interpolations (e.g. `$myInt%04x`)
+* The functions `format(String, Any): String`, `formatInt(String, Int): String` and `formatFloat(String, Float): String` have been added. They apply a format string to a single argument. These mainly exist because formatted string literals are desugared to calls to the functions. You probably don't want to use them directly. Note that calling these functions with an illegal format string will cause a runtime-exception, whereas formatted string literals would detect the error at compile time.
+* Change the implementation of TeSSLa's `List` to use Scala's `Vector` instead of Scala's `List`. That way `List_append` and `List_last` are no longer O(n)
+* Add built-in function `List_get` to access a list at a specified index
+* Add built-in function `lift4`
+* If `out expr` is used (rather than `out expr as name`), the inferred name will now be the actual source code of `expr`, not a "pretty-printed" version as before. This way something like `out "$x"` will now produce the output `23: "$x" = "42"` rather than being "pretty-printed" as `23: toString(x) = "42"`.
+
+### API Changes
+* The generated `BuildInfo` class has been moved from the `interpreter` package to the `tessla` package
+* Methods `Result.combineAll`, `Result.runSequentially` and `Result#combine` have been added to more conventiently work with Result objects
+
+## Version 0.7.2
+
+### Breaking Changes
+* It is no longer possible to write if-statements without an else-clause. Use `filter` instead.
+  * `if c then a` treats `c` and `a` with signal semantics and produces an event for each event on `c` or `a`. The new `filter(a, c)` treats `c` as a signal and `a` as an event stream. Hence you a get a real filter of the event stream `a` without any additional events, which is in most cases what you want. If you really need the additional events you can reproduce this behaviour with `filter(first(a, c), c)`.
+  * `if c then x` for a constant `x`, e.g. `5`, implicitly converts `x` to the constant stream `const(x, ())` and hence produces an event with value `x` for every truthy event on `c`. You can reproduce this behaviour with `filter(const(x, c), c)`.
+* `delayedLast` no longer exists. Use `delay` instead.
+  * `delayedLast` was a delayed `last` in the sense that the last seen value on `x` was used for events produced when the delay was over. The new `delay` no longer has this build-in `last` and produces unit events instead. `delay(d, r)` considers new events on the delay stream `d` only when they arrive simultaneously with an event on the reset stream `r` or when an old delay is over at that timestamp. An event on the reset stream without a simultaneous event on the delay stream cancels the currently active delay.
+  * A non-recursive `delayedLast(v,d)` can be realized as `last(v, delay(d,d))` where the stream `d` is used as delay and as reset stream, which is possible if `d` is not recusively defined.
+  * The recursive definition
+    ```ruby
+    def s: Events[Int] := default(delayedLast(s, s), f)
+    ```
+    which produces an event every `f` timeunits starting with `t=0` can now be realized as
+    ```ruby
+    def s: Events[Int] := const(f, default(delay(s, ()), ()))
+    ```
+    with the only reset event at `t=0`.
+  * In the most general case where new delays are started by old delays _and_ external events one has to use every external event as reset, e.g. the specification
+    ```ruby
+    def s: Events[Int] := merge(delayedLast(s,s), f)
+    ```
+    can now be realized as
+    ```ruby
+    def s: Events[Int] := merge(first(f, delay(s,f)), f)
+    ```
+
+### Additions
+* Some TesslaCore-to-TesslaCore optimizations have been added
+* `lift1`, `min`, `max`, `minimum`, `maximum` and `sum` have been added as built-in functions
+* The float operations `sin`, `cos`, `tan` and `atan` have been added as built-in functions
+* Aggregating functions in the standard library now take into account events at t=0
+
+### API Changes
+
+* `Compiler.applyPasses` is now `Compiler.compile`
+* Instead of `Interpreter.run*` taking Strings/streams there is now a single `Interpreter.run` that takes the TesslaCore.Specification as returned by `compile` and a `Trace`
+* `TesslaCore.Lift`'s function is now represented as a `TesslaCore.Function`, not `TesslaCore.ValueArg`
+* Scope and body have been renamed to body and result
+* Translation phases now consist of a `TranslationPhase.Translator` that does the actual work and a `TranslationPhase` that wraps the `Translator` and can be composed with other translation phases or functions
+
+## Version 0.7.1
+
+### Additions
+
+* `filter` now exists as a built-in function
+
+## Version 0.7.0
+
+### Breaking Changes
+
+* After being deprecated for some time, the `define` key no longer exists and `def` should be used instead
+* Line breaks are now significant and can no longer be used in arbitrary places. For a detailed lists of where line breaks can be used, see syntax.md (that is the syntax.md of version 0.6.3 as that's the earliest it has been updated). Line breaks can also be escaped with a backslash
+* Object members can now only have the form `ID = expression` (or equivalently `ID: expression`) or `ID`. The other forms were barely documented and never used and are now gone.
+* Backslashes and dollar signs can no longer be used unescaped inside string literals (see string interpolation and escape sequences below)
+* There no longer is sub-typing for tuples and normal object types. That is, if you have, say, a 3-element tuple or an object with members `x` and `y`, you can now no longer pass them to functions expecting 2-element tuples or objects with only an `x` member. If you want subtyping for objects, use open object types instead (see below)
+* Some of the syntactic variations to specify time ranges in the extended input format have been removed as they've been undocumented, untested and often buggy. This is a breaking change in the sense that if there had been any code using these features, it would now no longer work. However, it is an utterly irrelevant change in the sense that no one ever used these features or even knew they existed or how they were supposed to work.
+
+### Deprecations
+
+* Using `${` for object literals is deprecated, you can now use `{` as the beginning of an object literal
+* Using `return` is deprecated. Since newlines terminate definitions now, you can simply write blocks without `return` and there will be no ambiguities with prefix operators or time units
+* Using `fun` is deprecated, you can now simply write lambda expressions without it
+
+### Additions
+
+* Strings now support the following escape sequences:
+  * `\\`: a backslash
+  * `\"`: a double quote
+  * `\r`: a carriage return
+  * `\n`: a newline
+  * `\t`: a tabulator
+  * `\a`: the system bell (Unicode code point 0007)
+* Strings now support string interpolation by writing `$identifier` or `${expression}` inside a string literal. This will call `toString` on the value of the given identifier or expression and insert it into the string at the given point.
+* You can now use `print` instead of `out` to print a given value (applying `toString` if the value isn't already a string) without adding the standard formatting (i.e. `timestamp: name = value`) to it. That is, you can now print information using arbitrary formatting by building a custom string using string interpolation and then `print` to print it
+* Identifiers can now contain Unicode characters
+* Integers can now be written using Unicode digits and/or hexadecimal notation
+* We now support double-precision floating point numbers with a decimal literal notation, the type `Float` and the following built-in operations: `+.`, `-.`, `*.`, `/.`, `<.`, `>.`, `>=.`, `<=.`, `intToFloat`, `floatToInt`, `pow`, `log(n, base)`
+* We now support the modulo operator for integers (`%`)
+* We now support open object types for function parameters. These are object types that have `..` as their last member (e.g. `{x: Int, ..}`). If a function takes such a type as a parameter, you can pass any object as an argument as long as the object has at least the members specified (that is, it is allowed to have additional members). Functions taking non-open object types will only accept objects that have exactly the members specified and no others. Tuples are non-open object types.
+* The unit value, the empty tuple and the empty object are now all the same thing. The type `Unit` is now simply an alias for the type `()` (which can also be written as `{}`).
+* TesslaDoc comments (comments that start with `---` or `##`) can now be extracted using the `--doc` or `--doc-all` flags (the latter includes tessladocs from included files, the former only from the main file)
+* The input parser is now a lot faster (up to a factor of 10)
+
+### API Changes
+
+* The TesslaSource class no longer exists. ANTLR's CharStream class should be used instead.
+* The TesslaCore.Specification class now contains proper case classes to describe the contained streams instead of using tuples. Type information for streams is included again.
+* TesslaCore.Unit no longer exists - you'll need to check for / use empty objects instead
+
+## Version 0.6.5
+
+### Additions
+
+* Add the option `--print-node-count` to print the number of nodes in the TeSSLaCore graph
+
+## Version 0.6.4
+
+### Additions
+
+* Static-if-then-else can now be used inside lifted functions. This makes it possible to lift recursive functions
+* Add built-in functions `toString[T](x: T): String` and `String_concat(x: String, y: String): String`
+
+## Version 0.6.3
+
+### Additions
+
+* Add the ability to execute a TeSSLa specification through the Java API
+
+## Version 0.6.2
+
+### Additions
+
+* A built-in function `count` has been added
+
+## Version 0.6.1
+
+### Additions
+
+* Objects, set, maps and options can now be used in input streams
+* Add delay operator as described in the TeSSLa paper
+* Add built-in function `Set_fold`
+* The type `List[T]` has been added with the functions `List_empty`, `List_size`, `List_append`, `List_prepend`, `List_head`, `List_tail`, `List_init`, `List_last`, `List_fold`
+
+
+## Version 0.6.0
+
+### Additions
+
+* Lambda functions are now supported with the syntax `fun (paramList) => body` (the need for the keyword `fun` will be dropped in version 0.7.0)
+* Add option types (type `Option[T]` with constructor functions `Some[T](x: T)` and `None[T]` and the functions `isNone` and `getSome`)
+* Add built-in function `lift` that takes two streams and a function taking two values and then lifts that function to the streams as per the lift semantics from the TeSSLa paper. Also add `lift3` that does the same thing for three streams.
+* Objects are now value types if all their members have value types. It is now possible to have streams of such objects.
+* There now is a Java API
+
+### API changes
+
+* The old `TesslaCore.Lift` is now called `TesslaCore.SignalLift`, `TesslaCore.Lift` now refers to the new lift operator
+
+## Version 0.5.3
+
+### Additions
+
+* Explicitly set stream encoding
+
+## Version 0.5.2
+
+### Additions
+
+* `tessla.version` has been added to return the version of the current TeSSLa implementation
+* Objects whose members are assigned to local variables of the same name can now be defined using the shorthand `${x, y}`
+* The syntaxes `expression "where" { definition* }` and `{ definition* "return" expression }` have been added as a replacement for regular block syntax, which suffered from ambiguities. Note that this will change again in version 0.7.0 and regular block syntax, now unambiguous, will be preferred again.
+
+## Version 0.5.1 (Changes Since 0.5.0)
+
+### Additions
+
+* CTF support
+* It is now possible to use multiple unary operators in a row
+* Add support for objects and tuples
+* The syntax of function calls now allows non-identifier expressions as functions (that is, first-class functions can now be called without storing the function in a variable first)
+* Type aliases can now be defined using the `type` keyword

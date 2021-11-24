@@ -1,0 +1,1 @@
+errors/arity-mismatch.tessla(3,5 - 3,14): Wrong number of arguments for foo. Expected: 1, actual: 2

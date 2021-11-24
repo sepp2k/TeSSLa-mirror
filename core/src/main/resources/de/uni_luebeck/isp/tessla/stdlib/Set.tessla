@@ -1,0 +1,426 @@
+## Set
+module Set {
+  ## Returns an empty set of type `T` without any element
+  def empty[T]: Set[T] = extern("Set_empty")
+
+  ## Creates a set with a single element
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def set = Set.singleton(x)
+  ## out set
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: bubbles
+  ## stream set: signal
+  ## ---
+  ## 2: x = 1
+  ## 2: set = {1}
+  ## 4: x = 2
+  ## 4: set = {2}
+  ## 6: x = 3
+  ## 6: set = {3}
+  ## ~~~
+  liftable def singleton[T](value: T): Set[T] = add(empty[T], value)
+
+  ## Add an `item` to the given `set`, if not already contained
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int] # elements to add
+  ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
+  ## out set
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: bubbles
+  ## stream set: signal
+  ## ---
+  ## 0: set = {}
+  ## 2: set = {1}
+  ## 2: x = 1
+  ## 4: set = {1, 2}
+  ## 4: x = 2
+  ## 6: set = {1, 2}
+  ## 6: x = 2
+  ## 8: set = {1, 2, 7}
+  ## 8: x = 7
+  ## ~~~
+  liftable def add[T](set: strict Set[T], item: strict T): Set[T] = extern("Set_add")
+
+  ## Returns @[Types#true] if the given `set` contains the given item
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int] # elements to add
+  ## in y: Events[Int] # items to check
+  ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
+  ## def contains = Set.contains(set,y)
+  ## out contains
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,6]
+  ## stream x: bubbles
+  ## stream y: signal
+  ## stream set: signal
+  ## stream contains: signal
+  ## ---
+  ## 0: y = 1
+  ## 0: contains = false
+  ## 0: set = {}
+  ## 2: contains = true
+  ## 2: set = {1}
+  ## 2: x = 1
+  ## 4: y = 2
+  ## 4: contains = true
+  ## 4: set = {1, 2}
+  ## 4: x = 2
+  ## ~~~
+  liftable def contains[T](set: strict Set[T], item: strict T): Bool = extern("Set_contains")
+
+  ## Remove an element from the given `set`, if the `set` contains this element
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int] # elements to remove
+  ## def filledSet = Set.add(Set.add(Set.add(Set.empty[Int], 1), 2), 3)
+  ## def set: Events[Set[Int]] = fold(x, filledSet, Set.remove)
+  ## out set
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream set: signal
+  ## ---
+  ## 0: set = {1, 2, 3}
+  ## 2: set = {2, 3}
+  ## 2: x = 1
+  ## 4: set = {3}
+  ## 4: x = 2
+  ## 6: set = {3}
+  ## 6: x = 5
+  ## ~~~
+  liftable def remove[T](set: strict Set[T], item: strict T): Set[T] = extern("Set_remove")
+
+  ## Returns the number of elements in the given `set`
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
+  ## def size = Set.size(set)
+  ## out size
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,10]
+  ## stream x: bubbles
+  ## stream set: signal
+  ## stream size: signal
+  ## ---
+  ## 0: size = 0
+  ## 0: set = {}
+  ## 2: size = 1
+  ## 2: set = {1}
+  ## 2: x = 1
+  ## 4: size = 2
+  ## 4: set = {1, 2}
+  ## 4: x = 2
+  ## 6: size = 3
+  ## 6: set = {1, 2, 3}
+  ## 6: x = 3
+  ## 8: size = 3
+  ## 8: set = {1, 2, 3}
+  ## 8: x = 2
+  ## ~~~
+  liftable def size[T](set: strict Set[T]): Int = extern("Set_size")
+
+
+  ## Returns the union of the given @[Set]
+  ##
+  ## **Usage example:**x
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int] # elements to add to set1
+  ## in y: Events[Int] # elements to add to set2
+  ## def set1: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
+  ## def set2: Events[Set[Int]] = fold(y, Set.empty[Int], Set.add)
+  ## def union = Set.union(set1, set2)
+  ## out union
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-3,10]
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## stream set1: signal
+  ## stream set2: signal
+  ## stream union: signal
+  ## ---
+  ## 0: set1 = {}
+  ## 0: set2 = {}
+  ## 0: union = {}
+  ## 1: x = 1
+  ## 1: set1 = {1}
+  ## 1: union = {1}
+  ## 2: y = 2
+  ## 2: set2 = {2}
+  ## 2: union = {1, 2}
+  ## 4: y = 1
+  ## 4: set2 = {1, 2}
+  ## 4: union = {1, 2}
+  ## 6: x = 3
+  ## 6: set1 = {1, 3}
+  ## 6: union = {1, 2, 3}
+  ## 8: x = 2
+  ## 8: set1 = {1, 2, 3}
+  ## 8: union = {1, 2, 3}
+  ## ~~~
+  liftable def union[T](set1: strict Set[T], set2: strict Set[T]): Set[T] = extern("Set_union")
+
+  ## Returns the intersection of the given `sets` as @[Set].
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int] # elements to add to set1
+  ## in y: Events[Int] # elements to add to set2
+  ## def set1: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
+  ## def set2: Events[Set[Int]] = fold(y, Set.empty[Int], Set.add)
+  ## def intersection = Set.intersection(set1, set2)
+  ## out intersection
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,11]
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## stream set1: signal
+  ## stream set2: signal
+  ## stream intersection: signal
+  ## ---
+  ## 0: set1 = {}
+  ## 0: set2 = {}
+  ## 0: intersection = {}
+  ## 2: x = 1
+  ## 2: set1 = {1}
+  ## 2: intersection = {}
+  ## 4: y = 2
+  ## 4: set2 = {2}
+  ## 4: intersection = {}
+  ## 6: x = 2
+  ## 6: set1 = {1, 2}
+  ## 6: intersection = {2}
+  ## 9: x = 3
+  ## 9: set1 = {1, 2, 3}
+  ## 9: y = 3
+  ## 9: set2 = {2, 3}
+  ## 9: intersection = {2, 3}
+  ## ~~~
+  liftable def intersection[T](set1: strict Set[T], set2: strict Set[T]): Set[T] = extern("Set_intersection")
+
+  ## Returns a `set` containing the elements of `set1` which aren't part of `set2`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int] # elements to add to set1
+  ## in y: Events[Int] # elements to add to set2
+  ## def set1: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
+  ## def set2: Events[Set[Int]] = fold(y, Set.empty[Int], Set.add)
+  ## def minus = Set.minus(set1, set2)
+  ## out minus
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,12]
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## stream set1: signal
+  ## stream set2: signal
+  ## stream minus: signal
+  ## ---
+  ## 0: set1 = {}
+  ## 0: set2 = {}
+  ## 0: minus = {}
+  ## 2: x = 1
+  ## 2: set1 = {1}
+  ## 2: minus = {1}
+  ## 4: y = 2
+  ## 4: set2 = {2}
+  ## 4: minus = {1}
+  ## 6: x = 2
+  ## 6: set1 = {1, 2}
+  ## 6: minus = {1}
+  ## 8: x = 3
+  ## 8: set1 = {1, 2, 3}
+  ## 8: minus = {1, 3}
+  ## 10: y = 3
+  ## 10: set2 = {2, 3}
+  ## 10: minus = {1}
+  ## ~~~
+  liftable def minus[T](set1: strict Set[T], set2: strict Set[T]): Set[T] = extern("Set_minus")
+
+  ## Fold a function `f` on all values of the `set`.
+  ## Starting with the initial value start the function `f` is called for every element of the `set` with the
+  ## last result and the current element value as arguments.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def set: Events[Set[Int]] = fold(x, Set.empty[Int], Set.add)
+  ## def result = Set.fold(set, 0, (a:Int, b:Int) => a + b)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream set: signal
+  ## stream result: signal
+  ## ---
+  ## 0: result = 0
+  ## 0: set = {}
+  ## 2: result = 1
+  ## 2: set = {1}
+  ## 2: x = 1
+  ## 4: result = 3
+  ## 4: set = {1, 2}
+  ## 4: x = 2
+  ## 6: result = 6
+  ## 6: set = {1, 2, 3}
+  ## 6: x = 3
+  ## ~~~
+  liftable def fold[T, U](set: strict Set[T], start: lazy U, f: strict (strict U, strict T) => U): U = extern("Set_fold")
+
+  ## Collect the event values of the `value` stream in a set.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int]
+  ## def result = Set.collect(x)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,8]
+  ## stream x: bubbles
+  ## stream result: signal
+  ## ---
+  ## 0: result = {}
+  ## 2: x = 1
+  ## 2: result = {1}
+  ## 4: x = 2
+  ## 4: result = {1, 2}
+  ## 6: x = 3
+  ## 6: result = {1, 2, 3}
+  ## ~~~
+  def collect[T](value: Events[T]) = {
+    def set: Events[Set[T]] = default(add(last(set, value), value), empty[T])
+    set
+  }
+
+  ## Creates a `set` by collecting the elements from `value` and removing the ones from `removeValue`.
+  ##
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Int] # elements to collect
+  ## in y: Events[Int] # elements to remove
+  ## def result = Set.collectWithRemove(x, y)
+  ## out result
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,12]
+  ## stream x: bubbles
+  ## stream y: bubbles
+  ## stream result: signal
+  ## ---
+  ## 0: result = {}
+  ## 1: y = 1
+  ## 1: result = {}
+  ## 2: x = 1
+  ## 2: result = {1}
+  ## 4: y = 2
+  ## 4: result = {1}
+  ## 6: x = 3
+  ## 6: result = {1, 3}
+  ## 8: y = 3
+  ## 8: result = {1}
+  ## 10: x = 4
+  ## 10: y = 4
+  ## 10: result = {1}
+  ## ~~~
+  def collectWithRemove[T](value: Events[T], removeValue: Events[T]) = {
+    def old = last(set, merge(value, removeValue))
+    def operation: Events[Set[T]] = lift3(old, value, removeValue, (o: Option[Set[T]], v: Option[T], r: Option[T]) =>
+      Some(minus(union(getSome(o), OptionUtils.toSet(v)), OptionUtils.toSet(r))))
+    def set = default(operation, empty[T])
+    set
+  }
+
+  ## Applies a function to all elements in the set and returns a new set with the mapped elements.
+  ## **Usage example:**
+  ##
+  ## ~~~tessla
+  ## in x: Events[Set[Int]]
+  ## def y: Events[Set[Int]] = Set.map(x, (a: Int) => a + 1)
+  ## out y
+  ## ~~~
+  ##
+  ## **Trace example:**
+  ##
+  ## ~~~trace
+  ## option timeDomain: [-1,5]
+  ## stream x: signal
+  ## stream y: signal
+  ## ---
+  ## 0: x = {1, 2, 3}
+  ## 0: y = {2, 3, 4}
+  ## 2: x = {5}
+  ## 2: y = {6}
+  ## 4: x = {}
+  ## 4: y = {}
+  ## ~~~
+  liftable def map[A, B](l: strict Set[A], f: strict (strict A) => B) : Set[B] = extern("Set_map")
+}
+
+## inmodule Set
+## Type Set
+type Set[T] = extern("Set")

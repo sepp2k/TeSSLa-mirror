@@ -1,0 +1,5 @@
+def a: Int = extern("native:foo")
+def b: Int = extern("native:bar")
+def x = a + b
+
+out x

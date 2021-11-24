@@ -1,0 +1,5 @@
+{
+  "input": "input-stream.input",
+  "expectedOutput": "input-stream.output",
+  "spec": "input-stream.tessla"
+}

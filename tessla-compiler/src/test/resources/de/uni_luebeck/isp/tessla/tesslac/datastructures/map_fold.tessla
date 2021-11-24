@@ -1,0 +1,5 @@
+in map: Events[Map[Int, {x: Int, y: Int}]]
+
+def list = Map.fold(map, List.empty[Int], (acc: List[Int], key: Int, value: {x: Int, y: Int}) => List.append(acc, key * value.x * value.y))
+out list
+out Map.keys(map) as keys
