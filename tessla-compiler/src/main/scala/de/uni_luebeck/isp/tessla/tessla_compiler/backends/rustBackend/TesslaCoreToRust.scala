@@ -75,17 +75,8 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
         case (id, definition) =>
           definition.tpe match {
             case InstantiatedType("Events", _, _) =>
-              definition match {
-                case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) =>
-                  rustStreamCodeGenerator
-                    .translateExternSignalExpression(id, externResolution(e), args, typeArgs, srcSegments)
-                case ApplicationExpression(e, args, _) =>
-                  rustStreamCodeGenerator
-                    .translateExternSignalExpression(id, externResolution(e), args, Seq(), srcSegments)
-                case e =>
-                  throw Diagnostics
-                    .CoreASTError("Non valid stream defining expression cannot be translated", e.location)
-              }
+              rustStreamCodeGenerator
+                .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
             case FunctionType(_, _, _, _) =>
               definition match {
                 case FunctionExpression(_, params, body, result, _) =>

@@ -2,6 +2,8 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 
+import scala.annotation.tailrec
+
 /**
  * Abstract base class for the translation of stream code
  */
@@ -63,6 +65,48 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
       case name if name.startsWith("native:") =>
         produceNativeFunctionStepCode(id, typ.resultType.resolve(typeParamMap), e.name, args, typeArgs, currSource)
       case _ => throw Diagnostics.CommandNotSupportedError(e.toString)
+    }
+  }
+
+  @tailrec
+  final protected def externResolution(
+    e: ExpressionArg,
+    definitions: Map[Identifier, DefinitionExpression]
+  ): ExternExpression = e match {
+    case e: ExternExpression => e
+    case ExpressionRef(id, _, _) if definitions.contains(id) =>
+      externResolution(definitions(id), definitions)
+    case _ =>
+      throw Diagnostics.CoreASTError(
+        "No extern or reference to extern in function application with stream result",
+        e.location
+      )
+  }
+
+  /**
+   * Translates a definition expression, which is always an assignment of an external signal application
+   * to a stream variable and attaches it in a given source collection.
+   *
+   * @param id The id which is assigned (must be of stream type)
+   * @param expression The application expression
+   * @param definitions The map with all definition expressions
+   * @param currSrc The source listing where the generated code is attached to.
+   * @return The modified source listing
+   */
+  def translateStreamDefinitionExpression(
+    id: Identifier,
+    expression: DefinitionExpression,
+    definitions: Map[Identifier, DefinitionExpression],
+    currSrc: CollectionType
+  ): CollectionType = {
+    expression match {
+      case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) =>
+        translateExternSignalExpression(id, externResolution(e, definitions), args, typeArgs, currSrc)
+      case ApplicationExpression(e, args, _) =>
+        translateExternSignalExpression(id, externResolution(e, definitions), args, Seq(), currSrc)
+      case e =>
+        throw Diagnostics
+          .CoreASTError("Non valid stream defining expression cannot be translated", e.location)
     }
   }
 

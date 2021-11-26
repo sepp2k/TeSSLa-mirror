@@ -53,17 +53,6 @@ class TesslaCoreToIntermediate(ioInterface: Boolean)
     private val definitions = spec.definitions
     private val out = spec.out
 
-    @tailrec
-    final protected def externResolution(e: ExpressionArg): ExternExpression = e match {
-      case e: ExternExpression                                 => e
-      case ExpressionRef(id, _, _) if definitions.contains(id) => externResolution(definitions(id))
-      case _ =>
-        throw Diagnostics.CoreASTError(
-          "No extern or reference to extern in function application with stream result",
-          e.location
-        )
-    }
-
     protected def getStreamType(id: Identifier): Type = {
       if (definitions.contains(id)) {
         definitions(id).tpe
@@ -83,15 +72,7 @@ class TesslaCoreToIntermediate(ioInterface: Boolean)
         case (id, definition) =>
           currSrc = definition.tpe match {
             case InstantiatedType("Events", _, _) =>
-              definition match {
-                case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) =>
-                  streamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, typeArgs, currSrc)
-                case ApplicationExpression(e, args, _) =>
-                  streamCodeGenerator.translateExternSignalExpression(id, externResolution(e), args, Seq(), currSrc)
-                case e =>
-                  throw Diagnostics
-                    .CoreASTError("Non valid stream defining expression cannot be translated", e.location)
-              }
+              streamCodeGenerator.translateStreamDefinitionExpression(id, definition, definitions, currSrc)
             case _ =>
               SourceListing(
                 currSrc.stepSource,
