@@ -57,9 +57,9 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
   ): SourceSegments = {
     val output = s"var_${output_id.fullName}"
     val default = rustCodeGenerator.translateExpressionArg(default_expr, rustCodeGenerator.TypeArgManagement.empty)
-    currSrc.variables.append(s"let mut $output = init_with_value($default);")
+    currSrc.variables.append(s"let mut $output = init_with_value(&$default);")
     val stream = streamNameFromExpressionArg(stream_expr)
-    currSrc.computation.append(s"default($output, $stream);")
+    currSrc.computation.append(s"default(&$output, &$stream);")
     currSrc
   }
 
@@ -84,7 +84,7 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
     currSrc.variables.append(s"let mut $output = init();")
     val stream = streamNameFromExpressionArg(stream_expr)
     val default = streamNameFromExpressionArg(default_expr)
-    currSrc.computation.append(s"defaultFrom($output, $stream, $default);")
+    currSrc.computation.append(s"defaultFrom(&$output, &$stream, &$default);")
     currSrc
   }
 
@@ -102,9 +102,9 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
     currSrc: SourceSegments
   ): SourceSegments = {
     val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let $output = init();")
+    currSrc.variables.append(s"let mut $output = init();")
     val stream = streamNameFromExpressionArg(stream_expr)
-    currSrc.computation.append(s"time($output, $stream);")
+    currSrc.computation.append(s"time(&$output, &$stream);")
     currSrc
   }
 
@@ -126,12 +126,12 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
     currSrc: SourceSegments
   ): SourceSegments = {
     val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let $output = init();")
+    currSrc.variables.append(s"let mut $output = init();")
     val values = streamNameFromExpressionArg(values_expr)
     val trigger = streamNameFromExpressionArg(trigger_expr)
-    currSrc.computation.append(s"last($output, $values, $trigger);")
+    currSrc.computation.append(s"last(&$output, &$values, &$trigger);")
     // TODO this will needs deduplication/different representation:
-    currSrc.store.append(s"update_last($output);")
+    currSrc.store.append(s"update_last(&$output);")
     currSrc
   }
 
@@ -151,10 +151,10 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
     currSrc: SourceSegments
   ): SourceSegments = {
     val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let $output = init();")
+    currSrc.variables.append(s"let mut $output = init();")
     val delay = streamNameFromExpressionArg(delay_expr)
     val reset = streamNameFromExpressionArg(reset_expr)
-    currSrc.computation.append(s"delay($output, $delay, $reset);")
+    currSrc.computation.append(s"delay(&$output, &$delay, &$reset);")
 
     /** TODO needs additional rust data-structure/timestamp code
      * This needs to do something like this:
@@ -162,7 +162,7 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
      *   currTs = ${output}_nextTs;
      * }
      */
-    currSrc.timestamp.append(s"interrupt_for_delay($output);")
+    currSrc.timestamp.append(s"interrupt_for_delay(&$output);")
 
     /** TODO is there a reason for this being put /after/ the processing part?
      * if ${stream}_changed {
@@ -173,7 +173,7 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
      *   }
      * }
      */
-    currSrc.output.append(s"reset_delay($output, $delay, $reset);")
+    currSrc.output.append(s"reset_delay(&$output, &$delay, &$reset);")
     currSrc
   }
 
@@ -195,12 +195,12 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
     currSrc: SourceSegments
   ): SourceSegments = {
     val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let $output = init();")
-    val arguments = argument_exprs.map(streamNameFromExpressionArg).mkString(", ")
+    currSrc.variables.append(s"let mut $output = init();")
+    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a").mkString(", ")
     val function = rustCodeGenerator.translateExpressionArg(function_expr, rustCodeGenerator.TypeArgManagement.empty);
     // TODO I think the lifted function expects the stream values to be wrapped in options?
     // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
-    currSrc.computation.append(s"lift($output, vec![$arguments], $function);")
+    currSrc.computation.append(s"lift(&$output, vec![$arguments], $function);")
     currSrc
   }
 
@@ -222,10 +222,10 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
     currSrc: SourceSegments
   ): SourceSegments = {
     val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let $output = init();")
-    val arguments = argument_exprs.map(streamNameFromExpressionArg).mkString(", ")
+    currSrc.variables.append(s"let mut $output = init();")
+    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a").mkString(", ")
     val function = rustCodeGenerator.translateExpressionArg(function_expr, rustCodeGenerator.TypeArgManagement.empty)
-    currSrc.computation.append(s"slift($output, vec![$arguments], $function);")
+    currSrc.computation.append(s"slift(&$output, vec![$arguments], $function);")
     currSrc
   }
 
