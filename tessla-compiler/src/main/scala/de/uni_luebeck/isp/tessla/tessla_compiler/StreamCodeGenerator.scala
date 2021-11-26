@@ -16,9 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla._
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
 
@@ -28,65 +26,8 @@ import scala.language.{implicitConversions, postfixOps}
  * Class containing functions for the translation of single TeSSLa stream expressions to imperative code
  */
 
-class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
-
-  /**
-   * Translates an assignment to a stream variable to the corresponding ImpLan Code and attaches it in a given
-   * source listing. The assigned expression has to be (and is always in TeSSLa Core) an application.
-   *
-   * @param id The id which is assigned (must be of stream type)
-   * @param e The expression which is applicated with args and typeArgs and then assigned
-   * @param args The arguments passed to e
-   * @param typeArgs The type arguments passed to e
-   * @param currSource The source listing where the generated code is attached to. It is attached to the
-   *                   stepSource section of the source listing.
-   * @return The modified source listing
-   */
-  def translateExternSignalExpression(
-    id: Identifier,
-    e: ExternExpression,
-    args: Seq[ExpressionArg],
-    typeArgs: Seq[Type],
-    currSource: SourceListing
-  ): SourceListing = {
-    val typ = e.tpe.asInstanceOf[Core.FunctionType]
-    val typeParamMap = typ.typeParams.zip(typeArgs).toMap
-    e.name match {
-      case "nil" =>
-        produceNilStepCode(id, typ.resultType.resolve(typeParamMap), currSource)
-      case "default" =>
-        produceDefaultStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
-      case "defaultFrom" =>
-        produceDefaultFromStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
-      case "time" =>
-        produceTimeStepCode(id, args(0), currSource)
-      case "last" =>
-        produceLastStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
-      case "delay" =>
-        produceDelayStepCode(id, args(0), args(1), currSource)
-      case "lift" =>
-        produceLiftStepCode(id, typ.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
-      case "slift" =>
-        produceSignalLiftStepCode(id, typ.resultType.resolve(typeParamMap), args.dropRight(1), args.last, currSource)
-      case "merge" =>
-        produceMergeStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
-      case "count" =>
-        produceCountStepCode(id, args(0), currSource)
-      case "const" =>
-        produceConstStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
-      case "filter" =>
-        produceFilterStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
-      case "fold" =>
-        produceFoldStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), args(2), currSource)
-      case "reduce" =>
-        produceReduceStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
-      case "unitIf" =>
-        produceUnitIfStepCode(id, args(0), currSource)
-      case "pure" =>
-        producePureStepCode(id, typ.resultType.resolve(typeParamMap), args(0), currSource)
-      case _ => throw tessla_compiler.Diagnostics.CommandNotSupportedError(e.toString)
-    }
-  }
+class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
+    extends StreamCodeGeneratorInterface[SourceListing] {
 
   /**
    * Returns name and type if ea is an ExpressionRef otherwise an exception is thrown
@@ -97,7 +38,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
     ea match {
       case ExpressionRef(id, tpe, _) => ("var_" + id.fullName, tpe)
       case e: Expression =>
-        throw tessla_compiler.Diagnostics
+        throw Diagnostics
           .CoreASTError("Required ExpressionRef, but Expression found. Non flat AST.", e.location)
     }
   }
@@ -111,7 +52,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *               stepSource section of the source listing
    * @return The modified source listing
    */
-  private def produceNilStepCode(id: Identifier, ot: Type, currSrc: SourceListing): SourceListing = {
+  override def produceNilStepCode(id: Identifier, ot: Type, currSrc: SourceListing): SourceListing = {
     val o = s"var_${id.fullName}"
     val default = defaultValueForStreamType(ot)
 
@@ -140,7 +81,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *               stepSource section of the source listing
    * @return The modified source listing
    */
-  private def produceDefaultStepCode(
+  override def produceDefaultStepCode(
     id: Identifier,
     ot: Type,
     stream: ExpressionArg,
@@ -181,7 +122,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *               stepSource section of the source listing
    * @return The modified source listing
    */
-  private def produceDefaultFromStepCode(
+  override def produceDefaultFromStepCode(
     id: Identifier,
     ot: Type,
     stream: ExpressionArg,
@@ -230,7 +171,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *               stepSource section of the source listing
    * @return The modified source listing
    */
-  private def produceTimeStepCode(id: Identifier, stream: ExpressionArg, currSrc: SourceListing): SourceListing = {
+  override def produceTimeStepCode(id: Identifier, stream: ExpressionArg, currSrc: SourceListing): SourceListing = {
 
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val o = s"var_${id.fullName}"
@@ -267,7 +208,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *               stepSource section of the source listing
    * @return The modified source listing
    */
-  private def produceLastStepCode(
+  override def produceLastStepCode(
     id: Identifier,
     ot: Type,
     values: ExpressionArg,
@@ -316,7 +257,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the tsGenSource and stepSource section.
    * @return The modified source listing
    */
-  private def produceDelayStepCode(
+  override def produceDelayStepCode(
     id: Identifier,
     delay: ExpressionArg,
     reset: ExpressionArg,
@@ -380,7 +321,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def produceLiftStepCode(
+  override def produceLiftStepCode(
     id: Identifier,
     ot: Type,
     args: Seq[ExpressionArg],
@@ -484,7 +425,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def produceSignalLiftStepCode(
+  override def produceSignalLiftStepCode(
     id: Identifier,
     ot: Type,
     args: Seq[ExpressionArg],
@@ -558,7 +499,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def produceMergeStepCode(
+  override def produceMergeStepCode(
     id: Identifier,
     ot: Type,
     args: Seq[ExpressionArg],
@@ -612,7 +553,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def produceCountStepCode(id: Identifier, cntStream: ExpressionArg, currSrc: SourceListing): SourceListing = {
+  override def produceCountStepCode(id: Identifier, cntStream: ExpressionArg, currSrc: SourceListing): SourceListing = {
     val (s, _) = streamNameAndTypeFromExpressionArg(cntStream)
     val o = s"var_${id.fullName}"
 
@@ -647,7 +588,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def produceConstStepCode(
+  override def produceConstStepCode(
     id: Identifier,
     ot: Type,
     args: Seq[ExpressionArg],
@@ -696,7 +637,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def produceFilterStepCode(
+  override def produceFilterStepCode(
     id: Identifier,
     ot: Type,
     args: Seq[ExpressionArg],
@@ -746,7 +687,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def produceFoldStepCode(
+  override def produceFoldStepCode(
     id: Identifier,
     ot: Type,
     stream: ExpressionArg,
@@ -815,7 +756,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def produceReduceStepCode(
+  override def produceReduceStepCode(
     id: Identifier,
     ot: Type,
     stream: ExpressionArg,
@@ -884,7 +825,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def produceUnitIfStepCode(
+  override def produceUnitIfStepCode(
     id: Identifier,
     cond: ExpressionArg,
     currSrc: SourceListing
@@ -921,7 +862,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the stepSource section.
    * @return The modified source listing
    */
-  private def producePureStepCode(
+  override def producePureStepCode(
     id: Identifier,
     ot: Type,
     valStream: ExpressionArg,
@@ -961,6 +902,28 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
   }
 
   /**
+   * Produces code for a x = native:&lt;name&gt;(...) expression
+   *
+   * @param id The id which is assigned (must be of stream type)
+   * @param ot The Type of the output stream
+   * @param name The function name which is applied with args and typeArgs and then assigned
+   * @param args The arguments passed to e
+   * @param typeArgs The type arguments passed to e
+   * @param currSource The source listing where the generated code is attached to.
+   * @return The modified source listing
+   */
+  override def produceNativeFunctionStepCode(
+    id: Identifier,
+    ot: Type,
+    name: String,
+    args: Seq[ExpressionArg],
+    typeArgs: Seq[Type],
+    currSource: SourceListing
+  ): SourceListing = {
+    throw Diagnostics.CommandNotSupportedError("The translation of native:function() is not implemented.")
+  }
+
+  /**
    * Add code for output generation (calling of __[TC]output__) to the source listing.
    * __[TC]output__ gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
    * current timestamp) and has to be translated accordingly in the final code generation
@@ -973,7 +936,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the tailSource section.
    * @return The modified source listing
    */
-  def produceOutputToConsoleCode(
+  override def produceOutputToConsoleCode(
     id: Identifier,
     t: Type,
     nameOpt: Option[String],
@@ -1008,7 +971,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                There is code attached to the tailSource section.
    * @return The modified source listing
    */
-  def produceOutputToAPICode(
+  override def produceOutputToAPICode(
     id: Identifier,
     t: Type,
     nameOpt: Option[String],
@@ -1056,7 +1019,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                 There is code attached to the tailSource section.
    * @return The modified source listing
    */
-  def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing): SourceListing = {
+  override def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing): SourceListing = {
     val s = s"var_${inStream.fullName}"
 
     val newTail =
@@ -1076,7 +1039,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                 There is code attached to the inputProcessing section.
    * @return The modified source listing
    */
-  def produceInputFromConsoleCode(inStream: Identifier, typ: Type, currSrc: SourceListing): SourceListing = {
+  override def produceInputFromConsoleCode(inStream: Identifier, typ: Type, currSrc: SourceListing): SourceListing = {
     val s = s"var_${inStream.fullName}"
     val parseExp = typ match {
       case InstantiatedType("Events", Seq(RecordType(m, _)), _) if m.isEmpty => UnitValue
@@ -1110,7 +1073,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator) {
    *                 There is code attached to the inputProcessing section.
    * @return The modified source listing
    */
-  def produceInputFromAPICode(inStream: Identifier, typ: Type, currSrc: SourceListing): SourceListing = {
+  override def produceInputFromAPICode(inStream: Identifier, typ: Type, currSrc: SourceListing): SourceListing = {
     val s = s"var_${inStream.fullName}"
     val ft = IntermediateCode.FunctionType(Seq(typ, LongType), VoidType)
 

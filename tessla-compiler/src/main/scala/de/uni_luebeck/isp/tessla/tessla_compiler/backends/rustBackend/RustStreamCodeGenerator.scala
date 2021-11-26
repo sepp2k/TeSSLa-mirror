@@ -1,0 +1,486 @@
+package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
+
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, NonStreamCodeGenerator, StreamCodeGeneratorInterface}
+
+class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
+    extends StreamCodeGeneratorInterface[SourceSegments] {
+
+  /**
+   * Returns name if ea is an ExpressionRef otherwise an exception is thrown
+   * @param ea The expression to be examined
+   * @return Name of ea if it is an ExpressionRef
+   */
+  private def streamNameFromExpressionArg(ea: ExpressionArg): String = {
+    ea match {
+      case ExpressionRef(id, _, _) => "var_" + id.fullName
+      case e: Expression =>
+        throw Diagnostics
+          .CoreASTError("Required ExpressionRef, but Expression found. Non flat AST.", e.location)
+    }
+  }
+
+  /**
+   * Produces code for a x = nil expression
+   *
+   * @param output_id    The id nil is assigned to
+   * @param output_type  The type of id. Must be Events[...]
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceNilStepCode(
+    output_id: Identifier,
+    output_type: Type,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let $output = init();")
+    currSrc
+  }
+
+  /**
+   * Produces code for a x = default(...) expression
+   *
+   * @param output_id    The id default is assigned to
+   * @param output_type  The type of id. Must be Events[...]
+   * @param stream_expr  The stream parameter of the default
+   * @param default_expr The default parameter of the default
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceDefaultStepCode(
+    output_id: Identifier,
+    output_type: Type,
+    stream_expr: ExpressionArg,
+    default_expr: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${output_id.fullName}"
+    val default = rustCodeGenerator.translateExpressionArg(default_expr, rustCodeGenerator.TypeArgManagement.empty)
+    currSrc.variables.append(s"let mut $output = init_with_value($default);")
+    val stream = streamNameFromExpressionArg(stream_expr)
+    currSrc.computation.append(s"default($output, $stream);")
+    currSrc
+  }
+
+  /**
+   * Produces code for a x = defaultFrom(...) expression
+   *
+   * @param output_id    The id defaultFrom is assigned to
+   * @param output_type  The type of id. Must be Events[...]
+   * @param stream_expr  The stream parameter of the defaultFrom
+   * @param default_expr The stream parameter of the defaultFrom
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceDefaultFromStepCode(
+    output_id: Identifier,
+    output_type: Type,
+    stream_expr: ExpressionArg,
+    default_expr: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let mut $output = init();")
+    val stream = streamNameFromExpressionArg(stream_expr)
+    val default = streamNameFromExpressionArg(default_expr)
+    currSrc.computation.append(s"defaultFrom($output, $stream, $default);")
+    currSrc
+  }
+
+  /**
+   * Produces code for a x = time(...) expression
+   *
+   * @param output_id    The id time is assigned to
+   * @param stream_expr  The base-stream parameter of the time
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceTimeStepCode(
+    output_id: Identifier,
+    stream_expr: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let $output = init();")
+    val stream = streamNameFromExpressionArg(stream_expr)
+    currSrc.computation.append(s"time($output, $stream);")
+    currSrc
+  }
+
+  /**
+   * Produces code for a x = last(...) expression
+   *
+   * @param output_id    The id last is assigned to
+   * @param output_type  The type of id. Must be Events[...]
+   * @param values_expr  The value-stream parameter of the last
+   * @param trigger_expr   The trigger/clock-stream parameter of the last
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceLastStepCode(
+    output_id: Identifier,
+    output_type: Type,
+    values_expr: ExpressionArg,
+    trigger_expr: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let $output = init();")
+    val values = streamNameFromExpressionArg(values_expr)
+    val trigger = streamNameFromExpressionArg(trigger_expr)
+    currSrc.computation.append(s"last($output, $values, $trigger);")
+    // TODO this will needs deduplication/different representation:
+    currSrc.store.append(s"update_last($output);")
+    currSrc
+  }
+
+  /**
+   * Produces code for a x = delay(...) expression
+   *
+   * @param output_id      The id delay is assigned to
+   * @param delay_expr   The delay-stream parameter of the delay
+   * @param reset_expr   The reset-stream parameter of the delay
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceDelayStepCode(
+    output_id: Identifier,
+    delay_expr: ExpressionArg,
+    reset_expr: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let $output = init();")
+    val delay = streamNameFromExpressionArg(delay_expr)
+    val reset = streamNameFromExpressionArg(reset_expr)
+    currSrc.computation.append(s"delay($output, $delay, $reset);")
+
+    /** TODO needs additional rust data-structure/timestamp code
+     * This needs to do something like this:
+     * if ${output}_nextTs > lastProcessedTs && currTs > ${output}_nextTs {
+     *   currTs = ${output}_nextTs;
+     * }
+     */
+    currSrc.timestamp.append(s"interrupt_for_delay($output);")
+
+    /** TODO is there a reason for this being put /after/ the processing part?
+     * if ${stream}_changed {
+     *   if ${output}_changed && ${reset}_changed {
+     *     ${output}_nextTs = currTs + ${stream}_value
+     *   } else if (${reset}_changed) {
+     *     ${output}_nextTs = -1 //TODO this is supposed to stop the delay?
+     *   }
+     * }
+     */
+    currSrc.output.append(s"reset_delay($output, $delay, $reset);")
+    currSrc
+  }
+
+  /**
+   * Produces code for a x = lift(...) expression
+   *
+   * @param output_id      The id lift is assigned to
+   * @param output_type    The type of id. Must be Events[...]
+   * @param argument_exprs The arguments of the lift except the last one (function)
+   * @param function_expr  The lifted function
+   * @param currSrc  The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceLiftStepCode(
+    output_id: Identifier,
+    output_type: Type,
+    argument_exprs: Seq[ExpressionArg],
+    function_expr: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let $output = init();")
+    val arguments = argument_exprs.map(streamNameFromExpressionArg).mkString(", ")
+    val function = rustCodeGenerator.translateExpressionArg(function_expr, rustCodeGenerator.TypeArgManagement.empty);
+    // TODO I think the lifted function expects the stream values to be wrapped in options?
+    // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
+    currSrc.computation.append(s"lift($output, vec![$arguments], $function);")
+    currSrc
+  }
+
+  /**
+   * Produces code for a x = slift(...) expression
+   *
+   * @param output_id       The id slift is assigned to
+   * @param output_type       The type of id. Must be Events[...]
+   * @param argument_exprs     The arguments of the lift except the last one (function)
+   * @param function_expr The lifted function
+   * @param currSrc  The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceSignalLiftStepCode(
+    output_id: Identifier,
+    output_type: Type,
+    argument_exprs: Seq[ExpressionArg],
+    function_expr: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let $output = init();")
+    val arguments = argument_exprs.map(streamNameFromExpressionArg).mkString(", ")
+    val function = rustCodeGenerator.translateExpressionArg(function_expr, rustCodeGenerator.TypeArgManagement.empty)
+    currSrc.computation.append(s"slift($output, vec![$arguments], $function);")
+    currSrc
+  }
+
+  /**
+   * Produces code for a x = merge(...) expression
+   *
+   * @param id      The id merge is assigned to
+   * @param ot      The type of id. Must be Events[...]
+   * @param args    The stream expressions to be merged
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceMergeStepCode(
+    id: Identifier,
+    ot: Type,
+    args: Seq[ExpressionArg],
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${id.fullName}"
+    ???
+  }
+
+  /**
+   * Produces code for a x = count(...) expression
+   *
+   * @param id        The id merge is assigned to
+   * @param cntStream Expression of the stream to be counted
+   * @param currSrc   The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceCountStepCode(
+    id: Identifier,
+    cntStream: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${id.fullName}"
+    ???
+  }
+
+  /**
+   * Produces code for a x = const(...) expression
+   *
+   * @param id      The id merge is assigned to
+   * @param ot      Type of the output stream
+   * @param args    Argument expressions for const (const value, triggering stream)
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceConstStepCode(
+    id: Identifier,
+    ot: Type,
+    args: Seq[ExpressionArg],
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${id.fullName}"
+    ???
+  }
+
+  /**
+   * Produces code for a x = filter(...) expression
+   *
+   * @param id      The id merge is assigned to
+   * @param ot      Type of the output stream
+   * @param args    Argument expressions for filter (value stream, condition stream)
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceFilterStepCode(
+    id: Identifier,
+    ot: Type,
+    args: Seq[ExpressionArg],
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${id.fullName}"
+    ???
+  }
+
+  /**
+   * Produces code for a x = fold(...) expression
+   *
+   * @param id       The id merge is assigned to
+   * @param ot       Type of the output stream
+   * @param stream   Expression of the stream to be folded
+   * @param init     Expression of the initial value for the folding
+   * @param function Expression of the function used for folding
+   * @param currSrc  The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceFoldStepCode(
+    id: Identifier,
+    ot: Type,
+    stream: ExpressionArg,
+    init: ExpressionArg,
+    function: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${id.fullName}"
+    ???
+  }
+
+  /**
+   * Produces code for a x = reduce(...) expression
+   *
+   * @param id       The id merge is assigned to
+   * @param ot       Type of the output stream
+   * @param stream   Expression of the stream to be reduced
+   * @param function Expression of the function used for reducing
+   * @param currSrc  The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceReduceStepCode(
+    id: Identifier,
+    ot: Type,
+    stream: ExpressionArg,
+    function: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${id.fullName}"
+    ???
+  }
+
+  /**
+   * Produces code for a x = unitIf(...) expression
+   *
+   * @param id      The id merge is assigned to
+   * @param cond    Expression of the stream with the condition for unitIf
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceUnitIfStepCode(
+    id: Identifier,
+    cond: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${id.fullName}"
+    ???
+  }
+
+  /**
+   * Produces code for a x = pure(...) expression
+   *
+   * @param id        The id merge is assigned to
+   * @param ot        Type of the output stream
+   * @param valStream Stream to be filtered
+   * @param currSrc   The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def producePureStepCode(
+    id: Identifier,
+    ot: Type,
+    valStream: ExpressionArg,
+    currSrc: SourceSegments
+  ): SourceSegments = {
+    val output = s"var_${id.fullName}"
+    ???
+  }
+
+  /**
+   * Produces code for a x = native:&lt;name&gt;(...) expression
+   *
+   * @param id The id which is assigned (must be of stream type)
+   * @param ot The Type of the output stream
+   * @param name The function name which is applied with args and typeArgs and then assigned
+   * @param args The arguments passed to e
+   * @param typeArgs The type arguments passed to e
+   * @param currSource The source listing where the generated code is attached to.
+   * @return The modified source listing
+   */
+  override def produceNativeFunctionStepCode(
+    id: Identifier,
+    ot: Type,
+    name: String,
+    args: Seq[ExpressionArg],
+    typeArgs: Seq[Type],
+    currSource: SourceSegments
+  ): SourceSegments = {
+    throw Diagnostics.CommandNotSupportedError(s"The translation of native:$name(...) is not implemented.")
+  }
+
+  /**
+   * Add code for output generation to the source listing.
+   * It gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
+   * current timestamp) and has to be translated accordingly in the final code generation
+   *
+   * @param id      The id of the stream to be printed
+   * @param t       id's type. Must be Events[...]
+   * @param nameOpt The alias name of id for printing. Optional.
+   * @param raw     If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceOutputToConsoleCode(
+    id: Identifier,
+    t: Type,
+    nameOpt: Option[String],
+    currSrc: SourceSegments,
+    raw: Boolean
+  ): SourceSegments = ???
+
+  /**
+   * Add code for output generation to the source listing.
+   * It gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
+   * current timestamp) and has to be translated accordingly in the final code generation
+   *
+   * @param id      The id of the stream to be printed
+   * @param t       id's type. Must be Events[...]
+   * @param nameOpt The alias name of id for printing. Optional.
+   * @param raw     If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
+   * @param currSrc The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceOutputToAPICode(
+    id: Identifier,
+    t: Type,
+    nameOpt: Option[String],
+    currSrc: SourceSegments,
+    raw: Boolean
+  ): SourceSegments = ???
+
+  /**
+   * Produces code resetting the changed flags of input variables.
+   *
+   * @param inStream The inStream to be reseted.
+   * @param currSrc  The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceSegments): SourceSegments = ???
+
+  /**
+   * Produces code reading the std input (variable inputStream and value) and passes it to the _value variable
+   * of an input stream.
+   *
+   * @param inStream The input stream to be handled
+   * @param typ      The input stream's type. Must be Events[...].
+   * @param currSrc  The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceInputFromConsoleCode(
+    inStream: Identifier,
+    typ: Type,
+    currSrc: SourceSegments
+  ): SourceSegments = ???
+
+  /**
+   * Produces code reading the std input (variable inputStream and value) and passes it to the _value variable
+   * of an input stream.
+   *
+   * @param inStream The input stream to be handled
+   * @param typ      The input stream's type. Must be Events[...].
+   * @param currSrc  The source listing the generated block is added to.
+   * @return The modified source listing
+   */
+  override def produceInputFromAPICode(
+    inStream: Identifier,
+    typ: Type,
+    currSrc: SourceSegments
+  ): SourceSegments = ???
+}

@@ -43,6 +43,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
   class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[String] {
 
     val rustCodeGenerator = new RustCodeGenerator(extSpec)
+    val rustStreamCodeGenerator = new RustStreamCodeGenerator(rustCodeGenerator)
 
     @tailrec
     final protected def externResolution(e: ExpressionArg): ExternExpression = e match {
@@ -76,9 +77,11 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
             case InstantiatedType("Events", _, _) =>
               definition match {
                 case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) =>
-                  translateExternSignalExpression(id, externResolution(e), args, typeArgs, srcSegments)
+                  rustStreamCodeGenerator
+                    .translateExternSignalExpression(id, externResolution(e), args, typeArgs, srcSegments)
                 case ApplicationExpression(e, args, _) =>
-                  translateExternSignalExpression(id, externResolution(e), args, Seq(), srcSegments)
+                  rustStreamCodeGenerator
+                    .translateExternSignalExpression(id, externResolution(e), args, Seq(), srcSegments)
                 case e =>
                   throw Diagnostics
                     .CoreASTError("Non valid stream defining expression cannot be translated", e.location)
@@ -122,120 +125,6 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
         .replace("//OUTPUT", srcSegments.output.mkString("\n"))
         .replace("//INPUT", srcSegments.input.mkString("\n"))
       rewrittenSource
-    }
-
-    /**
-     * Returns name if ea is an ExpressionRef otherwise an exception is thrown
-     * @param ea The expression to be examined
-     * @return Name of ea if it is an ExpressionRef
-     */
-    private def streamNameFromExpressionArg(ea: ExpressionArg): String = {
-      ea match {
-        case ExpressionRef(id, _, _) => "var_" + id.fullName
-        case e: Expression =>
-          throw Diagnostics
-            .CoreASTError("Required ExpressionRef, but Expression found. Non flat AST.", e.location)
-      }
-    }
-
-    /**
-     * Translates an assignment to a stream variable to the corresponding rust function and appends it to the
-     * correct source segment. The assigned expression has to be (and is always in TeSSLa Core) an application.
-     *
-     * @param id The id which is assigned (must be of stream type)
-     * @param e The expression which is applied with args and typeArgs and then assigned
-     * @param args The arguments passed to e
-     * @param typeArgs The type arguments passed to e
-     * @param srcSegments The source segments where the generated code is attached to. It is attached to the
-     *                   calculations section of the source.
-     */
-    def translateExternSignalExpression(
-      id: Identifier,
-      e: ExternExpression,
-      args: Seq[ExpressionArg],
-      typeArgs: Seq[Type],
-      srcSegments: SourceSegments
-    ): Unit = {
-      val output = s"var_${id.fullName}"
-      e.name match {
-        case "nil" =>
-          // TODO does this do anything ??
-          srcSegments.variables.append(s"let $output = init();")
-        case "default" =>
-          val default = rustCodeGenerator.translateExpressionArg(args(1), rustCodeGenerator.TypeArgManagement.empty)
-          srcSegments.variables.append(s"let $output = init_with_value($default);")
-          val stream = streamNameFromExpressionArg(args(0))
-          srcSegments.computation.append(s"default($output, $stream);")
-        case "defaultFrom" =>
-          srcSegments.variables.append(s"let $output = init();")
-          val stream = streamNameFromExpressionArg(args(0))
-          val default = streamNameFromExpressionArg(args(1))
-          srcSegments.computation.append(s"defaultFrom($output, $stream, $default);")
-        case "time" =>
-          srcSegments.variables.append(s"let $output = init();")
-          val stream = streamNameFromExpressionArg(args(0))
-          srcSegments.computation.append(s"time($output, $stream);")
-        case "last" =>
-          srcSegments.variables.append(s"let $output = init();")
-          val stream = streamNameFromExpressionArg(args(0))
-          val trigger = streamNameFromExpressionArg(args(1))
-          srcSegments.computation.append(s"last($output, $stream, $trigger);")
-          // TODO this will needs deduplication/different representation:
-          srcSegments.store.append(s"update_last($output);")
-        case "delay" =>
-          srcSegments.variables.append(s"let $output = init();")
-          val stream = streamNameFromExpressionArg(args(0))
-          val reset = streamNameFromExpressionArg(args(1))
-          srcSegments.computation.append(s"delay($output, $stream, $reset);")
-
-          /** TODO needs additional rust data-structure/timestamp code
-           * This needs to do something like this:
-           * if ${output}_nextTs > lastProcessedTs && currTs > ${output}_nextTs {
-           *   currTs = ${output}_nextTs;
-           * }
-           */
-          srcSegments.timestamp.append(s"interrupt_for_delay($output);")
-
-          /** TODO is there a reason for this being put /after/ the processing part?
-           * if ${stream}_changed {
-           *   if ${output}_changed && ${reset}_changed {
-           *     ${output}_nextTs = currTs + ${stream}_value
-           *   } else if (${reset}_changed) {
-           *     ${output}_nextTs = -1 //TODO this is supposed to stop the delay?
-           *   }
-           * }
-           */
-          srcSegments.output.append(s"reset_delay($output, $stream, $reset);")
-        case "lift" =>
-          srcSegments.variables.append(s"let $output = init();")
-          val arguments = args.dropRight(1).map(streamNameFromExpressionArg).mkString(", ")
-          val function = args.last
-          // TODO I think the lifted function expects the stream values to be wrapped in options?
-          // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
-          srcSegments.computation.append(s"lift($output, vec![$arguments], $function);")
-        case "slift" =>
-          srcSegments.variables.append(s"let $output = init();")
-          val arguments = args.dropRight(1).map(streamNameFromExpressionArg).mkString(", ")
-          val function = args.last
-          srcSegments.computation.append(s"slift($output, vec![$arguments], $function);")
-        /*case "merge" =>
-          produceMergeStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
-        case "count" =>
-          produceCountStepCode(id, args(0), currSource)
-        case "const" =>
-          produceConstStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
-        case "filter" =>
-          produceFilterStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
-        case "fold" =>
-          produceFoldStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), args(2), currSource)
-        case "reduce" =>
-          produceReduceStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
-        case "unitIf" =>
-          produceUnitIfStepCode(id, args(0), currSource)
-        case "pure" =>
-          producePureStepCode(id, typ.resultType.resolve(typeParamMap), args(0), currSource) */
-        case _ => throw Diagnostics.CommandNotSupportedError(e.toString)
-      }
     }
 
     /**
