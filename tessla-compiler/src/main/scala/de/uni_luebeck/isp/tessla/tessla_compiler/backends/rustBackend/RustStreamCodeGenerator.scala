@@ -406,81 +406,46 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
   }
 
   /**
-   * Add code for output generation to the source listing.
-   * It gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
+   * Add code for output generation to the source segments.
+   * The output gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
    * current timestamp) and has to be translated accordingly in the final code generation
    *
-   * @param id      The id of the stream to be printed
-   * @param t       id's type. Must be Events[...]
+   * @param id The id of the stream to be printed
+   * @param t id's type. Must be Events[...]
    * @param nameOpt The alias name of id for printing. Optional.
-   * @param raw     If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
-   * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
+   * @param raw If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
+   * @param srcSegments The source segments the generated block is added to.
+   *                There is code attached to the output segment.
    */
-  override def produceOutputToConsoleCode(
+  def produceOutputCode(
     id: Identifier,
     t: Type,
     nameOpt: Option[String],
-    currSrc: SourceSegments,
+    srcSegments: SourceSegments,
     raw: Boolean
-  ): SourceSegments = ???
+  ): Unit = {
+    val s = s"var_${id.fullName}"
+    val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName)).replace("\n", "\\n").replace("\r", "\\r")
+
+    // FIXME better to string conversion??
+
+    srcSegments.output.append(s"""output_stream($s, "$name", currTs, $raw);""")
+  }
 
   /**
-   * Add code for output generation to the source listing.
-   * It gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
-   * current timestamp) and has to be translated accordingly in the final code generation
-   *
-   * @param id      The id of the stream to be printed
-   * @param t       id's type. Must be Events[...]
-   * @param nameOpt The alias name of id for printing. Optional.
-   * @param raw     If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
-   * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
-   */
-  override def produceOutputToAPICode(
-    id: Identifier,
-    t: Type,
-    nameOpt: Option[String],
-    currSrc: SourceSegments,
-    raw: Boolean
-  ): SourceSegments = ???
-
-  /**
-   * Produces code resetting the changed flags of input variables.
-   *
-   * @param inStream The inStream to be reseted.
-   * @param currSrc  The source listing the generated block is added to.
-   * @return The modified source listing
-   */
-  override def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceSegments): SourceSegments = ???
-
-  /**
-   * Produces code reading the std input (variable inputStream and value) and passes it to the _value variable
-   * of an input stream.
+   * Produces code reading the input (variable inputStream and value) and storing it.
    *
    * @param inStream The input stream to be handled
    * @param typ      The input stream's type. Must be Events[...].
-   * @param currSrc  The source listing the generated block is added to.
-   * @return The modified source listing
+   * @param srcSegments  The source segments the generated block is added to.
+   *                 There is code attached to the input, and output section.
    */
-  override def produceInputFromConsoleCode(
-    inStream: Identifier,
-    typ: Type,
-    currSrc: SourceSegments
-  ): SourceSegments = ???
+  def produceInputCode(inStream: Identifier, typ: Type, srcSegments: SourceSegments): Unit = {
+    val s = s"var_${inStream.fullName}"
 
-  /**
-   * Produces code reading the std input (variable inputStream and value) and passes it to the _value variable
-   * of an input stream.
-   *
-   * @param inStream The input stream to be handled
-   * @param typ      The input stream's type. Must be Events[...].
-   * @param currSrc  The source listing the generated block is added to.
-   * @return The modified source listing
-   */
-  override def produceInputFromAPICode(
-    inStream: Identifier,
-    typ: Type,
-    currSrc: SourceSegments
-  ): SourceSegments = ???
+    srcSegments.input.append(s"""if inputStream == "${inStream.idOrName.left.get}" { get_value_from_input($s) }""")
+
+    // TODO not necessary for all streams:
+    // srcSegments.output.append(s"update_last($s);")
+  }
 }

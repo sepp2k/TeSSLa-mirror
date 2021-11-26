@@ -102,12 +102,18 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       // Produce output generation
       extSpec.spec.out.foreach { o =>
         val name = TesslaAST.Core.getOutputName(o._2)
-        produceOutputCode(o._1.id, getStreamType(o._1.id), name, srcSegments, o._2.contains("raw"))
+        rustStreamCodeGenerator.produceOutputCode(
+          o._1.id,
+          getStreamType(o._1.id),
+          name,
+          srcSegments,
+          o._2.contains("raw")
+        )
       }
 
       // Produce input consumption
       extSpec.spec.in.foreach { i =>
-        produceInputCode(i._1, i._2._1, srcSegments)
+        rustStreamCodeGenerator.produceInputCode(i._1, i._2._1, srcSegments)
       }
 
       insertSegments(srcSegments).replace("$", "___") // Rust does not like $ in names
@@ -142,57 +148,6 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
           .translateBody(body, result, rustCodeGenerator.TypeArgManagement.empty, extSpec.spec.definitions),
         "}"
       )
-    }
-
-    /**
-     * Add code for output generation to the source segments.
-     * The output gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
-     * current timestamp) and has to be translated accordingly in the final code generation
-     *
-     * @param id The id of the stream to be printed
-     * @param t id's type. Must be Events[...]
-     * @param nameOpt The alias name of id for printing. Optional.
-     * @param raw If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
-     * @param srcSegments The source segments the generated block is added to.
-     *                There is code attached to the output segment.
-     */
-    def produceOutputCode(
-      id: Identifier,
-      t: Type,
-      nameOpt: Option[String],
-      srcSegments: SourceSegments,
-      raw: Boolean
-    ): Unit = {
-      val s = s"var_${id.fullName}"
-      val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName)).replace("\n", "\\n").replace("\r", "\\r")
-
-      // FIXME better to string conversion??
-
-      if (ioInterface) {
-        srcSegments.output.append(s"""output_stream($s, "$name", currTs, $raw);""")
-      } else {
-        throw Diagnostics
-          .NotYetImplementedError("Output via IOInterface")
-      }
-    }
-
-    /**
-     * Produces code reading the input (variable inputStream and value) and storing it.
-     * For parsing the input string to an exact value a function __[TC]inputParse__ is called
-     * which has to be translated in the following phases.
-     *
-     * @param inStream The input stream to be handled
-     * @param typ      The input stream's type. Must be Events[...].
-     * @param srcSegments  The source segments the generated block is added to.
-     *                 There is code attached to the input, and output section.
-     */
-    def produceInputCode(inStream: Identifier, typ: Type, srcSegments: SourceSegments): Unit = {
-      val s = s"var_${inStream.fullName}"
-
-      srcSegments.input.append(s"""if inputStream == "${inStream.idOrName.left.get}" { get_value_from_input($s) }""")
-
-      // TODO not necessary for all streams:
-      // srcSegments.output.append(s"update_last($s);")
     }
   }
 }

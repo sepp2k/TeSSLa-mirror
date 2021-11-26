@@ -936,7 +936,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
    *                There is code attached to the tailSource section.
    * @return The modified source listing
    */
-  override def produceOutputToConsoleCode(
+  def produceOutputToConsoleCode(
     id: Identifier,
     t: Type,
     nameOpt: Option[String],
@@ -971,7 +971,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
    *                There is code attached to the tailSource section.
    * @return The modified source listing
    */
-  override def produceOutputToAPICode(
+  def produceOutputToAPICode(
     id: Identifier,
     t: Type,
     nameOpt: Option[String],
@@ -1019,7 +1019,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
    *                 There is code attached to the tailSource section.
    * @return The modified source listing
    */
-  override def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing): SourceListing = {
+  def produceInputUnchangeCode(inStream: Identifier, currSrc: SourceListing): SourceListing = {
     val s = s"var_${inStream.fullName}"
 
     val newTail =
@@ -1039,7 +1039,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
    *                 There is code attached to the inputProcessing section.
    * @return The modified source listing
    */
-  override def produceInputFromConsoleCode(inStream: Identifier, typ: Type, currSrc: SourceListing): SourceListing = {
+  def produceInputFromConsoleCode(inStream: Identifier, typ: Type, currSrc: SourceListing): SourceListing = {
     val s = s"var_${inStream.fullName}"
     val parseExp = typ match {
       case InstantiatedType("Events", Seq(RecordType(m, _)), _) if m.isEmpty => UnitValue
@@ -1073,7 +1073,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
    *                 There is code attached to the inputProcessing section.
    * @return The modified source listing
    */
-  override def produceInputFromAPICode(inStream: Identifier, typ: Type, currSrc: SourceListing): SourceListing = {
+  def produceInputFromAPICode(inStream: Identifier, typ: Type, currSrc: SourceListing): SourceListing = {
     val s = s"var_${inStream.fullName}"
     val ft = IntermediateCode.FunctionType(Seq(typ, LongType), VoidType)
 
