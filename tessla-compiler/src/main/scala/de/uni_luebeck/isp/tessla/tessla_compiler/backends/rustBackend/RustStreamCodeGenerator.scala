@@ -57,7 +57,7 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
   ): SourceSegments = {
     val output = s"var_${output_id.fullName}"
     val default = rustCodeGenerator.translateExpressionArg(default_expr, rustCodeGenerator.TypeArgManagement.empty)
-    currSrc.variables.append(s"let mut $output = init_with_value(&$default);")
+    currSrc.variables.append(s"let mut $output = init_with_value($default);")
     val stream = streamNameFromExpressionArg(stream_expr)
     currSrc.computation.append(s"default(&$output, &$stream);")
     currSrc
@@ -232,174 +232,207 @@ class RustStreamCodeGenerator(rustCodeGenerator: RustCodeGenerator)
   /**
    * Produces code for a x = merge(...) expression
    *
-   * @param id      The id merge is assigned to
-   * @param ot      The type of id. Must be Events[...]
-   * @param args    The stream expressions to be merged
+   * @param output_id      The id merge is assigned to
+   * @param output_type      The type of id. Must be Events[...]
+   * @param argument_exprs    The stream expressions to be merged
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
    */
   override def produceMergeStepCode(
-    id: Identifier,
-    ot: Type,
-    args: Seq[ExpressionArg],
+    output_id: Identifier,
+    output_type: Type,
+    argument_exprs: Seq[ExpressionArg],
     currSrc: SourceSegments
   ): SourceSegments = {
-    val output = s"var_${id.fullName}"
-    ???
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let mut $output = init();")
+    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a").mkString(", ")
+    currSrc.computation.append(s"merge(&$output, vec![$arguments]);")
+    currSrc
   }
 
   /**
    * Produces code for a x = count(...) expression
    *
-   * @param id        The id merge is assigned to
-   * @param cntStream Expression of the stream to be counted
+   * @param output_id        The id merge is assigned to
+   * @param count_stream_expr Expression of the stream to be counted
    * @param currSrc   The source listing the generated block is added to.
    * @return The modified source listing
    */
   override def produceCountStepCode(
-    id: Identifier,
-    cntStream: ExpressionArg,
+    output_id: Identifier,
+    count_stream_expr: ExpressionArg,
     currSrc: SourceSegments
   ): SourceSegments = {
-    val output = s"var_${id.fullName}"
-    ???
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let mut $output = init_with_value(0_i64);")
+    val count_stream = streamNameFromExpressionArg(count_stream_expr)
+    currSrc.computation.append(s"count(&$output, $count_stream);")
+    currSrc
   }
 
   /**
    * Produces code for a x = const(...) expression
    *
-   * @param id      The id merge is assigned to
-   * @param ot      Type of the output stream
-   * @param args    Argument expressions for const (const value, triggering stream)
+   * @param output_id    The id merge is assigned to
+   * @param output_type  Type of the output stream
+   * @param value_expr   Argument expressions for const value
+   * @param trigger_expr Argument expression for triggering stream
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
    */
   override def produceConstStepCode(
-    id: Identifier,
-    ot: Type,
-    args: Seq[ExpressionArg],
+    output_id: Identifier,
+    output_type: Type,
+    value_expr: ExpressionArg,
+    trigger_expr: ExpressionArg,
     currSrc: SourceSegments
   ): SourceSegments = {
-    val output = s"var_${id.fullName}"
-    ???
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let mut $output = init();")
+    val value = rustCodeGenerator.translateExpressionArg(value_expr, rustCodeGenerator.TypeArgManagement.empty)
+    val trigger = streamNameFromExpressionArg(trigger_expr)
+    currSrc.computation.append(s"const(&$output, $value, &$trigger);")
+    currSrc
   }
 
   /**
    * Produces code for a x = filter(...) expression
    *
-   * @param id      The id merge is assigned to
-   * @param ot      Type of the output stream
-   * @param args    Argument expressions for filter (value stream, condition stream)
+   * @param output_id      The id merge is assigned to
+   * @param output_type    Type of the output stream
+   * @param value_expr     Argument expressions for filter value stream
+   * @param condition_expr Argument expressions for filter condition stream
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
    */
   override def produceFilterStepCode(
-    id: Identifier,
-    ot: Type,
-    args: Seq[ExpressionArg],
+    output_id: Identifier,
+    output_type: Type,
+    value_expr: ExpressionArg,
+    condition_expr: ExpressionArg,
     currSrc: SourceSegments
   ): SourceSegments = {
-    val output = s"var_${id.fullName}"
-    ???
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let mut $output = init();")
+    val value = streamNameFromExpressionArg(value_expr)
+    val condition = streamNameFromExpressionArg(condition_expr)
+    currSrc.computation.append(s"filter(&$output, &$value, &$condition);")
+    currSrc
   }
 
   /**
    * Produces code for a x = fold(...) expression
    *
-   * @param id       The id merge is assigned to
-   * @param ot       Type of the output stream
-   * @param stream   Expression of the stream to be folded
-   * @param init     Expression of the initial value for the folding
-   * @param function Expression of the function used for folding
+   * @param output_id     The id merge is assigned to
+   * @param output_type   Type of the output stream
+   * @param stream_expr   Expression of the stream to be folded
+   * @param init_expr     Expression of the initial value for the folding
+   * @param function_expr Expression of the function used for folding
    * @param currSrc  The source listing the generated block is added to.
    * @return The modified source listing
    */
   override def produceFoldStepCode(
-    id: Identifier,
-    ot: Type,
-    stream: ExpressionArg,
-    init: ExpressionArg,
-    function: ExpressionArg,
+    output_id: Identifier,
+    output_type: Type,
+    stream_expr: ExpressionArg,
+    init_expr: ExpressionArg,
+    function_expr: ExpressionArg,
     currSrc: SourceSegments
   ): SourceSegments = {
-    val output = s"var_${id.fullName}"
-    ???
+    val output = s"var_${output_id.fullName}"
+    val init = rustCodeGenerator.translateExpressionArg(init_expr, rustCodeGenerator.TypeArgManagement.empty)
+    currSrc.variables.append(s"let mut $output = init_with_value($init);")
+    val stream = streamNameFromExpressionArg(stream_expr)
+    val function = rustCodeGenerator.translateExpressionArg(function_expr, rustCodeGenerator.TypeArgManagement.empty)
+    currSrc.computation.append(s"fold(&$output, &$stream, $function);")
+    currSrc
   }
 
   /**
    * Produces code for a x = reduce(...) expression
    *
-   * @param id       The id merge is assigned to
-   * @param ot       Type of the output stream
-   * @param stream   Expression of the stream to be reduced
-   * @param function Expression of the function used for reducing
+   * @param output_id     The id merge is assigned to
+   * @param output_type   Type of the output stream
+   * @param stream_expr   Expression of the stream to be reduced
+   * @param function_expr Expression of the function used for reducing
    * @param currSrc  The source listing the generated block is added to.
    * @return The modified source listing
    */
   override def produceReduceStepCode(
-    id: Identifier,
-    ot: Type,
-    stream: ExpressionArg,
-    function: ExpressionArg,
+    output_id: Identifier,
+    output_type: Type,
+    stream_expr: ExpressionArg,
+    function_expr: ExpressionArg,
     currSrc: SourceSegments
   ): SourceSegments = {
-    val output = s"var_${id.fullName}"
-    ???
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let mut $output = init();")
+    val stream = streamNameFromExpressionArg(stream_expr)
+    val function = rustCodeGenerator.translateExpressionArg(function_expr, rustCodeGenerator.TypeArgManagement.empty)
+    currSrc.computation.append(s"reduce(&$output, &$stream, $function);")
+    currSrc
   }
 
   /**
    * Produces code for a x = unitIf(...) expression
    *
-   * @param id      The id merge is assigned to
-   * @param cond    Expression of the stream with the condition for unitIf
+   * @param output_id      The id merge is assigned to
+   * @param condition_expr Expression of the stream with the condition for unitIf
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
    */
   override def produceUnitIfStepCode(
-    id: Identifier,
-    cond: ExpressionArg,
+    output_id: Identifier,
+    condition_expr: ExpressionArg,
     currSrc: SourceSegments
   ): SourceSegments = {
-    val output = s"var_${id.fullName}"
-    ???
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let mut $output = init();")
+    val condition = streamNameFromExpressionArg(condition_expr)
+    currSrc.computation.append(s"unitIf(&$output, &$condition);")
+    currSrc
   }
 
   /**
    * Produces code for a x = pure(...) expression
    *
-   * @param id        The id merge is assigned to
-   * @param ot        Type of the output stream
-   * @param valStream Stream to be filtered
+   * @param output_id   The id merge is assigned to
+   * @param output_type Type of the output stream
+   * @param stream_expr Stream to be filtered
    * @param currSrc   The source listing the generated block is added to.
    * @return The modified source listing
    */
   override def producePureStepCode(
-    id: Identifier,
-    ot: Type,
-    valStream: ExpressionArg,
+    output_id: Identifier,
+    output_type: Type,
+    stream_expr: ExpressionArg,
     currSrc: SourceSegments
   ): SourceSegments = {
-    val output = s"var_${id.fullName}"
-    ???
+    val output = s"var_${output_id.fullName}"
+    currSrc.variables.append(s"let mut $output = init();")
+    val stream = streamNameFromExpressionArg(stream_expr);
+    currSrc.computation.append(s"pure(&$output, &$stream);")
+    currSrc
   }
 
   /**
    * Produces code for a x = native:&lt;name&gt;(...) expression
    *
-   * @param id The id which is assigned (must be of stream type)
-   * @param ot The Type of the output stream
-   * @param name The function name which is applied with args and typeArgs and then assigned
-   * @param args The arguments passed to e
-   * @param typeArgs The type arguments passed to e
+   * @param output_id      The id which is assigned (must be of stream type)
+   * @param output_type    The Type of the output stream
+   * @param name           The function name which is applied with args and typeArgs and then assigned
+   * @param argument_exprs The arguments passed to e
+   * @param argument_types The type arguments passed to e
    * @param currSource The source listing where the generated code is attached to.
    * @return The modified source listing
    */
   override def produceNativeFunctionStepCode(
-    id: Identifier,
-    ot: Type,
+    output_id: Identifier,
+    output_type: Type,
     name: String,
-    args: Seq[ExpressionArg],
-    typeArgs: Seq[Type],
+    argument_exprs: Seq[ExpressionArg],
+    argument_types: Seq[Type],
     currSource: SourceSegments
   ): SourceSegments = {
     throw Diagnostics.CommandNotSupportedError(s"The translation of native:$name(...) is not implemented.")

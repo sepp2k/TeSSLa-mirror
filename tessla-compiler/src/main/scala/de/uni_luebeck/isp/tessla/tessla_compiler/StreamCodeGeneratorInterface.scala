@@ -51,9 +51,9 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
       case "count" =>
         produceCountStepCode(id, args(0), currSource)
       case "const" =>
-        produceConstStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
+        produceConstStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
       case "filter" =>
-        produceFilterStepCode(id, typ.resultType.resolve(typeParamMap), args, currSource)
+        produceFilterStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), currSource)
       case "fold" =>
         produceFoldStepCode(id, typ.resultType.resolve(typeParamMap), args(0), args(1), args(2), currSource)
       case "reduce" =>
@@ -266,15 +266,17 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
    * Produces code for a x = const(...) expression
    *
    * @param id The id merge is assigned to
-   *  @param ot Type of the output stream
-   * @param args Argument expressions for const (const value, triggering stream)
+   * @param ot Type of the output stream
+   * @param value Argument expressions for const value
+   * @param trigger Argument expression for triggering stream
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
    */
   def produceConstStepCode(
     id: Identifier,
     ot: Type,
-    args: Seq[ExpressionArg],
+    value: ExpressionArg,
+    trigger: ExpressionArg,
     currSrc: CollectionType
   ): CollectionType
 
@@ -283,14 +285,16 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
    *
    * @param id The id merge is assigned to
    * @param ot Type of the output stream
-   * @param args Argument expressions for filter (value stream, condition stream)
+   * @param value Argument expressions for filter value stream
+   * @param condition Argument expressions for filter condition stream
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
    */
   def produceFilterStepCode(
     id: Identifier,
     ot: Type,
-    args: Seq[ExpressionArg],
+    value: ExpressionArg,
+    condition: ExpressionArg,
     currSrc: CollectionType
   ): CollectionType
 

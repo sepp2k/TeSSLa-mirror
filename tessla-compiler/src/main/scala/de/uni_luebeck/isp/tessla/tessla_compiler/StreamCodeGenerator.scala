@@ -582,8 +582,9 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
    * Produces ImpLan code for a x = const(...) expression
    *
    * @param id The id merge is assigned to
-   *  @param ot Type of the output stream
-   * @param args Argument expressions for const (const value, triggering stream)
+   * @param ot Type of the output stream
+   * @param value Argument expressions for const value
+   * @param trigger Argument expression for triggering stream
    * @param currSrc The source listing the generated block is added to.
    *                There is code attached to the stepSource section.
    * @return The modified source listing
@@ -591,14 +592,15 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
   override def produceConstStepCode(
     id: Identifier,
     ot: Type,
-    args: Seq[ExpressionArg],
+    value: ExpressionArg,
+    trigger: ExpressionArg,
     currSrc: SourceListing
   ): SourceListing = {
 
     val o = s"var_${id.fullName}"
-    val (t, _) = streamNameAndTypeFromExpressionArg(args(1))
+    val (t, _) = streamNameAndTypeFromExpressionArg(trigger)
     val constVal =
-      nonStreamCodeGenerator.translateExpressionArg(args(0), nonStreamCodeGenerator.TypeArgManagement.empty)
+      nonStreamCodeGenerator.translateExpressionArg(value, nonStreamCodeGenerator.TypeArgManagement.empty)
     val ueError =
       FunctionCall(
         "__[TC]UnknownEventError__",
@@ -632,7 +634,8 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
    *
    * @param id The id merge is assigned to
    * @param ot Type of the output stream
-   * @param args Argument expressions for filter (value stream, condition stream)
+   * @param value Argument expressions for filter value stream
+   * @param condition Argument expressions for filter condition stream
    * @param currSrc The source listing the generated block is added to.
    *                There is code attached to the stepSource section.
    * @return The modified source listing
@@ -640,12 +643,13 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
   override def produceFilterStepCode(
     id: Identifier,
     ot: Type,
-    args: Seq[ExpressionArg],
+    value: ExpressionArg,
+    condition: ExpressionArg,
     currSrc: SourceListing
   ): SourceListing = {
     val o = s"var_${id.fullName}"
-    val (v, _) = streamNameAndTypeFromExpressionArg(args(0))
-    val (f, _) = streamNameAndTypeFromExpressionArg(args(1))
+    val (v, _) = streamNameAndTypeFromExpressionArg(value)
+    val (f, _) = streamNameAndTypeFromExpressionArg(condition)
 
     val newStmt = currSrc.stepSource
       .Assignment(s"${o}_changed", BoolValue(false), BoolValue(false), BoolType)
