@@ -23,7 +23,7 @@ import scala.annotation.tailrec
 /**
  * Abstract base class for the translation of stream code
  */
-abstract class StreamCodeGeneratorInterface[CollectionType] {
+abstract class StreamCodeGeneratorInterface[CollectionType, ReturnType] {
 
   /**
    * Translates an assignment to a stream variable and attaches it in a given
@@ -42,7 +42,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     args: Seq[ExpressionArg],
     typeArgs: Seq[Type],
     currSource: CollectionType
-  ): CollectionType = {
+  ): ReturnType = {
     val typ = e.tpe.asInstanceOf[FunctionType]
     val typeParamMap = typ.typeParams.zip(typeArgs).toMap
     e.name match {
@@ -114,7 +114,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     expression: DefinitionExpression,
     definitions: Map[Identifier, DefinitionExpression],
     currSrc: CollectionType
-  ): CollectionType = {
+  ): ReturnType = {
     expression match {
       case ApplicationExpression(TypeApplicationExpression(e, typeArgs, _), args, _) =>
         translateExternSignalExpression(id, externResolution(e, definitions), args, typeArgs, currSrc)
@@ -134,7 +134,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
    */
-  def produceNilStepCode(id: Identifier, ot: Type, currSrc: CollectionType): CollectionType
+  def produceNilStepCode(id: Identifier, ot: Type, currSrc: CollectionType): ReturnType
 
   /**
    * Produces code for a x = default(...) expression
@@ -152,7 +152,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     stream: ExpressionArg,
     defVal: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = defaultFrom(...) expression
@@ -170,7 +170,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     stream: ExpressionArg,
     default: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = time(...) expression
@@ -180,7 +180,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
    */
-  def produceTimeStepCode(id: Identifier, stream: ExpressionArg, currSrc: CollectionType): CollectionType
+  def produceTimeStepCode(id: Identifier, stream: ExpressionArg, currSrc: CollectionType): ReturnType
 
   /**
    * Produces code for a x = last(...) expression
@@ -198,7 +198,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     values: ExpressionArg,
     clock: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = delay(...) expression
@@ -214,7 +214,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     delay: ExpressionArg,
     reset: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = lift(...) expression
@@ -232,7 +232,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     args: Seq[ExpressionArg],
     function: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = slift(...) expression
@@ -250,7 +250,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     args: Seq[ExpressionArg],
     function: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = merge(...) expression
@@ -266,7 +266,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     ot: Type,
     args: Seq[ExpressionArg],
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = count(...) expression
@@ -276,7 +276,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
    */
-  def produceCountStepCode(id: Identifier, cntStream: ExpressionArg, currSrc: CollectionType): CollectionType
+  def produceCountStepCode(id: Identifier, cntStream: ExpressionArg, currSrc: CollectionType): ReturnType
 
   /**
    * Produces code for a x = const(...) expression
@@ -294,7 +294,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     value: ExpressionArg,
     trigger: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = filter(...) expression
@@ -312,7 +312,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     value: ExpressionArg,
     condition: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = fold(...) expression
@@ -332,7 +332,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     init: ExpressionArg,
     function: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = reduce(...) expression
@@ -350,7 +350,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     stream: ExpressionArg,
     function: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = unitIf(...) expression
@@ -364,7 +364,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     id: Identifier,
     cond: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = pure(...) expression
@@ -380,7 +380,7 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     ot: Type,
     valStream: ExpressionArg,
     currSrc: CollectionType
-  ): CollectionType
+  ): ReturnType
 
   /**
    * Produces code for a x = native:&lt;name&gt;(...) expression
@@ -400,5 +400,5 @@ abstract class StreamCodeGeneratorInterface[CollectionType] {
     args: Seq[ExpressionArg],
     typeArgs: Seq[Type],
     currSource: CollectionType
-  ): CollectionType
+  ): ReturnType
 }

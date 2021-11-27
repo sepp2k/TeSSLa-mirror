@@ -27,7 +27,7 @@ import scala.language.{implicitConversions, postfixOps}
  */
 
 class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
-    extends StreamCodeGeneratorInterface[SourceListing] {
+    extends StreamCodeGeneratorInterface[SourceListing, SourceListing] {
 
   /**
    * Returns name and type if ea is an ExpressionRef otherwise an exception is thrown
