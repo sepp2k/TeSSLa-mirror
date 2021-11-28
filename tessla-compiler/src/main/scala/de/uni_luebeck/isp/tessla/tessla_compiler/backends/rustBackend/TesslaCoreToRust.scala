@@ -20,7 +20,6 @@ import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Diagnostics, ExtendedSpecification}
-import jdk.nashorn.api.tree.FunctionExpressionTree
 
 import scala.annotation.tailrec
 import scala.io.Source
@@ -42,8 +41,8 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
 
   class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[String] {
 
-    val rustCodeGenerator = new RustCodeGenerator(extSpec)
-    val rustStreamCodeGenerator = new RustStreamCodeGenerator(rustCodeGenerator)
+    val rustNonStreamCodeGenerator = new RustNonStreamCodeGenerator(extSpec)
+    val rustStreamCodeGenerator = new RustStreamCodeGenerator(rustNonStreamCodeGenerator)
 
     @tailrec
     final protected def externResolution(e: ExpressionArg): ExternExpression = e match {
@@ -124,10 +123,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       rewrittenSource
     }
 
-    /**
-     *
-     */
-    def translateStaticFunction(
+    private def translateStaticFunction(
       id: Identifier,
       params: List[(Identifier, Evaluation, Type)],
       body: Map[Identifier, DefinitionExpression],
@@ -135,8 +131,8 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     ): Set[String] = {
       Set(
         s"fn fun_$id(${params.map { case (id, _, tpe) => s"$id: ${RustUtils.convertType(tpe)}" }.mkString(", ")}) {",
-        rustCodeGenerator
-          .translateBody(body, result, rustCodeGenerator.TypeArgManagement.empty, extSpec.spec.definitions),
+        rustNonStreamCodeGenerator
+          .translateBody(body, result, rustNonStreamCodeGenerator.TypeArgManagement.empty, extSpec.spec.definitions),
         "}"
       )
     }

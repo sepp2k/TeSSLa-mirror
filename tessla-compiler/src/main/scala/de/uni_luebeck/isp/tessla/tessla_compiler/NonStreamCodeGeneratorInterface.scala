@@ -106,7 +106,7 @@ abstract class NonStreamCodeGeneratorInterface[ExpressionType, StatementType](ex
   ): ExpressionType
 
   /**
-   * Translates an ExpressionArg to a corresponding Expression
+   * Translates an ExpressionArg to a corresponding expression
    * @param e The expression to be translated
    * @param tm The [[TypeArgManagement]] to resolve type parameters
    * @param defContext Definition context depicting all var names in the current scope to their definition expression
