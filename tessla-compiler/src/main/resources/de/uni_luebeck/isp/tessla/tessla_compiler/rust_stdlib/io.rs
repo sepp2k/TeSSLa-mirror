@@ -44,7 +44,7 @@ pub fn output_var(output: &str, true_name: &str, error: &str, ts: i64, raw: bool
     }
 }
 
-pub fn parse_input(&&input_stream_name: &mut String, &&input_stream_value : &mut String) -> bool {
+pub fn parse_input(&&input_stream_name: &mut String, &&input_stream_value: &mut String) -> bool {
     let mut line = String::new();
     let mut reached_eof = false;
 

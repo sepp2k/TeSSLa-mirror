@@ -20,7 +20,7 @@ impl Stream<T> {
     }
 
     #[inline]
-    pub const fn init_with_value(value : T) -> Stream<T> {
+    pub const fn init_with_value(value: T) -> Stream<T> {
         Stream {
             value: Some(Ok(value)),
             last: None,
@@ -30,13 +30,13 @@ impl Stream<T> {
 
     // -- STEP FUNCTIONS --
 
-    pub const fn default(&Stream<T> output, &Stream<T> input) {
+    pub const fn default(output: &Stream<T>, input: &Stream<T>) {
         if (input.has_changed()) {
             output.set_value(input);
         }
     }
 
-    pub const fn merge(streams : Vec<&Stream<T>>, out : &mut Stream<T>) {
+    pub const fn merge(streams: Vec<&Stream<T>>, out: &mut Stream<T>) {
         for stream in streams {
             if stream.has_changed() {
                 out.set_value(&stream);
@@ -54,7 +54,7 @@ impl Stream<T> {
         self.value.is_some();
     }
 
-    pub fn set_value(&mut self, other : &Stream<T>) {
+    pub fn set_value(&mut self, other: &Stream<T>) {
         self.value = other.value.clone();
         self.unknown = other.unknown;
     }
