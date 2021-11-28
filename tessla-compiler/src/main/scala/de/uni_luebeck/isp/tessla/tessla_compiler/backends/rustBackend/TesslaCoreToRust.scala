@@ -128,13 +128,11 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       params: List[(Identifier, Evaluation, Type)],
       body: Map[Identifier, DefinitionExpression],
       result: ExpressionArg
-    ): Set[String] = {
-      Set(
-        s"fn fun_$id(${params.map { case (id, _, tpe) => s"$id: ${RustUtils.convertType(tpe)}" }.mkString(", ")}) {",
-        rustNonStreamCodeGenerator
-          .translateBody(body, result, rustNonStreamCodeGenerator.TypeArgManagement.empty, extSpec.spec.definitions),
-        "}"
-      )
+    ): Seq[String] = {
+      (s"fn fun_$id(${params.map { case (id, _, tpe) => s"$id: ${RustUtils.convertType(tpe)}" }.mkString(", ")}) {"
+        +: rustNonStreamCodeGenerator
+          .translateBody(body, result, rustNonStreamCodeGenerator.TypeArgManagement.empty, extSpec.spec.definitions)
+        :+ "}")
     }
   }
 }
