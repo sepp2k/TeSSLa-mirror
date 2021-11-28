@@ -83,13 +83,13 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       definedIdentifiers += (id -> FinalLazyDeclaration)
       val inlinedExp = inlineVars(e, defContext)
       // TODO how exactly do we handle this
-      s"const lazy_var_$id = ${translateExpressionArg(inlinedExp, tm, defContext)};"
+      s"let lazy_var_$id = ${translateExpressionArg(inlinedExp, tm, defContext)};"
     } else if (finalAssignmentPossible(e)) {
       definedIdentifiers += (id -> FinalDeclaration)
-      s"const var_$id = ${translateExpressionArg(e, tm, defContext)};"
+      s"let var_$id = ${translateExpressionArg(e, tm, defContext)};"
     } else {
       definedIdentifiers += (id -> VariableDeclaration)
-      s"let var_$id = ${translateExpressionArg(e, tm, defContext)};"
+      s"let mut var_$id = ${translateExpressionArg(e, tm, defContext)};"
     }
   }
 
