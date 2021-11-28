@@ -27,8 +27,8 @@ import scala.io.Source
 /**
  * Class implementing TranslationPhase for the translation from TeSSLa Core to
  * rust code
- * The translation of stream functions is performed in StreamCodeGenerator TODO
- * The translation of other expressions in NonStreamCodeGenerator TODO
+ * The translation of stream functions is performed in RustStreamCodeGenerator
+ * The translation of other expressions in RustNonStreamCodeGenerator
  * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
  */
 class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSpecification, String] {
@@ -132,7 +132,9 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       body: Map[Identifier, DefinitionExpression],
       result: ExpressionArg
     ): Seq[String] = {
-      (s"fn fun_$id(${params.map { case (id, _, tpe) => s"$id: ${RustUtils.convertType(tpe)}" }.mkString(", ")}) {"
+      val genericTypes = params.collect { case (_, _, TypeParam(name, _)) => name }
+      val typeParams = if (genericTypes.nonEmpty) s"<${genericTypes.mkString(", ")}>" else ""
+      (s"fn fun_$id$typeParams(${params.map { case (id, _, tpe) => s"$id: ${RustUtils.convertType(tpe)}" }.mkString(", ")}) {"
         +: rustNonStreamCodeGenerator
           .translateBody(body, result, rustNonStreamCodeGenerator.TypeArgManagement.empty, extSpec.spec.definitions)
         :+ "}")

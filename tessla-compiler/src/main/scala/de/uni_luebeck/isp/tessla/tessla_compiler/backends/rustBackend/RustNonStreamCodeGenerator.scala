@@ -202,7 +202,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           defContext
         )
       case StringLiteralExpression(value, _) =>
-        s"""\"$value\""""
+        s"""\"${value.replace("\"", "\\\"")}\""""
       case IntLiteralExpression(value, _) =>
         s"${value.toLong}_i64"
       case FloatLiteralExpression(value, _) =>

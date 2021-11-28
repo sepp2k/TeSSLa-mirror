@@ -63,7 +63,7 @@ object RustUtils {
         val types = sortedEntries.map { case (_, t) => convertType(t._1) }
         s"(${types.mkString(", ")})"
       }
-      case TypeParam(name, _) => s"TypeId[$name]" // TODO GeneralType, we kinda don't want this in rust
+      case TypeParam(name, _) => name.toString
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
