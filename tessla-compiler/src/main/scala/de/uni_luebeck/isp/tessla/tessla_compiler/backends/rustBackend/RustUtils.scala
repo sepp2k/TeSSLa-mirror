@@ -70,6 +70,28 @@ object RustUtils {
   }
 
   /**
+   * Extracts all [[TypeParam]] generic types used in a list of types
+   *
+   * @param types a list of types
+   * @return a [[Set]] containing the names of all generic types used
+   */
+  def getGenericTypeNames(types: Iterable[Type]): Set[Identifier] = {
+    types
+      .collect {
+        case InstantiatedType(_, Seq(), _) => Seq()
+        case InstantiatedType(_, types, _) => getGenericTypeNames(types)
+        case FunctionType(_, paramTypes, resultType, _) =>
+          (getGenericTypeNames(paramTypes.map { case (_, typ) => typ })
+            ++ getGenericTypeNames(Seq(resultType)))
+        case RecordType(entries, _) =>
+          getGenericTypeNames(entries.map { case (_, (t, _)) => t })
+        case TypeParam(name, _) => Seq(name)
+      }
+      .flatten
+      .toSet
+  }
+
+  /**
    * Performs the translation of calls to built-in function to a Rust expression
    * Note: Mutable datastructures are not yet handled on this branch since they are not generated
    * @param name Name of the function which is called

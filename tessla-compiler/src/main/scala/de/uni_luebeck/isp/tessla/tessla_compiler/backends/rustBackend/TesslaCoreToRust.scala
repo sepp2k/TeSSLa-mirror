@@ -132,8 +132,8 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       body: Map[Identifier, DefinitionExpression],
       result: ExpressionArg
     ): Seq[String] = {
-      val genericTypes = params.collect { case (_, _, TypeParam(name, _)) => name }
-      val typeParams = if (genericTypes.nonEmpty) s"<${genericTypes.mkString(", ")}>" else ""
+      val genericTypeNames = RustUtils.getGenericTypeNames(params.map { case (_, _, typ) => typ })
+      val typeParams = if (genericTypeNames.nonEmpty) s"<${genericTypeNames.mkString(", ")}>" else ""
       (s"fn fun_$id$typeParams(${params.map { case (id, _, tpe) => s"$id: ${RustUtils.convertType(tpe)}" }.mkString(", ")}) {"
         +: rustNonStreamCodeGenerator
           .translateBody(body, result, rustNonStreamCodeGenerator.TypeArgManagement.empty, extSpec.spec.definitions)
