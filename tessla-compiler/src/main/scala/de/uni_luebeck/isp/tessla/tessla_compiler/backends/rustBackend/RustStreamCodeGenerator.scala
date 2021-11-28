@@ -475,7 +475,12 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     raw: Boolean
   ): Unit = {
     val s = s"var_${id.fullName}"
-    val name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName)).replace("\n", "\\n").replace("\r", "\\r")
+    val name = nameOpt
+      .getOrElse(id.idOrName.left.getOrElse(id.fullName))
+      .replace("\n", "\\n")
+      .replace("\r", "\\r")
+      .replace("\"", "\\\"")
+      .replace("$", "\\$")
 
     // FIXME better to string conversion??
 

@@ -106,7 +106,10 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
         rustStreamCodeGenerator.produceInputCode(i._1, i._2._1, srcSegments)
       }
 
-      insertSegments(srcSegments).replace("$", "___") // Rust does not like $ in names
+      insertSegments(srcSegments)
+      // Rust does not like $ in names
+        .replace("$", "京")
+        .replace("\\京", "$")
     }
 
     private def insertSegments(srcSegments: SourceSegments): String = {
