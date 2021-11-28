@@ -54,7 +54,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         val newTm = tm.parsKnown(typ.typeParams)
         val resultType = RustUtils.convertType(typ.resultType.resolve(newTm.resMap))
         val paramTypes = typ.paramTypes.map { case (_, t) => RustUtils.convertType(t.resolve(newTm.resMap)) }
-        s"__${name}__(...)" // TODO
+        // TODO find out if we possibly need to type-cast params or the expression to match the expected signature
+        RustUtils.translateBuiltinFunctionCall(s"__${name}__", args, typ)
       case e: ExternExpression => translateExtern(e, tm, defContext)
       case _: FunctionExpression | _: ExpressionRef | _: ApplicationExpression | _: RecordAccessorExpression =>
         s"${translateExpressionArg(e, tm, defContext)}(${args.mkString(", ")})"
