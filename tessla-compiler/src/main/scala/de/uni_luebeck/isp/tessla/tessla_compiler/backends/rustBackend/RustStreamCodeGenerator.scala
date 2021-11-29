@@ -130,7 +130,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, IntType, "init()", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
-    currSrc.computation.append(s"$output.time(&$stream);")
+    currSrc.computation.append(s"$output.time(&$stream, state.current_ts);")
   }
 
   /**
@@ -218,7 +218,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
-    );
+    )
     // TODO I think the lifted function expects the stream values to be wrapped in options?
     // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
     currSrc.computation.append(s"$output.lift${arguments.size}(${arguments.mkString(", ")}, $function);")
@@ -266,8 +266,8 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     currSrc: SourceSegments
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
-    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a").mkString(", ")
-    currSrc.computation.append(s"$output.merge(vec![$arguments]);")
+    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
+    currSrc.computation.append(s"$output.merge${arguments.size}(${arguments.mkString(", ")});")
   }
 
   /**
@@ -309,7 +309,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val value =
       rustNonStreamCodeGenerator.translateExpressionArg(value_expr, rustNonStreamCodeGenerator.TypeArgManagement.empty)
     val trigger = streamNameFromExpressionArg(trigger_expr)
-    currSrc.computation.append(s"$output.const($value, &$trigger);")
+    currSrc.computation.append(s"$output.constant($value, &$trigger);")
   }
 
   /**
@@ -425,7 +425,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     currSrc: SourceSegments
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
-    val stream = streamNameFromExpressionArg(stream_expr);
+    val stream = streamNameFromExpressionArg(stream_expr)
     currSrc.computation.append(s"$output.pure(&$stream);")
   }
 
@@ -459,7 +459,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * current timestamp) and has to be translated accordingly in the final code generation
    *
    * @param id The id of the stream to be printed
-   * @param t id's type. Must be Events[...]
+   * @param typ id's type. Must be Events[...]
    * @param nameOpt The alias name of id for printing. Optional.
    * @param raw If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
    * @param srcSegments The source segments the generated block is added to.
