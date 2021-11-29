@@ -175,5 +175,9 @@ impl<T> Stream<T> where T: Clone {
         }
     }
 
-
+    pub fn last(&mut self, values: &Stream<T>, trigger: &Stream<U>){
+        if trigger.has_changed() {
+            self.set_value(values.last);
+        }
+    }
 }
