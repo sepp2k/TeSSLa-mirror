@@ -95,6 +95,30 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   }
 
   /**
+   * Translates a global function definition from TeSSLa Core into a static Rust function
+   * @param id The id which is assigned
+   * @param definition The function definition
+   * @return The translated function
+   */
+  def translateStaticFunction(
+    id: Identifier,
+    definition: DefinitionExpression
+  ): Seq[String] = {
+    definition match {
+      case FunctionExpression(_, params, body, result, _) =>
+        val genericTypeNames = RustUtils.getGenericTypeNames(params.map { case (_, _, typ) => typ })
+        val typeParams = if (genericTypeNames.nonEmpty) s"<${genericTypeNames.mkString(", ")}>" else ""
+        val functionParams = params.map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe)}" }
+        val returnType = RustUtils.convertType(result.tpe)
+        (s"fn fun_$id$typeParams(${functionParams.mkString(", ")}) -> $returnType {"
+          +: translateBody(body, result, TypeArgManagement.empty, extSpec.spec.definitions)
+          :+ "}")
+      case e =>
+        throw Diagnostics.CoreASTError("Non valid function expression cannot be translated", e.location)
+    }
+  }
+
+  /**
    * Translates a TeSSLa Core FunctionExpression to a Rust expression
    * @param e The function to be translated
    * @param tm The [[TypeArgManagement]] to resolve type parameters
@@ -111,7 +135,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val arguments = e.params
       .map {
         case (id, StrictEvaluation, tpe) => if (id.fullName == "_") "_" else s"var_$id"
-        case (id, LazyEvaluation, tpe)   => if (id.fullName == "_") "_" else s"lazy_var_$id" // TODO how to handle lazy...
+        case (id, LazyEvaluation, tpe) =>
+          if (id.fullName == "_") "_" else s"var_$id /* lazy */" // TODO how to handle lazy...
       }
       .mkString(", ")
     s"|$arguments| {\n" +
@@ -135,8 +160,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   ): Seq[String] = {
     val newDefContext = defContext ++ body
 
-    val translatedBody = DefinitionOrdering.order(body) map {
-      case (id, exp) => translateAssignment(id, exp, tm, newDefContext)
+    val translatedBody = DefinitionOrdering.order(body) collect {
+      case (id, exp) if !extSpec.inlining.get.contains(id) => translateAssignment(id, exp, tm, newDefContext)
     }
     translatedBody :+ s"return ${translateExpressionArg(ret, tm, newDefContext)};"
   }

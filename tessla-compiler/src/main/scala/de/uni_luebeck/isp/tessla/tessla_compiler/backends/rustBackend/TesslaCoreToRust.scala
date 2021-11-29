@@ -77,12 +77,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
               rustStreamCodeGenerator
                 .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
             case FunctionType(_, _, _, _) =>
-              definition match {
-                case FunctionExpression(_, params, body, result, _) =>
-                  srcSegments.static.appendAll(translateStaticFunction(id, params, body, result))
-                case e =>
-                  throw Diagnostics.CoreASTError("Non valid function expression cannot be translated", e.location)
-              }
+              srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
             case e =>
               throw Diagnostics
                 .NotYetImplementedError("Failed to translate an expression without instantiated type", e.location)
@@ -145,22 +140,6 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
         .replace("//OUTPUT", srcSegments.output.mkString("\n"))
         .replace("//INPUT", srcSegments.input.mkString("\n"))
       rewrittenSource
-    }
-
-    private def translateStaticFunction(
-      id: Identifier,
-      params: List[(Identifier, Evaluation, Type)],
-      body: Map[Identifier, DefinitionExpression],
-      result: ExpressionArg
-    ): Seq[String] = {
-      val genericTypeNames = RustUtils.getGenericTypeNames(params.map { case (_, _, typ) => typ })
-      val typeParams = if (genericTypeNames.nonEmpty) s"<${genericTypeNames.mkString(", ")}>" else ""
-      val functionParams = params.map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe)}" }
-      val returnType = RustUtils.convertType(result.tpe)
-      (s"fn fun_$id$typeParams(${functionParams.mkString(", ")}) -> $returnType {"
-        +: rustNonStreamCodeGenerator
-          .translateBody(body, result, rustNonStreamCodeGenerator.TypeArgManagement.empty, extSpec.spec.definitions)
-        :+ "}")
     }
   }
 }
