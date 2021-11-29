@@ -31,20 +31,15 @@ pub fn process_string_input(string: &str) -> String {
     }
 }
 
-pub fn output_var(output: &str, true_name: &str, error: &str, ts: i64, raw: bool) {
-    if error.is_empty() {
-        if raw {
-            println!("{}", output);
-        } else {
-            println!("{}: {} = {}", ts, true_name, output);
-        }
+pub fn output_var(output: &str, true_name: &str, ts: i64, raw: bool) {
+    if raw {
+        println!("{}", output);
     } else {
-        eprintln!("{}: FATAL: {} evaluation encountered an error:\n{}", ts, true_name, error);
-        exit(1);
+        println!("{}: {} = {}", ts, true_name, output);
     }
 }
 
-pub fn parse_input(&&input_stream_name: &mut String, &&input_stream_value: &mut String) -> bool {
+pub fn parse_input(input_stream_name: &mut String, input_stream_value: &mut String, new_input_ts: &mut i64) -> bool {
     let mut line = String::new();
     let mut reached_eof = false;
 
@@ -57,7 +52,7 @@ pub fn parse_input(&&input_stream_name: &mut String, &&input_stream_value: &mut 
                 Some(value) => value,
                 None => panic!("ERROR parsing input '{}'", line.trim())
             };
-            newInputTs = match i64::from_str(timestamp) {
+            *new_input_ts = match i64::from_str(timestamp) {
                 Ok(value) => value,
                 Err(err) => panic!("ERROR failed to parse timestamp:\n{}", err)
             };
@@ -68,7 +63,7 @@ pub fn parse_input(&&input_stream_name: &mut String, &&input_stream_value: &mut 
                 },
                 None => {
                     *input_stream_name = input_expression.trim().to_string();
-                    *input_stream_value = "";
+                    *input_stream_value = String::new();
                 }
             };
         }

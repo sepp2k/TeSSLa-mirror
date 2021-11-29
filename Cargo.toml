@@ -1,0 +1,20 @@
+[workspace]
+
+[package]
+name = "rust_tessla"
+version = "0.0.0"
+
+[dependencies]
+tessla_stdlib = { path = "./tessla-compiler/src/main/resources/de/uni_luebeck/isp/tessla/stdlib/rust" }
+
+#[[bin]]
+#name = "rust_skeleton"
+#path = "tessla-compiler/src/main/resources/de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs"
+
+#[[bin]]
+#name = "rust_skeleton-noio"
+#path = "tessla-compiler/src/main/resources/de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeletonNoIO.rs"
+
+[[bin]]
+name = "out"
+path = "out.rs"
