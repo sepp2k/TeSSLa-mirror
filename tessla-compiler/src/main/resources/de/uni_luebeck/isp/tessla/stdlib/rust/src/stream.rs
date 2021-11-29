@@ -99,6 +99,41 @@ impl<T> Stream<T> where T: Clone {
         }
     }
 
+    pub fn lift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(U0) -> T)
+        where U0: Clone{
+        if arg0.has_changed() {
+            self.set_value(function(arg0.value.clone()));
+        }
+    }
+
+    pub fn lift2<U0, U1>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, function: fn(U0, U1) -> T)
+        where U0: Clone, U1: Clone{
+        if arg0.has_changed() || arg1.has_changed(){
+            self.set_value(function(arg0.value.clone(),arg1.value.clone()));
+        }
+    }
+
+    pub fn lift3<U0, U1, U2>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, function: fn(U0, U1, U2) -> T)
+        where U0: Clone, U1: Clone, U2: Clone{
+        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed(){
+            self.set_value(function(arg0.value.clone(),arg1.value.clone(),arg2.value.clone()));
+        }
+    }
+
+    pub fn lift4<U0, U1, U2, U3>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, function: fn(U0, U1, U2, U3) -> T)
+        where U0: Clone, U1: Clone, U2: Clone, U3: Clone{
+        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed(){
+            self.set_value(function(arg0.value.clone(),arg1.value.clone(),arg2.value.clone(),arg3.value.clone()));
+        }
+    }
+
+    pub fn lift5<U0, U1, U2, U3, U4>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, arg4: &Stream<U4>, function: fn(U0, U1, U2, U3, U4) -> T)
+        where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone{
+        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() || arg4.has_changed() {
+            self.set_value(function(arg0.value.clone(),arg1.value.clone(),arg2.value.clone(),arg3.value.clone(),arg4.value.clone()));
+        }
+    }
+
     // TODO I think we need a single slift for each number of arguments...
     pub fn slift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(U0) -> T)
         where U0: Clone {
