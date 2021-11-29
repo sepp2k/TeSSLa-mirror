@@ -32,9 +32,7 @@ import scala.io.Source
  * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
  */
 class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSpecification, String] {
-  private val sourceTemplate: String = /*
-    if (ioInterface) "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs"
-    else */ "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeletonNoIO.rs"
+  private val sourceTemplate: String = "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeletonNoIO.rs"
 
   override def translate(extSpec: ExtendedSpecification): Result[String] =
     new Translator(extSpec).translate()

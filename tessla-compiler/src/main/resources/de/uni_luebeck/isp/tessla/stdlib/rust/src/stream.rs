@@ -40,6 +40,11 @@ impl<T> Stream<T> where T: Clone {
         self.unknown = other.unknown;
     }
 
+    pub fn set_result(&mut self, result: Result<T, &'static str>) {
+        self.value = Some(result);
+        self.unknown = false;
+    }
+
     pub fn set_value(&mut self, value: T) {
         self.value = Some(Ok(value));
         self.unknown = false;
