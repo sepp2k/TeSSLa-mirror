@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 pub type StreamValue<T> = Option<Result<T, &'static str>>;
 
 pub struct Stream<T> where T: Clone {
@@ -66,11 +68,23 @@ impl<T> Stream<T> where T: Clone {
         self.value.clone().unwrap().unwrap()
     }
 
+    pub fn unwrap_last(&self) -> T {
+        self.last.clone().unwrap().unwrap()
+    }
+
+    pub fn unwrap_value_or(&self) -> Option<T> {
+        if self.value.is_some() {
+            Some(self.unwrap_value())
+        } else {
+            None
+        }
+    }
+
     pub fn unwrap_value_or_last(&self) -> T {
         if self.value.is_some() {
             self.unwrap_value()
         } else {
-            self.last.clone().unwrap().unwrap()
+            self.unwrap_last()
         }
     }
 
@@ -92,7 +106,7 @@ impl<T> Stream<T> where T: Clone {
         }
     }
 
-    pub fn merge2(&mut self, streams: Vec<&Stream<T>>) {
+    pub fn merge(&mut self, streams: Vec<&Stream<T>>) {
         for i in 0..streams.len() {
             let stream = streams[i];
             if stream.has_changed() {
@@ -105,38 +119,38 @@ impl<T> Stream<T> where T: Clone {
         }
     }
 
-    pub fn lift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(U0) -> T)
-        where U0: Clone{
+    pub fn lift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(Option<U0>) -> T)
+        where U0: Clone {
         if arg0.has_changed() {
-            self.set_value(function(arg0.value.clone()));
+            self.set_value(function(arg0.unwrap_value_or()));
         }
     }
 
-    pub fn lift2<U0, U1>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, function: fn(U0, U1) -> T)
-        where U0: Clone, U1: Clone{
-        if arg0.has_changed() || arg1.has_changed(){
-            self.set_value(function(arg0.value.clone(),arg1.value.clone()));
+    pub fn lift2<U0, U1>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, function: fn(Option<U0>, Option<U1>) -> T)
+        where U0: Clone, U1: Clone {
+        if arg0.has_changed() || arg1.has_changed() {
+            self.set_value(function(arg0.unwrap_value_or(), arg1.unwrap_value_or()));
         }
     }
 
-    pub fn lift3<U0, U1, U2>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, function: fn(U0, U1, U2) -> T)
-        where U0: Clone, U1: Clone, U2: Clone{
-        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed(){
-            self.set_value(function(arg0.value.clone(),arg1.value.clone(),arg2.value.clone()));
+    pub fn lift3<U0, U1, U2>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, function: fn(Option<U0>, Option<U1>, Option<U2>) -> T)
+        where U0: Clone, U1: Clone, U2: Clone {
+        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() {
+            self.set_value(function(arg0.unwrap_value_or(), arg1.unwrap_value_or(), arg2.unwrap_value_or()));
         }
     }
 
-    pub fn lift4<U0, U1, U2, U3>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, function: fn(U0, U1, U2, U3) -> T)
-        where U0: Clone, U1: Clone, U2: Clone, U3: Clone{
-        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed(){
-            self.set_value(function(arg0.value.clone(),arg1.value.clone(),arg2.value.clone(),arg3.value.clone()));
+    pub fn lift4<U0, U1, U2, U3>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, function: fn(Option<U0>, Option<U1>, Option<U2>, Option<U3>) -> T)
+        where U0: Clone, U1: Clone, U2: Clone, U3: Clone {
+        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() {
+            self.set_value(function(arg0.unwrap_value_or(), arg1.unwrap_value_or(), arg2.unwrap_value_or(), arg3.unwrap_value_or()));
         }
     }
 
-    pub fn lift5<U0, U1, U2, U3, U4>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, arg4: &Stream<U4>, function: fn(U0, U1, U2, U3, U4) -> T)
-        where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone{
+    pub fn lift5<U0, U1, U2, U3, U4>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, arg4: &Stream<U4>, function: fn(Option<U0>, Option<U1>, Option<U2>, Option<U3>, Option<U4>) -> T)
+        where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone {
         if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() || arg4.has_changed() {
-            self.set_value(function(arg0.value.clone(),arg1.value.clone(),arg2.value.clone(),arg3.value.clone(),arg4.value.clone()));
+            self.set_value(function(arg0.unwrap_value_or(), arg1.unwrap_value_or(), arg2.unwrap_value_or(), arg3.unwrap_value_or(), arg4.unwrap_value_or()));
         }
     }
 
@@ -155,78 +169,77 @@ impl<T> Stream<T> where T: Clone {
     }
 
     pub fn slift3<U0, U1, U2>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, function: fn(U0, U1, U2) -> T)
-        where U0: Clone, U1: Clone, U2: Clone{
-        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() && (arg0.value.is_some() || arg0.last.is_some()) && (arg1.value.is_some() || arg1.last.is_some()) && (arg2.value.is_some() || arg2.last.is_some()){
+        where U0: Clone, U1: Clone, U2: Clone {
+        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() && (arg0.value.is_some() || arg0.last.is_some()) && (arg1.value.is_some() || arg1.last.is_some()) && (arg2.value.is_some() || arg2.last.is_some()) {
             self.set_value(function(arg0.unwrap_value_or_last(),arg1.unwrap_value_or_last(),arg2.unwrap_value_or_last()));
         }
     }
 
     pub fn slift4<U0, U1, U2, U3>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, function: fn(U0, U1, U2, U3) -> T)
-        where U0: Clone, U1: Clone, U2: Clone, U3: Clone{
-        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() && (arg0.value.is_some() || arg0.last.is_some()) && (arg1.value.is_some() || arg1.last.is_some()) && (arg2.value.is_some() || arg2.last.is_some()) && (arg3.value.is_some() || arg3.last.is_some()){
+        where U0: Clone, U1: Clone, U2: Clone, U3: Clone {
+        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() && (arg0.value.is_some() || arg0.last.is_some()) && (arg1.value.is_some() || arg1.last.is_some()) && (arg2.value.is_some() || arg2.last.is_some()) && (arg3.value.is_some() || arg3.last.is_some()) {
             self.set_value(function(arg0.unwrap_value_or_last(),arg1.unwrap_value_or_last(),arg2.unwrap_value_or_last(),arg3.unwrap_value_or_last()));
         }
     }
 
     pub fn slift5<U0, U1, U2, U3, U4>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, arg4: &Stream<U4>, function: fn(U0, U1, U2, U3, U4) -> T)
-        where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone{
-        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() || arg4.has_changed() && (arg0.value.is_some() || arg0.last.is_some()) && (arg1.value.is_some() || arg1.last.is_some()) && (arg2.value.is_some() || arg2.last.is_some()) && (arg3.value.is_some() || arg3.last.is_some()) && (arg4.value.is_some() || arg4.last.is_some()){
+        where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone {
+        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() || arg4.has_changed() && (arg0.value.is_some() || arg0.last.is_some()) && (arg1.value.is_some() || arg1.last.is_some()) && (arg2.value.is_some() || arg2.last.is_some()) && (arg3.value.is_some() || arg3.last.is_some()) && (arg4.value.is_some() || arg4.last.is_some()) {
             self.set_value(function(arg0.unwrap_value_or_last(),arg1.unwrap_value_or_last(),arg2.unwrap_value_or_last(),arg3.unwrap_value_or_last(),arg4.unwrap_value_or_last()));
         }
     }
 
-    pub fn last(&mut self, values: &Stream<T>, trigger: &Stream<U>){
+    pub fn last<U>(&mut self, values: &Stream<T>, trigger: &Stream<U>)
+        where U: Clone {
         if trigger.has_changed() {
-            self.set_value(values.last);
+            self.clone_value(values);
         }
     }
 
-    pub fn time(&mut self, arg0: &Stream<T>, timestamp: i64){
-        if arg0.has_Changed() {
-            self.set_value(timestamp);
+    pub fn time(&mut self, arg0: &Stream<T>, timestamp: i64)
+        where T: From<i64> {
+        if arg0.has_changed() {
+            self.set_value(T::from(timestamp));
         }
     }
 
-    //const
-    pub fn constant(&mut self,value: i64, trigger: &Stream<T>){
+    // const
+    pub fn constant(&mut self, value: T, trigger: &Stream<T>) {
         if trigger.has_changed() {
             self.set_value(value);
         }
     }
 
-    pub fn filter(&mut self, values: &Stream<T>, condition: &Stream<bool>){
+    pub fn filter(&mut self, values: &Stream<T>, condition: &Stream<bool>) {
         if values.has_changed() && condition.unwrap_value_or_last() {
             self.set_value(values.unwrap_value());
         }
     }
 
-    pub fn pure(&mut self, stream: &Stream<T>){
-        if(stream.has_changed() && stream.value.clone() != self.value.clone()){
+    pub fn pure(&mut self, stream: &Stream<T>)
+        where T: PartialEq {
+        if stream.has_changed() && stream.unwrap_value() != self.unwrap_last() {
             self.set_value(stream.unwrap_value());
         }
     }
 
-    pub fn count(&mut self, trigger: &Stream<T>){
-        if trigger.has_changed(){
-            self.set_value(self.unwrap_value + 1);
+    pub fn count(&mut self, trigger: &Stream<T>)
+        where T: Add<i64> + Into<i64> + From<i64> {
+        if trigger.has_changed() {
+            self.set_value(T::from(self.unwrap_value().into() + 1_i64));
         }
     }
 
-    pub fn fold<R>(&mut self, stream: &Stream<T>, i: R, function: fn(R,T) -> R)
-        where R: Clone {
-
-        if stream.has_changed(){
-            self.set_value(function(self.unwrap_value(),stream.unwrap_value()));
-        }
-
-        if !self.value.is_some() && !self.last.is_some(){
-            self.set_value(i);
+    pub fn fold<U>(&mut self, stream: &Stream<U>, function: fn(T, U) -> T)
+        where U: Clone {
+        if stream.has_changed() {
+            self.set_value(function(self.unwrap_last(), stream.unwrap_value()));
         }
     }
 
-    pub fn unitIf(&mut self, cond: &Stream<bool>){
-        if cond.unwrap_value(){
-            self.set_value(); //TODO need help understanding unit
+    pub fn unitIf(&mut self, cond: &Stream<bool>) where T: From<()> {
+        if cond.unwrap_value() {
+            self.set_value(T::from(())); //TODO need help understanding unit
         }
     }
 }
