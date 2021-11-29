@@ -21,8 +21,8 @@ pub fn init<T>() -> Stream<T> where T: Clone {
 #[inline]
 pub fn init_with_value<T>(value: T) -> Stream<T> where T: Clone {
     Stream {
-        value: Some(Ok(value)),
-        last: None,
+        value: None,
+        last: Some(Ok(value)),
         unknown: false
     }
 }
@@ -50,22 +50,22 @@ impl<T> Stream<T> where T: Clone {
         self.unknown = true;
     }
 
-    // TODO do this first: parse input blah blah...:
-    // if (get_input = stream_name) {
-    //     stream.set_value
-    // } else {
-    //     stream.set_none
-    // }
-
-    pub fn update_last(&mut self) { // DO THIS AT THE END
+    pub fn update_last(&mut self) {
         if self.has_changed() {
-            self.last = self.value.clone(); // TODO use move
-            self.value = None;
+            self.last = self.value.take();
         }
     }
 
     pub fn unwrap_value(&self) -> T {
         self.value.clone().unwrap().unwrap()
+    }
+
+    pub fn unwrap_value_or_last(&self) -> T {
+        if self.value.is_some() {
+            self.unwrap_value()
+        } else {
+            self.last.clone().unwrap().unwrap()
+        }
     }
 
     pub fn call_output(&self, output_function: Option<fn(T, i64)>, current_ts: i64)
@@ -137,9 +137,14 @@ impl<T> Stream<T> where T: Clone {
     // TODO I think we need a single slift for each number of arguments...
     pub fn slift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(U0) -> T)
         where U0: Clone {
-
+        if arg0.has_changed() {
+            self.set_value(function(arg0.unwrap_value_or_last()));
+        }
     }
     pub fn slift2<U0, U1>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, function: fn(U0, U1) -> T)
         where U0: Clone, U1: Clone {
+        if arg0.has_changed() || arg1.has_changed() {
+            self.set_value(function(arg0.unwrap_value_or_last(), arg1.unwrap_value_or_last()));
+        }
     }
 }

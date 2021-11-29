@@ -109,7 +109,7 @@ object RustUtils {
       case "__[TC]inputParse__" => "" // TODO RustIOHandling.getInputParseExpression(typeHint.retType, args(0))
 
       // TODO some brackets here are superfluous and will produce warnings
-      case "__ite__" | "__staticite__"  => s"(if (${args(0)}) ${args(1)} else ${args(2)})"
+      case "__ite__" | "__staticite__"  => s"if ${args(0)} { ${args(1)} } else { ${args(2)} }"
       case "__not__"                    => s"!(${args(0)})"
       case "__negate__" | "__fnegate__" => s"-${args(0)}"
       case "__bitflip__"                => s"!${args(0)}"
@@ -122,7 +122,7 @@ object RustUtils {
       case "__geq__" | "__fgeq__"       => s"(${args(0)} >= ${args(1)})"
       case "__leq__" | "__fleq__"       => s"(${args(0)} <= ${args(1)})"
       case "__add__" | "__fadd__"       => s"(${args(0)} + ${args(1)})"
-      case "__String_concat__"          => throw Diagnostics.CommandNotSupportedError("Can't concatenate &str")
+      case "__String_concat__"          => s"(${args(0)} + ${args(1)}.as_str())"
       case "__sub__" | "__fsub__"       => s"(${args(0)} - ${args(1)})"
       case "__mul__" | "__fmul__"       => s"(${args(0)} * ${args(1)})"
       case "__div__" | "__fdiv__"       => s"(${args(0)} / ${args(1)})"
@@ -133,7 +133,7 @@ object RustUtils {
       case "__leftshift__"              => "(" + s"${args(0)} << ${args(1)}" + ")"
       case "__rightshift__"             => "(" + s"${args(0)} >> ${args(1)}" + ")"
 
-      case "__pow__"  => s"${args(0)}.pow(${args(1)})"
+      case "__pow__"  => s"${args(0)}.powf(${args(1)})"
       case "__log__"  => s"${args(0)}.log(${args(1)})"
       case "__sin__"  => s"${args(0)}.sin()"
       case "__cos__"  => s"${args(0)}.cos()"
@@ -145,14 +145,16 @@ object RustUtils {
 
       case "__Some__"    => s"Some(${args(0)})"
       case "__None__"    => s"None"
-      case "__getSome__" => s"${args(0)}.unwrap().unwrap()" // TODO use unwrap_infallible/.into_ok
-      case "__isSome__"  => s"${args(0)}.is_ok() && ${args(0)}.unwrap().is_some()"
-      case "__isNone__"  => s"${args(0)}.is_ok() && ${args(0)}.unwrap().is_none()" // TODO return true for errors?
+      case "__getSome__" => s"${args(0)}.unwrap()" // TODO use unwrap_infallible/.into_ok
+      case "__isSome__"  => s"${args(0)}.is_some()"
+      case "__isNone__"  => s"${args(0)}.is_none()"
 
       // FIXME this will probably fail, cause the underlying String is not stored anywhere
       case "__toString__" => s"${args(0)}.to_string()"
       // TODO format string syntax is entirely different in rust???
-      case "__String_format__" => s"format!(${args(0)}, ${args(1)})"
+      //  s"format!(${args(0)}, ${args(1)})"
+      case "__String_format__" =>
+        throw Diagnostics.CommandNotSupportedError("Format requires a statically known format string")
 
       /* TODO https://docs.rs/im/15.0.0/im/
       case "__Map_empty__" => "im::HashMap::new()"

@@ -45,7 +45,9 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val name = s"var_${stream_id.fullName}"
     currSrc.stateDef.append(s"$name: Stream<${RustUtils.convertType(stream_type)}>")
     currSrc.stateInit.append(s"$name: $init_expr")
-    s"state.$name"
+    val stream = s"state.$name"
+    currSrc.store.append(s"$stream.update_last();")
+    stream
   }
 
   /**
@@ -152,8 +154,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val values = streamNameFromExpressionArg(values_expr)
     val trigger = streamNameFromExpressionArg(trigger_expr)
     currSrc.computation.append(s"$output.last(&$values, &$trigger);")
-    // TODO this will needs deduplication/different representation:
-    currSrc.store.append(s"update_last(&$output);")
   }
 
   /**
@@ -182,7 +182,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
      *   currTs = ${output}_nextTs;
      * }
      */
-    currSrc.timestamp.append(s"interrupt_for_delay(&$output);")
+    currSrc.timestamp.append(s"$output.interrupt_for_delay();")
 
     /** TODO is there a reason for this being put /after/ the processing part?
      * if ${stream}_changed {
@@ -451,7 +451,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     throw Diagnostics.CommandNotSupportedError(s"The translation of native:$name(...) is not implemented.")
   }
 
-  private val NON_ALPHA_PATTERN = "[^a-zA-Z0-9_\\p{L}\\p{M}*\\p{N}]".r
+  private val NON_ALPHA_PATTERN = "[^a-zA-Z0-9_\\p{L}\\p{M}\\p{N}]".r
 
   /**
    * Add code for output generation to the source segments.
@@ -477,7 +477,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val t = RustUtils.convertType(typ)
     // FIXME: All this replacing of specific chars is probably not exhaustive and kinda not nice to do here
     var name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
-    val cleanName = NON_ALPHA_PATTERN.replaceAllIn(name, "_")
+    val cleanName = NON_ALPHA_PATTERN.replaceAllIn(name, m => s"χ${m.group(0).charAt(0).asInstanceOf[Int]}")
     name = name.replace("$", "\\$")
 
     srcSegments.stateDef.append(s"out_$cleanName: /* $name */ Option<fn($t, i64)>")
@@ -525,8 +525,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     }
     // TODO move value?
     srcSegments.stateInit.append(s"""set_$stream_id: Some(|value: $t, ts: i64, state: &mut State| {
-                                    |$stream.set_value(value);
+                                    |if ts != state.current_ts {
                                     |step(state, ts, false);
+                                    |}
+                                    |$stream.set_value(value);
                                     |})""".stripMargin)
   }
 }

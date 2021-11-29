@@ -1,5 +1,4 @@
 use std::io::stdin;
-use std::process::exit;
 use std::str::FromStr;
 
 fn find_end(string: &str, delim: &str, start: usize) -> usize {

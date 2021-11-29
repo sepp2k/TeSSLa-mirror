@@ -32,9 +32,9 @@ fn main() {
 
 //INPUT
 
-        // do step
-        flush(state);
     }
+
+    flush(state);
 }
 
 fn flush(state: &mut State) {
