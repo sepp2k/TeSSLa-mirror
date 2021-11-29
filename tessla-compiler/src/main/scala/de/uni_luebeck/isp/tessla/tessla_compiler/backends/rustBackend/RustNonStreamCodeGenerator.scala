@@ -160,7 +160,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         "true"
       case ExternExpression("false", _, _) =>
         "false"
-      case ExternExpression("None", InstantiatedType("Option", Seq(t), _), _) =>
+      case ExternExpression("None", InstantiatedType("Option", _, _), _) =>
         "None"
       case ExternExpression(_, typ: Core.FunctionType, _) =>
         val newTm = tm.parsKnown(typ.typeParams)
@@ -202,11 +202,14 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           defContext
         )
       case StringLiteralExpression(value, _) =>
-        s"""\"${value.replace("\"", "\\\"")}\""""
+        // FIXME: it would be nice to standardise this functionality somewhere...
+        s"""\"${value.replace("\"", "\\\"").replace("$", "\\$")}\""""
       case IntLiteralExpression(value, _) =>
         s"${value.toLong}_i64"
       case FloatLiteralExpression(value, _) =>
         s"${value}_f64"
+      case ExpressionRef(id, Core.FunctionType(_, _, _, _), _) =>
+        s"fun_${id.fullName}"
       case ExpressionRef(id, _, _) =>
         s"var_${id.fullName}"
       case x: ExternExpression =>
