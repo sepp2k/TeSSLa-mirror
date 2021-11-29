@@ -267,13 +267,13 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
-    currSrc.computation.append(s"$output.merge${arguments.size}(${arguments.mkString(", ")});")
+    currSrc.computation.append(s"$output.merge(${arguments.mkString(", ")});")
   }
 
   /**
    * Produces code for a x = count(...) expression
    *
-   * @param output_id        The id merge is assigned to
+   * @param output_id        The id count is assigned to
    * @param count_stream_expr Expression of the stream to be counted
    * @param currSrc   The source listing the generated block is added to.
    * @return The modified source listing
@@ -291,7 +291,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   /**
    * Produces code for a x = const(...) expression
    *
-   * @param output_id    The id merge is assigned to
+   * @param output_id    The id const is assigned to
    * @param output_type  Type of the output stream
    * @param value_expr   Argument expressions for const value
    * @param trigger_expr Argument expression for triggering stream
@@ -315,7 +315,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   /**
    * Produces code for a x = filter(...) expression
    *
-   * @param output_id      The id merge is assigned to
+   * @param output_id      The id filter is assigned to
    * @param output_type    Type of the output stream
    * @param value_expr     Argument expressions for filter value stream
    * @param condition_expr Argument expressions for filter condition stream
@@ -338,7 +338,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   /**
    * Produces code for a x = fold(...) expression
    *
-   * @param output_id     The id merge is assigned to
+   * @param output_id     The id fold is assigned to
    * @param output_type   Type of the output stream
    * @param stream_expr   Expression of the stream to be folded
    * @param init_expr     Expression of the initial value for the folding
@@ -368,7 +368,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   /**
    * Produces code for a x = reduce(...) expression
    *
-   * @param output_id     The id merge is assigned to
+   * @param output_id     The id reduce is assigned to
    * @param output_type   Type of the output stream
    * @param stream_expr   Expression of the stream to be reduced
    * @param function_expr Expression of the function used for reducing
@@ -394,7 +394,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   /**
    * Produces code for a x = unitIf(...) expression
    *
-   * @param output_id      The id merge is assigned to
+   * @param output_id      The id unitIf is assigned to
    * @param condition_expr Expression of the stream with the condition for unitIf
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
@@ -412,7 +412,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   /**
    * Produces code for a x = pure(...) expression
    *
-   * @param output_id   The id merge is assigned to
+   * @param output_id   The id pure is assigned to
    * @param output_type Type of the output stream
    * @param stream_expr Stream to be filtered
    * @param currSrc   The source listing the generated block is added to.
