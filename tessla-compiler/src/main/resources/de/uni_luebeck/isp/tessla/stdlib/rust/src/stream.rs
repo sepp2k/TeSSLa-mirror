@@ -92,7 +92,7 @@ impl<T> Stream<T> where T: Clone {
         }
     }
 
-    pub fn merge(&mut self, streams: Vec<&Stream<T>>) {
+    pub fn merge2(&mut self, streams: Vec<&Stream<T>>) {
         for i in 0..streams.len() {
             let stream = streams[i];
             if stream.has_changed() {
@@ -178,6 +178,55 @@ impl<T> Stream<T> where T: Clone {
     pub fn last(&mut self, values: &Stream<T>, trigger: &Stream<U>){
         if trigger.has_changed() {
             self.set_value(values.last);
+        }
+    }
+
+    pub fn time(&mut self, arg0: &Stream<T>, timestamp: i64){
+        if arg0.has_Changed() {
+            self.set_value(timestamp);
+        }
+    }
+
+    //const
+    pub fn constant(&mut self,value: i64, trigger: &Stream<T>){
+        if trigger.has_changed() {
+            self.set_value(value);
+        }
+    }
+
+    pub fn filter(&mut self, values: &Stream<T>, condition: &Stream<bool>){
+        if values.has_changed() && condition.unwrap_value_or_last() {
+            self.set_value(values.unwrap_value());
+        }
+    }
+
+    pub fn pure(&mut self, stream: &Stream<T>){
+        if(stream.has_changed() && stream.value.clone() != self.value.clone()){
+            self.set_value(stream.unwrap_value());
+        }
+    }
+
+    pub fn count(&mut self, trigger: &Stream<T>){
+        if trigger.has_changed(){
+            self.set_value(self.unwrap_value + 1);
+        }
+    }
+
+    pub fn fold<R>(&mut self, stream: &Stream<T>, i: R, function: fn(R,T) -> R)
+        where R: Clone {
+
+        if stream.has_changed(){
+            self.set_value(function(self.unwrap_value(),stream.unwrap_value()));
+        }
+
+        if !self.value.is_some() && !self.last.is_some(){
+            self.set_value(i);
+        }
+    }
+
+    pub fn unitIf(&mut self, cond: &Stream<bool>){
+        if cond.unwrap_value(){
+            self.set_value(); //TODO need help understanding unit
         }
     }
 }
