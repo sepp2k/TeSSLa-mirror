@@ -39,7 +39,7 @@ object RustUtils {
       case InstantiatedType("Bool", Seq(), _)                       => "bool"
       case InstantiatedType("Int", Seq(), _)                        => "i64"
       case InstantiatedType("Float", Seq(), _)                      => "f64"
-      case InstantiatedType("String", Seq(), _)                     => "&str"
+      case InstantiatedType("String", Seq(), _)                     => "String" // FIXME I think &str is more hassle than is worth
       case InstantiatedType("Option", Seq(t), _)                    => s"Option<${convertType(t)}>"
       case InstantiatedType("Set", Seq(t), _)                       => s"im::set<${convertType(t)}>"
       case InstantiatedType("Map", Seq(t1, t2), _)                  => s"im::map<${convertType(t1)}, ${convertType(t2)}>"
@@ -150,7 +150,7 @@ object RustUtils {
       case "__isNone__"  => s"${args(0)}.is_ok() && ${args(0)}.unwrap().is_none()" // TODO return true for errors?
 
       // FIXME this will probably fail, cause the underlying String is not stored anywhere
-      case "__toString__" => s"${args(0)}.to_string().as_str()"
+      case "__toString__" => s"${args(0)}.to_string()"
       // TODO format string syntax is entirely different in rust???
       case "__String_format__" => s"format!(${args(0)}, ${args(1)})"
 
@@ -197,6 +197,8 @@ object RustUtils {
 
 case class SourceSegments(
   variables: ListBuffer[String] = new ListBuffer[String],
+  stateDef: ListBuffer[String] = new ListBuffer[String],
+  stateInit: ListBuffer[String] = new ListBuffer[String],
   input: ListBuffer[String] = new ListBuffer[String],
   timestamp: ListBuffer[String] = new ListBuffer[String],
   computation: ListBuffer[String] = new ListBuffer[String],

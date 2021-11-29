@@ -32,9 +32,9 @@ import scala.io.Source
  * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
  */
 class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSpecification, String] {
-  private val sourceTemplate: String =
+  private val sourceTemplate: String = /*
     if (ioInterface) "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs"
-    else "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeletonNoIO.rs"
+    else */ "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeletonNoIO.rs"
 
   override def translate(extSpec: ExtendedSpecification): Result[String] =
     new Translator(extSpec).translate()
@@ -97,13 +97,32 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
           getStreamType(o._1.id),
           name,
           srcSegments,
-          o._2.contains("raw")
+          o._2.contains("raw"),
+          ioInterface
         )
       }
 
       // Produce input consumption
+      if (ioInterface) {
+        srcSegments.variables.append("let mut new_input_ts = 0;")
+        srcSegments.variables.append("let mut input_stream_name = String::new();")
+        srcSegments.variables.append("let mut input_stream_value = String::new();")
+        srcSegments.input.append(
+          "if parse_input(&mut input_stream_name, &mut input_stream_value, &mut new_input_ts) { break; }"
+        )
+        srcSegments.static.append(
+          """fn call_set<T>(function: Option<fn(T, i64, &mut State)>, value: T, ts: i64, state: &mut State)
+            |where T: Clone {
+            |match function {
+            |Some(set_fun) => set_fun(value, ts, state),
+            |None => {}
+            |}
+            |}""".stripMargin
+        )
+      }
+
       extSpec.spec.in.foreach { i =>
-        rustStreamCodeGenerator.produceInputCode(i._1, i._2._1, srcSegments)
+        rustStreamCodeGenerator.produceInputCode(i._1, i._2._1, srcSegments, ioInterface)
       }
 
       insertSegments(srcSegments)
@@ -116,8 +135,10 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       val source = Source.fromResource(sourceTemplate).mkString
       val rewrittenSource = source
         .replace("//USERINCLUDES", "") //TODO
+        .replace("//STATEDEF", srcSegments.stateDef.mkString(",\n"))
         .replace("//STATIC", srcSegments.static.mkString("\n"))
         .replace("//VARIABLES", srcSegments.variables.mkString("\n"))
+        .replace("//STATEINIT", srcSegments.stateInit.mkString(",\n"))
         .replace("//STORE", srcSegments.store.mkString("\n"))
         .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
         .replace("//COMPUTATION", srcSegments.computation.mkString("\n"))

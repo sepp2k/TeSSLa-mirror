@@ -29,11 +29,23 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    */
   private def streamNameFromExpressionArg(ea: ExpressionArg): String = {
     ea match {
-      case ExpressionRef(id, _, _) => "var_" + id.fullName
+      case ExpressionRef(id, _, _) => "state.var_" + id.fullName
       case e: Expression =>
         throw Diagnostics
           .CoreASTError("Required ExpressionRef, but Expression found. Non flat AST.", e.location)
     }
+  }
+
+  private def createStreamContainer(
+    stream_id: Identifier,
+    stream_type: Type,
+    init_expr: String,
+    currSrc: SourceSegments
+  ): String = {
+    val name = s"var_${stream_id.fullName}"
+    currSrc.stateDef.append(s"$name: Stream<${RustUtils.convertType(stream_type)}>")
+    currSrc.stateInit.append(s"$name: $init_expr")
+    s"state.$name"
   }
 
   /**
@@ -49,8 +61,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     output_type: Type,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let $output = init();")
+    createStreamContainer(output_id, output_type, "init()", currSrc)
   }
 
   /**
@@ -70,14 +81,13 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     default_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
     val default = rustNonStreamCodeGenerator.translateExpressionArg(
       default_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.variables.append(s"let mut $output = init_with_value($default);")
+    val output = createStreamContainer(output_id, output_type, s"init_with_value($default)", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
-    currSrc.computation.append(s"default(&$output, &$stream);")
+    currSrc.computation.append(s"$output.default(&$stream);")
   }
 
   /**
@@ -97,11 +107,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     default_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
+    val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
     val default = streamNameFromExpressionArg(default_expr)
-    currSrc.computation.append(s"defaultFrom(&$output, &$stream, &$default);")
+    currSrc.computation.append(s"$output.defaultFrom(&$stream, &$default);")
   }
 
   /**
@@ -117,10 +126,9 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     stream_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
+    val output = createStreamContainer(output_id, IntType, "init()", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
-    currSrc.computation.append(s"time(&$output, &$stream);")
+    currSrc.computation.append(s"$output.time(&$stream);")
   }
 
   /**
@@ -129,7 +137,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param output_id    The id last is assigned to
    * @param output_type  The type of id. Must be Events[...]
    * @param values_expr  The value-stream parameter of the last
-   * @param trigger_expr   The trigger/clock-stream parameter of the last
+   * @param trigger_expr The trigger/clock-stream parameter of the last
    * @param currSrc The source listing the generated block is added to.
    * @return The modified source listing
    */
@@ -140,11 +148,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     trigger_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
+    val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val values = streamNameFromExpressionArg(values_expr)
     val trigger = streamNameFromExpressionArg(trigger_expr)
-    currSrc.computation.append(s"last(&$output, &$values, &$trigger);")
+    currSrc.computation.append(s"$output.last(&$values, &$trigger);")
     // TODO this will needs deduplication/different representation:
     currSrc.store.append(s"update_last(&$output);")
   }
@@ -152,7 +159,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   /**
    * Produces code for a x = delay(...) expression
    *
-   * @param output_id      The id delay is assigned to
+   * @param output_id    The id delay is assigned to
    * @param delay_expr   The delay-stream parameter of the delay
    * @param reset_expr   The reset-stream parameter of the delay
    * @param currSrc The source listing the generated block is added to.
@@ -164,11 +171,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     reset_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
+    val output = createStreamContainer(output_id, UnitType, "init()", currSrc)
     val delay = streamNameFromExpressionArg(delay_expr)
     val reset = streamNameFromExpressionArg(reset_expr)
-    currSrc.computation.append(s"delay(&$output, &$delay, &$reset);")
+    currSrc.computation.append(s"$output.delay(&$delay, &$reset);")
 
     /** TODO needs additional rust data-structure/timestamp code
      * This needs to do something like this:
@@ -187,7 +193,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
      *   }
      * }
      */
-    currSrc.output.append(s"reset_delay(&$output, &$delay, &$reset);")
+    currSrc.output.append(s"$output.reset_delay(&$delay, &$reset);")
   }
 
   /**
@@ -207,16 +213,15 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     function_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
-    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a").mkString(", ")
+    val output = createStreamContainer(output_id, output_type, "init()", currSrc)
+    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     );
     // TODO I think the lifted function expects the stream values to be wrapped in options?
     // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
-    currSrc.computation.append(s"lift(&$output, vec![$arguments], $function);")
+    currSrc.computation.append(s"$output.lift${arguments.size}(${arguments.mkString(", ")}, $function);")
   }
 
   /**
@@ -236,14 +241,13 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     function_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
-    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a").mkString(", ")
+    val output = createStreamContainer(output_id, output_type, "init()", currSrc)
+    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.computation.append(s"slift(&$output, vec![$arguments], $function);")
+    currSrc.computation.append(s"$output.slift${arguments.size}(${arguments.mkString(", ")}, $function);")
   }
 
   /**
@@ -261,10 +265,9 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     argument_exprs: Seq[ExpressionArg],
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
+    val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a").mkString(", ")
-    currSrc.computation.append(s"merge(&$output, vec![$arguments]);")
+    currSrc.computation.append(s"$output.merge(vec![$arguments]);")
   }
 
   /**
@@ -280,10 +283,9 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     count_stream_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init_with_value(0_i64);")
+    val output = createStreamContainer(output_id, IntType, "init_with_value(0_i64)", currSrc)
     val count_stream = streamNameFromExpressionArg(count_stream_expr)
-    currSrc.computation.append(s"count(&$output, $count_stream);")
+    currSrc.computation.append(s"$output.count($count_stream);")
   }
 
   /**
@@ -303,12 +305,11 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     trigger_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
+    val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val value =
       rustNonStreamCodeGenerator.translateExpressionArg(value_expr, rustNonStreamCodeGenerator.TypeArgManagement.empty)
     val trigger = streamNameFromExpressionArg(trigger_expr)
-    currSrc.computation.append(s"const(&$output, $value, &$trigger);")
+    currSrc.computation.append(s"$output.const($value, &$trigger);")
   }
 
   /**
@@ -328,11 +329,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     condition_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
+    val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val value = streamNameFromExpressionArg(value_expr)
     val condition = streamNameFromExpressionArg(condition_expr)
-    currSrc.computation.append(s"filter(&$output, &$value, &$condition);")
+    currSrc.computation.append(s"$output.filter(&$value, &$condition);")
   }
 
   /**
@@ -354,16 +354,15 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     function_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
     val init =
       rustNonStreamCodeGenerator.translateExpressionArg(init_expr, rustNonStreamCodeGenerator.TypeArgManagement.empty)
-    currSrc.variables.append(s"let mut $output = init_with_value($init);")
+    val output = createStreamContainer(output_id, output_type, s"init_with_value($init)", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.computation.append(s"fold(&$output, &$stream, $function);")
+    currSrc.computation.append(s"$output.fold(&$stream, $function);")
   }
 
   /**
@@ -383,14 +382,13 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     function_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
+    val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.computation.append(s"reduce(&$output, &$stream, $function);")
+    currSrc.computation.append(s"$output.reduce(&$stream, $function);")
   }
 
   /**
@@ -406,10 +404,9 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     condition_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
+    val output = createStreamContainer(output_id, UnitType, "init()", currSrc)
     val condition = streamNameFromExpressionArg(condition_expr)
-    currSrc.computation.append(s"unitIf(&$output, &$condition);")
+    currSrc.computation.append(s"$output.unitIf(&$condition);")
   }
 
   /**
@@ -427,10 +424,9 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     stream_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = s"var_${output_id.fullName}"
-    currSrc.variables.append(s"let mut $output = init();")
+    val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr);
-    currSrc.computation.append(s"pure(&$output, &$stream);")
+    currSrc.computation.append(s"$output.pure(&$stream);")
   }
 
   /**
@@ -455,6 +451,8 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     throw Diagnostics.CommandNotSupportedError(s"The translation of native:$name(...) is not implemented.")
   }
 
+  private val NON_ALPHA_PATTERN = "[^a-zA-Z0-9_\\p{L}\\p{M}*\\p{N}]".r
+
   /**
    * Add code for output generation to the source segments.
    * The output gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
@@ -469,38 +467,66 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    */
   def produceOutputCode(
     id: Identifier,
-    t: Type,
+    typ: Type,
     nameOpt: Option[String],
     srcSegments: SourceSegments,
-    raw: Boolean
+    raw: Boolean,
+    ioInterface: Boolean
   ): Unit = {
     val s = s"var_${id.fullName}"
-    val name = nameOpt
-      .getOrElse(id.idOrName.left.getOrElse(id.fullName))
-      .replace("\n", "\\n")
-      .replace("\r", "\\r")
-      .replace("\"", "\\\"")
-      .replace("$", "\\$")
+    val t = RustUtils.convertType(typ)
+    // FIXME: All this replacing of specific chars is probably not exhaustive and kinda not nice to do here
+    var name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
+    val cleanName = NON_ALPHA_PATTERN.replaceAllIn(name, "_")
+    name = name.replace("$", "\\$")
 
-    // FIXME better to string conversion??
+    srcSegments.stateDef.append(s"out_$cleanName: /* $name */ Option<fn($t, i64)>")
 
-    srcSegments.output.append(s"""output_stream($s, "$name", currTs, $raw);""")
+    if (ioInterface) {
+      val nameString = name
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\"", "\\\"")
+
+      // FIXME better to string conversion??
+      srcSegments.stateInit.append(
+        s"""out_$cleanName: Some(|value, ts| output_var(value.to_string().as_str(), \"$nameString\", ts, $raw))"""
+      )
+    } else {
+      srcSegments.stateInit.append(s"out_$cleanName: None")
+    }
+    srcSegments.output.append(s"state.$s.call_output(state.out_$cleanName, state.current_ts);")
   }
 
   /**
    * Produces code reading the input (variable inputStream and value) and storing it.
    *
-   * @param inStream The input stream to be handled
-   * @param typ      The input stream's type. Must be Events[...].
-   * @param srcSegments  The source segments the generated block is added to.
-   *                 There is code attached to the input, and output section.
+   * @param stream_id   The input stream to be handled
+   * @param stream_type The input stream's type. Must be Events[...].
+   * @param srcSegments The source segments the generated block is added to.
+   *                    There is code attached to the input, and output section.
    */
-  def produceInputCode(inStream: Identifier, typ: Type, srcSegments: SourceSegments): Unit = {
-    val s = s"var_${inStream.fullName}"
+  def produceInputCode(
+    stream_id: Identifier,
+    stream_type: Type,
+    srcSegments: SourceSegments,
+    ioInterface: Boolean
+  ): Unit = {
+    val stream = createStreamContainer(stream_id, stream_type, "init()", srcSegments)
 
-    srcSegments.input.append(s"""if inputStream == "${inStream.idOrName.left.get}" { get_value_from_input($s) }""")
+    val t = RustUtils.convertType(stream_type)
 
-    // TODO not necessary for all streams:
-    // srcSegments.output.append(s"update_last($s);")
+    srcSegments.stateDef.append(s"set_$stream_id: Option<fn($t, i64, &mut State)>")
+
+    if (ioInterface) {
+      srcSegments.input.append(
+        s"""if input_stream_name == \"$stream_id\" { call_set(state.set_$stream_id, input_stream_value.parse().unwrap(), new_input_ts, state); }"""
+      )
+    }
+    // TODO move value?
+    srcSegments.stateInit.append(s"""set_$stream_id: Some(|value: $t, ts: i64, state: &mut State| {
+                                    |$stream.set_value(value);
+                                    |step(state, ts, false);
+                                    |})""".stripMargin)
   }
 }
