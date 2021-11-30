@@ -233,8 +233,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         s"${value.toLong}_i64"
       case FloatLiteralExpression(value, _) =>
         s"${value}_f64"
-      case ExpressionRef(id, Core.FunctionType(_, _, _, _), _) =>
-        s"fun_${id.fullName}"
       case ExpressionRef(id, _, _) =>
         s"var_${id.fullName}"
       case x: ExternExpression =>
