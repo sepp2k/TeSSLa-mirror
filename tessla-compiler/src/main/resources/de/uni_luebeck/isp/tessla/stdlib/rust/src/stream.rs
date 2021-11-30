@@ -153,26 +153,9 @@ impl<T> Stream<T> where T: Clone {
 
 // -- STEP FUNCTIONS --
 
-    pub fn default(&mut self, input: &Stream<T>) {
-        if input.has_changed() {
-            self.clone_value(input);
-        }
-    }
 
-    pub fn merge(&mut self, streams: Vec<&Stream<T>>) {
-        for i in 0..streams.len() {
-            let stream = streams[i];
-            if stream.has_changed() {
-                self.clone_value(&stream);
-                // TODO out.unknown is true iff all changed streams are as well
-                if !self.unknown {
-                    return;
-                }
-            }
-        }
-    }
-
-    pub fn lift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(Option<U0>) -> T)
+/*
+    pub fn lift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(Option<U0>) -> Option<T>)
         where U0: Clone {
         if arg0.has_changed() {
             self.set_value(function(arg0.unwrap_value_or()));
@@ -293,6 +276,32 @@ impl<T> Stream<T> where T: Clone {
     pub fn unitIf(&mut self, cond: &Stream<bool>) where T: From<()> {
         if cond.unwrap_value() {
             self.set_value(T::from(())); //TODO need help understanding unit
+        }
+    }
+    */
+}
+
+// -- STEP FUNCTIONS --
+
+pub fn default<T>(output: &mut Stream<T>, input: &Stream<T>, timestamp: i64)
+    where T: Clone {
+    if input.has_changed() {
+        output.clone_value_from(input);
+    } else if timestamp == 0 {
+        output.set_value(output.get_last())
+    }
+}
+
+pub fn merge<T>(output: &mut Stream<T>, streams: Vec<&Stream<T>>)
+    where T: Clone {
+    for i in 0..streams.len() {
+        let stream = streams[i];
+        if stream.has_changed() {
+            output.clone_value_from(&stream);
+            // TODO output is a known value iff all changed streams are as well
+            if output.value.is_ok() {
+                return;
+            }
         }
     }
 }
