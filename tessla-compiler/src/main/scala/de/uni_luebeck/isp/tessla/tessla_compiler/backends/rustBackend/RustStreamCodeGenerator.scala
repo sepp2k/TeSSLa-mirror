@@ -89,7 +89,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     )
     val output = createStreamContainer(output_id, output_type, s"init_with_value($default)", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
-    currSrc.computation.append(s"$output.default(&$stream);")
+    currSrc.computation.append(s"default(&mut $output, &$stream, state.current_ts);")
   }
 
   /**
@@ -267,7 +267,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
-    currSrc.computation.append(s"$output.merge(${arguments.mkString(", ")});")
+    currSrc.computation.append(s"merge(&mut $output, ${arguments.mkString(", ")});")
   }
 
   /**
