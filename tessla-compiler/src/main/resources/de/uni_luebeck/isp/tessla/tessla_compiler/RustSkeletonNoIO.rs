@@ -46,8 +46,6 @@ fn step(state: &mut State, new_input_ts: i64, flush: bool) {
 
     if new_input_ts > state.current_ts || flush_required {
 
-//STORE
-
         let mut do_processing = true;
         while do_processing {
 
@@ -66,6 +64,9 @@ fn step(state: &mut State, new_input_ts: i64, flush: bool) {
                 state.current_ts = new_input_ts;
             }
         }
+
+//STORE
+
     } else if new_input_ts < state.current_ts {
         panic!("{}: FATAL: decreasing timestamp received", state.current_ts);
     }
