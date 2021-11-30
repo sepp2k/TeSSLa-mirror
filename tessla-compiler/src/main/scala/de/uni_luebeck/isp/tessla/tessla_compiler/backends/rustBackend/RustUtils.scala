@@ -39,8 +39,8 @@ object RustUtils {
       case InstantiatedType("Bool", Seq(), _)                       => "bool"
       case InstantiatedType("Int", Seq(), _)                        => "i64"
       case InstantiatedType("Float", Seq(), _)                      => "f64"
-      case InstantiatedType("String", Seq(), _)                     => "String" // FIXME I think &str is more hassle than is worth
-      case InstantiatedType("Option", Seq(t), _)                    => s"Option<${convertType(t)}>"
+      case InstantiatedType("String", Seq(), _)                     => "String"
+      case InstantiatedType("Option", Seq(t), _)                    => s"TesslaOption<${convertType(t)}>"
       case InstantiatedType("Set", Seq(t), _)                       => s"im::set<${convertType(t)}>"
       case InstantiatedType("Map", Seq(t1, t2), _)                  => s"im::map<${convertType(t1)}, ${convertType(t2)}>"
       case InstantiatedType("List", Seq(t), _)                      => s"im::vec<${convertType(t)}>"
@@ -143,9 +143,9 @@ object RustUtils {
       case "__intToFloat__" => s"${args(0)} as f64"
       case "__floatToInt__" => s"${args(0)} as i64"
 
-      case "__Some__"    => s"Some(${args(0)})"
-      case "__None__"    => s"None"
-      case "__getSome__" => s"${args(0)}.unwrap()" // TODO use unwrap_infallible/.into_ok
+      case "__Some__"    => s"TesslaOption::Some(${args(0)})"
+      case "__None__"    => s"TesslaOption::None()"
+      case "__getSome__" => s"${args(0)}.get_some()"
       case "__isSome__"  => s"${args(0)}.is_some()"
       case "__isNone__"  => s"${args(0)}.is_none()"
 

@@ -1,31 +1,67 @@
-use std::ops::Add;
+use std::ops::{Add, Deref};
 
-pub type StreamValue<T> = Option<Result<T, &'static str>>;
-
-pub struct Stream<T> where T: Clone {
-    value : StreamValue<T>,
-    last : StreamValue<T>,
-    // changed: bool, // If we use this: value stores the last value, unless changed is true
-    unknown: bool, // TODO could be Err() ??
+pub struct TesslaOption<T> {
+    value: Option<Result<T, &'static str>>,
 }
 
-// TODO StandardStream, LastStream, DelayStream
+// TODO Deref<Option<T>> https://doc.rust-lang.org/std/ops/trait.Deref.html
+
+impl<T> TesslaOption<T> where T: Clone {
+    fn Some(value: T) -> TesslaOption<T> {
+        TesslaOption { value: Some(Ok(value)) }
+    }
+    fn None() -> TesslaOption<T> {
+        TesslaOption { value: None }
+    }
+    fn Err(error: &'static str) -> TesslaOption<T> {
+        TesslaOption { value: Some(Err(error)) }
+    }
+
+    fn get_some(&self) -> Result<T, &'static str> {
+        // TODO use unwrap_infallible/.into_ok
+        self.value.ok_or("Tried to get value even though there was no event")?
+    }
+
+    fn take(&mut self) -> TesslaOption<T> {
+        TesslaOption { value: self.value.take() }
+    }
+
+    fn clone(&self) -> TesslaOption<T> {
+        TesslaOption { value: self.value.clone() }
+    }
+}
+
+impl<T> Deref for TesslaOption<T> {
+    type Target = Option<Result<T, &'static str>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+// Explanation:
+//  value: Err()      - there may be an event (†)
+//  value: Ok(Err())  - failed to determine event value (♢)
+//  value: Ok(Some()) - there is an event with a value
+//  value: Ok(None()) - there is no event
+pub struct Stream<T> where T: Clone {
+    value : Result<TesslaOption<T>, &'static str>,
+    last : Result<TesslaOption<T>, &'static str>,
+}
 
 #[inline]
 pub fn init<T>() -> Stream<T> where T: Clone {
     Stream {
-        value: None,
-        last: None,
-        unknown: false
+        value: Ok(TesslaOption::None()),
+        last: Ok(TesslaOption::None()),
     }
 }
 
 #[inline]
 pub fn init_with_value<T>(value: T) -> Stream<T> where T: Clone {
     Stream {
-        value: None,
-        last: Some(Ok(value)),
-        unknown: false
+        value: Ok(TesslaOption::None()),
+        last: Ok(TesslaOption::Some(value)),
     }
 }
 
@@ -34,66 +70,83 @@ impl<T> Stream<T> where T: Clone {
     // -- HELPERS --
 
     pub fn has_changed(&self) -> bool {
-        self.value.is_some()
-    }
-
-    pub fn clone_value(&mut self, other: &Stream<T>) {
-        self.value = other.value.clone();
-        self.unknown = other.unknown;
-    }
-
-    pub fn set_result(&mut self, result: Result<T, &'static str>) {
-        self.value = Some(result);
-        self.unknown = false;
-    }
-
-    pub fn set_value(&mut self, value: T) {
-        self.value = Some(Ok(value));
-        self.unknown = false;
-    }
-
-    pub fn set_unknown(&mut self, error: &'static str) {
-        self.value = Some(Err(error));
-        self.unknown = true;
+        match &self.value {
+            Ok(value) => value.is_some(),
+            &Err(_) => true
+        }
     }
 
     pub fn update_last(&mut self) {
         if self.has_changed() {
-            self.last = self.value.clone(); // TODO use move
-            self.value = None;
+            match &mut self.value {
+                Ok(value) => {
+                    self.last = Ok(value.take())
+                },
+                &mut Err(error) => {
+                    self.last = Err(error);
+                    self.value = Ok(TesslaOption::None());
+                }
+            }
         }
     }
 
-    pub fn unwrap_value(&self) -> T {
-        self.value.clone().unwrap().unwrap()
+    pub fn clone_value_from(&mut self, other: &Stream<T>) {
+        match &other.value {
+            Ok(value) => {
+                self.value = Ok(value.clone());
+            },
+            &Err(error) => {
+                self.value = Err(error);
+            }
+        }
     }
 
-    pub fn unwrap_last(&self) -> T {
-        self.last.clone().unwrap().unwrap()
+    pub fn set_value(&mut self, value: T) {
+        self.value = Ok(TesslaOption::Some(value));
     }
 
-    pub fn unwrap_value_or(&self) -> Option<T> {
-        if self.value.is_some() {
-            Some(self.unwrap_value())
+    pub fn set_error(&mut self, error: &'static str) {
+        self.value = Ok(TesslaOption::Err(error))
+    }
+
+    pub fn set_unknown(&mut self, error: &'static str) {
+        self.value = Err(error);
+    }
+
+    // TODO replace with proper failing functions..
+    pub fn get_value(&self) -> T {
+        match &self.value {
+            Ok(value) => value.get_some(),
+            &Err(error) => panic!("Tried to use † event caused by: {}", error)
+        }
+    }
+
+    pub fn get_last(&self) -> T {
+        match &self.last {
+            Ok(value) => value.get_some(),
+            &Err(error) => panic!("Tried to use † event caused by: {}", error)
+        }
+    }
+
+    pub fn get_value_or(&self) -> TesslaOption<T> {
+        match &self.value {
+            Ok(value) => value.clone(),
+            &Err(error) => panic!("")
+        }
+    }
+
+    pub fn get_value_or_last(&self) -> T {
+        if self.has_changed() {
+            self.get_value()
         } else {
-            None
+            self.get_last()
         }
     }
 
-    pub fn unwrap_value_or_last(&self) -> T {
-        if self.value.is_some() {
-            self.unwrap_value()
-        } else {
-            self.unwrap_last()
-        }
-    }
-
-    pub fn call_output(&self, output_function: Option<fn(T, i64)>, current_ts: i64)
-        where T: Clone {
-        if self.value.is_some() {
-            match output_function {
-                Some(out_fn) => out_fn(self.unwrap_value(), current_ts),
-                None => {}
+    pub fn call_output(&self, output_function: Option<fn(T, i64)>, current_ts: i64) {
+        if self.has_changed() {
+            if let Some(out_fn) = output_function {
+                out_fn(self.get_value(), current_ts)
             }
         }
     }
