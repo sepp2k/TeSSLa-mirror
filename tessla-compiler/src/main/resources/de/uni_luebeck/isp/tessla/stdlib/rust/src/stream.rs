@@ -6,7 +6,7 @@ pub struct TesslaOption<T> {
 
 // TODO Deref<Option<T>> https://doc.rust-lang.org/std/ops/trait.Deref.html
 
-impl<T> TesslaOption<T> where T: Clone {
+impl<T> TesslaOption<T> {
     fn Some(value: T) -> TesslaOption<T> {
         TesslaOption { value: Some(Ok(value)) }
     }
@@ -26,7 +26,7 @@ impl<T> TesslaOption<T> where T: Clone {
         TesslaOption { value: self.value.take() }
     }
 
-    fn clone(&self) -> TesslaOption<T> {
+    fn clone(&self) -> TesslaOption<T> where T: Clone {
         TesslaOption { value: self.value.clone() }
     }
 }
@@ -44,13 +44,13 @@ impl<T> Deref for TesslaOption<T> {
 //  value: Ok(Err())  - failed to determine event value (♢)
 //  value: Ok(Some()) - there is an event with a value
 //  value: Ok(None()) - there is no event
-pub struct Stream<T> where T: Clone {
+pub struct Stream<T> {
     value : Result<TesslaOption<T>, &'static str>,
     last : Result<TesslaOption<T>, &'static str>,
 }
 
 #[inline]
-pub fn init<T>() -> Stream<T> where T: Clone {
+pub fn init<T>() -> Stream<T> {
     Stream {
         value: Ok(TesslaOption::None()),
         last: Ok(TesslaOption::None()),
@@ -58,16 +58,14 @@ pub fn init<T>() -> Stream<T> where T: Clone {
 }
 
 #[inline]
-pub fn init_with_value<T>(value: T) -> Stream<T> where T: Clone {
+pub fn init_with_value<T>(value: T) -> Stream<T> {
     Stream {
         value: Ok(TesslaOption::None()),
         last: Ok(TesslaOption::Some(value)),
     }
 }
 
-impl<T> Stream<T> where T: Clone {
-
-    // -- HELPERS --
+impl<T> Stream<T> {
 
     pub fn has_changed(&self) -> bool {
         match &self.value {
@@ -98,7 +96,7 @@ impl<T> Stream<T> where T: Clone {
         }
     }
 
-    pub fn clone_value_from(&mut self, other: &Stream<T>) {
+    pub fn clone_value_from(&mut self, other: &Stream<T>) where T: Clone {
         match &other.value {
             Ok(value) => {
                 self.value = Ok(value.clone());
@@ -136,7 +134,7 @@ impl<T> Stream<T> where T: Clone {
         }
     }
 
-    pub fn get_value_or(&self) -> TesslaOption<T> {
+    pub fn get_value_or(&self) -> TesslaOption<T> where T: Clone {
         match &self.value {
             Ok(value) => value.clone(),
             &Err(error) => panic!("")
