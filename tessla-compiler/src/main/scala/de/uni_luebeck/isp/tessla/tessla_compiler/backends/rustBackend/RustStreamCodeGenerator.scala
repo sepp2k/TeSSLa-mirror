@@ -112,7 +112,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
     val default = streamNameFromExpressionArg(default_expr)
-    currSrc.computation.append(s"$output.defaultFrom(&$stream, &$default);")
+    currSrc.computation.append(s"default_from(&mut $output, &$stream, &$default);")
   }
 
   /**
@@ -130,7 +130,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, IntType, "init()", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
-    currSrc.computation.append(s"$output.time(&$stream, state.current_ts);")
+    currSrc.computation.append(s"time(&mut $output, &$stream, state.current_ts);")
   }
 
   /**
@@ -153,7 +153,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val values = streamNameFromExpressionArg(values_expr)
     val trigger = streamNameFromExpressionArg(trigger_expr)
-    currSrc.computation.append(s"$output.last(&$values, &$trigger);")
+    currSrc.computation.append(s"last(&mut $output, &$values, &$trigger);")
   }
 
   /**
@@ -174,7 +174,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val output = createStreamContainer(output_id, UnitType, "init()", currSrc)
     val delay = streamNameFromExpressionArg(delay_expr)
     val reset = streamNameFromExpressionArg(reset_expr)
-    currSrc.computation.append(s"$output.delay(&$delay, &$reset);")
+    currSrc.computation.append(s"delay(&mut $output, &$delay, &$reset);")
 
     /** TODO needs additional rust data-structure/timestamp code
      * This needs to do something like this:
@@ -182,7 +182,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
      *   currTs = ${output}_nextTs;
      * }
      */
-    currSrc.timestamp.append(s"$output.interrupt_for_delay();")
+    currSrc.timestamp.append(s"interrupt_for_delay(&mut $output);")
 
     /** TODO is there a reason for this being put /after/ the processing part?
      * if ${stream}_changed {
@@ -193,7 +193,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
      *   }
      * }
      */
-    currSrc.output.append(s"$output.reset_delay(&$delay, &$reset);")
+    currSrc.output.append(s"reset_delay(&mut $output, &$delay, &$reset);")
   }
 
   /**

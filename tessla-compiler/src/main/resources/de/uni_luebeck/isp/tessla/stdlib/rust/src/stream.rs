@@ -76,6 +76,14 @@ impl<T> Stream<T> where T: Clone {
         }
     }
 
+    pub fn is_initialised(&self) -> bool {
+        self.has_changed() ||
+        match &self.last {
+            Ok(value) => value.is_some(),
+            &Err(_) => true
+        }
+    }
+
     pub fn update_last(&mut self) {
         if self.has_changed() {
             match &mut self.value {
@@ -230,20 +238,6 @@ impl<T> Stream<T> where T: Clone {
         }
     }
 
-    pub fn last<U>(&mut self, values: &Stream<T>, trigger: &Stream<U>)
-        where U: Clone {
-        if trigger.has_changed() {
-            self.clone_value_from(values);
-        }
-    }
-
-    pub fn time<U>(&mut self, arg0: &Stream<U>, timestamp: i64)
-        where T: From<i64>, U: Clone {
-        if arg0.has_changed() {
-            self.set_value(T::from(timestamp));
-        }
-    }
-
     // const
     pub fn constant(&mut self, value: T, trigger: &Stream<T>) {
         if trigger.has_changed() {
@@ -296,6 +290,32 @@ pub fn default<T>(output: &mut Stream<T>, input: &Stream<T>, timestamp: i64)
         output.set_value(output.get_last())
     }
 }
+
+pub fn default_from<T>(output: &mut Stream<T>, input: &Stream<T>, default: &Stream<T>)
+    where T: Clone {
+    if input.has_changed() {
+        output.clone_value_from(input);
+    } else if !input.is_initialised() && default.has_changed() {
+        output.clone_value_from(default);
+    }
+}
+
+pub fn time<T>(output: &mut Stream<i64>, input: &Stream<T>, timestamp: i64) {
+    if input.has_changed() {
+        output.set_value(timestamp);
+    }
+}
+
+pub fn last<T, U>(output: &mut Stream<T>, values: &Stream<T>, trigger: &Stream<U>)
+    where T: Clone {
+    if trigger.has_changed() {
+        output.clone_value_from(values);
+    }
+}
+
+pub fn delay<T>(output: &mut Stream<()>, delays: &Stream<i64>, resets: &Stream<T>) {}
+
+
 
 pub fn merge<T>(output: &mut Stream<T>, streams: Vec<&Stream<T>>)
     where T: Clone {
