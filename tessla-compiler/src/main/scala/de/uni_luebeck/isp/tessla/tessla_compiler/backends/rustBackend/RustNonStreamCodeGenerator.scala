@@ -228,17 +228,17 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         )
       case StringLiteralExpression(value, _) =>
         // FIXME: it would be nice to standardise this functionality somewhere...
-        s"""\"${value.replace("\"", "\\\"").replace("$", "\\$")}\""""
+        s"""Value(\"${value.replace("\"", "\\\"").replace("$", "\\$")}\")"""
       case IntLiteralExpression(value, _) =>
-        s"${value.toLong}_i64"
+        s"Value(${value.toLong}_i64)"
       case FloatLiteralExpression(value, _) =>
-        s"${value}_f64"
+        s"Value(${value}_f64)"
       case ExpressionRef(id, _, _) =>
         s"var_${id.fullName}"
       case x: ExternExpression =>
         translateExtern(x, tm, defContext)
       case RecordConstructorExpression(entries, _) if entries.isEmpty =>
-        "()" // Unit value
+        "Value(())" // Unit value
       case RecordConstructorExpression(entries, _) =>
         s"{ ${entries.toSeq
           .map { case (name, (ea, _)) => s"$name: ${translateExpressionArg(ea, tm, defContext)}" }
