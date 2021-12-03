@@ -1,147 +1,248 @@
-use std::ops::{Add, Deref};
+use crate::{TesslaInt, TesslaType, TesslaUnit};
+use crate::TesslaValue;
+use crate::TesslaValue::*;
 
-pub struct TesslaOption<T> {
-    value: Option<Result<T, &'static str>>,
+/*
+pub enum TesslaOption<T> {
+    Some(T),
+    Error(&'static str),
+    None,
 }
-
-// TODO Deref<Option<T>> https://doc.rust-lang.org/std/ops/trait.Deref.html
 
 impl<T> TesslaOption<T> {
-    fn Some(value: T) -> TesslaOption<T> {
-        TesslaOption { value: Some(Ok(value)) }
-    }
-    fn None() -> TesslaOption<T> {
-        TesslaOption { value: None }
-    }
-    fn Err(error: &'static str) -> TesslaOption<T> {
-        TesslaOption { value: Some(Err(error)) }
+    #[inline]
+    fn is_some(&self) -> bool {
+        matches!(*self, TesslaOption::Some(_))
     }
 
-    fn get_some(&self) -> Result<T, &'static str> {
-        // TODO use unwrap_infallible/.into_ok
-        self.value.ok_or("Tried to get value even though there was no event")?
+    #[inline]
+    fn is_error(&self) -> bool {
+        matches!(*self, TesslaOption::Error(_))
     }
 
-    fn take(&mut self) -> TesslaOption<T> {
-        TesslaOption { value: self.value.take() }
+    #[inline]
+    fn is_none(&self) -> bool {
+        matches!(*self, TesslaOption::None)
     }
 
-    fn clone(&self) -> TesslaOption<T> where T: Clone {
-        TesslaOption { value: self.value.clone() }
+    #[inline]
+    fn is_event(&self) -> bool {
+        self.is_some() || self.is_error()
+    }
+
+    #[inline]
+    fn take(&mut self) -> Self {
+        mem::take(self)
     }
 }
 
+impl<T: Clone> TesslaOption<T> {
+    fn get_value(&self) -> T {
+        if let TesslaOption::Some(value) = self {
+            value.clone()
+        } else if let TesslaOption::Error(error) = self {
+            panic!("Expected a value, got an error: {}", error)
+        } else {
+            panic!("Expected a value, got a none")
+        }
+    }
+}
+
+impl<T> TesslaOption<TesslaOption<T>> {
+    fn tessla_is_none(&self) -> TesslaOption<bool> {
+        use TesslaOption::*;
+        match &self {
+            Some(_) => Some(false),
+            Error(error) => Error(error),
+            None => Some(true),
+        }
+    }
+
+    fn tessla_is_some(&self) -> TesslaOption<bool> {
+        use TesslaOption::*;
+        match &self {
+            Some(_) => Some(true),
+            Error(error) => Error(error),
+            None => Some(false),
+        }
+    }
+}
+
+impl<T: Clone> TesslaOption<TesslaOption<T>> {
+    fn tessla_get_some(&self) -> TesslaOption<T> {
+        use TesslaOption::*;
+        match self {
+            Some(value) => value.clone(),
+            Error(error) => Error(error),
+            None => Error("Tried to getSome(None)"),
+        }
+    }
+}
+
+impl<T> Default for TesslaOption<T> {
+    #[inline]
+    fn default() -> Self {
+        TesslaOption::None
+    }
+}
+
+impl<T: Clone> Clone for TesslaOption<T> {
+    fn clone(&self) -> Self {
+        match self {
+            TesslaOption::Some(value) => TesslaOption::Some(value.clone()),
+            TesslaOption::Error(error) => TesslaOption::Error(error),
+            TesslaOption::None => TesslaOption::None,
+        }
+    }
+}*/
+
+/*
 impl<T> Deref for TesslaOption<T> {
     type Target = Option<Result<T, &'static str>>;
 
     fn deref(&self) -> &Self::Target {
-        &self.value
+        match self {
+            &TesslaOption::Some(value) => &Some(Ok(&value)),
+            &TesslaOption::Error(error) => &Some(Err(error)),
+            TesslaOption::None => None,
+        }
     }
-}
+}*/
 
 // Explanation:
-//  value: Err()      - there may be an event (†)
-//  value: Ok(Err())  - failed to determine event value (♢)
-//  value: Ok(Some()) - there is an event with a value
-//  value: Ok(None()) - there is no event
-pub struct Stream<T> {
-    value : Result<TesslaOption<T>, &'static str>,
-    last : Result<TesslaOption<T>, &'static str>,
+//  value: Err()             - there may be an event (†)
+//  value: Ok(Some(Err()))   - failed to determine event value (♢)
+//  value: Ok(Some(Value())) - there is an event with a value
+//  value: Ok(None)          - there is no event
+pub struct Stream<T: TesslaType> {
+    value: Result<Option<T>, &'static str>,
+    last: Result<Option<T>, &'static str>,
 }
 
 #[inline]
-pub fn init<T>() -> Stream<T> {
+pub fn init<T: TesslaType>() -> Stream<T> {
     Stream {
-        value: Ok(TesslaOption::None()),
-        last: Ok(TesslaOption::None()),
+        value: Ok(None),
+        last: Ok(None),
     }
 }
 
 #[inline]
-pub fn init_with_value<T>(value: T) -> Stream<T> {
+pub fn init_with_value<T: TesslaType>(value: T) -> Stream<T> {
     Stream {
-        value: Ok(TesslaOption::None()),
-        last: Ok(TesslaOption::Some(value)),
+        value: Ok(None),
+        last: Ok(Some(value)),
     }
 }
 
-impl<T> Stream<T> {
-
+impl<T: TesslaType> Stream<T> {
+    #[inline]
     pub fn has_changed(&self) -> bool {
         match &self.value {
-            Ok(value) => value.is_some(),
-            &Err(_) => true
+            &Err(_) => true,
+            Ok(Some(_)) => true,
+            Ok(None) => false,
         }
     }
 
+    #[inline]
     pub fn is_initialised(&self) -> bool {
-        self.has_changed() ||
-        match &self.last {
-            Ok(value) => value.is_some(),
-            &Err(_) => true
+        self.has_changed()
+            || match &self.last {
+            &Err(_) => true,
+            Ok(Some(_)) => true,
+            Ok(None) => false,
         }
     }
 
     pub fn update_last(&mut self) {
         if self.has_changed() {
             match &mut self.value {
-                Ok(value) => {
-                    self.last = Ok(value.take())
-                },
+                Ok(value) => self.last = Ok(value.take()),
                 &mut Err(error) => {
                     self.last = Err(error);
-                    self.value = Ok(TesslaOption::None());
+                    self.value = Ok(None);
                 }
             }
         }
     }
 
-    pub fn clone_value_from(&mut self, other: &Stream<T>) where T: Clone {
+    pub fn clone_value_from(&mut self, other: &Stream<T>)
+        where T: Clone {
         match &other.value {
             Ok(value) => {
                 self.value = Ok(value.clone());
-            },
+            }
             &Err(error) => {
                 self.value = Err(error);
             }
         }
     }
 
+    #[inline]
     pub fn set_value(&mut self, value: T) {
-        self.value = Ok(TesslaOption::Some(value));
+        self.value = Ok(Some(value));
     }
 
-    pub fn set_error(&mut self, error: &'static str) {
-        self.value = Ok(TesslaOption::Err(error))
-    }
-
+    #[inline]
     pub fn set_unknown(&mut self, error: &'static str) {
         self.value = Err(error);
     }
+}
+
+impl<T: TesslaType + Clone> Stream<T> {
+    pub fn clone_value(&self) -> T {
+        match &self.value {
+            &Err(error) => panic!(""),
+            Ok(None) => panic!(""),
+            Ok(Some(value)) => value.clone(),
+        }
+    }
+
+    pub fn clone_last(&self) -> T {
+        match &self.last {
+            &Err(error) => panic!(""),
+            Ok(None) => panic!(""),
+            Ok(Some(last)) => last.clone(),
+        }
+    }
+
+    pub fn call_output(&self, output_function: Option<fn(T, i64)>, current_ts: i64) {
+        if self.has_changed() {
+            if let Some(out_fn) = output_function {
+                out_fn(self.clone_value(), current_ts)
+            }
+        }
+    }
+}
+
+impl<T> Stream<TesslaValue<T>> {
+    #[inline]
+    pub fn set_error(&mut self, error: &'static str) {
+        self.value = Ok(Some(Error(error)))
+    }
 
     // TODO replace with proper failing functions..
-    pub fn get_value(&self) -> T {
+    pub fn get_value(&self) -> T
+    where T: Clone {
         match &self.value {
-            Ok(value) => value.get_some(),
-            &Err(error) => panic!("Tried to use † event caused by: {}", error)
+            &Err(error) => panic!("Tried to use † event caused by: {}", error),
+            Ok(None) => panic!("Tried to use event when there is none"),
+            Ok(Some(value)) => value.clone_value(),
         }
     }
 
-    pub fn get_last(&self) -> T {
+    pub fn get_last(&self) -> T
+    where T: Clone {
         match &self.last {
-            Ok(value) => value.get_some(),
-            &Err(error) => panic!("Tried to use † event caused by: {}", error)
+            &Err(error) => panic!("Tried to use † event caused by: {}", error),
+            Ok(None) => panic!("Tried to use event when there is none"),
+            Ok(Some(value)) => value.clone_value(),
         }
     }
 
-    pub fn get_value_or(&self) -> TesslaOption<T> where T: Clone {
-        match &self.value {
-            Ok(value) => value.clone(),
-            &Err(error) => panic!("")
-        }
-    }
-
-    pub fn get_value_or_last(&self) -> T {
+    pub fn get_value_or_last(&self) -> T
+    where T: Clone {
         if self.has_changed() {
             self.get_value()
         } else {
@@ -149,18 +250,9 @@ impl<T> Stream<T> {
         }
     }
 
-    pub fn call_output(&self, output_function: Option<fn(T, i64)>, current_ts: i64) {
-        if self.has_changed() {
-            if let Some(out_fn) = output_function {
-                out_fn(self.get_value(), current_ts)
-            }
-        }
-    }
+    // -- STEP FUNCTIONS --
 
-// -- STEP FUNCTIONS --
-
-
-/*
+    /*
     pub fn lift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(Option<U0>) -> Option<T>)
         where U0: Clone {
         if arg0.has_changed() {
@@ -281,16 +373,16 @@ impl<T> Stream<T> {
 // -- STEP FUNCTIONS --
 
 pub fn default<T>(output: &mut Stream<T>, input: &Stream<T>, timestamp: i64)
-    where T: Clone {
+where T: TesslaType + Clone {
     if input.has_changed() {
         output.clone_value_from(input);
     } else if timestamp == 0 {
-        output.set_value(output.get_last())
+        output.set_value(output.clone_last())
     }
 }
 
 pub fn default_from<T>(output: &mut Stream<T>, input: &Stream<T>, default: &Stream<T>)
-    where T: Clone {
+where T: TesslaType + Clone {
     if input.has_changed() {
         output.clone_value_from(input);
     } else if !input.is_initialised() && default.has_changed() {
@@ -298,25 +390,25 @@ pub fn default_from<T>(output: &mut Stream<T>, input: &Stream<T>, default: &Stre
     }
 }
 
-pub fn time<T>(output: &mut Stream<i64>, input: &Stream<T>, timestamp: i64) {
+pub fn time<T>(output: &mut Stream<TesslaInt>, input: &Stream<T>, timestamp: i64)
+where T: TesslaType {
     if input.has_changed() {
-        output.set_value(timestamp);
+        output.set_value(Value(timestamp));
     }
 }
 
 pub fn last<T, U>(output: &mut Stream<T>, values: &Stream<T>, trigger: &Stream<U>)
-    where T: Clone {
+where T: TesslaType + Clone, U: TesslaType {
     if trigger.has_changed() {
         output.clone_value_from(values);
     }
 }
 
-pub fn delay<T>(output: &mut Stream<()>, delays: &Stream<i64>, resets: &Stream<T>) {}
-
-
+pub fn delay<T>(output: &mut Stream<TesslaUnit>, delays: &Stream<TesslaInt>, resets: &Stream<T>)
+where T: TesslaType {}
 
 pub fn merge<T>(output: &mut Stream<T>, streams: Vec<&Stream<T>>)
-    where T: Clone {
+where T: TesslaType + Clone {
     for i in 0..streams.len() {
         let stream = streams[i];
         if stream.has_changed() {
