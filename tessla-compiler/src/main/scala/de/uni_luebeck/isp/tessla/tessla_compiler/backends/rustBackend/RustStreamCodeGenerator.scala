@@ -193,7 +193,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
      *   }
      * }
      */
-    currSrc.output.append(s"reset_delay(&mut $output, &$delay, &$reset);")
+    //currSrc.after.append(s"reset_delay(&mut $output, &$delay, &$reset);")
   }
 
   /**
@@ -495,7 +495,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     } else {
       srcSegments.stateInit.append(s"out_$cleanName: None")
     }
-    srcSegments.output.append(s"state.$s.call_output(state.out_$cleanName, state.current_ts);")
+    srcSegments.computation.append(s"state.$s.call_output(state.out_$cleanName, state.current_ts);")
   }
 
   /**

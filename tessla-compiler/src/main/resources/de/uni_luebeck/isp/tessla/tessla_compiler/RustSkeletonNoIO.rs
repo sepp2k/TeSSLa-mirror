@@ -57,8 +57,6 @@ fn step(state: &mut State, new_input_ts: i64, flush: bool) {
 
 //COMPUTATION
 
-//OUTPUT
-
                 flush_required = flush && (state.current_ts != new_input_ts);
                 state.last_processed_ts = state.current_ts;
                 state.current_ts = new_input_ts;

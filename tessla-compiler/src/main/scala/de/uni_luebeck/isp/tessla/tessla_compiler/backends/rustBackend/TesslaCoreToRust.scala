@@ -67,6 +67,8 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     override protected def translateSpec(): String = {
       val srcSegments = SourceSegments()
 
+      val outputMap = extSpec.spec.out.map { case (expr, annotations) => (expr.id, annotations) }.toMap
+
       // Produce computation section
       DefinitionOrdering.order(extSpec.spec.definitions).foreach {
         case (id, definition) =>
@@ -74,25 +76,19 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
             case InstantiatedType("Events", _, _) =>
               rustStreamCodeGenerator
                 .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
+              // Produce output generation
+              if (outputMap.contains(id)) {
+                val annotations = outputMap(id)
+                val name = TesslaAST.Core.getOutputName(annotations)
+                rustStreamCodeGenerator
+                  .produceOutputCode(id, getStreamType(id), name, srcSegments, annotations.contains("raw"), ioInterface)
+              }
             case FunctionType(_, _, _, _) =>
               srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
             case e =>
               throw Diagnostics
                 .NotYetImplementedError("Failed to translate an expression without instantiated type", e.location)
           }
-      }
-
-      // Produce output generation
-      extSpec.spec.out.foreach { o =>
-        val name = TesslaAST.Core.getOutputName(o._2)
-        rustStreamCodeGenerator.produceOutputCode(
-          o._1.id,
-          getStreamType(o._1.id),
-          name,
-          srcSegments,
-          o._2.contains("raw"),
-          ioInterface
-        )
       }
 
       // Produce input consumption
@@ -135,7 +131,6 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
         .replace("//STORE", srcSegments.store.mkString("\n"))
         .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
         .replace("//COMPUTATION", srcSegments.computation.mkString("\n"))
-        .replace("//OUTPUT", srcSegments.output.mkString("\n"))
         .replace("//INPUT", srcSegments.input.mkString("\n"))
       rewrittenSource
     }
