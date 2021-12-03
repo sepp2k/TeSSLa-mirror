@@ -109,29 +109,30 @@ object RustUtils {
       case "__[TC]inputParse__" => "" // TODO RustIOHandling.getInputParseExpression(typeHint.retType, args(0))
 
       // TODO some brackets here are superfluous and will produce warnings
-      case "__ite__" | "__staticite__"  => s"if ${args(0)} { ${args(1)} } else { ${args(2)} }"
-      case "__not__"                    => s"!(${args(0)})"
+      //case "__ite__" | "__staticite__"  => s"if *${args(0)} { ${args(1)} } else { ${args(2)} }"
+      case "__ite__" | "__staticite__" =>
+        s"match ${args(0)} { Value(true) => { ${args(1)} }, Value(false) => { ${args(2)} }, Error(error) => Error(error) }"
+      case "__not__" | "__bitflip__"    => s"!(${args(0)})"
       case "__negate__" | "__fnegate__" => s"-${args(0)}"
-      case "__bitflip__"                => s"!${args(0)}"
-      case "__and__"                    => "(" + args.mkString(" && ") + ")"
-      case "__or__"                     => "(" + args.mkString(" || ") + ")"
-      case "__eq__"                     => s"(${args(0)} == ${args(1)})"
-      case "__neq__"                    => s"(${args(0)} != ${args(1)})"
-      case "__gt__" | "__fgt__"         => s"(${args(0)} > ${args(1)})"
-      case "__lt__" | "__flt__"         => s"(${args(0)} < ${args(1)})"
-      case "__geq__" | "__fgeq__"       => s"(${args(0)} >= ${args(1)})"
-      case "__leq__" | "__fleq__"       => s"(${args(0)} <= ${args(1)})"
+      case "__and__"                    => s"Value(${args.mkString(" && ")})"
+      case "__or__"                     => s"Value(${args.mkString(" || ")})"
+      case "__eq__"                     => s"Value(${args(0)} == ${args(1)})"
+      case "__neq__"                    => s"Value(${args(0)} != ${args(1)})"
+      case "__gt__" | "__fgt__"         => s"Value(${args(0)} > ${args(1)})"
+      case "__lt__" | "__flt__"         => s"Value(${args(0)} < ${args(1)})"
+      case "__geq__" | "__fgeq__"       => s"Value(${args(0)} >= ${args(1)})"
+      case "__leq__" | "__fleq__"       => s"Value(${args(0)} <= ${args(1)})"
       case "__add__" | "__fadd__"       => s"(${args(0)} + ${args(1)})"
       case "__String_concat__"          => s"(${args(0)} + ${args(1)}.as_str())"
       case "__sub__" | "__fsub__"       => s"(${args(0)} - ${args(1)})"
       case "__mul__" | "__fmul__"       => s"(${args(0)} * ${args(1)})"
       case "__div__" | "__fdiv__"       => s"(${args(0)} / ${args(1)})"
       case "__mod__"                    => s"(${args(0)} % ${args(1)})"
-      case "__bitand__"                 => "(" + args.mkString(" & ") + ")"
-      case "__bitor__"                  => "(" + args.mkString(" | ") + ")"
-      case "__bitxor__"                 => "(" + args.mkString(" ^ ") + ")"
-      case "__leftshift__"              => "(" + s"${args(0)} << ${args(1)}" + ")"
-      case "__rightshift__"             => "(" + s"${args(0)} >> ${args(1)}" + ")"
+      case "__bitand__"                 => s"(${args.mkString(" & ")})"
+      case "__bitor__"                  => s"(${args.mkString(" | ")})"
+      case "__bitxor__"                 => s"(${args.mkString(" ^ ")})"
+      case "__leftshift__"              => s"(${args(0)} << ${args(1)})"
+      case "__rightshift__"             => s"(${args(0)} >> ${args(1)})"
 
       case "__pow__"  => s"${args(0)}.powf(${args(1)})"
       case "__log__"  => s"${args(0)}.log(${args(1)})"
@@ -140,8 +141,8 @@ object RustUtils {
       case "__tan__"  => s"${args(0)}.tan()"
       case "__atan__" => s"${args(0)}.atan()"
 
-      case "__intToFloat__" => s"${args(0)} as f64"
-      case "__floatToInt__" => s"${args(0)} as i64"
+      case "__intToFloat__" => s"TesslaFloat::from(${args(0)})"
+      case "__floatToInt__" => s"TesslaInt::from(${args(0)})"
 
       case "__Some__"    => s"Value(Some(${args(0)}))"
       case "__None__"    => s"Value(None)"
@@ -149,12 +150,8 @@ object RustUtils {
       case "__isSome__"  => s"${args(0)}.is_some()"
       case "__isNone__"  => s"${args(0)}.is_none()"
 
-      // FIXME this will probably fail, cause the underlying String is not stored anywhere
-      case "__toString__" => s"${args(0)}.to_string()"
-      // TODO format string syntax is entirely different in rust???
-      //  s"format!(${args(0)}, ${args(1)})"
-      case "__String_format__" =>
-        throw Diagnostics.CommandNotSupportedError("Format requires a statically known format string")
+      case "__toString__"      => s"${args(0)}.to_string()"
+      case "__String_format__" => s"${args(0)}.format(${args(1)})"
 
       /* TODO https://docs.rs/im/15.0.0/im/
       case "__Map_empty__" => "im::HashMap::new()"
@@ -204,7 +201,6 @@ case class SourceSegments(
   input: ListBuffer[String] = new ListBuffer[String],
   timestamp: ListBuffer[String] = new ListBuffer[String],
   computation: ListBuffer[String] = new ListBuffer[String],
-  output: ListBuffer[String] = new ListBuffer[String],
   static: ListBuffer[String] = new ListBuffer[String],
   store: ListBuffer[String] = new ListBuffer[String]
 )
