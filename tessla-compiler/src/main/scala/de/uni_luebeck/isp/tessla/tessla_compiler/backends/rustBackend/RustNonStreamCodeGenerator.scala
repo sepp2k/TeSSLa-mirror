@@ -84,7 +84,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       definedIdentifiers += (id -> FinalLazyDeclaration)
       val inlinedExp = inlineVars(e, defContext)
       // TODO how exactly do we handle this
-      s"let lazy_var_$id = ${translateExpressionArg(inlinedExp, tm, defContext)};"
+      s"let /*lazy*/ var_$id = ${translateExpressionArg(inlinedExp, tm, defContext)};"
     } else if (finalAssignmentPossible(e)) {
       definedIdentifiers += (id -> FinalDeclaration)
       s"let var_$id = ${translateExpressionArg(e, tm, defContext)};"
@@ -110,7 +110,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         val typeParams = if (genericTypeNames.nonEmpty) s"<${genericTypeNames.mkString(", ")}>" else ""
         val functionParams = params.map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe)}" }
         val returnType = RustUtils.convertType(result.tpe)
-        (s"fn fun_$id$typeParams(${functionParams.mkString(", ")}) -> $returnType {"
+        (s"fn var_$id$typeParams(${functionParams.mkString(", ")}) -> $returnType {"
           +: translateBody(body, result, TypeArgManagement.empty, extSpec.spec.definitions)
           :+ "}")
       case e =>
