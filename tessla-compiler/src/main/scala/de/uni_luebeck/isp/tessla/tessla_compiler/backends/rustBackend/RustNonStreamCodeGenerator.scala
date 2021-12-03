@@ -182,11 +182,11 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   ): String = {
     e match {
       case ExternExpression("true", _, _) =>
-        "true"
+        "Value(true)"
       case ExternExpression("false", _, _) =>
-        "false"
+        "Value(false)"
       case ExternExpression("None", InstantiatedType("Option", _, _), _) =>
-        "None"
+        "Value(None)"
       case ExternExpression(_, typ: Core.FunctionType, _) =>
         val newTm = tm.parsKnown(typ.typeParams)
         val argNames = typ.paramTypes.indices.map(i => s"tLPar_$i")

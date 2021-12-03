@@ -193,7 +193,8 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
      *   }
      * }
      */
-    //currSrc.after.append(s"reset_delay(&mut $output, &$delay, &$reset);")
+    //TODO find proper placement in skeleton:
+    // currSrc.after.append(s"reset_delay(&mut $output, &$delay, &$reset);")
   }
 
   /**
