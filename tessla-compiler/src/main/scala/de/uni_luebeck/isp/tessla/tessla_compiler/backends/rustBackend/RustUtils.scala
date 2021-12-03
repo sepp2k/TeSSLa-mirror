@@ -35,11 +35,11 @@ object RustUtils {
   def convertType(t: Type): String = {
     t match {
       case InstantiatedType("Events", Seq(t), _)                    => convertType(t)
-      case RecordType(entries, _) if entries.isEmpty                => "()" // unit type
-      case InstantiatedType("Bool", Seq(), _)                       => "bool"
-      case InstantiatedType("Int", Seq(), _)                        => "i64"
-      case InstantiatedType("Float", Seq(), _)                      => "f64"
-      case InstantiatedType("String", Seq(), _)                     => "String"
+      case RecordType(entries, _) if entries.isEmpty                => "TesslaUnit"
+      case InstantiatedType("Bool", Seq(), _)                       => "TesslaBool"
+      case InstantiatedType("Int", Seq(), _)                        => "TesslaInt"
+      case InstantiatedType("Float", Seq(), _)                      => "TesslaFloat"
+      case InstantiatedType("String", Seq(), _)                     => "TesslaString"
       case InstantiatedType("Option", Seq(t), _)                    => s"TesslaOption<${convertType(t)}>"
       case InstantiatedType("Set", Seq(t), _)                       => s"im::set<${convertType(t)}>"
       case InstantiatedType("Map", Seq(t1, t2), _)                  => s"im::map<${convertType(t1)}, ${convertType(t2)}>"
@@ -143,8 +143,8 @@ object RustUtils {
       case "__intToFloat__" => s"${args(0)} as f64"
       case "__floatToInt__" => s"${args(0)} as i64"
 
-      case "__Some__"    => s"TesslaOption::Some(${args(0)})"
-      case "__None__"    => s"TesslaOption::None()"
+      case "__Some__"    => s"Value(Some(${args(0)}))"
+      case "__None__"    => s"Value(None)"
       case "__getSome__" => s"${args(0)}.get_some()"
       case "__isSome__"  => s"${args(0)}.is_some()"
       case "__isNone__"  => s"${args(0)}.is_none()"
