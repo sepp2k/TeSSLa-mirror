@@ -194,7 +194,6 @@ object RustUtils {
 }
 
 case class SourceSegments(
-  variables: ListBuffer[String] = new ListBuffer[String],
   stateDef: ListBuffer[String] = new ListBuffer[String],
   stateInit: ListBuffer[String] = new ListBuffer[String],
   input: ListBuffer[String] = new ListBuffer[String],

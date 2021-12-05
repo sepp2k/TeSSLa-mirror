@@ -8,8 +8,8 @@ version = "0.0.0"
 tessla_stdlib = { path = "./tessla-compiler/src/main/resources/de/uni_luebeck/isp/tessla/stdlib/rust" }
 
 [[bin]]
-name = "rust_skeleton-noio"
-path = "tessla-compiler/src/main/resources/de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeletonNoIO.rs"
+name = "rust_skeleton"
+path = "tessla-compiler/src/main/resources/de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs"
 
 [[bin]]
 name = "out"
