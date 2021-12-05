@@ -517,19 +517,16 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
 
     val t = RustUtils.convertType(stream_type)
 
-    srcSegments.stateDef.append(s"set_$stream_id: Option<fn($t, i64, &mut State)>")
+    srcSegments.stateDef.append(s"set_$stream_id: fn($t, i64, &mut State)")
 
     if (ioInterface) {
       srcSegments.input.append(
-        s"""if input_stream_name == \"$stream_id\" { call_set(state.set_$stream_id, input_stream_value.parse().unwrap(), new_input_ts, state); }"""
+        s"""if input_stream_name == \"$stream_id\" { state.set_$stream_id(input_stream_value.parse().unwrap(), new_input_ts, state); }"""
       )
     }
-    // TODO move value?
-    srcSegments.stateInit.append(s"""set_$stream_id: Some(|value: $t, ts: i64, state: &mut State| {
-                                    |if ts != state.current_ts {
-                                    |step(state, ts, false);
-                                    |}
+
+    srcSegments.stateInit.append(s"""set_$stream_id: |value: $t, ts: i64, state: &mut State| {
                                     |$stream.set_value(value);
-                                    |})""".stripMargin)
+                                    |}""".stripMargin)
   }
 }

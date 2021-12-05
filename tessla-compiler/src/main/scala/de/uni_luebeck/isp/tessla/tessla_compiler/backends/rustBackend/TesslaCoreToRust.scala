@@ -99,15 +99,6 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
         srcSegments.input.append(
           "if parse_input(&mut input_stream_name, &mut input_stream_value, &mut new_input_ts) { break; }"
         )
-        srcSegments.static.append(
-          """fn call_set<T>(function: Option<fn(T, i64, &mut State)>, value: T, ts: i64, state: &mut State)
-            |where T: Clone {
-            |match function {
-            |Some(set_fun) => set_fun(value, ts, state),
-            |None => {}
-            |}
-            |}""".stripMargin
-        )
       }
 
       extSpec.spec.in.foreach { i =>
