@@ -259,46 +259,22 @@ macro_rules! lift{
     }
 }
 
+macro_rules! slift{
+    ($output:ident, $func:ident, $($arg:ident),+) => {
+        if $($arg.has_changed())||+ && $(($arg.value.is_some() || $arg.last.is_some()))&&+ {
+            let res = $func($($arg.get_value_or_last()),+);
+            if let Some(value) = res{
+                $output.set_value(value);
+            }
+        }
+    }
+}
+
 
 impl<T: TesslaType> EventContainer<T> {
 
-    // -- STEP FUNCTIONS --
+
     /*
-    // TODO I think we need a single slift for each number of arguments...
-    pub fn slift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(U0) -> T)
-        where U0: Clone {
-        if arg0.has_changed() {
-            self.set_value(function(arg0.get_value_or_last()));
-        }
-    }
-    pub fn slift2<U0, U1>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, function: fn(U0, U1) -> T)
-        where U0: Clone, U1: Clone {
-        if arg0.has_changed() || arg1.has_changed() && (arg0.value.is_some() || arg0.last.is_some()) && (arg1.value.is_some() || arg1.last.is_some()) {
-            self.set_value(function(arg0.get_value_or_last(), arg1.get_value_or_last()));
-        }
-    }
-
-    pub fn slift3<U0, U1, U2>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, function: fn(U0, U1, U2) -> T)
-        where U0: Clone, U1: Clone, U2: Clone {
-        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() && (arg0.value.is_some() || arg0.last.is_some()) && (arg1.value.is_some() || arg1.last.is_some()) && (arg2.value.is_some() || arg2.last.is_some()) {
-            self.set_value(function(arg0.get_value_or_last(),arg1.get_value_or_last(),arg2.get_value_or_last()));
-        }
-    }
-
-    pub fn slift4<U0, U1, U2, U3>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, function: fn(U0, U1, U2, U3) -> T)
-        where U0: Clone, U1: Clone, U2: Clone, U3: Clone {
-        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() && (arg0.value.is_some() || arg0.last.is_some()) && (arg1.value.is_some() || arg1.last.is_some()) && (arg2.value.is_some() || arg2.last.is_some()) && (arg3.value.is_some() || arg3.last.is_some()) {
-            self.set_value(function(arg0.get_value_or_last(),arg1.get_value_or_last(),arg2.get_value_or_last(),arg3.get_value_or_last()));
-        }
-    }
-
-    pub fn slift5<U0, U1, U2, U3, U4>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, arg4: &Stream<U4>, function: fn(U0, U1, U2, U3, U4) -> T)
-        where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone {
-        if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() || arg4.has_changed() && (arg0.value.is_some() || arg0.last.is_some()) && (arg1.value.is_some() || arg1.last.is_some()) && (arg2.value.is_some() || arg2.last.is_some()) && (arg3.value.is_some() || arg3.last.is_some()) && (arg4.value.is_some() || arg4.last.is_some()) {
-            self.set_value(function(arg0.get_value_or_last(),arg1.get_value_or_last(),arg2.get_value_or_last(),arg3.get_value_or_last(),arg4.get_value_or_last()));
-        }
-    }
-
     // const
     pub fn constant(&mut self, value: T, trigger: &Stream<T>) {
         if trigger.has_changed() {
