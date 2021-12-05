@@ -103,10 +103,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     }
 
     private def insertSegments(srcSegments: SourceSegments): String = {
-      var source = Source.fromResource(sourceTemplate).mkString
-      if (ioInterface) {
-        source = "fn main.+//ENDMAIN".r.replaceFirstIn(source, "")
-      }
+      val source = Source.fromResource(sourceTemplate).mkString
       val rewrittenSource = source
         .replace("//USERINCLUDES", "") //TODO
         .replace("//STATEDEF", srcSegments.stateDef.mkString(",\n"))
@@ -116,7 +113,11 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
         .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
         .replace("//COMPUTATION", srcSegments.computation.mkString("\n"))
         .replace("//INPUT", srcSegments.input.mkString("\n"))
-      rewrittenSource
+      if (ioInterface) {
+        rewrittenSource.replace("//ENDMAIN", "")
+      } else {
+        "fn main[\\s\\S]+//ENDMAIN".r.replaceFirstIn(rewrittenSource, "")
+      }
     }
   }
 }
