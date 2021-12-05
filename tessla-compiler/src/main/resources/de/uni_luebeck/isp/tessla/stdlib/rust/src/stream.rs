@@ -247,51 +247,23 @@ impl<T: Clone> Events<T> {
     }
 }
 
-impl<T: TesslaType> EventContainer<T> {
 
-    // -- STEP FUNCTIONS --
-
-    /*
-    pub fn lift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(Option<U0>) -> Option<T>)
-        where U0: Clone {
-        if arg0.has_changed() {
-            let res = function(arg0.get_value_or());
-            if let Some(value) = res {
-                self.set_value(value);
+macro_rules! lift{
+    ($output:ident, $func:ident, $($arg:ident),+) => {
+        if $($arg.has_changed())||+ {
+            let res = $func($($arg.get_value_or()),+);
+            if let Some(value) = res{
+                $output.set_value(value);
             }
         }
     }
+}
+
+
+impl<T: TesslaType> EventContainer<T> {
+
+    // -- STEP FUNCTIONS --
     /*
-        pub fn lift2<U0, U1>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, function: fn(Option<U0>, Option<U1>) -> Option<T>)
-            where U0: Clone, U1: Clone {
-            if arg0.has_changed() || arg1.has_changed() {
-                self.set_value(function(arg0.get_value_or(), arg1.get_value_or()));
-            }
-        }
-
-        pub fn lift3<U0, U1, U2>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, function: fn(Option<U0>, Option<U1>, Option<U2>) -> Option<T>)
-            where U0: Clone, U1: Clone, U2: Clone {
-            if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() {
-                self.set_value(function(arg0.get_value_or(), arg1.get_value_or(), arg2.get_value_or()));
-            }
-        }
-
-        pub fn lift4<U0, U1, U2, U3>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, function: fn(Option<U0>, Option<U1>, Option<U2>, Option<U3>) -> Option<T>)
-            where U0: Clone, U1: Clone, U2: Clone, U3: Clone {
-            if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() {
-                self.set_value(function(arg0.get_value_or(), arg1.get_value_or(), arg2.get_value_or(), arg3.get_value_or()));
-            }
-        }
-
-        pub fn lift5<U0, U1, U2, U3, U4>(&mut self, arg0: &Stream<U0>, arg1: &Stream<U1>, arg2: &Stream<U2>, arg3: &Stream<U3>, arg4: &Stream<U4>, function: fn(Option<U0>, Option<U1>, Option<U2>, Option<U3>, Option<U4>) -> Option<T>)
-            where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone {
-            if arg0.has_changed() || arg1.has_changed() || arg2.has_changed() || arg3.has_changed() || arg4.has_changed() {
-                self.set_value(function(arg0.get_value_or(), arg1.get_value_or(), arg2.get_value_or(), arg3.get_value_or(), arg4.get_value_or()));
-            }
-        }
-
-    */
-
     // TODO I think we need a single slift for each number of arguments...
     pub fn slift1<U0>(&mut self, arg0: &Stream<U0>, function: fn(U0) -> T)
         where U0: Clone {
