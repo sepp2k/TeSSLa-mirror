@@ -2,113 +2,6 @@ use crate::TesslaType;
 use crate::TesslaValue;
 use crate::TesslaValue::*;
 
-/*
-pub enum TesslaOption<T> {
-    Some(T),
-    Error(&'static str),
-    None,
-}
-
-impl<T> TesslaOption<T> {
-    #[inline]
-    fn is_some(&self) -> bool {
-        matches!(*self, TesslaOption::Some(_))
-    }
-
-    #[inline]
-    fn is_error(&self) -> bool {
-        matches!(*self, TesslaOption::Error(_))
-    }
-
-    #[inline]
-    fn is_none(&self) -> bool {
-        matches!(*self, TesslaOption::None)
-    }
-
-    #[inline]
-    fn is_event(&self) -> bool {
-        self.is_some() || self.is_error()
-    }
-
-    #[inline]
-    fn take(&mut self) -> Self {
-        mem::take(self)
-    }
-}
-
-impl<T: Clone> TesslaOption<T> {
-    fn get_value(&self) -> T {
-        if let TesslaOption::Some(value) = self {
-            value.clone()
-        } else if let TesslaOption::Error(error) = self {
-            panic!("Expected a value, got an error: {}", error)
-        } else {
-            panic!("Expected a value, got a none")
-        }
-    }
-}
-
-impl<T> TesslaOption<TesslaOption<T>> {
-    fn tessla_is_none(&self) -> TesslaOption<bool> {
-        use TesslaOption::*;
-        match &self {
-            Some(_) => Some(false),
-            Error(error) => Error(error),
-            None => Some(true),
-        }
-    }
-
-    fn tessla_is_some(&self) -> TesslaOption<bool> {
-        use TesslaOption::*;
-        match &self {
-            Some(_) => Some(true),
-            Error(error) => Error(error),
-            None => Some(false),
-        }
-    }
-}
-
-impl<T: Clone> TesslaOption<TesslaOption<T>> {
-    fn tessla_get_some(&self) -> TesslaOption<T> {
-        use TesslaOption::*;
-        match self {
-            Some(value) => value.clone(),
-            Error(error) => Error(error),
-            None => Error("Tried to getSome(None)"),
-        }
-    }
-}
-
-impl<T> Default for TesslaOption<T> {
-    #[inline]
-    fn default() -> Self {
-        TesslaOption::None
-    }
-}
-
-impl<T: Clone> Clone for TesslaOption<T> {
-    fn clone(&self) -> Self {
-        match self {
-            TesslaOption::Some(value) => TesslaOption::Some(value.clone()),
-            TesslaOption::Error(error) => TesslaOption::Error(error),
-            TesslaOption::None => TesslaOption::None,
-        }
-    }
-}*/
-
-/*
-impl<T> Deref for TesslaOption<T> {
-    type Target = Option<Result<T, &'static str>>;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            &TesslaOption::Some(value) => &Some(Ok(&value)),
-            &TesslaOption::Error(error) => &Some(Err(error)),
-            TesslaOption::None => None,
-        }
-    }
-}*/
-
 // Explanation:
 //  value: Err()             - there may be an event (†)
 //  value: Ok(Some(Err()))   - failed to determine event value (♢)
@@ -183,25 +76,28 @@ impl<T> Events<T> {
     pub fn set_error(&mut self, error: &'static str) {
         self.value = Ok(Some(Error(error)))
     }
+}
 
-    // TODO replace with proper failing functions..
-    pub fn get_value(&self) -> T where T: Clone {
+impl<T: Copy> Events<T> {
+    pub fn get_value(&self) -> T {
         match &self.value {
             &Err(error) => panic!("Tried to use † event caused by: {}", error),
             Ok(None) => panic!("Tried to use event when there is none"),
-            Ok(Some(value)) => value.clone_value(),
+            Ok(Some(value)) => value.get_value(),
         }
     }
 
-    pub fn get_last(&self) -> T where T: Clone {
+    // TODO do we need this?
+    pub fn get_last(&self) -> T {
         match &self.last {
             &Err(error) => panic!("Tried to use † event caused by: {}", error),
             Ok(None) => panic!("Tried to use event when there is none"),
-            Ok(Some(value)) => value.clone_value(),
+            Ok(Some(value)) => value.get_value(),
         }
     }
 
-    pub fn get_value_or_last(&self) -> T where T: Clone {
+    // TODO do we need this?
+    pub fn get_value_or_last(&self) -> T {
         if self.has_changed() {
             self.get_value()
         } else {
@@ -224,17 +120,33 @@ impl<T: Clone> Events<T> {
 
     pub fn clone_value(&self) -> TesslaValue<T> {
         match &self.value {
-            &Err(error) => panic!(""),
-            Ok(None) => panic!(""),
+            &Err(error) => panic!("Tried to use † event caused by: {}", error),
+            Ok(None) => panic!("Tried to use event when there is none"),
             Ok(Some(value)) => value.clone(),
         }
     }
 
     pub fn clone_last(&self) -> TesslaValue<T> {
         match &self.last {
-            &Err(error) => panic!(""),
-            Ok(None) => panic!(""),
+            &Err(error) => panic!("Tried to use † event caused by: {}", error),
+            Ok(None) => panic!("Tried to use event when there is none"),
             Ok(Some(last)) => last.clone(),
+        }
+    }
+
+    pub fn clone_value_or_last(&self) -> TesslaValue<T> {
+        if self.has_changed() {
+            self.clone_value()
+        } else {
+            self.clone_last()
+        }
+    }
+
+    pub fn clone_value_or_none(&self) -> TesslaValue<Option<TesslaValue<T>>> {
+        if self.has_changed() {
+            Value(Some(self.clone_value()))
+        } else {
+            Value(None)
         }
     }
 
