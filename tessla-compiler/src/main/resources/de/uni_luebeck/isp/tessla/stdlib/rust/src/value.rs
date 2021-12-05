@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, BitAnd, BitOr, BitXor, Deref, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 use std::str::FromStr;
@@ -51,17 +52,6 @@ impl<T: Clone> Clone for TesslaValue<T> {
         match self {
             &Error(error) => Error(error),
             Value(value) => Value(value.clone()),
-        }
-    }
-}
-
-impl<T: FromStr> FromStr for TesslaValue<T> {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match T::from_str(s) {
-            Err(_) => Ok(Error("Failed to parse value from String")),
-            Ok(value) => Ok(Value(value)),
         }
     }
 }
@@ -154,6 +144,15 @@ impl<T: Not<Output = T>> Not for TesslaValue<T> {
 
 pub type TesslaBool = TesslaValue<bool>;
 
+impl From<&str> for TesslaBool {
+    fn from(s: &str) -> Self {
+        match bool::from_str(s) {
+            Ok(value) => Value(value),
+            Err(_) => Error("Failed to parse Bool from String"),
+        }
+    }
+}
+
 impl Deref for TesslaBool {
     type Target = bool;
 
@@ -224,6 +223,15 @@ impl<T: PartialOrd> PartialOrd for TesslaValue<T> {
 
 pub type TesslaInt = TesslaValue<i64>;
 
+impl From<&str> for TesslaInt {
+    fn from(s: &str) -> Self {
+        match i64::from_str(s) {
+            Ok(value) => Value(value),
+            Err(_) => Error("Failed to parse Int from String"),
+        }
+    }
+}
+
 impl From<TesslaFloat> for TesslaInt {
     #[inline]
     fn from(value: TesslaFloat) -> Self {
@@ -237,6 +245,15 @@ impl From<TesslaFloat> for TesslaInt {
 // 5.4 Float
 
 pub type TesslaFloat = TesslaValue<f64>;
+
+impl From<&str> for TesslaFloat {
+    fn from(s: &str) -> Self {
+        match f64::from_str(s) {
+            Ok(value) => Value(value),
+            Err(_) => Error("Failed to parse Float from String"),
+        }
+    }
+}
 
 impl From<TesslaInt> for TesslaFloat {
     #[inline]
@@ -302,6 +319,12 @@ impl TesslaFloat {
 
 pub type TesslaString = TesslaValue<String>;
 
+impl From<&str> for TesslaString {
+    fn from(s: &str) -> Self {
+        Value(String::from(s))
+    }
+}
+
 impl Deref for TesslaString {
     type Target = String;
 
@@ -349,6 +372,22 @@ impl TesslaString {
 
 pub type TesslaOption<T> = TesslaValue<Option<T>>;
 
+impl<'a, T> From<&'a str> for TesslaOption<T> where T: From<&'a str> {
+    fn from(s: &'a str) -> Self {
+        match s {
+            "None" => Value(None),
+            _ if s.starts_with("Some(") => match s.split_once("Some(") {
+                Some(("", rest)) => match rest.rsplit_once(")") {
+                    Some((inner, "")) => Value(Some(T::from(inner))),
+                    _ => Error("Failed to parse Option from String"),
+                },
+                _ => Error("Failed to parse Option from String"),
+            },
+            _ => Error("Failed to parse Option from String"),
+        }
+    }
+}
+
 impl<T> TesslaOption<T> {
     #[inline]
     pub fn is_none(&self) -> TesslaBool {
@@ -388,3 +427,12 @@ impl<T: Clone> TesslaOption<T> {
 }
 
 pub type TesslaUnit = TesslaValue<()>;
+
+impl From<&str> for TesslaUnit {
+    fn from(s: &str) -> Self {
+        match s {
+            "()" => Value(()),
+            _ => Error("Failed to parse Unit from String"),
+        }
+    }
+}
