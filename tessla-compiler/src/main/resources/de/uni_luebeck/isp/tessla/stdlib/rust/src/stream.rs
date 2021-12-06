@@ -186,14 +186,15 @@ macro_rules! slift{
 impl<T: TesslaType> EventContainer<T> {
 
 
-    /*
+
     // const
-    pub fn constant(&mut self, value: T, trigger: &Stream<T>) {
+    pub fn constant<T>(output: &mut Events<T>, value: T, trigger: &Stream<T>)
+        where T: Clone{
         if trigger.has_changed() {
-            self.set_value(value);
+            output.set_value(value);
         }
     }
-
+    /*
     pub fn filter(&mut self, values: &Stream<T>, condition: &Stream<bool>) {
         if values.has_changed() && condition.get_value_or_last() {
             self.set_value(values.get_value());
@@ -223,7 +224,7 @@ impl<T: TesslaType> EventContainer<T> {
 
     pub fn unitIf(&mut self, cond: &Stream<bool>) where T: From<()> {
         if cond.get_value() {
-            self.set_value(T::from(())); //TODO need help understanding unit
+            self.set_value(T::from(()));
         }
     }
     */
