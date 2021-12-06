@@ -244,7 +244,7 @@ where T: Clone {
 pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>)
     where T: Clone {
     if trigger.has_changed() {
-        output.set_value(output.get_value() + Value(1_i64));
+        output.set_value(output.clone_value() + Value(1_i64));
     }
 }
 
@@ -255,40 +255,42 @@ pub fn constant<T, U>(output: &mut Events<T>, value: T, trigger: &Events<U>) {
     }
 }
 
-pub fn filter<T>(output: &mut Events<T>, values: &Events<U1>, condition: &Events<bool>)
-    where T: Clone{
+pub fn filter<T>(output: &mut Events<T>, values: &Events<T>, condition: &Events<bool>)
+    where T: Clone {
     if values.has_changed() && condition.get_value_or_last() {
-        output.set_value(values.get_value());
+        output.clone_value_from(&values);
     }
 }
 
-pub fn fold<T, U>(output: &mut Events<T>, stream: &Events<U>, function: fn(T, U) -> T)
-    where U: Clone, T: Clone {
+pub fn fold<T, U>(output: &mut Events<T>, stream: &Events<U>, function: fn(TesslaValue<T>, TesslaValue<U>) -> TesslaValue<T>)
+    where T: Clone, U: Clone {
     if stream.has_changed() {
-        output.set_value(function(output.get_last(), stream.get_value()));
+        output.set_value(function(output.clone_last(), stream.clone_value()));
     }
 }
 
-pub fn reduce<T>(output: &mut Events<T>, input: &Events<T>, function: fn(T,T) -> T)
+pub fn reduce<T>(output: &mut Events<T>, input: &Events<T>, function: fn(TesslaValue<T>, TesslaValue<T>) -> TesslaValue<T>)
     where T: Clone {
     if input.has_changed() {
-        if output.last.is_some() {
-            output.set_value(function(output.get_last(), input.get_value()));
-        }else{
-            output.set_value(input.get_value());
+        if output.is_initialised() {
+            output.set_value(function(output.clone_last(), input.clone_value()));
+        } else {
+            output.clone_value_from(&input);
         }
     }
 }
 
-pub fn unitIf(output: &mut Events<T>, cond: &Events<bool>) where T: From<()> {
+pub fn unitIf(output: &mut Events<()>, cond: &Events<bool>) {
     if cond.get_value() {
-        output.set_value(T::from(()));
+        output.set_value(Value(()));
     }
 }
 
-pub fn pure<T>(output: &mut Events<T>, stream: &Events<U1>)
-    where U1: PartialEq ,T: Clone{
-    if stream.has_changed() && stream.get_value() != output.get_last() {
-        output.set_value(stream.get_value());
+pub fn pure<T>(output: &mut Events<T>, stream: &Events<T>)
+    where T: Clone + PartialEq {
+    if stream.has_changed() {
+        if !output.is_initialised() || stream.get_value() != output.get_value() {
+            output.clone_value_from(&stream);
+        }
     }
 }
