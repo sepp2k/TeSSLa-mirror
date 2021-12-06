@@ -51,10 +51,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case TypeApplicationExpression(app, types, _) =>
         translateFunctionCall(app, args, tm.typeApp(types), defContext)
       case ExternExpression(name, typ: Core.FunctionType, _) =>
-        val newTm = tm.parsKnown(typ.typeParams)
-        val resultType = RustUtils.convertType(typ.resultType.resolve(newTm.resMap))
-        val paramTypes = typ.paramTypes.map { case (_, t) => RustUtils.convertType(t.resolve(newTm.resMap)) }
-        // TODO find out if we possibly need to type-cast params or the expression to match the expected signature
         RustUtils.translateBuiltinFunctionCall(s"__${name}__", args, typ)
       case e: ExternExpression => translateExtern(e, tm, defContext)
       case _: FunctionExpression | _: ExpressionRef | _: ApplicationExpression | _: RecordAccessorExpression =>
@@ -78,7 +74,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     tm: TypeArgManagement,
     defContext: Map[Identifier, DefinitionExpression]
   ): String = {
-    val resTpe = e.tpe.resolve(tm.resMap) // TODO do we ever need to specify this explicitly?
     val lazyVar = extSpec.lazyVars.get.contains(id)
     if (lazyVar) {
       definedIdentifiers += (id -> FinalLazyDeclaration)
@@ -134,8 +129,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val newTm = tm.parsKnown(e.typeParams)
     val arguments = e.params
       .map {
-        case (id, StrictEvaluation, tpe) => if (id.fullName == "_") "_" else s"var_$id"
-        case (id, LazyEvaluation, tpe) =>
+        case (id, StrictEvaluation, _) => if (id.fullName == "_") "_" else s"var_$id"
+        case (id, LazyEvaluation, _) =>
           if (id.fullName == "_") "_" else s"var_$id /* lazy */" // TODO how to handle lazy...
       }
       .mkString(", ")
@@ -190,14 +185,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case ExternExpression(_, typ: Core.FunctionType, _) =>
         val newTm = tm.parsKnown(typ.typeParams)
         val argNames = typ.paramTypes.indices.map(i => s"tLPar_$i")
-        val argTypes = typ.paramTypes
-          .map(_._2.resolve(newTm.resMap))
-          .map(RustUtils.convertType)
-          .zip(typ.paramTypes.map(_._1))
-          .map {
-            case (t, StrictEvaluation) => t
-            case (t, LazyEvaluation)   => s"Lazy($t)" // TODO lazy again...
-          }
         val ret = translateFunctionCall(e, argNames, newTm, defContext)
         s"|${argNames.mkString(", ")}|{ return $ret }"
     }
