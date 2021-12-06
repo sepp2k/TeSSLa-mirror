@@ -201,14 +201,14 @@ impl<T: TesslaType> EventContainer<T> {
             output.set_value(values.get_value());
         }
     }
-    /*
-    pub fn pure(&mut self, stream: &Stream<T>)
-        where T: PartialEq {
-        if stream.has_changed() && stream.get_value() != self.get_last() {
-            self.set_value(stream.get_value());
+
+    pub fn pure<T>(output: &mut Events<T>, stream: &Stream<U1>)
+        where U1: PartialEq ,T: Clone{
+        if stream.has_changed() && stream.get_value() != output.get_last() {
+            output.set_value(stream.get_value());
         }
     }
-
+/*
     pub fn count(&mut self, trigger: &Stream<T>)
         where T: Add<i64> + Into<i64> + From<i64> {
         if trigger.has_changed() {
