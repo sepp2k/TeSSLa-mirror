@@ -215,14 +215,15 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     currSrc: SourceSegments
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
-    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
+    val arguments = argument_exprs.map(streamNameFromExpressionArg)
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    // TODO I think the lifted function expects the stream values to be wrapped in options?
-    // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
-    currSrc.computation.append(s"lift!(&mut $output, $function, ${arguments.mkString(", ")});")
+    val wrappedFunctionCall =
+      s"|values| ($function)(${arguments.indices.map(i => s"values.pop_front().unwrap()").mkString(", ")})"
+    val argumentsVec = s"vec![${arguments.map(a => s"&$a").reverse.mkString(", ")}]"
+    currSrc.computation.append(s"lift(&mut $output, $argumentsVec, $wrappedFunctionCall);")
   }
 
   /**
@@ -243,12 +244,15 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     currSrc: SourceSegments
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
-    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
+    val arguments = argument_exprs.map(streamNameFromExpressionArg)
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.computation.append(s"slift!(&mut $output, $function, ${arguments.mkString(", ")});")
+    val wrappedFunctionCall =
+      s"|values| ($function)(${arguments.map(_ => s"values.pop_front().unwrap()").mkString(", ")})"
+    val argumentsVec = s"vec![${arguments.map(a => s"&$a").mkString(", ")}]"
+    currSrc.computation.append(s"slift(&mut $output, $argumentsVec, $wrappedFunctionCall);")
   }
 
   /**
@@ -268,7 +272,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
-    currSrc.computation.append(s"merge!(&mut $output, ${arguments.mkString(", ")});")
+    currSrc.computation.append(s"merge(&mut $output, vec![${arguments.mkString(", ")}]);")
   }
 
   /**

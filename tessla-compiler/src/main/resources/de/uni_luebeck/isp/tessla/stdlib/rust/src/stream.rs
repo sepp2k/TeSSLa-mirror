@@ -1,4 +1,7 @@
-use crate::TesslaType;
+use std::any::Any;
+use std::collections::VecDeque;
+use std::ops::Not;
+use crate::{TesslaOption, TesslaType};
 use crate::TesslaValue;
 use crate::TesslaValue::*;
 
@@ -194,40 +197,41 @@ where T: Clone {
 
 pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>) {}
 
-#[macro_export]
-macro_rules! lift {
-    ($output:ident, $func:ident, $($arg:ident),+) => {
-        if $($arg.has_changed())||+ {
-            let res = $func($($arg.get_value_or()),+);
-            if let Some(value) = res{
-                $output.set_value(value);
-            }
+pub fn lift<T, U, F>(output: &mut Events<T>, inputs: Vec<&Events<U>>, function: F)
+where U: Any + Sized + Clone, F: FnOnce(&mut VecDeque<TesslaOption<TesslaValue<U>>>) -> TesslaOption<TesslaValue<T>> {
+    let mut any_changed = false;
+    let mut values = VecDeque::with_capacity(inputs.capacity());
+    for input in inputs {
+        if input.has_changed() {
+            any_changed = true;
+        }
+        values.push_back(input.clone_value_or_none())
+    }
+    if any_changed {
+        let res = function(&mut values);
+        if let Value(Some(value)) = res {
+            output.set_value(value);
         }
     }
 }
 
-#[macro_export]
-macro_rules! slift {
-    ($output:ident, $func:ident, $($arg:ident),+) => {
-        if $($arg.has_changed())||+ && $(($arg.value.is_some() || $arg.last.is_some()))&&+ {
-            let res = $func($($arg.get_value_or_last()),+);
-            if let Some(value) = res{
-                $output.set_value(value);
-            }
+pub fn slift<T, U, F>(output: &mut Events<T>, inputs: Vec<&Events<U>>, function: F)
+    where U: Any + Sized + Clone, F: FnOnce(&mut VecDeque<TesslaValue<U>>) -> TesslaValue<T> {
+    let mut any_changed = false;
+    let mut all_initialised = true;
+    let mut values = VecDeque::with_capacity(inputs.capacity());
+    for input in inputs {
+        if !input.is_initialised() {
+            all_initialised = false;
+            break;
+        } else if input.has_changed() {
+            any_changed = true;
         }
+        values.push_back(input.clone_value_or_last())
     }
-}
-
-#[macro_export]
-macro_rules! merge {
-    ($output:ident, $($arg:ident),+) => {$(
-        if $arg.has_changed() {
-            $output.clone_value_from(&$arg);
-            if let Ok(_) = $output.value {
-                return;
-            }
-        }
-    )+}
+    if any_changed && all_initialised {
+        output.set_value(function(&mut values));
+    }
 }
 
 pub fn merge<T>(output: &mut Events<T>, streams: Vec<&Events<T>>)
