@@ -194,13 +194,14 @@ impl<T: TesslaType> EventContainer<T> {
             output.set_value(value);
         }
     }
-    /*
-    pub fn filter(&mut self, values: &Stream<T>, condition: &Stream<bool>) {
+
+    pub fn filter<T>(output: &mut Events<T>, values: &Stream<U1>, condition: &Stream<bool>)
+    where T: Clone{
         if values.has_changed() && condition.get_value_or_last() {
-            self.set_value(values.get_value());
+            output.set_value(values.get_value());
         }
     }
-
+    /*
     pub fn pure(&mut self, stream: &Stream<T>)
         where T: PartialEq {
         if stream.has_changed() && stream.get_value() != self.get_last() {
