@@ -222,7 +222,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     )
     // TODO I think the lifted function expects the stream values to be wrapped in options?
     // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
-    currSrc.computation.append(s"!lift($output, $function, ${arguments.mkString(", ")});")
+    currSrc.computation.append(s"!lift(&mut $output, $function, ${arguments.mkString(", ")});")
   }
 
   /**
@@ -248,7 +248,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.computation.append(s"!slift($output, $function, ${arguments.mkString(", ")});")
+    currSrc.computation.append(s"!slift(&mut $output, $function, ${arguments.mkString(", ")});")
   }
 
   /**
@@ -286,7 +286,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, IntType, "init_with_value(0_i64)", currSrc)
     val count_stream = streamNameFromExpressionArg(count_stream_expr)
-    currSrc.computation.append(s"$output.count($count_stream);")
+    currSrc.computation.append(s"$output.count(&mut $count_stream);")
   }
 
   /**
