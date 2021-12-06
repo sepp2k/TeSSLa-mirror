@@ -223,7 +223,7 @@ impl<T: TesslaType> EventContainer<T> {
         }
     }
 
-    pub fn unitIf<T>(output: &mut Events<T>, cond: &Stream<bool>) where T: Clone {
+    pub fn unitIf(output: &mut Events<T>, cond: &Stream<bool>) where T: From<()> {
         if cond.get_value() {
             output.set_value(T::from(()));
         }
