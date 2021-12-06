@@ -222,7 +222,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     )
     // TODO I think the lifted function expects the stream values to be wrapped in options?
     // TODO function can be different things, we'll probably need some preprocessing (nonStream.translateFunctionCall)
-    currSrc.computation.append(s"!lift(&mut $output, $function, ${arguments.mkString(", ")});")
+    currSrc.computation.append(s"lift!(&mut $output, $function, ${arguments.mkString(", ")});")
   }
 
   /**
@@ -248,7 +248,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.computation.append(s"!slift(&mut $output, $function, ${arguments.mkString(", ")});")
+    currSrc.computation.append(s"slift!(&mut $output, $function, ${arguments.mkString(", ")});")
   }
 
   /**
