@@ -333,7 +333,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val value = streamNameFromExpressionArg(value_expr)
     val condition = streamNameFromExpressionArg(condition_expr)
-    currSrc.computation.append(s"$output.filter(&$value, &$condition);")
+    currSrc.computation.append(s"filter<$output_type>(&$output, $value, &$condition);")
   }
 
   /**
