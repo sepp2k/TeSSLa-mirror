@@ -22,8 +22,11 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{stringToVariable, structComparison}
 
 import scala.collection.mutable.ListBuffer
+import scala.util.matching.Regex
 
 object RustUtils {
+
+  val NON_ALPHA_PATTERN: Regex = "[^a-zA-Z0-9_\\p{L}\\p{M}\\p{N}]".r
 
   /**
    * Converts TeSSLa type to corresponding rust types

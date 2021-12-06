@@ -452,8 +452,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     throw Diagnostics.CommandNotSupportedError(s"The translation of native:$name(...) is not implemented.")
   }
 
-  private val NON_ALPHA_PATTERN = "[^a-zA-Z0-9_\\p{L}\\p{M}\\p{N}]".r
-
   /**
    * Add code for output generation to the source segments.
    * The output gets value, error, timestamp passed and if the printing format is raw (i.e. only value, not the
@@ -478,10 +476,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val t = RustUtils.convertType(typ)
     // FIXME: All this replacing of specific chars is probably not exhaustive and kinda not nice to do here
     var name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
-    val cleanName = NON_ALPHA_PATTERN.replaceAllIn(name, m => s"χ${m.group(0).charAt(0).asInstanceOf[Int]}")
+    val cleanName = RustUtils.NON_ALPHA_PATTERN.replaceAllIn(name, m => s"χ${m.group(0).charAt(0).asInstanceOf[Int]}")
     name = name.replace("$", "\\$")
 
-    srcSegments.stateDef.append(s"out_$cleanName: /* $name */ Option<fn($t, i64)>")
+    srcSegments.stateDef.append(s"out_$cleanName: Option<fn($t, i64)> /* $name */")
 
     if (ioInterface) {
       val nameString = name
