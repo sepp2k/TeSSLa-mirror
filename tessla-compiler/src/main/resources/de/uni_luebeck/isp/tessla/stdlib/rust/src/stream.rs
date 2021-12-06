@@ -215,14 +215,14 @@ impl<T: TesslaType> EventContainer<T> {
             output.set_value(U1::from(output.get_value().into() + 1_i64));
         }
     }
-/*
-    pub fn fold<U>(&mut self, stream: &Stream<U>, function: fn(T, U) -> T)
-        where U: Clone {
+
+    pub fn fold<T, U>(output: &mut Events<T>, stream: &Stream<U>, function: fn(T, U) -> T)
+        where U: Clone, T: Clone {
         if stream.has_changed() {
-            self.set_value(function(self.get_last(), stream.get_value()));
+            output.set_value(function(output.get_last(), stream.get_value()));
         }
     }
-
+/*
     pub fn unitIf(&mut self, cond: &Stream<bool>) where T: From<()> {
         if cond.get_value() {
             self.set_value(T::from(()));
