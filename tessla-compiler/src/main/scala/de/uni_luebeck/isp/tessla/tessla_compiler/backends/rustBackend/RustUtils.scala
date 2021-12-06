@@ -19,7 +19,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{stringToVariable, structComparison}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.structComparison
 
 import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
@@ -27,6 +27,11 @@ import scala.util.matching.Regex
 object RustUtils {
 
   val NON_ALPHA_PATTERN: Regex = "[^a-zA-Z0-9_\\p{L}\\p{M}\\p{N}]".r
+
+  /**
+   * Set of structs keyed by their generated name, with their field names, and types.
+   */
+  var definedStructs: Map[String, Seq[(String, Type)]] = Map()
 
   /**
    * Converts TeSSLa type to corresponding rust types
@@ -56,15 +61,8 @@ object RustUtils {
             case (StrictEvaluation, t) => convertType(t)
           }
           .mkString(", ")}) -> ${convertType(resultType)}"""
-      case RecordType(entries, _) => {
-        // FIXME Frankly these need to be handled differently
-        //  since rust does not allow anonymous structs, we need to name them,
-        //  perhaps in a repeatable way, and then instantiate the type once in <static>
-        val sortedEntries = entries.toSeq.sortWith { case ((n1, _), (n2, _)) => structComparison(n1.name, n2.name) }
-        val names = sortedEntries.map(_._1.name) // TODO named tuple...
-        val types = sortedEntries.map { case (_, t) => convertType(t._1) }
-        s"(${types.mkString(", ")})"
-      }
+      case RecordType(entries, _) =>
+        RustUtils.getStructName(entries.toSeq.map { case (name, (tpe, _)) => (name, tpe) })
       case TypeParam(name, _) => name.toString
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
@@ -91,6 +89,26 @@ object RustUtils {
       }
       .flatten
       .toSet
+  }
+
+  /**
+   * Create a struct name repeatably from the field names and their types
+   * This name, along with the signature is also stored, so that the struct can be generated
+   * @param fields the field names and their types
+   * @return the name for that struct datatype
+   */
+  def getStructName(fields: Seq[(String, Type)]): String = {
+    val structName = NON_ALPHA_PATTERN.replaceAllIn(
+      s"Structſ${fields
+        .sortWith { case ((n1, _), (n2, _)) => structComparison(n1, n2) }
+        .map { case (name, tpe) => s"${name.capitalize}þ$tpe" }
+        .mkString("ſ")}",
+      "ø"
+    )
+    if (!definedStructs.contains(structName)) {
+      definedStructs += (structName -> fields)
+    }
+    structName
   }
 
   /**

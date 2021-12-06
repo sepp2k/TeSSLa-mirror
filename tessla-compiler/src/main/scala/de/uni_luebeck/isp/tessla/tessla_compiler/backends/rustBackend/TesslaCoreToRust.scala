@@ -96,6 +96,8 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
         rustStreamCodeGenerator.produceInputCode(i._1, i._2._1, srcSegments, ioInterface)
       }
 
+      srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStructDefinitions())
+
       insertSegments(srcSegments)
       // Rust does not like $ in names
         .replace("$", "京")

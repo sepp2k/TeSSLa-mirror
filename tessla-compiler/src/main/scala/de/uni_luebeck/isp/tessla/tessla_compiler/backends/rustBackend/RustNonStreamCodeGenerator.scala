@@ -29,6 +29,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
   FinalLazyDeclaration,
   VariableDeclaration
 }
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustUtils.convertType
 
 class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     extends NonStreamCodeGeneratorInterface[String, String](extSpec) {
@@ -227,13 +228,30 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case RecordConstructorExpression(entries, _) if entries.isEmpty =>
         "Value(())" // Unit value
       case RecordConstructorExpression(entries, _) =>
-        s"{ ${entries.toSeq
+        val fields = entries.toSeq.map { case (name, (ea, _)) => (name, ea.tpe.resolve(tm.resMap)) }
+        val structName = RustUtils.getStructName(fields)
+
+        s"$structName { ${entries
           .map { case (name, (ea, _)) => s"$name: ${translateExpressionArg(ea, tm, defContext)}" }
           .mkString(", ")} }"
       case RecordAccessorExpression(name, target, _, _) =>
         s"${translateExpressionArg(target, tm, defContext)}.$name"
       case _ =>
         throw Diagnostics.CoreASTError("Unexpected ExpressionArg cannot be translated", e.location)
+    }
+  }
+
+  /**
+   * Translates all encountered structs to rust definitions
+   * @return The struct definitions
+   */
+  def translateStructDefinitions(): Seq[String] = {
+    // TODO we need some sort of struct from string code generation, if we provide an io interface
+    RustUtils.definedStructs.toSeq.map {
+      case (name, fields) =>
+        s"""struct $name {
+           |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
+           |}""".stripMargin
     }
   }
 }
