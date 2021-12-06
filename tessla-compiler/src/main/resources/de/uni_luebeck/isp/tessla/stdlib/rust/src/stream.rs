@@ -217,14 +217,14 @@ macro_rules! slift {
 }
 
 macro_rules! merge {
-    ($output:ident, $($arg:ident),+) => {${
+    ($output:ident, $($arg:ident),+) => {$(
         if $arg.has_changed() {
             $output.clone_value_from(&$arg);
             if let Ok(_) = $output.value {
                 return;
             }
         }
-    }+}
+    )+}
 }
 
 pub fn merge<T>(output: &mut Events<T>, streams: Vec<&Events<T>>)
@@ -249,7 +249,7 @@ pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>)
 }
 
 // const
-pub fn constant<T, U>(output: &mut Events<T>, value: T, trigger: &Events<U>) {
+pub fn constant<T, U>(output: &mut Events<T>, value: TesslaValue<T>, trigger: &Events<U>) {
     if trigger.has_changed() {
         output.set_value(value);
     }
@@ -289,7 +289,7 @@ pub fn unitIf(output: &mut Events<()>, cond: &Events<bool>) {
 pub fn pure<T>(output: &mut Events<T>, stream: &Events<T>)
     where T: Clone + PartialEq {
     if stream.has_changed() {
-        if !output.is_initialised() || stream.get_value() != output.get_value() {
+        if !output.is_initialised() || stream.value != output.value {
             output.clone_value_from(&stream);
         }
     }
