@@ -222,13 +222,13 @@ impl<T: TesslaType> EventContainer<T> {
             output.set_value(function(output.get_last(), stream.get_value()));
         }
     }
-/*
-    pub fn unitIf(&mut self, cond: &Stream<bool>) where T: From<()> {
+
+    pub fn unitIf<T>(output: &mut Events<T>, cond: &Stream<bool>) where T: Clone {
         if cond.get_value() {
-            self.set_value(T::from(()));
+            output.set_value(T::from(()));
         }
     }
-    */
+
 }
 
 // -- STEP FUNCTIONS --
