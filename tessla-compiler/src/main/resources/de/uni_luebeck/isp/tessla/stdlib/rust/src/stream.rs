@@ -249,8 +249,7 @@ pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>)
 }
 
 // const
-pub fn constant<T>(output: &mut Events<T>, value: T, trigger: &Events<T>)
-    where T: Clone{
+pub fn constant<T, U>(output: &mut Events<T>, value: T, trigger: &Events<U>) {
     if trigger.has_changed() {
         output.set_value(value);
     }
