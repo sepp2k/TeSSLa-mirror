@@ -194,6 +194,7 @@ where T: Clone {
 
 pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>) {}
 
+#[macro_export]
 macro_rules! lift {
     ($output:ident, $func:ident, $($arg:ident),+) => {
         if $($arg.has_changed())||+ {
@@ -205,6 +206,7 @@ macro_rules! lift {
     }
 }
 
+#[macro_export]
 macro_rules! slift {
     ($output:ident, $func:ident, $($arg:ident),+) => {
         if $($arg.has_changed())||+ && $(($arg.value.is_some() || $arg.last.is_some()))&&+ {
@@ -216,6 +218,7 @@ macro_rules! slift {
     }
 }
 
+#[macro_export]
 macro_rules! merge {
     ($output:ident, $($arg:ident),+) => {$(
         if $arg.has_changed() {
