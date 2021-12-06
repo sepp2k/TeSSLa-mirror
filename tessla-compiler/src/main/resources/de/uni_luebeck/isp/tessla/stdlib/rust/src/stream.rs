@@ -159,29 +159,6 @@ impl<T: Clone> Events<T> {
     }
 }
 
-
-macro_rules! lift{
-    ($output:ident, $func:ident, $($arg:ident),+) => {
-        if $($arg.has_changed())||+ {
-            let res = $func($($arg.get_value_or()),+);
-            if let Some(value) = res{
-                $output.set_value(value);
-            }
-        }
-    }
-}
-
-macro_rules! slift{
-    ($output:ident, $func:ident, $($arg:ident),+) => {
-        if $($arg.has_changed())||+ && $(($arg.value.is_some() || $arg.last.is_some()))&&+ {
-            let res = $func($($arg.get_value_or_last()),+);
-            if let Some(value) = res{
-                $output.set_value(value);
-            }
-        }
-    }
-}
-
 // const
 pub fn constant<T>(output: &mut Events<T>, value: T, trigger: &Events<T>)
     where T: Clone{
@@ -269,6 +246,39 @@ where T: Clone {
 }
 
 pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>) {}
+
+macro_rules! lift {
+    ($output:ident, $func:ident, $($arg:ident),+) => {
+        if $($arg.has_changed())||+ {
+            let res = $func($($arg.get_value_or()),+);
+            if let Some(value) = res{
+                $output.set_value(value);
+            }
+        }
+    }
+}
+
+macro_rules! slift {
+    ($output:ident, $func:ident, $($arg:ident),+) => {
+        if $($arg.has_changed())||+ && $(($arg.value.is_some() || $arg.last.is_some()))&&+ {
+            let res = $func($($arg.get_value_or_last()),+);
+            if let Some(value) = res{
+                $output.set_value(value);
+            }
+        }
+    }
+}
+
+macro_rules! merge {
+    ($output:ident, $($arg:ident),+) => {${
+        if $arg.has_changed() {
+            $output.clone_value_from(&$arg);
+            if let Ok(_) = $output.value {
+                return;
+            }
+        }
+    }+}
+}
 
 pub fn merge<T>(output: &mut Events<T>, streams: Vec<&Events<T>>)
 where T: Clone {
