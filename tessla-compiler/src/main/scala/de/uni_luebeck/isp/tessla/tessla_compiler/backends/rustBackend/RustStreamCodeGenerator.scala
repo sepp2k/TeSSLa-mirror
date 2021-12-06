@@ -310,7 +310,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val value =
       rustNonStreamCodeGenerator.translateExpressionArg(value_expr, rustNonStreamCodeGenerator.TypeArgManagement.empty)
     val trigger = streamNameFromExpressionArg(trigger_expr)
-    currSrc.computation.append(s"$output.constant($value, &$trigger);")
+    currSrc.computation.append(s"constant<$output_type>($output, $value, &$trigger);")
   }
 
   /**
