@@ -181,13 +181,6 @@ pub fn pure<T>(output: &mut Events<T>, stream: &Events<U1>)
     }
 }
 
-pub fn count<T>(output: &mut Events<T>, trigger: &Events<U1>)
-    where U1: Add<i64> + Into<i64> + From<i64> ,T: Clone {
-    if trigger.has_changed() {
-        output.set_value(U1::from(output.get_value().into() + 1_i64));
-    }
-}
-
 pub fn fold<T, U>(output: &mut Events<T>, stream: &Events<U>, function: fn(T, U) -> T)
     where U: Clone, T: Clone {
     if stream.has_changed() {
@@ -291,5 +284,12 @@ where T: Clone {
                 return;
             }
         }
+    }
+}
+
+pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>)
+    where T: Clone {
+    if trigger.has_changed() {
+        output.set_value(output.get_value() + Value(1_i64));
     }
 }
