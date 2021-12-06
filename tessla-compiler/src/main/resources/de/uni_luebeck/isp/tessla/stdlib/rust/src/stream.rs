@@ -229,6 +229,17 @@ impl<T: TesslaType> EventContainer<T> {
         }
     }
 
+    pub fn reduce<T>(output: &mut Events<T>, input: &Stream<T>, function: fn(T,T) -> T)
+        where T: Clone {
+        if input.has_changed() {
+            if output.last.is_some() {
+                output.set_value(function(output.get_last(), input.get_value()));
+            }else{
+                output.set_value(input.get_value());
+            }
+        }
+    }
+
 }
 
 // -- STEP FUNCTIONS --

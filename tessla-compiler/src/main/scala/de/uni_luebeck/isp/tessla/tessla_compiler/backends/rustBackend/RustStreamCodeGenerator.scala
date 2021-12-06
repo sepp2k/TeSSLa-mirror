@@ -389,7 +389,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.computation.append(s"$output.reduce(&$stream, $function);")
+    currSrc.computation.append(s"reduce<$output_type>(&mut $output, &$stream, $function);")
   }
 
   /**
