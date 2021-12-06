@@ -208,14 +208,14 @@ impl<T: TesslaType> EventContainer<T> {
             output.set_value(stream.get_value());
         }
     }
-/*
-    pub fn count(&mut self, trigger: &Stream<T>)
-        where T: Add<i64> + Into<i64> + From<i64> {
+
+    pub fn count<T>(output: &mut Events<T>, trigger: &Stream<U1>)
+        where U1: Add<i64> + Into<i64> + From<i64> ,T: Clone {
         if trigger.has_changed() {
-            self.set_value(T::from(self.get_value().into() + 1_i64));
+            output.set_value(U1::from(output.get_value().into() + 1_i64));
         }
     }
-
+/*
     pub fn fold<U>(&mut self, stream: &Stream<U>, function: fn(T, U) -> T)
         where U: Clone {
         if stream.has_changed() {
