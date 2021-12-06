@@ -310,7 +310,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val value =
       rustNonStreamCodeGenerator.translateExpressionArg(value_expr, rustNonStreamCodeGenerator.TypeArgManagement.empty)
     val trigger = streamNameFromExpressionArg(trigger_expr)
-    currSrc.computation.append(s"constant<$output_type>($output, $value, &$trigger);")
+    currSrc.computation.append(s"constant<$output_type>(&mut $output, $value, &$trigger);")
   }
 
   /**
@@ -333,7 +333,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val value = streamNameFromExpressionArg(value_expr)
     val condition = streamNameFromExpressionArg(condition_expr)
-    currSrc.computation.append(s"filter<$output_type>(&$output, $value, &$condition);")
+    currSrc.computation.append(s"filter<$output_type>(&mut $output, &$value, &$condition);")
   }
 
   /**
@@ -363,7 +363,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.computation.append(s"$output.fold(&$stream, $function);")
+    currSrc.computation.append(s"fold<$output_type>(&mut $output, &$stream, $function);")
   }
 
   /**
