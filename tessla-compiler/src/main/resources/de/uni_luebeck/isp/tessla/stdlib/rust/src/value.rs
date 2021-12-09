@@ -165,56 +165,62 @@ impl Deref for TesslaBool {
     }
 }
 
-impl TesslaBool {
-    #[inline]
-    pub fn then_else<T, F>(&self, if_true: /* lazy */ F, if_false: /* lazy */ F) -> TesslaValue<T>
-    where F: FnOnce() -> TesslaValue<T> {
-        match self {
-            &Error(error) => Error(error),
-            &Value(value) => if value { if_true() } else { if_false() },
-        }
-    }
-
-    #[inline]
-    pub fn and<F>(&self, rhs: /* lazy */ F) -> TesslaBool
-    where F: FnOnce() -> TesslaBool {
-        match self {
-            &Error(error) => Error(error),
-            &Value(value) => if value { rhs() } else { Value(false) },
-        }
-    }
-
-    #[inline]
-    pub fn or<F>(&self, rhs: /* lazy */ F) -> TesslaBool
-    where F: FnOnce() -> TesslaBool {
-        match self {
-            &Error(error) => Error(error),
-            &Value(value) => if value { Value(true) } else { rhs() },
-        }
-    }
-
-}
-
 // 5.2 Comparison
 
-// lhs == rhs, lhs != rhs
-impl<T: PartialEq> PartialEq for TesslaValue<T> {
+impl<T: PartialEq> TesslaValue<T> {
+    // lhs == rhs
     #[inline]
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, other: &Self) -> TesslaBool {
         match (self, other) {
-            (Error(_), _) | (_, Error(_)) => true, // TODO is this correct?
-            (Value(lvalue), Value(rvalue)) => lvalue.eq(rvalue),
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.eq(rvalue)),
+        }
+    }
+
+    // lhs != rhs
+    #[inline]
+    fn neq(&self, other: &Self) -> TesslaBool {
+        match (self, other) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.neq(rvalue)),
         }
     }
 }
 
-// lhs < rhs, lhs <= rhs, lhs >= rhs, lhs > rhs
-impl<T: PartialOrd> PartialOrd for TesslaValue<T> {
+impl<T: PartialOrd> TesslaValue<T> {
+    // lhs < rhs
     #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn lt(&self, other: &Self) -> TesslaBool {
         match (self, other) {
-            (Error(_), _) | (_, Error(_)) => None, // TODO is this correct?
-            (Value(lvalue), Value(rvalue)) => lvalue.partial_cmp(rvalue),
+            (Error(_), _) | (_, Error(_)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.lt(rvalue)),
+        }
+    }
+
+    // lhs <= rhs
+    #[inline]
+    fn le(&self, other: &Self) -> TesslaBool {
+        match (self, other) {
+            (Error(_), _) | (_, Error(_)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.le(rvalue)),
+        }
+    }
+
+    // lhs > rhs
+    #[inline]
+    fn gt(&self, other: &Self) -> TesslaBool {
+        match (self, other) {
+            (Error(_), _) | (_, Error(_)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.gt(rvalue)),
+        }
+    }
+
+    // lhs >= rhs
+    #[inline]
+    fn ge(&self, other: &Self) -> TesslaBool {
+        match (self, other) {
+            (Error(_), _) | (_, Error(_)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.ge(rvalue)),
         }
     }
 }
