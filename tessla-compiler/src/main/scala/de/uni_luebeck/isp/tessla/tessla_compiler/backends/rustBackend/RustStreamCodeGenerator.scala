@@ -528,7 +528,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     }
 
     srcSegments.stateInit.append(s"""set_$stream_id: |value: $t, ts: i64, state: &mut State| {
-                                    |$stream.set_value(value);
+                                    |$stream.set_event(value);
                                     |}""".stripMargin)
   }
 }

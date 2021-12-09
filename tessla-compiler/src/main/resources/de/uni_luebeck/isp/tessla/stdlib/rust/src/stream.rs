@@ -1,6 +1,3 @@
-use std::any::Any;
-use std::collections::VecDeque;
-use std::ops::Not;
 use crate::{TesslaOption, TesslaType};
 use crate::TesslaValue;
 use crate::TesslaValue::*;
@@ -35,49 +32,47 @@ pub fn init_with_value<T>(value: TesslaValue<T>) -> Events<T> {
 
 impl<T> Events<T> {
     #[inline]
-    pub fn has_changed(&self) -> bool {
+    pub fn set_error(&mut self, error: &'static str) {
+        self.value = Err(error);
+    }
+
+    #[inline]
+    pub fn has_error(&self) -> bool {
         match &self.value {
-            &Err(_) => true,
+            Err(_) => true,
+            _ => false,
+        }
+    }
+
+    #[inline]
+    pub fn set_event(&mut self, value: TesslaValue<T>) {
+        self.value = Ok(Some(value));
+    }
+
+    #[inline]
+    pub fn has_event(&self) -> bool {
+        match &self.value {
             Ok(Some(_)) => true,
-            Ok(None) => false,
+            _ => false,
         }
     }
 
     #[inline]
     pub fn is_initialised(&self) -> bool {
-        self.has_changed()
-            || match &self.last {
-            &Err(_) => true,
-            Ok(Some(_)) => true,
-            Ok(None) => false,
+        match (&self.value, &self.last) {
+            (Ok(None), Ok(None)) => false,
+            _ => true,
         }
     }
 
     pub fn update_last(&mut self) {
-        if self.has_changed() {
-            match &mut self.value {
-                Ok(value) => self.last = Ok(value.take()),
-                &mut Err(error) => {
-                    self.last = Err(error);
-                    self.value = Ok(None);
-                }
+        match &mut self.value {
+            Ok(event) => self.last = Ok(event.take()),
+            &mut Err(error) => {
+                self.last = Err(error);
+                self.value = Ok(None);
             }
         }
-    }
-
-    #[inline]
-    pub fn set_value(&mut self, value: TesslaValue<T>) {
-        self.value = Ok(Some(value));
-    }
-
-    #[inline]
-    pub fn set_unknown(&mut self, error: &'static str) {
-        self.value = Err(error);
-    }
-
-    #[inline]
-    pub fn set_error(&mut self, error: &'static str) {
-        self.value = Ok(Some(Error(error)))
     }
 }
 
@@ -101,7 +96,7 @@ impl<T: Copy> Events<T> {
 
     // TODO do we need this?
     pub fn get_value_or_last(&self) -> T {
-        if self.has_changed() {
+        if self.has_event() {
             self.get_value()
         } else {
             self.get_last()
@@ -154,7 +149,7 @@ impl<T: Clone> Events<T> {
     }
 
     pub fn call_output(&self, output_function: Option<fn(TesslaValue<T>, i64)>, current_ts: i64) {
-        if self.has_changed() {
+        if self.has_event() {
             if let Some(out_fn) = output_function {
                 out_fn(self.clone_value(), current_ts)
             }
@@ -165,32 +160,32 @@ impl<T: Clone> Events<T> {
 // -- STEP FUNCTIONS --
 
 pub fn default<T>(output: &mut Events<T>, input: &Events<T>, timestamp: i64)
-where T: Clone {
-    if input.has_changed() {
+    where T: Clone {
+    if input.has_event() {
         output.clone_value_from(input);
     } else if timestamp == 0 {
-        output.set_value(output.clone_last())
+        output.set_event(output.clone_last())
     }
 }
 
 pub fn default_from<T>(output: &mut Events<T>, input: &Events<T>, default: &Events<T>)
-where T: Clone {
-    if input.has_changed() {
+    where T: Clone {
+    if input.has_event() {
         output.clone_value_from(input);
-    } else if !input.is_initialised() && default.has_changed() {
+    } else if !input.is_initialised() && default.has_event() {
         output.clone_value_from(default);
     }
 }
 
 pub fn time<T>(output: &mut Events<i64>, input: &Events<T>, timestamp: i64) {
-    if input.has_changed() {
-        output.set_value(Value(timestamp));
+    if input.has_event() {
+        output.set_event(Value(timestamp));
     }
 }
 
 pub fn last<T, U>(output: &mut Events<T>, values: &Events<T>, trigger: &Events<U>)
-where T: Clone {
-    if trigger.has_changed() {
+    where T: Clone {
+    if trigger.has_event() {
         output.clone_value_from(values);
     }
 }
@@ -235,10 +230,10 @@ pub fn slift<T, U, F>(output: &mut Events<T>, inputs: Vec<&Events<U>>, function:
 }
 
 pub fn merge<T>(output: &mut Events<T>, streams: Vec<&Events<T>>)
-where T: Clone {
+    where T: Clone {
     for i in 0..streams.len() {
         let stream = streams[i];
-        if stream.has_changed() {
+        if stream.has_event() {
             output.clone_value_from(&stream);
             // TODO output is a known value iff all changed streams are as well
             if output.value.is_ok() {
@@ -249,37 +244,37 @@ where T: Clone {
 }
 
 pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>) {
-    if trigger.has_changed() {
-        output.set_value(output.clone_value() + Value(1_i64));
+    if trigger.has_event() {
+        output.set_event(output.clone_value() + Value(1_i64));
     }
 }
 
 // const
 pub fn constant<T, U>(output: &mut Events<T>, value: TesslaValue<T>, trigger: &Events<U>) {
-    if trigger.has_changed() {
-        output.set_value(value);
+    if trigger.has_event() {
+        output.set_event(value);
     }
 }
 
 pub fn filter<T>(output: &mut Events<T>, values: &Events<T>, condition: &Events<bool>)
     where T: Clone {
-    if values.has_changed() && condition.get_value_or_last() {
+    if values.has_event() && condition.get_value_or_last() {
         output.clone_value_from(&values);
     }
 }
 
 pub fn fold<T, U>(output: &mut Events<T>, stream: &Events<U>, function: fn(TesslaValue<T>, TesslaValue<U>) -> TesslaValue<T>)
     where T: Clone, U: Clone {
-    if stream.has_changed() {
-        output.set_value(function(output.clone_last(), stream.clone_value()));
+    if stream.has_event() {
+        output.set_event(function(output.clone_last(), stream.clone_value()));
     }
 }
 
 pub fn reduce<T>(output: &mut Events<T>, input: &Events<T>, function: fn(TesslaValue<T>, TesslaValue<T>) -> TesslaValue<T>)
     where T: Clone {
-    if input.has_changed() {
+    if input.has_event() {
         if output.is_initialised() {
-            output.set_value(function(output.clone_last(), input.clone_value()));
+            output.set_event(function(output.clone_last(), input.clone_value()));
         } else {
             output.clone_value_from(&input);
         }
@@ -287,16 +282,16 @@ pub fn reduce<T>(output: &mut Events<T>, input: &Events<T>, function: fn(TesslaV
 }
 
 pub fn unitIf(output: &mut Events<()>, cond: &Events<bool>) {
-    if cond.get_value() {
-        output.set_value(Value(()));
+    if cond.has_event() && cond.get_value() {
+        output.set_event(Value(()));
     }
 }
 
 pub fn pure<T>(output: &mut Events<T>, stream: &Events<T>)
     where T: Clone + PartialEq {
-    if stream.has_changed() {
-        if !output.is_initialised() || stream.value != output.value {
-            output.clone_value_from(&stream);
-        }
+    if stream.has_event() {
+    }
+    if !output.is_initialised() || stream.clone_value().ne(&output.clone_last()).get_value() {
+        output.clone_value_from(&stream);
     }
 }
