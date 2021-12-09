@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::ops::{Add, BitAnd, BitOr, BitXor, Deref, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 use std::str::FromStr;
 
 use TesslaValue::*;
@@ -149,18 +149,6 @@ impl From<&str> for TesslaBool {
         match bool::from_str(s) {
             Ok(value) => Value(value),
             Err(_) => Error("Failed to parse Bool from String"),
-        }
-    }
-}
-
-impl Deref for TesslaBool {
-    type Target = bool;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        match &self {
-            &Error(error) => panic!("Deref to bool failed, was error: {}", error),
-            Value(value) => value,
         }
     }
 }
@@ -328,18 +316,6 @@ pub type TesslaString = TesslaValue<String>;
 impl From<&str> for TesslaString {
     fn from(s: &str) -> Self {
         Value(String::from(s))
-    }
-}
-
-impl Deref for TesslaString {
-    type Target = String;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        match &self {
-            &Error(error) => panic!("Deref to String failed, was error: {}", error),
-            Value(value) => &value,
-        }
     }
 }
 
