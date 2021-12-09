@@ -365,6 +365,14 @@ impl<T: Display> Display for TesslaValue<T> {
 
 impl TesslaString {
     #[inline]
+    pub fn as_str(&self) -> &str {
+        match self {
+            &Error(error) => error,
+            Value(value) => value.as_str()
+        }
+    }
+
+    #[inline]
     pub fn format<T: Display>(&self, value: &TesslaValue<T>) -> TesslaString {
         match (self, value) {
             (&Error(error), _) | (_, &Error(error)) => Error(error),
