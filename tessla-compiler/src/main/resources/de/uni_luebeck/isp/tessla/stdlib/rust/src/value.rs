@@ -158,7 +158,7 @@ impl From<&str> for TesslaBool {
 impl<T: PartialEq> TesslaValue<T> {
     // lhs == rhs
     #[inline]
-    fn eq(&self, other: &Self) -> TesslaBool {
+    pub fn eq(&self, other: &Self) -> TesslaBool {
         match (self, other) {
             (Error(error), _) | (_, Error(error)) => Error(error),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.eq(rvalue)),
@@ -167,7 +167,7 @@ impl<T: PartialEq> TesslaValue<T> {
 
     // lhs != rhs
     #[inline]
-    fn neq(&self, other: &Self) -> TesslaBool {
+    pub fn neq(&self, other: &Self) -> TesslaBool {
         match (self, other) {
             (Error(error), _) | (_, Error(error)) => Error(error),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.neq(rvalue)),
@@ -178,7 +178,7 @@ impl<T: PartialEq> TesslaValue<T> {
 impl<T: PartialOrd> TesslaValue<T> {
     // lhs < rhs
     #[inline]
-    fn lt(&self, other: &Self) -> TesslaBool {
+    pub fn lt(&self, other: &Self) -> TesslaBool {
         match (self, other) {
             (Error(_), _) | (_, Error(_)) => Error(error),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.lt(rvalue)),
@@ -187,7 +187,7 @@ impl<T: PartialOrd> TesslaValue<T> {
 
     // lhs <= rhs
     #[inline]
-    fn le(&self, other: &Self) -> TesslaBool {
+    pub fn le(&self, other: &Self) -> TesslaBool {
         match (self, other) {
             (Error(_), _) | (_, Error(_)) => Error(error),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.le(rvalue)),
@@ -196,7 +196,7 @@ impl<T: PartialOrd> TesslaValue<T> {
 
     // lhs > rhs
     #[inline]
-    fn gt(&self, other: &Self) -> TesslaBool {
+    pub fn gt(&self, other: &Self) -> TesslaBool {
         match (self, other) {
             (Error(_), _) | (_, Error(_)) => Error(error),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.gt(rvalue)),
@@ -205,7 +205,7 @@ impl<T: PartialOrd> TesslaValue<T> {
 
     // lhs >= rhs
     #[inline]
-    fn ge(&self, other: &Self) -> TesslaBool {
+    pub fn ge(&self, other: &Self) -> TesslaBool {
         match (self, other) {
             (Error(_), _) | (_, Error(_)) => Error(error),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.ge(rvalue)),
