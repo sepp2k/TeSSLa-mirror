@@ -132,22 +132,6 @@ impl<T: Clone> Events<T> {
         }
     }
 
-    pub fn clone_value_or_last(&self) -> TesslaValue<T> {
-        if self.has_changed() {
-            self.clone_value()
-        } else {
-            self.clone_last()
-        }
-    }
-
-    pub fn clone_value_or_none(&self) -> TesslaValue<Option<TesslaValue<T>>> {
-        if self.has_changed() {
-            Value(Some(self.clone_value()))
-        } else {
-            Value(None)
-        }
-    }
-
     pub fn call_output(&self, output_function: Option<fn(TesslaValue<T>, i64)>, current_ts: i64) {
         if self.has_event() {
             if let Some(out_fn) = output_function {
@@ -192,40 +176,160 @@ pub fn last<T, U>(output: &mut Events<T>, values: &Events<T>, trigger: &Events<U
 
 pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>) {}
 
-pub fn lift<T, U, F>(output: &mut Events<T>, inputs: Vec<&Events<U>>, function: F)
-where U: Any + Sized + Clone, F: FnOnce(&mut VecDeque<TesslaOption<TesslaValue<U>>>) -> TesslaOption<TesslaValue<T>> {
-    let mut any_changed = false;
-    let mut values = VecDeque::with_capacity(inputs.capacity());
-    for input in inputs {
-        if input.has_changed() {
-            any_changed = true;
-        }
-        values.push_back(input.clone_value_or_none())
-    }
-    if any_changed {
-        let res = function(&mut values);
-        if let Value(Some(value)) = res {
-            output.set_value(value);
+impl<T: Clone> Events<T> {
+    fn clone_value_for_lift(&self) -> TesslaOption<TesslaValue<T>> {
+        match &self.value {
+            &Err(error) => Error(error),
+            Ok(None) => Value(None),
+            Ok(Some(event)) => Value(Some(event.clone())),
         }
     }
 }
 
-pub fn slift<T, U, F>(output: &mut Events<T>, inputs: Vec<&Events<U>>, function: F)
-    where U: Any + Sized + Clone, F: FnOnce(&mut VecDeque<TesslaValue<U>>) -> TesslaValue<T> {
-    let mut any_changed = false;
-    let mut all_initialised = true;
-    let mut values = VecDeque::with_capacity(inputs.capacity());
-    for input in inputs {
-        if !input.is_initialised() {
-            all_initialised = false;
-            break;
-        } else if input.has_changed() {
-            any_changed = true;
+pub fn lift1<T, U0, F>(output: &mut Events<T>, arg0: &Events<U0>, function: F)
+    where U0: Clone,
+          F: FnOnce(TesslaOption<TesslaValue<U0>>) -> TesslaOption<TesslaValue<T>> {
+    let any_error = arg0.has_error();
+    let any_event = arg0.has_event();
+    if any_event {
+        let res = function(arg0.clone_value_for_lift());
+        match res {
+            Error(error) => output.set_error(error),
+            Value(Some(event)) => output.set_event(event),
+            Value(None) => {},
         }
-        values.push_back(input.clone_value_or_last())
+    } else if any_error {
+        output.set_error("Lift couldn't determine if there should be an event");
     }
-    if any_changed && all_initialised {
-        output.set_value(function(&mut values));
+}
+
+pub fn lift2<T, U0, U1, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, function: F)
+    where U0: Clone, U1: Clone,
+          F: FnOnce(TesslaOption<TesslaValue<U0>>, TesslaOption<TesslaValue<U1>>) -> TesslaOption<TesslaValue<T>> {
+    let any_error = arg0.has_error() || arg1.has_error();
+    let any_event = arg0.has_event() || arg1.has_event();
+    if any_event {
+        let res = function(arg0.clone_value_for_lift(), arg1.clone_value_for_lift());
+        match res {
+            Error(error) => output.set_error(error),
+            Value(Some(event)) => output.set_event(event),
+            Value(None) => {},
+        }
+    } else if any_error {
+        output.set_error("Lift couldn't determine if there should be an event");
+    }
+}
+
+pub fn lift3<T, U0, U1, U2, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, function: F)
+    where U0: Clone, U1: Clone, U2: Clone,
+          F: FnOnce(TesslaOption<TesslaValue<U0>>, TesslaOption<TesslaValue<U1>>, TesslaOption<TesslaValue<U2>>) -> TesslaOption<TesslaValue<T>> {
+    let any_error = arg0.has_error() || arg1.has_error() || arg2.has_error();
+    let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event();
+    if any_event {
+        let res = function(arg0.clone_value_for_lift(), arg1.clone_value_for_lift(), arg2.clone_value_for_lift());
+        match res {
+            Error(error) => output.set_error(error),
+            Value(Some(event)) => output.set_event(event),
+            Value(None) => {},
+        }
+    } else if any_error {
+        output.set_error("Lift couldn't determine if there should be an event");
+    }
+}
+
+pub fn lift4<T, U0, U1, U2, U3, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, function: F)
+    where U0: Clone, U1: Clone, U2: Clone, U3: Clone,
+          F: FnOnce(TesslaOption<TesslaValue<U0>>, TesslaOption<TesslaValue<U1>>, TesslaOption<TesslaValue<U2>>, TesslaOption<TesslaValue<U3>>) -> TesslaOption<TesslaValue<T>> {
+    let any_error = arg0.has_error() || arg1.has_error() || arg2.has_error() || arg3.has_error();
+    let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event();
+    if any_event {
+        let res = function(arg0.clone_value_for_lift(), arg1.clone_value_for_lift(),
+                           arg2.clone_value_for_lift(), arg3.clone_value_for_lift());
+        match res {
+            Error(error) => output.set_error(error),
+            Value(Some(event)) => output.set_event(event),
+            Value(None) => {},
+        }
+    } else if any_error {
+        output.set_error("Lift couldn't determine if there should be an event");
+    }
+}
+
+pub fn lift5<T, U0, U1, U2, U3, U4, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, arg4: &Events<U4>, function: F)
+    where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone,
+          F: FnOnce(TesslaOption<TesslaValue<U0>>, TesslaOption<TesslaValue<U1>>, TesslaOption<TesslaValue<U2>>, TesslaOption<TesslaValue<U3>>, TesslaOption<TesslaValue<U4>>) -> TesslaOption<TesslaValue<T>> {
+    let any_error = arg0.has_error() || arg1.has_error() || arg2.has_error() || arg3.has_error() || arg4.has_error();
+    let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event() || arg4.has_event();
+    if any_event {
+        let res = function(arg0.clone_value_for_lift(), arg1.clone_value_for_lift(),
+                           arg2.clone_value_for_lift(), arg3.clone_value_for_lift(), arg4.clone_value_for_lift());
+        match res {
+            Error(error) => output.set_error(error),
+            Value(Some(event)) => output.set_event(event),
+            Value(None) => {},
+        }
+    } else if any_error {
+        output.set_error("Lift couldn't determine if there should be an event");
+    }
+}
+
+impl<T: Clone> Events<T> {
+    fn clone_value_for_slift(&self) -> TesslaValue<T> {
+        if self.has_event() {
+            self.clone_value()
+        } else {
+            self.clone_last()
+        }
+    }
+}
+
+pub fn slift1<T, U0, F>(output: &mut Events<T>, arg0: &Events<U0>, function: F)
+    where U0: Clone,
+          F: FnOnce(TesslaValue<U0>) -> TesslaValue<T> {
+    let any_event = arg0.has_event();
+    let all_initialised = arg0.is_initialised();
+    if any_event && all_initialised {
+        output.set_event(function(arg0.clone_value_for_slift()));
+    }
+}
+
+pub fn slift2<T, U0, U1, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, function: F)
+    where U0: Clone, U1: Clone,
+          F: FnOnce(TesslaValue<U0>, TesslaValue<U1>) -> TesslaValue<T> {
+    let any_event = arg0.has_event() || arg1.has_event();
+    let all_initialised = arg0.is_initialised() && arg1.is_initialised();
+    if any_event && all_initialised {
+        output.set_event(function(arg0.clone_value_for_slift(), arg1.clone_value_for_slift()));
+    }
+}
+
+pub fn slift3<T, U0, U1, U2, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, function: F)
+    where U0: Clone, U1: Clone, U2: Clone,
+          F: FnOnce(TesslaValue<U0>, TesslaValue<U1>, TesslaValue<U2>) -> TesslaValue<T> {
+    let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event();
+    let all_initialised = arg0.is_initialised() && arg1.is_initialised() && arg2.is_initialised();
+    if any_event && all_initialised {
+        output.set_event(function(arg0.clone_value_for_slift(), arg1.clone_value_for_slift(), arg2.clone_value_for_slift()));
+    }
+}
+
+pub fn slift4<T, U0, U1, U2, U3, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, function: F)
+    where U0: Clone, U1: Clone, U2: Clone, U3: Clone,
+          F: FnOnce(TesslaValue<U0>, TesslaValue<U1>, TesslaValue<U2>, TesslaValue<U3>) -> TesslaValue<T> {
+    let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event();
+    let all_initialised = arg0.is_initialised() && arg1.is_initialised() && arg2.is_initialised() && arg3.is_initialised();
+    if any_event && all_initialised {
+        output.set_event(function(arg0.clone_value_for_slift(), arg1.clone_value_for_slift(), arg2.clone_value_for_slift(), arg3.clone_value_for_slift()));
+    }
+}
+
+pub fn slift5<T, U0, U1, U2, U3, U4, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, arg4: &Events<U4>, function: F)
+    where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone,
+          F: FnOnce(TesslaValue<U0>, TesslaValue<U1>, TesslaValue<U2>, TesslaValue<U3>, TesslaValue<U4>) -> TesslaValue<T> {
+    let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event() || arg4.has_event();
+    let all_initialised = arg0.is_initialised() && arg1.is_initialised() && arg2.is_initialised() && arg3.is_initialised() && arg4.is_initialised();
+    if any_event && all_initialised {
+        output.set_event(function(arg0.clone_value_for_slift(), arg1.clone_value_for_slift(), arg2.clone_value_for_slift(), arg3.clone_value_for_slift(), arg4.clone_value_for_slift()));
     }
 }
 

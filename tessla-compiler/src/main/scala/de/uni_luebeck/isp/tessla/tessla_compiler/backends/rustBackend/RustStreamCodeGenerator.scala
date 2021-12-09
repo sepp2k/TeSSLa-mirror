@@ -215,15 +215,12 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     currSrc: SourceSegments
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
-    val arguments = argument_exprs.map(streamNameFromExpressionArg)
+    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    val wrappedFunctionCall =
-      s"|values| ($function)(${arguments.indices.map(i => s"values.pop_front().unwrap()").mkString(", ")})"
-    val argumentsVec = s"vec![${arguments.map(a => s"&$a").reverse.mkString(", ")}]"
-    currSrc.computation.append(s"lift(&mut $output, $argumentsVec, $wrappedFunctionCall);")
+    currSrc.computation.append(s"lift${arguments.size}(&mut $output, ${arguments.mkString(", ")}, $function);")
   }
 
   /**
@@ -244,15 +241,12 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     currSrc: SourceSegments
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
-    val arguments = argument_exprs.map(streamNameFromExpressionArg)
+    val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    val wrappedFunctionCall =
-      s"|values| ($function)(${arguments.map(_ => s"values.pop_front().unwrap()").mkString(", ")})"
-    val argumentsVec = s"vec![${arguments.map(a => s"&$a").mkString(", ")}]"
-    currSrc.computation.append(s"slift(&mut $output, $argumentsVec, $wrappedFunctionCall);")
+    currSrc.computation.append(s"slift${arguments.size}(&mut $output, ${arguments.mkString(", ")}, $function);")
   }
 
   /**
