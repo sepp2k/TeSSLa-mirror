@@ -237,7 +237,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           .map { case (name, (ea, _)) => s"$name: ${translateExpressionArg(ea, tm, defContext)}" }
           .mkString(", ")} })"
       case RecordAccessorExpression(name, target, _, _) =>
-        s"${translateExpressionArg(target, tm, defContext)}.$name" // TODO what happens if name is not a valid member?
+        s"match ${translateExpressionArg(target, tm, defContext)} { Value(value) => value.$name, Error(error) => Error(error) }"
       case _ =>
         throw Diagnostics.CoreASTError("Unexpected ExpressionArg cannot be translated", e.location)
     }
