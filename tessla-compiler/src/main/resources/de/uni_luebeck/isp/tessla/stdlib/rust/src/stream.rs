@@ -248,8 +248,7 @@ where T: Clone {
     }
 }
 
-pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>)
-    where T: Clone {
+pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>) {
     if trigger.has_changed() {
         output.set_value(output.clone_value() + Value(1_i64));
     }

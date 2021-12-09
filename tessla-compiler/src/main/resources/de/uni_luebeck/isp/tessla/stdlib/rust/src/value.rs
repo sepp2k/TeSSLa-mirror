@@ -412,22 +412,22 @@ impl<T> TesslaOption<T> {
     }
 }
 
-impl<T: Clone> TesslaOption<T> {
+impl<T: Clone> TesslaOption<TesslaValue<T>> {
     #[inline]
     pub fn get_some(&self) -> TesslaValue<T> {
         match self {
             &Error(error) => Error(error),
-            Value(Some(value)) => Value(value.clone()),
+            Value(Some(value)) => value.clone(),
             Value(None) => Error("Tried to getSome(None)"),
         }
     }
 
     #[inline]
-    pub fn get_some_or_else(&self, fallback: T) -> TesslaValue<T> {
+    pub fn get_some_or_else(&self, fallback: TesslaValue<T>) -> TesslaValue<T> {
         match self {
             &Error(error) => Error(error),
-            Value(Some(value)) => Value(value.clone()),
-            Value(None) => Value(fallback),
+            Value(Some(value)) => value.clone(),
+            Value(None) => fallback,
         }
     }
 }
