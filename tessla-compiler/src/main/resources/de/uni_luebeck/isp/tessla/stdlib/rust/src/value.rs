@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 use std::str::FromStr;
@@ -193,10 +191,10 @@ impl<T: PartialEq> TesslaValue<T> {
 
     // lhs != rhs
     #[inline]
-    pub fn neq(&self, other: &Self) -> TesslaBool {
+    pub fn ne(&self, other: &Self) -> TesslaBool {
         match (self, other) {
             (Error(error), _) | (_, Error(error)) => Error(error),
-            (Value(lvalue), Value(rvalue)) => Value(lvalue.neq(rvalue)),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.ne(rvalue)),
         }
     }
 }
@@ -206,7 +204,7 @@ impl<T: PartialOrd> TesslaValue<T> {
     #[inline]
     pub fn lt(&self, other: &Self) -> TesslaBool {
         match (self, other) {
-            (Error(_), _) | (_, Error(_)) => Error(error),
+            (Error(error), _) | (_, Error(error)) => Error(error),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.lt(rvalue)),
         }
     }
@@ -215,7 +213,7 @@ impl<T: PartialOrd> TesslaValue<T> {
     #[inline]
     pub fn le(&self, other: &Self) -> TesslaBool {
         match (self, other) {
-            (Error(_), _) | (_, Error(_)) => Error(error),
+            (Error(error), _) | (_, Error(error)) => Error(error),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.le(rvalue)),
         }
     }
@@ -224,7 +222,7 @@ impl<T: PartialOrd> TesslaValue<T> {
     #[inline]
     pub fn gt(&self, other: &Self) -> TesslaBool {
         match (self, other) {
-            (Error(_), _) | (_, Error(_)) => Error(error),
+            (Error(error), _) | (_, Error(error)) => Error(error),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.gt(rvalue)),
         }
     }
@@ -233,7 +231,7 @@ impl<T: PartialOrd> TesslaValue<T> {
     #[inline]
     pub fn ge(&self, other: &Self) -> TesslaBool {
         match (self, other) {
-            (Error(_), _) | (_, Error(_)) => Error(error),
+            (Error(error), _) | (_, Error(error)) => Error(error),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.ge(rvalue)),
         }
     }

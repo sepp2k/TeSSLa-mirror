@@ -258,7 +258,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
            |impl Clone for $structName {
            |    fn clone(&self) -> Self {
            |        $structName {
-           |${fields.map { case (name, _) => s"$name: $name.clone()" }.mkString(",\n")}
+           |${fields.map { case (name, _) => s"$name: self.$name.clone()" }.mkString(",\n")}
            |        }
            |    }
            |}""".stripMargin
@@ -281,12 +281,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val args = oArgs.toIndexedSeq
     name match {
       case "__[TC]inputParse__" => "" // TODO RustIOHandling.getInputParseExpression(typeHint.retType, args(0))
-
-      //case "__and__"                    => args.reduceRight((a, b) => s"$a.and(Box::new(|| $b))") // TODO needed?
-      //case "__or__"                     => args.reduceRight((a, b) => s"$a.or(Box::new(|| $b))") // TODO needed?
-
-      // TODO nested match
-
       // TODO some brackets here are superfluous and will produce warnings
       case "__ite__" | "__staticite__" =>
         s"match ${args(0)} { Value(true) => { ${args(1)} }, Value(false) => { ${args(2)} }, Error(error) => Error(error) }"
@@ -301,7 +295,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__not__" | "__bitflip__"    => s"!(${args(0)})"
       case "__negate__" | "__fnegate__" => s"-${args(0)}"
       case "__eq__"                     => s"${args(0)}.eq(${args(1)})"
-      case "__neq__"                    => s"${args(0)}.neq(${args(1)})"
+      case "__neq__"                    => s"${args(0)}.ne(${args(1)})"
       case "__gt__" | "__fgt__"         => s"${args(0)}.gt(${args(1)})"
       case "__lt__" | "__flt__"         => s"${args(0)}.lt(${args(1)})"
       case "__geq__" | "__fgeq__"       => s"${args(0)}.ge(${args(1)})"
