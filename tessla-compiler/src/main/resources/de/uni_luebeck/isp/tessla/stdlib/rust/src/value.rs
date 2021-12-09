@@ -85,7 +85,7 @@ impl_binary_op!(Shr, shr); // lhs >> rhs
 impl_binary_op!(Sub, sub); // lhs - rhs
 
 // lhs / rhs
-impl<T: Div<Output = T> + PartialEq<i64>> Div for TesslaValue<T> {
+impl Div for TesslaInt {
     type Output = Self;
 
     #[inline]
@@ -93,14 +93,27 @@ impl<T: Div<Output = T> + PartialEq<i64>> Div for TesslaValue<T> {
         use TesslaValue::*;
         match (self, rhs) {
             (Error(error), _) | (_, Error(error)) => Error(error),
-            (_, Value(value)) if value == 0 => Error("Division by zero"),
+            (_, Value(value)) if value == 0_i64 => Error("Division by zero"),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.div(rvalue)),
+        }
+    }
+}
+impl Div for TesslaFloat {
+    type Output = Self;
+
+    #[inline]
+    fn div(self, rhs: Self) -> Self::Output {
+        use TesslaValue::*;
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (_, Value(value)) if value == 0_f64 => Error("Division by zero"),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.div(rvalue)),
         }
     }
 }
 
 // lhs % rhs
-impl<T: Rem<Output = T> + PartialEq<i64>> Rem for TesslaValue<T> {
+impl Rem for TesslaInt {
     type Output = Self;
 
     #[inline]
@@ -108,7 +121,20 @@ impl<T: Rem<Output = T> + PartialEq<i64>> Rem for TesslaValue<T> {
         use TesslaValue::*;
         match (self, rhs) {
             (Error(error), _) | (_, Error(error)) => Error(error),
-            (_, Value(value)) if value == 0 => Error("Division by zero"),
+            (_, Value(value)) if value == 0_i64 => Error("Division by zero"),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.rem(rvalue)),
+        }
+    }
+}
+impl Rem for TesslaFloat {
+    type Output = Self;
+
+    #[inline]
+    fn rem(self, rhs: Self) -> Self::Output {
+        use TesslaValue::*;
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (_, Value(value)) if value == 0_f64 => Error("Division by zero"),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.rem(rvalue)),
         }
     }
