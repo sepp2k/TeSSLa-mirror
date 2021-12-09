@@ -221,8 +221,10 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         s"Value(${value.toLong}_i64)"
       case FloatLiteralExpression(value, _) =>
         s"Value(${value}_f64)"
-      case ExpressionRef(id, _, _) =>
+      case ExpressionRef(id, Core.FunctionType(_, _, _, _), _) =>
         s"var_${id.fullName}"
+      case ExpressionRef(id, _, _) =>
+        s"var_${id.fullName}.clone()" // TODO clone or pass by ref????
       case x: ExternExpression =>
         translateExtern(x, tm, defContext)
       case RecordConstructorExpression(entries, _) if entries.isEmpty =>
