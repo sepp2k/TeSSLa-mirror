@@ -231,11 +231,11 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         val fields = entries.toSeq.map { case (name, (ea, _)) => (name, ea.tpe.resolve(tm.resMap)) }
         val structName = RustUtils.getStructName(fields)
 
-        s"$structName { ${entries
+        s"Value($structName { ${entries
           .map { case (name, (ea, _)) => s"$name: ${translateExpressionArg(ea, tm, defContext)}" }
-          .mkString(", ")} }"
+          .mkString(", ")} })"
       case RecordAccessorExpression(name, target, _, _) =>
-        s"${translateExpressionArg(target, tm, defContext)}.$name"
+        s"${translateExpressionArg(target, tm, defContext)}.$name" // TODO what happens if name is not a valid member?
       case _ =>
         throw Diagnostics.CoreASTError("Unexpected ExpressionArg cannot be translated", e.location)
     }
@@ -247,10 +247,18 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    */
   def translateStructDefinitions(): Seq[String] = {
     // TODO we need some sort of struct from string code generation, if we provide an io interface
+    //  we probably also want comparison
     RustUtils.definedStructs.toSeq.map {
-      case (name, fields) =>
-        s"""struct $name {
+      case (structName, fields) =>
+        s"""struct $structName {
            |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
+           |}
+           |impl Clone for $structName {
+           |    fn clone(&self) -> Self {
+           |        $structName {
+           |${fields.map { case (name, _) => s"$name: $name.clone()" }.mkString(",\n")}
+           |        }
+           |    }
            |}""".stripMargin
     }
   }
