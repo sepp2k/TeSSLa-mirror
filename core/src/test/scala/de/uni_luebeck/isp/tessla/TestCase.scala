@@ -15,9 +15,8 @@
  */
 
 package de.uni_luebeck.isp.tessla
-import java.io.InputStream
+import java.io.{File, InputStream}
 import java.nio.charset.StandardCharsets
-
 import spray.json._
 import DefaultJsonProtocol._
 import de.uni_luebeck.isp.tessla.core.IncludeResolvers
@@ -54,6 +53,8 @@ object TestCase {
       Using(Source.fromInputStream(inStream(file))(StandardCharsets.UTF_8))(f).get
 
     def inStream(file: String): InputStream = clazz.getResourceAsStream(root + resolve(file))
+
+    def inStreamFile(file: String): File = new File(clazz.getResource(root + resolve(file)).toURI)
 
     def string(file: String): String = source(file)(_.getLines().mkString("\n"))
 
