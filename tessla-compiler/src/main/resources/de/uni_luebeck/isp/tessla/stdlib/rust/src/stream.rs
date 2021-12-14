@@ -195,7 +195,23 @@ where T: Clone {
     }
 }
 
-pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>) {}
+pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>, nextDelay: &mut i64, timestamp: i64) {
+
+    if nextDelay == timestamp {
+        output.set_value(Value(()));
+    }
+    if output.has_changed() || resets.has_changed() {
+        if delays.has_changed() {
+            if delays.clone_value() > 0 {
+                nextDelay = timestamp + delays.clone_value();
+            }else{
+                panic!("Tried to set a delay lower than one.");
+            }
+        }else{
+            nextDelay = timestamp;
+        }
+    }
+}
 
 pub fn lift<T, U, F>(output: &mut Events<T>, inputs: Vec<&Events<U>>, function: F)
 where U: Any + Sized + Clone, F: FnOnce(&mut VecDeque<TesslaOption<TesslaValue<U>>>) -> TesslaOption<TesslaValue<T>> {
