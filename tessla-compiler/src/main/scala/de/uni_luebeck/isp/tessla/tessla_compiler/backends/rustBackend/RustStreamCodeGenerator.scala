@@ -176,7 +176,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val output = createStreamContainer(output_id, UnitType, "init()", currSrc)
     val delay = streamNameFromExpressionArg(delay_expr)
     val reset = streamNameFromExpressionArg(reset_expr)
-    currSrc.computation.append(s"delay<(&mut $output, &$delay, &$reset, state.current_ts);")
+    currSrc.computation.append(s"delay(&mut $output, &$delay, &$reset, state.nextDelay_$output, state.current_ts);")
 
     /** TODO needs additional rust data-structure/timestamp code
      * This needs to do something like this:
@@ -184,7 +184,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
      *   currTs = ${output}_nextTs;
      * }
      */
-    currSrc.timestamp.append(s"interrupt_for_delay(&mut $output);")
+    currSrc.timestamp.append(s"if state.nextDelay_$output > state.current_ts && state.nextDelay_$output < new_input_ts { state.current_ts = state.nextDelay_$output;}")
 
     /** TODO is there a reason for this being put /after/ the processing part?
      * if ${stream}_changed {
