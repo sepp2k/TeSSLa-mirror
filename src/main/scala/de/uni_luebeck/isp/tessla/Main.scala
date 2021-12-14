@@ -203,7 +203,7 @@ object Main {
             case "scala" =>
               new ScalaCompiler(dirPath, name, false, config.ioInterface)().translate(sourceStr)
             case "rust" =>
-              new RustCompiler(dirPath, name).translate(sourceStr)
+              new RustCompiler(dirPath, name, config.ioInterface).translate(sourceStr)
           }
         }
 

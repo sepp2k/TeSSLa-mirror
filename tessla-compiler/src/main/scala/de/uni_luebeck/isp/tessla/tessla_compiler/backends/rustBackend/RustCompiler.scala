@@ -16,12 +16,24 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
+import de.uni_luebeck.isp.tessla.core.Errors.{mkTesslaError, TesslaError}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 
-import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.{
+  FileAlreadyExistsException,
+  FileSystem,
+  FileSystems,
+  FileVisitResult,
+  Files,
+  Path,
+  SimpleFileVisitor,
+  StandardCopyOption
+}
+import java.util.Collections
+import scala.io.Source
 import scala.reflect.io.Directory
 
 /**
@@ -29,8 +41,10 @@ import scala.reflect.io.Directory
  *
  * @param outDir The directory where the binary artifact shall be created.
  * @param binaryArtifactName The name of the generated artifact.
+ * @param executableCode Indicates whether passed source contains a main method
  */
-class RustCompiler(outDir: Path, binaryArtifactName: String) extends TranslationPhase[String, Unit] {
+class RustCompiler(outDir: Path, binaryArtifactName: String, executableCode: Boolean)
+    extends TranslationPhase[String, Unit] {
 
   /**
    * Invokes rustc to translate a Rust source string into a binary artifact.
@@ -40,12 +54,84 @@ class RustCompiler(outDir: Path, binaryArtifactName: String) extends Translation
   override def translate(sourceCode: String): TranslationPhase.Result[Unit] = {
     Files.createDirectories(outDir)
 
-    val sourcePath = Path.of(URI.create(outDir.toUri.toString + "main.rs"))
-    deleteOnExit(sourcePath)
+    val cargoDir = outDir.resolve("build-tessla")
+    Files.createDirectories(cargoDir)
+    deleteOnExit(cargoDir)
 
-    writeCode(sourcePath, sourceCode)
+    val libPath = cargoDir.resolve("rustlib")
+    if (!Files.exists(libPath)) {
+      RustCompiler.exportLibrary(libPath)
+    }
 
-    new ProcessBuilder("rustc", sourcePath.toString).inheritIO().start().waitFor()
+    val sourcePath = cargoDir.resolve("src")
+    Files.createDirectories(sourcePath)
+
+    val targetName = if (executableCode) "main.rs" else "lib.rs"
+    writeCode(sourcePath.resolve(targetName), sourceCode)
+
+    val cargoPath = cargoDir.resolve("Cargo.toml")
+    Files.writeString(
+      cargoPath,
+      s"""[workspace]
+         |
+         |[package]
+         |name = "tessla_monitor"
+         |version = "0.0.0"
+         |
+         |[dependencies]
+         |tessla_stdlib = { path = "./rustlib" }
+         |""".stripMargin
+    )
+
+    val cargoManifest = cargoPath.toAbsolutePath.toString
+    val cargoBuild = if (executableCode) {
+      new ProcessBuilder(
+        "cargo",
+        "build",
+        "--manifest-path",
+        cargoManifest,
+        "--release"
+      )
+    } else {
+      new ProcessBuilder(
+        "cargo",
+        "build",
+        "--manifest-path",
+        cargoManifest,
+        "--lib",
+        "--release"
+      )
+    }
+
+    try {
+      val cargoProcess = cargoBuild.start()
+      val returnCode = cargoProcess.waitFor()
+
+      if (returnCode != 0) {
+        val errors = Source.fromInputStream(cargoProcess.getErrorStream).getLines().toSeq
+        val error = mkTesslaError(s"Cargo build failed:\n${errors.mkString("\n")}")
+        throw error
+      }
+    } catch {
+      case e: TesslaError => throw e
+      case e: Exception =>
+        val error = mkTesslaError(s"Cargo failed to run: ${e.getMessage}")
+        error.setStackTrace(e.getStackTrace)
+        throw error
+    }
+
+    try {
+      Files.copy(
+        cargoDir.resolve("target/release/tessla_monitor"),
+        outDir.resolve(binaryArtifactName),
+        StandardCopyOption.REPLACE_EXISTING
+      )
+    } catch {
+      case e: Exception =>
+        val error = mkTesslaError(s"Failed to copy binary: ${e.getMessage}")
+        error.setStackTrace(e.getStackTrace)
+        throw error
+    }
 
     Success((), Seq())
   }
