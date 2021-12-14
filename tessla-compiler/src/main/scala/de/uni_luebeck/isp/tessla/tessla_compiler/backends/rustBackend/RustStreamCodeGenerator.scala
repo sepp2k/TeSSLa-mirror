@@ -284,7 +284,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     count_stream_expr: ExpressionArg,
     currSrc: SourceSegments
   ): Unit = {
-    val output = createStreamContainer(output_id, IntType, "init_with_value(0_i64)", currSrc)
+    val output = createStreamContainer(output_id, IntType, "init_with_value(Value(0_i64))", currSrc)
     val count_stream = streamNameFromExpressionArg(count_stream_expr)
     currSrc.computation.append(s"$output.count(&mut $count_stream);")
   }

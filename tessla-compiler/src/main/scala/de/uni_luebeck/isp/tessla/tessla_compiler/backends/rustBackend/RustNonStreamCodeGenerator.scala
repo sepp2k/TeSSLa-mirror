@@ -222,7 +222,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         )
       case StringLiteralExpression(value, _) =>
         // FIXME: it would be nice to standardise this functionality somewhere...
-        s"""Value(\"${value.replace("\"", "\\\"").replace("$", "\\$")}\")"""
+        s"""Value(\"${value.replace("\"", "\\\"").replace("$", "\\$")}\".to_string())"""
       case IntLiteralExpression(value, _) =>
         s"Value(${value.toLong}_i64)"
       case FloatLiteralExpression(value, _) =>
@@ -307,7 +307,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__geq__" | "__fgeq__"       => s"${args(0)}.ge(&${args(1)})"
       case "__leq__" | "__fleq__"       => s"${args(0)}.le(&${args(1)})"
       case "__add__" | "__fadd__"       => s"(${args(0)} + ${args(1)})"
-      case "__String_concat__"          => s"(${args(0)} + ${args(1)}.as_str())"
+      case "__String_concat__"          => s"(${args(0)} + ${args(1)})"
       case "__sub__" | "__fsub__"       => s"(${args(0)} - ${args(1)})"
       case "__mul__" | "__fmul__"       => s"(${args(0)} * ${args(1)})"
       case "__div__" | "__fdiv__"       => s"(${args(0)} / ${args(1)})"
