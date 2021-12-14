@@ -47,10 +47,10 @@ object RustUtils {
       case InstantiatedType("Int", Seq(), _)                        => "TesslaInt"
       case InstantiatedType("Float", Seq(), _)                      => "TesslaFloat"
       case InstantiatedType("String", Seq(), _)                     => "TesslaString"
-      case InstantiatedType("Option", Seq(t), _)                    => s"TesslaOption<${convertType(t)}>"
+      case InstantiatedType("Option", Seq(t), _)                    => s"TesslaOption<${convertType(t)}>" /*
       case InstantiatedType("Set", Seq(t), _)                       => s"im::set<${convertType(t)}>"
       case InstantiatedType("Map", Seq(t1, t2), _)                  => s"im::map<${convertType(t1)}, ${convertType(t2)}>"
-      case InstantiatedType("List", Seq(t), _)                      => s"im::vec<${convertType(t)}>"
+      case InstantiatedType("List", Seq(t), _)                      => s"im::vec<${convertType(t)}>"*/
       case InstantiatedType(n, Seq(), _) if n.startsWith("native:") => n.stripPrefix("native:")
       case InstantiatedType(n, tps, _) if n.startsWith("native:") =>
         s"${n.stripPrefix("native:")}<${tps.map(convertType).mkString(", ")}>"
