@@ -44,7 +44,9 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): String = {
     val name = s"var_${stream_id.fullName}"
     currSrc.stateDef.append(s"$name: EventContainer<${RustUtils.convertType(stream_type)}>")
+    currSrc.stateDef.append(s" nextDelay_$name : i64")
     currSrc.stateInit.append(s"$name: $init_expr")
+    currSrc.stateInit.append(s"nextDelay_$name : 0")
     val stream = s"state.$name"
     currSrc.store.append(s"$stream.update_last();")
     stream
@@ -174,7 +176,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val output = createStreamContainer(output_id, UnitType, "init()", currSrc)
     val delay = streamNameFromExpressionArg(delay_expr)
     val reset = streamNameFromExpressionArg(reset_expr)
-    currSrc.computation.append(s"delay(&mut $output, &$delay, &$reset);")
+    currSrc.computation.append(s"delay<(&mut $output, &$delay, &$reset, state.current_ts);")
 
     /** TODO needs additional rust data-structure/timestamp code
      * This needs to do something like this:
