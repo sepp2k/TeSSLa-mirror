@@ -207,6 +207,12 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         translateExpressionArg(e, tm.typeApp(tArgs), defContext)
       case f: FunctionExpression =>
         translateFunction(f, tm, defContext)
+      case ApplicationExpression(
+            TypeApplicationExpression(ExternExpression("error", _: Core.FunctionType, _), _, _),
+            Seq(message),
+            _
+          ) =>
+        s"Error($message)"
       case ApplicationExpression(e, args, _) =>
         translateFunctionCall(
           e,
