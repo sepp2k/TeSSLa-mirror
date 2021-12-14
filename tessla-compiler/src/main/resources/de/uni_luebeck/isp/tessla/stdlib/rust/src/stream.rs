@@ -174,7 +174,7 @@ pub fn last<T, U>(output: &mut Events<T>, values: &Events<T>, trigger: &Events<U
     }
 }
 
-pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>, nextDelay: &mut i64, timestamp: i64) {
+pub fn delay(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>, nextDelay: &mut i64, timestamp: i64) {
 
     if nextDelay == timestamp {
         output.set_value(Value(()));
