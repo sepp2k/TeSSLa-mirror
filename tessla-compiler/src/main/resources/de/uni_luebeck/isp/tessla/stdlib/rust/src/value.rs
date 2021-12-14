@@ -104,7 +104,6 @@ impl Div for TesslaFloat {
         use TesslaValue::*;
         match (self, rhs) {
             (Error(error), _) | (_, Error(error)) => Error(error),
-            (_, Value(value)) if value == 0_f64 => Error("Division by zero"),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.div(rvalue)),
         }
     }
@@ -132,7 +131,6 @@ impl Rem for TesslaFloat {
         use TesslaValue::*;
         match (self, rhs) {
             (Error(error), _) | (_, Error(error)) => Error(error),
-            (_, Value(value)) if value == 0_f64 => Error("Division by zero"),
             (Value(lvalue), Value(rvalue)) => Value(lvalue.rem(rvalue)),
         }
     }
