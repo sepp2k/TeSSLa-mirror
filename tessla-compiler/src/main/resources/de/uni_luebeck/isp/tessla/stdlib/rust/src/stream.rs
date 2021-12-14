@@ -67,7 +67,9 @@ impl<T> Events<T> {
 
     pub fn update_last(&mut self) {
         match &mut self.value {
-            Ok(event) => self.last = Ok(event.take()),
+            Ok(event) => if event.is_some() {
+                self.last = Ok(event.take())
+            },
             &mut Err(error) => {
                 self.last = Err(error);
                 self.value = Ok(None);
