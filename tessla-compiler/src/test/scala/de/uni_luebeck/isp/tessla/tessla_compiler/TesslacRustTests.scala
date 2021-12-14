@@ -20,7 +20,7 @@ import java.nio.file.{Files, Path}
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.TesslaCoreToRust
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
 import org.antlr.v4.runtime.CharStream
@@ -33,8 +33,6 @@ import scala.reflect.io.Directory
 class TesslacRustTests extends AbstractTestRunner[String]("Tessla Rust Compiler") with BeforeAndAfterAll {
 
   val fsPath: Path = Files.createTempDirectory("TesslaRustCompilerTests")
-
-  var staticLibrary: String = _
 
   override def roots = Seq("common/", "tesslac/")
 
@@ -50,21 +48,26 @@ class TesslacRustTests extends AbstractTestRunner[String]("Tessla Rust Compiler"
     testCase: TestCase.TestConfig,
     resolver: TestCase.PathResolver
   ): (String, String) = {
-    TesslacRustTests.compile(fsPath, spec, staticLibrary)
-    val (output, errors) = TesslacRustTests.execute(fsPath, resolver.inStreamFile(inputFile))
+    val (output, errors) = TesslacRustTests.execute(fsPath, spec, resolver.inStreamFile(inputFile))
     (output.mkString("\n"), errors.mkString("\n"))
   }
 
   override def beforeAll(): Unit = {
-    // bundle rust library
-    val ioLib = Source.fromResource("de/uni_luebeck/isp/tessla/stdlib/rust/src/io.rs").getLines()
-    val valueLib = Source.fromResource("de/uni_luebeck/isp/tessla/stdlib/rust/src/value.rs").getLines()
-    val streamLib = Source
-      .fromResource("de/uni_luebeck/isp/tessla/stdlib/rust/src/stream.rs")
-      .getLines()
-      .filterNot(l => l.startsWith("use crate"))
+    RustCompiler.exportLibrary(fsPath.resolve("rustlib"))
+    Files.createDirectories(fsPath.resolve("src"))
 
-    staticLibrary = (ioLib ++ valueLib ++ streamLib).mkString("\n")
+    Files.writeString(
+      fsPath.resolve("Cargo.toml"),
+      s"""[workspace]
+         |
+         |[package]
+         |name = "tessla_test"
+         |version = "0.0.0"
+         |
+         |[dependencies]
+         |tessla_stdlib = { path = "./rustlib" }
+         |""".stripMargin
+    )
   }
 
   override def afterAll(): Unit = {
@@ -76,7 +79,7 @@ class TesslacRustTests extends AbstractTestRunner[String]("Tessla Rust Compiler"
 object TesslacRustTests {
   def pipeline(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, String] = {
     val consoleInterface = !testCase.options.contains("no-console")
-    // FIXME: any additional source here would be in scala
+    // FIXME: any additional source here would be in scala?
     val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
     assert(additionalSource == "")
 
@@ -85,20 +88,38 @@ object TesslacRustTests {
       .andThen(new TesslaCoreToRust(consoleInterface))
   }
 
-  // Search for Main$ in the provided path and execute Main$.main with the input trace.
-  def execute(path: Path, inputTrace: java.io.File): (Seq[String], Seq[String]) = {
-    val runner = new ProcessBuilder(path.resolve("out").toString)
+  def execute(dirPath: Path, sourceCode: String, inputTrace: java.io.File): (Seq[String], Seq[String]) = {
+    val sourcePath = dirPath.resolve("src/main.rs")
+    Files.writeString(sourcePath, sourceCode)
 
-    runner.redirectInput(Redirect.from(inputTrace))
-    runner.redirectError(Redirect.PIPE)
-    runner.redirectOutput(Redirect.PIPE)
+    val cargoRun = new ProcessBuilder(
+      "cargo",
+      "run",
+      "--quiet",
+      "--manifest-path",
+      dirPath.resolve("Cargo.toml").toAbsolutePath.toString,
+      "--release"
+    )
+
+    // Which warnings we want to allow, any not specified here, will result in a failed test
+    cargoRun
+      .environment()
+      .put(
+        "RUSTFLAGS",
+        "-A unused_parens -A unused_variables -A unused_mut -A non_snake_case -A non_camel_case_types -A uncommon_codepoints"
+      )
+
+    cargoRun.redirectInput(Redirect.from(inputTrace))
 
     try {
-      val process = runner.start()
+      val process = cargoRun.start()
+
+      val out = process.getInputStream
+      val err = process.getErrorStream
+
       process.waitFor()
 
-      val out = process.getInputStream // yes this is the correct one
-      val err = process.getErrorStream
+      out.markSupported()
 
       val output = Source.fromInputStream(out).getLines().toSeq
       val errors = Source.fromInputStream(err).getLines().toSeq
@@ -109,17 +130,6 @@ object TesslacRustTests {
         // If this fails it failed to run the file, ergo no output
         (Seq(), Seq(e.getMessage))
     }
-  }
-
-  def compile(dirPath: Path, sourceCode: String, libraryCode: String): Unit = {
-    val standaloneCode = sourceCode.replace("extern crate tessla_stdlib;\nuse tessla_stdlib::*;", libraryCode)
-
-    val sourcePath = dirPath.resolve("out.rs")
-    Files.writeString(sourcePath, standaloneCode)
-
-    val rustc = new ProcessBuilder("rustc", sourcePath.toString).start()
-    //val rustc = new ProcessBuilder("cargo", "build", "--bin", "out"). /* TODO: ?? */ inheritIO().start()
-    rustc.waitFor()
   }
 
 }
