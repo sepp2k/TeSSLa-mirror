@@ -70,3 +70,53 @@ class RustCompiler(outDir: Path, binaryArtifactName: String) extends Translation
     }))
   }
 }
+
+object RustCompiler {
+
+  /**
+   * Exports the rust library crate from resources into an external folder
+   * @param destination the destination folder
+   */
+  def exportLibrary(destination: Path): Unit = {
+    val libraryLocation = "de/uni_luebeck/isp/tessla/stdlib/rust"
+    val libraryURI = getClass.getClassLoader.getResource(libraryLocation).toURI
+
+    if ("jar".equals(libraryURI.getScheme)) {
+      var jarFS: FileSystem = null
+      try {
+        jarFS = FileSystems.newFileSystem(libraryURI, Collections.emptyMap(), getClass.getClassLoader)
+        val libraryPath = jarFS.getPath(libraryLocation)
+        Files.walkFileTree(libraryPath, new CopyFileVisitor(libraryPath, destination))
+      } catch {
+        case e: Exception => e.printStackTrace()
+      } finally {
+        jarFS.close()
+      }
+    } else {
+      val libraryPath = Path.of(libraryURI)
+      Files.walkFileTree(libraryPath, new CopyFileVisitor(libraryPath, destination))
+    }
+  }
+
+  /**
+   * Helper class to copy a file tree into another folder with [[Files.walkFileTree]]
+   * @param sourceBase the source path
+   * @param destination the destination path
+   * @throws FileAlreadyExistsException if any of the files already exist in the destination
+   */
+  private class CopyFileVisitor(sourceBase: Path, destination: Path) extends SimpleFileVisitor[Path] {
+    override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult = {
+      val check = super.preVisitDirectory(dir, attrs)
+      val destinationDir = destination.resolve(sourceBase.relativize(dir).toString)
+      Files.createDirectory(destinationDir)
+      check
+    }
+
+    override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+      val check = super.visitFile(file, attrs)
+      val destinationFile = destination.resolve(sourceBase.relativize(file).toString)
+      Files.copy(file, destinationFile)
+      check
+    }
+  }
+}
