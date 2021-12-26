@@ -176,20 +176,19 @@ pub fn last<T, U>(output: &mut Events<T>, values: &Events<T>, trigger: &Events<U
     }
 }
 
-pub fn delay(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>, nextDelay: &mut i64, timestamp: i64) {
-
-    if nextDelay == timestamp {
-        output.set_value(Value(()));
+// FIXME: I think this does not quite cover all possible specified Error states
+pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>, next_delay: &mut i64, timestamp: i64) {
+    if *next_delay == timestamp {
+        output.set_event(Value(()));
     }
-    if output.has_changed() || resets.has_changed() {
-        if delays.has_changed() {
-            if delays.clone_value() > 0 {
-                nextDelay = timestamp + delays.clone_value();
-            }else{
+    if output.has_event() || resets.has_event() {
+        if delays.has_event() {
+            let delay_value = delays.get_value();
+            if delay_value > 0 {
+                *next_delay = timestamp + delay_value;
+            } else {
                 panic!("Tried to set a delay lower than one.");
             }
-        }else{
-            nextDelay = timestamp;
         }
     }
 }
