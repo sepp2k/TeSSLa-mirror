@@ -171,8 +171,15 @@ pub fn time<T>(output: &mut Events<i64>, input: &Events<T>, timestamp: i64) {
 
 pub fn last<T, U>(output: &mut Events<T>, values: &Events<T>, trigger: &Events<U>)
     where T: Clone {
-    if trigger.has_event() {
-        output.clone_value_from(values);
+    if values.is_initialised() {
+        match trigger.value {
+            Err(error) => output.set_error(error),
+            Ok(_) => match values.last {
+                Err(error) => output.set_error(error),
+                Ok(Some(_)) => output.set_event(values.clone_last()),
+                Ok(None) => {}
+            }
+        }
     }
 }
 
