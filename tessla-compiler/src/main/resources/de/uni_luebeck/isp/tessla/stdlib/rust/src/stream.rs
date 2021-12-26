@@ -379,7 +379,7 @@ pub fn constant<T, U>(output: &mut Events<T>, value: TesslaValue<T>, trigger: &E
 
 pub fn filter<T>(output: &mut Events<T>, values: &Events<T>, condition: &Events<bool>)
     where T: Clone {
-    if values.has_event() && condition.get_value_or_last() {
+    if values.has_event() && condition.is_initialised() && condition.get_value_or_last() {
         output.clone_value_from(&values);
     }
 }
