@@ -67,7 +67,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     override protected def translateSpec(): String = {
       val srcSegments = SourceSegments()
 
-      val outputMap = extSpec.spec.out.map { case (expr, annotations) => (expr.id, annotations) }.toMap
+      val outputMap = extSpec.spec.out.groupMap { case (expr, _) => expr.id } { case (_, annotations) => annotations }
 
       // Produce computation section
       DefinitionOrdering.order(extSpec.spec.definitions).foreach {
@@ -78,10 +78,18 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
                 .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
               // Produce output generation
               if (outputMap.contains(id)) {
-                val annotations = outputMap(id)
-                val name = TesslaAST.Core.getOutputName(annotations)
-                rustStreamCodeGenerator
-                  .produceOutputCode(id, getStreamType(id), name, srcSegments, annotations.contains("raw"), ioInterface)
+                outputMap(id).foreach { annotations =>
+                  val name = TesslaAST.Core.getOutputName(annotations)
+                  rustStreamCodeGenerator
+                    .produceOutputCode(
+                      id,
+                      getStreamType(id),
+                      name,
+                      srcSegments,
+                      annotations.contains("raw"),
+                      ioInterface
+                    )
+                }
               }
             case FunctionType(_, _, _, _) =>
               srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
