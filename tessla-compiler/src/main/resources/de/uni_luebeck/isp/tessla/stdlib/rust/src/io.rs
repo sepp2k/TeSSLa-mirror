@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::io::stdin;
 use std::str::FromStr;
 
@@ -30,7 +31,7 @@ pub fn process_string_input(string: &str) -> String {
     }
 }
 
-pub fn output_var(output: &str, true_name: &str, ts: i64, raw: bool) {
+pub fn output_var<T: Display>(output: T, true_name: &str, ts: i64, raw: bool) {
     if raw {
         println!("{}", output);
     } else {

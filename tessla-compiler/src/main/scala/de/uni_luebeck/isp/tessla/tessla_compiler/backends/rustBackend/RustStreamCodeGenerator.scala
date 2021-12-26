@@ -475,7 +475,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
 
       // FIXME better to string conversion??
       srcSegments.stateInit.append(
-        s"""out_$cleanName: Some(|value, ts| output_var(value.to_string().as_str(), \"$nameString\", ts, $raw))"""
+        s"""out_$cleanName: Some(|value, ts| output_var(value, \"$nameString\", ts, $raw))"""
       )
     } else {
       srcSegments.stateInit.append(s"out_$cleanName: None")
