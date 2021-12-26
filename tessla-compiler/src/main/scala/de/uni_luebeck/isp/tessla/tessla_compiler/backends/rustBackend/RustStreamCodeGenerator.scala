@@ -296,7 +296,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val value =
       rustNonStreamCodeGenerator.translateExpressionArg(value_expr, rustNonStreamCodeGenerator.TypeArgManagement.empty)
     val trigger = streamNameFromExpressionArg(trigger_expr)
-    currSrc.computation.append(s"constant<$output_type>(&mut $output, $value, &$trigger);")
+    currSrc.computation.append(s"constant(&mut $output, $value, &$trigger);")
   }
 
   /**
@@ -319,7 +319,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val value = streamNameFromExpressionArg(value_expr)
     val condition = streamNameFromExpressionArg(condition_expr)
-    currSrc.computation.append(s"filter<$output_type>(&mut $output, &$value, &$condition);")
+    currSrc.computation.append(s"filter(&mut $output, &$value, &$condition);")
   }
 
   /**
@@ -349,7 +349,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.computation.append(s"fold<$output_type>(&mut $output, &$stream, $function);")
+    currSrc.computation.append(s"fold(&mut $output, &$stream, $function);")
   }
 
   /**
@@ -375,7 +375,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
       function_expr,
       rustNonStreamCodeGenerator.TypeArgManagement.empty
     )
-    currSrc.computation.append(s"reduce<$output_type>(&mut $output, &$stream, $function);")
+    currSrc.computation.append(s"reduce(&mut $output, &$stream, $function);")
   }
 
   /**
@@ -413,7 +413,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
-    currSrc.computation.append(s"pure<$output_type>(&mut $output, &$stream);")
+    currSrc.computation.append(s"pure(&mut $output, &$stream);")
   }
 
   /**
