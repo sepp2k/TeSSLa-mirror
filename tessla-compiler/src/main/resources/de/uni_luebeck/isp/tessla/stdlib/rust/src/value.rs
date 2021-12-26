@@ -2,6 +2,8 @@ use std::fmt::{Display, Formatter};
 use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 use std::str::FromStr;
 
+use crate::process_string_input;
+
 use TesslaValue::*;
 
 pub enum TesslaValue<T> {
@@ -337,7 +339,7 @@ pub type TesslaString = TesslaValue<String>;
 
 impl From<&str> for TesslaString {
     fn from(s: &str) -> Self {
-        Value(String::from(s))
+        Value(process_string_input(s).to_string())
     }
 }
 
@@ -362,14 +364,6 @@ impl<T: Display> Display for TesslaValue<T> {
 }
 
 impl TesslaString {
-    #[inline]
-    pub fn as_str(&self) -> &str {
-        match self {
-            &Error(error) => error,
-            Value(value) => value.as_str()
-        }
-    }
-
     #[inline]
     pub fn format<T: Display>(&self, value: &TesslaValue<T>) -> TesslaString {
         match (self, value) {

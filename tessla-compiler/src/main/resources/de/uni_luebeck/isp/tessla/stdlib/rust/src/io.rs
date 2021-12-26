@@ -23,9 +23,9 @@ pub fn process_string_input(string: &str) -> String {
         string[1..(string.len() - 1)]
             .replace("\\\\n", "\n")
             .replace("\\\\r", "\r")
+            .replace("\\\\t", "\t")
             .replace("\\\\\"", "\"")
             .replace("\\\\\\\\", "\\")
-            .replace("\\\\t", "\t")
     } else {
         panic!("Not a valid string input: \"{}\"", string);
     }
