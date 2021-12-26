@@ -234,7 +234,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case x: ExternExpression =>
         translateExtern(x, tm, defContext)
       case RecordConstructorExpression(entries, _) if entries.isEmpty =>
-        "Value(())" // Unit value
+        "Value(Unit::Unit)" // Unit value
       case RecordConstructorExpression(entries, _) =>
         val fields = entries.toSeq.map { case (name, (ea, _)) => (name, ea.tpe.resolve(tm.resMap)) }
         val structName = RustUtils.getStructName(fields)
