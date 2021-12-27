@@ -175,14 +175,16 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val delay = streamNameFromExpressionArg(delay_expr)
     val reset = streamNameFromExpressionArg(reset_expr)
 
-    currSrc.stateDef.append(s"nextDelay_$output: i64")
-    currSrc.stateInit.append(s"nextDelay_$output: 0")
+    val nextDelay = s"nextDelay_${output_id.fullName}"
+
+    currSrc.stateDef.append(s"$nextDelay: i64")
+    currSrc.stateInit.append(s"$nextDelay: 0")
 
     currSrc.timestamp.append(
-      s"if state.nextDelay_$output > state.current_ts && state.nextDelay_$output < new_input_ts { state.current_ts = state.nextDelay_$output; }"
+      s"if state.$nextDelay > state.current_ts && state.$nextDelay < new_input_ts { state.current_ts = state.$nextDelay; }"
     )
 
-    currSrc.computation.append(s"delay(&mut $output, &$delay, &$reset, state.nextDelay_$output, state.current_ts);")
+    currSrc.computation.append(s"delay(&mut $output, &$delay, &$reset, &mut state.$nextDelay, state.current_ts);")
   }
 
   /**
