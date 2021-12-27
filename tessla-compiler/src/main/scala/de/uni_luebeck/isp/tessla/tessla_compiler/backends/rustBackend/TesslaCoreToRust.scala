@@ -102,6 +102,22 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       // Produce input consumption
       extSpec.spec.in.foreach { i =>
         rustStreamCodeGenerator.produceInputCode(i._1, i._2._1, srcSegments, ioInterface)
+
+        // Produce output generation
+        if (outputMap.contains(i._1)) {
+          outputMap(i._1).foreach { annotations =>
+            val name = TesslaAST.Core.getOutputName(annotations)
+            rustStreamCodeGenerator
+              .produceOutputCode(
+                i._1,
+                getStreamType(i._1),
+                name,
+                srcSegments,
+                annotations.contains("raw"),
+                ioInterface
+              )
+          }
+        }
       }
 
       srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStructDefinitions())
