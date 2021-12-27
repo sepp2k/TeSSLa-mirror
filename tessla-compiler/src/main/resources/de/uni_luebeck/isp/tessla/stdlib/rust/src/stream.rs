@@ -156,7 +156,7 @@ pub fn default_from<T>(output: &mut Events<T>, input: &Events<T>, default: &Even
     where T: Clone {
     if input.has_event() {
         output.clone_value_from(input);
-    } else if !input.is_initialised() && default.has_event() {
+    } else if !input.is_initialised() && !output.is_initialised() && default.has_event() {
         output.clone_value_from(default);
     }
 }
