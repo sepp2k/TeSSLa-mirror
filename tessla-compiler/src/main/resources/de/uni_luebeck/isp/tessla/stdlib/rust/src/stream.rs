@@ -172,7 +172,8 @@ pub fn last<T, U>(output: &mut Events<T>, values: &Events<T>, trigger: &Events<U
     if values.is_initialised() {
         match trigger.value {
             Err(error) => output.set_error(error),
-            Ok(_) => match values.last {
+            Ok(None) => {},
+            Ok(Some(_)) => match values.last {
                 Err(error) => output.set_error(error),
                 Ok(Some(_)) => output.set_event(values.clone_last()),
                 Ok(None) => {}
