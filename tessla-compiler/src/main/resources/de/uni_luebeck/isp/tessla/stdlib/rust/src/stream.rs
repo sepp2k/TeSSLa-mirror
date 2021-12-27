@@ -23,9 +23,9 @@ pub fn init<T>() -> Events<T> {
 }
 
 #[inline]
-pub fn init_with_value<T>(value: TesslaValue<T>) -> Events<T> {
+pub fn init_with_value<T: Clone>(value: TesslaValue<T>) -> Events<T> {
     EventContainer {
-        value: Ok(None),
+        value: Ok(Some(value.clone())),
         last: Ok(Some(value)),
     }
 }
@@ -145,12 +145,10 @@ impl<T: Clone> Events<T> {
 
 // -- STEP FUNCTIONS --
 
-pub fn default<T>(output: &mut Events<T>, input: &Events<T>, timestamp: i64)
+pub fn default<T>(output: &mut Events<T>, input: &Events<T>)
     where T: Clone {
     if input.has_event() {
         output.clone_value_from(input);
-    } else if timestamp == 0 {
-        output.set_event(output.clone_last())
     }
 }
 
@@ -371,14 +369,8 @@ pub fn merge<T>(output: &mut Events<T>, streams: Vec<&Events<T>>)
     }
 }
 
-pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>, timestamp: i64) {
-    if timestamp == 0 {
-        if trigger.has_event() {
-            output.set_event(Value(1_i64))
-        } else {
-            output.set_event(Value(0_i64))
-        }
-    } else if trigger.has_event() {
+pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>) {
+    if trigger.has_event() {
         output.set_event(output.clone_last() + Value(1_i64));
     }
 }
