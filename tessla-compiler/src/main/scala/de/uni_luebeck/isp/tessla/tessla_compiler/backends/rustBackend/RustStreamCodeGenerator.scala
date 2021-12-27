@@ -505,7 +505,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
 
     if (ioInterface) {
       srcSegments.input.append(
-        s"""if input_stream_name == \"$stream_id\" { (state.set_$stream_id)($t::from(input_stream_value.as_str()), new_input_ts, state); }"""
+        s"""if input_stream_name == \"$stream_id\" { (state.set_$stream_id)(input_stream_value.as_str().into(), new_input_ts, state); }"""
       )
     }
 
