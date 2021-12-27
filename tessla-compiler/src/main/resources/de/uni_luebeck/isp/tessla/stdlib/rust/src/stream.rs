@@ -371,9 +371,15 @@ pub fn merge<T>(output: &mut Events<T>, streams: Vec<&Events<T>>)
     }
 }
 
-pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>) {
-    if trigger.has_event() {
-        output.set_event(output.clone_value() + Value(1_i64));
+pub fn count<T>(output: &mut Events<i64>, trigger: &Events<T>, timestamp: i64) {
+    if timestamp == 0 {
+        if trigger.has_event() {
+            output.set_event(Value(1_i64))
+        } else {
+            output.set_event(Value(0_i64))
+        }
+    } else if trigger.has_event() {
+        output.set_event(output.clone_last() + Value(1_i64));
     }
 }
 
