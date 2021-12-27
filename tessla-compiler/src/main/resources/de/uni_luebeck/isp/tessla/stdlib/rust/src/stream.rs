@@ -186,6 +186,9 @@ pub fn delay<T>(output: &mut Events<Unit>, delays: &Events<i64>, resets: &Events
     if *next_delay == timestamp {
         output.set_event(Value(Unit::Unit));
     }
+    if delays.has_error() || resets.has_error() {
+        panic!("Could not determine delay state.")
+    }
     if output.has_event() || resets.has_event() {
         if delays.has_event() {
             let delay_value = delays.get_value();
