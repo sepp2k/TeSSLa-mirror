@@ -66,13 +66,13 @@ fn step(state: &mut State, new_input_ts: i64, flush: bool) {
 
 //COMPUTATION
 
+//STORE
+
                 flush_required = flush && (state.current_ts != new_input_ts);
                 state.last_processed_ts = state.current_ts;
                 state.current_ts = new_input_ts;
             }
         }
-
-//STORE
 
     } else if new_input_ts < state.current_ts {
         panic!("{}: FATAL: decreasing timestamp received", state.current_ts);
