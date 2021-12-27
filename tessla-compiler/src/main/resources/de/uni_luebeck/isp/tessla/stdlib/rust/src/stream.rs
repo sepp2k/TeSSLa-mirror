@@ -424,8 +424,8 @@ pub fn unitIf(output: &mut Events<Unit>, cond: &Events<bool>) {
 pub fn pure<T>(output: &mut Events<T>, stream: &Events<T>)
     where T: Clone + PartialEq {
     if stream.has_event() {
-    }
-    if !output.is_initialised() || stream.clone_value().ne(&output.clone_last()).get_value() {
-        output.clone_value_from(&stream);
+        if !output.is_initialised() || stream.clone_value().ne(&output.clone_last()).get_value() {
+            output.clone_value_from(&stream);
+        }
     }
 }
