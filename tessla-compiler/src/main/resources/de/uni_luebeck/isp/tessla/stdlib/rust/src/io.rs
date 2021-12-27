@@ -63,7 +63,7 @@ pub fn parse_input(input_stream_name: &mut String, input_stream_value: &mut Stri
                 },
                 None => {
                     *input_stream_name = input_expression.trim().to_string();
-                    *input_stream_value = String::new();
+                    *input_stream_value = String::from("()");
                 }
             };
         }
