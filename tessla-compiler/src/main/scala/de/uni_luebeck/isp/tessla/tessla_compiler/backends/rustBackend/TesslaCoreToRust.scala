@@ -22,6 +22,7 @@ import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Diagnostics, ExtendedSpecification}
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.io.Source
 
 /**
@@ -64,10 +65,27 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       }
     }
 
+    private def produceOutputCode(
+      outputMap: Map[Identifier, List[Annotations]],
+      outputNames: mutable.Set[String],
+      id: Identifier,
+      srcSegments: SourceSegments
+    ): Unit = {
+      if (outputMap.contains(id)) {
+        outputMap(id).foreach { annotations =>
+          var name = TesslaAST.Core.getOutputName(annotations).getOrElse(id.idOrName.left.getOrElse(id.fullName))
+          val raw = annotations.contains("raw")
+          rustStreamCodeGenerator
+            .produceOutputCode(id, getStreamType(id), name, srcSegments, raw, ioInterface, outputNames)
+        }
+      }
+    }
+
     override protected def translateSpec(): String = {
       val srcSegments = SourceSegments()
 
       val outputMap = extSpec.spec.out.groupMap { case (expr, _) => expr.id } { case (_, annotations) => annotations }
+      var outputNames = mutable.Set[String]()
 
       // Produce computation section
       DefinitionOrdering.order(extSpec.spec.definitions).foreach {
@@ -76,21 +94,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
             case InstantiatedType("Events", _, _) =>
               rustStreamCodeGenerator
                 .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
-              // Produce output generation
-              if (outputMap.contains(id)) {
-                outputMap(id).foreach { annotations =>
-                  val name = TesslaAST.Core.getOutputName(annotations)
-                  rustStreamCodeGenerator
-                    .produceOutputCode(
-                      id,
-                      getStreamType(id),
-                      name,
-                      srcSegments,
-                      annotations.contains("raw"),
-                      ioInterface
-                    )
-                }
-              }
+              produceOutputCode(outputMap, outputNames, id, srcSegments)
             case FunctionType(_, _, _, _) =>
               srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
             case e =>
@@ -100,24 +104,10 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       }
 
       // Produce input consumption
-      extSpec.spec.in.foreach { i =>
-        rustStreamCodeGenerator.produceInputCode(i._1, i._2._1, srcSegments, ioInterface)
-
-        // Produce output generation
-        if (outputMap.contains(i._1)) {
-          outputMap(i._1).foreach { annotations =>
-            val name = TesslaAST.Core.getOutputName(annotations)
-            rustStreamCodeGenerator
-              .produceOutputCode(
-                i._1,
-                getStreamType(i._1),
-                name,
-                srcSegments,
-                annotations.contains("raw"),
-                ioInterface
-              )
-          }
-        }
+      extSpec.spec.in.foreach {
+        case (id, (definition, _)) =>
+          rustStreamCodeGenerator.produceInputCode(id, definition, srcSegments, ioInterface)
+          produceOutputCode(outputMap, outputNames, id, srcSegments)
       }
 
       srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStructDefinitions())

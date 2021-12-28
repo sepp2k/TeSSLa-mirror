@@ -19,6 +19,8 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, StreamCodeGeneratorInterface}
 
+import scala.collection.mutable
+
 class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGenerator)
     extends StreamCodeGeneratorInterface[SourceSegments, Unit] {
 
@@ -447,7 +449,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    *
    * @param id The id of the stream to be printed
    * @param typ id's type. Must be Events[...]
-   * @param nameOpt The alias name of id for printing. Optional.
+   * @param name The alias name of id for printing.
    * @param raw If the output should be printed raw (without timestamp). Is passed to __[TC]output__.
    * @param srcSegments The source segments the generated block is added to.
    *                There is code attached to the output segment.
@@ -455,33 +457,39 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   def produceOutputCode(
     id: Identifier,
     typ: Type,
-    nameOpt: Option[String],
+    name: String,
     srcSegments: SourceSegments,
     raw: Boolean,
-    ioInterface: Boolean
+    ioInterface: Boolean,
+    outputNames: mutable.Set[String]
   ): Unit = {
     val s = s"var_${id.fullName}"
     val t = RustUtils.convertType(typ)
     // FIXME: All this replacing of specific chars is probably not exhaustive and kinda not nice to do here
-    var name = nameOpt.getOrElse(id.idOrName.left.getOrElse(id.fullName))
     val cleanName = RustUtils.NON_ALPHA_PATTERN.replaceAllIn(name, m => s"χ${m.group(0).charAt(0).asInstanceOf[Int]}")
-    name = name.replace("$", "\\$")
+    val trueName = name.replace("$", "\\$").replace("ø", "")
 
-    srcSegments.stateDef.append(s"out_$cleanName: Option<fn($t, i64)> /* $name */")
+    // Only add state definitions if they haven't been added before
+    if (!outputNames.contains(name)) {
+      outputNames.add(name)
 
-    if (ioInterface) {
-      val nameString = name
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\"", "\\\"")
+      srcSegments.stateDef.append(s"out_$cleanName: Option<fn($t, i64)> /* $trueName */")
 
-      // FIXME better to string conversion??
-      srcSegments.stateInit.append(
-        s"""out_$cleanName: Some(|value, ts| output_var(value, \"$nameString\", ts, $raw))"""
-      )
-    } else {
-      srcSegments.stateInit.append(s"out_$cleanName: None")
+      if (ioInterface) {
+        val nameString = trueName
+          .replace("\n", "\\n")
+          .replace("\r", "\\r")
+          .replace("\"", "\\\"")
+
+        // FIXME better to string conversion??
+        srcSegments.stateInit.append(
+          s"""out_$cleanName: Some(|value, ts| output_var(value, \"$nameString\", ts, $raw))"""
+        )
+      } else {
+        srcSegments.stateInit.append(s"out_$cleanName: None")
+      }
     }
+
     srcSegments.computation.append(s"state.$s.call_output(state.out_$cleanName, state.current_ts);")
   }
 
