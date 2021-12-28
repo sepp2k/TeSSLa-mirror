@@ -73,7 +73,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     ): Unit = {
       if (outputMap.contains(id)) {
         outputMap(id).foreach { annotations =>
-          var name = TesslaAST.Core.getOutputName(annotations).getOrElse(id.idOrName.left.getOrElse(id.fullName))
+          val name = TesslaAST.Core.getOutputName(annotations).getOrElse(id.idOrName.left.getOrElse(id.fullName))
           val raw = annotations.contains("raw")
           rustStreamCodeGenerator
             .produceOutputCode(id, getStreamType(id), name, srcSegments, raw, ioInterface, outputNames)
