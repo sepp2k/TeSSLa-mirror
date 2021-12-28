@@ -379,7 +379,7 @@ struct FormatSpec {
     format_type: char,
 }
 
-fn parse_format_string(&format_string: String) -> Result<FormatSpec, &'static str> {
+fn parse_format_string(format_string: &String) -> Result<FormatSpec, &'static str> {
     let mut spec = FormatSpec {
         flag_left_justify: false,
         flag_plus_sign: false,
