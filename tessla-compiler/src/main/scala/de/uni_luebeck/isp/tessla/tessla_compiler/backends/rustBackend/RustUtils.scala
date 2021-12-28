@@ -63,7 +63,7 @@ object RustUtils {
           .mkString(", ")}) -> ${convertType(resultType)}"""
       case RecordType(entries, _) =>
         s"TesslaValue<${RustUtils.getStructName(entries.toSeq.map { case (name, (tpe, _)) => (name, tpe) })}>"
-      case TypeParam(name, _) => name.toString
+      case TypeParam(name, _) => s"TesslaValue<${name.toString}>"
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
