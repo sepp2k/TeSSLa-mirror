@@ -52,7 +52,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case TypeApplicationExpression(app, types, _) =>
         translateFunctionCall(app, args, tm.typeApp(types), defContext)
       case ExternExpression(name, typ: Core.FunctionType, _) =>
-        translateBuiltinFunctionCall(s"__${name}__", args, typ)
+        translateBuiltinFunctionCall(s"__${name}__", args, typ, tm.parsKnown(typ.typeParams))
       case e: ExternExpression => translateExtern(e, tm, defContext)
       case _: FunctionExpression | _: ExpressionRef | _: ApplicationExpression | _: RecordAccessorExpression =>
         s"${translateExpressionArg(e, tm, defContext)}(${args.mkString(", ")})"
@@ -278,12 +278,14 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * @param name Name of the function which is called
    * @param oArgs Argument expressions of the function call
    * @param typeHint The type signature of the called function.
+   * @param tm The [[TypeArgManagement]] to resolve type parameters
    * @return The translated function call in Rust
    */
   def translateBuiltinFunctionCall(
     name: String,
     oArgs: Seq[String],
-    typeHint: Core.FunctionType
+    typeHint: Core.FunctionType,
+    tm: TypeArgManagement
   ): String = {
     val args = oArgs.toIndexedSeq
     name match {
@@ -294,11 +296,11 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__and__" if args.length == 2 =>
         s"match ${args(0)} { Value(true) => { ${args(1)} }, false_or_error => false_or_error }"
       case "__and__" =>
-        s"match ${args(0)} { Value(true) => { ${translateBuiltinFunctionCall(name, args.tail, typeHint)} }, false_or_error => false_or_error }"
+        s"match ${args(0)} { Value(true) => { ${translateBuiltinFunctionCall(name, args.tail, typeHint, tm)} }, false_or_error => false_or_error }"
       case "__or__" if args.length == 2 =>
         s"match ${args(0)} { Value(false) => { ${args(1)} }, true_or_error => true_or_error }"
       case "__or__" =>
-        s"match ${args(0)} { Value(false) => { ${translateBuiltinFunctionCall(name, args.tail, typeHint)} }, true_or_error => true_or_error }"
+        s"match ${args(0)} { Value(false) => { ${translateBuiltinFunctionCall(name, args.tail, typeHint, tm)} }, true_or_error => true_or_error }"
       case "__not__" | "__bitflip__"    => s"!(${args(0)})"
       case "__negate__" | "__fnegate__" => s"-${args(0)}"
       case "__eq__"                     => s"${args(0)}.eq(&${args(1)})"
@@ -335,8 +337,14 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__isSome__"  => s"${args(0)}.is_some()"
       case "__isNone__"  => s"${args(0)}.is_none()"
 
-      case "__toString__"      => s"${args(0)}.to_string()"
-      case "__String_format__" => s"${args(0)}.format(${args(1)})"
+      case "__toString__" => s"${args(0)}.to_string()"
+      case "__String_format__" =>
+        val valueType = typeHint.paramTypes(1)._2.resolve(tm.resMap)
+        valueType match {
+          case InstantiatedType("Int", _, _)   => s"${args(0)}.format_int(&${args(1)})"
+          case InstantiatedType("Float", _, _) => s"${args(0)}.format_float(&${args(1)})"
+          case _                               => s"${args(0)}.format(&${args(1)})"
+        }
 
       /* TODO https://docs.rs/im/15.0.0/im/
       case "__Map_empty__" => "im::HashMap::new()"

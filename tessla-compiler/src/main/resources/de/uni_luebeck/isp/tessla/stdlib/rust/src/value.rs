@@ -379,6 +379,22 @@ impl TesslaString {
                 todo!("{}.format({}) /* See Section 4.13.3.1 */", format_string, value),
         }
     }
+
+    pub fn format_int(&self, value: &TesslaInt) -> TesslaString {
+        match (self, value) {
+            (&Error(error), _) | (_, &Error(error)) => Error(error),
+            (Value(format_string), Value(value)) =>
+                todo!("{}.format({}) /* See Section 4.13.3.1 */", format_string, value),
+        }
+    }
+
+    pub fn format_float(&self, value: &TesslaFloat) -> TesslaString {
+        match (self, value) {
+            (&Error(error), _) | (_, &Error(error)) => Error(error),
+            (Value(format_string), Value(value)) =>
+                todo!("{}.format({}) /* See Section 4.13.3.1 */", format_string, value),
+        }
+    }
 }
 
 // 5.6 Option
