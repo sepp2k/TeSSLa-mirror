@@ -364,21 +364,22 @@ impl<T: Display> Display for TesslaValue<T> {
 }
 
 struct FormatSpec {
-    flag_left_justify: bool,
-    flag_plus_sign: bool,
-    flag_pad_sign: bool,
-    flag_alternate_form: bool,
-    flag_zero_pad: bool,
-    flag_locale_separators: bool,
-    flag_enclose_negatives: bool,
+    flag_left_justify: bool, // '-'
+    flag_plus_sign: bool, // '+'
+    flag_pad_sign: bool, // ' '
+    flag_alternate_form: bool, // '#'
+    flag_zero_pad: bool, // '0'
+    flag_locale_separators: bool, // ','
+    flag_enclose_negatives: bool, // '('
 
     width: Option<usize>,
     precision: Option<usize>,
 
+    uppercase: bool,
     format_type: char,
 }
 
-fn parse_format_string(format_string: String) -> Result<FormatSpec, &'static str> {
+fn parse_format_string(&format_string: String) -> Result<FormatSpec, &'static str> {
     let mut spec = FormatSpec {
         flag_left_justify: false,
         flag_plus_sign: false,
@@ -391,13 +392,14 @@ fn parse_format_string(format_string: String) -> Result<FormatSpec, &'static str
         width: None,
         precision: None,
 
-        format_type: '?'
+        uppercase: false,
+        format_type: '?',
     };
 
     let format_chars: Vec<char> = format_string.chars().collect();
 
     if format_chars[0] != '%' {
-        return Err("Invalid format string")
+        return Err("Format string does not start with %")
     }
 
     let mut i = 1;
@@ -427,7 +429,7 @@ fn parse_format_string(format_string: String) -> Result<FormatSpec, &'static str
 
         match format_string[j..i].parse::<usize>() {
             Ok(width) => spec.width = Some(width),
-            Err(_) => return Err("Invalid format string")
+            Err(_) => return Err("Failed to parse format width")
         }
     }
 
@@ -442,11 +444,16 @@ fn parse_format_string(format_string: String) -> Result<FormatSpec, &'static str
 
         match format_string[j..i].parse::<usize>() {
             Ok(precision) => spec.precision = Some(precision),
-            Err(_) => return Err("Invalid format string")
+            Err(_) => return Err("Failed to parse format precision")
         }
     }
 
     spec.format_type = format_chars[i];
+
+    if spec.format_type.is_ascii_uppercase() {
+        spec.uppercase = true;
+        spec.format_type = spec.format_type.to_ascii_lowercase()
+    }
 
     if i + 1 == format_string.len() {
         Ok(spec)
