@@ -308,7 +308,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__geq__" | "__fgeq__"       => s"${args(0)}.ge(&${args(1)})"
       case "__leq__" | "__fleq__"       => s"${args(0)}.le(&${args(1)})"
       case "__add__" | "__fadd__"       => s"(${args(0)} + ${args(1)})"
-      case "__String_concat__"          => s"(${args(0)} + ${args(1)})"
+      case "__String_concat__"          => s"${args(0)}.concat(&${args(1)})"
       case "__sub__" | "__fsub__"       => s"(${args(0)} - ${args(1)})"
       case "__mul__" | "__fmul__"       => s"(${args(0)} * ${args(1)})"
       case "__div__" | "__fdiv__"       => s"(${args(0)} / ${args(1)})"

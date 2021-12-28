@@ -364,6 +364,13 @@ impl<T: Display> Display for TesslaValue<T> {
 }
 
 impl TesslaString {
+    pub fn concat(&self, other: &TesslaString) -> TesslaString {
+        match (self, other) {
+            (&Error(error), _) | (_, &Error(error)) => Error(error),
+            (Value(lhs), Value(rhs)) => Value(lhs.to_owned() + rhs),
+        }
+    }
+
     #[inline]
     pub fn format<T: Display>(&self, value: &TesslaValue<T>) -> TesslaString {
         match (self, value) {
