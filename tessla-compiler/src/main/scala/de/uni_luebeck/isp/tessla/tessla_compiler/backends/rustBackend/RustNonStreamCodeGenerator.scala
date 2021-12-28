@@ -131,9 +131,12 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val newTm = tm.parsKnown(e.typeParams)
     val arguments = e.params
       .map {
-        case (id, StrictEvaluation, _) => if (id.fullName == "_") "_" else s"var_$id"
-        case (id, LazyEvaluation, _) =>
-          if (id.fullName == "_") "_" else s"var_$id /* lazy */" // TODO how to handle lazy...
+        case (id, e, tpe) => (id, e, RustUtils.convertType(tpe.resolve(newTm.resMap), mask_generics = true))
+      }
+      .map {
+        case (id, StrictEvaluation, tpe) => if (id.fullName == "_") "_" else s"var_$id: $tpe"
+        case (id, LazyEvaluation, tpe) =>
+          if (id.fullName == "_") "_" else s"var_$id /* lazy */: $tpe" // TODO how to handle lazy...
       }
       .mkString(", ")
     s"|$arguments| {\n" +

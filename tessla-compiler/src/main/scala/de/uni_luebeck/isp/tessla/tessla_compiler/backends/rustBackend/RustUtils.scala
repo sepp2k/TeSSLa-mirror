@@ -37,33 +37,35 @@ object RustUtils {
    * Converts TeSSLa type to corresponding rust types
    *
    * @param t Type to be converted. If type is Events[t] the result is equal to calling the function with t.
+   * @param mask_generics Replace all generic types with _, resulting in them being inferred by rust.
+   *                      This is needed in anonymous functions, where you cannot specify generic types
    * @return The converted type
    */
-  def convertType(t: Type): String = {
+  def convertType(t: Type, mask_generics: Boolean = false): String = {
     t match {
-      case InstantiatedType("Events", Seq(t), _)                    => convertType(t)
+      case InstantiatedType("Events", Seq(t), _)                    => convertType(t, mask_generics)
       case RecordType(entries, _) if entries.isEmpty                => "TesslaUnit"
       case InstantiatedType("Bool", Seq(), _)                       => "TesslaBool"
       case InstantiatedType("Int", Seq(), _)                        => "TesslaInt"
       case InstantiatedType("Float", Seq(), _)                      => "TesslaFloat"
       case InstantiatedType("String", Seq(), _)                     => "TesslaString"
-      case InstantiatedType("Option", Seq(t), _)                    => s"TesslaOption<${convertType(t)}>" /*
-      case InstantiatedType("Set", Seq(t), _)                       => s"im::set<${convertType(t)}>"
-      case InstantiatedType("Map", Seq(t1, t2), _)                  => s"im::map<${convertType(t1)}, ${convertType(t2)}>"
-      case InstantiatedType("List", Seq(t), _)                      => s"im::vec<${convertType(t)}>"*/
+      case InstantiatedType("Option", Seq(t), _)                    => s"TesslaOption<${convertType(t, mask_generics)}>" /*
+      case InstantiatedType("Set", Seq(t), _)                       => s"im::set<${convertType(t, mask_generics)}>"
+      case InstantiatedType("Map", Seq(t1, t2), _)                  => s"im::map<${convertType(t1, mask_generics)}, ${convertType(t2, mask_generics)}>"
+      case InstantiatedType("List", Seq(t), _)                      => s"im::vec<${convertType(t, mask_generics)}>"*/
       case InstantiatedType(n, Seq(), _) if n.startsWith("native:") => n.stripPrefix("native:")
       case InstantiatedType(n, tps, _) if n.startsWith("native:") =>
-        s"${n.stripPrefix("native:")}<${tps.map(convertType).mkString(", ")}>"
+        s"${n.stripPrefix("native:")}<${tps.map { t => convertType(t, mask_generics) }.mkString(", ")}>"
       case FunctionType(_, paramTypes, resultType, _) =>
         s"""fn(${paramTypes
           .map {
-            case (LazyEvaluation, t)   => s"Lazy<${convertType(t)}>"
-            case (StrictEvaluation, t) => convertType(t)
+            case (LazyEvaluation, t)   => s"Lazy<${convertType(t, mask_generics)}>"
+            case (StrictEvaluation, t) => convertType(t, mask_generics)
           }
-          .mkString(", ")}) -> ${convertType(resultType)}"""
+          .mkString(", ")}) -> ${convertType(resultType, mask_generics)}"""
       case RecordType(entries, _) =>
         s"TesslaValue<${RustUtils.getStructName(entries.toSeq.map { case (name, (tpe, _)) => (name, tpe) })}>"
-      case TypeParam(name, _) => s"TesslaValue<${name.toString}>"
+      case TypeParam(name, _) => s"TesslaValue<${if (mask_generics) "_" else name.toString}>"
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
