@@ -474,8 +474,34 @@ impl TesslaString {
     pub fn format<T: Display>(&self, value: &TesslaValue<T>) -> TesslaString {
         match (self, value) {
             (&Error(error), _) | (_, &Error(error)) => Error(error),
-            (Value(format_string), Value(value)) =>
-                todo!("{}.format({}) /* See Section 4.13.3.1 */", format_string, value),
+            (Value(format_string), Value(value)) => match parse_format_string(format_string) {
+                Ok(spec) => {
+                    if spec.flag_alternate_form || spec.flag_plus_sign || spec.flag_pad_sign || spec.flag_zero_pad || spec.flag_locale_separators || spec.flag_enclose_negatives {
+                        return Error("Invalid format flags specified")
+                    }
+
+                    if spec.format_type != 's' {
+                        return Error("Invalid format type")
+                    }
+
+                    let formatted = match (spec.flag_left_justify, spec.width, spec.precision) {
+                        (true, Some(width), Some(precision)) => format!("{0:<1$.2$}", value, width, precision),
+                        (true, Some(width), None) => format!("{0:<1$}", value, width),
+                        (true, None, _) => return Error("Failed to format left justify, no specified width"),
+                        (false, Some(width), Some(precision)) => format!("{0:>1$.2$}", value, width, precision),
+                        (false, Some(width), None) => format!("{0:>1$}", value, width),
+                        (false, None, Some(precision)) => format!("{0:.1$}", value, precision),
+                        (false, None, None) => format!("{}", value),
+                    };
+
+                    if spec.uppercase {
+                        Value(formatted.to_uppercase())
+                    } else {
+                        Value(formatted)
+                    }
+                },
+                Err(error) => Error(error),
+            }
         }
     }
 
