@@ -363,6 +363,98 @@ impl<T: Display> Display for TesslaValue<T> {
     }
 }
 
+struct FormatSpec {
+    flag_left_justify: bool,
+    flag_plus_sign: bool,
+    flag_pad_sign: bool,
+    flag_alternate_form: bool,
+    flag_zero_pad: bool,
+    flag_locale_separators: bool,
+    flag_enclose_negatives: bool,
+
+    width: Option<usize>,
+    precision: Option<usize>,
+
+    format_type: char,
+}
+
+fn parse_format_string(format_string: String) -> Result<FormatSpec, &'static str> {
+    let mut spec = FormatSpec {
+        flag_left_justify: false,
+        flag_plus_sign: false,
+        flag_pad_sign: false,
+        flag_alternate_form: false,
+        flag_zero_pad: false,
+        flag_locale_separators: false,
+        flag_enclose_negatives: false,
+
+        width: None,
+        precision: None,
+
+        format_type: '?'
+    };
+
+    let format_chars: Vec<char> = format_string.chars().collect();
+
+    if format_chars[0] != '%' {
+        return Err("Invalid format string")
+    }
+
+    let mut i = 1;
+
+    // extract flags, each only allowed to occur once
+    loop {
+        match format_chars[i] {
+            '-' if !spec.flag_left_justify => spec.flag_left_justify = true,
+            '+' if !spec.flag_plus_sign => spec.flag_plus_sign = true,
+            ' ' if !spec.flag_pad_sign => spec.flag_pad_sign = true,
+            '#' if !spec.flag_alternate_form => spec.flag_alternate_form = true,
+            '0' if !spec.flag_zero_pad => spec.flag_zero_pad = true,
+            ',' if !spec.flag_locale_separators => spec.flag_locale_separators = true,
+            '(' if !spec.flag_enclose_negatives => spec.flag_enclose_negatives = true,
+            _ => break
+        }
+        i += 1;
+    }
+
+    // extract width, don't allow leading zeroes
+    if format_chars[i] != '0' && format_chars[i].is_ascii_digit() {
+        let j = i;
+
+        while format_chars[i].is_ascii_digit() {
+            i += 1;
+        }
+
+        match format_string[j..i].parse::<usize>() {
+            Ok(width) => spec.width = Some(width),
+            Err(_) => return Err("Invalid format string")
+        }
+    }
+
+    // extract precision
+    if format_chars[i] == '.' {
+        i += 1;
+        let j = i;
+
+        while format_chars[i].is_ascii_digit() {
+            i += 1;
+        }
+
+        match format_string[j..i].parse::<usize>() {
+            Ok(precision) => spec.precision = Some(precision),
+            Err(_) => return Err("Invalid format string")
+        }
+    }
+
+    spec.format_type = format_chars[i];
+
+    if i + 1 == format_string.len() {
+        Ok(spec)
+    } else {
+        Err("Invalid format string")
+    }
+}
+
 impl TesslaString {
     pub fn concat(&self, other: &TesslaString) -> TesslaString {
         match (self, other) {
