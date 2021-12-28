@@ -580,29 +580,12 @@ impl<T: Clone> TesslaOption<TesslaValue<T>> {
     }
 }
 
-
-pub enum Unit {
-    Unit
-}
-
-impl Clone for Unit {
-    fn clone(&self) -> Self {
-        Unit::Unit
-    }
-}
-
-impl Display for Unit {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "()")
-    }
-}
-
-pub type TesslaUnit = TesslaValue<Unit>;
+pub type TesslaUnit = TesslaValue<()>;
 
 impl From<&str> for TesslaUnit {
     fn from(s: &str) -> Self {
         match s {
-            "()" => Value(Unit::Unit),
+            "()" => Value(()),
             _ => Error("Failed to parse Unit from String"),
         }
     }

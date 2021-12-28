@@ -1,4 +1,4 @@
-use crate::{TesslaOption, TesslaType, Unit};
+use crate::{TesslaOption, TesslaType};
 use crate::TesslaValue;
 use crate::TesslaValue::*;
 
@@ -183,9 +183,9 @@ pub fn last<T, U>(output: &mut Events<T>, values: &Events<T>, trigger: &Events<U
 }
 
 // FIXME: I think this does not quite cover all possible specified Error states
-pub fn delay<T>(output: &mut Events<Unit>, delays: &Events<i64>, resets: &Events<T>, next_delay: &mut i64, timestamp: i64) {
+pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>, next_delay: &mut i64, timestamp: i64) {
     if *next_delay == timestamp {
-        output.set_event(Value(Unit::Unit));
+        output.set_event(Value(()));
     }
     if delays.has_error() || resets.has_error() {
         panic!("Could not determine delay state.")
@@ -411,9 +411,9 @@ pub fn reduce<T>(output: &mut Events<T>, input: &Events<T>, function: fn(TesslaV
     }
 }
 
-pub fn unitIf(output: &mut Events<Unit>, cond: &Events<bool>) {
+pub fn unitIf(output: &mut Events<()>, cond: &Events<bool>) {
     if cond.has_event() && cond.get_value() {
-        output.set_event(Value(Unit::Unit));
+        output.set_event(Value(()));
     }
 }
 
