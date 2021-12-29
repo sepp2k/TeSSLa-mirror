@@ -395,11 +395,11 @@ impl Display for TesslaString {
 }
 
 struct FormatSpec {
-    flag_left_justify: bool, // '-'
-    flag_plus_sign: bool, // '+', doesn't work for x, o
-    flag_pad_sign: bool, // ' ', doesn't work with '+'
-    flag_alternate_form: bool, // '#', doesn't work for d
-    flag_zero_pad: bool, // '0'
+    flag_left_justify: bool,      // '-'
+    flag_plus_sign: bool,         // '+', doesn't work for x, o
+    flag_pad_sign: bool,          // ' ', doesn't work with '+'
+    flag_alternate_form: bool,    // '#', doesn't work for d
+    flag_zero_pad: bool,          // '0'
     flag_locale_separators: bool, // ',', not implemented
     flag_enclose_negatives: bool, // '(', doesn't work for x, o
 
@@ -629,10 +629,22 @@ impl TesslaString {
     }
 
     pub fn format_float(&self, value: &TesslaFloat) -> TesslaString {
+
+        // FIXME: Technically we don't handle NaN / Infinity correctly, since rust prints them differently
+
         match (self, value) {
             (&Error(error), _) | (_, &Error(error)) => Error(error),
-            (Value(format_string), Value(value)) =>
-                todo!("{}.format({}) /* See Section 4.13.3.1 */", format_string, value),
+            (Value(format_string), &Value(value)) => match parse_format_string(format_string) {
+                Err(error) => Error(error),
+                Ok(spec) => match spec.format_type {
+                    's' => format_to_type_s(spec, &value),
+                    'e' => format_to_type_e(spec, value),
+                    'f' => format_to_type_f(spec, value),
+                    'g' => format_to_type_g(spec, value),
+                    'a' => format_to_type_a(spec, value),
+                    _ => return Error("Invalid format type for float value")
+                }
+            }
         }
     }
 }
@@ -657,6 +669,120 @@ fn format_to_type_s<T: Display>(spec: FormatSpec, value: &T) -> TesslaString {
     } else {
         Value(formatted)
     }
+}
+
+fn format_to_type_e(spec: FormatSpec, value: f64) -> TesslaString {
+    if spec.flag_locale_separators {
+        return Error("Invalid format flag ',' specified for %e")
+    }
+    // alternate form (#) seems to be ignored by java for %e
+
+    let precision = spec.precision.unwrap_or(6);
+
+    let formatted = match (spec.flag_plus_sign, spec.flag_pad_sign, spec.flag_enclose_negatives,
+                           spec.width, spec.flag_left_justify, spec.flag_zero_pad) {
+        (true, true, _, _, _, _) => return Error("Invalid format flag combination ' +' for %e"),
+        (_, _, _, None, true, _) | (_, _, _, None, _, true) => return Error("Missing format width for %e"),
+
+        (_, true, _, None, false, _) if value >= 0_f64 => format!(" {0:.1$e}", value, precision),
+        (_, _, true, None, false, _) if value < 0_f64 => format!("({0:.1$e})", -value, precision),
+        (true, _, _, None, false, _) => format!("{0:+.1$e}", value, precision),
+        (_, _, _, None, false, _) => format!("{0:.1$e}", value, precision),
+
+        (_, true, _, Some(width), _, true) if value >= 0_f64 => format!(" {0:01$.2$e}", value, width, precision),
+        (_, _, true, Some(width), _, true) if value < 0_f64 => format!("({0:01$.2$e})", -value, width, precision),
+        (true, _, _, Some(width), _, true) => format!("{0:+01$.2$e}", value, width, precision),
+        (_, _, _, Some(width), _, true) => format!("{0:01$.2$e}", value, width, precision),
+
+        (_, true, _, Some(width), true, false) if value >= 0_f64 => format!(" {0:<1$.2$e}", value, width, precision),
+        (_, _, true, Some(width), true, false) if value < 0_f64 => format!("({0:<1$.2$e})", -value, width, precision),
+        (true, _, _, Some(width), true, false) => format!("{0:+<1$.2$e}", value, width, precision),
+        (_, _, _, Some(width), true, false) => format!("{0:<1$.2$e}", value, width, precision),
+
+        (_, true, _, Some(width), false, false) if value >= 0_f64 => format!(" {0:>1$.2$e}", value, width, precision),
+        (_, _, true, Some(width), false, false) if value < 0_f64 => format!("({0:>1$.2$e})", -value, width, precision),
+        (true, _, _, Some(width), false, false) => format!("{0:+>1$.2$e}", value, width, precision),
+        (_, _, _, Some(width), false, false) => format!("{0:>1$.2$e}", value, width, precision),
+    };
+
+    match formatted.rsplit_once('e') {
+        None => return Error("Failed to format float with %e"),
+        Some((value, exp)) => match (i64::from_str(exp), spec.uppercase) {
+            (Err(_), _) => Error("Failed to parse exponent while formatting %e"),
+            (Ok(exp), true) => Value(format!("{}E{:+03}", value, exp)),
+            (Ok(exp), false) => Value(format!("{}e{:+03}", value, exp)),
+        },
+    }
+}
+
+fn format_to_type_f(spec: FormatSpec, value: f64) -> TesslaString {
+    if spec.uppercase {
+        return Error("Invalid format type %F")
+    }
+    // alternate form (#) seems to be ignored by java for %f
+
+    let precision = spec.precision.unwrap_or(6);
+
+    // FIXME: support locale separators (,): https://crates.io/crates/num-format
+
+    let formatted = match (spec.flag_plus_sign, spec.flag_pad_sign, spec.flag_enclose_negatives,
+                           spec.width, spec.flag_left_justify, spec.flag_zero_pad) {
+        (true, true, _, _, _, _) => return Error("Invalid format flag combination ' +' for %f"),
+
+        (_, true, _, None, _, _) if value >= 0_f64 => format!(" {0:.1$}", value, precision),
+        (_, _, true, None, _, _) if value < 0_f64 => format!("({0:.1$})", -value, precision),
+        (true, _, _, None, _, _) => format!("{0:+.1$}", value, precision),
+        (_, _, _, None, _, _) => format!("{0:.1$}", value, precision),
+
+        (_, true, _, Some(width), _, true) if value >= 0_f64 => format!(" {0:01$.2$}", value, width, precision),
+        (_, _, true, Some(width), _, true) if value < 0_f64 => format!("({0:01$.2$})", -value, width, precision),
+        (true, _, _, Some(width), _, true) => format!("{0:+01$.2$}", value, width, precision),
+        (_, _, _, Some(width), _, true) => format!("{0:01$.2$}", value, width, precision),
+
+        (_, true, _, Some(width), true, false) if value >= 0_f64 => format!(" {0:<1$.2$}", value, width, precision),
+        (_, _, true, Some(width), true, false) if value < 0_f64 => format!("({0:<1$.2$})", -value, width, precision),
+        (true, _, _, Some(width), true, false) => format!("{0:+<1$.2$}", value, width, precision),
+        (_, _, _, Some(width), true, false) => format!("{0:<1$.2$}", value, width, precision),
+
+        (_, true, _, Some(width), false, false) if value >= 0_f64 => format!(" {0:>1$.2$}", value, width, precision),
+        (_, _, true, Some(width), false, false) if value < 0_f64 => format!("({0:>1$.2$})", -value, width, precision),
+        (true, _, _, Some(width), false, false) => format!("{0:+>1$.2$}", value, width, precision),
+        (_, _, _, Some(width), false, false) => format!("{0:>1$.2$}", value, width, precision),
+    };
+
+    Value(formatted)
+}
+
+fn format_to_type_g(spec: FormatSpec, value: f64) -> TesslaString {
+    if spec.flag_alternate_form {
+        return Error("Invalid format flag '#' specified for %g")
+    }
+
+    let mut modified_spec = FormatSpec { ..spec };
+    if spec.precision.is_none() {
+        modified_spec.precision = Some(6);
+    } else if spec.precision.unwrap() == 0 {
+        modified_spec.precision = Some(1);
+    }
+
+    let precision = match i32::try_from(modified_spec.precision.unwrap()) {
+        Err(_) => return Error("Failed to cast precision to i32 without overflow"),
+        Ok(value) => value
+    };
+    if 10e-4_f64 <= value && value < 10_f64.powi(precision) {
+        format_to_type_f(modified_spec, value)
+    } else {
+        format_to_type_e(modified_spec, value)
+    }
+}
+
+fn format_to_type_a(spec: FormatSpec, value: f64) -> TesslaString {
+    if spec.flag_locale_separators || spec.flag_enclose_negatives {
+        return Error("Invalid format flags specified for %a");
+    }
+
+    //todo!("crate::hexf")
+    Value("Not impl".into())
 }
 
 // 5.6 Option
