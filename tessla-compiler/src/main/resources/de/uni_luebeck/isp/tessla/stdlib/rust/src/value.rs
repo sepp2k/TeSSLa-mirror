@@ -521,107 +521,18 @@ impl TesslaString {
             (Value(format_string), Value(value)) => match parse_format_string(format_string) {
                 Err(error) => Error(error),
                 Ok(spec) => {
-                    if spec.format_type != 'x' && spec.format_type != 'o' && spec.format_type != 'd' {
-                        return Error("Invalid format specifier.");
-                    }
                     if spec.precision.is_some() {
                         return Error("Precision is not applicable for integers.");
                     }
                     if spec.flag_locale_separators {
-                        return Error("Locale-specific grouping separator are not yet supported.");
-                    }
-                    if spec.flag_alternate_form {
-                        return Error("Alternative form can't be applied to decimal integers.");
+                        return Error("Locale-specific grouping separators are not yet supported.");
                     }
 
-                    let lj = spec.flag_left_justify;
-                    let pl = spec.flag_plus_sign;
-                    let pa = spec.flag_pad_sign;
-                    let zp = spec.flag_zero_pad;
-
-                    // This is bäh but anything else is worse
-                    if spec.width.is_some() {
-                        if Value(value) < 0_i64 && spec.flag_enclose_negatives {
-                            // Enclose negative numbers with () and remove the sign
-                            let formatted = match (lj, pl, pa, zp) {
-                                (false, false, false, false) => format!("({0:>1$})", -1 * value, spec.width.unwrap()),
-                                (false, false, false, true) => format!("({0:0>1$})", -1 * value, spec.width.unwrap()),
-                                (false, false, true, false) => format!("({0:>1$})", -1 * value, spec.width.unwrap()),
-                                (false, false, true, true) => format!("({0:0>1$})", -1 * value, spec.width.unwrap()),
-                                (false, true, false, false) => format!("({0:+>1$})", -1 * value, spec.width.unwrap()),
-                                (false, true, false, true) => format!("({0:0>+1$})", -1 * value, spec.width.unwrap()),
-                                (_, true, true, _) => Error("Sign and sign padding can't be applied at the same time."),
-                                (true, false, false, false) => format!("({0:<1$})", -1 * value, spec.width.unwrap()),
-                                (true, false, false, true) => format!("({0:0<1$})", -1 * value, spec.width.unwrap()),
-                                (true, false, true, false) => format!("({0:<1$})", -1 * value, spec.width.unwrap()),
-                                (true, false, true, true) => format!("({0:0<1$})", -1 * value, spec.width.unwrap()),
-                                (true, true, false, false) => format!("({0:+<1$})", -1 * value, spec.width.unwrap()),
-                                (true, true, false, true) => format!("({0:0<+1$})", -1 * value, spec.width.unwrap())
-                            };
-                        } else if Value(value) < 0_i64 {
-                            let formatted = match (lj, pl, pa, zp) {
-                                (false, false, false, false) => format!("{0:>1$}", value, spec.width.unwrap()),
-                                (false, false, false, true) => format!("{0:0>1$}", value, spec.width.unwrap()),
-                                (false, false, true, false) => format!("{0:>1$}", value, spec.width.unwrap()),
-                                (false, false, true, true) => format!("{0:0>1$}", value, spec.width.unwrap()),
-                                (false, true, false, false) => format!("{0:+>1$}", value, spec.width.unwrap()),
-                                (false, true, false, true) => format!("{0:0>+1$}", value, spec.width.unwrap()),
-                                (_, true, true, _) => Error("Sign and sign padding can't be applied at the same time."),
-                                (true, false, false, false) => format!("{0:<1$}", value, spec.width.unwrap()),
-                                (true, false, false, true) => format!("{0:0<1$}", value, spec.width.unwrap()),
-                                (true, false, true, false) => format!("{0:<1$}", value, spec.width.unwrap()),
-                                (true, false, true, true) => format!("{0:0<1$}", value, spec.width.unwrap()),
-                                (true, true, false, false) => format!("{0:+<1$}", value, spec.width.unwrap()),
-                                (true, true, false, true) => format!("{0:0<+1$}", value, spec.width.unwrap()),
-                            };
-                        } else /* value >= 0 */ {
-                            let formatted = match (lj, pl, pa, zp) {
-                                (false, false, false, false) => format!("{0:>1$}", value, spec.width.unwrap()),
-                                (false, false, false, true) => format!("{0:0>1$}", value, spec.width.unwrap()),
-                                (false, false, true, false) => format!(" {0:>1$}", value, spec.width.unwrap()),
-                                (false, false, true, true) => format!(" {0:0>1$}", value, spec.width.unwrap()),
-                                (false, true, false, false) => format!("{0:+>1$}", value, spec.width.unwrap()),
-                                (false, true, false, true) => format!("{0:0>+1$}", value, spec.width.unwrap()),
-                                (_, true, true, _) => Error("Sign and sign padding can't be applied at the same time."),
-                                (true, _, _, _) => Error("Can't format left justified without format width specified.")
-                            };
-                        }
-                    } else /* spec.width is none */ {
-                        if Value(value) < 0_i64 && spec.flag_enclose_negatives {
-                            // Enclose negative numbers with () and remove the sign
-                            let formatted = match (lj, pl, pa, zp) {
-                                (false, false, false, false) => format!("({0:>})", -1 * value),
-                                (false, false, true, false) => format!("({0:>})", -1 * value),
-                                (false, true, false, false) => format!("({0:+>})", -1 * value),
-                                (_, _, _, true) => Error("Can't pad with zeroes without format width specified."),
-                                (_, true, true, _) => Error("Sign and sign padding can't be applied at the same time."),
-                                (true, _, _, _) => Error("Can't format left justified without format width specified.")
-                            };
-                        } else if Value(value) < 0_i64 {
-                            let formatted = match (lj, pl, pa, zp) {
-                                (false, false, false, false) => format!("{0:>}", value),
-                                (false, false, true, false) => format!("{0:>}", value),
-                                (false, true, false, false) => format!("{0:+>}", value),
-                                (_, _, _, true) => Error("Can't pad with zeroes without format width specified."),
-                                (_, true, true, _) => Error("Sign and sign padding can't be applied at the same time."),
-                                (true, _, _, _) => Error("Can't format left justified without format width specified.")
-                            };
-                        } else {
-                            let formatted = match (lj, pl, pa, zp) {
-                                (false, false, false, false) => format!("{0:>}", value),
-                                (false, false, true, false) => format!(" {0:>}", value),
-                                (false, true, false, false) => format!("{0:+>}", value),
-                                (_, _, _, true) => Error("Can't pad with zeroes without format width specified."),
-                                (_, true, true, _) => Error("Sign and sign padding can't be applied at the same time."),
-                                (true, _, _, _) => Error("Can't format left justified without format width specified.")
-                            };
-                        }
-                    }
-
-                    if spec.uppercase {
-                        Value(formatted.to_uppercase())
-                    } else {
-                        Value(formatted)
+                    match spec.format_type {
+                        'd' => format_int_d(&Value(*value)),
+                        'o' => format_int_o(&Value(*value)),
+                        'x' => format_int_x(&Value(*value)),
+                        _ => return Error("Invalid format specifier.")
                     }
                 }
             }
@@ -646,6 +557,119 @@ impl TesslaString {
                 }
             }
         }
+    }
+}
+
+fn format_int_o(value: &TesslaInt) -> TesslaString {
+    Error("Not implemented.")
+}
+
+fn format_int_x(value: &TesslaInt) -> TesslaString {
+    Error("Not implemented.")
+}
+
+fn format_int_d(value: &TesslaInt) -> TesslaString {
+    match value {
+        (&Error(error), _) | (_, &Error(error)) => Error(error),
+        (Value(format_string), Value(value)) => match parse_format_string(format_string) {
+            Err(error) => Error(error),
+            Ok(spec) => {
+                if spec.flag_alternate_form {
+                    return Error("Alternative form can't be applied to decimal integers.");
+                }
+
+                let lj = spec.flag_left_justify;
+                let pl = spec.flag_plus_sign;
+                let pa = spec.flag_pad_sign;
+                let zp = spec.flag_zero_pad;
+
+                // This is bäh but anything else is worse
+                let formatted = if spec.width.is_some() {
+                    if Value(value) < 0_i64 && spec.flag_enclose_negatives {
+                        // Enclose negative numbers with () and remove the sign
+                        match (lj, pl, pa, zp) {
+                            (false, false, false, false) => format!("({0:>1$})", -1 * value, spec.width.unwrap()),
+                            (false, false, false, true) => format!("({0:0>1$})", -1 * value, spec.width.unwrap()),
+                            (false, false, true, false) => format!("({0:>1$})", -1 * value, spec.width.unwrap()),
+                            (false, false, true, true) => format!("({0:0>1$})", -1 * value, spec.width.unwrap()),
+                            (false, true, false, false) => format!("({0:+>1$})", -1 * value, spec.width.unwrap()),
+                            (false, true, false, true) => format!("({0:0>+1$})", -1 * value, spec.width.unwrap()),
+                            (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
+                            (true, false, false, false) => format!("({0:<1$})", -1 * value, spec.width.unwrap()),
+                            (true, false, false, true) => format!("({0:0<1$})", -1 * value, spec.width.unwrap()),
+                            (true, false, true, false) => format!("({0:<1$})", -1 * value, spec.width.unwrap()),
+                            (true, false, true, true) => format!("({0:0<1$})", -1 * value, spec.width.unwrap()),
+                            (true, true, false, false) => format!("({0:+<1$})", -1 * value, spec.width.unwrap()),
+                            (true, true, false, true) => format!("({0:0<+1$})", -1 * value, spec.width.unwrap())
+                        }
+                    } else if Value(value) < 0_i64 {
+                        match (lj, pl, pa, zp) {
+                            (false, false, false, false) => format!("{0:>1$}", value, spec.width.unwrap()),
+                            (false, false, false, true) => format!("{0:0>1$}", value, spec.width.unwrap()),
+                            (false, false, true, false) => format!("{0:>1$}", value, spec.width.unwrap()),
+                            (false, false, true, true) => format!("{0:0>1$}", value, spec.width.unwrap()),
+                            (false, true, false, false) => format!("{0:+>1$}", value, spec.width.unwrap()),
+                            (false, true, false, true) => format!("{0:0>+1$}", value, spec.width.unwrap()),
+                            (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
+                            (true, false, false, false) => format!("{0:<1$}", value, spec.width.unwrap()),
+                            (true, false, false, true) => format!("{0:0<1$}", value, spec.width.unwrap()),
+                            (true, false, true, false) => format!("{0:<1$}", value, spec.width.unwrap()),
+                            (true, false, true, true) => format!("{0:0<1$}", value, spec.width.unwrap()),
+                            (true, true, false, false) => format!("{0:+<1$}", value, spec.width.unwrap()),
+                            (true, true, false, true) => format!("{0:0<+1$}", value, spec.width.unwrap()),
+                        }
+                    } else /* value >= 0 */ {
+                        match (lj, pl, pa, zp) {
+                            (false, false, false, false) => format!("{0:>1$}", value, spec.width.unwrap()),
+                            (false, false, false, true) => format!("{0:0>1$}", value, spec.width.unwrap()),
+                            (false, false, true, false) => format!(" {0:>1$}", value, spec.width.unwrap()),
+                            (false, false, true, true) => format!(" {0:0>1$}", value, spec.width.unwrap()),
+                            (false, true, false, false) => format!("{0:+>1$}", value, spec.width.unwrap()),
+                            (false, true, false, true) => format!("{0:0>+1$}", value, spec.width.unwrap()),
+                            (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
+                            (true, _, _, _) => return Error("Can't format left justified without format width specified.")
+                        }
+                    }
+                } else /* spec.width is none */ {
+                    if Value(value) < 0_i64 && spec.flag_enclose_negatives {
+                        // Enclose negative numbers with () and remove the sign
+                        match (lj, pl, pa, zp) {
+                            (false, false, false, false) => format!("({0:>})", -1 * value),
+                            (false, false, true, false) => format!("({0:>})", -1 * value),
+                            (false, true, false, false) => format!("({0:+>})", -1 * value),
+                            (_, _, _, true) => return Error("Can't pad with zeroes without format width specified."),
+                            (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
+                            (true, _, _, _) => return Error("Can't format left justified without format width specified.")
+                        }
+                    } else if Value(value) < 0_i64 {
+                        match (lj, pl, pa, zp) {
+                            (false, false, false, false) => format!("{0:>}", value),
+                            (false, false, true, false) => format!("{0:>}", value),
+                            (false, true, false, false) => format!("{0:+>}", value),
+                            (_, _, _, true) => return Error("Can't pad with zeroes without format width specified."),
+                            (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
+                            (true, _, _, _) => return Error("Can't format left justified without format width specified.")
+                        }
+                    } else {
+                        match (lj, pl, pa, zp) {
+                            (false, false, false, false) => format!("{0:>}", value),
+                            (false, false, true, false) => format!(" {0:>}", value),
+                            (false, true, false, false) => format!("{0:+>}", value),
+                            (_, _, _, true) => return Error("Can't pad with zeroes without format width specified."),
+                            (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
+                            (true, _, _, _) => return Error("Can't format left justified without format width specified.")
+                        }
+                    }
+                };
+
+                if spec.uppercase {
+                    Value(formatted.to_uppercase())
+                } else {
+                    Value(formatted)
+                }
+            }
+        },
+        _ => Error("Unknown")
     }
 }
 
