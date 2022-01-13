@@ -57,6 +57,20 @@ impl<T: Clone> Clone for TesslaValue<T> {
     }
 }
 
+pub trait TesslaDisplay {
+    fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result;
+}
+
+impl<T: TesslaDisplay> Display for TesslaValue<T> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            &Error(error) => write!(f, "Error: {}", error),
+            Value(value) => value.tessla_fmt(f),
+        }
+    }
+}
+
 // ---------- OPERATOR TRAITS ----------
 
 macro_rules! impl_binary_op {
@@ -169,21 +183,18 @@ impl<T: Not<Output = T>> Not for TesslaValue<T> {
 
 pub type TesslaBool = TesslaValue<bool>;
 
+impl TesslaDisplay for bool {
+    #[inline]
+    fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.fmt(f)
+    }
+}
+
 impl From<&str> for TesslaBool {
     fn from(s: &str) -> Self {
         match bool::from_str(s) {
             Ok(value) => Value(value),
             Err(_) => Error("Failed to parse Bool from String"),
-        }
-    }
-}
-
-impl Display for TesslaBool {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            &Error(error) => write!(f, "Error: {}", error),
-            Value(value) => value.fmt(f),
         }
     }
 }
@@ -252,6 +263,13 @@ impl<T: PartialOrd> TesslaValue<T> {
 
 pub type TesslaInt = TesslaValue<i64>;
 
+impl TesslaDisplay for i64 {
+    #[inline]
+    fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.fmt(f)
+    }
+}
+
 impl From<&str> for TesslaInt {
     fn from(s: &str) -> Self {
         match i64::from_str(s) {
@@ -271,19 +289,22 @@ impl From<TesslaFloat> for TesslaInt {
     }
 }
 
-impl Display for TesslaInt {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            &Error(error) => write!(f, "Error: {}", error),
-            Value(value) => value.fmt(f),
-        }
-    }
-}
-
 // 5.4 Float
 
 pub type TesslaFloat = TesslaValue<f64>;
+
+impl TesslaDisplay for f64 {
+    #[inline]
+    fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.is_infinite() {
+            f.write_str("Infinity")
+        } else if self.is_nan() {
+            f.write_str("NaN")
+        } else {
+            write!(f, "{:?}", self)
+        }
+    }
+}
 
 impl From<&str> for TesslaFloat {
     fn from(s: &str) -> Self {
@@ -300,17 +321,6 @@ impl From<TesslaInt> for TesslaFloat {
         match value {
             Error(error) => Error(error),
             Value(value) => Value(value as f64),
-        }
-    }
-}
-
-impl Display for TesslaFloat {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            &Error(error) => write!(f, "Error: {}", error),
-            &Value(value) if value == f64::INFINITY => write!(f, "Infinity"),
-            Value(value) => write!(f, "{:?}", value),
         }
     }
 }
@@ -369,6 +379,13 @@ impl TesslaFloat {
 
 pub type TesslaString = TesslaValue<String>;
 
+impl TesslaDisplay for String {
+    #[inline]
+    fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.fmt(f)
+    }
+}
+
 impl From<&str> for TesslaString {
     fn from(s: &str) -> Self {
         Value(process_string_input(s).to_string())
@@ -381,16 +398,6 @@ impl<T: ToString> TesslaValue<T> {
         match self {
             &Error(error) => Error(error),
             Value(value) => Value(value.to_string()),
-        }
-    }
-}
-
-impl Display for TesslaString {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            &Error(error) => write!(f, "Error: {}", error),
-            Value(value) => value.fmt(f),
         }
     }
 }
@@ -842,6 +849,16 @@ fn format_to_type_a(spec: FormatSpec, value: f64) -> TesslaString {
 
 pub type TesslaOption<T> = TesslaValue<Option<T>>;
 
+impl<T: Display> TesslaDisplay for Option<T> {
+    #[inline]
+    fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Some(value) => write!(f, "Some({})", value),
+            None => f.write_str("None"),
+        }
+    }
+}
+
 impl<'a, T> From<&'a str> for TesslaOption<T> where T: From<&'a str> {
     fn from(s: &'a str) -> Self {
         match s {
@@ -854,17 +871,6 @@ impl<'a, T> From<&'a str> for TesslaOption<T> where T: From<&'a str> {
                 _ => Error("Failed to parse Option from String"),
             },
             _ => Error("Failed to parse Option from String"),
-        }
-    }
-}
-
-impl<T: Display> Display for TesslaOption<T> {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            &Error(error) => write!(f, "Error: {}", error),
-            Value(Some(value)) => write!(f, "Some({})", value),
-            Value(None) => write!(f, "None"),
         }
     }
 }
@@ -909,21 +915,18 @@ impl<T: Clone> TesslaOption<TesslaValue<T>> {
 
 pub type TesslaUnit = TesslaValue<()>;
 
+impl TesslaDisplay for () {
+    #[inline]
+    fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("()")
+    }
+}
+
 impl From<&str> for TesslaUnit {
     fn from(s: &str) -> Self {
         match s {
             "()" => Value(()),
             _ => Error("Failed to parse Unit from String"),
-        }
-    }
-}
-
-impl Display for TesslaUnit {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            &Error(error) => write!(f, "Error: {}", error),
-            &Value(()) => write!(f, "()"),
         }
     }
 }

@@ -300,6 +300,15 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
            |${fields.map { case (name, _) => s"$name: self.$name.clone()" }.mkString(",\n")}
            |        }
            |    }
+           |}
+           |impl TesslaDisplay for $structName {
+           |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+           |        f.write_str("{")?;
+           |${fields
+          .map { case (name, _) => s"""write!(f, \"$name = {}\", self.$name)?;""" }
+          .mkString("\nf.write_str(\", \")?;\n")}
+           |        f.write_str("}")
+           |    }
            |}""".stripMargin
     }
   }
