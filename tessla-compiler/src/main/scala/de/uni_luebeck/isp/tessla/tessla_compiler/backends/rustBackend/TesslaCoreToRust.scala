@@ -21,6 +21,7 @@ import de.uni_luebeck.isp.tessla.core.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Diagnostics, ExtendedSpecification}
 
+import java.util
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.io.Source
@@ -32,13 +33,13 @@ import scala.io.Source
  * The translation of other expressions in RustNonStreamCodeGenerator
  * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
  */
-class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSpecification, String] {
+class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[(ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String]), String] {
   private val sourceTemplate: String = "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs"
 
-  override def translate(extSpec: ExtendedSpecification): Result[String] =
-    new Translator(extSpec).translate()
+  override def translate(extSpec: (ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String])): Result[String] =
+    new Translator(extSpec._1, extSpec._2, extSpec._3).translate()
 
-  class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[String] {
+  class Translator(extSpec: ExtendedSpecification, removedStreams: util.ArrayList[String], formatStrings: mutable.HashMap[String, String]) extends TranslationPhase.Translator[String] {
 
     val rustNonStreamCodeGenerator = new RustNonStreamCodeGenerator(extSpec)
     val rustStreamCodeGenerator = new RustStreamCodeGenerator(rustNonStreamCodeGenerator)
@@ -90,15 +91,18 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       // Produce computation section
       DefinitionOrdering.order(extSpec.spec.definitions).foreach {
         case (id, definition) =>
-          definition.tpe match {
-            case InstantiatedType("Events", _, _) =>
-              rustStreamCodeGenerator
-                .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
-              produceOutputCode(outputMap, outputNames, id, srcSegments)
-            case FunctionType(_, _, _, _) =>
-              srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
-            case _ =>
-              srcSegments.static.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
+          // Skip streams that were removed by the FormatStringMangler
+          if (!removedStreams.contains(id.fullName)) {
+            definition.tpe match {
+              case InstantiatedType("Events", _, _) =>
+                rustStreamCodeGenerator
+                  .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
+                produceOutputCode(outputMap, outputNames, id, srcSegments)
+              case FunctionType(_, _, _, _) =>
+                srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
+              case _ =>
+                srcSegments.static.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
+            }
           }
       }
 
