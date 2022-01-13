@@ -86,7 +86,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       s"let var_$id = ${translateExpressionArg(e, tm, defContext)};"
     } else {
       definedIdentifiers += (id -> VariableDeclaration)
-      s"let mut var_$id = ${translateExpressionArg(e, tm, defContext)};"
+      s"let var_$id = ${translateExpressionArg(e, tm, defContext)};"
     }
   }
 
@@ -139,6 +139,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           if (id.fullName == "_") "_" else s"var_$id /* lazy */: $tpe" // TODO how to handle lazy...
       }
       .mkString(", ")
+    // TODO argumente die aus dem äußeren scope kommen müssen wir hier klonen,
+    //  damit wir die dann danach in eine box moven können
     s"|$arguments| {\n" +
       s"${translateBody(e.body, e.result, newTm, defContext).mkString("\n")}" +
       s"\n}"
@@ -192,6 +194,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         val argNames = typ.paramTypes.indices.map(i => s"tLPar_$i")
         val ret = translateFunctionCall(e, argNames, newTm, defContext)
         s"|${argNames.mkString(", ")}|{ return $ret }"
+      // TODO suspicious
     }
   }
 
