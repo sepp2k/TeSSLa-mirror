@@ -1,5 +1,5 @@
 // This Rust code was automatically created by tessla-compiler from a TeSSLa Specification
-// #![allow(unused_parens, unused_assignments, unused_variables, non_snake_case, dead_code)]
+// #![allow(unused_parens, unused_variables, non_snake_case, non_camel_case_types, uncommon_codepoints, non_upper_case_globals)]
 
 extern crate tessla_stdlib;
 use tessla_stdlib::*;

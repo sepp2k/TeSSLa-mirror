@@ -97,9 +97,8 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
               produceOutputCode(outputMap, outputNames, id, srcSegments)
             case FunctionType(_, _, _, _) =>
               srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
-            case e =>
-              throw Diagnostics
-                .NotYetImplementedError("Failed to translate an expression without instantiated type", e.location)
+            case _ =>
+              srcSegments.static.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
           }
       }
 

@@ -106,7 +106,7 @@ object TesslacRustTests {
       .environment()
       .put(
         "RUSTFLAGS",
-        "-A unused_parens -A unused_variables -A unused_mut -A non_snake_case -A non_camel_case_types -A uncommon_codepoints"
+        "-A unused_parens -A unused_variables -A non_snake_case -A non_camel_case_types -A uncommon_codepoints -A non_upper_case_globals"
       )
 
     cargoRun.redirectInput(Redirect.from(inputTrace))

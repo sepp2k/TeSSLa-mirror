@@ -91,6 +91,32 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   }
 
   /**
+   * Translates a static assignment definition from TeSSLa Core into a static Rust variable
+   * @param id The id which is assigned
+   * @param e The expression assigned to id
+   * @return The translated assignment
+   */
+  def translateStaticAssignment(
+    id: Identifier,
+    e: ExpressionArg
+  ): String = {
+    val typ = RustUtils.convertType(e.tpe)
+    val lazyVar = extSpec.lazyVars.get.contains(id)
+    if (lazyVar) {
+      definedIdentifiers += (id -> FinalLazyDeclaration)
+      val inlinedExp = inlineVars(e, extSpec.spec.definitions)
+      // TODO how exactly do we handle this
+      s"const /*lazy*/ var_$id: $typ = ${translateExpressionArg(inlinedExp, TypeArgManagement.empty, extSpec.spec.definitions)};"
+    } else if (finalAssignmentPossible(e)) {
+      definedIdentifiers += (id -> FinalDeclaration)
+      s"const var_$id: $typ = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};"
+    } else {
+      definedIdentifiers += (id -> VariableDeclaration)
+      s"const var_$id: $typ = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};"
+    }
+  }
+
+  /**
    * Translates a global function definition from TeSSLa Core into a static Rust function
    * @param id The id which is assigned
    * @param definition The function definition
