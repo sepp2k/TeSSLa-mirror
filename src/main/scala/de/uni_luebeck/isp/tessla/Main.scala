@@ -29,7 +29,7 @@ import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
-import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove, FormatStringMangler}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{FormatStringMangler, TesslaCoreToIntermediate, UnusedVarRemove}
 import de.uni_luebeck.isp.tessla.tessladoc.{DocGenerator, TesslaDoc}
 
 import scala.Option.when
@@ -179,7 +179,7 @@ object Main {
             andThen (config.targetLanguage match {
               case "rust" =>
                 (FormatStringMangler
-                andThen new TesslaCoreToRust(config.ioInterface)) // , config.additionalSource
+                  andThen new TesslaCoreToRust(config.ioInterface)) // , config.additionalSource
               case "scala" =>
                 (new TesslaCoreToIntermediate(config.ioInterface)
                   andThen UnusedVarRemove

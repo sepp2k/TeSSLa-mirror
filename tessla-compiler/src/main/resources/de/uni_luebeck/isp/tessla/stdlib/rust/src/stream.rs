@@ -183,10 +183,13 @@ pub fn last<T, U>(output: &mut Events<T>, values: &Events<T>, trigger: &Events<U
 }
 
 // FIXME: I think this does not quite cover all possible specified Error states
-pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T>, next_delay: &mut i64, timestamp: i64) {
-    if *next_delay == timestamp {
+pub fn delay(output: &mut Events<()>, next_delay: i64, timestamp: i64) {
+    if next_delay == timestamp {
         output.set_event(Value(()));
     }
+}
+
+pub fn reset_delay<T>(output: &Events<()>, delays: &Events<i64>, resets: &Events<T>, next_delay: &mut i64, timestamp: i64) {
     if delays.has_error() || resets.has_error() {
         panic!("Could not determine delay state.")
     }
@@ -200,6 +203,7 @@ pub fn delay<T>(output: &mut Events<()>, delays: &Events<i64>, resets: &Events<T
             }
         }
     }
+
 }
 
 impl<T: Clone> Events<T> {

@@ -85,6 +85,7 @@ object TesslacRustTests {
 
     UsageAnalysis
       .andThen(InliningAnalysis)
+      .andThen(FormatStringMangler)
       .andThen(new TesslaCoreToRust(consoleInterface))
   }
 

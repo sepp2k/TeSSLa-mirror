@@ -121,5 +121,6 @@ case class SourceSegments(
   timestamp: ListBuffer[String] = new ListBuffer[String],
   computation: ListBuffer[String] = new ListBuffer[String],
   static: ListBuffer[String] = new ListBuffer[String],
-  store: ListBuffer[String] = new ListBuffer[String]
+  store: ListBuffer[String] = new ListBuffer[String],
+  delayreset: ListBuffer[String] = new ListBuffer[String]
 )

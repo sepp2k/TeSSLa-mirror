@@ -66,6 +66,8 @@ fn step(state: &mut State, new_input_ts: i64, flush: bool) {
 
 //COMPUTATION
 
+//DELAYRESET
+
 //STORE
 
                 flush_required = flush && (state.current_ts != new_input_ts);

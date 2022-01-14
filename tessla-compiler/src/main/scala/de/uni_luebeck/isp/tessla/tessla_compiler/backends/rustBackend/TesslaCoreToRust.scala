@@ -132,6 +132,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[(ExtendedS
         .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
         .replace("//COMPUTATION", srcSegments.computation.mkString("\n"))
         .replace("//INPUT", srcSegments.input.mkString("\n"))
+        .replace("//DELAYRESET", srcSegments.delayreset.mkString("\n"))
       if (ioInterface) {
         rewrittenSource.replace("//ENDMAIN", "")
       } else {

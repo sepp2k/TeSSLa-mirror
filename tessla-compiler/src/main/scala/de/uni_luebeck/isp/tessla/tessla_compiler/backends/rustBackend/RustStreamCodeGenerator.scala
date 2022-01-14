@@ -186,7 +186,9 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
       s"if state.$nextDelay > state.last_processed_ts && state.$nextDelay < state.current_ts { state.current_ts = state.$nextDelay; }"
     )
 
-    currSrc.computation.append(s"delay(&mut $output, &$delay, &$reset, &mut state.$nextDelay, state.current_ts);")
+    currSrc.computation.append(s"delay(&mut $output, state.$nextDelay, state.current_ts);")
+
+    currSrc.delayreset.append(s"reset_delay(&$output, &$delay, &$reset, &mut state.$nextDelay, state.current_ts);")
   }
 
   /**
