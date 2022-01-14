@@ -112,6 +112,15 @@ object RustUtils {
     }
     structName
   }
+
+  /**
+   * Figures out if a struct is a tuple. i.e. has field names _1,_2 ...
+   * @param fieldNames The struct field names
+   * @return Whether given struct is tuple
+   */
+  def structIsTuple(fieldNames: Seq[String]): Boolean = {
+    fieldNames.indices.forall(i => fieldNames.contains(s"_${i + 1}"))
+  }
 }
 
 case class SourceSegments(

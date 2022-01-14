@@ -291,7 +291,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     //  we probably also want comparison
     RustUtils.definedStructs.toSeq.map {
       case (structName, fields) =>
-        s"""struct $structName {
+        var structDef = s"""struct $structName {
            |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
            |}
            |impl Clone for $structName {
@@ -300,16 +300,31 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
            |${fields.map { case (name, _) => s"$name: self.$name.clone()" }.mkString(",\n")}
            |        }
            |    }
-           |}
-           |impl TesslaDisplay for $structName {
-           |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-           |        f.write_str("{")?;
-           |${fields
-          .map { case (name, _) => s"""write!(f, \"$name = {}\", self.$name)?;""" }
-          .mkString("\nf.write_str(\", \")?;\n")}
-           |        f.write_str("}")
-           |    }
            |}""".stripMargin
+        if (RustUtils.structIsTuple(fields.map { case (name, _) => name })) {
+          structDef += s"""
+             |impl TesslaDisplay for $structName {
+             |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+             |        f.write_str("(")?;
+             |${fields
+            .map { case (name, _) => s"""write!(f, \"{}\", self.$name)?;""" }
+            .mkString("\nf.write_str(\", \")?;\n")}
+             |        f.write_str(")")
+             |    }
+             |}""".stripMargin
+        } else {
+          structDef += s"""
+             |impl TesslaDisplay for $structName {
+             |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+             |        f.write_str("{")?;
+             |${fields
+            .map { case (name, _) => s"""write!(f, \"$name = {}\", self.$name)?;""" }
+            .mkString("\nf.write_str(\", \")?;\n")}
+             |        f.write_str("}")
+             |    }
+             |}""".stripMargin
+        }
+        structDef
     }
   }
 
