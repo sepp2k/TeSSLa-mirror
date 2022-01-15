@@ -287,45 +287,56 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * @return The struct definitions
    */
   def translateStructDefinitions(): Seq[String] = {
-    // TODO we need some sort of struct from string code generation, if we provide an io interface
-    //  we probably also want comparison
     RustUtils.definedStructs.toSeq.map {
-      case (structName, fields) =>
-        var structDef = s"""struct $structName {
-           |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
-           |}
-           |impl Clone for $structName {
-           |    fn clone(&self) -> Self {
-           |        $structName {
-           |${fields.map { case (name, _) => s"$name: self.$name.clone()" }.mkString(",\n")}
-           |        }
-           |    }
-           |}""".stripMargin
-        if (RustUtils.structIsTuple(fields.map { case (name, _) => name })) {
-          structDef += s"""
-             |impl TesslaDisplay for $structName {
-             |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-             |        f.write_str("(")?;
-             |${fields
-            .map { case (name, _) => s"""write!(f, \"{}\", self.$name)?;""" }
-            .mkString("\nf.write_str(\", \")?;\n")}
-             |        f.write_str(")")
-             |    }
-             |}""".stripMargin
-        } else {
-          structDef += s"""
-             |impl TesslaDisplay for $structName {
-             |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-             |        f.write_str("{")?;
-             |${fields
-            .map { case (name, _) => s"""write!(f, \"$name = {}\", self.$name)?;""" }
-            .mkString("\nf.write_str(\", \")?;\n")}
-             |        f.write_str("}")
-             |    }
-             |}""".stripMargin
-        }
-        structDef
+      case (structName, fields) => translateStructDefinition(structName, fields)
     }
+  }
+
+  /**
+   * Generate all the necessary code and implement any Traits needed for a Rust struct
+   * @return The struct definition and its impls
+   */
+  protected def translateStructDefinition(structName: String, fields: Seq[(String, Type)]): String = {
+    var structDef = s"""struct $structName {
+       |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
+       |}
+       |impl Clone for $structName {
+       |    fn clone(&self) -> Self {
+       |        $structName {
+       |${fields.map { case (name, _) => s"$name: self.$name.clone()" }.mkString(",\n")}
+       |        }
+       |    }
+       |}""".stripMargin
+    if (RustUtils.structIsTuple(fields.map { case (name, _) => name })) {
+      structDef += generateTupleDisplay(structName, fields)
+    } else {
+      structDef += generateStructDisplay(structName, fields)
+    }
+    structDef
+  }
+
+  protected def generateTupleDisplay(structName: String, fields: Seq[(String, Type)]): String = {
+    s"""impl TesslaDisplay for $structName {
+       |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+       |        f.write_str("(")?;
+       |${fields
+      .map { case (name, _) => s"""write!(f, \"{}\", self.$name)?;""" }
+      .mkString("\nf.write_str(\", \")?;\n")}
+       |        f.write_str(")")
+       |    }
+       |}""".stripMargin
+  }
+
+  private def generateStructDisplay(structName: String, fields: Seq[(String, Type)]): String = {
+    s"""impl TesslaDisplay for $structName {
+       |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+       |        f.write_str("{")?;
+       |${fields
+      .map { case (name, _) => s"""write!(f, \"$name = {}\", self.$name)?;""" }
+      .mkString("\nf.write_str(\", \")?;\n")}
+       |        f.write_str("}")
+       |    }
+       |}""".stripMargin
   }
 
   /**
