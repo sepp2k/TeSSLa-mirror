@@ -297,8 +297,10 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * Generate all the necessary code and implement any Traits needed for a Rust struct
    * @return The struct definition and its impls
    */
-  protected def translateStructDefinition(structName: String, fields: Seq[(String, Type)]): String = {
-    var structDef = s"""struct $structName {
+  private def translateStructDefinition(structName: String, fields: Seq[(String, Type)]): String = {
+    val genericTypes = RustUtils.getGenericTypeNames(fields.map { case (_, typ) => typ })
+    val genericAnnotation = if (genericTypes.nonEmpty) s"<${genericTypes.mkString(", ")}>" else ""
+    var structDef = s"""struct $structName$genericAnnotation {
        |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
        |}
        |impl Clone for $structName {
@@ -316,7 +318,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     structDef
   }
 
-  protected def generateTupleDisplay(structName: String, fields: Seq[(String, Type)]): String = {
+  private def generateTupleDisplay(structName: String, fields: Seq[(String, Type)]): String = {
     s"""impl TesslaDisplay for $structName {
        |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        |        f.write_str("(")?;
