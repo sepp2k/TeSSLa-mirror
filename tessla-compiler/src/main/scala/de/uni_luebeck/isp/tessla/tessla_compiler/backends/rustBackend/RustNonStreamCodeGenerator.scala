@@ -128,7 +128,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   ): Seq[String] = {
     definition match {
       case FunctionExpression(_, params, body, result, _) =>
-        val genericTypeNames = RustUtils.getGenericTypeNames(params.map { case (_, _, typ) => typ })
+        val genericTypeNames =
+          RustUtils.getGenericTypeNames(params.map { case (_, _, typ) => typ }.appended(result.tpe))
         val typeParams =
           if (genericTypeNames.nonEmpty) s"<${genericTypeNames.map { tpe => s"$tpe: Clone" }.mkString(", ")}>" else ""
         val functionParams = params.map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe)}" }
