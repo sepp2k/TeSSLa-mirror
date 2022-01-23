@@ -16,18 +16,23 @@ import scala.collection.mutable
  * removed format string streams to their corresponding format strings to the next compiler stage, so that they then can
  * be statically generated into the Rust code.
  */
-object FormatStringMangler extends TranslationPhase[ExtendedSpecification, (ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String])] {
-  override def translate(spec: ExtendedSpecification): TranslationPhase.Result[(ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String])] = {
-    System.out.println("lul")
-
-    var removedStreams = new util.ArrayList[String]()
-    var formatStrings = new mutable.HashMap[String, String]()
+object FormatStringMangler
+    extends TranslationPhase[
+      ExtendedSpecification,
+      (ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String])
+    ] {
+  override def translate(
+    spec: ExtendedSpecification
+  ): TranslationPhase.Result[(ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String])] = {
+    val removedStreams = new util.ArrayList[String]()
+    val formatStrings = new mutable.HashMap[String, String]()
 
     // Find every slift that uses extern("String_format")
     spec.spec.definitions.foreach {
       case (sliftid, definition) =>
         definition match {
-          case ApplicationExpression(TypeApplicationExpression(ExternExpression("slift", _, _), _, _), args, location) =>
+          case ApplicationExpression(TypeApplicationExpression(ExternExpression("slift", _, _), _, _), args, _)
+              if args.length >= 3 =>
             args(2) match {
               case TypeApplicationExpression(ExternExpression("String_format", _, loc), _, _) =>
                 args(0) match {
@@ -36,18 +41,36 @@ object FormatStringMangler extends TranslationPhase[ExtendedSpecification, (Exte
                     if (!removedStreams.contains(id.fullName)) {
                       spec.spec.definitions.get(id) match {
                         // Ensure that the format string is stored on a nil stream using default
-                        case Some(ApplicationExpression(TypeApplicationExpression(ExternExpression("default", _, _), _, _), args, _)) =>
-                          var stream = args(0) match { // the stream the format string is based on
+                        case Some(
+                              ApplicationExpression(
+                                TypeApplicationExpression(ExternExpression("default", _, _), _, _),
+                                args,
+                                _
+                              )
+                            ) =>
+                          val stream = args(0) match { // the stream the format string is based on
                             case ExpressionRef(id, _, _) => id
                             case _ =>
-                              throw Diagnostics.CommandNotSupportedError("Can't determine format string at compile time.", loc)
+                              throw Diagnostics.CommandNotSupportedError(
+                                "Can't determine format string at compile time.",
+                                loc
+                              )
                           }
 
                           // Do nothing if the format string is based on a nil stream
                           spec.spec.definitions.get(stream) match {
-                            case Some(ApplicationExpression(TypeApplicationExpression(ExternExpression("nil", _, _), _, _), args, _)) => {}
+                            case Some(
+                                  ApplicationExpression(
+                                    TypeApplicationExpression(ExternExpression("nil", _, _), _, _),
+                                    _,
+                                    _
+                                  )
+                                ) => {}
                             case _ =>
-                              throw Diagnostics.CommandNotSupportedError("Can't determine format string at compile time.", loc)
+                              throw Diagnostics.CommandNotSupportedError(
+                                "Can't determine format string at compile time.",
+                                loc
+                              )
                           }
 
                           // Remove the nil stream
@@ -56,7 +79,10 @@ object FormatStringMangler extends TranslationPhase[ExtendedSpecification, (Exte
                           var format = args(1) match { // the format string itself
                             case StringLiteralExpression(value, _) => value
                             case _ =>
-                              throw Diagnostics.CommandNotSupportedError("Can't determine format string at compile time.", loc)
+                              throw Diagnostics.CommandNotSupportedError(
+                                "Can't determine format string at compile time.",
+                                loc
+                              )
                           }
 
                           // Add the format string to the map
@@ -65,15 +91,21 @@ object FormatStringMangler extends TranslationPhase[ExtendedSpecification, (Exte
                           // Remove the format string stream
                           removedStreams.add(id.fullName)
                         case _ =>
-                          throw Diagnostics.CommandNotSupportedError("Can't determine format string at compile time.", loc)
+                          throw Diagnostics.CommandNotSupportedError(
+                            "Can't determine format string at compile time.",
+                            loc
+                          )
                       }
                     }
 
                     // We encountered the format string already and removed the streams
-                    else /* we just need to map the slift to the corresponding format string */ {
-                      formatStrings.addOne((sliftid.fullName, formatStrings(id.fullName)))
-                    }
+                    else
+                      /* we just need to map the slift to the corresponding format string */ {
+                        formatStrings.addOne((sliftid.fullName, formatStrings(id.fullName)))
+                      }
+                  case _ => {}
                 }
+              case _ => {}
             }
 
           case _ => {}

@@ -33,13 +33,20 @@ import scala.io.Source
  * The translation of other expressions in RustNonStreamCodeGenerator
  * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
  */
-class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[(ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String]), String] {
+class TesslaCoreToRust(ioInterface: Boolean)
+    extends TranslationPhase[(ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String]), String] {
   private val sourceTemplate: String = "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs"
 
-  override def translate(extSpec: (ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String])): Result[String] =
+  override def translate(
+    extSpec: (ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String])
+  ): Result[String] =
     new Translator(extSpec._1, extSpec._2, extSpec._3).translate()
 
-  class Translator(extSpec: ExtendedSpecification, removedStreams: util.ArrayList[String], formatStrings: mutable.HashMap[String, String]) extends TranslationPhase.Translator[String] {
+  class Translator(
+    extSpec: ExtendedSpecification,
+    removedStreams: util.ArrayList[String],
+    formatStrings: mutable.HashMap[String, String]
+  ) extends TranslationPhase.Translator[String] {
 
     val rustNonStreamCodeGenerator = new RustNonStreamCodeGenerator(extSpec)
     val rustStreamCodeGenerator = new RustStreamCodeGenerator(rustNonStreamCodeGenerator)
@@ -86,7 +93,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[(ExtendedS
       val srcSegments = SourceSegments()
 
       val outputMap = extSpec.spec.out.groupMap { case (expr, _) => expr.id } { case (_, annotations) => annotations }
-      var outputNames = mutable.Set[String]()
+      val outputNames = mutable.Set[String]()
 
       // Produce computation section
       DefinitionOrdering.order(extSpec.spec.definitions).foreach {
