@@ -21,7 +21,11 @@ import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{
+  ExtractAndWrapFunctions,
+  InliningAnalysis,
+  UsageAnalysis
+}
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
 import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
@@ -85,6 +89,7 @@ object TesslacRustTests {
 
     UsageAnalysis
       .andThen(InliningAnalysis)
+      //.andThen(new ExtractAndWrapFunctions)
       .andThen(FormatStringMangler)
       .andThen(new TesslaCoreToRust(consoleInterface))
   }

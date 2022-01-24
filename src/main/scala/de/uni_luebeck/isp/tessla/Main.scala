@@ -28,7 +28,11 @@ import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{
+  ExtractAndWrapFunctions,
+  InliningAnalysis,
+  UsageAnalysis
+}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{FormatStringMangler, TesslaCoreToIntermediate, UnusedVarRemove}
 import de.uni_luebeck.isp.tessla.tessladoc.{DocGenerator, TesslaDoc}
 
@@ -178,7 +182,8 @@ object Main {
             andThen InliningAnalysis
             andThen (config.targetLanguage match {
               case "rust" =>
-                (FormatStringMangler
+                (/*new ExtractAndWrapFunctions
+                  andThen */ FormatStringMangler
                   andThen new TesslaCoreToRust(config.ioInterface)) // , config.additionalSource
               case "scala" =>
                 (new TesslaCoreToIntermediate(config.ioInterface)
