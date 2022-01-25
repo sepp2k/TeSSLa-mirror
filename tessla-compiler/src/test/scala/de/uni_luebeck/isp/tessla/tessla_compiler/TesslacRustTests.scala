@@ -38,7 +38,7 @@ class TesslacRustTests extends AbstractTestRunner[String]("Tessla Rust Compiler"
 
   val fsPath: Path = Files.createTempDirectory("TesslaRustCompilerTests")
 
-  override def roots = Seq("common/", "tesslac/")
+  override def roots = Seq("common/", "tesslac/", "tesslac_rust/") // TODO remove tesslac
 
   override def translation(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, String] =
     TesslacRustTests.pipeline(testCase, resolver)
