@@ -177,16 +177,19 @@ object Main {
     def runTesslaCompiler(config: CLIParser.TesslacConfig): Unit = {
       try {
         val sourceStr = unwrapResult(
-          Compiler.compile(config.specSource, config.compilerOptions)
-            andThen UsageAnalysis
-            andThen InliningAnalysis
-            andThen (config.targetLanguage match {
+          Compiler
+            .compile(config.specSource, config.compilerOptions)
+            .andThen(config.targetLanguage match {
               case "rust" =>
-                (/*new ExtractAndWrapFunctions
-                  andThen */ FormatStringMangler
+                (new ExtractAndWrapFunctions
+                  andThen UsageAnalysis
+                  andThen InliningAnalysis
+                  andThen FormatStringMangler
                   andThen new TesslaCoreToRust(config.ioInterface)) // , config.additionalSource
               case "scala" =>
-                (new TesslaCoreToIntermediate(config.ioInterface)
+                (UsageAnalysis
+                  andThen InliningAnalysis
+                  andThen new TesslaCoreToIntermediate(config.ioInterface)
                   andThen UnusedVarRemove
                   andThen new ScalaBackend(config.ioInterface, config.additionalSource))
             })

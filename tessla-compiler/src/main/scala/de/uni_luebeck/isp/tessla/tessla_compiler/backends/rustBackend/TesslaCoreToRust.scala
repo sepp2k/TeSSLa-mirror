@@ -95,6 +95,9 @@ class TesslaCoreToRust(ioInterface: Boolean)
       val outputMap = extSpec.spec.out.groupMap { case (expr, _) => expr.id } { case (_, annotations) => annotations }
       val outputNames = mutable.Set[String]()
 
+      // TODO maybe don't do this as a global var but in a translation step
+      RustUtils.definedStructs = Map()
+
       // Produce computation section
       DefinitionOrdering.order(extSpec.spec.definitions).foreach {
         case (id, definition) =>

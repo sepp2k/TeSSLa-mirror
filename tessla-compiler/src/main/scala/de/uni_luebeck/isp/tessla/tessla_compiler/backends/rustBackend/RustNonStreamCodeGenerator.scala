@@ -221,7 +221,9 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         val argNames = typ.paramTypes.indices.map(i => s"tLPar_$i")
         val ret = translateFunctionCall(e, argNames, newTm, defContext)
         s"|${argNames.mkString(", ")}|{ return $ret }"
-      // TODO suspicious
+      // TODO maybe handle native: ?
+      case ExternExpression(name, _, location) =>
+        throw Diagnostics.CoreASTError(s"""Invalid extern(\"$name\") expression could not be translated""", location)
     }
   }
 

@@ -85,11 +85,10 @@ object TesslacRustTests {
     val consoleInterface = !testCase.options.contains("no-console")
     // FIXME: any additional source here would be in scala?
     val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
-    assert(additionalSource == "")
 
-    UsageAnalysis
+    (new ExtractAndWrapFunctions)
+      .andThen(UsageAnalysis)
       .andThen(InliningAnalysis)
-      //.andThen(new ExtractAndWrapFunctions)
       .andThen(FormatStringMangler)
       .andThen(new TesslaCoreToRust(consoleInterface))
   }

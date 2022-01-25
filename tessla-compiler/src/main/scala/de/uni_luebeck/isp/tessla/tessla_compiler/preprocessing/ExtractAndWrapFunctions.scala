@@ -5,12 +5,11 @@ import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TesslaAST.StrictEvaluation
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
-import de.uni_luebeck.isp.tessla.tessla_compiler.ExtendedSpecification
 
 import scala.collection.immutable.{ArraySeq, Map}
 import scala.collection.mutable
 
-class ExtractAndWrapFunctions extends TranslationPhase[ExtendedSpecification, ExtendedSpecification] {
+class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specification] {
 
   private var nextId: Long = _
   private def nextIdentifier(name: Option[String] = None): Identifier = {
@@ -32,13 +31,13 @@ class ExtractAndWrapFunctions extends TranslationPhase[ExtendedSpecification, Ex
 
   private val recursivelyCalledNames = mutable.Set.empty[Identifier]
 
-  private var spec: Specification = _;
+  private var spec: Specification = _
   private def inGlobalScope(name: Identifier): Boolean = {
     spec.definitions.contains(name) || spec.in.contains(name) || additionalDefinitions.contains(name)
   }
 
-  override def translate(extSpec: ExtendedSpecification): TranslationPhase.Result[ExtendedSpecification] = {
-    spec = extSpec.spec
+  override def translate(spec: Specification): TranslationPhase.Result[Specification] = {
+    this.spec = spec
     nextId = spec.maxIdentifier
 
     argumentScopeMap.clear()
@@ -50,17 +49,14 @@ class ExtractAndWrapFunctions extends TranslationPhase[ExtendedSpecification, Ex
       case (id, definition) =>
         nameStack.push(id)
         val expression = extractFunctionExpressions(definition, _ => false, isGlobalDefinition = true)
-        assert(nameStack.pop() == id)
+        if (nameStack.pop() != id) {
+          System.err.println("Uneven name defs")
+        }
         id -> expression.asInstanceOf[DefinitionExpression]
     }
 
     Success(
-      ExtendedSpecification(
-        Specification(spec.annotations, spec.in, definitions ++ additionalDefinitions, spec.out, nextId),
-        extSpec.usageInfo,
-        extSpec.lazyVars,
-        extSpec.inlining
-      ),
+      Specification(spec.annotations, spec.in, definitions ++ additionalDefinitions, spec.out, nextId),
       Seq()
     )
   }
@@ -113,6 +109,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[ExtendedSpecification, Ex
         boxScopedDependencies(function, isGlobalDefinition)
 
       case ApplicationExpression(applicable, args, location) =>
+        // TODO these should try finding out what is being called
         ApplicationExpression(
           extractFunctionExpressions(applicable, inCurrentScope),
           args.map { exprArg =>
@@ -143,6 +140,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[ExtendedSpecification, Ex
         )
 
       case ExpressionRef(id, tpe, location) =>
+        // TODO handle reference to function somewhere in outer scope
         if (inGlobalScope(id) || inCurrentScope(id)) {
           e
         } else if (argumentScopeMap.head.contains(id)) {
@@ -175,7 +173,9 @@ class ExtractAndWrapFunctions extends TranslationPhase[ExtendedSpecification, Ex
         case (name, definition) =>
           nameStack.push(name)
           val expression = extractFunctionExpressions(definition, inCurrentScope)
-          assert(nameStack.pop() == name)
+          if (nameStack.pop() != name) {
+            System.err.println("Uneven name defs")
+          }
           name -> expression.asInstanceOf[DefinitionExpression]
       }
       val sanitizedResult =

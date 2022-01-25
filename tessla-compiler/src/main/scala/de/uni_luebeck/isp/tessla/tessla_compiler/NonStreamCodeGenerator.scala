@@ -177,6 +177,8 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification)
           }
         val ret = translateFunctionCall(e, argNames.map(Variable), newTm, defContext)
         LambdaExpression(argNames, argTypes, typ.resultType.resolve(newTm.resMap), Seq(ReturnStatement(ret)))
+      case ExternExpression(name, _, location) =>
+        throw Diagnostics.CoreASTError(s"""Invalid extern(\"$name\") expression could not be translated""", location)
     }
   }
 
