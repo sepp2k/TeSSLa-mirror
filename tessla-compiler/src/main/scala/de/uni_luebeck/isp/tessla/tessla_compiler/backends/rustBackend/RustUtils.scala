@@ -57,12 +57,12 @@ object RustUtils {
       case InstantiatedType(n, tps, _) if n.startsWith("native:") =>
         s"${n.stripPrefix("native:")}<${tps.map { t => convertType(t, mask_generics) }.mkString(", ")}>"
       case FunctionType(_, paramTypes, resultType, _) =>
-        s"""fn(${paramTypes
+        s"""Box<dyn Fn(${paramTypes
           .map {
             case (LazyEvaluation, t)   => s"Lazy<${convertType(t, mask_generics)}>"
             case (StrictEvaluation, t) => convertType(t, mask_generics)
           }
-          .mkString(", ")}) -> ${convertType(resultType, mask_generics)}"""
+          .mkString(", ")}) -> ${convertType(resultType, mask_generics)}>"""
       case RecordType(entries, _) =>
         s"TesslaValue<${RustUtils.getStructName(entries.toSeq.map { case (name, (tpe, _)) => (name, tpe) })}>"
       case TypeParam(name, _) => s"TesslaValue<${if (mask_generics) "_" else name.toString}>"

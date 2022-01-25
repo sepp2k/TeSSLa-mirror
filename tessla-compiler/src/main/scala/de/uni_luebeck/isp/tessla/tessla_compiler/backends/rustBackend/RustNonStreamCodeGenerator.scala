@@ -363,6 +363,9 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     name match {
       case "__[TC]inputParse__" => "" // TODO RustIOHandling.getInputParseExpression(typeHint.retType, args(0))
       // TODO some brackets here are superfluous and will produce warnings
+
+      case "__[rust]box__" => s"Box::new(move ${args(0)})"
+
       case "__ite__" | "__staticite__" =>
         s"match ${args(0)} { Value(true) => { ${args(1)} }, Value(false) => { ${args(2)} }, Error(error) => Error(error) }"
       case "__and__" if args.length == 2 =>
