@@ -1,0 +1,6 @@
+in x: Events[Int]
+
+def mult(x: Int): (Int) => Int =
+  (y: Int) => x * y
+
+out slift2(x, x, (a: Int, b: Int) => mult(a)(b)) as y

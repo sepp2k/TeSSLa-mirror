@@ -1,0 +1,5 @@
+{
+  "input": "curried-closure.input",
+  "expectedOutput": "curried-closure.output",
+  "spec": "curried-closure.tessla"
+}

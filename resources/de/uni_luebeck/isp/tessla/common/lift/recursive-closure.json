@@ -1,0 +1,5 @@
+{
+  "input": "recursive-closure.input",
+  "expectedOutput": "recursive-closure.output",
+  "spec": "recursive-closure.tessla"
+}
