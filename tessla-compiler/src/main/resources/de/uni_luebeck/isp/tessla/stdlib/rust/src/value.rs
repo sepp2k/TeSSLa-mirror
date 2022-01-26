@@ -1,11 +1,16 @@
 use std::fmt::{Display, Formatter};
-use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
+use std::hash::{Hash, Hasher};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Deref, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 use std::str::FromStr;
+use im::HashSet;
+use im::HashMap;
+use im::Vector;
 
 use crate::process_string_input;
 
 use TesslaValue::*;
 
+#[derive(Hash, Eq)]
 pub enum TesslaValue<T> {
     Error(&'static str),
     Value(T),
@@ -56,6 +61,16 @@ impl<T: Clone> Clone for TesslaValue<T> {
         }
     }
 }
+
+impl<T: Eq> PartialEq<Self> for TesslaValue<T> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Error(error), _) | (_, Error(error)) => false,
+            (Value(lvalue), Value(rvalue)) => lvalue.eq(rvalue),
+        }
+    }
+}
+
 
 pub trait TesslaDisplay {
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result;
@@ -930,3 +945,300 @@ impl From<&str> for TesslaUnit {
         }
     }
 }
+
+
+pub type TesslaSet<T> = TesslaValue<HashSet<T>>;
+
+impl<T: Display> TesslaDisplay for HashSet<T> {
+    fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("TODO")
+    }
+}
+
+
+impl<T> TesslaSet<T>{
+
+    #[inline]
+    pub fn Set_empty() -> TesslaSet<TesslaValue<T>> {
+        Value(HashSet::<TesslaValue<T>>::new())
+    }
+}
+
+
+
+impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
+    #[inline]
+    pub fn Set_add (&mut self, x: TesslaValue<T>) -> TesslaSet<TesslaValue<T>> {
+        match self {
+            Error(error) => Error(error),
+            Value(value) => {
+                value.insert(x);
+                return self.clone();
+            },
+        }
+    }
+
+    #[inline]
+    pub fn Set_contains(&self, item: TesslaValue<T>) -> TesslaBool {
+        match self {
+            &Error(error) => Error(error),
+            Value(value) => return Value(value.contains(&item)),
+        }
+    }
+
+
+
+    /*
+    #[inline]
+    pub fn Set_intersection(set1: TesslaSet<T>, set2: TesslaSet<T>) -> TesslaSet<T>{
+        match set1 {
+            &Error(error) => Error(error),
+            Some(value1) => {
+                match set2 {
+                    &Error(error) => Error(error),
+                    Some(value2) => {
+                        let out: TesslaValue<HashSet<T>> = Value(value1.intersection(value2));
+                        return out;
+                    },
+                }
+            },
+        }
+    }
+
+    #[inline]
+    pub fn Set_minus(set1: TesslaSet<T>, set2: TesslaSet<T>) -> TesslaSet<T> {
+        let out: TesslaValue<HashSet<T>> = Value(HashSet::new());
+        for item in set1 {
+            if !set2.contains(item) {
+                out.add(item);
+            }
+        }
+        return out;
+    }
+*/
+    #[inline]
+    pub fn Set_remove(&mut self, item: TesslaValue<T>) -> TesslaSet<TesslaValue<T>> {
+        match self {
+            Error(error) => Error(error),
+            Value(value) => {
+                value.remove(&item);
+                return self.clone();
+            },
+        }
+    }
+
+    #[inline]
+    pub fn Set_size(&self) -> TesslaInt{
+        match self {
+            &Error(error) => Error(error),
+            Value(value) => {
+                return Value(value.len() as i64);
+            },
+        }
+    }
+
+    #[inline]
+    pub fn Set_union(&self, set2 : TesslaSet<TesslaValue<T>>) -> TesslaSet<TesslaValue<T>>{
+        match (self, set2) {
+            (Error(error), _) => Error(error),
+            (_, Error(error)) => Error(error),
+            (Value(value1), Value(value2)) => {
+                return Value(value1.clone().union(value2));
+            }
+        }
+    }
+}
+/*
+    #[inline]
+    pub fn fold<U>(&self, start : U, function : fn(TesslaValue<U>, TesslaValue<T>) -> TesslaValue<U>) -> TesslaValue<U>{
+        match self {
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                let result: U = start;
+                for item in value {
+                    result = function(result,item);
+                }
+                return result;
+            },
+        }
+    }
+
+}
+
+pub type TesslaMap<T,U> = TesslaValue<HashMap<T,U>>;
+
+impl<T,U> TesslaMap<TesslaValue<T>,TesslaValue<U>>{
+
+    #[inline]
+    pub fn add(&self , key: T, item: U) -> TesslaMap<T,U>{
+        match self{
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                value.insert(key,item);
+                return self;
+            },
+        }
+    }
+
+    #[inline]
+    pub fn contains(&self , key: T) -> bool{
+        match self{
+            &Error(error) => Error(error),
+            Value(Some(value)) => value.containsa_key(key),
+        }
+    }
+
+    #[inline]
+    pub fn empty() -> TesslaMap<T,U>{
+        let x: TesslaValue<HashMap<T>> = Value(HashMap::new());
+        return x;
+    }
+
+    #[inline]
+    pub fn fold<R>(&self, start : R, function : fn(TesslaValue<R>, TesslaValue<T>, TesslaValue<U>) -> TesslaValue<R>) -> TesslaValue<R>{
+        match self {
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                let result: R = start;
+                for item in value {
+                    result = function(result,item,value.get(item));
+                }
+                return result;
+            },
+        }
+    }
+
+    #[inline]
+    pub fn get(&self, key: T) -> U{
+        match self{
+            &Error(error) => Error(error),
+            Value(Some(value)) => value.get(key)
+        }
+    }
+
+    #[inline]
+    pub fn keys() -> TesslaList<T>{
+        todo!()
+    }
+
+    #[inline]
+    pub fn remove(&self, key: T) -> TesslaMap<T,U>{
+        match self{
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                value.remove(key);
+                return self;
+            }
+        }
+    }
+
+    #[inline]
+    pub fn size(&self) -> TesslaInt{
+        match self {
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                let size: i64 = 0;
+                for x in value {
+                    size+=1;
+                }
+                return size;
+            },
+        }
+    }
+}
+
+pub type TesslaList<T> = TesslaValue<Vector<T>>;
+
+impl<T> TesslaList<TesslaValue<T>>{
+
+    #[inline]
+    pub fn append(&self , elem: T) -> TesslaList<T>{
+        match self{
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                value.insert(value.len()-1,elem);
+                return self;
+            }
+        }
+    }
+
+    #[inline]
+    pub fn empty() -> TesslaList<T>{
+        let x: TesslaList<Vector<T>> = Value(Vector::new());
+        return x;
+    }
+
+    #[inline]
+    pub fn fold<U>(&self, start: U, function: fn(TesslaValue<U>, TesslaValue<T>) -> U) -> U{
+        match self {
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                let result: U = start;
+                for item in value {
+                    result = function(result,item);
+                }
+                return result;
+            },
+        }
+    }
+
+    #[inline]
+    pub fn get(&self, index: i64) -> T{
+        match self {
+            &Error(error) => Error(error),
+            Value(Some(value)) => value.get(index),
+        }
+    }
+
+    #[inline]
+    pub fn init(&self) -> TesslaList<T>{
+        match self {
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                let x = value.clone();
+                return x.slice(x.len()-2);
+            },
+        }
+    }
+
+    #[inline]
+    pub fn prepend(elem: T, list: TesslaList<T>) -> TesslaList<T>{
+        match list {
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                value.insert(0,elem);
+                return list;
+            },
+        }
+    }
+
+    #[inline]
+    pub fn set(&self, index: i64, elem: T) -> TesslaList<T>{
+        match self {
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                value.set(index,elem);
+                return self;
+            },
+        }
+    }
+
+    #[inline]
+    pub fn size(&self) -> i64{
+        match self {
+            &Error(error) => Error(error),
+            Value(Some(value)) => value.len(),
+        }
+    }
+
+    #[inline]
+    pub fn tail(&self) -> TesslaList<T>{
+        match self {
+            &Error(error) => Error(error),
+            Value(Some(value)) => {
+                let x = value.clone();
+                return x.split_off(1);
+            },
+        }
+    }
+}*/

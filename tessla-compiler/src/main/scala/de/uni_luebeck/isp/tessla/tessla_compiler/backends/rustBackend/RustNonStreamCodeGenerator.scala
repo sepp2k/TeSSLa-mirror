@@ -433,17 +433,17 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__Map_fold__" =>
         s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)}){case (c, (k, v)) => val f = ${args(2)}; f(c, k, v)}"
       case "__Map_keys__" => s"Vec::from_iter(${args(0)}.keys())"
-
-      case "__Set_empty__"        => "std::collections::HashSet::new()"
-      case "__Set_add__"          => s"${args(0)}.insert(${args(1)})"
-      case "__Set_contains__"     => s"${args(0)}.contains(${args(1)})"
-      case "__Set_remove__"       => s"${args(0)}.remove(${args(1)})"
-      case "__Set_size__"         => s"${args(0)}.len()"
-      case "__Set_union__"        => s"${args(0)}.union(${args(1)})"
-      case "__Set_intersection__" => s"${args(0)}.intersection(${args(1)})"
-      case "__Set_minus__"        => s"${args(0)}.difference(${args(1)})"
-      case "__Set_fold__"         => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
-
+*/
+      case "__Set_empty__"        => s"TesslaSet::Set_empty()"
+      case "__Set_add__"          => s"${args(0)}.Set_add(${args(1)})"
+      case "__Set_contains__"     => s"${args(0)}.Set_contains(${args(1)})"
+      //case "__Set_remove__"       => s"${args(0)}.Set_remove(${args(1)})"
+      case "__Set_size__"         => s"${args(0)}.Set_size()"
+      //case "__Set_union__"        => s"${args(0)}.Set_union(${args(1)})"
+      //case "__Set_intersection__" => s"${args(0)}.intersection(${args(1)})"
+      //case "__Set_minus__"        => s"${args(0)}.difference(${args(1)})"
+      //case "__Set_fold__"         => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
+/*
       case "__List_empty__"   => s"std::vec::Vec::new()"
       case "__List_size__"    => s"${args(0)}.len()"
       case "__List_append__"  => s"${args(0)}.append(${args(1)})"
