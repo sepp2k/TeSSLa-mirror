@@ -19,7 +19,6 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{ImmutableListType, ImmutableMapType, ImmutableSetType, ImpLanType}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.structComparison
 
 import scala.collection.mutable.ListBuffer
@@ -44,16 +43,17 @@ object RustUtils {
    */
   def convertType(t: Type, mask_generics: Boolean = false): String = {
     t match {
-      case InstantiatedType("Events", Seq(t), _)                    => convertType(t, mask_generics)
-      case RecordType(entries, _) if entries.isEmpty                => "TesslaUnit"
-      case InstantiatedType("Bool", Seq(), _)                       => "TesslaBool"
-      case InstantiatedType("Int", Seq(), _)                        => "TesslaInt"
-      case InstantiatedType("Float", Seq(), _)                      => "TesslaFloat"
-      case InstantiatedType("String", Seq(), _)                     => "TesslaString"
-      case InstantiatedType("Option", Seq(t), _)                    => s"TesslaOption<${convertType(t, mask_generics)}>"
-      case InstantiatedType("Set", Seq(t), _)                       => s"TesslaSet<${convertType(t, mask_generics)}>"
-      case InstantiatedType("Map", Seq(t1, t2), _)                  => s"TesslaMap<${convertType(t1, mask_generics)}, ${convertType(t2, mask_generics)}>"
-      case InstantiatedType("List", Seq(t), _)                      => s"TEsslaList<${convertType(t, mask_generics)}>"
+      case InstantiatedType("Events", Seq(t), _)     => convertType(t, mask_generics)
+      case RecordType(entries, _) if entries.isEmpty => "TesslaUnit"
+      case InstantiatedType("Bool", Seq(), _)        => "TesslaBool"
+      case InstantiatedType("Int", Seq(), _)         => "TesslaInt"
+      case InstantiatedType("Float", Seq(), _)       => "TesslaFloat"
+      case InstantiatedType("String", Seq(), _)      => "TesslaString"
+      case InstantiatedType("Option", Seq(t), _)     => s"TesslaOption<${convertType(t, mask_generics)}>"
+      case InstantiatedType("Set", Seq(t), _)        => s"TesslaSet<${convertType(t, mask_generics)}>"
+      case InstantiatedType("Map", Seq(t1, t2), _) =>
+        s"TesslaMap<${convertType(t1, mask_generics)}, ${convertType(t2, mask_generics)}>"
+      case InstantiatedType("List", Seq(t), _)                      => s"TesslaList<${convertType(t, mask_generics)}>"
       case InstantiatedType(n, Seq(), _) if n.startsWith("native:") => n.stripPrefix("native:")
       case InstantiatedType(n, tps, _) if n.startsWith("native:") =>
         s"${n.stripPrefix("native:")}<${tps.map { t => convertType(t, mask_generics) }.mkString(", ")}>"
@@ -119,7 +119,7 @@ object RustUtils {
    * @param fieldNames The struct field names
    * @return Whether given struct is tuple
    */
-  def structIsTuple(fieldNames: Seq[String]): Boolean = {
+  def isStructTuple(fieldNames: Seq[String]): Boolean = {
     fieldNames.indices.forall(i => fieldNames.contains(s"_${i + 1}"))
   }
 }

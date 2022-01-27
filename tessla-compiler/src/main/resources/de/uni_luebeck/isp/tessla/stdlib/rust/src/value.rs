@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
-use std::hash::{Hash, Hasher};
-use std::ops::{Add, BitAnd, BitOr, BitXor, Deref, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
+use std::hash::{Hash};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 use std::str::FromStr;
 use im::HashSet;
 use im::HashMap;

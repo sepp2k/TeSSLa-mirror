@@ -299,10 +299,10 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * Generate all the necessary code and implement any Traits needed for a Rust struct
    * @return The struct definition and its impls
    */
-  private def translateStructDefinition(structName: String, fields: Seq[(String, Type)]): String = {
+  def translateStructDefinition(structName: String, fields: Seq[(String, Type)]): String = {
     val genericTypes = RustUtils.getGenericTypeNames(fields.map { case (_, typ) => typ })
     val genericAnnotation = if (genericTypes.nonEmpty) s"<${genericTypes.mkString(", ")}>" else ""
-    var structDef = s"""struct $structName$genericAnnotation {
+    val structDef = s"""struct $structName$genericAnnotation {
        |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
        |}
        |impl Clone for $structName {
@@ -312,12 +312,11 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |        }
        |    }
        |}""".stripMargin
-    if (RustUtils.structIsTuple(fields.map { case (name, _) => name })) {
-      structDef += generateTupleDisplay(structName, fields)
+    if (RustUtils.isStructTuple(fields.map { case (name, _) => name })) {
+      structDef + generateTupleDisplay(structName, fields)
     } else {
-      structDef += generateStructDisplay(structName, fields)
+      structDef + generateStructDisplay(structName, fields)
     }
-    structDef
   }
 
   private def generateTupleDisplay(structName: String, fields: Seq[(String, Type)]): String = {
@@ -433,17 +432,17 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__Map_fold__" =>
         s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)}){case (c, (k, v)) => val f = ${args(2)}; f(c, k, v)}"
       case "__Map_keys__" => s"Vec::from_iter(${args(0)}.keys())"
-*/
-      case "__Set_empty__"        => s"TesslaSet::Set_empty()"
-      case "__Set_add__"          => s"${args(0)}.Set_add(${args(1)})"
-      case "__Set_contains__"     => s"${args(0)}.Set_contains(${args(1)})"
+       */
+      case "__Set_empty__"    => s"TesslaSet::Set_empty()"
+      case "__Set_add__"      => s"${args(0)}.Set_add(${args(1)})"
+      case "__Set_contains__" => s"${args(0)}.Set_contains(${args(1)})"
       //case "__Set_remove__"       => s"${args(0)}.Set_remove(${args(1)})"
-      case "__Set_size__"         => s"${args(0)}.Set_size()"
+      case "__Set_size__" => s"${args(0)}.Set_size()"
       //case "__Set_union__"        => s"${args(0)}.Set_union(${args(1)})"
       //case "__Set_intersection__" => s"${args(0)}.intersection(${args(1)})"
       //case "__Set_minus__"        => s"${args(0)}.difference(${args(1)})"
       //case "__Set_fold__"         => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
-/*
+      /*
       case "__List_empty__"   => s"std::vec::Vec::new()"
       case "__List_size__"    => s"${args(0)}.len()"
       case "__List_append__"  => s"${args(0)}.append(${args(1)})"

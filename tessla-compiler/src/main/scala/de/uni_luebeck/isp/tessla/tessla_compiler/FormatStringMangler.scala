@@ -33,7 +33,7 @@ object FormatStringMangler
       case (sliftid, definition) =>
         definition match {
           case ApplicationExpression(TypeApplicationExpression(ExternExpression("slift", _, _), _, _), args, _)
-            if args.length >= 3 =>
+              if args.length >= 3 =>
             args(2) match {
               case TypeApplicationExpression(ExternExpression("String_format", _, loc), _, _) =>
                 args(0) match {
@@ -43,12 +43,12 @@ object FormatStringMangler
                       spec.spec.definitions.get(id) match {
                         // Ensure that the format string is stored on a nil stream using default
                         case Some(
-                        ApplicationExpression(
-                        TypeApplicationExpression(ExternExpression("default", _, _), _, _),
-                        args,
-                        _
-                        )
-                        ) =>
+                              ApplicationExpression(
+                                TypeApplicationExpression(ExternExpression("default", _, _), _, _),
+                                args,
+                                _
+                              )
+                            ) =>
                           val stream = args(0) match { // the stream the format string is based on
                             case ExpressionRef(id, _, _) => id
                             case _ =>
@@ -61,12 +61,12 @@ object FormatStringMangler
                           // Do nothing if the format string is based on a nil stream
                           spec.spec.definitions.get(stream) match {
                             case Some(
-                            ApplicationExpression(
-                            TypeApplicationExpression(ExternExpression("nil", _, _), _, _),
-                            _,
-                            _
-                            )
-                            ) => {}
+                                  ApplicationExpression(
+                                    TypeApplicationExpression(ExternExpression("nil", _, _), _, _),
+                                    _,
+                                    _
+                                  )
+                                ) => {}
                             case _ =>
                               throw Diagnostics.CommandNotSupportedError(
                                 "Can't determine format string at compile time.",
@@ -101,9 +101,9 @@ object FormatStringMangler
 
                     // We encountered the format string already and removed the streams
                     else
-                    /* we just need to map the slift to the corresponding format string */ {
-                      formatStrings.addOne((sliftid.fullName, formatStrings(id.fullName)))
-                    }
+                      /* we just need to map the slift to the corresponding format string */ {
+                        formatStrings.addOne((sliftid.fullName, formatStrings(id.fullName)))
+                      }
                   case _ => {}
                 }
               case _ => {}
@@ -128,7 +128,7 @@ object FormatStringMangler
     if (fs.length < 2) {
       throw Diagnostics.CommandNotSupportedError("Invalid format string.")
     }
-    if (fs[0] != '%') {
+    if (fs.charAt(0) != '%') {
       throw Diagnostics.CommandNotSupportedError("Format string does not start with '%'.")
     }
 
@@ -138,41 +138,48 @@ object FormatStringMangler
     breakable {
       while (true) {
         fs.charAt(i) match {
-          case '-' => if (!spec.leftJustify) {
-            spec.leftJustify = true
-          } else {
-            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
-          }
-          case '+' => if (!spec.plusSign) {
-            spec.plusSign = true
-          } else {
-            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
-          }
-          case ' ' => if (!spec.padSign) {
-            spec.padSign = true
-          } else {
-            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
-          }
-          case '#' => if (!spec.altForm) {
-            spec.altForm = true
-          } else {
-            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
-          }
-          case '0' => if (!spec.zeroPad) {
-            spec.zeroPad = true
-          } else {
-            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
-          }
-          case ',' => if (!spec.localeSeparators) {
-            spec.localeSeparators = true
-          } else {
-            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
-          }
-          case '(' => if (!spec.encloseNegatives) {
-            spec.encloseNegatives = true
-          } else {
-            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
-          }
+          case '-' =>
+            if (!spec.leftJustify) {
+              spec.leftJustify = true
+            } else {
+              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+            }
+          case '+' =>
+            if (!spec.plusSign) {
+              spec.plusSign = true
+            } else {
+              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+            }
+          case ' ' =>
+            if (!spec.padSign) {
+              spec.padSign = true
+            } else {
+              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+            }
+          case '#' =>
+            if (!spec.altForm) {
+              spec.altForm = true
+            } else {
+              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+            }
+          case '0' =>
+            if (!spec.zeroPad) {
+              spec.zeroPad = true
+            } else {
+              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+            }
+          case ',' =>
+            if (!spec.localeSeparators) {
+              spec.localeSeparators = true
+            } else {
+              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+            }
+          case '(' =>
+            if (!spec.encloseNegatives) {
+              spec.encloseNegatives = true
+            } else {
+              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+            }
           case _ => break
         }
       }
@@ -200,8 +207,7 @@ object FormatStringMangler
         spec.uppercase = true
         spec.formatType = spec.formatType.toLower
       }
-    } catch
-    {
+    } catch {
       case e: Exception => throw Diagnostics.CommandNotSupportedError("Invalid format string: " + e.getMessage)
     }
 
@@ -216,6 +222,7 @@ object FormatStringMangler
    * Specifies a format string.
    */
   class FormatStringSpecification {
+
     /**
      * Left justify withing the given field of width FmtWidth.
      */
@@ -306,10 +313,14 @@ object FormatStringMangler
    */
   def produceRustFormatString(fs: FormatStringSpecification): String = {
     if (fs.formatType == 'a') {
-      throw Diagnostics.CommandNotSupportedError("Hexadecimal floating point literals aren't supported in Rust format strings.")
+      throw Diagnostics.CommandNotSupportedError(
+        "Hexadecimal floating point literals aren't supported in Rust format strings."
+      )
     }
     if (fs.localeSeparators) {
-      throw Diagnostics.CommandNotSupportedError("Locale-specific grouping separators aren't supported in Rust format strings.")
+      throw Diagnostics.CommandNotSupportedError(
+        "Locale-specific grouping separators aren't supported in Rust format strings."
+      )
     }
     if (fs.isOther && fs.zeroPad) {
       throw Diagnostics.CommandNotSupportedError("Strings can be zero-padded.")
@@ -342,7 +353,8 @@ object FormatStringMangler
 
     // Add format specifier
     if (fs.formatType == 'x') {
-      str += (if (fs.uppercase) {'X'} else {'x'})
+      str += (if (fs.uppercase) { 'X' }
+              else { 'x' })
     }
     if (fs.formatType == 's' || fs.formatType == 'd') {
       // Add nothing
