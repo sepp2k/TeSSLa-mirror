@@ -272,6 +272,29 @@ object FormatStringMangler
      * The format specifier.
      */
     var formatType = '?'
+
+    /**
+     * Determines whether this format specifier specifies an integer format.
+     *
+     */
+    def isInteger() = {
+      formatType == 'x' || formatType == 'o' || formatType == 'd'
+    }
+
+    /**
+     * Determines whether this format specifier specifies a floating point format.
+     */
+    def isFloat() = {
+      formatType == 'f' || formatType == 'g' || formatType == 'e' || formatType == 'a'
+    }
+
+    /**
+     * Determines whether this format specifies neither an integer nor a floating
+     * point format.
+     */
+    def isOther() = {
+      !isFloat() && !isInteger()
+    }
   }
 
   /**
@@ -282,6 +305,58 @@ object FormatStringMangler
    * @return A format string for Rusts format!-macro.
    */
   def produceRustFormatString(fs: FormatStringSpecification): String = {
-    return ""
+    if (fs.formatType == 'a') {
+      throw Diagnostics.CommandNotSupportedError("Hexadecimal floating point literals aren't supported in Rust format strings.")
+    }
+    if (fs.localeSeparators) {
+      throw Diagnostics.CommandNotSupportedError("Locale-specific grouping separators aren't supported in Rust format strings.")
+    }
+    if (fs.isOther && fs.zeroPad) {
+      throw Diagnostics.CommandNotSupportedError("Strings can be zero-padded.")
+    }
+    if (fs.precision > 0 && fs.isInteger) {
+      throw Diagnostics.CommandNotSupportedError("Integer formats can't use a precision")
+    }
+
+    // Apply format flags
+    var str = "{:"
+    if (fs.altForm) {
+      str += '#'
+    }
+    if (fs.zeroPad) {
+      str += '0'
+    }
+    if (fs.leftJustify) {
+      str += '<'
+    } else {
+      str += '>'
+    }
+    if (fs.plusSign) {
+      str += '+'
+    }
+    str += fs.width;
+    if (fs.precision > 0) {
+      str += '.'
+      str += fs.precision
+    }
+
+    // Add format specifier
+    if (fs.formatType == 'x') {
+      str += (if (fs.uppercase) {'X'} else {'x'})
+    }
+    if (fs.formatType == 's' || fs.formatType == 'd') {
+      // Add nothing
+    }
+    if (fs.formatType == 'o') {
+      str += 'o'
+    }
+    if (fs.formatType == 'e') {
+      str += 'e'
+    }
+
+    str += '}'
+    str
+
+    // TODO: Rust: padSign, encloseNegatives, upper case strings, g
   }
 }
