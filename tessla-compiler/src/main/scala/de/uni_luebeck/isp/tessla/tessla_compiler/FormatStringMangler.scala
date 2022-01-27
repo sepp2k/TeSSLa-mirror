@@ -1,11 +1,12 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
-import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 
 import java.util
 import scala.collection.mutable
+import scala.util.control.Breaks._
 
 /**
  * This object is part of the translation pipeline of the Rust backend. The idea behind this is that format strings must
@@ -32,7 +33,7 @@ object FormatStringMangler
       case (sliftid, definition) =>
         definition match {
           case ApplicationExpression(TypeApplicationExpression(ExternExpression("slift", _, _), _, _), args, _)
-              if args.length >= 3 =>
+            if args.length >= 3 =>
             args(2) match {
               case TypeApplicationExpression(ExternExpression("String_format", _, loc), _, _) =>
                 args(0) match {
@@ -42,12 +43,12 @@ object FormatStringMangler
                       spec.spec.definitions.get(id) match {
                         // Ensure that the format string is stored on a nil stream using default
                         case Some(
-                              ApplicationExpression(
-                                TypeApplicationExpression(ExternExpression("default", _, _), _, _),
-                                args,
-                                _
-                              )
-                            ) =>
+                        ApplicationExpression(
+                        TypeApplicationExpression(ExternExpression("default", _, _), _, _),
+                        args,
+                        _
+                        )
+                        ) =>
                           val stream = args(0) match { // the stream the format string is based on
                             case ExpressionRef(id, _, _) => id
                             case _ =>
@@ -60,12 +61,12 @@ object FormatStringMangler
                           // Do nothing if the format string is based on a nil stream
                           spec.spec.definitions.get(stream) match {
                             case Some(
-                                  ApplicationExpression(
-                                    TypeApplicationExpression(ExternExpression("nil", _, _), _, _),
-                                    _,
-                                    _
-                                  )
-                                ) => {}
+                            ApplicationExpression(
+                            TypeApplicationExpression(ExternExpression("nil", _, _), _, _),
+                            _,
+                            _
+                            )
+                            ) => {}
                             case _ =>
                               throw Diagnostics.CommandNotSupportedError(
                                 "Can't determine format string at compile time.",
@@ -100,9 +101,9 @@ object FormatStringMangler
 
                     // We encountered the format string already and removed the streams
                     else
-                      /* we just need to map the slift to the corresponding format string */ {
-                        formatStrings.addOne((sliftid.fullName, formatStrings(id.fullName)))
-                      }
+                    /* we just need to map the slift to the corresponding format string */ {
+                      formatStrings.addOne((sliftid.fullName, formatStrings(id.fullName)))
+                    }
                   case _ => {}
                 }
               case _ => {}
@@ -113,5 +114,174 @@ object FormatStringMangler
     }
 
     Success((spec, removedStreams, formatStrings), Seq())
+  }
+
+  /**
+   * Parses the specified TeSSLa format string.
+   *
+   * @param fs The format string to parse.
+   * @return The extracted format string specification.
+   */
+  def parseFormatString(fs: String): FormatStringSpecification = {
+    var spec: FormatStringSpecification = new FormatStringSpecification()
+
+    if (fs.length < 2) {
+      throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+    }
+    if (fs[0] != '%') {
+      throw Diagnostics.CommandNotSupportedError("Format string does not start with '%'.")
+    }
+
+    var i = 1
+
+    // Extract flags; each only allowed once
+    breakable {
+      while (true) {
+        fs.charAt(i) match {
+          case '-' => if (!spec.leftJustify) {
+            spec.leftJustify = true
+          } else {
+            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+          }
+          case '+' => if (!spec.plusSign) {
+            spec.plusSign = true
+          } else {
+            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+          }
+          case ' ' => if (!spec.padSign) {
+            spec.padSign = true
+          } else {
+            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+          }
+          case '#' => if (!spec.altForm) {
+            spec.altForm = true
+          } else {
+            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+          }
+          case '0' => if (!spec.zeroPad) {
+            spec.zeroPad = true
+          } else {
+            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+          }
+          case ',' => if (!spec.localeSeparators) {
+            spec.localeSeparators = true
+          } else {
+            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+          }
+          case '(' => if (!spec.encloseNegatives) {
+            spec.encloseNegatives = true
+          } else {
+            throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+          }
+          case _ => break
+        }
+      }
+
+      i += 1
+    }
+
+    try {
+      // Extract width, don't allow zeroes
+      if (fs.charAt(i) != '0' && fs.charAt(i).isDigit) {
+        val j = i;
+
+        while (fs.charAt(i).isDigit) {
+          i += 1
+        }
+
+        spec.width = Integer.parseInt(fs.substring(j, i))
+      }
+
+      // Extract the format specifier
+      spec.formatType = fs.charAt(i)
+
+      // Determine whether the output should be in upper case
+      if (spec.formatType.isUpper) {
+        spec.uppercase = true
+        spec.formatType = spec.formatType.toLower
+      }
+    } catch
+    {
+      case e: Exception => throw Diagnostics.CommandNotSupportedError("Invalid format string: " + e.getMessage)
+    }
+
+    if (i + 1 != fs.length) {
+      throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+    }
+
+    spec
+  }
+
+  /**
+   * Specifies a format string.
+   */
+  class FormatStringSpecification {
+    /**
+     * Left justify withing the given field of width FmtWidth.
+     */
+    var leftJustify = false
+
+    /**
+     * Precede the output with a '+', unless the value is negative.
+     */
+    var plusSign = false
+
+    /**
+     * If no sign is written, write a space (0x20) instead.
+     */
+    var padSign = false
+
+    /**
+     * Precede integer with 0 for o, 0x for x and 0X for X.
+     */
+    var altForm = false
+
+    /**
+     * Left-pad the number with 0 if a padding is specified.
+     */
+    var zeroPad = false
+
+    /**
+     * Use a locale-specific grouping separator.
+     */
+    var localeSeparators = false
+
+    /**
+     * Enclose negative numbers with parenthesis.
+     */
+    var encloseNegatives = false
+
+    /**
+     * A non-negative decimal integer specifying the minimal number
+     * of characters written to the output.
+     */
+    var width = 0
+
+    /**
+     * The maximum numbers of characters written for floating points.
+     * Not applicable to o, d, x and X types.
+     */
+    var precision = 0
+
+    /**
+     * Indicates whether the output should be in upper case.
+     */
+    var uppercase = false
+
+    /**
+     * The format specifier.
+     */
+    var formatType = '?'
+  }
+
+  /**
+   * Translates the specified format string into a format string
+   * that can be fed into Rusts format!-macro.
+   *
+   * @param fs The format string to translate.
+   * @return A format string for Rusts format!-macro.
+   */
+  def produceRustFormatString(fs: FormatStringSpecification): String = {
+    return ""
   }
 }
