@@ -95,11 +95,14 @@ class TesslaCoreToRust(ioInterface: Boolean)
       val outputMap = extSpec.spec.out.groupMap { case (expr, _) => expr.id } { case (_, annotations) => annotations }
       val outputNames = mutable.Set[String]()
 
-      // TODO maybe don't do this as a global var but in a translation step
-      RustUtils.definedStructs = Map()
-
       // Produce computation section
       DefinitionOrdering.order(extSpec.spec.definitions).foreach {
+        case (Identifier((None, Some(name), _)), ExternExpression("[rust]Struct", RecordType(entries, _), _)) =>
+          srcSegments.static.append(
+            rustNonStreamCodeGenerator
+              .translateStructDefinition(name, entries.toSeq.map { case (name, (typ, _)) => (name, typ) })
+          )
+
         case (id, definition) =>
           // Skip streams that were removed by the FormatStringMangler
           if (!removedStreams.contains(id.fullName)) {
@@ -111,6 +114,7 @@ class TesslaCoreToRust(ioInterface: Boolean)
               case FunctionType(_, _, _, _) =>
                 srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
               case _ =>
+                throw Diagnostics.CoreASTError(s"Invalid definition of type: ${definition.tpe}, could not be compiled")
                 srcSegments.static.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
             }
           }
@@ -118,12 +122,10 @@ class TesslaCoreToRust(ioInterface: Boolean)
 
       // Produce input consumption
       extSpec.spec.in.foreach {
-        case (id, (definition, _)) =>
-          rustStreamCodeGenerator.produceInputCode(id, definition, srcSegments, ioInterface)
+        case (id, (typ, _)) =>
+          rustStreamCodeGenerator.produceInputCode(id, typ, srcSegments, ioInterface)
           produceOutputCode(outputMap, outputNames, id, srcSegments)
       }
-
-      srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStructDefinitions())
 
       insertSegments(srcSegments)
       // Rust does not like $ in names

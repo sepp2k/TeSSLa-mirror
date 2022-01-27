@@ -26,7 +26,11 @@ import de.uni_luebeck.isp.tessla.core.util.Lazy
 import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, FlattenCore, IncludeResolvers, TesslaAST}
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{
+  GenerateStructDefinitions,
+  RustCompiler,
+  TesslaCoreToRust
+}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{
   ExtractAndWrapFunctions,
@@ -182,6 +186,7 @@ object Main {
             .andThen(config.targetLanguage match {
               case "rust" =>
                 (new ExtractAndWrapFunctions
+                  andThen GenerateStructDefinitions
                   andThen UsageAnalysis
                   andThen InliningAnalysis
                   andThen FormatStringMangler

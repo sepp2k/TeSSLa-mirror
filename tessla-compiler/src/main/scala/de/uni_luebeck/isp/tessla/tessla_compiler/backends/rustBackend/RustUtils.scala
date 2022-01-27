@@ -16,6 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
+import de.uni_luebeck.isp.tessla.core.Location
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
@@ -27,11 +28,6 @@ import scala.util.matching.Regex
 object RustUtils {
 
   val NON_ALPHA_PATTERN: Regex = "[^a-zA-Z0-9_\\p{L}\\p{M}\\p{N}]".r
-
-  /**
-   * Set of structs keyed by their generated name, with their field names, and types.
-   */
-  var definedStructs: Map[String, Seq[(String, Type)]] = Map()
 
   /**
    * Converts TeSSLa type to corresponding rust types
@@ -65,7 +61,7 @@ object RustUtils {
           }
           .mkString(", ")}) -> ${convertType(resultType, mask_generics)}>"""
       case RecordType(entries, _) =>
-        s"TesslaValue<${RustUtils.getStructName(entries.toSeq.map { case (name, (tpe, _)) => (name, tpe) })}>"
+        s"TesslaValue<${RustUtils.getStructName(entries)}>"
       case TypeParam(name, _) => s"TesslaValue<${if (mask_generics) "_" else name.toString}>"
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
@@ -100,18 +96,15 @@ object RustUtils {
    * @param fields the field names and their types
    * @return the name for that struct datatype
    */
-  def getStructName(fields: Seq[(String, Type)]): String = {
-    val structName = NON_ALPHA_PATTERN.replaceAllIn(
-      s"Structſ${fields
+  def getStructName(fields: Map[String, (Type, Location)]): String = {
+    NON_ALPHA_PATTERN.replaceAllIn(
+      s"Structſ${fields.toSeq
+        .map { case (name, (tpe, _)) => (name, tpe) }
         .sortWith { case ((n1, _), (n2, _)) => structComparison(n1, n2) }
         .map { case (name, tpe) => s"${name.capitalize}þ$tpe" }
         .mkString("ſ")}",
       "ø"
     )
-    if (!definedStructs.contains(structName)) {
-      definedStructs += (structName -> fields)
-    }
-    structName
   }
 
   /**

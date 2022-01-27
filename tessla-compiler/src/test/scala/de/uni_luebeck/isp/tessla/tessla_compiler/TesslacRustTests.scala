@@ -20,7 +20,11 @@ import java.nio.file.{Files, Path}
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{
+  GenerateStructDefinitions,
+  RustCompiler,
+  TesslaCoreToRust
+}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{
   ExtractAndWrapFunctions,
   InliningAnalysis,
@@ -87,6 +91,7 @@ object TesslacRustTests {
     val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
 
     (new ExtractAndWrapFunctions)
+      .andThen(GenerateStructDefinitions)
       .andThen(UsageAnalysis)
       .andThen(InliningAnalysis)
       .andThen(FormatStringMangler)

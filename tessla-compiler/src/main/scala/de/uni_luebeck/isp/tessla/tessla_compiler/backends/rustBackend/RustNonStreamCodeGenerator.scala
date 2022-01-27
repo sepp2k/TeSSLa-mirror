@@ -272,8 +272,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case RecordConstructorExpression(entries, _) if entries.isEmpty =>
         "Value(())" // Unit value
       case RecordConstructorExpression(entries, _) =>
-        val fields = entries.toSeq.map { case (name, (ea, _)) => (name, ea.tpe.resolve(tm.resMap)) }
-        val structName = RustUtils.getStructName(fields)
+        val resolvedEntries = entries.map { case (name, (ea, loc)) => (name, (ea.tpe.resolve(tm.resMap), loc)) }
+        val structName = RustUtils.getStructName(resolvedEntries)
 
         s"Value($structName { ${entries
           .map { case (name, (ea, _)) => s"$name: ${translateExpressionArg(ea, tm, defContext)}" }
@@ -282,16 +282,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         s"match ${translateExpressionArg(target, tm, defContext)} { Value(value) => value.$name, Error(error) => Error(error) }"
       case _ =>
         throw Diagnostics.CoreASTError("Unexpected ExpressionArg cannot be translated", e.location)
-    }
-  }
-
-  /**
-   * Translates all encountered structs to rust definitions
-   * @return The struct definitions
-   */
-  def translateStructDefinitions(): Seq[String] = {
-    RustUtils.definedStructs.toSeq.map {
-      case (structName, fields) => translateStructDefinition(structName, fields)
     }
   }
 
