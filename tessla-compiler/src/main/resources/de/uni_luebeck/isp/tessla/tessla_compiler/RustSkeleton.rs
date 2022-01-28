@@ -12,7 +12,9 @@ struct State {
 //STATEDEF
 }
 
+lazy_static! {
 //STATIC
+}
 
 fn get_initial_state() -> State {
     State {

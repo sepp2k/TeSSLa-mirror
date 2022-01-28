@@ -106,13 +106,13 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       definedIdentifiers += (id -> FinalLazyDeclaration)
       val inlinedExp = inlineVars(e, extSpec.spec.definitions)
       // TODO how exactly do we handle this
-      s"const /*lazy*/ var_$id: $typ = ${translateExpressionArg(inlinedExp, TypeArgManagement.empty, extSpec.spec.definitions)};"
+      s"static ref /*lazy*/ var_$id: $typ = ${translateExpressionArg(inlinedExp, TypeArgManagement.empty, extSpec.spec.definitions)};"
     } else if (finalAssignmentPossible(e)) {
       definedIdentifiers += (id -> FinalDeclaration)
-      s"const var_$id: $typ = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};"
+      s"static ref var_$id: $typ = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};"
     } else {
       definedIdentifiers += (id -> VariableDeclaration)
-      s"const var_$id: $typ = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};"
+      s"static ref var_$id: $typ = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};"
     }
   }
 

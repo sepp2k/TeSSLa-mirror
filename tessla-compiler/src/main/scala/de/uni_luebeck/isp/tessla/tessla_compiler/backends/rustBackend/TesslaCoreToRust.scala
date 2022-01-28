@@ -114,7 +114,6 @@ class TesslaCoreToRust(ioInterface: Boolean)
               case FunctionType(_, _, _, _) =>
                 srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
               case _ =>
-                throw Diagnostics.CoreASTError(s"Invalid definition of type: ${definition.tpe}, could not be compiled")
                 srcSegments.static.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
             }
           }

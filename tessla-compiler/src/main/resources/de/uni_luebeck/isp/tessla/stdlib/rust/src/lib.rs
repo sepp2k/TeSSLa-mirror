@@ -2,6 +2,9 @@ mod io;
 mod stream;
 mod value;
 
+extern crate lazy_static;
+pub use lazy_static::lazy_static;
+
 pub use self::io::*;
 pub use self::stream::*;
 pub use self::value::*;
