@@ -114,7 +114,7 @@ class TesslaCoreToRust(ioInterface: Boolean)
               case FunctionType(_, _, _, _) =>
                 srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
               case _ =>
-                srcSegments.static.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
+                srcSegments.lazyStatic.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
             }
           }
       }
@@ -137,6 +137,7 @@ class TesslaCoreToRust(ioInterface: Boolean)
       val rewrittenSource = source
         .replace("//USERINCLUDES", "") //TODO
         .replace("//STATEDEF", srcSegments.stateDef.mkString(",\n"))
+        .replace("//LAZYSTATIC", srcSegments.lazyStatic.mkString("\n"))
         .replace("//STATIC", srcSegments.static.mkString("\n"))
         .replace("//STATEINIT", srcSegments.stateInit.mkString(",\n"))
         .replace("//STORE", srcSegments.store.mkString("\n"))

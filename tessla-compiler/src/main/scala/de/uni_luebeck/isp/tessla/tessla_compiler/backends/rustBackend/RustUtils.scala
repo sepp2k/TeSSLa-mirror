@@ -123,6 +123,7 @@ case class SourceSegments(
   input: ListBuffer[String] = new ListBuffer[String],
   timestamp: ListBuffer[String] = new ListBuffer[String],
   computation: ListBuffer[String] = new ListBuffer[String],
+  lazyStatic: ListBuffer[String] = new ListBuffer[String],
   static: ListBuffer[String] = new ListBuffer[String],
   store: ListBuffer[String] = new ListBuffer[String],
   delayreset: ListBuffer[String] = new ListBuffer[String]

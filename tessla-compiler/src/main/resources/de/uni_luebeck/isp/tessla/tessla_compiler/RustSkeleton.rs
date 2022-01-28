@@ -13,8 +13,10 @@ struct State {
 }
 
 lazy_static! {
-//STATIC
+//LAZYSTATIC
 }
+
+//STATIC
 
 fn get_initial_state() -> State {
     State {
