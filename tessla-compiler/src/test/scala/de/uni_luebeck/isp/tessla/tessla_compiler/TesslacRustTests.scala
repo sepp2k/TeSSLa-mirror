@@ -20,16 +20,12 @@ import java.nio.file.{Files, Path}
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{
-  GenerateStructDefinitions,
-  RustCompiler,
-  TesslaCoreToRust
-}
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
   ExtractAndWrapFunctions,
-  InliningAnalysis,
-  UsageAnalysis
+  GenerateStructDefinitions
 }
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
 import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll

@@ -26,17 +26,13 @@ import de.uni_luebeck.isp.tessla.core.util.Lazy
 import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, FlattenCore, IncludeResolvers, TesslaAST}
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{
-  GenerateStructDefinitions,
-  RustCompiler,
-  TesslaCoreToRust
-}
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
-import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
   ExtractAndWrapFunctions,
-  InliningAnalysis,
-  UsageAnalysis
+  GenerateStructDefinitions
 }
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
+import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{FormatStringMangler, TesslaCoreToIntermediate, UnusedVarRemove}
 import de.uni_luebeck.isp.tessla.tessladoc.{DocGenerator, TesslaDoc}
 

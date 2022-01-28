@@ -1,8 +1,9 @@
-package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
+package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
+import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustUtils, TesslaCoreToRust}
 
 import scala.collection.mutable
 
@@ -19,7 +20,7 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
    * @param spec The TeSSLa Core specification to be examined
    * @return The same spec with the added definitions
    */
-  override def translate(spec: TesslaAST.Core.Specification): TranslationPhase.Result[TesslaAST.Core.Specification] = {
+  override def translate(spec: Specification): TranslationPhase.Result[Specification] = {
     val structDefinitions = mutable.Map.empty[Identifier, DefinitionExpression]
 
     spec.definitions.foreach { case (_, definition) => findRequiredStructs(definition, structDefinitions) }
