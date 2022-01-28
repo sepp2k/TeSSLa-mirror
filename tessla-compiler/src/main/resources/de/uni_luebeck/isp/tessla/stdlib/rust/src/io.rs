@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::io::stdin;
 use std::str::FromStr;
 
-fn find_end(string: &str, delim: &str, start: usize) -> usize {
+pub fn find_end(string: &str, delim: &str, start: usize) -> usize {
     if (start + delim.len()) <= string.len() && delim == &string[start..(start + delim.len())] {
         start
     } else if start >= (string.len() - 1) {
@@ -18,17 +18,17 @@ fn find_end(string: &str, delim: &str, start: usize) -> usize {
     }
 }
 
-pub fn process_string_input(string: &str) -> String {
-    if &string[0..1] == "\"" && find_end(&string, "\"", 1) == (string.len() - 1) {
-        string[1..(string.len() - 1)]
-            .replace("\\\\n", "\n")
-            .replace("\\\\r", "\r")
-            .replace("\\\\t", "\t")
-            .replace("\\\\\"", "\"")
-            .replace("\\\\\\\\", "\\")
-    } else {
-        panic!("Not a valid string input: \"{}\"", string);
+pub fn find_num_boundary(s: &str) -> usize {
+    let mut boundary = 0_usize;
+    for char in s.chars() {
+        match char {
+            '+' | '-' | '.' => {},
+            _ if char.is_alphanumeric() => {},
+            _ => break
+        }
+        boundary += 1;
     }
+    boundary
 }
 
 pub fn output_var<T: Display>(output: T, true_name: &str, ts: i64, raw: bool) {

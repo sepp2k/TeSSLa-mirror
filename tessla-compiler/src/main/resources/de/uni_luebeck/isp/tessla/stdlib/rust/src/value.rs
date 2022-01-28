@@ -6,7 +6,7 @@ use im::HashSet;
 use im::HashMap;
 use im::Vector;
 
-use crate::process_string_input;
+use crate::{find_end, find_num_boundary};
 
 use TesslaValue::*;
 
@@ -82,6 +82,20 @@ impl<T: TesslaDisplay> Display for TesslaValue<T> {
         match self {
             &Error(error) => write!(f, "Error: {}", error),
             Value(value) => value.tessla_fmt(f),
+        }
+    }
+}
+
+pub trait TesslaParse {
+    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) where Self: Sized;
+}
+
+impl<T: TesslaParse> From<&str> for TesslaValue<T> {
+    fn from(s: &str) -> Self {
+        match T::tessla_parse(s.trim()) {
+            (Ok(result), "") => Value(result),
+            (Ok(_), _) => Error("Failed to parse value, match not exhaustive"),
+            (Err(error), _) => Error(error),
         }
     }
 }
@@ -205,11 +219,14 @@ impl TesslaDisplay for bool {
     }
 }
 
-impl From<&str> for TesslaBool {
-    fn from(s: &str) -> Self {
-        match bool::from_str(s) {
-            Ok(value) => Value(value),
-            Err(_) => Error("Failed to parse Bool from String"),
+impl TesslaParse for bool {
+    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
+        match s.strip_prefix("true") {
+            Some(rest) => (Ok(true), rest.trim_start()),
+            None => match s.strip_prefix("false") {
+                Some(rest) => (Ok(false), rest.trim_start()),
+                None => (Err("Failed to parse Bool from String"), s)
+            }
         }
     }
 }
@@ -285,11 +302,13 @@ impl TesslaDisplay for i64 {
     }
 }
 
-impl From<&str> for TesslaInt {
-    fn from(s: &str) -> Self {
-        match i64::from_str(s) {
-            Ok(value) => Value(value),
-            Err(_) => Error("Failed to parse Int from String"),
+impl TesslaParse for i64 {
+    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
+        match s.split_at(find_num_boundary(s)) {
+            (number, rest) => (match i64::from_str(number) {
+                Ok(value) => Ok(value),
+                Err(_) => Err("Failed to parse Int from String"),
+            }, rest)
         }
     }
 }
@@ -321,11 +340,13 @@ impl TesslaDisplay for f64 {
     }
 }
 
-impl From<&str> for TesslaFloat {
-    fn from(s: &str) -> Self {
-        match f64::from_str(s) {
-            Ok(value) => Value(value),
-            Err(_) => Error("Failed to parse Float from String"),
+impl TesslaParse for f64 {
+    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
+        match s.split_at(find_num_boundary(s)) {
+            (number, rest) => (match f64::from_str(number) {
+                Ok(value) => Ok(value),
+                Err(_) => Err("Failed to parse Float from String"),
+            }, rest)
         }
     }
 }
@@ -401,9 +422,19 @@ impl TesslaDisplay for String {
     }
 }
 
-impl From<&str> for TesslaString {
-    fn from(s: &str) -> Self {
-        Value(process_string_input(s).to_string())
+impl TesslaParse for TesslaString {
+    fn tessla_parse(string: &str) -> (Result<Self, &'static str>, &str) {
+        let end = find_end(&string, "\"", 1);
+        (if &string[0..1] == "\"" && &string[end..(end + 1)] == "\"" {
+            Ok(Value(string[1..end]
+                .replace("\\\\n", "\n")
+                .replace("\\\\r", "\r")
+                .replace("\\\\t", "\t")
+                .replace("\\\\\"", "\"")
+                .replace("\\\\\\\\", "\\")))
+        } else {
+            Err("Failed to parse String value")
+        }, &string[(end + 1)..])
     }
 }
 
@@ -874,18 +905,22 @@ impl<T: Display> TesslaDisplay for Option<T> {
     }
 }
 
-impl<'a, T> From<&'a str> for TesslaOption<T> where T: From<&'a str> {
-    fn from(s: &'a str) -> Self {
-        match s {
-            "None" => Value(None),
-            _ if s.starts_with("Some(") => match s.split_once("Some(") {
-                Some(("", rest)) => match rest.rsplit_once(")") {
-                    Some((inner, "")) => Value(Some(T::from(inner))),
-                    _ => Error("Failed to parse Option from String"),
+impl<T: TesslaParse> TesslaParse for Option<TesslaValue<T>> {
+    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
+        match s.strip_prefix("None") {
+            Some(rest) => (Ok(None), rest.trim_start()),
+            None => match s.strip_prefix("Some(") {
+                Some(rest) => match T::tessla_parse(rest.trim_start()) {
+                    (inner, rest) => match rest.strip_prefix(")") {
+                        Some(rest) => match inner {
+                            Ok(value) => (Ok(Some(Value(value))), rest.trim_start()),
+                            Err(error) => (Ok(Some(Error(error))), rest.trim_start())
+                        }
+                        None => (Err("Failed to parse Option from String"), rest.trim_start())
+                    }
                 },
-                _ => Error("Failed to parse Option from String"),
+                None => (Err("Failed to parse Option from String"), s),
             },
-            _ => Error("Failed to parse Option from String"),
         }
     }
 }
@@ -928,6 +963,8 @@ impl<T: Clone> TesslaOption<TesslaValue<T>> {
     }
 }
 
+// Unit
+
 pub type TesslaUnit = TesslaValue<()>;
 
 impl TesslaDisplay for () {
@@ -937,11 +974,11 @@ impl TesslaDisplay for () {
     }
 }
 
-impl From<&str> for TesslaUnit {
-    fn from(s: &str) -> Self {
-        match s {
-            "()" => Value(()),
-            _ => Error("Failed to parse Unit from String"),
+impl TesslaParse for () {
+    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
+        match s.strip_prefix("()") {
+            Some(rest) => (Ok(()), rest.trim_start()),
+            None => (Err("Failed to parse Unit from String"), s)
         }
     }
 }
