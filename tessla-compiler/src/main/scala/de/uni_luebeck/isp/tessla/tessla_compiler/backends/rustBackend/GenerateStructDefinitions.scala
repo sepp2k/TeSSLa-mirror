@@ -77,7 +77,7 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
     typ: Type,
     structDefinitions: mutable.Map[Identifier, DefinitionExpression]
   ): Unit = typ match {
-    case RecordType(entries, _) =>
+    case RecordType(entries, _) if entries.nonEmpty =>
       // check if this type has already been added
       val structName = Identifier(RustUtils.getStructName(entries))
 

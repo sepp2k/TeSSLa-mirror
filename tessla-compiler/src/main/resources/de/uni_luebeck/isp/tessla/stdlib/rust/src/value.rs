@@ -62,7 +62,7 @@ impl<T: Clone> Clone for TesslaValue<T> {
     }
 }
 
-impl<T: Eq> PartialEq<Self> for TesslaValue<T> {
+impl<T: PartialEq> PartialEq<Self> for TesslaValue<T> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Error(error), _) | (_, Error(error)) => false,

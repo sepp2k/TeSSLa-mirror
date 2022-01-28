@@ -301,7 +301,13 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |${fields.map { case (name, _) => s"$name: self.$name.clone()" }.mkString(",\n")}
        |        }
        |    }
-       |}""".stripMargin
+       |}
+       |impl PartialEq for $structName {
+       |    fn eq(&self, other: &Self) -> bool {
+       |${fields.map { case (name, _) => s"PartialEq::eq(&self.$name, &other.$name)" }.mkString("\n&& ")}
+       |    }
+       |}
+       |""".stripMargin
     if (RustUtils.isStructTuple(fields.map { case (name, _) => name })) {
       structDef + generateTupleDisplay(structName, fields)
     } else {
