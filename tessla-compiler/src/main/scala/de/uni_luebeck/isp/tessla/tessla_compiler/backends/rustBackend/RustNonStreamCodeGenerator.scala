@@ -18,17 +18,8 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{Core, LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.{FunctionType => _, _}
-import de.uni_luebeck.isp.tessla.tessla_compiler.{
-  DefinitionOrdering,
-  Diagnostics,
-  ExtendedSpecification,
-  NonStreamCodeGeneratorInterface
-}
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
-  FinalDeclaration,
-  FinalLazyDeclaration,
-  VariableDeclaration
-}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Diagnostics, ExtendedSpecification, NonStreamCodeGeneratorInterface}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{FinalDeclaration, FinalLazyDeclaration, VariableDeclaration}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustUtils.convertType
 
 class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
@@ -416,41 +407,38 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           case _                               => s"${args(0)}.format(&${args(1)})"
         }
 
-      /* TODO https://docs.rs/im/15.0.0/im/
-      case "__Map_empty__" => "im::HashMap::new()"
-      case "__Map_add__" if typeHint.retType.isInstanceOf[MutableMapType] =>
-        s"${args(0)}.insert(${args(1)}, ${args(2)})"
-      case "__Map_add__"      => s"${args(0)} + ((${args(1)}) -> (${args(2)}))"
-      case "__Map_contains__" => s"${args(0)}.contains_key(${args(1)})"
-      case "__Map_get__"      => s"${args(0)}.get(${args(1)})"
-      case "__Map_remove__"   => s"${args(0)}.remove(${args(1)})"
-      case "__Map_size__"     => s"${args(0)}.len()"
-      case "__Map_fold__" =>
-        s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)}){case (c, (k, v)) => val f = ${args(2)}; f(c, k, v)}"
-      case "__Map_keys__" => s"Vec::from_iter(${args(0)}.keys())"
-       */
+
+      case "__Map_empty__" => "TesslaMap::Map_empty()"
+      //case "__Map_add__" if typeHint.retType.isInstanceOf[MutableMapType] => s"${args(0)}.insert(${args(1)}, ${args(2)})"
+      case "__Map_add__"      => s"${args(0)}.Map_add(${args(1)},${args(2)})"
+      case "__Map_contains__" => s"${args(0)}.Map_contains(${args(1)})"
+      case "__Map_get__"      => s"${args(0)}.Map_get(${args(1)})"
+      case "__Map_remove__"   => s"${args(0)}.Map_remove(${args(1)})"
+      case "__Map_size__"     => s"${args(0)}.Map_size()"
+      case "__Map_fold__" => s"${args(0)}.Map_fold(${args(1)},${args(2)})"
+      case "__Map_keys__" => s"${args(0)}.keys()"
+
       case "__Set_empty__"    => s"TesslaSet::Set_empty()"
       case "__Set_add__"      => s"${args(0)}.Set_add(${args(1)})"
       case "__Set_contains__" => s"${args(0)}.Set_contains(${args(1)})"
-      //case "__Set_remove__"       => s"${args(0)}.Set_remove(${args(1)})"
+      case "__Set_remove__"       => s"${args(0)}.Set_remove(${args(1)})"
       case "__Set_size__" => s"${args(0)}.Set_size()"
-      //case "__Set_union__"        => s"${args(0)}.Set_union(${args(1)})"
-      //case "__Set_intersection__" => s"${args(0)}.intersection(${args(1)})"
-      //case "__Set_minus__"        => s"${args(0)}.difference(${args(1)})"
-      //case "__Set_fold__"         => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
-      /*
-      case "__List_empty__"   => s"std::vec::Vec::new()"
-      case "__List_size__"    => s"${args(0)}.len()"
-      case "__List_append__"  => s"${args(0)}.append(${args(1)})"
-      case "__List_prepend__" => s"${args(0)}.insert(0, ${args(1)})"
-      case "__List_tail__"    => s"${args(0)}.split_off(1)"
-      case "__List_init__"    => s"${args(0)}.truncate(${args(0)}.len() - 1)"
-      case "__List_get__"     => s"${args(0)}[${args(1)} as usize]"
-      case "__List_set__" if typeHint.retType.isInstanceOf[MutableListType] =>
-        s"${args(0)}.insert(${args(1)} as usize, ${args(2)})"
-      case "__List_set__"  => s"${args(0)}.updated(${args(1)}.asInstanceOf[Int], ${args(2)})"
-      case "__List_fold__" => s"${args(0)}.foldLeft[${typeTranslation(typeHint.argsTypes(1))}](${args(1)})(${args(2)})"
-       */
+      case "__Set_union__"        => s"${args(0)}.Set_union(${args(1)})"
+      case "__Set_intersection__" => s"${args(0)}.Set_intersection(${args(1)})"
+      case "__Set_minus__"        => s"${args(0)}.difference(${args(1)})"
+      case "__Set_fold__"         => s"${args(0)}.Set_fold(${args(1)},${args(2)})"
+
+      case "__List_empty__"   => s"TesslaList::List_empty()"
+      case "__List_size__"    => s"${args(0)}.List_size()"
+      case "__List_append__"  => s"${args(0)}.List_append(${args(1)})"
+      case "__List_prepend__" => s"${args(0)}.List_prepend(0, ${args(1)})"
+      case "__List_tail__"    => s"${args(0)}.List_tail()"
+      case "__List_init__"    => s"${args(0)}.List_init()"
+      case "__List_get__"     => s"${args(0)}.List_get(${args(1)})"
+      //case "__List_set__" if typeHint.retType.isInstanceOf[MutableListType] => s"${args(0)}.insert(${args(1)} as usize, ${args(2)})"
+      case "__List_set__"  => s"${args(0)}.List_set(${args(1)}, ${args(2)})"
+      case "__List_fold__" => s"${args(0)}.List_fold(${args(1)},${args(2)})"
+
 
       case _ => throw Diagnostics.CommandNotSupportedError(s"Unsupported built-in function for Rust backend: $name")
     }
