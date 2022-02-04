@@ -1,12 +1,9 @@
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash};
 use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
-use std::str::FromStr;
 use im::HashSet;
 use im::HashMap;
 use im::Vector;
-
-use crate::{find_end, find_num_boundary};
 
 use TesslaValue::*;
 
@@ -142,6 +139,7 @@ impl Div for TesslaInt {
         }
     }
 }
+
 impl Div for TesslaFloat {
     type Output = Self;
 
@@ -169,6 +167,7 @@ impl Rem for TesslaInt {
         }
     }
 }
+
 impl Rem for TesslaFloat {
     type Output = Self;
 
@@ -216,18 +215,6 @@ impl TesslaDisplay for bool {
     #[inline]
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.fmt(f)
-    }
-}
-
-impl TesslaParse for bool {
-    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
-        match s.strip_prefix("true") {
-            Some(rest) => (Ok(true), rest.trim_start()),
-            None => match s.strip_prefix("false") {
-                Some(rest) => (Ok(false), rest.trim_start()),
-                None => (Err("Failed to parse Bool from String"), s)
-            }
-        }
     }
 }
 
@@ -302,17 +289,6 @@ impl TesslaDisplay for i64 {
     }
 }
 
-impl TesslaParse for i64 {
-    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
-        match s.split_at(find_num_boundary(s)) {
-            (number, rest) => (match i64::from_str(number) {
-                Ok(value) => Ok(value),
-                Err(_) => Err("Failed to parse Int from String"),
-            }, rest)
-        }
-    }
-}
-
 impl From<TesslaFloat> for TesslaInt {
     #[inline]
     fn from(value: TesslaFloat) -> Self {
@@ -336,17 +312,6 @@ impl TesslaDisplay for f64 {
             f.write_str("NaN")
         } else {
             write!(f, "{:?}", self)
-        }
-    }
-}
-
-impl TesslaParse for f64 {
-    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
-        match s.split_at(find_num_boundary(s)) {
-            (number, rest) => (match f64::from_str(number) {
-                Ok(value) => Ok(value),
-                Err(_) => Err("Failed to parse Float from String"),
-            }, rest)
         }
     }
 }
@@ -422,22 +387,6 @@ impl TesslaDisplay for String {
     }
 }
 
-impl TesslaParse for String {
-    fn tessla_parse(string: &str) -> (Result<Self, &'static str>, &str) {
-        let end = find_end(&string, "\"", 1);
-        (if &string[0..1] == "\"" && &string[end..(end + 1)] == "\"" {
-            Ok(string[1..end]
-                .replace("\\\\n", "\n")
-                .replace("\\\\r", "\r")
-                .replace("\\\\t", "\t")
-                .replace("\\\\\"", "\"")
-                .replace("\\\\\\\\", "\\"))
-        } else {
-            Err("Failed to parse String value")
-        }, &string[(end + 1)..])
-    }
-}
-
 impl<T: ToString> TesslaValue<T> {
     #[inline]
     pub fn to_string(&self) -> TesslaString {
@@ -448,446 +397,12 @@ impl<T: ToString> TesslaValue<T> {
     }
 }
 
-struct FormatSpec {
-    flag_left_justify: bool,      // '-'
-    flag_plus_sign: bool,         // '+', doesn't work for x, o
-    flag_pad_sign: bool,          // ' ', doesn't work with '+'
-    flag_alternate_form: bool,    // '#', doesn't work for d
-    flag_zero_pad: bool,          // '0'
-    flag_locale_separators: bool, // ',', not implemented
-    flag_enclose_negatives: bool, // '(', doesn't work for x, o
-
-    width: Option<usize>,
-    precision: Option<usize>,
-
-    uppercase: bool,
-    format_type: char,
-}
-
-fn parse_format_string(format_string: &String) -> Result<FormatSpec, &'static str> {
-    let mut spec = FormatSpec {
-        flag_left_justify: false,
-        flag_plus_sign: false,
-        flag_pad_sign: false,
-        flag_alternate_form: false,
-        flag_zero_pad: false,
-        flag_locale_separators: false,
-        flag_enclose_negatives: false,
-
-        width: None,
-        precision: None,
-
-        uppercase: false,
-        format_type: '?',
-    };
-
-    let format_chars: Vec<char> = format_string.chars().collect();
-
-    if format_chars[0] != '%' {
-        return Err("Format string does not start with %")
-    }
-
-    let mut i = 1;
-
-    // extract flags, each only allowed to occur once
-    loop {
-        match format_chars[i] {
-            '-' if !spec.flag_left_justify => spec.flag_left_justify = true,
-            '+' if !spec.flag_plus_sign => spec.flag_plus_sign = true,
-            ' ' if !spec.flag_pad_sign => spec.flag_pad_sign = true,
-            '#' if !spec.flag_alternate_form => spec.flag_alternate_form = true,
-            '0' if !spec.flag_zero_pad => spec.flag_zero_pad = true,
-            ',' if !spec.flag_locale_separators => spec.flag_locale_separators = true,
-            '(' if !spec.flag_enclose_negatives => spec.flag_enclose_negatives = true,
-            _ => break
-        }
-        i += 1;
-    }
-
-    // extract width, don't allow leading zeroes
-    if format_chars[i] != '0' && format_chars[i].is_ascii_digit() {
-        let j = i;
-
-        while format_chars[i].is_ascii_digit() {
-            i += 1;
-        }
-
-        match format_string[j..i].parse::<usize>() {
-            Ok(width) => spec.width = Some(width),
-            Err(_) => return Err("Failed to parse format width")
-        }
-    }
-
-    // extract precision
-    if format_chars[i] == '.' {
-        i += 1;
-        let j = i;
-
-        while format_chars[i].is_ascii_digit() {
-            i += 1;
-        }
-
-        match format_string[j..i].parse::<usize>() {
-            Ok(precision) => spec.precision = Some(precision),
-            Err(_) => return Err("Failed to parse format precision")
-        }
-    }
-
-    spec.format_type = format_chars[i];
-
-    if spec.format_type.is_ascii_uppercase() {
-        spec.uppercase = true;
-        spec.format_type = spec.format_type.to_ascii_lowercase()
-    }
-
-    if i + 1 == format_string.len() {
-        Ok(spec)
-    } else {
-        Err("Invalid format string")
-    }
-}
-
 impl TesslaString {
     pub fn concat(&self, other: &TesslaString) -> TesslaString {
         match (self, other) {
             (&Error(error), _) | (_, &Error(error)) => Error(error),
             (Value(lhs), Value(rhs)) => Value(lhs.to_owned() + rhs),
         }
-    }
-
-    #[inline]
-    pub fn format<T: Display>(&self, value: &TesslaValue<T>) -> TesslaString {
-        match (self, value) {
-            (&Error(error), _) | (_, &Error(error)) => Error(error),
-            (Value(format_string), Value(value)) => match parse_format_string(format_string) {
-                Err(error) => Error(error),
-                Ok(spec) => match spec.format_type {
-                    's' => format_to_type_s(spec, &value),
-                    _ => return Error("Invalid format type"),
-                }
-            }
-        }
-    }
-
-    pub fn format_int(&self, value: &TesslaInt) -> TesslaString {
-        match (self, value) {
-            (&Error(error), _) | (_, &Error(error)) => Error(error),
-            (Value(format_string), &Value(value)) => match parse_format_string(format_string) {
-                Err(error) => Error(error),
-                Ok(spec) => {
-                    if spec.precision.is_some() {
-                        return Error("Precision is not applicable for integers.");
-                    }
-                    if spec.flag_locale_separators {
-                        return Error("Locale-specific grouping separators are not yet supported.");
-                    }
-
-                    match spec.format_type {
-                        'd' => format_int_d(spec, value),
-                        'o' => format_int_o(spec, value),
-                        'x' => format_int_x(spec, value),
-                        _ => return Error("Invalid format specifier.")
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn format_float(&self, value: &TesslaFloat) -> TesslaString {
-
-        // FIXME: Technically we don't handle NaN / Infinity correctly, since rust prints them differently
-
-        // FIXME: alignment and '(' do not play well together
-
-        match (self, value) {
-            (&Error(error), _) | (_, &Error(error)) => Error(error),
-            (Value(format_string), &Value(value)) => match parse_format_string(format_string) {
-                Err(error) => Error(error),
-                Ok(spec) => match spec.format_type {
-                    's' => format_to_type_s(spec, &value),
-                    'e' => format_to_type_e(spec, value),
-                    'f' => format_to_type_f(spec, value),
-                    'g' => format_to_type_g(spec, value),
-                    'a' => format_to_type_a(spec, value),
-                    _ => return Error("Invalid format type for float value")
-                }
-            }
-        }
-    }
-}
-
-fn format_int_o(spec: FormatSpec, value: i64) -> TesslaString {
-    Value("Not implemented.".to_string())
-}
-
-fn format_int_x(spec: FormatSpec, value: i64) -> TesslaString {
-    Value("Not implemented.".to_string())
-}
-
-fn format_int_d(spec: FormatSpec, value: i64) -> TesslaString {
-    if spec.flag_alternate_form {
-        return Error("Alternative form can't be applied to decimal integers.");
-    }
-
-    let lj = spec.flag_left_justify;
-    let pl = spec.flag_plus_sign;
-    let pa = spec.flag_pad_sign;
-    let zp = spec.flag_zero_pad;
-
-    // This is bäh but anything else is worse
-    let formatted = if let Some(width) = spec.width {
-        if value < 0_i64 && spec.flag_enclose_negatives {
-            // Enclose negative numbers with () and remove the sign
-            match (lj, pl, pa, zp) {
-                (false, false, false, false) => format!("({0:>1$})", -1 * value, width),
-                (false, false, false, true) => format!("({0:0>1$})", -1 * value, width),
-                (false, false, true, false) => format!("({0:>1$})", -1 * value, width),
-                (false, false, true, true) => format!("({0:0>1$})", -1 * value, width),
-                (false, true, false, false) => format!("({0:+>1$})", -1 * value, width),
-                (false, true, false, true) => format!("({0:0>+1$})", -1 * value, width),
-                (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
-                (true, false, false, false) => format!("({0:<1$})", -1 * value, width),
-                (true, false, false, true) => format!("({0:0<1$})", -1 * value, width),
-                (true, false, true, false) => format!("({0:<1$})", -1 * value, width),
-                (true, false, true, true) => format!("({0:0<1$})", -1 * value, width),
-                (true, true, false, false) => format!("({0:+<1$})", -1 * value, width),
-                (true, true, false, true) => format!("({0:0<+1$})", -1 * value, width)
-            }
-        } else if value < 0_i64 {
-            match (lj, pl, pa, zp) {
-                (false, false, false, false) => format!("{0:>1$}", value, width),
-                (false, false, false, true) => format!("{0:0>1$}", value, width),
-                (false, false, true, false) => format!("{0:>1$}", value, width),
-                (false, false, true, true) => format!("{0:0>1$}", value, width),
-                (false, true, false, false) => format!("{0:+>1$}", value, width),
-                (false, true, false, true) => format!("{0:0>+1$}", value, width),
-                (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
-                (true, false, false, false) => format!("{0:<1$}", value, width),
-                (true, false, false, true) => format!("{0:0<1$}", value, width),
-                (true, false, true, false) => format!("{0:<1$}", value, width),
-                (true, false, true, true) => format!("{0:0<1$}", value, width),
-                (true, true, false, false) => format!("{0:+<1$}", value, width),
-                (true, true, false, true) => format!("{0:0<+1$}", value, width),
-            }
-        } else /* value >= 0 */ {
-            match (lj, pl, pa, zp) {
-                (false, false, false, false) => format!("{0:>1$}", value, width),
-                (false, false, false, true) => format!("{0:0>1$}", value, width),
-                (false, false, true, false) => format!(" {0:>1$}", value, width),
-                (false, false, true, true) => format!(" {0:0>1$}", value, width),
-                (false, true, false, false) => format!("{0:+>1$}", value, width),
-                (false, true, false, true) => format!("{0:0>+1$}", value, width),
-                (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
-                (true, _, _, _) => return Error("Can't format left justified without format width specified.")
-            }
-        }
-    } else /* spec.width is none */ {
-        if value < 0_i64 && spec.flag_enclose_negatives {
-            // Enclose negative numbers with () and remove the sign
-            match (lj, pl, pa, zp) {
-                (false, false, false, false) => format!("({0:>})", -1 * value),
-                (false, false, true, false) => format!("({0:>})", -1 * value),
-                (false, true, false, false) => format!("({0:+>})", -1 * value),
-                (_, _, _, true) => return Error("Can't pad with zeroes without format width specified."),
-                (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
-                (true, _, _, _) => return Error("Can't format left justified without format width specified.")
-            }
-        } else if value < 0_i64 {
-            match (lj, pl, pa, zp) {
-                (false, false, false, false) => format!("{0:>}", value),
-                (false, false, true, false) => format!("{0:>}", value),
-                (false, true, false, false) => format!("{0:+>}", value),
-                (_, _, _, true) => return Error("Can't pad with zeroes without format width specified."),
-                (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
-                (true, _, _, _) => return Error("Can't format left justified without format width specified.")
-            }
-        } else {
-            match (lj, pl, pa, zp) {
-                (false, false, false, false) => format!("{0:>}", value),
-                (false, false, true, false) => format!(" {0:>}", value),
-                (false, true, false, false) => format!("{0:+>}", value),
-                (_, _, _, true) => return Error("Can't pad with zeroes without format width specified."),
-                (_, true, true, _) => return Error("Sign and sign padding can't be applied at the same time."),
-                (true, _, _, _) => return Error("Can't format left justified without format width specified.")
-            }
-        }
-    };
-
-    if spec.uppercase {
-        Value(formatted.to_uppercase())
-    } else {
-        Value(formatted)
-    }
-}
-
-fn format_to_type_s<T: Display>(spec: FormatSpec, value: &T) -> TesslaString {
-    if spec.flag_alternate_form || spec.flag_plus_sign || spec.flag_pad_sign || spec.flag_zero_pad || spec.flag_locale_separators || spec.flag_enclose_negatives {
-        return Error("Invalid format flags specified for %s")
-    }
-
-    let formatted = match (spec.flag_left_justify, spec.width, spec.precision) {
-        (true, Some(width), Some(precision)) => format!("{0:<1$.2$}", value, width, precision),
-        (true, Some(width), None) => format!("{0:<1$}", value, width),
-        (true, None, _) => return Error("Failed to format left justify, no specified width"),
-        (false, Some(width), Some(precision)) => format!("{0:>1$.2$}", value, width, precision),
-        (false, Some(width), None) => format!("{0:>1$}", value, width),
-        (false, None, Some(precision)) => format!("{0:.1$}", value, precision),
-        (false, None, None) => format!("{}", value),
-    };
-
-    if spec.uppercase {
-        Value(formatted.to_uppercase())
-    } else {
-        Value(formatted)
-    }
-}
-
-fn format_to_type_e(spec: FormatSpec, value: f64) -> TesslaString {
-    if spec.flag_locale_separators {
-        return Error("Invalid format flag ',' specified for %e")
-    }
-    // alternate form (#) seems to be ignored by java for %e
-
-    let precision = spec.precision.unwrap_or(6);
-
-    let formatted = match (spec.flag_plus_sign, spec.flag_pad_sign, spec.flag_enclose_negatives,
-                           spec.width, spec.flag_left_justify, spec.flag_zero_pad) {
-        (true, true, _, _, _, _) => return Error("Invalid format flag combination ' +' for %e"),
-        (_, _, _, None, true, _) | (_, _, _, None, _, true) => return Error("Missing format width for %e"),
-
-        (_, true, _, None, false, _) if value >= 0_f64 => format!(" {0:.1$e}", value, precision),
-        (_, _, true, None, false, _) if value < 0_f64 => format!("({0:.1$e})", -value, precision),
-        (true, _, _, None, false, _) => format!("{0:+.1$e}", value, precision),
-        (_, _, _, None, false, _) => format!("{0:.1$e}", value, precision),
-
-        (_, true, _, Some(width), _, true) if value >= 0_f64 => format!(" {0:01$.2$e}", value, width, precision),
-        (_, _, true, Some(width), _, true) if value < 0_f64 => format!("({0:01$.2$e})", -value, width, precision),
-        (true, _, _, Some(width), _, true) => format!("{0:+01$.2$e}", value, width, precision),
-        (_, _, _, Some(width), _, true) => format!("{0:01$.2$e}", value, width, precision),
-
-        (_, true, _, Some(width), true, false) if value >= 0_f64 => format!(" {0:<1$.2$e}", value, width, precision),
-        (_, _, true, Some(width), true, false) if value < 0_f64 => format!("({0:<1$.2$e})", -value, width, precision),
-        (true, _, _, Some(width), true, false) => format!("{0:+<1$.2$e}", value, width, precision),
-        (_, _, _, Some(width), true, false) => format!("{0:<1$.2$e}", value, width, precision),
-
-        (_, true, _, Some(width), false, false) if value >= 0_f64 => format!(" {0:>1$.2$e}", value, width, precision),
-        (_, _, true, Some(width), false, false) if value < 0_f64 => format!("({0:>1$.2$e})", -value, width, precision),
-        (true, _, _, Some(width), false, false) => format!("{0:+>1$.2$e}", value, width, precision),
-        (_, _, _, Some(width), false, false) => format!("{0:>1$.2$e}", value, width, precision),
-    };
-
-    match formatted.rsplit_once('e') {
-        None => return Error("Failed to format float with %e"),
-        Some((value, exp)) => match (i64::from_str(exp), spec.uppercase) {
-            (Err(_), _) => Error("Failed to parse exponent while formatting %e"),
-            (Ok(exp), true) => Value(format!("{}E{:+03}", value, exp)),
-            (Ok(exp), false) => Value(format!("{}e{:+03}", value, exp)),
-        },
-    }
-}
-
-fn format_to_type_f(spec: FormatSpec, value: f64) -> TesslaString {
-    if spec.uppercase {
-        return Error("Invalid format type %F")
-    }
-    // alternate form (#) seems to be ignored by java for %f
-
-    let precision = spec.precision.unwrap_or(6);
-
-    // FIXME: support locale separators (,): https://crates.io/crates/num-format
-
-    let formatted = match (spec.flag_plus_sign, spec.flag_pad_sign, spec.flag_enclose_negatives,
-                           spec.width, spec.flag_left_justify, spec.flag_zero_pad) {
-        (true, true, _, _, _, _) => return Error("Invalid format flag combination ' +' for %f"),
-
-        (_, true, _, None, _, _) if value >= 0_f64 => format!(" {0:.1$}", value, precision),
-        (_, _, true, None, _, _) if value < 0_f64 => format!("({0:.1$})", -value, precision),
-        (true, _, _, None, _, _) => format!("{0:+.1$}", value, precision),
-        (_, _, _, None, _, _) => format!("{0:.1$}", value, precision),
-
-        (_, true, _, Some(width), _, true) if value >= 0_f64 => format!(" {0:01$.2$}", value, width, precision),
-        (_, _, true, Some(width), _, true) if value < 0_f64 => format!("({0:01$.2$})", -value, width, precision),
-        (true, _, _, Some(width), _, true) => format!("{0:+01$.2$}", value, width, precision),
-        (_, _, _, Some(width), _, true) => format!("{0:01$.2$}", value, width, precision),
-
-        (_, true, _, Some(width), true, false) if value >= 0_f64 => format!(" {0:<1$.2$}", value, width, precision),
-        (_, _, true, Some(width), true, false) if value < 0_f64 => format!("({0:<1$.2$})", -value, width, precision),
-        (true, _, _, Some(width), true, false) => format!("{0:+<1$.2$}", value, width, precision),
-        (_, _, _, Some(width), true, false) => format!("{0:<1$.2$}", value, width, precision),
-
-        (_, true, _, Some(width), false, false) if value >= 0_f64 => format!(" {0:>1$.2$}", value, width, precision),
-        (_, _, true, Some(width), false, false) if value < 0_f64 => format!("({0:>1$.2$})", -value, width, precision),
-        (true, _, _, Some(width), false, false) => format!("{0:+>1$.2$}", value, width, precision),
-        (_, _, _, Some(width), false, false) => format!("{0:>1$.2$}", value, width, precision),
-    };
-
-    Value(formatted)
-}
-
-fn format_to_type_g(spec: FormatSpec, value: f64) -> TesslaString {
-    if spec.flag_alternate_form {
-        return Error("Invalid format flag '#' specified for %g")
-    }
-
-    let mut modified_spec = FormatSpec { ..spec };
-    if spec.precision.is_none() {
-        modified_spec.precision = Some(6);
-    } else if spec.precision.unwrap() == 0 {
-        modified_spec.precision = Some(1);
-    }
-
-    let precision = match i32::try_from(modified_spec.precision.unwrap()) {
-        Err(_) => return Error("Failed to cast precision to i32 without overflow"),
-        Ok(value) => value
-    };
-    if 10e-4_f64 <= value && value < 10_f64.powi(precision) {
-        format_to_type_f(modified_spec, value)
-    } else {
-        format_to_type_e(modified_spec, value)
-    }
-}
-
-fn format_to_type_a(spec: FormatSpec, value: f64) -> TesslaString {
-    if spec.flag_locale_separators || spec.flag_enclose_negatives {
-        return Error("Invalid format flags specified for %a");
-    }
-
-    let formatted = if value == f64::NAN {
-        "NaN".to_string()
-    } else if value == f64::INFINITY {
-        "Infinity".to_string()
-    } else {
-        // Extract float features, dec2flt/float.rs
-        let bits = value.to_bits();
-        let sign: i8 = if bits >> 63 == 0 { 1 } else { -1 };
-        let mut exponent: i16 = ((bits >> 52) & 0x7ff) as i16;
-        let mantissa = if exponent == 0 {
-            (bits & 0xfffffffffffff) << 1
-        } else {
-            (bits & 0xfffffffffffff) | 0x10000000000000
-        };
-        // Exponent bias + mantissa shift
-        exponent -= 1023 + 52;
-
-        if value.is_normal() {
-            if sign > 0 {
-                format!("0x1.{:x}p{:x}", mantissa, exponent)
-            } else {
-                format!("-0x1.{:x}p{:x}", mantissa, exponent)
-            }
-        } else {
-            if sign > 0 {
-                format!("0x0.{:x}p{:x}", mantissa, exponent)
-            } else {
-                format!("-0x0.{:x}p{:x}", mantissa, exponent)
-            }
-        }
-    };
-
-    if spec.uppercase {
-        Value(formatted.to_uppercase())
-    } else {
-        Value(formatted)
     }
 }
 
@@ -901,26 +416,6 @@ impl<T: Display> TesslaDisplay for Option<T> {
         match self {
             Some(value) => write!(f, "Some({})", value),
             None => f.write_str("None"),
-        }
-    }
-}
-
-impl<T: TesslaParse> TesslaParse for Option<TesslaValue<T>> {
-    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
-        match s.strip_prefix("None") {
-            Some(rest) => (Ok(None), rest.trim_start()),
-            None => match s.strip_prefix("Some(") {
-                Some(rest) => match T::tessla_parse(rest.trim_start()) {
-                    (inner, rest) => match rest.strip_prefix(")") {
-                        Some(rest) => match inner {
-                            Ok(value) => (Ok(Some(Value(value))), rest.trim_start()),
-                            Err(error) => (Ok(Some(Error(error))), rest.trim_start())
-                        }
-                        None => (Err("Failed to parse Option from String"), rest.trim_start())
-                    }
-                },
-                None => (Err("Failed to parse Option from String"), s),
-            },
         }
     }
 }
@@ -974,15 +469,7 @@ impl TesslaDisplay for () {
     }
 }
 
-impl TesslaParse for () {
-    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
-        match s.strip_prefix("()") {
-            Some(rest) => (Ok(()), rest.trim_start()),
-            None => (Err("Failed to parse Unit from String"), s)
-        }
-    }
-}
-
+// Set
 
 pub type TesslaSet<T> = TesslaValue<HashSet<T>>;
 
@@ -999,44 +486,6 @@ impl<T: Display> TesslaDisplay for HashSet<T> {
             write!(f, "{}", item)?;
         }
         f.write_str(")")
-    }
-}
-
-fn parse_set_inner<'a, T: TesslaParse + Clone + Eq + Hash>(set: &mut HashSet<TesslaValue<T>>, string: &'a str) -> Result<&'a str, &'static str> {
-    match T::tessla_parse(string) {
-        (Ok(elem), rest) => {
-            set.insert(Value(elem));
-            Ok(rest)
-        },
-        (Err(error), _) => Err(error)
-    }
-}
-
-impl<T: TesslaParse + Clone + Eq + Hash> TesslaParse for HashSet<TesslaValue<T>> {
-    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) where Self: Sized {
-        match s.strip_prefix("Set(") {
-            Some(rest) => {
-                let mut set = HashSet::new();
-                let mut inner = rest.trim_start();
-                loop {
-                    match parse_set_inner(&mut set, inner) {
-                        Ok(rest) => match rest.trim_start().strip_prefix(",") {
-                            Some(next) => inner = next.trim_start(),
-                            None => {
-                                inner = rest.trim_start();
-                                break
-                            }
-                        },
-                        Err(error) => return (Err(error), inner)
-                    }
-                }
-                match inner.strip_prefix(")") {
-                    Some(rest) => (Ok(set), rest.trim_start()),
-                    None => (Err("Failed to parse Set from String"), rest.trim_start())
-                }
-            },
-            None => (Err("Failed to parse Set from String"), s),
-        }
     }
 }
 
@@ -1168,50 +617,6 @@ impl<T: Display + Hash + Eq, U: Display> TesslaDisplay for HashMap<T,U> {
     }
 }
 
-fn parse_map_inner<'a, T: TesslaParse + Clone + Eq + Hash, U: TesslaParse + Clone>(map: &mut HashMap<TesslaValue<T>, TesslaValue<U>>, string: &'a str) -> Result<&'a str, &'static str> {
-    match T::tessla_parse(string) {
-        (Ok(key), rest) => match rest.trim_start().strip_prefix("->") {
-            Some(rest) => match U::tessla_parse(rest.trim_start()) {
-                (Ok(value), rest) => {
-                    map.insert(Value(key), Value(value));
-                    Ok(rest.trim_start())
-                },
-                (Err(error), _) => Err(error)
-            }
-            None => Err("Failed to parse Map from String")
-        },
-        (Err(error), _) => Err(error)
-    }
-}
-
-impl<T: TesslaParse + Clone + Eq + Hash, U: TesslaParse + Clone> TesslaParse for HashMap<TesslaValue<T>, TesslaValue<U>> {
-    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) where Self: Sized {
-        match s.strip_prefix("Map(") {
-            Some(rest) => {
-                let mut map = HashMap::new();
-                let mut inner = rest.trim_start();
-                loop {
-                    match parse_map_inner(&mut map, inner) {
-                        Ok(rest) => match rest.trim_start().strip_prefix(",") {
-                            Some(next) => inner = next.trim_start(),
-                            None => {
-                                inner = rest.trim_start();
-                                break
-                            }
-                        },
-                        Err(error) => return (Err(error), inner)
-                    }
-                }
-                match inner.strip_prefix(")") {
-                    Some(rest) => (Ok(map), rest.trim_start()),
-                    None => (Err("Failed to parse Map from String"), rest.trim_start())
-                }
-            },
-            None => (Err("Failed to parse Map from String"), s),
-        }
-    }
-}
-
 impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaValue<U>>{
     #[inline]
     pub fn Map_add(&self , key: TesslaValue<T>, item: TesslaValue<U>) -> TesslaMap<TesslaValue<T>,TesslaValue<U>>{
@@ -1313,44 +718,6 @@ impl<T: Display + Clone> TesslaDisplay for Vector<T> {
             write!(f, "{}", item)?;
         }
         f.write_str(")")
-    }
-}
-
-fn parse_list_inner<'a, T: TesslaParse + Clone>(list: &mut Vector<TesslaValue<T>>, string: &'a str) -> Result<&'a str, &'static str> {
-    match T::tessla_parse(string) {
-        (Ok(elem), rest) => {
-            list.push_back(Value(elem));
-            Ok(rest)
-        },
-        (Err(error), _) => Err(error)
-    }
-}
-
-impl<T: TesslaParse + Clone> TesslaParse for Vector<TesslaValue<T>> {
-    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) where Self: Sized {
-        match s.strip_prefix("List(") {
-            Some(rest) => {
-                let mut list = Vector::new();
-                let mut inner = rest.trim_start();
-                loop {
-                    match parse_list_inner(&mut list, inner) {
-                        Ok(rest) => match rest.trim_start().strip_prefix(",") {
-                            Some(next) => inner = next.trim_start(),
-                            None => {
-                                inner = rest.trim_start();
-                                break
-                            }
-                        },
-                        Err(error) => return (Err(error), inner)
-                    }
-                }
-                match inner.strip_prefix(")") {
-                    Some(rest) => (Ok(list), rest.trim_start()),
-                    None => (Err("Failed to parse List from String"), rest.trim_start())
-                }
-            },
-            None => (Err("Failed to parse List from String"), s),
-        }
     }
 }
 

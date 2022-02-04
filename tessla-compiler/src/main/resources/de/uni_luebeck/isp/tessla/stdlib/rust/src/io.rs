@@ -2,35 +2,6 @@ use std::fmt::Display;
 use std::io::stdin;
 use std::str::FromStr;
 
-pub fn find_end(string: &str, delim: &str, start: usize) -> usize {
-    if (start + delim.len()) <= string.len() && delim == &string[start..(start + delim.len())] {
-        start
-    } else if start >= (string.len() - 1) {
-        string.len()
-    } else {
-        find_end(&string, delim, match &string[start..(start + 1)] {
-            "(" if delim != "\""  => find_end(&string, ")", start + 1) + 1,
-            "{" if delim != "\""  => find_end(&string, "}", start + 1) + 1,
-            "\""                  => find_end(&string, "\"", start + 1) + 1,
-            "\\" if delim == "\"" => start + 2,
-            _                     => start + 1
-        })
-    }
-}
-
-pub fn find_num_boundary(s: &str) -> usize {
-    let mut boundary = 0_usize;
-    for char in s.chars() {
-        match char {
-            '+' | '-' | '.' => {},
-            _ if char.is_alphanumeric() => {},
-            _ => break
-        }
-        boundary += 1;
-    }
-    boundary
-}
-
 pub fn output_var<T: Display>(output: T, true_name: &str, ts: i64, raw: bool) {
     if raw {
         println!("{}", output);

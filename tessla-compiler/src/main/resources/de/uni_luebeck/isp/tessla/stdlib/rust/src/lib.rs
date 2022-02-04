@@ -1,4 +1,5 @@
 mod io;
+mod parse;
 mod stream;
 mod value;
 
