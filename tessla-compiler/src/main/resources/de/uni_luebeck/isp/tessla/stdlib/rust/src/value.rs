@@ -1000,6 +1000,43 @@ impl<T: Display> TesslaDisplay for HashSet<T> {
     }
 }
 
+fn parse_set_inner<'a, T: TesslaParse + Clone + Eq + Hash>(set: &mut HashSet<TesslaValue<T>>, string: &'a str) -> Result<&'a str, &'static str> {
+    match T::tessla_parse(string) {
+        (Ok(elem), rest) => {
+            set.insert(Value(elem));
+            Ok(rest)
+        },
+        (Err(error), _) => Err(error)
+    }
+}
+
+impl<T: TesslaParse + Clone + Eq + Hash> TesslaParse for HashSet<TesslaValue<T>> {
+    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) where Self: Sized {
+        match s.strip_prefix("Set(") {
+            Some(rest) => {
+                let mut set = HashSet::new();
+                let mut inner = rest.trim_start();
+                loop {
+                    match parse_set_inner(&mut set, inner) {
+                        Ok(rest) => match rest.trim_start().strip_prefix(",") {
+                            Some(next) => inner = next.trim_start(),
+                            None => {
+                                inner = rest.trim_start();
+                                break
+                            }
+                        },
+                        Err(error) => return (Err(error), inner)
+                    }
+                }
+                match inner.strip_prefix(")") {
+                    Some(rest) => (Ok(set), rest.trim_start()),
+                    None => (Err("Failed to parse Set from String"), rest.trim_start())
+                }
+            },
+            None => (Err("Failed to parse Set from String"), s),
+        }
+    }
+}
 
 impl<T> TesslaSet<T>{
 
@@ -1115,6 +1152,7 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     }
 }
 
+// Map
 
 pub type TesslaMap<T,U> = TesslaValue<HashMap<T,U>>;
 
@@ -1128,6 +1166,50 @@ impl<T: Display + Hash + Eq, U: Display> TesslaDisplay for HashMap<T,U> {
             f.write_str(&*("Map(".to_owned() + out.split_at(out.len()-2).0 + ")"))
         } else {
             f.write_str("Map()")
+        }
+    }
+}
+
+fn parse_map_inner<'a, T: TesslaParse + Clone + Eq + Hash, U: TesslaParse + Clone>(map: &mut HashMap<TesslaValue<T>, TesslaValue<U>>, string: &'a str) -> Result<&'a str, &'static str> {
+    match T::tessla_parse(string) {
+        (Ok(key), rest) => match rest.trim_start().strip_prefix("->") {
+            Some(rest) => match U::tessla_parse(rest.trim_start()) {
+                (Ok(value), rest) => {
+                    map.insert(Value(key), Value(value));
+                    Ok(rest.trim_start())
+                },
+                (Err(error), _) => Err(error)
+            }
+            None => Err("Failed to parse Map from String")
+        },
+        (Err(error), _) => Err(error)
+    }
+}
+
+impl<T: TesslaParse + Clone + Eq + Hash, U: TesslaParse + Clone> TesslaParse for HashMap<TesslaValue<T>, TesslaValue<U>> {
+    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) where Self: Sized {
+        match s.strip_prefix("Map(") {
+            Some(rest) => {
+                let mut map = HashMap::new();
+                let mut inner = rest.trim_start();
+                loop {
+                    match parse_map_inner(&mut map, inner) {
+                        Ok(rest) => match rest.trim_start().strip_prefix(",") {
+                            Some(next) => inner = next.trim_start(),
+                            None => {
+                                inner = rest.trim_start();
+                                break
+                            }
+                        },
+                        Err(error) => return (Err(error), inner)
+                    }
+                }
+                match inner.strip_prefix(")") {
+                    Some(rest) => (Ok(map), rest.trim_start()),
+                    None => (Err("Failed to parse Map from String"), rest.trim_start())
+                }
+            },
+            None => (Err("Failed to parse Map from String"), s),
         }
     }
 }
@@ -1237,8 +1319,45 @@ impl<T: Display + Clone> TesslaDisplay for Vector<T> {
     }
 }
 
-impl<T: Clone + Eq + Hash> TesslaList<TesslaValue<T>>{
+fn parse_list_inner<'a, T: TesslaParse + Clone>(list: &mut Vector<TesslaValue<T>>, string: &'a str) -> Result<&'a str, &'static str> {
+    match T::tessla_parse(string) {
+        (Ok(elem), rest) => {
+            list.push_back(Value(elem));
+            Ok(rest)
+        },
+        (Err(error), _) => Err(error)
+    }
+}
 
+impl<T: TesslaParse + Clone> TesslaParse for Vector<TesslaValue<T>> {
+    fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) where Self: Sized {
+        match s.strip_prefix("List(") {
+            Some(rest) => {
+                let mut list = Vector::new();
+                let mut inner = rest.trim_start();
+                loop {
+                    match parse_list_inner(&mut list, inner) {
+                        Ok(rest) => match rest.trim_start().strip_prefix(",") {
+                            Some(next) => inner = next.trim_start(),
+                            None => {
+                                inner = rest.trim_start();
+                                break
+                            }
+                        },
+                        Err(error) => return (Err(error), inner)
+                    }
+                }
+                match inner.strip_prefix(")") {
+                    Some(rest) => (Ok(list), rest.trim_start()),
+                    None => (Err("Failed to parse List from String"), rest.trim_start())
+                }
+            },
+            None => (Err("Failed to parse List from String"), s),
+        }
+    }
+}
+
+impl<T: Clone> TesslaList<TesslaValue<T>>{
     #[inline]
     pub fn List_append(&self , elem: TesslaValue<T>) -> TesslaList<TesslaValue<T>>{
         match self{

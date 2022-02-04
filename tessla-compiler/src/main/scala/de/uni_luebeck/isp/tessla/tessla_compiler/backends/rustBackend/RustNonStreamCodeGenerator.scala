@@ -18,8 +18,17 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{Core, LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.{FunctionType => _, _}
-import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Diagnostics, ExtendedSpecification, NonStreamCodeGeneratorInterface}
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{FinalDeclaration, FinalLazyDeclaration, VariableDeclaration}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{
+  DefinitionOrdering,
+  Diagnostics,
+  ExtendedSpecification,
+  NonStreamCodeGeneratorInterface
+}
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
+  FinalDeclaration,
+  FinalLazyDeclaration,
+  VariableDeclaration
+}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustUtils.convertType
 
 class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
@@ -283,7 +292,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   def translateStructDefinition(structName: String, fields: Seq[(String, Type)]): String = {
     val genericTypes = RustUtils.getGenericTypeNames(fields.map { case (_, typ) => typ })
     val genericAnnotation = if (genericTypes.nonEmpty) s"<${genericTypes.mkString(", ")}>" else ""
-    val structDef = s"""struct $structName$genericAnnotation {
+    val structDef = s"""#[derive(Eq, Hash)]
+       |struct $structName$genericAnnotation {
        |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
        |}
        |impl Clone for $structName {
@@ -407,7 +417,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           case _                               => s"${args(0)}.format(&${args(1)})"
         }
 
-
       case "__Map_empty__" => "TesslaMap::Map_empty()"
       //case "__Map_add__" if typeHint.retType.isInstanceOf[MutableMapType] => s"${args(0)}.insert(${args(1)}, ${args(2)})"
       case "__Map_add__"      => s"${args(0)}.Map_add(${args(1)},${args(2)})"
@@ -415,14 +424,14 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__Map_get__"      => s"${args(0)}.Map_get(${args(1)})"
       case "__Map_remove__"   => s"${args(0)}.Map_remove(${args(1)})"
       case "__Map_size__"     => s"${args(0)}.Map_size()"
-      case "__Map_fold__" => s"${args(0)}.Map_fold(${args(1)},${args(2)})"
-      case "__Map_keys__" => s"${args(0)}.keys()"
+      case "__Map_fold__"     => s"${args(0)}.Map_fold(${args(1)},${args(2)})"
+      case "__Map_keys__"     => s"${args(0)}.keys()"
 
-      case "__Set_empty__"    => s"TesslaSet::Set_empty()"
-      case "__Set_add__"      => s"${args(0)}.Set_add(${args(1)})"
-      case "__Set_contains__" => s"${args(0)}.Set_contains(${args(1)})"
+      case "__Set_empty__"        => s"TesslaSet::Set_empty()"
+      case "__Set_add__"          => s"${args(0)}.Set_add(${args(1)})"
+      case "__Set_contains__"     => s"${args(0)}.Set_contains(${args(1)})"
       case "__Set_remove__"       => s"${args(0)}.Set_remove(${args(1)})"
-      case "__Set_size__" => s"${args(0)}.Set_size()"
+      case "__Set_size__"         => s"${args(0)}.Set_size()"
       case "__Set_union__"        => s"${args(0)}.Set_union(${args(1)})"
       case "__Set_intersection__" => s"${args(0)}.Set_intersection(${args(1)})"
       case "__Set_minus__"        => s"${args(0)}.difference(${args(1)})"
@@ -438,7 +447,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       //case "__List_set__" if typeHint.retType.isInstanceOf[MutableListType] => s"${args(0)}.insert(${args(1)} as usize, ${args(2)})"
       case "__List_set__"  => s"${args(0)}.List_set(${args(1)}, ${args(2)})"
       case "__List_fold__" => s"${args(0)}.List_fold(${args(1)},${args(2)})"
-
 
       case _ => throw Diagnostics.CommandNotSupportedError(s"Unsupported built-in function for Rust backend: $name")
     }
