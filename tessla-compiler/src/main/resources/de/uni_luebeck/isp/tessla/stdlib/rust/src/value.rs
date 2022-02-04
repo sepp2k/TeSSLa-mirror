@@ -988,15 +988,17 @@ pub type TesslaSet<T> = TesslaValue<HashSet<T>>;
 
 impl<T: Display> TesslaDisplay for HashSet<T> {
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut out: String = String::from("");
+        f.write_str("Set(")?;
+        let mut start = true;
         for item in self.iter() {
-            out.push_str(&*(item.to_string() + ", "));
+            if start {
+                start = false;
+            } else {
+                f.write_str(", ")?;
+            }
+            write!(f, "{}", item)?;
         }
-        return if self.len() > 0 {
-            f.write_str(&*("Set(".to_owned() + out.split_at(out.len()-2).0 + ")"))
-        } else {
-            f.write_str("Set()")
-        }
+        f.write_str(")")
     }
 }
 
@@ -1039,14 +1041,11 @@ impl<T: TesslaParse + Clone + Eq + Hash> TesslaParse for HashSet<TesslaValue<T>>
 }
 
 impl<T> TesslaSet<T>{
-
     #[inline]
     pub fn Set_empty() -> TesslaSet<TesslaValue<T>> {
         Value(HashSet::<TesslaValue<T>>::new())
     }
 }
-
-
 
 impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     #[inline]
@@ -1069,9 +1068,6 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
             Value(value) => return Value(value.contains(&item)),
         }
     }
-
-
-
 
     #[inline]
     pub fn Set_intersection(&self, set2: TesslaSet<TesslaValue<T>>) -> TesslaSet<TesslaValue<T>>{
@@ -1158,15 +1154,17 @@ pub type TesslaMap<T,U> = TesslaValue<HashMap<T,U>>;
 
 impl<T: Display + Hash + Eq, U: Display> TesslaDisplay for HashMap<T,U> {
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut out: String = String::from("");
-        for item in self.keys() {
-            out.push_str(&*(item.to_string() + " -> " + &*self.get(item).unwrap().to_string() + ", "));
+        f.write_str("Map(")?;
+        let mut start = true;
+        for item in self.iter() {
+            if start {
+                start = false;
+            } else {
+                f.write_str(", ")?;
+            }
+            write!(f, "{} -> {}", item.0, item.1)?;
         }
-        return if self.len() > 0 {
-            f.write_str(&*("Map(".to_owned() + out.split_at(out.len()-2).0 + ")"))
-        } else {
-            f.write_str("Map()")
-        }
+        f.write_str(")")
     }
 }
 
@@ -1215,7 +1213,6 @@ impl<T: TesslaParse + Clone + Eq + Hash, U: TesslaParse + Clone> TesslaParse for
 }
 
 impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaValue<U>>{
-
     #[inline]
     pub fn Map_add(&self , key: TesslaValue<T>, item: TesslaValue<U>) -> TesslaMap<TesslaValue<T>,TesslaValue<U>>{
         match self{
@@ -1264,7 +1261,6 @@ impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaV
         }
     }
 
-
     #[inline]
     pub fn keys(&self) -> TesslaList<TesslaValue<T>>{
         match self {
@@ -1278,8 +1274,6 @@ impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaV
             }
         }
     }
-
-
 
     #[inline]
     pub fn Map_remove(&self, key: TesslaValue<T>) -> TesslaMap<TesslaValue<T>,TesslaValue<U>>{
@@ -1302,20 +1296,23 @@ impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaV
     }
 }
 
+// List
 
 pub type TesslaList<T> = TesslaValue<Vector<T>>;
 
 impl<T: Display + Clone> TesslaDisplay for Vector<T> {
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut out: String = String::from("");
+        f.write_str("List(")?;
+        let mut start = true;
         for item in self.iter() {
-            out.push_str(&*(item.to_string() + ", "));
+            if start {
+                start = false;
+            } else {
+                f.write_str(", ")?;
+            }
+            write!(f, "{}", item)?;
         }
-        return if self.len() > 0 {
-            f.write_str(&*("List(".to_owned() + out.split_at(out.len()-2).0 + ")"))
-        } else {
-            f.write_str("List()")
-        }
+        f.write_str(")")
     }
 }
 
