@@ -361,6 +361,11 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       // TODO some brackets here are superfluous and will produce warnings
 
       case "__[rust]box__" => s"Box::new(move ${args(0)})"
+      case "__[rust]format__" =>
+        s"match ${args(1)} { " +
+        s"Value(val) => Value(format!(${args(0).substring(6, args(0).length - 13)}, val)), " +
+          s"Error(err) => Error(err) " +
+        s"}"
 
       case "__ite__" | "__staticite__" =>
         s"match ${args(0)} { Value(true) => { ${args(1)} }, Value(false) => { ${args(2)} }, Error(error) => Error(error) }"

@@ -181,11 +181,11 @@ object Main {
             .compile(config.specSource, config.compilerOptions)
             .andThen(config.targetLanguage match {
               case "rust" =>
-                (new ExtractAndWrapFunctions
+                (FormatStringMangler
+                  andThen new ExtractAndWrapFunctions
                   andThen GenerateStructDefinitions
                   andThen UsageAnalysis
                   andThen InliningAnalysis
-                  andThen FormatStringMangler
                   andThen new TesslaCoreToRust(config.ioInterface)) // , config.additionalSource
               case "scala" =>
                 (UsageAnalysis

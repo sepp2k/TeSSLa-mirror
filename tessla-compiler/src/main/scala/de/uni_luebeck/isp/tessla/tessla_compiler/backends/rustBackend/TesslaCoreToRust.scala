@@ -34,19 +34,13 @@ import scala.io.Source
  * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
  */
 class TesslaCoreToRust(ioInterface: Boolean)
-    extends TranslationPhase[(ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String]), String] {
+    extends TranslationPhase[ExtendedSpecification, String] {
   private val sourceTemplate: String = "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs"
 
-  override def translate(
-    extSpec: (ExtendedSpecification, util.ArrayList[String], mutable.HashMap[String, String])
-  ): Result[String] =
-    new Translator(extSpec._1, extSpec._2, extSpec._3).translate()
+  override def translate(extSpec: ExtendedSpecification): Result[String] =
+    new Translator(extSpec).translate()
 
-  class Translator(
-    extSpec: ExtendedSpecification,
-    removedStreams: util.ArrayList[String],
-    formatStrings: mutable.HashMap[String, String]
-  ) extends TranslationPhase.Translator[String] {
+  class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[String] {
 
     val rustNonStreamCodeGenerator = new RustNonStreamCodeGenerator(extSpec)
     val rustStreamCodeGenerator = new RustStreamCodeGenerator(rustNonStreamCodeGenerator)
@@ -104,8 +98,6 @@ class TesslaCoreToRust(ioInterface: Boolean)
           )
 
         case (id, definition) =>
-          // Skip streams that were removed by the FormatStringMangler
-          if (!removedStreams.contains(id.fullName)) {
             definition.tpe match {
               case InstantiatedType("Events", _, _) =>
                 rustStreamCodeGenerator
@@ -116,7 +108,6 @@ class TesslaCoreToRust(ioInterface: Boolean)
               case _ =>
                 srcSegments.lazyStatic.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
             }
-          }
       }
 
       // Produce input consumption
