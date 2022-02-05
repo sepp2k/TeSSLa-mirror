@@ -68,7 +68,6 @@ impl<T: PartialEq> PartialEq<Self> for TesslaValue<T> {
     }
 }
 
-
 pub trait TesslaDisplay {
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result;
 }
@@ -667,15 +666,15 @@ impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaV
     }
 
     #[inline]
-    pub fn keys(&self) -> TesslaList<TesslaValue<T>>{
+    pub fn keys(&self) -> TesslaList<TesslaValue<T>> {
         match self {
             Error(error) => Error(error),
             Value(value) => {
-                let out: TesslaList<TesslaValue<T>> = TesslaList::List_empty();
+                let mut out: Vector<TesslaValue<T>> = Vector::new();
                 for item in value.keys(){
-                    out.List_append(item.clone());
+                    out.push_back(item.clone());
                 }
-                return out;
+                return Value(out);
             }
         }
     }
