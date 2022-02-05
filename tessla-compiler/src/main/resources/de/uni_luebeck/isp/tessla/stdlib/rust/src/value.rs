@@ -298,6 +298,16 @@ impl From<TesslaFloat> for TesslaInt {
     }
 }
 
+impl TesslaInt {
+    #[inline]
+    pub fn abs(&self) -> Self {
+        match value {
+            Error(error) => Error(error),
+            Value(value) => Value(value.abs())
+        }
+    }
+}
+
 // 5.4 Float
 
 pub type TesslaFloat = TesslaValue<f64>;
@@ -371,6 +381,14 @@ impl TesslaFloat {
         match self {
             &Error(error) => Error(error),
             Value(value) => Value(value.atan()),
+        }
+    }
+
+    #[inline]
+    pub fn abs(&self) -> Self {
+        match value {
+            Error(error) => Error(error),
+            Value(value) => Value(value.abs())
         }
     }
 }

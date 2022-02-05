@@ -448,6 +448,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__bitxor__"                 => s"(${args.mkString(" ^ ")})"
       case "__leftshift__"              => s"(${args(0)} << ${args(1)})"
       case "__rightshift__"             => s"(${args(0)} >> ${args(1)})"
+      case "__abs__" | "__fabs__"       => s"${args(0)}.abs()"
 
       case "__pow__"  => s"${args(0)}.powf(${args(1)})"
       case "__log__"  => s"${args(0)}.log(${args(1)})"
