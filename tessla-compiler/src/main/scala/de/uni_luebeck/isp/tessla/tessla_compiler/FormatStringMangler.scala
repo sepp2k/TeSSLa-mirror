@@ -173,11 +173,11 @@ object FormatStringMangler
             FunctionExpression(List(), List((Identifier("x"), StrictEvaluation, inputStreamType)), Map(),
               (fs_spec.padSign, fs_spec.formatType == 'g') match {
                 /* neither sign padding (' ') nor %g
-                    => simply call format!
                  */
                 case (false, false) => generateNoSignNoG(fstring, inputStreamType)
 
                 /* %g
+
                   if 10e-4_f64 <= fabs(value) && fabs(value) < 10_f64.powi(precision) {
                     format_to_type_f(modified_spec, value)
                   } else {
@@ -187,15 +187,15 @@ object FormatStringMangler
                 case (false, true) => generateNoSignG(fstring, inputStreamType, fs_spec)
 
                 /* sign padding (' ')
+
                   if value < 0 {
                     format!("{...}")
                   } else {
                     format(" {...}")
                   }
                  */
-                case (true, false) => {
-                  ???
-                }
+                case (true, false) => generateSignPaddingNoG(fstring, inputStreamType, fs_spec)
+
                 case (true, true) => {
                   ???
                 }
@@ -351,14 +351,86 @@ object FormatStringMangler
               (StrictEvaluation, inputStreamType)),
             InstantiatedType("String", List())    // Return type
           )),
-          ArraySeq(StringLiteralExpression(fstring.replace("}", "e}")), ExpressionRef(Identifier("x"), inputStreamType))
+          ArraySeq(StringLiteralExpression(fstring.replace("}", if (fs_spec.uppercase) {"E}"} else {"e}"})), ExpressionRef(Identifier("x"), inputStreamType))
         )
       )
     )
   }
 
-  def generateSignPaddingNoG() = {
-
+  /**
+   * Generates a format! call for a format string that specifies sign padding but not %g.
+   *
+   * @param fstring The format string.
+   * @param inputStreamType The type of the input stream.
+   * @param fs_spec The format string specification.
+   * @return The format! call.
+   */
+  def generateSignPaddingNoG(fstring : String, inputStreamType : Type, fs_spec : FormatStringSpecification) = {
+    ApplicationExpression(ExternExpression("ite",
+      FunctionType(   // The if
+        List(),       // Identifier
+        List(         // Parameter
+          (StrictEvaluation, InstantiatedType("Bool", List())),
+          (LazyEvaluation, InstantiatedType("String", List())),
+          (LazyEvaluation, InstantiatedType("String", List()))
+        ),
+        InstantiatedType("String", List())    // Return type
+      )),
+      ArraySeq(   // Arguments of the if: (exp : bool, then : T, else : T)
+        (fs_spec.isInteger, fs_spec.isFloat) match {
+          case (true, false) =>
+            ApplicationExpression(ExternExpression("lt", // value < 10_f64.powi(precision)
+              FunctionType(
+                List(),
+                List(
+                  (StrictEvaluation, InstantiatedType("Int", List())),
+                  (StrictEvaluation, InstantiatedType("Int", List()))
+                ),
+                InstantiatedType("Bool", List())
+              )),
+              ArraySeq( // Arguments of lt (<)
+                ExpressionRef(Identifier("x"), inputStreamType),
+                IntLiteralExpression(0)
+              )
+            )
+          case (false, true) =>
+            ApplicationExpression(ExternExpression("flt", // value < 10_f64.powi(precision)
+              FunctionType(
+                List(),
+                List(
+                  (StrictEvaluation, InstantiatedType("Float", List())),
+                  (StrictEvaluation, InstantiatedType("Float", List()))
+                ),
+                InstantiatedType("Bool", List())
+              )),
+              ArraySeq( // Arguments of flt (<)
+                ExpressionRef(Identifier("x"), inputStreamType),
+                FloatLiteralExpression(0.0)
+              )
+            )
+        },
+        ApplicationExpression(ExternExpression("[rust]format",    // format_to_type_f
+          FunctionType(   // The lambda
+            List(),       // Identifier
+            List(         // Parameter
+              (StrictEvaluation, InstantiatedType("String", List())),
+              (StrictEvaluation, inputStreamType)),
+            InstantiatedType("String", List())    // Return type
+          )),
+          ArraySeq(StringLiteralExpression(fstring), ExpressionRef(Identifier("x"), inputStreamType))
+        ),
+        ApplicationExpression(ExternExpression("[rust]format",  // format_to_type_e
+          FunctionType(   // The lambda
+            List(),       // Identifier
+            List(         // Parameter
+              (StrictEvaluation, InstantiatedType("String", List())),
+              (StrictEvaluation, inputStreamType)),
+            InstantiatedType("String", List())    // Return type
+          )),
+          ArraySeq(StringLiteralExpression(if (fs_spec.leftJustify) { fstring.replace("{", " {") } else { fstring }), ExpressionRef(Identifier("x"), inputStreamType))
+        )
+      )
+    )
   }
 
   def generateSignPaddingG() = {
