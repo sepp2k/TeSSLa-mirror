@@ -421,6 +421,20 @@ impl TesslaString {
             (Value(lhs), Value(rhs)) => Value(lhs.to_owned() + rhs),
         }
     }
+
+    pub fn toUpper(&self) -> Self {
+        match self {
+            Error(error) => Error(error),
+            Value(value) => Value(value.to_uppercase())
+        }
+    }
+
+    pub fn toLower(&self) -> Self {
+        match self {
+            Error(error) => Error(error),
+            Value(value) => Value(value.to_lowercase())
+        }
+    }
 }
 
 // 5.6 Option
