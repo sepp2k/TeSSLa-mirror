@@ -110,82 +110,62 @@ impl TesslaParse for () {
     }
 }
 
-/*
-impl<T: ParseRecord> From<&str> for TesslaValue<T> {
-    fn from(s: &str) -> Self {
-        match s.split_once("{") {
-            Some(("", rest)) => match T::parse_inner(rest) {
-                (value_or_error, "}") => value_or_error,
-                (_, _) => Error("Failed to parse record")
-            },
-            _ => Error("Failed to parse record")
-        }
-    }
-}*/
+// Structs & Tuples
 
-/*impl TesslaParse for StructſXþIntſYþInt {
+pub trait TesslaRecordParse where Self: Sized {
+    fn tessla_parse_struct(s: &str) -> (Result<Self, &'static str>, &str);
+
+    fn tessla_parse_tuple(s: &str) -> (Result<Self, &'static str>, &str) {
+        (Err("This Struct can't be parsed as a Tuple"), s)
+    }
+}
+
+impl<T: TesslaRecordParse> TesslaParse for T {
     fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) where Self: Sized {
         match s.strip_prefix("{") {
-            Some(rest) => {
-                let mut inner = rest.trim_start();
-                let mut result = StructſXþIntſYþInt {
-                    x: Error("Value not assigned while parsing"),
-                    y: Error("Value not assigned while parsing")
-                };
-                loop {
-                    match inner.split_once(":") {
-                        Some((lhs, rhs)) => match lhs.trim() {
-                            "x" => match i64::tessla_parse(rhs.trim_start()) {
-                                (Ok(value), rest) => {
-                                    result.x = Value(value);
-                                    match rest.trim_start().strip_prefix(",") {
-                                        Some(next) => {
-                                            inner = next.trim_start();
-                                        }
-                                        None => {
-                                            inner = rest.trim_start();
-                                            break;
-                                        }
-                                    }
-                                },
-                                (Err(error), rest) => {
-                                    result.x = Error(error);
-                                    inner = rest.trim_start();
-                                }
-                            },
-                            "y" => match i64::tessla_parse(rhs.trim_start()) {
-                                (Ok(value), rest) => {
-                                    result.y = Value(value);
-                                    match rest.trim_start().strip_prefix(",") {
-                                        Some(next) => {
-                                            inner = next.trim_start();
-                                        }
-                                        None => {
-                                            inner = rest.trim_start();
-                                            break;
-                                        }
-                                    }
-                                },
-                                (Err(error), rest) => {
-                                    result.y = Error(error);
-                                    inner = rest.trim_start();
-                                }
-                            },
-                            _ => return (Err("Encountered invalid key while parsing Struct"), inner)
+            Some(inner) =>
+                match Self::tessla_parse_struct(inner.trim_start()) {
+                    (Ok(result), tail) => {
+                        match tail.strip_prefix("}") {
+                            Some(rest) => (Ok(result), rest.trim_start()),
+                            None => (Err("Failed to parse Struct from String"), tail.trim_start())
                         }
-                        None => break
+                    },
+                    error => error
+                },
+            None => match s.strip_prefix("(") {
+                Some(inner) => {
+                    match Self::tessla_parse_tuple(inner.trim_start()) {
+                        (Ok(result), tail) => {
+                            match tail.strip_prefix(")") {
+                                Some(rest) => (Ok(result), rest.trim_start()),
+                                None => (Err("Failed to parse Tuple from String"), tail.trim_start())
+                            }
+                        },
+                        error => error
                     }
-                }
-                match inner.strip_prefix("}") {
-                    Some(rest) => (Ok(result), rest.trim_start()),
-                    None => (Err("Failed to parse Struct from String"), inner.trim_start())
-                }
-
-            },
-            None => (Err("Failed to parse Struct from String"), s)
+                },
+                None => (Err("Failed to parse Struct/Tuple from String"),  s)
+            }
         }
     }
-}*/
+}
+
+pub fn parse_struct_inner<T: TesslaParse>(slot: &mut TesslaValue<T>, string: &mut &str) {
+    match T::tessla_parse(string) {
+        (Ok(value), rest) => {
+            *slot = Value(value);
+            match rest.trim_start().strip_prefix(",") {
+                Some(next) => *string = next.trim_start(),
+                None => *string = rest.trim_start()
+            }
+        },
+        (Err(error), rest) => {
+            *slot = Error(error);
+            *string = rest.trim_start();
+        }
+    }
+}
 
 fn parse_set_inner<'a, T: TesslaParse + Clone + Eq + Hash>(set: &mut im::HashSet<TesslaValue<T>>, string: &'a str) -> Result<&'a str, &'static str> {
     match T::tessla_parse(string) {

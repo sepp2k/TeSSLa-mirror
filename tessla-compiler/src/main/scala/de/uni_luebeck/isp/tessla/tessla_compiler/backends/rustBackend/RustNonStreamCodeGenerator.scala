@@ -309,35 +309,87 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |    }
        |}
        |""".stripMargin
-    if (RustUtils.isStructTuple(fields.map { case (name, _) => name })) {
-      structDef + generateTupleDisplay(structName, fields)
+    val fieldNames = fields.map { case (name, _) => name }
+    val isTuple = RustUtils.isStructTuple(fieldNames)
+    val parseImpl = generateStructParser(structName, fieldNames, isTuple)
+    if (isTuple) {
+      structDef + generateTupleDisplay(structName, fieldNames) + parseImpl
     } else {
-      structDef + generateStructDisplay(structName, fields)
+      structDef + generateStructDisplay(structName, fieldNames) + parseImpl
     }
   }
 
-  private def generateTupleDisplay(structName: String, fields: Seq[(String, Type)]): String = {
+  private def generateTupleDisplay(structName: String, fieldNames: Seq[String]): String = {
     s"""impl TesslaDisplay for $structName {
        |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        |        f.write_str("(")?;
-       |${fields
-      .map { case (name, _) => s"""write!(f, \"{}\", self.$name)?;""" }
+       |${fieldNames
+      .map { name => s"""write!(f, \"{}\", self.$name)?;""" }
       .mkString("\nf.write_str(\", \")?;\n")}
        |        f.write_str(")")
        |    }
-       |}""".stripMargin
+       |}
+       |""".stripMargin
   }
 
-  private def generateStructDisplay(structName: String, fields: Seq[(String, Type)]): String = {
+  private def generateStructDisplay(structName: String, fieldNames: Seq[String]): String = {
     s"""impl TesslaDisplay for $structName {
        |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        |        f.write_str("{")?;
-       |${fields
-      .map { case (name, _) => s"""write!(f, \"$name = {}\", self.$name)?;""" }
+       |${fieldNames
+      .map { name => s"""write!(f, \"$name = {}\", self.$name)?;""" }
       .mkString("\nf.write_str(\", \")?;\n")}
        |        f.write_str("}")
        |    }
-       |}""".stripMargin
+       |}
+       |""".stripMargin
+  }
+
+  private def generateStructParser(structName: String, fieldNames: Seq[String], isTuple: Boolean): String = {
+    val init = s"""let mut result = $structName {\n${fieldNames
+      .map { name => s"""$name: Error("Value not assigned while parsing")""" }
+      .mkString(",\n")}};"""
+
+    val tuple_parse = if (isTuple) {
+      s"""
+         |    fn tessla_parse_tuple(s: &str) -> (Result<Self, &'static str>, &str) {
+         |        let mut inner = s.trim_start();
+         |        let mut i = 1_i64;
+         |        $init
+         |        while !inner.starts_with(")") {
+         |            match i {
+         |${fieldNames
+        .map { name => s"""${name.substring(1)} => parse_struct_inner(&mut result.$name, &mut inner)""" }
+        .mkString(",\n")},
+         |                _ => return (Err("Tuple index out of bounds while parsing"), inner)
+         |            }
+         |        }
+         |        (Ok(result), inner)
+         |    }""".stripMargin
+    } else { "" }
+
+    s"""impl TesslaRecordParse for $structName {
+       |    fn tessla_parse_struct(s: &str) -> (Result<Self, &'static str>, &str) {
+       |        let mut inner = s.trim_start();
+       |        $init
+       |        while !inner.starts_with("}") {
+       |            match inner.split_once(":") {
+       |                Some((lhs, rhs)) => {
+       |                    inner = rhs.trim_start();
+       |                    match lhs.trim() {
+       |${fieldNames
+      .map { name => s""""$name" => parse_struct_inner(&mut result.$name, &mut inner)""" }
+      .mkString(",\n")},
+       |                        _ => return (Err("Encountered invalid key while parsing Struct"), inner)
+       |                    }
+       |                }
+       |                None => break
+       |            }
+       |        }
+       |        (Ok(result), inner)
+       |    }$tuple_parse
+       |}
+       |""".stripMargin
   }
 
   /**
