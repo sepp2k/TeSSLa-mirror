@@ -87,7 +87,6 @@ impl<T: Copy> Events<T> {
         }
     }
 
-    // TODO do we need this?
     pub fn get_last(&self) -> T {
         match &self.last {
             &Err(error) => panic!("Tried to use † event caused by: {}", error),
@@ -96,7 +95,6 @@ impl<T: Copy> Events<T> {
         }
     }
 
-    // TODO do we need this?
     pub fn get_value_or_last(&self) -> T {
         if self.has_event() {
             self.get_value()
@@ -131,6 +129,22 @@ impl<T: Clone> Events<T> {
             &Err(error) => panic!("Tried to use † event caused by: {}", error),
             Ok(None) => panic!("Tried to use event when there is none"),
             Ok(Some(last)) => last.clone(),
+        }
+    }
+
+    pub fn clone_value_or_last(&self) -> TesslaValue<T> {
+        if self.has_event() {
+            self.clone_value()
+        } else {
+            self.clone_last()
+        }
+    }
+
+    fn clone_value_option(&self) -> TesslaOption<TesslaValue<T>> {
+        match &self.value {
+            &Err(error) => Error(error),
+            Ok(None) => Value(None),
+            Ok(Some(event)) => Value(Some(event.clone())),
         }
     }
 
@@ -206,23 +220,13 @@ pub fn reset_delay<T>(output: &Events<()>, delays: &Events<i64>, resets: &Events
 
 }
 
-impl<T: Clone> Events<T> {
-    fn clone_value_for_lift(&self) -> TesslaOption<TesslaValue<T>> {
-        match &self.value {
-            &Err(error) => Error(error),
-            Ok(None) => Value(None),
-            Ok(Some(event)) => Value(Some(event.clone())),
-        }
-    }
-}
-
 pub fn lift1<T, U0, F>(output: &mut Events<T>, arg0: &Events<U0>, function: F)
     where U0: Clone,
           F: FnOnce(TesslaOption<TesslaValue<U0>>) -> TesslaOption<TesslaValue<T>> {
     let any_error = arg0.has_error();
     let any_event = arg0.has_event();
     if any_event {
-        let res = function(arg0.clone_value_for_lift());
+        let res = function(arg0.clone_value_option());
         match res {
             Error(error) => output.set_error(error),
             Value(Some(event)) => output.set_event(event),
@@ -239,7 +243,7 @@ pub fn lift2<T, U0, U1, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Eve
     let any_error = arg0.has_error() || arg1.has_error();
     let any_event = arg0.has_event() || arg1.has_event();
     if any_event {
-        let res = function(arg0.clone_value_for_lift(), arg1.clone_value_for_lift());
+        let res = function(arg0.clone_value_option(), arg1.clone_value_option());
         match res {
             Error(error) => output.set_error(error),
             Value(Some(event)) => output.set_event(event),
@@ -256,7 +260,7 @@ pub fn lift3<T, U0, U1, U2, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: 
     let any_error = arg0.has_error() || arg1.has_error() || arg2.has_error();
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event();
     if any_event {
-        let res = function(arg0.clone_value_for_lift(), arg1.clone_value_for_lift(), arg2.clone_value_for_lift());
+        let res = function(arg0.clone_value_option(), arg1.clone_value_option(), arg2.clone_value_option());
         match res {
             Error(error) => output.set_error(error),
             Value(Some(event)) => output.set_event(event),
@@ -273,8 +277,8 @@ pub fn lift4<T, U0, U1, U2, U3, F>(output: &mut Events<T>, arg0: &Events<U0>, ar
     let any_error = arg0.has_error() || arg1.has_error() || arg2.has_error() || arg3.has_error();
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event();
     if any_event {
-        let res = function(arg0.clone_value_for_lift(), arg1.clone_value_for_lift(),
-                           arg2.clone_value_for_lift(), arg3.clone_value_for_lift());
+        let res = function(arg0.clone_value_option(), arg1.clone_value_option(),
+                           arg2.clone_value_option(), arg3.clone_value_option());
         match res {
             Error(error) => output.set_error(error),
             Value(Some(event)) => output.set_event(event),
@@ -291,8 +295,8 @@ pub fn lift5<T, U0, U1, U2, U3, U4, F>(output: &mut Events<T>, arg0: &Events<U0>
     let any_error = arg0.has_error() || arg1.has_error() || arg2.has_error() || arg3.has_error() || arg4.has_error();
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event() || arg4.has_event();
     if any_event {
-        let res = function(arg0.clone_value_for_lift(), arg1.clone_value_for_lift(),
-                           arg2.clone_value_for_lift(), arg3.clone_value_for_lift(), arg4.clone_value_for_lift());
+        let res = function(arg0.clone_value_option(), arg1.clone_value_option(),
+                           arg2.clone_value_option(), arg3.clone_value_option(), arg4.clone_value_option());
         match res {
             Error(error) => output.set_error(error),
             Value(Some(event)) => output.set_event(event),
@@ -303,23 +307,13 @@ pub fn lift5<T, U0, U1, U2, U3, U4, F>(output: &mut Events<T>, arg0: &Events<U0>
     }
 }
 
-impl<T: Clone> Events<T> {
-    fn clone_value_for_slift(&self) -> TesslaValue<T> {
-        if self.has_event() {
-            self.clone_value()
-        } else {
-            self.clone_last()
-        }
-    }
-}
-
 pub fn slift1<T, U0, F>(output: &mut Events<T>, arg0: &Events<U0>, function: F)
     where U0: Clone,
           F: FnOnce(TesslaValue<U0>) -> TesslaValue<T> {
     let any_event = arg0.has_event();
     let all_initialised = arg0.is_initialised();
     if any_event && all_initialised {
-        output.set_event(function(arg0.clone_value_for_slift()));
+        output.set_event(function(arg0.clone_value_or_last()));
     }
 }
 
@@ -329,7 +323,7 @@ pub fn slift2<T, U0, U1, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Ev
     let any_event = arg0.has_event() || arg1.has_event();
     let all_initialised = arg0.is_initialised() && arg1.is_initialised();
     if any_event && all_initialised {
-        output.set_event(function(arg0.clone_value_for_slift(), arg1.clone_value_for_slift()));
+        output.set_event(function(arg0.clone_value_or_last(), arg1.clone_value_or_last()));
     }
 }
 
@@ -339,7 +333,7 @@ pub fn slift3<T, U0, U1, U2, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1:
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event();
     let all_initialised = arg0.is_initialised() && arg1.is_initialised() && arg2.is_initialised();
     if any_event && all_initialised {
-        output.set_event(function(arg0.clone_value_for_slift(), arg1.clone_value_for_slift(), arg2.clone_value_for_slift()));
+        output.set_event(function(arg0.clone_value_or_last(), arg1.clone_value_or_last(), arg2.clone_value_or_last()));
     }
 }
 
@@ -349,7 +343,7 @@ pub fn slift4<T, U0, U1, U2, U3, F>(output: &mut Events<T>, arg0: &Events<U0>, a
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event();
     let all_initialised = arg0.is_initialised() && arg1.is_initialised() && arg2.is_initialised() && arg3.is_initialised();
     if any_event && all_initialised {
-        output.set_event(function(arg0.clone_value_for_slift(), arg1.clone_value_for_slift(), arg2.clone_value_for_slift(), arg3.clone_value_for_slift()));
+        output.set_event(function(arg0.clone_value_or_last(), arg1.clone_value_or_last(), arg2.clone_value_or_last(), arg3.clone_value_or_last()));
     }
 }
 
@@ -359,7 +353,7 @@ pub fn slift5<T, U0, U1, U2, U3, U4, F>(output: &mut Events<T>, arg0: &Events<U0
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event() || arg4.has_event();
     let all_initialised = arg0.is_initialised() && arg1.is_initialised() && arg2.is_initialised() && arg3.is_initialised() && arg4.is_initialised();
     if any_event && all_initialised {
-        output.set_event(function(arg0.clone_value_for_slift(), arg1.clone_value_for_slift(), arg2.clone_value_for_slift(), arg3.clone_value_for_slift(), arg4.clone_value_for_slift()));
+        output.set_event(function(arg0.clone_value_or_last(), arg1.clone_value_or_last(), arg2.clone_value_or_last(), arg3.clone_value_or_last(), arg4.clone_value_or_last()));
     }
 }
 
@@ -369,7 +363,7 @@ pub fn merge<T>(output: &mut Events<T>, streams: Vec<&Events<T>>)
         let stream = streams[i];
         if stream.has_event() {
             output.clone_value_from(&stream);
-            // TODO output is a known value iff all changed streams are as well
+            // merge accepts the first non-error value of all changed streams
             if output.value.is_ok() {
                 return;
             }

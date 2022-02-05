@@ -18,7 +18,6 @@ pub fn parse_input(input_stream_name: &mut String, input_stream_value: &mut Stri
         Err(error) => panic!("ERROR parsing the input stream\n{}", error),
         Ok(0) => reached_eof = true,
         Ok(_) => {
-            // TODO do we want to handle all these errors or just use unwrap()?
             let (timestamp, input_expression) = match line.split_once(':') {
                 Some(value) => value,
                 None => panic!("ERROR parsing input '{}'", line.trim())
