@@ -203,7 +203,7 @@ impl<T: TesslaParse + Clone + Eq + Hash> TesslaParse for im::HashSet<TesslaValue
             Some(rest) => {
                 let mut set = im::HashSet::new();
                 let mut inner = rest.trim_start();
-                loop {
+                while !inner.starts_with(")") {
                     match parse_set_inner(&mut set, inner) {
                         Ok(rest) => match rest.trim_start().strip_prefix(",") {
                             Some(next) => inner = next.trim_start(),
@@ -247,7 +247,7 @@ impl<T: TesslaParse + Clone + Eq + Hash, U: TesslaParse + Clone> TesslaParse for
             Some(rest) => {
                 let mut map = im::HashMap::new();
                 let mut inner = rest.trim_start();
-                loop {
+                while !inner.starts_with(")") {
                     match parse_map_inner(&mut map, inner) {
                         Ok(rest) => match rest.trim_start().strip_prefix(",") {
                             Some(next) => inner = next.trim_start(),
@@ -285,7 +285,7 @@ impl<T: TesslaParse + Clone> TesslaParse for im::Vector<TesslaValue<T>> {
             Some(rest) => {
                 let mut list = im::Vector::new();
                 let mut inner = rest.trim_start();
-                loop {
+                while !inner.starts_with(")") {
                     match parse_list_inner(&mut list, inner) {
                         Ok(rest) => match rest.trim_start().strip_prefix(",") {
                             Some(next) => inner = next.trim_start(),
