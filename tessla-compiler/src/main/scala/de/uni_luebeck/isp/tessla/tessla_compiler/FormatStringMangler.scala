@@ -179,7 +179,7 @@ object FormatStringMangler
 
                 /* neither sign padding (' ') nor %g
                  */
-                case (false, false) => generateNoSignNoG(fstring, inputStreamType)
+                case (false, false) => generateNoSignNoG(fstring, inputStreamType, fs_spec)
 
                 /* %g
 
@@ -219,9 +219,8 @@ object FormatStringMangler
    * @param inputStreamType The type of the input stream.
    * @return The format! call.
    */
-  def generateNoSignNoG(fstring : String, inputStreamType : Type) = {
-    // TODO: Generate code for uppercase strings (%S)
-    ApplicationExpression(ExternExpression("[rust]format",
+  def generateNoSignNoG(fstring : String, inputStreamType : Type, fs_spec : FormatStringSpecification) = {
+    val format = ApplicationExpression(ExternExpression("[rust]format",
       FunctionType(   // The lambda
         List(),       // Identifier
         List(         // Parameter
@@ -231,6 +230,22 @@ object FormatStringMangler
       )),
       ArraySeq(StringLiteralExpression(fstring), ExpressionRef(Identifier("x"), inputStreamType))
     )
+
+    // Generate code for uppercase strings (%S)
+    if (fs_spec.uppercase) {
+      ApplicationExpression(ExternExpression("String_toUpper",
+        FunctionType(
+          List(),
+          List((StrictEvaluation, InstantiatedType("String", List()))),
+          InstantiatedType("String", List())
+        )),
+        ArraySeq(
+          format
+        )
+      )
+    } else {
+      format
+    }
   }
 
   /**
