@@ -742,7 +742,7 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
     }
 
     #[inline]
-    pub fn List_fold<U>(&self, start: TesslaValue<U>, function: fn(TesslaValue<U>, TesslaValue<T>) -> TesslaValue<U>) -> TesslaValue<U>{
+    pub fn List_fold<U>(&self, start: TesslaValue<U>, function: Box<dyn Fn(TesslaValue<U>, TesslaValue<T>) -> TesslaValue<U>>) -> TesslaValue<U>{
         match self {
             Error(error) => Error(error),
             Value(value) => {
@@ -756,10 +756,10 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
     }
 
     #[inline]
-    pub fn List_get(&self, index: i64) -> TesslaValue<T>{
+    pub fn List_get(&self, index: TesslaInt) -> TesslaValue<T>{
         match self {
             Error(error) => Error(error),
-            Value(value) => value.get(index as usize).unwrap().clone(),
+            Value(value) => value.get(index.get_value() as usize).unwrap().clone(),
         }
     }
 
@@ -818,6 +818,20 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
                 x.append(value.clone());
                 return Value(x.split_off(1));
             },
+        }
+    }
+
+    #[inline]
+    pub fn List_map(&self, function: Box<dyn Fn(TesslaValue<T>) -> TesslaValue<T>>) -> TesslaList<TesslaValue<T>>{
+        match self {
+            Error(error) => Error(error),
+            Value(value) => {
+                let x: TesslaValue<Vector<TesslaValue<T>>> = Value(Vector::<TesslaValue<T>>::new());
+                for item in value{
+                    x.List_append(function(item.clone()));
+                }
+                return x;
+            }
         }
     }
 }
