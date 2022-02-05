@@ -544,6 +544,7 @@ object FormatStringMangler
     }
 
     try {
+      var widthFound = false
       // Extract width, don't allow zeroes
       if (fs.charAt(i) != '0' && fs.charAt(i).isDigit) {
         val j = i;
@@ -553,6 +554,7 @@ object FormatStringMangler
         }
 
         spec.width = Integer.parseInt(fs.substring(j, i))
+        widthFound = true
       }
 
       var precisionFound = false
@@ -576,6 +578,9 @@ object FormatStringMangler
       // Set default precision to 6, if floating point format specifier given
       if (!precisionFound && spec.isFloat()) {
         spec.precision = 6
+      }
+      if (!widthFound) {
+        spec.leftJustify = true
       }
 
       // Determine whether the output should be in upper case

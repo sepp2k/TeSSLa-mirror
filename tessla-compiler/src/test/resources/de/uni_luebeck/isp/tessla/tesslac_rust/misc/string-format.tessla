@@ -1,0 +1,87 @@
+in s_hello: Events[String]
+in s_verylongtexttotrim: Events[String]
+in s_myshortint: Events[Int]
+in s_mylongint: Events[Int]
+in s_mynegint: Events[Int]
+in s_fancyfloat: Events[Float]
+in s_longifloat: Events[Float]
+in s_negfloat: Events[Float]
+in s_longnegfloat: Events[Float]
+
+# Test variations on lower case strings
+out String.format("%s", s_hello)
+out String.format("%10s", s_hello)
+out String.format("%-10s", s_hello)
+out String.format("%10.10s", s_verylongtexttotrim)
+out String.format("%-10.5s", s_verylongtexttotrim)
+out String.format("%10.5s", s_verylongtexttotrim)
+
+# Test variations on upper case strings
+out String.format("%S", s_hello)
+out String.format("%10S", s_hello)
+out String.format("%-10S", s_hello)
+out String.format("%10.10S", s_verylongtexttotrim)
+out String.format("%-10.5S", s_verylongtexttotrim)
+out String.format("%10.5S", s_verylongtexttotrim)
+
+# Test variations on short integers
+out String.format("%-10d", s_myshortint)
+out String.format("%10d", s_myshortint)
+out String.format("%-10o", s_myshortint)
+out String.format("%10o", s_myshortint)
+out String.format("%-10x", s_myshortint)
+out String.format("%10x", s_myshortint)
+out String.format("%-10X", s_myshortint)
+out String.format("%10X", s_myshortint)
+
+# Test variations on long integers
+out String.format("%-10d", s_mylongint)
+out String.format("%10d", s_mylongint)
+out String.format("%-10o", s_mylongint)
+out String.format("%10o", s_mylongint)
+out String.format("%-10x", s_mylongint)
+out String.format("%10x", s_mylongint)
+out String.format("%-10X", s_mylongint)
+out String.format("%10X", s_mylongint)
+
+# Test variations on integers with negatives and sign padding
+out String.format("%+d", s_myshortint)
+out String.format("%+d", s_mynegint)
+out String.format("% d", s_myshortint)
+out String.format("% d", s_mynegint)
+out String.format("% 10d", s_myshortint)
+out String.format("% 10d", s_mynegint)
+out String.format("%+10d", s_myshortint)
+out String.format("%- 10d", s_myshortint)
+out String.format("%- 10d", s_mynegint)
+out String.format("%-+10d", s_myshortint)
+
+# Test variations on floats
+# TODO: Add negative floats; somehow Scala doesn't like them so you can't test them there :(
+out String.format("%g", s_fancyfloat)
+out String.format("%10g", s_fancyfloat)
+out String.format("%10.2f", s_fancyfloat)
+out String.format("%-10.2f", s_fancyfloat)
+out String.format("%+10.2f", s_fancyfloat)
+out String.format("%- 10.2f", s_fancyfloat)
+out String.format("%-+10.2f", s_fancyfloat)
+out String.format("%10.2g", s_fancyfloat)
+out String.format("%-10.2g", s_fancyfloat)
+out String.format("%+10.2g", s_fancyfloat)
+out String.format("%- 10.2g", s_fancyfloat)
+out String.format("%-+10.2g", s_fancyfloat)
+out String.format("%.4G", s_fancyfloat)
+
+out String.format("%g", s_longifloat)
+out String.format("%10g", s_longifloat)
+out String.format("%10.2f", s_longifloat)
+out String.format("%-10.2f", s_longifloat)
+out String.format("%+10.2f", s_longifloat)
+out String.format("%- 10.2f", s_longifloat)
+out String.format("%-+10.2f", s_longifloat)
+out String.format("%10.2g", s_longifloat)
+out String.format("%-10.2g", s_longifloat)
+out String.format("%+10.2g", s_longifloat)
+out String.format("%- 10.2g", s_longifloat)
+out String.format("%-+10.2g", s_longifloat)
+out String.format("%.4G", s_longifloat)

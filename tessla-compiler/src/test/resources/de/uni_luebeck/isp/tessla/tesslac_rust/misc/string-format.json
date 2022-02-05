@@ -1,0 +1,6 @@
+{
+  "skip": true,
+  "input": "string-format.input",
+  "expectedOutput": "string-format.output",
+  "spec": "string-format.tessla"
+}
