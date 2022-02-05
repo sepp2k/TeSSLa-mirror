@@ -433,6 +433,7 @@ object FormatStringMangler
     )
   }
 
+
   def generateSignPaddingG() = {
 
   }
