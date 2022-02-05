@@ -301,7 +301,7 @@ impl From<TesslaFloat> for TesslaInt {
 impl TesslaInt {
     #[inline]
     pub fn abs(&self) -> Self {
-        match value {
+        match self {
             Error(error) => Error(error),
             Value(value) => Value(value.abs())
         }
@@ -386,7 +386,7 @@ impl TesslaFloat {
 
     #[inline]
     pub fn abs(&self) -> Self {
-        match value {
+        match self {
             Error(error) => Error(error),
             Value(value) => Value(value.abs())
         }
