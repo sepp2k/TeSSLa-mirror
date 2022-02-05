@@ -34,7 +34,7 @@ object FormatStringMangler
                 args(0) match {
                   case ExpressionRef(id, _, _) =>
                     // If we encounter this format string the first time
-                    if (!removedStreams.contains(id.fullName)) {
+                    //if (!removedStreams.contains(id.fullName)) {
                       spec.definitions.get(id) match {
                         // Ensure that the format string is stored on a nil stream using default
                         case Some(
@@ -92,13 +92,13 @@ object FormatStringMangler
                             loc
                           )
                       }
-                    }
+                    //}
 
                     // We encountered the format string already and removed the streams
-                    else
+                    /*else
                       /* we just need to map the slift to the corresponding format string */ {
                         formatStrings.addOne((sliftid.fullName, formatStrings(id.fullName)))
-                      }
+                      }*/
                   case _ => {}
                 }
               case _ => {}
@@ -555,6 +555,8 @@ object FormatStringMangler
         spec.width = Integer.parseInt(fs.substring(j, i))
       }
 
+      var precisionFound = false
+
       // Extract precision
       if (fs.charAt(i) == '.') {
         i+=1
@@ -565,10 +567,16 @@ object FormatStringMangler
         }
 
         spec.precision = Integer.parseInt(fs.substring(j, i))
+        precisionFound = true
       }
 
       // Extract the format specifier
       spec.formatType = fs.charAt(i)
+
+      // Set default precision to 6, if floating point format specifier given
+      if (!precisionFound && spec.isFloat()) {
+        spec.precision = 6
+      }
 
       // Determine whether the output should be in upper case
       if (spec.formatType.isUpper) {
