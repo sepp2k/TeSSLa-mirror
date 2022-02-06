@@ -27,7 +27,7 @@ pub fn parse_input(input_stream_name: &mut String, input_stream_value: &mut Stri
                 Some(value) => value,
                 None => panic!("ERROR parsing input '{}'", line.trim())
             };
-            *new_input_ts = match i64::from_str(timestamp) {
+            *new_input_ts = match i64::from_str(timestamp.trim()) {
                 Ok(value) => value,
                 Err(err) => panic!("ERROR failed to parse timestamp:\n{}", err)
             };
