@@ -27,6 +27,7 @@ import scala.collection.mutable
  * Creates Struct [[ExternExpression]] definitions for all unique struct/record types found in the specification
  * These are then used in [[TesslaCoreToRust]] to generate the rust structs
  */
+
 object GenerateStructDefinitions extends TranslationPhase[Specification, Specification] {
 
   /**

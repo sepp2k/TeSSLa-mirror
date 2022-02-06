@@ -151,7 +151,7 @@ impl<T: TesslaRecordParse> TesslaParse for T {
     }
 }
 
-pub fn parse_struct_inner<T: TesslaParse>(slot: &mut TesslaValue<T>, string: &mut &str) {
+pub fn parse_struct_inner<T: TesslaParse>(slot: &mut TesslaValue<T>, string: &mut &str) -> bool {
     match T::tessla_parse(string) {
         (Ok(value), rest) => {
             *slot = Value(value);
@@ -159,10 +159,12 @@ pub fn parse_struct_inner<T: TesslaParse>(slot: &mut TesslaValue<T>, string: &mu
                 Some(next) => *string = next.trim_start(),
                 None => *string = rest.trim_start()
             }
+            true
         },
         (Err(error), rest) => {
             *slot = Error(error);
             *string = rest.trim_start();
+            false
         }
     }
 }

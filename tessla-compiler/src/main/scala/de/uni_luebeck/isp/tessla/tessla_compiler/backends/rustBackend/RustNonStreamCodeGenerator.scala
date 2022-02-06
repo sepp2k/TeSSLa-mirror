@@ -354,10 +354,10 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
          |        let mut inner = s.trim_start();
          |        let mut i = 1_i64;
          |        $init
-         |        while !inner.starts_with(")") {
+         |        loop {
          |            match i {
          |${fieldNames
-        .map { name => s"""${name.substring(1)} => parse_struct_inner(&mut result.$name, &mut inner)""" }
+        .map { name => s"""${name.substring(1)} => if !parse_struct_inner(&mut result.$name, &mut inner) { break }""" }
         .mkString(",\n")},
          |                _ => return (Err("Tuple index out of bounds while parsing"), inner)
          |            }
@@ -370,13 +370,13 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |    fn tessla_parse_struct(s: &str) -> (Result<Self, &'static str>, &str) {
        |        let mut inner = s.trim_start();
        |        $init
-       |        while !inner.starts_with("}") {
+       |        loop {
        |            match inner.split_once(":") {
        |                Some((lhs, rhs)) => {
        |                    inner = rhs.trim_start();
        |                    match lhs.trim() {
        |${fieldNames
-      .map { name => s""""$name" => parse_struct_inner(&mut result.$name, &mut inner)""" }
+      .map { name => s""""$name" => if !parse_struct_inner(&mut result.$name, &mut inner) { break }""" }
       .mkString(",\n")},
        |                        _ => return (Err("Encountered invalid key while parsing Struct"), inner)
        |                    }
