@@ -31,6 +31,7 @@ import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
 
 import java.lang.ProcessBuilder.Redirect
+import scala.concurrent.duration.MINUTES
 import scala.io.Source
 import scala.reflect.io.Directory
 
@@ -122,7 +123,7 @@ object TesslacRustTests {
       val out = process.getInputStream
       val err = process.getErrorStream
 
-      process.waitFor()
+      process.waitFor(60, MINUTES);
 
       out.markSupported()
 
