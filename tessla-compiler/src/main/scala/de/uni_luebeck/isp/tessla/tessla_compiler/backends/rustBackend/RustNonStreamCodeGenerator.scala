@@ -29,7 +29,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
   FinalLazyDeclaration,
   VariableDeclaration
 }
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustUtils.convertType
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustUtils.{canBeHashed, convertType}
 
 class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     extends NonStreamCodeGeneratorInterface[String, String](extSpec) {
@@ -289,8 +289,9 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    */
   def translateStructDefinition(structName: String, fields: Seq[(String, Type)]): String = {
     val genericTypes = RustUtils.getGenericTypeNames(fields.map { case (_, typ) => typ })
-    val genericAnnotation = if (genericTypes.nonEmpty) s"<${genericTypes.mkString(", ")}>" else ""
-    val structDef = s"""#[derive(Eq, Hash)]
+    val genericsWithTraits = genericTypes.map { name => s"$name: Hash" }
+    val genericAnnotation = if (genericTypes.nonEmpty) s"<${genericsWithTraits.mkString(", ")}>" else ""
+    val structDef = s"""${if (fields.forall { case (_, tpe) => canBeHashed(tpe) }) "#[derive(Hash)]" else ""}
        |struct $structName$genericAnnotation {
        |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
        |}

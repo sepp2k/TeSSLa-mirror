@@ -69,6 +69,35 @@ object RustUtils {
   }
 
   /**
+   * Helper to determine whether a type can be hashed in Rust.
+   * The only types that cannot be hashed are Floats and Functions
+   * @param t a type
+   * @return a bool describing if it is completely made up of hashable types
+   */
+  def canBeHashed(t: Type): Boolean = {
+    t match {
+      case InstantiatedType("Float", Seq(), _)     => false
+      case InstantiatedType("Events", Seq(t), _)   => canBeHashed(t)
+      case InstantiatedType("Bool", Seq(), _)      => true
+      case InstantiatedType("Int", Seq(), _)       => true
+      case InstantiatedType("String", Seq(), _)    => true
+      case InstantiatedType("Option", Seq(t), _)   => canBeHashed(t)
+      case InstantiatedType("Set", Seq(t), _)      => canBeHashed(t)
+      case InstantiatedType("Map", Seq(t1, t2), _) => canBeHashed(t1) && canBeHashed(t2)
+      case InstantiatedType("List", Seq(t), _)     => canBeHashed(t)
+      case TypeParam(_, _)                         => true // only because we require them to impl Hash
+      case InstantiatedType(n, types, _) if n.startsWith("native:") =>
+        types.forall { t => canBeHashed(t) }
+      case RecordType(entries, _) =>
+        entries.forall { case (_, (tpe, _)) => canBeHashed(tpe) }
+      case FunctionType(_, _, _, _) =>
+        throw Diagnostics.CommandNotSupportedError("Function type can not be hashed")
+      case _ =>
+        throw Diagnostics.CommandNotSupportedError(s"Found unknown type $t")
+    }
+  }
+
+  /**
    * Extracts all [[TypeParam]] generic types used in a list of types
    *
    * @param types a list of types
