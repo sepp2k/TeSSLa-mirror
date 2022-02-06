@@ -18,7 +18,12 @@ pub fn parse_input(input_stream_name: &mut String, input_stream_value: &mut Stri
         Err(error) => panic!("ERROR parsing the input stream\n{}", error),
         Ok(0) => reached_eof = true,
         Ok(_) => {
-            let (timestamp, input_expression) = match line.split_once(':') {
+            match line.trim() {
+                "" => { return false }, // empty line
+                s if s.starts_with("#") => { return false }, // comment
+                _ => {}
+            };
+            let (timestamp, input_expression) = match line.trim().split_once(':') {
                 Some(value) => value,
                 None => panic!("ERROR parsing input '{}'", line.trim())
             };
