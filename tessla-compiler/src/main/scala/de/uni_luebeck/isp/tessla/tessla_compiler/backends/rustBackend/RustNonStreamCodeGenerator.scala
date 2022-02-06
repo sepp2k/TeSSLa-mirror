@@ -419,15 +419,15 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           s"}"
 
       case "__ite__" | "__staticite__" =>
-        s"match ${args(0)} { Value(true) => { ${args(1)} }, Value(false) => { ${args(2)} }, Error(error) => Error(error) }"
+        s"tessla_bool! { if (${args(0)}) { ${args(1)} } else { ${args(2)} } }"
       case "__and__" if args.length == 2 =>
-        s"match ${args(0)} { Value(true) => { ${args(1)} }, false_or_error => false_or_error }"
+        s"tessla_bool! { (${args(0)}) && (${args(1)}) }"
       case "__and__" =>
-        s"match ${args(0)} { Value(true) => { ${translateBuiltinFunctionCall(name, args.tail, typeHint, tm)} }, false_or_error => false_or_error }"
+        s"tessla_bool! { (${args(0)}) && (${translateBuiltinFunctionCall(name, args.tail, typeHint, tm)}) }"
       case "__or__" if args.length == 2 =>
-        s"match ${args(0)} { Value(false) => { ${args(1)} }, true_or_error => true_or_error }"
+        s"tessla_bool! { (${args(0)}) || (${args(1)}) }"
       case "__or__" =>
-        s"match ${args(0)} { Value(false) => { ${translateBuiltinFunctionCall(name, args.tail, typeHint, tm)} }, true_or_error => true_or_error }"
+        s"tessla_bool! { (${args(0)}) || (${translateBuiltinFunctionCall(name, args.tail, typeHint, tm)}) }"
       case "__not__" | "__bitflip__"    => s"!(${args(0)})"
       case "__negate__" | "__fnegate__" => s"-${args(0)}"
       case "__eq__"                     => s"${args(0)}.eq(&${args(1)})"

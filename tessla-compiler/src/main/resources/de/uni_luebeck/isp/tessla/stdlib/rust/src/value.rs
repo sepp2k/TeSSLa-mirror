@@ -218,6 +218,29 @@ impl TesslaDisplay for bool {
     }
 }
 
+#[macro_export]
+macro_rules! tessla_bool {
+    (if ($condition:expr) {$then:expr} else {$else:expr}) => {
+        match $condition {
+            $crate::TesslaValue::Value(true) => { $then },
+            $crate::TesslaValue::Value(false) => { $else },
+            $crate::TesslaValue::Error(error) => Error(error)
+        }
+    };
+    (($condition1:expr) && ($condition2:expr)) => {
+        match $condition1 {
+            $crate::TesslaValue::Value(true) => { $condition2 },
+            false_or_error => false_or_error
+        }
+    };
+    (($condition1:expr) || ($condition2:expr)) => {
+        match $condition1 {
+            Value(false) => { $condition2 },
+            true_or_error => true_or_error
+        }
+    };
+}
+
 // 5.2 Comparison
 
 impl<T: PartialEq> TesslaValue<T> {
