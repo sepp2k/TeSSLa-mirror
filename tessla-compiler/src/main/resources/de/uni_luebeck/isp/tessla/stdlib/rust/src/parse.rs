@@ -122,7 +122,7 @@ pub trait TesslaRecordParse where Self: Sized {
 
 impl<T: TesslaRecordParse> TesslaParse for T {
     fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) where Self: Sized {
-        match s.strip_prefix("{") {
+        match s.strip_prefix("{").or_else(|| s.strip_prefix("${")) {
             Some(inner) =>
                 match Self::tessla_parse_struct(inner.trim_start()) {
                     (Ok(result), tail) => {
