@@ -166,8 +166,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           if (id.fullName == "_") "_" else s"var_$id /* lazy */: $tpe" // TODO how to handle lazy...
       }
       .mkString(", ")
-    // TODO argumente die aus dem äußeren scope kommen müssen wir hier klonen,
-    //  damit wir die dann danach in eine box moven können
     s"|$arguments| {\n" +
       s"${translateBody(e.body, e.result, newTm, defContext).mkString("\n")}" +
       s"\n}"
@@ -409,15 +407,14 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   ): String = {
     val args = oArgs.toIndexedSeq
     name match {
-      case "__[TC]inputParse__" => "" // TODO RustIOHandling.getInputParseExpression(typeHint.retType, args(0))
       // TODO some brackets here are superfluous and will produce warnings
 
       case "__[rust]box__" => s"Box::new(move ${args(0)})"
       case "__[rust]format__" =>
         s"match ${args(1)} { " +
-        s"Value(val) => Value(format!(${args(0).substring(6, args(0).length - 13)}, val)), " +
+          s"Value(val) => Value(format!(${args(0).substring(6, args(0).length - 13)}, val)), " +
           s"Error(err) => Error(err) " +
-        s"}"
+          s"}"
 
       case "__ite__" | "__staticite__" =>
         s"match ${args(0)} { Value(true) => { ${args(1)} }, Value(false) => { ${args(2)} }, Error(error) => Error(error) }"
@@ -466,7 +463,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__isSome__"  => s"${args(0)}.is_some()"
       case "__isNone__"  => s"${args(0)}.is_none()"
 
-      case "__toString__" => s"${args(0)}.to_string()"
+      case "__toString__"       => s"${args(0)}.to_string()"
       case "__String_toUpper__" => s"${args(0)}.toUpper()"
       case "__String_toLower__" => s"${args(1)}.toLower()"
       case "__String_format__" =>

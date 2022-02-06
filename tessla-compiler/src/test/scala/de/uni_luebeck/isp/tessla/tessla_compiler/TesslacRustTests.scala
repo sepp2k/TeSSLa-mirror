@@ -77,7 +77,6 @@ class TesslacRustTests extends AbstractTestRunner[String]("Tessla Rust Compiler"
   override def afterAll(): Unit = {
     Directory(fsPath.toFile).deleteRecursively()
   }
-
 }
 
 object TesslacRustTests {
@@ -86,8 +85,8 @@ object TesslacRustTests {
     // FIXME: any additional source here would be in scala?
     val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
 
-    (FormatStringMangler)
-      .andThen (new ExtractAndWrapFunctions)
+    FormatStringMangler
+      .andThen(new ExtractAndWrapFunctions)
       .andThen(GenerateStructDefinitions)
       .andThen(UsageAnalysis)
       .andThen(InliningAnalysis)

@@ -33,8 +33,7 @@ import scala.io.Source
  * The translation of other expressions in RustNonStreamCodeGenerator
  * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
  */
-class TesslaCoreToRust(ioInterface: Boolean)
-    extends TranslationPhase[ExtendedSpecification, String] {
+class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSpecification, String] {
   private val sourceTemplate: String = "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs"
 
   override def translate(extSpec: ExtendedSpecification): Result[String] =
@@ -98,16 +97,16 @@ class TesslaCoreToRust(ioInterface: Boolean)
           )
 
         case (id, definition) =>
-            definition.tpe match {
-              case InstantiatedType("Events", _, _) =>
-                rustStreamCodeGenerator
-                  .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
-                produceOutputCode(outputMap, outputNames, id, srcSegments)
-              case FunctionType(_, _, _, _) =>
-                srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
-              case _ =>
-                srcSegments.lazyStatic.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
-            }
+          definition.tpe match {
+            case InstantiatedType("Events", _, _) =>
+              rustStreamCodeGenerator
+                .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
+              produceOutputCode(outputMap, outputNames, id, srcSegments)
+            case FunctionType(_, _, _, _) =>
+              srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
+            case _ =>
+              srcSegments.lazyStatic.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
+          }
       }
 
       // Produce input consumption

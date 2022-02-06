@@ -17,8 +17,7 @@ import scala.util.control.Breaks._
  * the TeSSLa core. In addition, this translation stage translates the format string into a Rust format string and
  * replaces the String.format() call.
  */
-object FormatStringMangler
-    extends TranslationPhase[Specification, Specification] {
+object FormatStringMangler extends TranslationPhase[Specification, Specification] {
   override def translate(spec: Specification): TranslationPhase.Result[Specification] = {
     val removedStreams = new util.ArrayList[String]()
     val formatStrings = new mutable.HashMap[String, String]()
@@ -35,67 +34,67 @@ object FormatStringMangler
                   case ExpressionRef(id, _, _) =>
                     // If we encounter this format string the first time
                     //if (!removedStreams.contains(id.fullName)) {
-                      spec.definitions.get(id) match {
-                        // Ensure that the format string is stored on a nil stream using default
-                        case Some(
-                              ApplicationExpression(
-                                TypeApplicationExpression(ExternExpression("default", _, _), _, _),
-                                args,
-                                _
-                              )
-                            ) =>
-                          val stream = args(0) match { // the stream the format string is based on
-                            case ExpressionRef(id, _, _) => id
-                            case _ =>
-                              throw Diagnostics.CommandNotSupportedError(
-                                "Can't determine format string at compile time.",
-                                loc
-                              )
-                          }
+                    spec.definitions.get(id) match {
+                      // Ensure that the format string is stored on a nil stream using default
+                      case Some(
+                            ApplicationExpression(
+                              TypeApplicationExpression(ExternExpression("default", _, _), _, _),
+                              args,
+                              _
+                            )
+                          ) =>
+                        val stream = args(0) match { // the stream the format string is based on
+                          case ExpressionRef(id, _, _) => id
+                          case _ =>
+                            throw Diagnostics.CommandNotSupportedError(
+                              "Can't determine format string at compile time.",
+                              loc
+                            )
+                        }
 
-                          // Do nothing if the format string is based on a nil stream
-                          spec.definitions.get(stream) match {
-                            case Some(
-                                  ApplicationExpression(
-                                    TypeApplicationExpression(ExternExpression("nil", _, _), _, _),
-                                    _,
-                                    _
-                                  )
-                                ) => {}
-                            case _ =>
-                              throw Diagnostics.CommandNotSupportedError(
-                                "Can't determine format string at compile time.",
-                                loc
-                              )
-                          }
+                        // Do nothing if the format string is based on a nil stream
+                        spec.definitions.get(stream) match {
+                          case Some(
+                                ApplicationExpression(
+                                  TypeApplicationExpression(ExternExpression("nil", _, _), _, _),
+                                  _,
+                                  _
+                                )
+                              ) => {}
+                          case _ =>
+                            throw Diagnostics.CommandNotSupportedError(
+                              "Can't determine format string at compile time.",
+                              loc
+                            )
+                        }
 
-                          // Remove the nil stream
-                          removedStreams.add(stream.fullName)
+                        // Remove the nil stream
+                        removedStreams.add(stream.fullName)
 
-                          var format = args(1) match { // the format string itself
-                            case StringLiteralExpression(value, _) => value
-                            case _ =>
-                              throw Diagnostics.CommandNotSupportedError(
-                                "Can't determine format string at compile time.",
-                                loc
-                              )
-                          }
+                        var format = args(1) match { // the format string itself
+                          case StringLiteralExpression(value, _) => value
+                          case _ =>
+                            throw Diagnostics.CommandNotSupportedError(
+                              "Can't determine format string at compile time.",
+                              loc
+                            )
+                        }
 
-                          // Add the format string to the map
-                          formatStrings.addOne((sliftid.fullName, format))
+                        // Add the format string to the map
+                        formatStrings.addOne((sliftid.fullName, format))
 
-                          // Remove the format string stream
-                          removedStreams.add(id.fullName)
-                        case _ =>
-                          throw Diagnostics.CommandNotSupportedError(
-                            "Can't determine format string at compile time.",
-                            loc
-                          )
-                      }
-                    //}
+                        // Remove the format string stream
+                        removedStreams.add(id.fullName)
+                      case _ =>
+                        throw Diagnostics.CommandNotSupportedError(
+                          "Can't determine format string at compile time.",
+                          loc
+                        )
+                    }
+                  //}
 
-                    // We encountered the format string already and removed the streams
-                    /*else
+                  // We encountered the format string already and removed the streams
+                  /*else
                       /* we just need to map the slift to the corresponding format string */ {
                         formatStrings.addOne((sliftid.fullName, formatStrings(id.fullName)))
                       }*/
@@ -135,13 +134,11 @@ object FormatStringMangler
    * @return The modified specification.
    */
   def modifyFormatStringSlifts(spec: Specification, formatStrings: mutable.HashMap[String, String]): Specification = {
-    System.out.println("")
-
     val definitions = spec.definitions.map {
       case (id, defi) if formatStrings.contains(id.fullName) => {
         val location = defi.location
-        var inputStream : ExpressionArg = null
-        var inputStreamType : Type = null
+        var inputStream: ExpressionArg = null
+        var inputStreamType: Type = null
 
         defi match {
           case ApplicationExpression(applicable, args, _) => {
@@ -158,53 +155,65 @@ object FormatStringMangler
         val fs_spec = parseFormatString(formatStrings.get(id.fullName).get)
         val fstring = produceRustFormatString(fs_spec)
 
-        (id, ApplicationExpression(
-          ExternExpression("slift",
-            FunctionType(
-              List(),                 // Identifier
-              List(                   // Parameter
-                (StrictEvaluation, inputStreamType),
-                (StrictEvaluation, FunctionType(List(), List((StrictEvaluation, inputStreamType)), InstantiatedType("String", List())))
-              ),
-              InstantiatedType("Events", List(InstantiatedType("String", List())))    // Return type
-            )),
-          ArraySeq( // slift arguments: input stream and lambda that calls format!
-            inputStream,
-            FunctionExpression(List(), List((Identifier("x"), StrictEvaluation, inputStreamType)), Map(),
-              (fs_spec.padSign, fs_spec.formatType == 'g') match {
+        (
+          id,
+          ApplicationExpression(
+            ExternExpression(
+              "slift",
+              FunctionType(
+                List(), // Identifier
+                List( // Parameter
+                  (StrictEvaluation, inputStreamType),
+                  (
+                    StrictEvaluation,
+                    FunctionType(List(), List((StrictEvaluation, inputStreamType)), InstantiatedType("String", List()))
+                  )
+                ),
+                InstantiatedType("Events", List(InstantiatedType("String", List()))) // Return type
+              )
+            ),
+            ArraySeq( // slift arguments: input stream and lambda that calls format!
+              inputStream,
+              FunctionExpression(
+                List(),
+                List((Identifier("x"), StrictEvaluation, inputStreamType)),
+                Map(),
+                (fs_spec.padSign, fs_spec.formatType == 'g') match {
 
-                /* The following four methods generate funky format string code because Rusts format! macro supports
-                 * neither sign padding nor the %g format specifier.
-                 */
+                  /* The following four methods generate funky format string code because Rusts format! macro supports
+                   * neither sign padding nor the %g format specifier.
+                   */
 
-                /* neither sign padding (' ') nor %g
-                 */
-                case (false, false) => generateNoSignNoG(fstring, inputStreamType, fs_spec)
+                  /* neither sign padding (' ') nor %g
+                   */
+                  case (false, false) => generateNoSignNoG(fstring, inputStreamType, fs_spec)
 
-                /* %g
+                  /* %g
 
                   if 10e-4_f64 <= fabs(value) && fabs(value) < 10_f64.powi(precision) {
                     format_to_type_f(modified_spec, value)
                   } else {
                     format_to_type_e(modified_spec, value)
                   }
-                 */
-                case (false, true) => generateNoSignG(fstring, inputStreamType, fs_spec)
+                   */
+                  case (false, true) => generateNoSignG(fstring, inputStreamType, fs_spec)
 
-                /* sign padding (' ')
+                  /* sign padding (' ')
 
                   if value < 0 {
                     format!("{...}")
                   } else {
                     format(" {...}")
                   }
-                 */
-                case (true, false) => generateSignPaddingNoG(fstring, inputStreamType, fs_spec)
+                   */
+                  case (true, false) => generateSignPaddingNoG(fstring, inputStreamType, fs_spec)
 
-                case (true, true) => generateSignPaddingG(fstring, inputStreamType, fs_spec)
-              }
-            ))
-        ))
+                  case (true, true) => generateSignPaddingG(fstring, inputStreamType, fs_spec)
+                }
+              )
+            )
+          )
+        )
       }
       case other => other
     }
@@ -219,26 +228,33 @@ object FormatStringMangler
    * @param inputStreamType The type of the input stream.
    * @return The format! call.
    */
-  def generateNoSignNoG(fstring : String, inputStreamType : Type, fs_spec : FormatStringSpecification) = {
-    val format = ApplicationExpression(ExternExpression("[rust]format",
-      FunctionType(   // The lambda
-        List(),       // Identifier
-        List(         // Parameter
-          (StrictEvaluation, InstantiatedType("String", List())),
-          (StrictEvaluation, inputStreamType)),
-        InstantiatedType("String", List())    // Return type
-      )),
+  def generateNoSignNoG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
+    val format = ApplicationExpression(
+      ExternExpression(
+        "[rust]format",
+        FunctionType( // The lambda
+          List(), // Identifier
+          List( // Parameter
+            (StrictEvaluation, InstantiatedType("String", List())),
+            (StrictEvaluation, inputStreamType)
+          ),
+          InstantiatedType("String", List()) // Return type
+        )
+      ),
       ArraySeq(StringLiteralExpression(fstring), ExpressionRef(Identifier("x"), inputStreamType))
     )
 
     // Generate code for uppercase strings (%S)
     if (fs_spec.uppercase) {
-      ApplicationExpression(ExternExpression("String_toUpper",
-        FunctionType(
-          List(),
-          List((StrictEvaluation, InstantiatedType("String", List()))),
-          InstantiatedType("String", List())
-        )),
+      ApplicationExpression(
+        ExternExpression(
+          "String_toUpper",
+          FunctionType(
+            List(),
+            List((StrictEvaluation, InstantiatedType("String", List()))),
+            InstantiatedType("String", List())
+          )
+        ),
         ArraySeq(
           format
         )
@@ -256,101 +272,134 @@ object FormatStringMangler
    * @param fs_spec The format string specification.
    * @return The format! call.
    */
-  def generateNoSignG(fstring : String, inputStreamType : Type, fs_spec : FormatStringSpecification) = {
-    ApplicationExpression(ExternExpression("ite",
-      FunctionType(   // The if
-        List(),       // Identifier
-        List(         // Parameter
-          (StrictEvaluation, InstantiatedType("Bool", List())),
-          (LazyEvaluation, InstantiatedType("String", List())),
-          (LazyEvaluation, InstantiatedType("String", List()))
-        ),
-        InstantiatedType("String", List())    // Return type
-      )),
-      ArraySeq(   // Arguments of the if: (exp : bool, then : T, else : T)
-        ApplicationExpression(ExternExpression("and",   // &&
-          FunctionType(
-            List(),                   // Identifier
-            List(                     // Parameter
-              (LazyEvaluation, InstantiatedType("Bool", List())),
-              (LazyEvaluation, InstantiatedType("Bool", List()))
-            ),
-            InstantiatedType("Bool", List())  // Return type
-          )),
-          ArraySeq(    // Arguments of the &&: (op1 : bool, op2 : bool)
-            ApplicationExpression(ExternExpression("fleq",  // 10e-4_f64 <= value
-              FunctionType(
-                List(),
-                List(
-                  (StrictEvaluation, InstantiatedType("Float", List())),
-                  (StrictEvaluation, InstantiatedType("Float", List()))
-                ),
-                InstantiatedType("Bool", List())
-              )),
-              ArraySeq(   // Arguments of fleq (<=)
+  def generateNoSignG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
+    ApplicationExpression(
+      ExternExpression(
+        "ite",
+        FunctionType( // The if
+          List(), // Identifier
+          List( // Parameter
+            (StrictEvaluation, InstantiatedType("Bool", List())),
+            (LazyEvaluation, InstantiatedType("String", List())),
+            (LazyEvaluation, InstantiatedType("String", List()))
+          ),
+          InstantiatedType("String", List()) // Return type
+        )
+      ),
+      ArraySeq( // Arguments of the if: (exp : bool, then : T, else : T)
+        ApplicationExpression(
+          ExternExpression(
+            "and", // &&
+            FunctionType(
+              List(), // Identifier
+              List( // Parameter
+                (LazyEvaluation, InstantiatedType("Bool", List())),
+                (LazyEvaluation, InstantiatedType("Bool", List()))
+              ),
+              InstantiatedType("Bool", List()) // Return type
+            )
+          ),
+          ArraySeq( // Arguments of the &&: (op1 : bool, op2 : bool)
+            ApplicationExpression(
+              ExternExpression(
+                "fleq", // 10e-4_f64 <= value
+                FunctionType(
+                  List(),
+                  List(
+                    (StrictEvaluation, InstantiatedType("Float", List())),
+                    (StrictEvaluation, InstantiatedType("Float", List()))
+                  ),
+                  InstantiatedType("Bool", List())
+                )
+              ),
+              ArraySeq( // Arguments of fleq (<=)
                 FloatLiteralExpression(10e-4),
-                ApplicationExpression(ExternExpression("fabs",    // abs(value)
-                  FunctionType(
-                    List(),
-                    List(
-                      (StrictEvaluation, InstantiatedType("Float", List()))
-                    ),
-                    InstantiatedType("Float", List())
-                  )
-                ),
+                ApplicationExpression(
+                  ExternExpression(
+                    "fabs", // abs(value)
+                    FunctionType(
+                      List(),
+                      List(
+                        (StrictEvaluation, InstantiatedType("Float", List()))
+                      ),
+                      InstantiatedType("Float", List())
+                    )
+                  ),
                   ArraySeq(
                     ExpressionRef(Identifier("x"), inputStreamType)
                   )
-                )     // end of abs(value)
+                ) // end of abs(value)
               )
             ),
-            ApplicationExpression(ExternExpression("flt",  // value < 10_f64.powi(precision)
-              FunctionType(
-                List(),
-                List(
-                  (StrictEvaluation, InstantiatedType("Float", List())),
-                  (StrictEvaluation, InstantiatedType("Float", List()))
-                ),
-                InstantiatedType("Bool", List())
-              )),
-              ArraySeq(   // Arguments of flt (<)
-                ApplicationExpression(ExternExpression("fabs",    // abs(value)
-                  FunctionType(
-                    List(),
-                    List(
-                      (StrictEvaluation, InstantiatedType("Float", List()))
-                    ),
-                    InstantiatedType("Float", List())
-                  )
-                ),
+            ApplicationExpression(
+              ExternExpression(
+                "flt", // value < 10_f64.powi(precision)
+                FunctionType(
+                  List(),
+                  List(
+                    (StrictEvaluation, InstantiatedType("Float", List())),
+                    (StrictEvaluation, InstantiatedType("Float", List()))
+                  ),
+                  InstantiatedType("Bool", List())
+                )
+              ),
+              ArraySeq( // Arguments of flt (<)
+                ApplicationExpression(
+                  ExternExpression(
+                    "fabs", // abs(value)
+                    FunctionType(
+                      List(),
+                      List(
+                        (StrictEvaluation, InstantiatedType("Float", List()))
+                      ),
+                      InstantiatedType("Float", List())
+                    )
+                  ),
                   ArraySeq(
                     ExpressionRef(Identifier("x"), inputStreamType)
                   )
-                ),     // end of abs(value)
+                ), // end of abs(value)
                 FloatLiteralExpression(Math.pow(10, fs_spec.precision))
               )
             )
-          )     // end of && arguments
+          ) // end of && arguments
         ),
-        ApplicationExpression(ExternExpression("[rust]format",    // format_to_type_f
-          FunctionType(   // The lambda
-            List(),       // Identifier
-            List(         // Parameter
-              (StrictEvaluation, InstantiatedType("String", List())),
-              (StrictEvaluation, inputStreamType)),
-            InstantiatedType("String", List())    // Return type
-          )),
+        ApplicationExpression(
+          ExternExpression(
+            "[rust]format", // format_to_type_f
+            FunctionType( // The lambda
+              List(), // Identifier
+              List( // Parameter
+                (StrictEvaluation, InstantiatedType("String", List())),
+                (StrictEvaluation, inputStreamType)
+              ),
+              InstantiatedType("String", List()) // Return type
+            )
+          ),
           ArraySeq(StringLiteralExpression(fstring), ExpressionRef(Identifier("x"), inputStreamType))
         ),
-        ApplicationExpression(ExternExpression("[rust]format",  // format_to_type_e
-          FunctionType(   // The lambda
-            List(),       // Identifier
-            List(         // Parameter
-              (StrictEvaluation, InstantiatedType("String", List())),
-              (StrictEvaluation, inputStreamType)),
-            InstantiatedType("String", List())    // Return type
-          )),
-          ArraySeq(StringLiteralExpression(fstring.replace("}", if (fs_spec.uppercase) {"E}"} else {"e}"})), ExpressionRef(Identifier("x"), inputStreamType))
+        ApplicationExpression(
+          ExternExpression(
+            "[rust]format", // format_to_type_e
+            FunctionType( // The lambda
+              List(), // Identifier
+              List( // Parameter
+                (StrictEvaluation, InstantiatedType("String", List())),
+                (StrictEvaluation, inputStreamType)
+              ),
+              InstantiatedType("String", List()) // Return type
+            )
+          ),
+          ArraySeq(
+            StringLiteralExpression(
+              fstring.replace(
+                "}",
+                if (fs_spec.uppercase) { "E}" }
+                else { "e}" }
+              )
+            ),
+            ExpressionRef(Identifier("x"), inputStreamType)
+          )
         )
       )
     )
@@ -364,69 +413,90 @@ object FormatStringMangler
    * @param fs_spec The format string specification.
    * @return The format! call.
    */
-  def generateSignPaddingNoG(fstring : String, inputStreamType : Type, fs_spec : FormatStringSpecification) = {
-    ApplicationExpression(ExternExpression("ite",
-      FunctionType(   // The if
-        List(),       // Identifier
-        List(         // Parameter
-          (StrictEvaluation, InstantiatedType("Bool", List())),
-          (LazyEvaluation, InstantiatedType("String", List())),
-          (LazyEvaluation, InstantiatedType("String", List()))
-        ),
-        InstantiatedType("String", List())    // Return type
-      )),
-      ArraySeq(   // Arguments of the if: (exp : bool, then : T, else : T)
+  def generateSignPaddingNoG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
+    ApplicationExpression(
+      ExternExpression(
+        "ite",
+        FunctionType( // The if
+          List(), // Identifier
+          List( // Parameter
+            (StrictEvaluation, InstantiatedType("Bool", List())),
+            (LazyEvaluation, InstantiatedType("String", List())),
+            (LazyEvaluation, InstantiatedType("String", List()))
+          ),
+          InstantiatedType("String", List()) // Return type
+        )
+      ),
+      ArraySeq( // Arguments of the if: (exp : bool, then : T, else : T)
         (fs_spec.isInteger, fs_spec.isFloat) match {
           case (true, false) =>
-            ApplicationExpression(ExternExpression("lt", // value < 10_f64.powi(precision)
-              FunctionType(
-                List(),
-                List(
-                  (StrictEvaluation, InstantiatedType("Int", List())),
-                  (StrictEvaluation, InstantiatedType("Int", List()))
-                ),
-                InstantiatedType("Bool", List())
-              )),
+            ApplicationExpression(
+              ExternExpression(
+                "lt", // value < 10_f64.powi(precision)
+                FunctionType(
+                  List(),
+                  List(
+                    (StrictEvaluation, InstantiatedType("Int", List())),
+                    (StrictEvaluation, InstantiatedType("Int", List()))
+                  ),
+                  InstantiatedType("Bool", List())
+                )
+              ),
               ArraySeq( // Arguments of lt (<)
                 ExpressionRef(Identifier("x"), inputStreamType),
                 IntLiteralExpression(0)
               )
             )
           case (false, true) =>
-            ApplicationExpression(ExternExpression("flt", // value < 0.0
-              FunctionType(
-                List(),
-                List(
-                  (StrictEvaluation, InstantiatedType("Float", List())),
-                  (StrictEvaluation, InstantiatedType("Float", List()))
-                ),
-                InstantiatedType("Bool", List())
-              )),
+            ApplicationExpression(
+              ExternExpression(
+                "flt", // value < 0.0
+                FunctionType(
+                  List(),
+                  List(
+                    (StrictEvaluation, InstantiatedType("Float", List())),
+                    (StrictEvaluation, InstantiatedType("Float", List()))
+                  ),
+                  InstantiatedType("Bool", List())
+                )
+              ),
               ArraySeq( // Arguments of flt (<)
                 ExpressionRef(Identifier("x"), inputStreamType),
                 FloatLiteralExpression(0.0)
               )
             )
         },
-        ApplicationExpression(ExternExpression("[rust]format",    // the value is negative, don't add padding
-          FunctionType(   // The lambda
-            List(),       // Identifier
-            List(         // Parameter
-              (StrictEvaluation, InstantiatedType("String", List())),
-              (StrictEvaluation, inputStreamType)),
-            InstantiatedType("String", List())    // Return type
-          )),
+        ApplicationExpression(
+          ExternExpression(
+            "[rust]format", // the value is negative, don't add padding
+            FunctionType( // The lambda
+              List(), // Identifier
+              List( // Parameter
+                (StrictEvaluation, InstantiatedType("String", List())),
+                (StrictEvaluation, inputStreamType)
+              ),
+              InstantiatedType("String", List()) // Return type
+            )
+          ),
           ArraySeq(StringLiteralExpression(fstring), ExpressionRef(Identifier("x"), inputStreamType))
         ),
-        ApplicationExpression(ExternExpression("[rust]format",  // the value is positive, add padding
-          FunctionType(   // The lambda
-            List(),       // Identifier
-            List(         // Parameter
-              (StrictEvaluation, InstantiatedType("String", List())),
-              (StrictEvaluation, inputStreamType)),
-            InstantiatedType("String", List())    // Return type
-          )),
-          ArraySeq(StringLiteralExpression(if (fs_spec.leftJustify) { fstring.replace("{", " {") } else { fstring }), ExpressionRef(Identifier("x"), inputStreamType))
+        ApplicationExpression(
+          ExternExpression(
+            "[rust]format", // the value is positive, add padding
+            FunctionType( // The lambda
+              List(), // Identifier
+              List( // Parameter
+                (StrictEvaluation, InstantiatedType("String", List())),
+                (StrictEvaluation, inputStreamType)
+              ),
+              InstantiatedType("String", List()) // Return type
+            )
+          ),
+          ArraySeq(
+            StringLiteralExpression(if (fs_spec.leftJustify) { fstring.replace("{", " {") }
+            else { fstring }),
+            ExpressionRef(Identifier("x"), inputStreamType)
+          )
         )
       )
     )
@@ -440,34 +510,45 @@ object FormatStringMangler
    * @param fs_spec The format string specification.
    * @return The format! call.
    */
-  def generateSignPaddingG(fstring : String, inputStreamType : Type, fs_spec : FormatStringSpecification) = {
-    ApplicationExpression(ExternExpression("ite",
-      FunctionType(   // The if
-        List(),       // Identifier
-        List(         // Parameter
-          (StrictEvaluation, InstantiatedType("Bool", List())),
-          (LazyEvaluation, InstantiatedType("String", List())),
-          (LazyEvaluation, InstantiatedType("String", List()))
-        ),
-        InstantiatedType("String", List())    // Return type
-      )),
-      ArraySeq(   // Arguments of the if: (exp : bool, then : T, else : T)
-        ApplicationExpression(ExternExpression("flt", // value < 0.0
-          FunctionType(
-            List(),
-            List(
-              (StrictEvaluation, InstantiatedType("Float", List())),
-              (StrictEvaluation, InstantiatedType("Float", List()))
-            ),
-            InstantiatedType("Bool", List())
-          )),
+  def generateSignPaddingG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
+    ApplicationExpression(
+      ExternExpression(
+        "ite",
+        FunctionType( // The if
+          List(), // Identifier
+          List( // Parameter
+            (StrictEvaluation, InstantiatedType("Bool", List())),
+            (LazyEvaluation, InstantiatedType("String", List())),
+            (LazyEvaluation, InstantiatedType("String", List()))
+          ),
+          InstantiatedType("String", List()) // Return type
+        )
+      ),
+      ArraySeq( // Arguments of the if: (exp : bool, then : T, else : T)
+        ApplicationExpression(
+          ExternExpression(
+            "flt", // value < 0.0
+            FunctionType(
+              List(),
+              List(
+                (StrictEvaluation, InstantiatedType("Float", List())),
+                (StrictEvaluation, InstantiatedType("Float", List()))
+              ),
+              InstantiatedType("Bool", List())
+            )
+          ),
           ArraySeq( // Arguments of flt (<)
             ExpressionRef(Identifier("x"), inputStreamType),
             FloatLiteralExpression(0.0)
           )
         ),
         generateNoSignG(fstring, inputStreamType, fs_spec),
-        generateNoSignG(if (fs_spec.leftJustify) { fstring.replace("{", " {") } else { fstring }, inputStreamType, fs_spec)
+        generateNoSignG(
+          if (fs_spec.leftJustify) { fstring.replace("{", " {") }
+          else { fstring },
+          inputStreamType,
+          fs_spec
+        )
       )
     )
   }
@@ -561,7 +642,7 @@ object FormatStringMangler
 
       // Extract precision
       if (fs.charAt(i) == '.') {
-        i+=1
+        i += 1
         val j = i
 
         while (fs.charAt(i).isDigit) {
