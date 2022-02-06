@@ -529,15 +529,10 @@ impl<T> TesslaSet<T>{
 
 impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     #[inline]
-    pub fn Set_add (&self, x: TesslaValue<T>) -> TesslaSet<TesslaValue<T>> {
+    pub fn Set_add(&self, x: TesslaValue<T>) -> TesslaSet<TesslaValue<T>> {
         match self {
             Error(error) => Error(error),
-            Value(value) => {
-                let mut x_set: HashSet<TesslaValue<T>> = HashSet::<TesslaValue<T>>::new();
-                x_set.insert(x);
-                let out: TesslaSet<TesslaValue<T>> = Value(x_set.union(value.clone()));
-                return out;
-            },
+            Value(value) => Value(value.update(x))
         }
     }
 
@@ -545,39 +540,27 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     pub fn Set_contains(&self, item: TesslaValue<T>) -> TesslaBool {
         match self {
             Error(error) => Error(error),
-            Value(value) => return Value(value.contains(&item)),
+            Value(value) => Value(value.contains(&item))
         }
     }
 
     #[inline]
     pub fn Set_intersection(&self, set2: TesslaSet<TesslaValue<T>>) -> TesslaSet<TesslaValue<T>>{
-        match self {
-            Error(error) => Error(error),
-            Value(value1) => {
-                match set2 {
-                    Error(error) => Error(error),
-                    Value(value2) => {
-                        let out: TesslaValue<HashSet<TesslaValue<T>>> = Value(value1.clone().intersection(value2.clone()));
-                        return out;
-                    },
-                }
-            },
+        match (self, set2) {
+            (Error(error), _) => Error(error),
+            (_, Error(error)) => Error(error),
+            (Value(set_a), Value(set_b)) =>
+                Value(set_a.clone().intersection(set_b))
         }
     }
 
     #[inline]
     pub fn Set_minus(&self, set2: TesslaSet<TesslaValue<T>>) -> TesslaSet<TesslaValue<T>> {
-        match self {
-            Error(error) => Error(error),
-            Value(value) => {
-                let out: TesslaValue<HashSet<TesslaValue<T>>> = Value(HashSet::new());
-                for item in value.iter() {
-                    if !set2.Set_contains(item.clone()).get_value() {
-                        out.Set_add(item.clone());
-                    }
-                }
-                return out;
-            }
+        match (self, set2) {
+            (Error(error), _) => Error(error),
+            (_, Error(error)) => Error(error),
+            (Value(set_a), Value(set_b)) =>
+                Value(set_a.clone().difference(set_b))
         }
     }
 
@@ -585,10 +568,8 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     pub fn Set_remove(&self, item: TesslaValue<T>) -> TesslaSet<TesslaValue<T>> {
         match self {
             Error(error) => Error(error),
-            Value(value) => {
-                let out: TesslaSet<TesslaValue<T>> = Value(value.clone().without(&item));
-                return out;
-            },
+            Value(value) =>
+                Value(value.without(&item))
         }
     }
 
@@ -596,8 +577,9 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     pub fn Set_size(&self) -> TesslaInt{
         match self {
             Error(error) => Error(error),
-            Value(value) => {
-                return Value(i64::try_from(value.len()).unwrap());
+            Value(value) => match i64::try_from(value.len()) {
+                Ok(size) => Value(size),
+                Err(_) => Error("Failed to convert usize to i64")
             },
         }
     }
@@ -607,9 +589,8 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
         match (self, set2) {
             (Error(error), _) => Error(error),
             (_, Error(error)) => Error(error),
-            (Value(value1), Value(value2)) => {
-                return Value(value1.clone().union(value2));
-            }
+            (Value(set_a), Value(set_b)) =>
+                Value(set_a.clone().union(set_b))
         }
     }
 
@@ -788,9 +769,13 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
 
     #[inline]
     pub fn List_get(&self, index: TesslaInt) -> TesslaValue<T>{
-        match self {
-            Error(error) => Error(error),
-            Value(value) => value.get(index.get_value() as usize).unwrap().clone(),
+        match (self, index) {
+            (Error(error), _) => Error(error),
+            (_, Error(error)) => Error(error),
+            (Value(list), Value(index)) => match list.get(index as usize) {
+                Some(value) => value.clone(),
+                None => Error("Index out of bounds")
+            },
         }
     }
 
@@ -799,9 +784,11 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
         match self {
             Error(error) => Error(error),
             Value(value) => {
-                let mut x: Vector<TesslaValue<T>> = Vector::<TesslaValue<T>>::new();
-                x.append(value.clone());
-                return Value(x.clone().split_at(x.clone().len()-2).0);
+                if value.len() > 1 {
+                    Value(value.clone().slice(..(value.len() - 1)))
+                } else {
+                    Self::List_empty()
+                }
             },
         }
     }
@@ -841,13 +828,15 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
     }
 
     #[inline]
-    pub fn List_tail(&self) -> TesslaList<TesslaValue<T>>{
+    pub fn List_tail(&self) -> TesslaList<TesslaValue<T>> {
         match self {
             Error(error) => Error(error),
             Value(value) => {
-                let mut x: Vector<TesslaValue<T>> = Vector::<TesslaValue<T>>::new();
-                x.append(value.clone());
-                return Value(x.split_off(1));
+                if value.len() > 1 {
+                    Value((value.clone()).split_off(1))
+                } else {
+                    Self::List_empty()
+                }
             },
         }
     }
