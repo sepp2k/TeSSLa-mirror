@@ -7,7 +7,7 @@ use im::Vector;
 
 use TesslaValue::*;
 
-#[derive(Hash, Eq)]
+#[derive(Hash)]
 pub enum TesslaValue<T> {
     Error(&'static str),
     Value(T),
@@ -59,6 +59,7 @@ impl<T: Clone> Clone for TesslaValue<T> {
     }
 }
 
+impl<T: PartialEq> Eq for TesslaValue<T> {}
 impl<T: PartialEq> PartialEq<Self> for TesslaValue<T> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
