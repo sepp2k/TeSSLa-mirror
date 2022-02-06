@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.uni_luebeck.isp.tessla.tessla_compiler;
+package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import java.nio.file.{Files, Path}
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
@@ -31,7 +31,7 @@ import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
 
 import java.lang.ProcessBuilder.Redirect
-import scala.concurrent.duration.MINUTES
+import scala.concurrent.duration.SECONDS
 import scala.io.Source
 import scala.reflect.io.Directory
 
@@ -123,7 +123,7 @@ object TesslacRustTests {
       val out = process.getInputStream
       val err = process.getErrorStream
 
-      process.waitFor(60, MINUTES);
+      process.waitFor(60, SECONDS)
 
       out.markSupported()
 
