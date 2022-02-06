@@ -25,7 +25,6 @@ test:
     - development
     - /^mr-.*$/
     - /^issue-.*$/
-    - rust-dev2
   tags:
     - docker
   script:
