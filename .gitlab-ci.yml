@@ -1,5 +1,5 @@
-image: hseeberger/scala-sbt:11.0.12_1.5.5_2.13.6
-       
+image: registry.isp.uni-luebeck.de/docker/scala-sbt-rust:11.0.12_1.5.5_2.13.6
+
 before_script:
   # Log the Java version
   - java -version
@@ -25,6 +25,7 @@ test:
     - development
     - /^mr-.*$/
     - /^issue-.*$/
+    - rust-dev2
   tags:
     - docker
   script:
@@ -42,6 +43,7 @@ deploy:
     - development
     - /^mr-.*$/
     - /^issue-.*$/
+    - rust-dev2
   tags:
     - docker
   script:
