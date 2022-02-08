@@ -531,14 +531,14 @@ pub type TesslaSet<T> = TesslaValue<HashSet<T>>;
 impl<T: Display> TesslaDisplay for HashSet<T> {
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("Set(")?;
-        let mut start = true;
-        for item in self.iter() {
-            if start {
-                start = false;
-            } else {
+        let mut entries = Vector::from_iter(
+            self.iter().map(|value| format!("{}", value)));
+        entries.sort();
+        for (i, entry) in entries.iter().enumerate() {
+            if i > 0 {
                 f.write_str(", ")?;
             }
-            write!(f, "{}", item)?;
+            f.write_str(entry)?;
         }
         f.write_str(")")
     }
@@ -640,14 +640,14 @@ pub type TesslaMap<T,U> = TesslaValue<HashMap<T,U>>;
 impl<T: Display + Hash + Eq, U: Display> TesslaDisplay for HashMap<T,U> {
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("Map(")?;
-        let mut start = true;
-        for item in self.iter() {
-            if start {
-                start = false;
-            } else {
+        let mut entries = Vector::from_iter(
+            self.iter().map(|(key, value)| format!("{} -> {}", key, value)));
+        entries.sort();
+        for (i, entry) in entries.iter().enumerate() {
+            if i > 0 {
                 f.write_str(", ")?;
             }
-            write!(f, "{} -> {}", item.0, item.1)?;
+            f.write_str(entry)?;
         }
         f.write_str(")")
     }
