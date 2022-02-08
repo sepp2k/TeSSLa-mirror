@@ -1,8 +1,11 @@
-use std::fmt::Display;
 use std::io::stdin;
 use std::str::FromStr;
+use crate::{TesslaDisplay, TesslaType, TesslaValue};
 
-pub fn output_var<T: Display>(output: T, true_name: &str, ts: i64, raw: bool) {
+pub fn output_var<T: TesslaDisplay>(output: TesslaValue<T>, true_name: &str, ts: i64, raw: bool) {
+    if output.is_error() {
+        panic!("{}", output);
+    }
     if raw {
         println!("{}", output);
     } else {
