@@ -480,7 +480,7 @@ object CInstrumentation {
     /**
      * Produces code to print the event index to the provided input stream.
      */
-    protected def printEventIndex(in: InStream, index: Int): String = printEvent(in, s"index$index")
+    protected def printEventIndex(in: InStream, index: Int): String = printEvent(in, s"subExp$index")
 
     protected val prefix = "#include \"logging.h\"\n"
 

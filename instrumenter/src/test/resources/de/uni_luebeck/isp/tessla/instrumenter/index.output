@@ -1,5 +1,5 @@
 READ int &thing[][]->foo
 _1_globalRead
 uint8_t* events = trace_create_events(1);
-trace_push_int(events, "thingRead", (int64_t) index0);
+trace_push_int(events, "thingRead", (int64_t) subExp0);
 trace_write(events);
