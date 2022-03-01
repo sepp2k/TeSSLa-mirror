@@ -27,6 +27,7 @@ import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, FlattenCore,
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
+  EscapeInvalidIdentifiers,
   ExtractAndWrapFunctions,
   GenerateStructDefinitions
 }
@@ -182,6 +183,7 @@ object Main {
             .andThen(config.targetLanguage match {
               case "rust" =>
                 (FormatStringMangler
+                  andThen EscapeInvalidIdentifiers
                   andThen new ExtractAndWrapFunctions
                   andThen GenerateStructDefinitions
                   andThen UsageAnalysis

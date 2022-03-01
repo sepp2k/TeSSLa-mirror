@@ -20,8 +20,11 @@ import java.nio.file.{Files, Path}
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
-import de.uni_luebeck.isp.tessla.core.TranslationPhase.Result
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{ExtractAndWrapFunctions, GenerateStructDefinitions}
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
+  EscapeInvalidIdentifiers,
+  ExtractAndWrapFunctions,
+  GenerateStructDefinitions
+}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
@@ -77,7 +80,12 @@ class TesslacRustTests extends AbstractTestRunner[String]("Tessla Rust Compiler"
     Directory(fsPath.toFile).deleteRecursively()
   }
 
-  override def compareRunResult(actualOut: String, actualErr: String, expectedOut: String, expectedErr: String): Unit = {
+  override def compareRunResult(
+    actualOut: String,
+    actualErr: String,
+    expectedOut: String,
+    expectedErr: String
+  ): Unit = {
     val expectedOutput = expectedOut.linesIterator.toSet.filterNot(_.isBlank)
     val expectedErrors = expectedErr.split("\n(?! )").toSet.filterNot(_.isBlank)
     val output = actualOut.linesIterator.toSet.filterNot(_.isBlank)
@@ -112,13 +120,13 @@ object TesslacRustTests {
     val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
 
     FormatStringMangler
+      .andThen(EscapeInvalidIdentifiers)
       .andThen(new ExtractAndWrapFunctions)
       .andThen(GenerateStructDefinitions)
       .andThen(UsageAnalysis)
       .andThen(InliningAnalysis)
       .andThen(new TesslaCoreToRust(consoleInterface))
   }
-
 
   def execute(dirPath: Path, sourceCode: String, inputTrace: java.io.File): (Seq[String], Seq[String]) = {
     val sourcePath = dirPath.resolve("src/main.rs")
