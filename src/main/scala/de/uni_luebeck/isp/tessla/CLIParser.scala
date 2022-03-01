@@ -290,7 +290,7 @@ object CLIParser {
         opt[Unit]('n', "no-io")
           .foreach(_ => config = config.copy(ioInterface = false))
           .text("Replaces I/O Handling in generated source with simple API interface"),
-        opt[String]('t', "target-language")
+        opt[String]('g', "target-language")
           .foreach(s => config = config.copy(targetLanguage = s))
           .validate {
             case "scala" | "rust" => success
