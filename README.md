@@ -102,9 +102,11 @@ Compile TeSSLa specifications to Scala
   <tessla-file>            The file containing the Tessla specification
   -a, --add-source <value>
                            Additional source file included on top of the generated source
-  -o, --out-file <value>   Place the generated Scala source code at this location.
-  -j, --jar-file <value>   Compile TeSSLa specification to an executable jar file which is created at the given location.
+  -o, --out-file <value>   Place the generated source code at this location.
+  -b, --bin-file <value>   Compile TeSSLa specification to an executable jar file which is created at the given location.
   -n, --no-io              Replaces I/O Handling in generated source with simple API interface
+  -g, --target-language <value>
+                           Select the target language to compile to: (scala, rust)
 
 Command: instrumenter <tessla-file> <c-file> [<include-path>...]
 Instrument C code based on the provided annotations (linux-amd64, windows-x64 only)
