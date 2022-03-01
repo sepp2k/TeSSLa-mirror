@@ -36,10 +36,10 @@ TesslaValue is specified together with some specializations in `value.rs` in the
 | TeSSLa Type   | Rust  Type                    | Notes                                                     |
 |---            |---                            |---                                                        |
 |  Unit         | TesslaValue<()>               |                                                           |
-|  Bool         | TesslaValue<bool>             |                                                           |
-|  Int          | TesslaValue<i64>              |                                                           |
-|  Float        | TesslaValue<f64>              |                                                           |
-|  String       | TesslaValue<String>           |                                                           |
+|  Bool         | TesslaValue&lt;bool>             |                                                           |
+|  Int          | TesslaValue&lt;i64>              |                                                           |
+|  Float        | TesslaValue&lt;f64>              |                                                           |
+|  String       | TesslaValue&lt;String>           |                                                           |
 |  Set          | TesslaValue<im::HashSet<T>>   |                                                           |
 |  List         | TesslaValue<im::Vector<T>>    |                                                           |
 |  Map          | TesslaValue<im::HashMap<T,U>> |                                                           |
