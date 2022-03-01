@@ -1,0 +1,6 @@
+{
+  "input": "invalid-input-object3.input",
+  "expectedOutput": "empty.output",
+  "expectedRuntimeErrors": "invalid-input-object3.runtime-errors",
+  "spec": "input-stream.tessla"
+}
