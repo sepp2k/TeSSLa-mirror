@@ -20,10 +20,8 @@ import java.nio.file.{Files, Path}
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
-  ExtractAndWrapFunctions,
-  GenerateStructDefinitions
-}
+import de.uni_luebeck.isp.tessla.core.TranslationPhase.Result
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{ExtractAndWrapFunctions, GenerateStructDefinitions}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
@@ -78,6 +76,33 @@ class TesslacRustTests extends AbstractTestRunner[String]("Tessla Rust Compiler"
   override def afterAll(): Unit = {
     Directory(fsPath.toFile).deleteRecursively()
   }
+
+  override def compareRunResult(actualOut: String, actualErr: String, expectedOut: String, expectedErr: String): Unit = {
+    val expectedOutput = expectedOut.linesIterator.toSet.filterNot(_.isBlank)
+    val expectedErrors = expectedErr.split("\n(?! )").toSet.filterNot(_.isBlank)
+    val output = actualOut.linesIterator.toSet.filterNot(_.isBlank)
+    val errors = actualErr.split("\n(?! )").toSet.filterNot(_.isBlank)
+
+    assertTrue(!(errors.isEmpty && expectedErrors.nonEmpty), "Expected: Runtime error. Actual: success")
+    assertTrue(
+      !(errors.nonEmpty && expectedErrors.isEmpty),
+      s"Expected: success, Actual: Runtime error:\n${errors.mkString("\n")}"
+    )
+
+    // Extract the error message since Rust prints additional stuff like the backtrace
+    val expErrMsg = scala.collection.mutable.Set[String]()
+    errors.foreach(ln => {
+      if (!ln.startsWith("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace")) {
+        if (ln.startsWith("thread 'main' panicked at '")) {
+          val spl = ln.split("',")(0).split("at '")(1)
+          expErrMsg.add(spl)
+        }
+      }
+    });
+
+    assertEqualSets(expErrMsg.toSet, expectedErrors)
+    assertEqualSets(output.map(splitOutput), expectedOutput.map(splitOutput), unsplitOutput)
+  }
 }
 
 object TesslacRustTests {
@@ -93,6 +118,7 @@ object TesslacRustTests {
       .andThen(InliningAnalysis)
       .andThen(new TesslaCoreToRust(consoleInterface))
   }
+
 
   def execute(dirPath: Path, sourceCode: String, inputTrace: java.io.File): (Seq[String], Seq[String]) = {
     val sourcePath = dirPath.resolve("src/main.rs")
