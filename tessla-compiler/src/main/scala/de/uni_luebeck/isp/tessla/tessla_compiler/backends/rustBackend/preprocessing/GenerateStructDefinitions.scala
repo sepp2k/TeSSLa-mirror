@@ -19,6 +19,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preproces
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
+import de.uni_luebeck.isp.tessla.tessla_compiler.TypeArgManagement
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustUtils, TesslaCoreToRust}
 
 import scala.collection.mutable
@@ -40,12 +41,14 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
   override def translate(spec: Specification): TranslationPhase.Result[Specification] = {
     val structDefinitions = mutable.Map.empty[Identifier, DefinitionExpression]
 
-    spec.definitions.foreach { case (_, definition) => findRequiredStructs(definition, structDefinitions) }
+    spec.definitions.foreach {
+      case (_, definition) => findRequiredStructs(definition, TypeArgManagement.empty, structDefinitions)
+    }
 
     // we need to also consider input stream types, since they could just get passed through
     // without being modified, thus not ever appearing in the definitions
-    spec.in.foreach { case (_, (typ, _)) => findRecordTypes(typ, structDefinitions) }
-    spec.out.foreach { case (expr, _) => findRequiredStructs(expr, structDefinitions) }
+    spec.in.foreach { case (_, (typ, _)) => findRecordTypes(typ, TypeArgManagement.empty, structDefinitions) }
+    spec.out.foreach { case (expr, _) => findRequiredStructs(expr, TypeArgManagement.empty, structDefinitions) }
 
     Success(
       Specification(spec.annotations, spec.in, spec.definitions ++ structDefinitions, spec.out, spec.maxIdentifier),
@@ -59,29 +62,31 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
    * later on.
    *
    * @param expression an expression
+   * @param tm The [[TypeArgManagement]] to resolve type parameters
    * @param structDefinitions a definition map containing every unique record type
    */
   private def findRequiredStructs(
     expression: ExpressionArg,
+    tm: TypeArgManagement,
     structDefinitions: mutable.Map[Identifier, DefinitionExpression]
   ): Unit = expression match {
     case FunctionExpression(_, params, body, result, _) =>
-      params.foreach { case (_, _, tpe) => findRecordTypes(tpe, structDefinitions) }
-      body.foreach { case (_, definition) => findRequiredStructs(definition, structDefinitions) }
-      findRequiredStructs(result, structDefinitions)
+      params.foreach { case (_, _, tpe) => findRecordTypes(tpe, tm, structDefinitions) }
+      body.foreach { case (_, definition) => findRequiredStructs(definition, tm, structDefinitions) }
+      findRequiredStructs(result, tm, structDefinitions)
     case ApplicationExpression(applicable, args, _) =>
-      findRequiredStructs(applicable, structDefinitions)
-      args.foreach(findRequiredStructs(_, structDefinitions))
+      findRequiredStructs(applicable, tm, structDefinitions)
+      args.foreach(findRequiredStructs(_, tm, structDefinitions))
     case TypeApplicationExpression(applicable, typeArgs, _) =>
-      findRequiredStructs(applicable, structDefinitions)
-      typeArgs.foreach(findRecordTypes(_, structDefinitions))
+      findRequiredStructs(applicable, tm.typeApp(typeArgs), structDefinitions)
+      typeArgs.foreach(findRecordTypes(_, tm, structDefinitions))
     case RecordConstructorExpression(entries, _) =>
-      entries.foreach { case (_, (value, _)) => findRequiredStructs(value, structDefinitions) }
+      entries.foreach { case (_, (value, _)) => findRequiredStructs(value, tm, structDefinitions) }
     case RecordAccessorExpression(_, target, _, _) =>
-      findRequiredStructs(target, structDefinitions)
+      findRequiredStructs(target, tm, structDefinitions)
 
-    case ExpressionRef(_, tpe, _)    => findRecordTypes(tpe, structDefinitions)
-    case ExternExpression(_, tpe, _) => findRecordTypes(tpe, structDefinitions)
+    case ExpressionRef(_, tpe, _)    => findRecordTypes(tpe, tm, structDefinitions)
+    case ExternExpression(_, tpe, _) => findRecordTypes(tpe, tm, structDefinitions)
 
     case _: StringLiteralExpression | _: IntLiteralExpression | _: FloatLiteralExpression => {}
   }
@@ -90,10 +95,12 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
    * Go through a given type recursively, noting any record types found in the definitions map.
    *
    * @param typ any type
+   * @param tm The [[TypeArgManagement]] to resolve type parameters
    * @param structDefinitions a definition map containing every encountered unique record type
    */
   private def findRecordTypes(
     typ: Type,
+    tm: TypeArgManagement,
     structDefinitions: mutable.Map[Identifier, DefinitionExpression]
   ): Unit = typ match {
     case RecordType(entries, _) if entries.nonEmpty =>
@@ -101,18 +108,20 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
       val structName = Identifier(RustUtils.getStructName(entries))
 
       if (!structDefinitions.contains(structName)) {
-        entries.foreach { case (_, (typ, _)) => findRecordTypes(typ, structDefinitions) }
+        entries.foreach { case (_, (typ, _)) => findRecordTypes(typ.resolve(tm.resMap), tm, structDefinitions) }
 
-        structDefinitions.addOne(structName -> ExternExpression("[rust]Struct", typ).asInstanceOf[DefinitionExpression])
+        structDefinitions.addOne(
+          structName -> ExternExpression("[rust]Struct", typ.resolve(tm.resMap)).asInstanceOf[DefinitionExpression]
+        )
       }
 
-    case InstantiatedType("Events", Seq(t), _) => findRecordTypes(t, structDefinitions)
-    case InstantiatedType("Option", Seq(t), _) => findRecordTypes(t, structDefinitions)
+    case InstantiatedType("Events", Seq(t), _) => findRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
+    case InstantiatedType("Option", Seq(t), _) => findRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
     case InstantiatedType(n, types, _) if n.startsWith("native:") =>
-      types.foreach(findRecordTypes(_, structDefinitions))
+      types.foreach(typ => findRecordTypes(typ.resolve(tm.resMap), tm, structDefinitions))
     case FunctionType(_, paramTypes, resultType, _) =>
-      paramTypes.foreach { case (_, typ) => findRecordTypes(typ, structDefinitions) }
-      findRecordTypes(resultType, structDefinitions)
+      paramTypes.foreach { case (_, typ) => findRecordTypes(typ.resolve(tm.resMap), tm, structDefinitions) }
+      findRecordTypes(resultType.resolve(tm.resMap), tm, structDefinitions)
 
     case _ => ()
   }

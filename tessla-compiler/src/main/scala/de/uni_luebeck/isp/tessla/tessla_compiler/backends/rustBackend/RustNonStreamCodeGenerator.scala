@@ -22,7 +22,8 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{
   DefinitionOrdering,
   Diagnostics,
   ExtendedSpecification,
-  NonStreamCodeGeneratorInterface
+  NonStreamCodeGeneratorInterface,
+  TypeArgManagement
 }
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
   FinalDeclaration,
