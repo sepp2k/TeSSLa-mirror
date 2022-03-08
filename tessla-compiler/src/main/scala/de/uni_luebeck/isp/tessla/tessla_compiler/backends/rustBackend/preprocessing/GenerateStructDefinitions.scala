@@ -45,6 +45,7 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
     // we need to also consider input stream types, since they could just get passed through
     // without being modified, thus not ever appearing in the definitions
     spec.in.foreach { case (_, (typ, _)) => findRecordTypes(typ, structDefinitions) }
+    spec.out.foreach { case (expr, _) => findRequiredStructs(expr, structDefinitions) }
 
     Success(
       Specification(spec.annotations, spec.in, spec.definitions ++ structDefinitions, spec.out, spec.maxIdentifier),
