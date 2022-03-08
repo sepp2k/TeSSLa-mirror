@@ -61,7 +61,12 @@ object RustUtils {
           }
           .mkString(", ")}) -> ${convertType(resultType, mask_generics)}>"""
       case RecordType(entries, _) =>
-        s"TesslaValue<${RustUtils.getStructName(entries)}>"
+        val genericTypes = getGenericTypeNames(entries.map { case (_, (typ, _)) => typ })
+        if (genericTypes.nonEmpty) {
+          s"""TesslaValue<${RustUtils.getStructName(entries)}<${genericTypes.mkString(", ")}>>"""
+        } else {
+          s"TesslaValue<${RustUtils.getStructName(entries)}>"
+        }
       case TypeParam(name, _) => s"TesslaValue<${if (mask_generics) "_" else name.toString}>"
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
