@@ -80,7 +80,7 @@ class TesslaCoreToIntermediate(ioInterface: Boolean)
                 currSrc.tsGenSource,
                 currSrc.inputProcessing,
                 currSrc.staticSource :+ nonStreamCodeGenerator
-                  .translateAssignment(id, definition, nonStreamCodeGenerator.TypeArgManagement.empty, definitions)
+                  .translateAssignment(id, definition, TypeArgManagement.empty, definitions)
               )
           }
       }

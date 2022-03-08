@@ -17,7 +17,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, StreamCodeGeneratorInterface}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, StreamCodeGeneratorInterface, TypeArgManagement}
 
 import scala.collection.mutable
 
@@ -87,7 +87,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val default = rustNonStreamCodeGenerator.translateExpressionArg(
       default_expr,
-      rustNonStreamCodeGenerator.TypeArgManagement.empty
+      TypeArgManagement.empty
     )
     val output = createStreamContainer(output_id, output_type, s"init_with_value($default)", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
@@ -212,7 +212,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
-      rustNonStreamCodeGenerator.TypeArgManagement.empty
+      TypeArgManagement.empty
     )
     currSrc.computation.append(s"lift${arguments.size}(&mut $output, ${arguments.mkString(", ")}, $function);")
   }
@@ -238,7 +238,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
-      rustNonStreamCodeGenerator.TypeArgManagement.empty
+      TypeArgManagement.empty
     )
     currSrc.computation.append(s"slift${arguments.size}(&mut $output, ${arguments.mkString(", ")}, $function);")
   }
@@ -300,7 +300,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val value =
-      rustNonStreamCodeGenerator.translateExpressionArg(value_expr, rustNonStreamCodeGenerator.TypeArgManagement.empty)
+      rustNonStreamCodeGenerator.translateExpressionArg(value_expr, TypeArgManagement.empty)
     val trigger = streamNameFromExpressionArg(trigger_expr)
     currSrc.computation.append(s"constant(&mut $output, $value, &$trigger);")
   }
@@ -348,12 +348,12 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     currSrc: SourceSegments
   ): Unit = {
     val init =
-      rustNonStreamCodeGenerator.translateExpressionArg(init_expr, rustNonStreamCodeGenerator.TypeArgManagement.empty)
+      rustNonStreamCodeGenerator.translateExpressionArg(init_expr, TypeArgManagement.empty)
     val output = createStreamContainer(output_id, output_type, s"init_with_value($init)", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
-      rustNonStreamCodeGenerator.TypeArgManagement.empty
+      TypeArgManagement.empty
     )
     currSrc.computation.append(s"fold(&mut $output, &$stream, $function);")
   }
@@ -379,7 +379,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     val stream = streamNameFromExpressionArg(stream_expr)
     val function = rustNonStreamCodeGenerator.translateExpressionArg(
       function_expr,
-      rustNonStreamCodeGenerator.TypeArgManagement.empty
+      TypeArgManagement.empty
     )
     currSrc.computation.append(s"reduce(&mut $output, &$stream, $function);")
   }

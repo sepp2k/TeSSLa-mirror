@@ -90,7 +90,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
   ): SourceListing = {
     val (s, _) = streamNameAndTypeFromExpressionArg(stream)
     val o = s"var_${id.fullName}"
-    val default = nonStreamCodeGenerator.translateExpressionArg(defVal, nonStreamCodeGenerator.TypeArgManagement.empty)
+    val default = nonStreamCodeGenerator.translateExpressionArg(defVal, TypeArgManagement.empty)
 
     val newStmt = currSrc.stepSource
       .If(Seq(Seq(NotEqual("currTs", LongValue(0)))))
@@ -361,7 +361,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
       .Assignment(s"${o}_unknown", BoolValue(true), BoolValue(false), BoolType)
       .Assignment(
         s"${o}_fval",
-        nonStreamCodeGenerator.translateFunctionCall(function, params, nonStreamCodeGenerator.TypeArgManagement.empty),
+        nonStreamCodeGenerator.translateFunctionCall(function, params, TypeArgManagement.empty),
         None,
         OptionType(ot),
         false
@@ -451,7 +451,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
     }
 
     val fcall =
-      nonStreamCodeGenerator.translateFunctionCall(function, fargs, nonStreamCodeGenerator.TypeArgManagement.empty)
+      nonStreamCodeGenerator.translateFunctionCall(function, fargs, TypeArgManagement.empty)
     val unknown: ImpLanExpr = And(args.map { sr => Variable(s"${streamNameAndTypeFromExpressionArg(sr)._1}_unknown") })
 
     val newStmt = currSrc.stepSource
@@ -600,7 +600,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
     val o = s"var_${id.fullName}"
     val (t, _) = streamNameAndTypeFromExpressionArg(trigger)
     val constVal =
-      nonStreamCodeGenerator.translateExpressionArg(value, nonStreamCodeGenerator.TypeArgManagement.empty)
+      nonStreamCodeGenerator.translateExpressionArg(value, TypeArgManagement.empty)
     val ueError =
       FunctionCall(
         "__[TC]UnknownEventError__",
@@ -717,9 +717,9 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
             Throw(Variable(s"${s}_error"), st)
           )
         ),
-        nonStreamCodeGenerator.TypeArgManagement.empty
+        TypeArgManagement.empty
       )
-    val initVal = nonStreamCodeGenerator.translateExpressionArg(init, nonStreamCodeGenerator.TypeArgManagement.empty)
+    val initVal = nonStreamCodeGenerator.translateExpressionArg(init, TypeArgManagement.empty)
     val ueError =
       FunctionCall("__[TC]UnknownEventError__", Seq(NoError), IntermediateCode.FunctionType(Seq(ErrorType), ErrorType))
 
@@ -785,7 +785,7 @@ class StreamCodeGenerator(nonStreamCodeGenerator: NonStreamCodeGenerator)
             Throw(Variable(s"${s}_error"), st)
           )
         ),
-        nonStreamCodeGenerator.TypeArgManagement.empty
+        TypeArgManagement.empty
       )
     val ueError =
       FunctionCall("__[TC]UnknownEventError__", Seq(NoError), IntermediateCode.FunctionType(Seq(ErrorType), ErrorType))
