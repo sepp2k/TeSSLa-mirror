@@ -90,7 +90,7 @@ object RustUtils {
       case InstantiatedType("Set", Seq(t), _)      => canBeHashed(t)
       case InstantiatedType("Map", Seq(t1, t2), _) => canBeHashed(t1) && canBeHashed(t2)
       case InstantiatedType("List", Seq(t), _)     => canBeHashed(t)
-      case TypeParam(_, _)                         => true // only because we require them to impl Hash
+      case TypeParam(_, _)                         => false
       case InstantiatedType(n, types, _) if n.startsWith("native:") =>
         types.forall { t => canBeHashed(t) }
       case RecordType(entries, _) =>

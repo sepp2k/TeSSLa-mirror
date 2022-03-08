@@ -295,7 +295,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         s"<${genericTypes.map { name => s"$name: $traits" }.mkString(", ")}>"
       else ""
     val structDef = s"""${if (fields.forall { case (_, tpe) => canBeHashed(tpe) }) "#[derive(Hash)]" else ""}
-       |struct $structName${genericBounds("Hash")} {
+       |struct $structName$genericAnnotation {
        |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
        |}
        |impl${genericBounds("Clone")} Clone for $structName$genericAnnotation {
