@@ -328,7 +328,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     genericBounds: String => String
   ): String = {
 
-    s"""impl<${genericBounds("TesslaDisplay")} TesslaDisplay for $structName$genericAnnotation {
+    s"""impl${genericBounds("TesslaDisplay")} TesslaDisplay for $structName$genericAnnotation {
        |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        |        f.write_str("(")?;
        |${fieldNames
