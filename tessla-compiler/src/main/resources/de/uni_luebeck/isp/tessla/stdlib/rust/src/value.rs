@@ -1,8 +1,9 @@
 use std::fmt::{Display, Formatter};
-use std::hash::{Hash};
+use std::hash::Hash;
 use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
-use im::HashSet;
+
 use im::HashMap;
+use im::HashSet;
 use im::Vector;
 
 use TesslaValue::*;
@@ -97,33 +98,152 @@ impl<T: TesslaParse> From<&str> for TesslaValue<T> {
     }
 }
 
-// ---------- OPERATOR TRAITS ----------
+// --- Number operations ---
 
-macro_rules! impl_binary_op {
-    ($trait:ident, $function:ident) => {
-        impl<T: $trait<Output = T>> $trait for $crate::TesslaValue<T> {
-            type Output = Self;
+// lhs & rhs
+impl<T: BitAnd<Output = T>> BitAnd for TesslaValue<T> {
+    type Output = Self;
 
-            #[inline]
-            fn $function(self, rhs: Self) -> Self::Output {
-                use $crate::TesslaValue::*;
-                match (self, rhs) {
-                    (Error(error), _) | (_, Error(error)) => Error(error),
-                    (Value(lvalue), Value(rvalue)) => Value(lvalue.$function(rvalue)),
-                }
-            }
+    #[inline]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.bitand(rvalue))
         }
     }
 }
 
-impl_binary_op!(Add, add); // lhs + rhs
-impl_binary_op!(BitAnd, bitand); // lhs & rhs
-impl_binary_op!(BitOr, bitor); // lhs | rhs
-impl_binary_op!(BitXor, bitxor); // lhs ^ rhs
-impl_binary_op!(Mul, mul); // lhs * rhs
-impl_binary_op!(Shl, shl); // lhs << rhs
-impl_binary_op!(Shr, shr); // lhs >> rhs
-impl_binary_op!(Sub, sub); // lhs - rhs
+// lhs | rhs
+impl<T: BitOr<Output = T>> BitOr for TesslaValue<T> {
+    type Output = Self;
+
+    #[inline]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.bitor(rvalue))
+        }
+    }
+}
+
+// lhs ^ rhs
+impl<T: BitXor<Output=T>> BitXor for TesslaValue<T> {
+    type Output = Self;
+
+    #[inline]
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.bitxor(rvalue)),
+        }
+    }
+}
+
+// lhs << rhs
+impl<T: Shl<Output = T>> Shl for TesslaValue<T> {
+    type Output = Self;
+
+    #[inline]
+    fn shl(self, rhs: Self) -> Self::Output {
+        use TesslaValue::*;
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.shl(rvalue)),
+        }
+    }
+}
+
+// lhs >> rhs
+impl<T: Shr<Output = T>> Shr for TesslaValue<T> {
+    type Output = Self;
+
+    #[inline]
+    fn shr(self, rhs: Self) -> Self::Output {
+        use TesslaValue::*;
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.shr(rvalue)),
+        }
+    }
+}
+
+// lhs + rhs
+impl Add for TesslaInt {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.wrapping_add(rvalue))
+        }
+    }
+}
+
+impl Add for TesslaFloat {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.add(rvalue))
+        }
+    }
+}
+
+// lhs - rhs
+impl Sub for TesslaInt {
+    type Output = Self;
+
+    #[inline]
+    fn sub(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.wrapping_sub(rvalue))
+        }
+    }
+}
+
+impl Sub for TesslaFloat {
+    type Output = Self;
+
+    #[inline]
+    fn sub(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.sub(rvalue))
+        }
+    }
+}
+
+// lhs * rhs
+impl Mul for TesslaInt {
+    type Output = Self;
+
+    #[inline]
+    fn mul(self, rhs: Self) -> Self::Output {
+        use TesslaValue::*;
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (_, Value(value)) if value == 0_i64 => Error("Division by zero"),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.wrapping_mul(rvalue)),
+        }
+    }
+}
+
+impl Mul for TesslaFloat {
+    type Output = Self;
+
+    #[inline]
+    fn mul(self, rhs: Self) -> Self::Output {
+        use TesslaValue::*;
+        match (self, rhs) {
+            (Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.mul(rvalue)),
+        }
+    }
+}
 
 // lhs / rhs
 impl Div for TesslaInt {
@@ -135,7 +255,7 @@ impl Div for TesslaInt {
         match (self, rhs) {
             (Error(error), _) | (_, Error(error)) => Error(error),
             (_, Value(value)) if value == 0_i64 => Error("Division by zero"),
-            (Value(lvalue), Value(rvalue)) => Value(lvalue.div(rvalue)),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.wrapping_div(rvalue)),
         }
     }
 }
@@ -163,7 +283,7 @@ impl Rem for TesslaInt {
         match (self, rhs) {
             (Error(error), _) | (_, Error(error)) => Error(error),
             (_, Value(value)) if value == 0_i64 => Error("Division by zero"),
-            (Value(lvalue), Value(rvalue)) => Value(lvalue.rem(rvalue)),
+            (Value(lvalue), Value(rvalue)) => Value(lvalue.wrapping_rem(rvalue)),
         }
     }
 }
