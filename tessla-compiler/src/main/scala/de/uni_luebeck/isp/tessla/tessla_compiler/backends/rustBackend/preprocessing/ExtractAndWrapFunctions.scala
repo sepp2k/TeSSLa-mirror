@@ -16,65 +16,82 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing
 
-import cats.data.Ior
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TesslaAST.StrictEvaluation
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
+import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
 
 import scala.collection.immutable.{ArraySeq, Map}
 import scala.collection.mutable
 
 class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specification] {
 
-  private var nextId: Long = _
-  private def nextIdentifier(name: Option[String] = None): Identifier = {
-    nextId += 1
-    name match {
-      case Some(name) => new Identifier(Ior.both(name, nextId))
-      case None       => new Identifier(Ior.right(nextId))
-    }
-  }
-  private def appendToIdentifier(name: Identifier, suffix: String): Identifier = Identifier(name.idOrName match {
-    case Ior.Left(name)      => Ior.left(name + suffix)
-    case Ior.Right(num)      => Ior.both(suffix, num)
-    case Ior.Both(name, num) => Ior.both(name + suffix, num)
-  })
-
-  private val argumentScopeMap = mutable.Stack.empty[mutable.Map[Identifier, (Identifier, Type)]]
-  private val additionalDefinitions = mutable.Map.empty[Identifier, DefinitionExpression]
-  private val nameStack = mutable.Stack.empty[Identifier]
-
-  private val recursivelyCalledNames = mutable.Set.empty[Identifier]
-
-  private var spec: Specification = _
-  private def inGlobalScope(name: Identifier): Boolean = {
-    spec.definitions.contains(name) || spec.in.contains(name) || additionalDefinitions.contains(name)
-  }
+  private val extractedFunctions = mutable.Map.empty[Identifier, (Identifier, FunctionExpression)]
 
   override def translate(spec: Specification): TranslationPhase.Result[Specification] = {
-    this.spec = spec
-    nextId = spec.maxIdentifier
-
-    argumentScopeMap.clear()
-    additionalDefinitions.clear()
-    nameStack.clear()
-    recursivelyCalledNames.clear()
+    val globalScope = spec.definitions.keySet
 
     val definitions = spec.definitions.map {
       case (id, definition) =>
-        nameStack.push(id)
-        val expression = extractFunctionExpressions(definition, _ => false, isGlobalDefinition = true)
-        if (nameStack.pop() != id) {
-          System.err.println("Uneven name defs")
-        }
+        val expression = extractFunctionExpressions(definition, globalScope, Set(), id.fullName)
         id -> expression.asInstanceOf[DefinitionExpression]
     }
 
+    val remappedDefinitions = (definitions ++ extractedFunctions.values).map {
+      case (id, definition) =>
+        val expression = remapFunctionApplications(definition, Set())
+        id -> expression.asInstanceOf[DefinitionExpression]
+    }
+
+    val newSpec = Specification(
+      spec.annotations,
+      spec.in,
+      remappedDefinitions,
+      spec.out,
+      spec.maxIdentifier
+    )
+    println(newSpec)
     Success(
-      Specification(spec.annotations, spec.in, definitions ++ additionalDefinitions, spec.out, nextId),
+      newSpec,
       Seq()
     )
+  }
+
+  /**
+   * Traverse an expression, and collect a list of all [[ExpressionRef]]s, that are not defined in the current scope
+   * @param e
+   * @param currentScope
+   * @param outerScope
+   * @return
+   */
+  private def findClosureArgs(
+    e: ExpressionArg,
+    currentScope: Set[Identifier],
+    outerScope: Set[Identifier]
+  ): Set[(Identifier, Evaluation, Type)] = e match {
+    case ExpressionRef(id, _, _) if currentScope.contains(id) => Set()
+    case ExpressionRef(id, tpe, _) if outerScope.contains(id) => Set((id, StrictEvaluation, tpe))
+
+    case ref: ExpressionRef => throw Diagnostics.CoreASTError(s"ExpressionRef('${ref.id}') was not found in any scope")
+
+    case FunctionExpression(_, params, body, result, _) =>
+      val functionScope = currentScope ++ params.map { case (id, _, _) => id } ++ body.map { case (id, _) => id }
+      body.flatMap {
+        case (_, definition) => findClosureArgs(definition, functionScope, outerScope)
+      }.toSet ++ findClosureArgs(result, functionScope, outerScope)
+    case ApplicationExpression(applicable, args, _) =>
+      findClosureArgs(applicable, currentScope, outerScope) ++ args.flatMap { e =>
+        findClosureArgs(e, currentScope, outerScope)
+      }
+    case TypeApplicationExpression(applicable, _, _) =>
+      findClosureArgs(applicable, currentScope, outerScope)
+    case RecordConstructorExpression(entries, _) =>
+      entries.flatMap { case (_, (expr, _)) => findClosureArgs(expr, currentScope, outerScope) }.toSet
+    case RecordAccessorExpression(_, target, _, _) =>
+      findClosureArgs(target, currentScope, outerScope)
+
+    case _: ExternExpression | _: StringLiteralExpression | _: IntLiteralExpression | _: FloatLiteralExpression => Set()
   }
 
   /**
@@ -85,64 +102,84 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
    * The extracted global functions have all references to variables outside its scope redirected to additional arguments,
    * which are partially applied in the boxed closure.
    *
-   * fn foo(a, b) {
-   *   bar = (x) {
-   *     x + a
-   *   }
-   *   bar(b)
-   * }
-   *
-   * This is supposed to be transformed into -->
-   *
-   * fn bar_(p) {
-   *   Box::new(move (x) {
-   *     x + p
-   *   })
-   * }
-   *
-   * fn foo(a, b) {
-   *   bar = bar_(a)
-   *   bar(b)
-   * }
-   *
-   * @param id
-   * @param e
-   * @param isGlobalDefinition
+   * @param ???
    * @return
    */
   def extractFunctionExpressions(
     e: ExpressionArg,
-    inCurrentScope: Identifier => Boolean,
-    isGlobalDefinition: Boolean = false
+    currentScope: Set[Identifier],
+    outerScope: Set[Identifier],
+    definitionPath: String
   ): ExpressionArg = {
     e match {
-      case ExpressionRef(id, tpe: FunctionType, location) if nameStack.contains(id) =>
-        recursivelyCalledNames.addOne(id)
-        ExpressionRef(id, tpe, location)
+      case FunctionExpression(typeParams, params, body, result, location) =>
+        val functionScope = (params.map { case (id, _, _) => id } ++ body.map { case (id, _) => id }).toSet
+        val functionOuterScope = outerScope ++ currentScope
+        val closureArgs = findClosureArgs(e, functionScope, functionOuterScope).filterNot {
+          // don't include reference to self in arguments to be captured
+          case (id, _, typ) => definitionPath.endsWith(id.fullName) && e.tpe == typ
+        }.toList
+        println(s"function $definitionPath needs $closureArgs")
+        val functionExpr = FunctionExpression(
+          typeParams,
+          params,
+          body.flatMap {
+            case (id, definition) =>
+              val modifiedPath = s"${definitionPath}λ${id.fullName}"
+              extractFunctionExpressions(
+                definition,
+                functionScope,
+                functionOuterScope,
+                modifiedPath
+              ) match {
+                case functionDefinition: FunctionExpression =>
+                  println(s"$modifiedPath needs to be extracted")
+                  extractedFunctions += id -> (Identifier(modifiedPath), functionDefinition)
+                  println(s"map $id -> $modifiedPath")
+                  None
+                case modifiedDefinition =>
+                  Some(id -> modifiedDefinition.asInstanceOf[DefinitionExpression])
+              }
+          },
+          result,
+          location
+        )
+        // this function takes all externally scoped arguments, and moves them into a box around the inner function
+        FunctionExpression(
+          List(),
+          closureArgs,
+          Map(),
+          boxExpression(functionExpr)
+        )
 
-      case function: FunctionExpression =>
-        // FIXME: here we assume that all functions have a name before being called, is that correct?
-        boxScopedDependencies(function, isGlobalDefinition)
+      /**
+       * def mult(x: Int): (Int) => Int = {
+       *   def prod(a: Int): Int = if a < 1 then x else prod(a - 1) * x
+       *   prod
+       * }
+       *
+         * mult_prod(a: Int, x: Int)
+       */
+      // global name: outer_inner__(..params, ..outer_params) {
 
       case ApplicationExpression(applicable, args, location) =>
-        // TODO these should try finding out what is being called
         ApplicationExpression(
-          extractFunctionExpressions(applicable, inCurrentScope),
+          extractFunctionExpressions(applicable, currentScope, outerScope, definitionPath),
           args.map { exprArg =>
-            extractFunctionExpressions(exprArg, inCurrentScope)
+            extractFunctionExpressions(exprArg, currentScope, outerScope, definitionPath)
           },
           location
         )
       case TypeApplicationExpression(applicable, typeArgs, location) =>
         TypeApplicationExpression(
-          extractFunctionExpressions(applicable, inCurrentScope, isGlobalDefinition),
+          extractFunctionExpressions(applicable, currentScope, outerScope, definitionPath),
           typeArgs,
           location
         )
       case RecordAccessorExpression(name, target, nameLocation, location) =>
         RecordAccessorExpression(
           name,
-          extractFunctionExpressions(target, inCurrentScope),
+          extractFunctionExpressions(target, currentScope, outerScope, definitionPath),
           nameLocation,
           location
         )
@@ -150,23 +187,17 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
         RecordConstructorExpression(
           entries.map {
             case (name, (exprArg, location)) =>
-              name -> (extractFunctionExpressions(exprArg, inCurrentScope), location)
+              name -> (extractFunctionExpressions(exprArg, currentScope, outerScope, definitionPath), location)
           },
           location
         )
 
-      case ExpressionRef(id, tpe, location) =>
-        // TODO handle reference to function somewhere in outer scope
-        if (inGlobalScope(id) || inCurrentScope(id)) {
-          e
-        } else if (argumentScopeMap.head.contains(id)) {
-          ExpressionRef(argumentScopeMap.head(id)._1, tpe, location)
-        } else {
-          val cleanName = nextIdentifier()
-          argumentScopeMap.head.addOne(id -> (cleanName, tpe))
-          ExpressionRef(cleanName, tpe, location)
+      case ref: ExpressionRef =>
+        if (ref.tpe.isInstanceOf[FunctionType]) {
+          println(s"yeaaaa this is a function: ${ref.id}, in current: ${currentScope
+            .contains(ref.id)}, in outer: ${outerScope.contains(ref.id)}, $definitionPath")
         }
-
+        ref
       case extern: ExternExpression        => extern
       case float: FloatLiteralExpression   => float
       case int: IntLiteralExpression       => int
@@ -174,6 +205,85 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
     }
   }
 
+  /**
+   * map exprRefs to functions to the respective global extract, with the added closure scope params
+   *
+   * @param ???
+   * @return
+   */ // TODO
+  def remapFunctionApplications(
+    e: ExpressionArg,
+    outerScope: Set[Identifier]
+  ): ExpressionArg = {
+    e match {
+      case ExpressionRef(id, typ: FunctionType, location) =>
+        extractedFunctions.get(id) match {
+          case None => ExpressionRef(id, typ, location)
+          case Some((extractedId, FunctionExpression(_, params, _, result, location))) =>
+            ApplicationExpression(
+              ExpressionRef(
+                extractedId,
+                FunctionType(
+                  List(),
+                  params.map { case (_, eval, typ) => (eval, typ) },
+                  result.tpe
+                )
+              ),
+              ArraySeq.from(params.map { case (id, _, typ) => ExpressionRef(id, typ) }),
+              location
+            )
+        }
+
+      case FunctionExpression(typeParams, params, body, result, location) =>
+        FunctionExpression(
+          typeParams,
+          params,
+          body.map {
+            case (id, definition) =>
+              id -> remapFunctionApplications(definition, outerScope).asInstanceOf[DefinitionExpression]
+          },
+          remapFunctionApplications(result, outerScope),
+          location
+        )
+      case ApplicationExpression(applicable, args, location) =>
+        ApplicationExpression(
+          remapFunctionApplications(applicable, outerScope),
+          args.map { exprArg =>
+            remapFunctionApplications(exprArg, outerScope)
+          },
+          location
+        )
+      case TypeApplicationExpression(applicable, typeArgs, location) =>
+        TypeApplicationExpression(
+          remapFunctionApplications(applicable, outerScope),
+          typeArgs,
+          location
+        )
+      case RecordAccessorExpression(name, target, nameLocation, location) =>
+        RecordAccessorExpression(
+          name,
+          remapFunctionApplications(target, outerScope),
+          nameLocation,
+          location
+        )
+      case RecordConstructorExpression(entries, location) =>
+        RecordConstructorExpression(
+          entries.map {
+            case (name, (exprArg, location)) =>
+              name -> (remapFunctionApplications(exprArg, outerScope), location)
+          },
+          location
+        )
+
+      case ref: ExpressionRef              => ref
+      case extern: ExternExpression        => extern
+      case float: FloatLiteralExpression   => float
+      case int: IntLiteralExpression       => int
+      case string: StringLiteralExpression => string
+    }
+  }
+
+  /*
   private def boxScopedDependencies(
     function: FunctionExpression,
     isGlobalDefinition: Boolean = false
@@ -224,7 +334,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
         )
 
         if (recursivelyCalledNames.contains(name)) {
-          additionalDefinitions.addOne(
+          extractedFunctions.addOne(
             functionName -> resolveRecursiveCall(
               name,
               functionName,
@@ -234,7 +344,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
             ).asInstanceOf[DefinitionExpression]
           )
         } else {
-          additionalDefinitions.addOne(functionName -> functionExpr)
+          extractedFunctions.addOne(functionName -> functionExpr)
         }
 
         val boxName = appendToIdentifier(name, "$box")
@@ -262,7 +372,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
             )
           )
         )
-        additionalDefinitions.addOne(boxName -> boxExpr)
+        extractedFunctions.addOne(boxName -> boxExpr)
 
         ApplicationExpression(
           TypeApplicationExpression(
@@ -276,6 +386,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
         )
       }
   }
+   */
 
   private def boxExpression(expr: ExpressionArg): ApplicationExpression = {
     ApplicationExpression(
