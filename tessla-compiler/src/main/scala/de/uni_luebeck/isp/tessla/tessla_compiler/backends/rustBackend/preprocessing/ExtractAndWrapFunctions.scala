@@ -34,7 +34,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
 
     val definitions = spec.definitions.map {
       case (id, definition) =>
-        val expression = extractFunctionExpressions(definition, globalScope, Set(), id.fullName)
+        val expression = extractFunctionExpressions(definition, globalScope, Set(), id.fullName, isGlobalDef = true)
         id -> expression.asInstanceOf[DefinitionExpression]
     }
 
@@ -109,13 +109,15 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
     e: ExpressionArg,
     currentScope: Set[Identifier],
     outerScope: Set[Identifier],
-    definitionPath: String
+    definitionPath: String,
+    isGlobalDef: Boolean = false
   ): ExpressionArg = {
     e match {
       case FunctionExpression(typeParams, params, body, result, location) =>
         val functionScope = (params.map { case (id, _, _) => id } ++ body.map { case (id, _) => id }).toSet
         val functionOuterScope = outerScope ++ currentScope
         val closureArgs = findClosureArgs(e, functionScope, functionOuterScope).filterNot {
+          // FIXME I imagine this filter is not exhaustive...
           // don't include reference to self in arguments to be captured
           case (id, _, typ) => definitionPath.endsWith(id.fullName) && e.tpe == typ
         }.toList
@@ -141,16 +143,20 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
                   Some(id -> modifiedDefinition.asInstanceOf[DefinitionExpression])
               }
           },
-          result,
+          extractFunctionExpressions(result, functionScope, functionOuterScope, s"${definitionPath}λreturn"),
           location
         )
-        // this function takes all externally scoped arguments, and moves them into a box around the inner function
-        FunctionExpression(
-          List(),
-          closureArgs,
-          Map(),
-          boxExpression(functionExpr)
-        )
+        if (isGlobalDef) {
+          functionExpr
+        } else {
+          // this function takes all externally scoped arguments, and moves them into a box around the inner function
+          FunctionExpression(
+            List(),
+            closureArgs,
+            Map(),
+            boxExpression(functionExpr)
+          )
+        }
 
       /**
        * def mult(x: Int): (Int) => Int = {
