@@ -37,29 +37,43 @@ object RustUtils {
    *                      This is needed in anonymous functions, where you cannot specify generic types
    * @return The converted type
    */
-  def convertType(t: Type, mask_generics: Boolean = false): String = {
+  def convertType(
+    t: Type,
+    knownFunctionTypes: Seq[FunctionType],
+    mask_generics: Boolean = false,
+    function_as_trait: Boolean = false
+  ): String = {
     t match {
-      case InstantiatedType("Events", Seq(t), _)     => convertType(t, mask_generics)
+      case InstantiatedType("Events", Seq(t), _)     => convertType(t, knownFunctionTypes, mask_generics, function_as_trait)
       case RecordType(entries, _) if entries.isEmpty => "TesslaUnit"
       case InstantiatedType("Bool", Seq(), _)        => "TesslaBool"
       case InstantiatedType("Int", Seq(), _)         => "TesslaInt"
       case InstantiatedType("Float", Seq(), _)       => "TesslaFloat"
       case InstantiatedType("String", Seq(), _)      => "TesslaString"
-      case InstantiatedType("Option", Seq(t), _)     => s"TesslaOption<${convertType(t, mask_generics)}>"
-      case InstantiatedType("Set", Seq(t), _)        => s"TesslaSet<${convertType(t, mask_generics)}>"
+      case InstantiatedType("Option", Seq(t), _) =>
+        s"TesslaOption<${convertType(t, knownFunctionTypes, mask_generics, function_as_trait)}>"
+      case InstantiatedType("Set", Seq(t), _) =>
+        s"TesslaSet<${convertType(t, knownFunctionTypes, mask_generics, function_as_trait)}>"
       case InstantiatedType("Map", Seq(t1, t2), _) =>
-        s"TesslaMap<${convertType(t1, mask_generics)}, ${convertType(t2, mask_generics)}>"
-      case InstantiatedType("List", Seq(t), _)                      => s"TesslaList<${convertType(t, mask_generics)}>"
+        s"TesslaMap<${convertType(t1, knownFunctionTypes, mask_generics, function_as_trait)}, ${convertType(t2, knownFunctionTypes, mask_generics, function_as_trait)}>"
+      case InstantiatedType("List", Seq(t), _) =>
+        s"TesslaList<${convertType(t, knownFunctionTypes, mask_generics, function_as_trait)}>"
       case InstantiatedType(n, Seq(), _) if n.startsWith("native:") => n.stripPrefix("native:")
       case InstantiatedType(n, tps, _) if n.startsWith("native:") =>
-        s"${n.stripPrefix("native:")}<${tps.map { t => convertType(t, mask_generics) }.mkString(", ")}>"
-      case FunctionType(_, paramTypes, resultType, _) =>
-        s"""Box<dyn Fn(${paramTypes
+        s"${n.stripPrefix("native:")}<${tps
+          .map { t => convertType(t, knownFunctionTypes, mask_generics, function_as_trait) }
+          .mkString(", ")}>"
+      case FunctionType(_, paramTypes, resultType, _) if function_as_trait =>
+        s"""Fn(${paramTypes
           .map {
-            case (LazyEvaluation, t)   => s"Lazy<${convertType(t, mask_generics)}>"
-            case (StrictEvaluation, t) => convertType(t, mask_generics)
+            case (LazyEvaluation, t)   => s"Lazy<${convertType(t, knownFunctionTypes, mask_generics)}>"
+            case (StrictEvaluation, t) => convertType(t, knownFunctionTypes, mask_generics)
           }
-          .mkString(", ")}) -> ${convertType(resultType, mask_generics)}>"""
+          .mkString(", ")}) -> ${convertType(resultType, knownFunctionTypes, mask_generics)}"""
+      case fun: FunctionType if knownFunctionTypes.contains(fun) =>
+        s"F${knownFunctionTypes.indexOf(fun)}"
+      case _: FunctionType if mask_generics =>
+        "_"
       case RecordType(entries, _) =>
         val genericTypes = getGenericTypeNames(entries.map { case (_, (typ, _)) => typ })
         if (genericTypes.nonEmpty) {
@@ -71,6 +85,29 @@ object RustUtils {
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
+  }
+
+  def getTraitBounds(genericTypes: Set[Identifier], functionTypes: Seq[FunctionType]): String => String = {
+    def genericBounds(requiredTraits: String): String = genericTypes
+      .map { name => if (requiredTraits.nonEmpty) s"$name: $requiredTraits" else name }
+      .mkString(", ")
+    def functionTypeBounds(withBounds: Boolean): String = functionTypes.zipWithIndex
+      .map {
+        case (tpe, i) =>
+          if (withBounds) s"F$i: ${RustUtils.convertType(tpe, functionTypes, function_as_trait = true)}" else s"F$i"
+      }
+      .mkString(", ")
+    def traitBounds(requiredTraits: String): String =
+      if (functionTypes.nonEmpty)
+        if (genericTypes.nonEmpty)
+          s"<${genericBounds(requiredTraits)}, ${functionTypeBounds(requiredTraits.nonEmpty)}>"
+        else
+          s"<${functionTypeBounds(requiredTraits.nonEmpty)}>"
+      else if (genericTypes.nonEmpty)
+        s"<${genericBounds(requiredTraits)}>"
+      else
+        ""
+    traitBounds
   }
 
   /**
@@ -101,6 +138,19 @@ object RustUtils {
         throw Diagnostics.CommandNotSupportedError(s"Found unknown type $t")
     }
   }
+
+  def getFunctionTypes(types: Seq[Type]): Set[FunctionType] =
+    types.flatMap {
+      case InstantiatedType(_, Seq(), _) => Seq()
+      case InstantiatedType(_, types, _) => getFunctionTypes(types)
+      case FunctionType(typeParams, paramTypes, resultType, _) =>
+        (getFunctionTypes(paramTypes.map { case (_, typ) => typ })
+          ++ getFunctionTypes(Seq(resultType))
+          ++ Seq(FunctionType(typeParams, paramTypes, resultType)))
+      case RecordType(entries, _) =>
+        getFunctionTypes(entries.map { case (_, (t, _)) => t }.toSeq)
+      case TypeParam(_, _) => Seq()
+    }.toSet
 
   /**
    * Extracts all [[TypeParam]] generic types used in a list of types

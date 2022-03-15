@@ -44,18 +44,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
         id -> expression.asInstanceOf[DefinitionExpression]
     }
 
-    val newSpec = Specification(
-      spec.annotations,
-      spec.in,
-      remappedDefinitions,
-      spec.out,
-      spec.maxIdentifier
-    )
-    println(newSpec)
-    Success(
-      newSpec,
-      Seq()
-    )
+    Success(Specification(spec.annotations, spec.in, remappedDefinitions, spec.out, spec.maxIdentifier), Seq())
   }
 
   /**
@@ -116,12 +105,12 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
       case FunctionExpression(typeParams, params, body, result, location) =>
         val functionScope = (params.map { case (id, _, _) => id } ++ body.map { case (id, _) => id }).toSet
         val functionOuterScope = outerScope ++ currentScope
+        // find all ExpressionRefs that do not refer to something in current+global scope
         val closureArgs = findClosureArgs(e, functionScope, functionOuterScope).filterNot {
           // FIXME I imagine this filter is not exhaustive...
           // don't include reference to self in arguments to be captured
           case (id, _, typ) => definitionPath.endsWith(id.fullName) && e.tpe == typ
         }.toList
-        println(s"function $definitionPath needs $closureArgs")
         val functionExpr = FunctionExpression(
           typeParams,
           params,
@@ -135,9 +124,8 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
                 modifiedPath
               ) match {
                 case functionDefinition: FunctionExpression =>
-                  println(s"$modifiedPath needs to be extracted")
+                  // extract this inner function definition into global scope, mapping id -> modifiedPath
                   extractedFunctions += id -> (Identifier(modifiedPath), functionDefinition)
-                  println(s"map $id -> $modifiedPath")
                   None
                 case modifiedDefinition =>
                   Some(id -> modifiedDefinition.asInstanceOf[DefinitionExpression])
@@ -198,12 +186,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
           location
         )
 
-      case ref: ExpressionRef =>
-        if (ref.tpe.isInstanceOf[FunctionType]) {
-          println(s"yeaaaa this is a function: ${ref.id}, in current: ${currentScope
-            .contains(ref.id)}, in outer: ${outerScope.contains(ref.id)}, $definitionPath")
-        }
-        ref
+      case ref: ExpressionRef              => ref
       case extern: ExternExpression        => extern
       case float: FloatLiteralExpression   => float
       case int: IntLiteralExpression       => int

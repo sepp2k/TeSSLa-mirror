@@ -101,7 +101,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     id: Identifier,
     e: ExpressionArg
   ): String = {
-    val typ = RustUtils.convertType(e.tpe)
+    val typ = RustUtils.convertType(e.tpe, Seq())
     val lazyVar = extSpec.lazyVars.get.contains(id)
     if (lazyVar) {
       definedIdentifiers += (id -> FinalLazyDeclaration)
@@ -129,13 +129,18 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   ): Seq[String] = {
     definition match {
       case FunctionExpression(_, params, body, result, _) =>
-        val genericTypeNames =
-          RustUtils.getGenericTypeNames(params.map { case (_, _, typ) => typ }.appended(result.tpe))
-        val typeParams =
-          if (genericTypeNames.nonEmpty) s"<${genericTypeNames.map { tpe => s"$tpe: Clone" }.mkString(", ")}>" else ""
-        val functionParams = params.map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe)}" }
-        val returnType = RustUtils.convertType(result.tpe)
-        (s"fn var_$id$typeParams(${functionParams.mkString(", ")}) -> $returnType {"
+        val types = params.map { case (_, _, typ) => typ } :+ result.tpe
+
+        val genericTypes = RustUtils.getGenericTypeNames(types)
+        val functionTypes = RustUtils.getFunctionTypes(types).toSeq
+        val traitBounds = RustUtils.getTraitBounds(genericTypes, functionTypes)
+
+        val functionParams = params
+          .map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe, functionTypes)}" }
+          .mkString(", ")
+        val returnType = RustUtils.convertType(result.tpe, functionTypes)
+
+        (s"fn var_$id${traitBounds("Clone")}($functionParams) -> $returnType {"
           +: translateBody(body, result, TypeArgManagement.empty, extSpec.spec.definitions)
           :+ "}")
       case e =>
@@ -159,7 +164,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val newTm = tm.parsKnown(e.typeParams)
     val arguments = e.params
       .map {
-        case (id, e, tpe) => (id, e, RustUtils.convertType(tpe.resolve(newTm.resMap), mask_generics = true))
+        case (id, e, tpe) => (id, e, RustUtils.convertType(tpe.resolve(newTm.resMap), Seq(), mask_generics = true))
       }
       .map {
         case (id, StrictEvaluation, tpe) => if (id.fullName == "_") "_" else s"var_$id: $tpe"
@@ -289,24 +294,23 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * @return The struct definition and its impls
    */
   def translateStructDefinition(structName: String, fields: Seq[(String, Type)]): String = {
-    val genericTypes = RustUtils.getGenericTypeNames(fields.map { case (_, typ) => typ })
-    val genericAnnotation = if (genericTypes.nonEmpty) s"<${genericTypes.mkString(", ")}>" else ""
-    def genericBounds(traits: String) =
-      if (genericTypes.nonEmpty)
-        s"<${genericTypes.map { name => s"$name: $traits" }.mkString(", ")}>"
-      else ""
+    val types = fields.map { case (_, typ) => typ }
+    val genericTypes = RustUtils.getGenericTypeNames(types)
+    val functionTypes = RustUtils.getFunctionTypes(types).toSeq
+    val traitBounds = RustUtils.getTraitBounds(genericTypes, functionTypes)
+    val traitAnnotation = traitBounds("")
     val structDef = s"""${if (fields.forall { case (_, tpe) => canBeHashed(tpe) }) "#[derive(Hash)]" else ""}
-       |struct $structName$genericAnnotation {
-       |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
+       |struct $structName$traitAnnotation {
+       |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe, functionTypes)}" }.mkString(",\n")}
        |}
-       |impl${genericBounds("Clone")} Clone for $structName$genericAnnotation {
+       |impl${traitBounds("Clone")} Clone for $structName$traitAnnotation {
        |    fn clone(&self) -> Self {
        |        $structName {
        |${fields.map { case (name, _) => s"$name: self.$name.clone()" }.mkString(",\n")}
        |        }
        |    }
        |}
-       |impl${genericBounds("PartialEq")} PartialEq for $structName$genericAnnotation {
+       |impl${traitBounds("PartialEq")} PartialEq for $structName$traitAnnotation {
        |    fn eq(&self, other: &Self) -> bool {
        |${fields.map { case (name, _) => s"PartialEq::eq(&self.$name, &other.$name)" }.mkString("\n&& ")}
        |    }
@@ -314,22 +318,21 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |""".stripMargin
     val fieldNames = fields.map { case (name, _) => name }
     val isTuple = RustUtils.isStructTuple(fieldNames)
-    val parseImpl = generateStructParser(structName, fieldNames, isTuple, genericAnnotation, genericBounds)
+    val parseImpl = generateStructParser(structName, fieldNames, isTuple, traitBounds, traitAnnotation)
     if (isTuple) {
-      structDef + generateTupleDisplay(structName, fieldNames, genericAnnotation, genericBounds) + parseImpl
+      structDef + generateTupleDisplay(structName, fieldNames, traitBounds, traitAnnotation) + parseImpl
     } else {
-      structDef + generateStructDisplay(structName, fieldNames, genericAnnotation, genericBounds) + parseImpl
+      structDef + generateStructDisplay(structName, fieldNames, traitBounds, traitAnnotation) + parseImpl
     }
   }
 
   private def generateTupleDisplay(
     structName: String,
     fieldNames: Seq[String],
-    genericAnnotation: String,
-    genericBounds: String => String
+    traitBounds: String => String,
+    traitAnnotation: String
   ): String = {
-
-    s"""impl${genericBounds("TesslaDisplay")} TesslaDisplay for $structName$genericAnnotation {
+    s"""impl${traitBounds("TesslaDisplay")} TesslaDisplay for $structName$traitAnnotation {
        |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        |        f.write_str("(")?;
        |${fieldNames
@@ -344,10 +347,10 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   private def generateStructDisplay(
     structName: String,
     fieldNames: Seq[String],
-    genericAnnotation: String,
-    genericBounds: String => String
+    traitBounds: String => String,
+    traitAnnotation: String
   ): String = {
-    s"""impl${genericBounds("TesslaDisplay")} TesslaDisplay for $structName$genericAnnotation {
+    s"""impl${traitBounds("TesslaDisplay")} TesslaDisplay for $structName$traitAnnotation {
        |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        |        f.write_str("{")?;
        |${fieldNames
@@ -363,8 +366,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     structName: String,
     fieldNames: Seq[String],
     isTuple: Boolean,
-    genericAnnotation: String,
-    genericBounds: String => String
+    traitBounds: String => String,
+    traitAnnotation: String
   ): String = {
     val init = s"""let mut result = $structName {\n${fieldNames
       .map { name => s"""$name: Error("Value not assigned while parsing")""" }
@@ -389,7 +392,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
          |    }""".stripMargin
     } else { "" }
 
-    s"""impl${genericBounds("TesslaParse")} TesslaRecordParse for $structName$genericAnnotation {
+    s"""impl${traitBounds("TesslaParse")} TesslaRecordParse for $structName$traitAnnotation {
        |    fn tessla_parse_struct(s: &str) -> (Result<Self, &'static str>, &str) {
        |        let mut inner = s.trim_start();
        |        $init

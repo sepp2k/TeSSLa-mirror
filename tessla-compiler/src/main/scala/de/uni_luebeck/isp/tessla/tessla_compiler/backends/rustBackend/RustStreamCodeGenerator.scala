@@ -45,7 +45,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     currSrc: SourceSegments
   ): String = {
     val name = s"var_${stream_id.fullName}"
-    currSrc.stateDef.append(s"$name: EventContainer<${RustUtils.convertType(stream_type)}>")
+    currSrc.stateDef.append(s"$name: EventContainer<${RustUtils.convertType(stream_type, Seq())}>")
     currSrc.stateInit.append(s"$name: $init_expr")
     val stream = s"state.$name"
     currSrc.store.append(s"$stream.update_last();")
@@ -466,7 +466,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     outputNames: mutable.Set[String]
   ): Unit = {
     val s = s"var_${id.fullName}"
-    val t = RustUtils.convertType(typ)
+    val t = RustUtils.convertType(typ, Seq())
     // FIXME: All this replacing of specific chars is probably not exhaustive and kinda not nice to do here
     val cleanName = RustUtils.NON_ALPHA_PATTERN.replaceAllIn(name, m => s"χ${m.group(0).charAt(0).asInstanceOf[Int]}")
     val trueName = name.replace("$", "\\$").replace("ø", "")
@@ -511,7 +511,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val stream = createStreamContainer(stream_id, stream_type, "init()", srcSegments)
 
-    val t = RustUtils.convertType(stream_type)
+    val t = RustUtils.convertType(stream_type, Seq())
 
     srcSegments.stateDef.append(s"set_$stream_id: fn($t, i64, &mut State)")
 
