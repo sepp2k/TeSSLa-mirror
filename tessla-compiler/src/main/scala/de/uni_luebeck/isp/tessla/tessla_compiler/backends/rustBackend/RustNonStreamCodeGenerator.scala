@@ -101,7 +101,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     id: Identifier,
     e: ExpressionArg
   ): String = {
-    val typ = RustUtils.convertType(e.tpe, Seq())
+    val typ = RustUtils.convertType(e.tpe)
     val lazyVar = extSpec.lazyVars.get.contains(id)
     if (lazyVar) {
       definedIdentifiers += (id -> FinalLazyDeclaration)
@@ -129,16 +129,12 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   ): Seq[String] = {
     definition match {
       case FunctionExpression(_, params, body, result, _) =>
-        val types = params.map { case (_, _, typ) => typ } :+ result.tpe
-
-        val genericTypes = RustUtils.getGenericTypeNames(types)
-        val functionTypes = RustUtils.getFunctionTypes(types).toSeq
-        val traitBounds = RustUtils.getTraitBounds(genericTypes, functionTypes)
+        val traitBounds = RustUtils.getGenericTraitBounds(params.map { case (_, _, typ) => typ } :+ result.tpe)
 
         val functionParams = params
-          .map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe, functionTypes)}" }
+          .map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe)}" }
           .mkString(", ")
-        val returnType = RustUtils.convertType(result.tpe, functionTypes)
+        val returnType = RustUtils.convertType(result.tpe)
 
         (s"fn var_$id${traitBounds("Clone")}($functionParams) -> $returnType {"
           +: translateBody(body, result, TypeArgManagement.empty, extSpec.spec.definitions)
@@ -164,7 +160,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val newTm = tm.parsKnown(e.typeParams)
     val arguments = e.params
       .map {
-        case (id, e, tpe) => (id, e, RustUtils.convertType(tpe.resolve(newTm.resMap), Seq(), mask_generics = true))
+        case (id, e, tpe) => (id, e, RustUtils.convertType(tpe.resolve(newTm.resMap), mask_generics = true))
       }
       .map {
         case (id, StrictEvaluation, tpe) => if (id.fullName == "_") "_" else s"var_$id: $tpe"
@@ -294,14 +290,11 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * @return The struct definition and its impls
    */
   def translateStructDefinition(structName: String, fields: Seq[(String, Type)]): String = {
-    val types = fields.map { case (_, typ) => typ }
-    val genericTypes = RustUtils.getGenericTypeNames(types)
-    val functionTypes = RustUtils.getFunctionTypes(types).toSeq
-    val traitBounds = RustUtils.getTraitBounds(genericTypes, functionTypes)
+    val traitBounds = RustUtils.getGenericTraitBounds(fields.map { case (_, typ) => typ })
     val traitAnnotation = traitBounds("")
     val structDef = s"""${if (fields.forall { case (_, tpe) => canBeHashed(tpe) }) "#[derive(Hash)]" else ""}
        |struct $structName$traitAnnotation {
-       |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe, functionTypes)}" }.mkString(",\n")}
+       |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
        |}
        |impl${traitBounds("Clone")} Clone for $structName$traitAnnotation {
        |    fn clone(&self) -> Self {
@@ -310,6 +303,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |        }
        |    }
        |}
+       |impl${traitBounds("Eq")} Eq for $structName$traitAnnotation {}
        |impl${traitBounds("PartialEq")} PartialEq for $structName$traitAnnotation {
        |    fn eq(&self, other: &Self) -> bool {
        |${fields.map { case (name, _) => s"PartialEq::eq(&self.$name, &other.$name)" }.mkString("\n&& ")}
