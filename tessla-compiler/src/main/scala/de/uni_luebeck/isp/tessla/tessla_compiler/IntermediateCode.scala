@@ -123,10 +123,6 @@ object IntermediateCode {
     override def toString = s"native:$name" + (if (subTypes.nonEmpty) s"[${subTypes.mkString(",")}]" else "")
   }
 
-  final case class StreamType(valType: ImpLanType) extends ImpLanType {
-    override def toString: String = s"Stream[$valType]"
-  }
-
   /* Values */
 
   final case class LongValue(value: Long) extends ImpLanVal {
@@ -157,10 +153,6 @@ object IntermediateCode {
     override def toString: String = s"Some($content)"
   }
 
-  final case class StreamValue(typeHint: ImpLanType, default: Option[ImpLanVal]) extends ImpLanVal {
-    override def toString: String = s"Stream[[type: $typeHint, default: $default]]"
-  }
-
   final case class EmptyMutableSet(valType: ImpLanType) extends ImpLanVal {
     override def toString: String = s"MutSet<$valType>{}"
   }
@@ -183,14 +175,6 @@ object IntermediateCode {
 
   final case class EmptyImmutableList(valType: ImpLanType) extends ImpLanVal {
     override def toString: String = s"ImmutList<$valType>{}"
-  }
-
-  final case class ImmutableList(valType: ImpLanType, values: Seq[ImpLanVal]) extends ImpLanVal {
-    override def toString: String = s"ImmutList<$valType>{ ${values
-      .map { value =>
-        value.toString
-      }
-      .mkString(", ")} }"
   }
 
   final case class EmptyFunction(typeHint: ImpLanType) extends ImpLanVal {
