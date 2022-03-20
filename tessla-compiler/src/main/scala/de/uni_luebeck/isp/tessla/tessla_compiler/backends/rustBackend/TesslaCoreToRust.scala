@@ -125,7 +125,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     private def insertSegments(srcSegments: SourceSegments): String = {
       val source = Source.fromResource(sourceTemplate).mkString
       val rewrittenSource = source
-        .replace("//USERINCLUDES", "") //TODO
+        .replace("//USERINCLUDES", "") //srcSegments.userIncludes.mkString(",\n)")) //TODO
         .replace("//STATEDEF", srcSegments.stateDef.mkString(",\n"))
         .replace("//LAZYSTATIC", srcSegments.lazyStatic.mkString("\n"))
         .replace("//STATIC", srcSegments.static.mkString("\n"))
