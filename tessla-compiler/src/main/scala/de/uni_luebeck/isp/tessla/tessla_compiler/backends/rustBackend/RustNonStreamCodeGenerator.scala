@@ -480,13 +480,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__toString__"       => s"${args(0)}.to_string()"
       case "__String_toUpper__" => s"${args(0)}.toUpper()"
       case "__String_toLower__" => s"${args(1)}.toLower()"
-      case "__String_format__" =>
-        val valueType = typeHint.paramTypes(1)._2.resolve(tm.resMap)
-        valueType match {
-          case InstantiatedType("Int", _, _)   => s"${args(0)}.format_int(&${args(1)})"
-          case InstantiatedType("Float", _, _) => s"${args(0)}.format_float(&${args(1)})"
-          case _                               => s"${args(0)}.format(&${args(1)})"
-        }
 
       case "__Map_empty__" => "TesslaMap::Map_empty()"
       //case "__Map_add__" if typeHint.retType.isInstanceOf[MutableMapType] => s"${args(0)}.insert(${args(1)}, ${args(2)})"
