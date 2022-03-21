@@ -18,7 +18,6 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
 import de.uni_luebeck.isp.tessla.core.Location
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.core.TesslaAST.{LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.structComparison
 
