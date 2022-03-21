@@ -23,8 +23,8 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
   FinalLazyDeclaration,
   VariableDeclaration
 }
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustUtils.{canBeHashed, convertType}
 import de.uni_luebeck.isp.tessla.tessla_compiler._
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustUtils.{canBeHashed, convertType}
 
 class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     extends NonStreamCodeGeneratorInterface[String, String](extSpec) {
@@ -297,8 +297,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |        }
        |    }
        |}
-       |impl${traitBounds("Eq")} Eq for $structName$traitAnnotation {}
-       |impl${traitBounds("PartialEq")} PartialEq for $structName$traitAnnotation {
+       |impl${traitBounds("PartialEq + Clone")} Eq for $structName$traitAnnotation {}
+       |impl${traitBounds("PartialEq + Clone")} PartialEq for $structName$traitAnnotation {
        |    fn eq(&self, other: &Self) -> bool {
        |${fields.map { case (name, _) => s"PartialEq::eq(&self.$name, &other.$name)" }.mkString("\n&& ")}
        |    }
@@ -320,7 +320,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     traitBounds: String => String,
     traitAnnotation: String
   ): String = {
-    s"""impl${traitBounds("TesslaDisplay")} TesslaDisplay for $structName$traitAnnotation {
+    s"""impl${traitBounds("TesslaDisplay + Clone")} TesslaDisplay for $structName$traitAnnotation {
        |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        |        f.write_str("(")?;
        |${fieldNames
@@ -338,7 +338,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     traitBounds: String => String,
     traitAnnotation: String
   ): String = {
-    s"""impl${traitBounds("TesslaDisplay")} TesslaDisplay for $structName$traitAnnotation {
+    s"""impl${traitBounds("TesslaDisplay + Clone")} TesslaDisplay for $structName$traitAnnotation {
        |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        |        f.write_str("{")?;
        |${fieldNames
@@ -380,7 +380,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
          |    }""".stripMargin
     } else { "" }
 
-    s"""impl${traitBounds("TesslaParse")} TesslaRecordParse for $structName$traitAnnotation {
+    s"""impl${traitBounds("TesslaParse + Clone")} TesslaRecordParse for $structName$traitAnnotation {
        |    fn tessla_parse_struct(s: &str) -> (Result<Self, &'static str>, &str) {
        |        let mut inner = s.trim_start();
        |        $init
