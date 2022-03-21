@@ -54,7 +54,7 @@ class RustCompiler(outDir: Path, binaryArtifactName: String, executableCode: Boo
   override def translate(sourceCode: String): TranslationPhase.Result[Unit] = {
     Files.createDirectories(outDir)
 
-    val cargoDir = outDir.resolve("build-tessla")
+    val cargoDir = outDir.resolve(binaryArtifactName.substring(0, binaryArtifactName.length - 4))
     Files.createDirectories(cargoDir)
     deleteOnExit(cargoDir)
 

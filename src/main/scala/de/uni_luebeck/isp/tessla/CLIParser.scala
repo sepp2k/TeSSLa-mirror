@@ -286,7 +286,7 @@ object CLIParser {
           .text("Place the generated source code at this location."),
         opt[File]('b', "bin-file")
           .foreach(f => config = config.copy(binFile = Some(f)))
-          .text("Compile TeSSLa specification to an executable jar file which is created at the given location."),
+          .text("Compile TeSSLa specification to an executable binary file which is created at the given location."),
         opt[Unit]('n', "no-io")
           .foreach(_ => config = config.copy(ioInterface = false))
           .text("Replaces I/O Handling in generated source with simple API interface"),
