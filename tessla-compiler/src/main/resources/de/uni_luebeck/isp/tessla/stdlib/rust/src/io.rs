@@ -1,6 +1,7 @@
 use std::io::stdin;
 use std::str::FromStr;
-use crate::{TesslaDisplay, TesslaType, TesslaValue};
+
+use crate::{TesslaDisplay, TesslaValue};
 
 pub fn output_var<T: TesslaDisplay>(output: TesslaValue<T>, true_name: &str, ts: i64, raw: bool) {
     if output.is_error() {

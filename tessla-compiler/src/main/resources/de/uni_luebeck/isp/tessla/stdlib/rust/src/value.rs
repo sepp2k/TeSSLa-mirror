@@ -14,18 +14,14 @@ pub enum TesslaValue<T> {
     Value(T),
 }
 
-pub trait TesslaType {
-    fn is_value(&self) -> bool;
-    fn is_error(&self) -> bool;
-}
-impl<T> TesslaType for TesslaValue<T> {
+impl<T> TesslaValue<T> {
     #[inline]
-    fn is_value(&self) -> bool {
+    pub fn is_value(&self) -> bool {
         matches!(*self, Value(_))
     }
 
     #[inline]
-    fn is_error(&self) -> bool {
+    pub fn is_error(&self) -> bool {
         matches!(*self, Error(_))
     }
 }

@@ -1,4 +1,4 @@
-use crate::{TesslaOption, TesslaType};
+use crate::TesslaOption;
 use crate::TesslaValue;
 use crate::TesslaValue::*;
 
@@ -7,7 +7,7 @@ use crate::TesslaValue::*;
 //  value: Ok(Some(Err()))   - failed to determine event value (♢)
 //  value: Ok(Some(Value())) - there is an event with a value
 //  value: Ok(None)          - there is no event
-pub struct EventContainer<T: TesslaType> {
+pub struct EventContainer<T> {
     value: Result<Option<T>, &'static str>,
     last: Result<Option<T>, &'static str>,
 }
