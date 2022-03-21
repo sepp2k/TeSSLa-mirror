@@ -1,7 +1,7 @@
 Architecture of the Compiler Backend
 ====================================
 
-The compiler backend is able to translate TeSSLa core to Scala and can be
+The compiler backend is able to translate TeSSLa core to Scala and Rust and can be
 extended to other imperative languages.
 
 The translation works as follows:
@@ -20,7 +20,9 @@ Compilation process
 In the following the compilation process is described step by step.
 It consists of `TranslationPhases` which are run sequentially.
 
-### Preprocessing
+### Scala
+
+#### Preprocessing
 
 First the compiler backend preprocesses the received Core AST. Therefore it
 produces an `ExtendedSpecification` which is a container class for the CoreAST
@@ -52,9 +54,9 @@ only used once in the program (here in Scala again):
 
   This lazyness analysis is performed in `preprocessing.LazynessAnalysis`
 
-### Translation into Intermediate Code
+#### Translation into Intermediate Code
 
-A TeSSLa Core specification is not directly translated into Scala, Rust etc. but
+A TeSSLa Core specification is not directly translated into Scala but
 first into a common abstract imperative language.
 
 This language is defined in `IntermediateCode`. The generated container is
@@ -121,7 +123,7 @@ by class `IntermediateCodeTypeInference`. Also unused variables which may exist
 e.g. by generated `_lastvalue` variables without lasts in the specification or
 variables which were inlined (`UnusedVarRemove`).
 
-### Translation to the target Source code
+#### Translation to the target Source code
 
 For the translation to real source code the interface
 `backends.BackendInterface` exists. It loads a template source file from the
@@ -138,7 +140,7 @@ real-world code.
 The Scala translation can be found in `backends.scalaBackend.ScalaBackend`. It
 inherits `backends.BackendInterface`.
 
-### Further translation steps
+#### Further translation steps
 
 For Scala there is also the possibility to generate the monitor as fat jar.
 This is done in class `backends.scalaBackend.ScalaCompiler`.
@@ -146,6 +148,49 @@ Therefore the standard scala compiler is used as resource in the sbt project.
 To generate a fat jar, all scala dependencies are extracted from the
 `scala-library.jar` which is used by the compiler itself and packed into the
 generated monitor.
+
+### Rust
+
+#### Preprocessing
+
+The compiler starts with the `ExtractAndWrapFunctions` phase. In this phase, nested functions are unwrapped and boxed so
+that they can call themselves recursively. In the next phase, the `FormatStringMangler`, calls to `String.format()` are 
+transformed.
+This has the reason that Rust's format! macro must know the format string parameter at compile time. In the third
+preprocessing phase `EscapeInvalidIdentifiers`, characters that are not allowed to be part of an identifier in Rust are 
+replaced by valid characters. The last phase of _rust specific_ preprocessing `GenerateStructDefinitions` iterates over 
+the core AST,
+filtering out all tuples and records and generating the corresponding Rust structure definitions.
+
+The two preprocessing phases `UsageAnalysis` and `InliningAnalysis` are described in detail above in the Scala section.
+
+#### Translation into Intermediate Code
+
+The intermediate code is neither generated nor used by the Rust backend.
+
+#### Translation to the target source code
+
+The translation to Rust source code is performed by
+[TesslaCoreToRust](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/TesslaCoreToRust.scala).
+It loads a [template source file](../src/main/resources/de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs) from 
+the
+resources and replaces comments in there by the translations of the statement
+sequences in the generated `SourceListing`. It is a `TranslationPhase` from
+`SourceListing` to String. The generation of the Rust code is handled here by two code generators: 
+The 
+[RustStreamCodeGenerator](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/RustStreamCodeGenerator.scala)
+generates stream-related function calls such as lifts and I/O functions.
+The 
+[RustNonStreamCodeGenerator](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/RustNonStreamCodeGenerator.scala) 
+generates code such as for external and integrated function applications and assignments.
+
+#### Further translation steps
+
+For Rust there is also the possibility to generate the monitor as a Cargo project.
+This is done by the
+[RustCompiler](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/RustCompiler.scala).
+The Cargo project is generated on the fly. The standard library is copied from the resources and included as a sub
+project.
 
 Further documentation
 ---------------------
