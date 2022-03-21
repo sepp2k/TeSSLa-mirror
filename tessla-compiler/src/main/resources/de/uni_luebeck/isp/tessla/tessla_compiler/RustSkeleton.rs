@@ -2,11 +2,12 @@
 // #![allow(unused_parens, unused_variables, non_snake_case, non_camel_case_types, uncommon_codepoints, non_upper_case_globals)]
 
 extern crate tessla_stdlib;
+
 use tessla_stdlib::*;
 
 //USERINCLUDES
 
-struct State {
+pub struct State {
     current_ts: i64,
     last_processed_ts: i64,
 //STATEDEF
@@ -18,7 +19,7 @@ lazy_static! {
 
 //STATIC
 
-fn get_initial_state() -> State {
+pub fn get_initial_state() -> State {
     State {
         current_ts: 0,
         last_processed_ts: 0,
@@ -50,11 +51,11 @@ fn main() {
     flush(state);
 }//ENDMAIN
 
-fn flush(state: &mut State) {
+pub fn flush(state: &mut State) {
     step(state, state.current_ts, true);
 }
 
-fn step(state: &mut State, new_input_ts: i64, flush: bool) {
+pub fn step(state: &mut State, new_input_ts: i64, flush: bool) {
     let mut flush_required = flush;
 
     if new_input_ts > state.current_ts || flush_required {
