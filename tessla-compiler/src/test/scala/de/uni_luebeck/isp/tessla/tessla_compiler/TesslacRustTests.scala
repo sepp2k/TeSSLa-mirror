@@ -119,9 +119,9 @@ object TesslacRustTests {
     // FIXME: any additional source here would be in scala?
     val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
 
-    FormatStringMangler
+    (new ExtractAndWrapFunctions)
+      .andThen(FormatStringMangler)
       .andThen(EscapeInvalidIdentifiers)
-      .andThen(new ExtractAndWrapFunctions)
       .andThen(GenerateStructDefinitions)
       .andThen(UsageAnalysis)
       .andThen(InliningAnalysis)

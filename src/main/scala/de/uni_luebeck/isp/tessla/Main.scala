@@ -182,9 +182,9 @@ object Main {
             .compile(config.specSource, config.compilerOptions)
             .andThen(config.targetLanguage match {
               case "rust" =>
-                (FormatStringMangler
+                (new ExtractAndWrapFunctions
+                  andThen FormatStringMangler
                   andThen EscapeInvalidIdentifiers
-                  andThen new ExtractAndWrapFunctions
                   andThen GenerateStructDefinitions
                   andThen UsageAnalysis
                   andThen InliningAnalysis
