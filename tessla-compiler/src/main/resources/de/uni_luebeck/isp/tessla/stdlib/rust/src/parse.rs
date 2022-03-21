@@ -1,6 +1,7 @@
 use std::hash::Hash;
 use std::str::FromStr;
-use crate::{TesslaParse, TesslaValue, Error, Value};
+
+use crate::{Error, TesslaParse, TesslaValue, Value};
 
 fn find_end(string: &str, delim: &str, start: usize) -> usize {
     if (start + delim.len()) <= string.len() && delim == &string[start..(start + delim.len())] {
@@ -9,11 +10,11 @@ fn find_end(string: &str, delim: &str, start: usize) -> usize {
         string.len()
     } else {
         find_end(&string, delim, match &string[start..(start + 1)] {
-            "(" if delim != "\""  => find_end(&string, ")", start + 1) + 1,
-            "{" if delim != "\""  => find_end(&string, "}", start + 1) + 1,
-            "\""                  => find_end(&string, "\"", start + 1) + 1,
+            "(" if delim != "\"" => find_end(&string, ")", start + 1) + 1,
+            "{" if delim != "\"" => find_end(&string, "}", start + 1) + 1,
+            "\"" => find_end(&string, "\"", start + 1) + 1,
             "\\" if delim == "\"" => start + 2,
-            _                     => start + 1
+            _ => start + 1
         })
     }
 }
@@ -22,8 +23,8 @@ fn find_num_boundary(s: &str) -> usize {
     let mut boundary = 0_usize;
     for char in s.chars() {
         match char {
-            '+' | '-' | '.' => {},
-            _ if char.is_alphanumeric() => {},
+            '+' | '-' | '.' => {}
+            _ if char.is_alphanumeric() => {}
             _ => break
         }
         boundary += 1;
@@ -130,7 +131,7 @@ impl<T: TesslaRecordParse> TesslaParse for T {
                             Some(rest) => (Ok(result), rest.trim_start()),
                             None => (Err("Failed to parse Struct from String"), tail.trim_start())
                         }
-                    },
+                    }
                     error => error
                 },
             None => match s.strip_prefix("(") {
@@ -141,11 +142,11 @@ impl<T: TesslaRecordParse> TesslaParse for T {
                                 Some(rest) => (Ok(result), rest.trim_start()),
                                 None => (Err("Failed to parse Tuple from String"), tail.trim_start())
                             }
-                        },
+                        }
                         error => error
                     }
-                },
-                None => (Err("Failed to parse Struct/Tuple from String"),  s)
+                }
+                None => (Err("Failed to parse Struct/Tuple from String"), s)
             }
         }
     }
@@ -160,7 +161,7 @@ pub fn parse_struct_inner<T: TesslaParse>(slot: &mut TesslaValue<T>, string: &mu
                 None => *string = rest.trim_start()
             }
             true
-        },
+        }
         (Err(error), rest) => {
             *slot = Error(error);
             *string = rest.trim_start();
@@ -174,7 +175,7 @@ fn parse_set_inner<'a, T: TesslaParse + Clone + Eq + Hash>(set: &mut im::HashSet
         (Ok(elem), rest) => {
             set.insert(Value(elem));
             Ok(rest)
-        },
+        }
         (Err(error), _) => Err(error)
     }
 }
@@ -191,7 +192,7 @@ impl<T: TesslaParse + Clone + Eq + Hash> TesslaParse for im::HashSet<TesslaValue
                             Some(next) => inner = next.trim_start(),
                             None => {
                                 inner = rest.trim_start();
-                                break
+                                break;
                             }
                         },
                         Err(error) => return (Err(error), inner)
@@ -201,7 +202,7 @@ impl<T: TesslaParse + Clone + Eq + Hash> TesslaParse for im::HashSet<TesslaValue
                     Some(rest) => (Ok(set), rest.trim_start()),
                     None => (Err("Failed to parse Set from String"), rest.trim_start())
                 }
-            },
+            }
             None => (Err("Failed to parse Set from String"), s),
         }
     }
@@ -214,7 +215,7 @@ fn parse_map_inner<'a, T: TesslaParse + Clone + Eq + Hash, U: TesslaParse + Clon
                 (Ok(value), rest) => {
                     map.insert(Value(key), Value(value));
                     Ok(rest.trim_start())
-                },
+                }
                 (Err(error), _) => Err(error)
             }
             None => Err("Failed to parse Map from String")
@@ -235,7 +236,7 @@ impl<T: TesslaParse + Clone + Eq + Hash, U: TesslaParse + Clone> TesslaParse for
                             Some(next) => inner = next.trim_start(),
                             None => {
                                 inner = rest.trim_start();
-                                break
+                                break;
                             }
                         },
                         Err(error) => return (Err(error), inner)
@@ -245,7 +246,7 @@ impl<T: TesslaParse + Clone + Eq + Hash, U: TesslaParse + Clone> TesslaParse for
                     Some(rest) => (Ok(map), rest.trim_start()),
                     None => (Err("Failed to parse Map from String"), rest.trim_start())
                 }
-            },
+            }
             None => (Err("Failed to parse Map from String"), s),
         }
     }
@@ -256,7 +257,7 @@ fn parse_list_inner<'a, T: TesslaParse + Clone>(list: &mut im::Vector<TesslaValu
         (Ok(elem), rest) => {
             list.push_back(Value(elem));
             Ok(rest)
-        },
+        }
         (Err(error), _) => Err(error)
     }
 }
@@ -273,7 +274,7 @@ impl<T: TesslaParse + Clone> TesslaParse for im::Vector<TesslaValue<T>> {
                             Some(next) => inner = next.trim_start(),
                             None => {
                                 inner = rest.trim_start();
-                                break
+                                break;
                             }
                         },
                         Err(error) => return (Err(error), inner)
@@ -283,7 +284,7 @@ impl<T: TesslaParse + Clone> TesslaParse for im::Vector<TesslaValue<T>> {
                     Some(rest) => (Ok(list), rest.trim_start()),
                     None => (Err("Failed to parse List from String"), rest.trim_start())
                 }
-            },
+            }
             None => (Err("Failed to parse List from String"), s),
         }
     }

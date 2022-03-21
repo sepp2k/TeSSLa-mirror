@@ -57,6 +57,7 @@ impl<T: Clone> Clone for TesslaValue<T> {
 }
 
 impl<T: PartialEq> Eq for TesslaValue<T> {}
+
 impl<T: PartialEq> PartialEq<Self> for TesslaValue<T> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -123,7 +124,7 @@ impl<T: BitOr<Output = T>> BitOr for TesslaValue<T> {
 }
 
 // lhs ^ rhs
-impl<T: BitXor<Output=T>> BitXor for TesslaValue<T> {
+impl<T: BitXor<Output = T>> BitXor for TesslaValue<T> {
     type Output = Self;
 
     #[inline]
@@ -660,7 +661,7 @@ impl<T: Display> TesslaDisplay for HashSet<T> {
     }
 }
 
-impl<T> TesslaSet<T>{
+impl<T> TesslaSet<T> {
     #[inline]
     pub fn empty() -> TesslaSet<TesslaValue<T>> {
         Value(HashSet::<TesslaValue<T>>::new())
@@ -685,7 +686,7 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     }
 
     #[inline]
-    pub fn intersection(&self, set2: TesslaSet<TesslaValue<T>>) -> TesslaSet<TesslaValue<T>>{
+    pub fn intersection(&self, set2: TesslaSet<TesslaValue<T>>) -> TesslaSet<TesslaValue<T>> {
         match (self, set2) {
             (Error(error), _) => Error(error),
             (_, Error(error)) => Error(error),
@@ -714,7 +715,7 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     }
 
     #[inline]
-    pub fn size(&self) -> TesslaInt{
+    pub fn size(&self) -> TesslaInt {
         match self {
             Error(error) => Error(error),
             Value(value) => match i64::try_from(value.len()) {
@@ -725,7 +726,7 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     }
 
     #[inline]
-    pub fn union(&self, set2 : TesslaSet<TesslaValue<T>>) -> TesslaSet<TesslaValue<T>>{
+    pub fn union(&self, set2: TesslaSet<TesslaValue<T>>) -> TesslaSet<TesslaValue<T>> {
         match (self, set2) {
             (Error(error), _) => Error(error),
             (_, Error(error)) => Error(error),
@@ -744,12 +745,12 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
                     result = function(result, item.clone());
                 }
                 return result;
-            },
+            }
         }
     }
 
     #[inline]
-    pub fn map<U: Clone + Eq + Hash>(&self, function: TesslaValue<impl Fn(TesslaValue<T>) -> TesslaValue<U>>) -> TesslaSet<TesslaValue<U>>{
+    pub fn map<U: Clone + Eq + Hash>(&self, function: TesslaValue<impl Fn(TesslaValue<T>) -> TesslaValue<U>>) -> TesslaSet<TesslaValue<U>> {
         match (self, function) {
             (&Error(error), _) | (_, Error(error)) => Error(error),
             (Value(set), Value(function)) => {
@@ -765,9 +766,9 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
 
 // Map
 
-pub type TesslaMap<T,U> = TesslaValue<HashMap<T,U>>;
+pub type TesslaMap<T, U> = TesslaValue<HashMap<T, U>>;
 
-impl<T: Display + Hash + Eq, U: Display> TesslaDisplay for HashMap<T,U> {
+impl<T: Display + Hash + Eq, U: Display> TesslaDisplay for HashMap<T, U> {
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("Map(")?;
         let mut entries = Vector::from_iter(
@@ -785,34 +786,34 @@ impl<T: Display + Hash + Eq, U: Display> TesslaDisplay for HashMap<T,U> {
 
 impl<T, U> TesslaMap<TesslaValue<T>, TesslaValue<U>> {
     #[inline]
-    pub fn empty() -> TesslaMap<TesslaValue<T>, TesslaValue<U>>{
+    pub fn empty() -> TesslaMap<TesslaValue<T>, TesslaValue<U>> {
         Value(HashMap::<TesslaValue<T>, TesslaValue<U>>::new())
     }
 }
 
-impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaValue<U>>{
+impl<T: Clone + Eq + Hash, U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>, TesslaValue<U>> {
     #[inline]
-    pub fn add(&self , key: TesslaValue<T>, item: TesslaValue<U>) -> TesslaMap<TesslaValue<T>,TesslaValue<U>>{
-        match self{
+    pub fn add(&self, key: TesslaValue<T>, item: TesslaValue<U>) -> TesslaMap<TesslaValue<T>, TesslaValue<U>> {
+        match self {
             Error(error) => Error(error),
             Value(value) => {
                 let mut result: HashMap<TesslaValue<T>, TesslaValue<U>> = HashMap::new();
                 result.insert(key, item);
                 return Value(result.union(value.clone()));
-            },
+            }
         }
     }
 
     #[inline]
-    pub fn contains(&self , key: TesslaValue<T>) -> TesslaBool{
-        match self{
+    pub fn contains(&self, key: TesslaValue<T>) -> TesslaBool {
+        match self {
             Error(error) => Error(error),
             Value(value) => Value(value.contains_key(&key)),
         }
     }
 
     #[inline]
-    pub fn fold<R>(&self, start : TesslaValue<R>, function : impl Fn(TesslaValue<R>, TesslaValue<T>, TesslaValue<U>) -> TesslaValue<R>) -> TesslaValue<R>{
+    pub fn fold<R>(&self, start: TesslaValue<R>, function: impl Fn(TesslaValue<R>, TesslaValue<T>, TesslaValue<U>) -> TesslaValue<R>) -> TesslaValue<R> {
         match self {
             Error(error) => Error(error),
             Value(map) => {
@@ -826,8 +827,8 @@ impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaV
     }
 
     #[inline]
-    pub fn get(&self, key: TesslaValue<T>) -> TesslaValue<U>{
-        match self{
+    pub fn get(&self, key: TesslaValue<T>) -> TesslaValue<U> {
+        match self {
             Error(error) => Error(error),
             Value(map) => match map.get(&key) {
                 None => Error("Map does not contain the given key"),
@@ -842,7 +843,7 @@ impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaV
             Error(error) => Error(error),
             Value(value) => {
                 let mut out: Vector<TesslaValue<T>> = Vector::new();
-                for item in value.keys(){
+                for item in value.keys() {
                     out.push_back(item.clone());
                 }
                 return Value(out);
@@ -851,8 +852,8 @@ impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaV
     }
 
     #[inline]
-    pub fn remove(&self, key: TesslaValue<T>) -> TesslaMap<TesslaValue<T>,TesslaValue<U>>{
-        match self{
+    pub fn remove(&self, key: TesslaValue<T>) -> TesslaMap<TesslaValue<T>, TesslaValue<U>> {
+        match self {
             Error(error) => Error(error),
             Value(value) => {
                 Value(value.without(&key))
@@ -861,7 +862,7 @@ impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaV
     }
 
     #[inline]
-    pub fn size(&self) -> TesslaInt{
+    pub fn size(&self) -> TesslaInt {
         match self {
             Error(error) => Error(error),
             Value(value) => match i64::try_from(value.len()) {
@@ -876,7 +877,7 @@ impl<T: Clone + Eq + Hash,U: Clone + Eq + Hash> TesslaMap<TesslaValue<T>,TesslaV
         match (self, function) {
             (&Error(error), _) | (_, Error(error)) => Error(error),
             (Value(map), Value(function)) => {
-                let mut result: HashMap<TesslaValue<A>,TesslaValue<B>> = HashMap::new();
+                let mut result: HashMap<TesslaValue<A>, TesslaValue<B>> = HashMap::new();
                 for (key, value) in map.iter() {
                     let (mapped_key, mapped_value) = function(key.clone(), value.clone());
                     result.insert(mapped_key, mapped_value);
@@ -907,10 +908,10 @@ impl<T: Display + Clone> TesslaDisplay for Vector<T> {
     }
 }
 
-impl<T: Clone> TesslaList<TesslaValue<T>>{
+impl<T: Clone> TesslaList<TesslaValue<T>> {
     #[inline]
-    pub fn append(&self , elem: TesslaValue<T>) -> TesslaList<TesslaValue<T>>{
-        match self{
+    pub fn append(&self, elem: TesslaValue<T>) -> TesslaList<TesslaValue<T>> {
+        match self {
             Error(error) => Error(error),
             Value(list) => {
                 let mut result: Vector<TesslaValue<T>> = list.clone();
@@ -921,7 +922,7 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
     }
 
     #[inline]
-    pub fn empty() -> TesslaList<TesslaValue<T>>{
+    pub fn empty() -> TesslaList<TesslaValue<T>> {
         let x: TesslaList<TesslaValue<T>> = Value(Vector::new());
         return x;
     }
@@ -941,7 +942,7 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
     }
 
     #[inline]
-    pub fn get(&self, index: TesslaInt) -> TesslaValue<T>{
+    pub fn get(&self, index: TesslaInt) -> TesslaValue<T> {
         match (self, index) {
             (Error(error), _) => Error(error),
             (_, Error(error)) => Error(error),
@@ -953,7 +954,7 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
     }
 
     #[inline]
-    pub fn init(&self) -> TesslaList<TesslaValue<T>>{
+    pub fn init(&self) -> TesslaList<TesslaValue<T>> {
         match self {
             Error(error) => Error(error),
             Value(value) => {
@@ -962,12 +963,12 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
                 } else {
                     Self::empty()
                 }
-            },
+            }
         }
     }
 
     #[inline]
-    pub fn prepend(&self, elem: TesslaValue<T>) -> TesslaList<TesslaValue<T>>{
+    pub fn prepend(&self, elem: TesslaValue<T>) -> TesslaList<TesslaValue<T>> {
         match self {
             Error(error) => Error(error),
             Value(list) => {
@@ -979,7 +980,7 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
     }
 
     #[inline]
-    pub fn set(&self, index: i64, elem: TesslaValue<T>) -> TesslaList<TesslaValue<T>>{
+    pub fn set(&self, index: i64, elem: TesslaValue<T>) -> TesslaList<TesslaValue<T>> {
         match self {
             Error(error) => Error(error),
             Value(list) => {
@@ -991,7 +992,7 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
     }
 
     #[inline]
-    pub fn size(&self) -> TesslaInt{
+    pub fn size(&self) -> TesslaInt {
         match self {
             Error(error) => Error(error),
             Value(value) => match i64::try_from(value.len()) {
@@ -1011,12 +1012,12 @@ impl<T: Clone> TesslaList<TesslaValue<T>>{
                 } else {
                     Self::empty()
                 }
-            },
+            }
         }
     }
 
     #[inline]
-    pub fn map<U: Clone>(&self, function: TesslaValue<impl Fn(TesslaValue<T>) -> TesslaValue<U>>) -> TesslaList<TesslaValue<U>>{
+    pub fn map<U: Clone>(&self, function: TesslaValue<impl Fn(TesslaValue<T>) -> TesslaValue<U>>) -> TesslaList<TesslaValue<U>> {
         match (self, function) {
             (&Error(error), _) | (_, Error(error)) => Error(error),
             (Value(list), Value(function)) => {

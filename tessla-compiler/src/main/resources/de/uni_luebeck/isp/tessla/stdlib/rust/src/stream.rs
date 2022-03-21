@@ -186,7 +186,7 @@ pub fn last<T, U>(output: &mut Events<T>, values: &Events<T>, trigger: &Events<U
     if values.is_initialised() {
         match trigger.value {
             Err(error) => output.set_error(error),
-            Ok(None) => {},
+            Ok(None) => {}
             Ok(Some(_)) => match values.last {
                 Err(error) => output.set_error(error),
                 Ok(Some(_)) => output.set_event(values.clone_last()),
@@ -217,7 +217,6 @@ pub fn reset_delay<T>(output: &Events<()>, delays: &Events<i64>, resets: &Events
             }
         }
     }
-
 }
 
 pub fn lift1<T, U0, F>(output: &mut Events<T>, arg0: &Events<U0>, function: F)
@@ -230,7 +229,7 @@ pub fn lift1<T, U0, F>(output: &mut Events<T>, arg0: &Events<U0>, function: F)
         match res {
             Error(error) => output.set_error(error),
             Value(Some(event)) => output.set_event(event),
-            Value(None) => {},
+            Value(None) => {}
         }
     } else if any_error {
         output.set_error("Lift couldn't determine if there should be an event");
@@ -247,7 +246,7 @@ pub fn lift2<T, U0, U1, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Eve
         match res {
             Error(error) => output.set_error(error),
             Value(Some(event)) => output.set_event(event),
-            Value(None) => {},
+            Value(None) => {}
         }
     } else if any_error {
         output.set_error("Lift couldn't determine if there should be an event");
@@ -264,7 +263,7 @@ pub fn lift3<T, U0, U1, U2, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: 
         match res {
             Error(error) => output.set_error(error),
             Value(Some(event)) => output.set_event(event),
-            Value(None) => {},
+            Value(None) => {}
         }
     } else if any_error {
         output.set_error("Lift couldn't determine if there should be an event");
@@ -282,7 +281,7 @@ pub fn lift4<T, U0, U1, U2, U3, F>(output: &mut Events<T>, arg0: &Events<U0>, ar
         match res {
             Error(error) => output.set_error(error),
             Value(Some(event)) => output.set_event(event),
-            Value(None) => {},
+            Value(None) => {}
         }
     } else if any_error {
         output.set_error("Lift couldn't determine if there should be an event");
@@ -300,7 +299,7 @@ pub fn lift5<T, U0, U1, U2, U3, U4, F>(output: &mut Events<T>, arg0: &Events<U0>
         match res {
             Error(error) => output.set_error(error),
             Value(Some(event)) => output.set_event(event),
-            Value(None) => {},
+            Value(None) => {}
         }
     } else if any_error {
         output.set_error("Lift couldn't determine if there should be an event");

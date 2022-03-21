@@ -23,8 +23,8 @@ pub fn parse_input(input_stream_name: &mut String, input_stream_value: &mut Stri
         Ok(0) => reached_eof = true,
         Ok(_) => {
             match line.trim() {
-                "" => { return false }, // empty line
-                s if s.starts_with("#") => { return false }, // comment
+                "" => { return false; } // empty line
+                s if s.starts_with("#") => { return false; } // comment
                 _ => {}
             };
             let (timestamp, input_expression) = match line.trim().split_once(':') {
@@ -39,7 +39,7 @@ pub fn parse_input(input_stream_name: &mut String, input_stream_value: &mut Stri
                 Some((lhs, rhs)) => {
                     *input_stream_name = lhs.trim().to_string();
                     *input_stream_value = rhs.trim().to_string();
-                },
+                }
                 None => {
                     *input_stream_name = input_expression.trim().to_string();
                     *input_stream_value = String::from("()");

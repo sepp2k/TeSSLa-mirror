@@ -35,7 +35,6 @@ fn main() {
     let state = &mut get_initial_state();
 
     loop {
-
         if tessla_stdlib::parse_input(&mut input_stream_name, &mut input_stream_value, &mut new_input_ts) {
             break; // reached EOF
         }
@@ -59,7 +58,6 @@ pub fn step(state: &mut State, new_input_ts: i64, flush: bool) {
     let mut flush_required = flush;
 
     if new_input_ts > state.current_ts || flush_required {
-
         let mut do_processing = true;
         while do_processing {
 
@@ -80,7 +78,6 @@ pub fn step(state: &mut State, new_input_ts: i64, flush: bool) {
                 state.current_ts = new_input_ts;
             }
         }
-
     } else if new_input_ts < state.current_ts {
         panic!("{}: FATAL: decreasing timestamp received", state.current_ts);
     }
