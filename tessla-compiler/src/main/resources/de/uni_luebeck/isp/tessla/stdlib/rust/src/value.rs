@@ -30,15 +30,6 @@ impl<T> TesslaType for TesslaValue<T> {
     }
 }
 
-impl<T> TesslaValue<T> {
-    pub fn get_ref(&self) -> &T {
-        match self {
-            &Error(error) => panic!("Expected a value, got an error: {}", error),
-            Value(value) => value,
-        }
-    }
-}
-
 impl<T: Copy> TesslaValue<T> {
     #[inline]
     pub fn get_value(&self) -> T {

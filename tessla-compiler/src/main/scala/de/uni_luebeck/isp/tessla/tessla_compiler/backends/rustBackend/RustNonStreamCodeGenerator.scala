@@ -16,21 +16,15 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
-import de.uni_luebeck.isp.tessla.core.TesslaAST.{Core, LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.{FunctionType => _, _}
-import de.uni_luebeck.isp.tessla.tessla_compiler.{
-  DefinitionOrdering,
-  Diagnostics,
-  ExtendedSpecification,
-  NonStreamCodeGeneratorInterface,
-  TypeArgManagement
-}
+import de.uni_luebeck.isp.tessla.core.TesslaAST.{Core, LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
   FinalDeclaration,
   FinalLazyDeclaration,
   VariableDeclaration
 }
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustUtils.{canBeHashed, convertType}
+import de.uni_luebeck.isp.tessla.tessla_compiler._
 
 class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     extends NonStreamCodeGeneratorInterface[String, String](extSpec) {
@@ -503,7 +497,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__Map_size__"     => s"${args(0)}.Map_size()"
       case "__Map_fold__"     => s"${args(0)}.Map_fold(${args(1)},${args(2)})"
       case "__Map_keys__"     => s"${args(0)}.keys()"
-      case "__Map_map__"      => s"${args(0)}.Map_map(${args(1)}.get_ref())"
+      case "__Map_map__"      => s"${args(0)}.Map_map(${args(1)})"
 
       case "__Set_empty__"        => s"TesslaSet::Set_empty()"
       case "__Set_add__"          => s"${args(0)}.Set_add(${args(1)})"
@@ -514,7 +508,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__Set_intersection__" => s"${args(0)}.Set_intersection(${args(1)})"
       case "__Set_minus__"        => s"${args(0)}.difference(${args(1)})"
       case "__Set_fold__"         => s"${args(0)}.Set_fold(${args(1)},${args(2)})"
-      case "__Set_map__"          => s"${args(0)}.Set_map(${args(1)}.get_ref())"
+      case "__Set_map__"          => s"${args(0)}.Set_map(${args(1)})"
 
       case "__List_empty__"   => s"TesslaList::List_empty()"
       case "__List_size__"    => s"${args(0)}.List_size()"
@@ -523,7 +517,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__List_tail__"    => s"${args(0)}.List_tail()"
       case "__List_init__"    => s"${args(0)}.List_init()"
       case "__List_get__"     => s"${args(0)}.List_get(${args(1)})"
-      case "__List_map__"     => s"${args(0)}.List_map(${args(1)}.get_ref())"
+      case "__List_map__"     => s"${args(0)}.List_map(${args(1)})"
       //case "__List_set__" if typeHint.retType.isInstanceOf[MutableListType] => s"${args(0)}.insert(${args(1)} as usize, ${args(2)})"
       case "__List_set__"  => s"${args(0)}.List_set(${args(1)}, ${args(2)})"
       case "__List_fold__" => s"${args(0)}.List_fold(${args(1)},${args(2)})"
