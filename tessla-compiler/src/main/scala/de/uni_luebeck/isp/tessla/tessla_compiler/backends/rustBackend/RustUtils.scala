@@ -35,38 +35,46 @@ object RustUtils {
    * @param t Type to be converted. If type is Events[t] the result is equal to calling the function with t.
    * @param mask_generics Replace all generic types with _, resulting in them being inferred by rust.
    *                      This is needed in anonymous functions, where you cannot specify generic types
+   * @param use_abstract_fn_type Where possible we want to use this type, since it does not limit what exactly is put in.
+   *                             At the moment this type description is only allowed for arguments and return types of
+   *                             proper static functions: [[https://doc.rust-lang.org/reference/types/impl-trait.html]]
+   *
+   *                             In places where we cannot use this, we instead use {{{Box<dyn Fn(...) -> ..>}}}
    * @return The converted type
    */
-  def convertType(t: Type, mask_generics: Boolean = false): String = {
+  def convertType(t: Type, mask_generics: Boolean = false, use_abstract_fn_type: Boolean = false): String = {
     t match {
-      case InstantiatedType("Events", Seq(t), _)     => convertType(t, mask_generics)
+      case InstantiatedType("Events", Seq(t), _)     => convertType(t, mask_generics, use_abstract_fn_type)
       case RecordType(entries, _) if entries.isEmpty => "TesslaUnit"
       case InstantiatedType("Bool", Seq(), _)        => "TesslaBool"
       case InstantiatedType("Int", Seq(), _)         => "TesslaInt"
       case InstantiatedType("Float", Seq(), _)       => "TesslaFloat"
       case InstantiatedType("String", Seq(), _)      => "TesslaString"
       case InstantiatedType("Option", Seq(t), _) =>
-        s"TesslaOption<${convertType(t, mask_generics)}>"
+        s"TesslaOption<${convertType(t, mask_generics, use_abstract_fn_type)}>"
       case InstantiatedType("Set", Seq(t), _) =>
-        s"TesslaSet<${convertType(t, mask_generics)}>"
+        s"TesslaSet<${convertType(t, mask_generics, use_abstract_fn_type)}>"
       case InstantiatedType("Map", Seq(t1, t2), _) =>
-        s"TesslaMap<${convertType(t1, mask_generics)}, ${convertType(t2, mask_generics)}>"
+        s"TesslaMap<${convertType(t1, mask_generics, use_abstract_fn_type)}, ${convertType(t2, mask_generics, use_abstract_fn_type)}>"
       case InstantiatedType("List", Seq(t), _) =>
-        s"TesslaList<${convertType(t, mask_generics)}>"
+        s"TesslaList<${convertType(t, mask_generics, use_abstract_fn_type)}>"
       case InstantiatedType(n, Seq(), _) if n.startsWith("native:") => n.stripPrefix("native:")
       case InstantiatedType(n, tps, _) if n.startsWith("native:") =>
         s"${n.stripPrefix("native:")}<${tps
-          .map { t => convertType(t, mask_generics) }
+          .map { t => convertType(t, mask_generics, use_abstract_fn_type) }
           .mkString(", ")}>"
-      case _: FunctionType if mask_generics =>
-        "_"
       case FunctionType(_, paramTypes, resultType, _) =>
-        s"""impl Fn(${paramTypes
+        val params = paramTypes
           .map {
-            case (LazyEvaluation, t)   => s"Lazy<${convertType(t, mask_generics)}>"
-            case (StrictEvaluation, t) => convertType(t, mask_generics)
+            // FIXME case (LazyEvaluation, t) =>
+            case (_, t) => convertType(t, mask_generics, use_abstract_fn_type)
           }
-          .mkString(", ")}) -> ${convertType(resultType, mask_generics)}"""
+          .mkString(", ")
+        val result = convertType(resultType, mask_generics, use_abstract_fn_type)
+        if (use_abstract_fn_type)
+          s"impl Fn($params) -> $result"
+        else
+          s"Box<dyn Fn($params) -> $result>"
       case RecordType(entries, _) =>
         val genericBounds = getGenericTraitBounds(entries.map { case (_, (typ, _)) => typ })("")
         s"TesslaValue<${RustUtils.getStructName(entries)}$genericBounds>"

@@ -132,9 +132,9 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         val traitBounds = RustUtils.getGenericTraitBounds(params.map { case (_, _, typ) => typ } :+ result.tpe)
 
         val functionParams = params
-          .map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe)}" }
+          .map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe, use_abstract_fn_type = true)}" }
           .mkString(", ")
-        val returnType = RustUtils.convertType(result.tpe)
+        val returnType = RustUtils.convertType(result.tpe, use_abstract_fn_type = true)
 
         (s"fn var_$id${traitBounds("Clone")}($functionParams) -> $returnType {"
           +: translateBody(body, result, TypeArgManagement.empty, extSpec.spec.definitions)
