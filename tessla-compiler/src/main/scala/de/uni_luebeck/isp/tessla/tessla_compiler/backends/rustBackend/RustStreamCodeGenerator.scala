@@ -399,7 +399,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, UnitType, "init()", currSrc)
     val condition = streamNameFromExpressionArg(condition_expr)
-    currSrc.computation.append(s"unitIf(&mut $output, &$condition);")
+    currSrc.computation.append(s"unit_if(&mut $output, &$condition);")
   }
 
   /**

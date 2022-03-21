@@ -409,7 +409,7 @@ pub fn reduce<T>(output: &mut Events<T>, input: &Events<T>, function: fn(TesslaV
     }
 }
 
-pub fn unitIf(output: &mut Events<()>, cond: &Events<bool>) {
+pub fn unit_if(output: &mut Events<()>, cond: &Events<bool>) {
     if cond.has_event() && cond.get_value() {
         output.set_event(Value(()));
     }
