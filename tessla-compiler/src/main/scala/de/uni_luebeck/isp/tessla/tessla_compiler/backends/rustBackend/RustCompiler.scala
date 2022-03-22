@@ -22,16 +22,7 @@ import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.{
-  FileAlreadyExistsException,
-  FileSystem,
-  FileSystems,
-  FileVisitResult,
-  Files,
-  Path,
-  SimpleFileVisitor,
-  StandardCopyOption
-}
+import java.nio.file._
 import java.util.Collections
 import scala.io.Source
 import scala.reflect.io.Directory
@@ -54,7 +45,7 @@ class RustCompiler(outDir: Path, binaryArtifactName: String, executableCode: Boo
   override def translate(sourceCode: String): TranslationPhase.Result[Unit] = {
     Files.createDirectories(outDir)
 
-    val cargoDir = outDir.resolve(binaryArtifactName.substring(0, binaryArtifactName.length - 4))
+    val cargoDir = outDir.resolve(s"build-$binaryArtifactName")
     Files.createDirectories(cargoDir)
     deleteOnExit(cargoDir)
 
@@ -102,6 +93,10 @@ class RustCompiler(outDir: Path, binaryArtifactName: String, executableCode: Boo
         "--release"
       )
     }
+
+    cargoBuild.redirectInput()
+    cargoBuild.redirectOutput()
+    cargoBuild.redirectError()
 
     try {
       val cargoProcess = cargoBuild.start()
