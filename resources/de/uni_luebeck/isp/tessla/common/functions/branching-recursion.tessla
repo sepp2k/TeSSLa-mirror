@@ -1,0 +1,12 @@
+# At the moment, generics can't be function type, so we have to define
+# an if-then-else manually, that takes two functions
+def ite(cond: strict Bool, thenCase: lazy (Int) => Int, elseCase: lazy (Int) => Int): (Int) => Int = extern("ite")
+
+in x: Events[Int]
+
+def foo(a: Int): (Int) => Int = {
+    ite(a < 1, (b: Int) => b, (c: Int) => foo(c - 1)(a))
+}
+
+out slift1(x, foo(5)) as u
+out slift1(x, foo(8)) as v

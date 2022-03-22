@@ -1,0 +1,5 @@
+{
+  "input": "branching-recursion.input",
+  "expectedOutput": "branching-recursion.output",
+  "spec": "branching-recursion.tessla"
+}

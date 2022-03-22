@@ -1,0 +1,5 @@
+{
+  "input": "mutual-recursion.input",
+  "expectedOutput": "mutual-recursion.output",
+  "spec": "mutual-recursion-renamed.tessla"
+}

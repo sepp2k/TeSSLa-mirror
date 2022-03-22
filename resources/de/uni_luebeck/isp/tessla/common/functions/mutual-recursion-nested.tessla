@@ -1,0 +1,12 @@
+in x: Events[Int]
+
+def pow(x: Int): (Int) => Int = {
+    def prod(a: Int): Int = {
+        def prod2(a: Int): Int =
+            if a < 2 then x else prod(a - 1) * x
+        if a <= 1 then x else prod2(a - 1) * x
+    }
+    prod
+}
+
+out slift2(x, x, (a: Int, b: Int) => pow(a)(b)) as y
