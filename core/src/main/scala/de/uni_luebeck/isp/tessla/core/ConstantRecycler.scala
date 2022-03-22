@@ -34,7 +34,7 @@ object ConstantRecycler extends TranslationPhase[Specification, Specification] {
    */
   override def translate(spec: Specification): Result[Specification] = {
 
-    var identifiedIDs : Map[Identifier, Identifier] = Map()
+    var identifiedIDs: Map[Identifier, Identifier] = Map()
 
     /**
      * This function checks if two expressions are exactly equivalent.
@@ -120,10 +120,10 @@ object ConstantRecycler extends TranslationPhase[Specification, Specification] {
           val parameter = paramMapping.contains(id)
 
           val res = (parameter && paramMapping(id) == er2.id) ||
-          (!parameter && (id == er2.id || identifiedIDs.get(id).contains(er2.id))) ||
-          (scope1.contains(id) &&
-          scope2.contains(er2.id) &&
-          checkEquivalence(scope1(id), scope2(er2.id), scope1, scope2, paramMapping, stack + id))
+            (!parameter && (id == er2.id || identifiedIDs.get(id).contains(er2.id))) ||
+            (scope1.contains(id) &&
+              scope2.contains(er2.id) &&
+              checkEquivalence(scope1(id), scope2(er2.id), scope1, scope2, paramMapping, stack + id))
 
           if (res && !parameter && stack.isEmpty) {
             identifiedIDs = identifiedIDs + (id -> er2.id) + (er2.id -> id)
