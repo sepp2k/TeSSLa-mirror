@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The TeSSLa Community
+ * Copyright 2022 The TeSSLa Community
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -264,7 +264,7 @@ object CLIParser {
       finally addIncludeFile.close
     }
 
-    val myCompilerOptions =
+    compilerOptions =
       if (!global.userStdLib)
         compilerOptions.copy(stdlibIncludeResolver = CompilerStdLibIncludeResolver.fromCompilerStdlibResource)
       else
@@ -272,7 +272,7 @@ object CLIParser {
 
     note("")
     cmd("compile")
-      .foreach(_ => tasks += (() => Task("compile", config.copy(compilerOptions = myCompilerOptions))))
+      .foreach(_ => tasks += (() => Task("compile", config.copy(compilerOptions = compilerOptions))))
       .text("Compile TeSSLa specifications to Scala")
       .children(
         arg[File]("<tessla-file>")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The TeSSLa Community
+ * Copyright 2022 The TeSSLa Community
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -480,7 +480,7 @@ object CInstrumentation {
     /**
      * Produces code to print the event index to the provided input stream.
      */
-    protected def printEventIndex(in: InStream, index: Int): String = printEvent(in, s"index$index")
+    protected def printEventIndex(in: InStream, index: Int): String = printEvent(in, s"subExp$index")
 
     protected val prefix = "#include \"logging.h\"\n"
 

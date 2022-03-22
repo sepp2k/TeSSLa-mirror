@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The TeSSLa Community
+ * Copyright 2022 The TeSSLa Community
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,14 +34,16 @@ object ConstantRecycler extends TranslationPhase[Specification, Specification] {
    */
   override def translate(spec: Specification): Result[Specification] = {
 
+    var identifiedIDs: Map[Identifier, Identifier] = Map()
+
     /**
      * This function checks if two expressions are exactly equivalent.
      * The procedure is recursive. If one of the expressions is/contains an [[ExpressionRef]] the expression that is
-     * bind to this reference is used for the equivalence check. Therfore it is necessary to pass the scopes of e1, e2
+     * bind to this reference is used for the equivalence check. Therefore it is necessary to pass the scopes of e1, e2
      * to this function.
      * If identifiers are not contained in a scope map they must be parameters of a surrounding function expression.
      *
-     * When function expressions are checked for equivalance their result expression is compared. Therfore paramMapping
+     * When function expressions are checked for equivalence their result expression is compared. Therefore paramMapping
      * stores pairs of corresponding parameters from surrounding function expressions.
      *
      * @param e1 First expression to be compared
@@ -115,11 +117,19 @@ object ConstantRecycler extends TranslationPhase[Specification, Specification] {
         case ExpressionRef(id, _, _) if stack.contains(id) => true
         case ExpressionRef(id, _, _) if e2.isInstanceOf[ExpressionRef] =>
           val er2 = e2.asInstanceOf[ExpressionRef]
-          (paramMapping.contains(id) && paramMapping(id) == er2.id) ||
-          (!paramMapping.contains(id) && id == er2.id) ||
-          (scope1.contains(id) &&
-          scope2.contains(er2.id) &&
-          checkEquivalence(scope1(id), scope2(er2.id), scope1, scope2, paramMapping, stack + id))
+          val parameter = paramMapping.contains(id)
+
+          val res = (parameter && paramMapping(id) == er2.id) ||
+            (!parameter && (id == er2.id || identifiedIDs.get(id).contains(er2.id))) ||
+            (scope1.contains(id) &&
+              scope2.contains(er2.id) &&
+              checkEquivalence(scope1(id), scope2(er2.id), scope1, scope2, paramMapping, stack + id))
+
+          if (res && !parameter && stack.isEmpty) {
+            identifiedIDs = identifiedIDs + (id -> er2.id) + (er2.id -> id)
+          }
+
+          res
 
         case _ => false
       }
@@ -183,6 +193,7 @@ object ConstantRecycler extends TranslationPhase[Specification, Specification] {
         case (currentRPlan, (id, exp)) =>
           val equiv = includedStmts.find(i => checkEquivalence(exp, scope(i), scope, scope))
           if (equiv.isDefined) {
+            identifiedIDs = identifiedIDs + (id -> equiv.get) + (equiv.get -> id)
             currentRPlan + (id -> equiv.get)
           } else {
             includedStmts += id
