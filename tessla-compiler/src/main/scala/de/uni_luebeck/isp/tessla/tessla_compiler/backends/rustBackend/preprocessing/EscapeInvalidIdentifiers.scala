@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The TeSSLa Community
+ * Copyright 2022 The TeSSLa Community
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preproces
 
 import cats.data.Ior
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
+import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 
 object EscapeInvalidIdentifiers extends TranslationPhase[Specification, Specification] {
   override def translate(spec: TesslaAST.Core.Specification): TranslationPhase.Result[TesslaAST.Core.Specification] = {

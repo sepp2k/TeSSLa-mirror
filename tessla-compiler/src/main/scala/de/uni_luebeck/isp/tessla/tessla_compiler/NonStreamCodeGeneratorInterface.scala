@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The TeSSLa Community
+ * Copyright 2022 The TeSSLa Community
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.{FunctionType => _, _}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.{FunctionType => _, _}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
 
 /**
