@@ -172,9 +172,9 @@ The intermediate code is neither generated nor used by the Rust backend.
 
 The translation to Rust source code is performed by
 [TesslaCoreToRust](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/TesslaCoreToRust.scala).
-It loads a [template source file](../src/main/resources/de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs) from 
+It loads two [template source files](../src/main/resources/de/uni_luebeck/isp/tessla/rust/templates/) from 
 the
-resources and replaces comments in there by the translations of the statement
+resources and replaces comments in there with the translations of the statement
 sequences in the generated `SourceListing`. It is a `TranslationPhase` from
 `SourceListing` to String. The generation of the Rust code is handled here by two code generators: 
 The 

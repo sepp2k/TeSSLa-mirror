@@ -1,0 +1,18 @@
+[workspace]
+
+[package]
+name = "tessla_rust"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+tessla_stdlib = { path = "stdlib" }
+
+[lib]
+name = "monitor"
+path = "templates/monitor_skeleton.rs"
+
+[[bin]]
+name = "io_interface"
+path = "templates/main_skeleton.rs"

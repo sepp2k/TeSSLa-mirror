@@ -159,7 +159,7 @@ object RustCompiler {
    * @param destination the destination folder
    */
   def exportLibrary(destination: Path): Unit = {
-    val libraryLocation = "de/uni_luebeck/isp/tessla/stdlib/rust"
+    val libraryLocation = "de/uni_luebeck/isp/tessla/rust/stdlib"
     val libraryURI = getClass.getClassLoader.getResource(libraryLocation).toURI
 
     if ("jar".equals(libraryURI.getScheme)) {

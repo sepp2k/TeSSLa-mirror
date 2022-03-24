@@ -21,7 +21,6 @@ import de.uni_luebeck.isp.tessla.core.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Diagnostics, ExtendedSpecification}
 
-import java.util
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.io.Source
@@ -34,7 +33,8 @@ import scala.io.Source
  * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
  */
 class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSpecification, String] {
-  private val sourceTemplate: String = "de/uni_luebeck/isp/tessla/tessla_compiler/RustSkeleton.rs"
+  private val monitorTemplate: String = "de/uni_luebeck/isp/tessla/rust/templates/monitor_skeleton.rs"
+  private val mainTemplate: String = "de/uni_luebeck/isp/tessla/rust/templates/main_skeleton.rs"
 
   override def translate(extSpec: ExtendedSpecification): Result[String] =
     new Translator(extSpec).translate()
@@ -123,7 +123,7 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
     }
 
     private def insertSegments(srcSegments: SourceSegments): String = {
-      val source = Source.fromResource(sourceTemplate).mkString
+      val source = Source.fromResource(monitorTemplate).mkString
       val rewrittenSource = source
         .replace("//USERINCLUDES", "") //srcSegments.userIncludes.mkString(",\n)")) //TODO
         .replace("//STATEDEF", srcSegments.stateDef.mkString(",\n"))
