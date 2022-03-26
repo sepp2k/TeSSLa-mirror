@@ -20,6 +20,7 @@ import de.uni_luebeck.isp.tessla.core.Errors.{mkTesslaError, TesslaError}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 
+import java.io.IOException
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
@@ -186,20 +187,26 @@ object RustCompiler {
     val libraryLocation = "de/uni_luebeck/isp/tessla/rust/stdlib"
     val libraryURI = getClass.getClassLoader.getResource(libraryLocation).toURI
 
+    def copyLibToDest(sourcePath: Path): Unit = {
+      // delete any previously existing files and folders
+      if (destination.toFile.exists()) {
+        Files.walkFileTree(destination, DeleteFileVisitor)
+      }
+      Files.walkFileTree(sourcePath, new CopyFileVisitor(sourcePath, destination))
+    }
+
     if ("jar".equals(libraryURI.getScheme)) {
       var jarFS: FileSystem = null
       try {
         jarFS = FileSystems.newFileSystem(libraryURI, Collections.emptyMap(), getClass.getClassLoader)
-        val libraryPath = jarFS.getPath(libraryLocation)
-        Files.walkFileTree(libraryPath, new CopyFileVisitor(libraryPath, destination))
+        copyLibToDest(jarFS.getPath(libraryLocation))
       } catch {
         case e: Exception => e.printStackTrace()
       } finally {
         jarFS.close()
       }
     } else {
-      val libraryPath = Path.of(libraryURI)
-      Files.walkFileTree(libraryPath, new CopyFileVisitor(libraryPath, destination))
+      copyLibToDest(Path.of(libraryURI))
     }
   }
 
@@ -226,6 +233,23 @@ object RustCompiler {
         StandardCopyOption.REPLACE_EXISTING,
         StandardCopyOption.COPY_ATTRIBUTES
       )
+      check
+    }
+  }
+
+  /**
+   * Helper class to delete a file tree with [[Files.walkFileTree]]
+   */
+  private object DeleteFileVisitor extends SimpleFileVisitor[Path] {
+    override def postVisitDirectory(dir: Path, exc: IOException): FileVisitResult = {
+      val check = super.postVisitDirectory(dir, exc)
+      Files.delete(dir)
+      check
+    }
+
+    override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+      val check = super.visitFile(file, attrs)
+      Files.delete(file)
       check
     }
   }
