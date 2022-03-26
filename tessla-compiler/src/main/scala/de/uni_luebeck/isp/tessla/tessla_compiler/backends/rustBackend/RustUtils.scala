@@ -22,7 +22,6 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.structComparison
 
 import scala.collection.mutable.ListBuffer
-import scala.util.matching.Regex
 
 object RustUtils {
 

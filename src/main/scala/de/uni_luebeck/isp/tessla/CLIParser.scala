@@ -335,12 +335,7 @@ object CLIParser {
           .text("Export a Cargo workspace with everything necessary to modify and build the tessla monitor yourself"),
         opt[Unit]('m', "io-interface")
           .foreach(_ => config = config.copy(generateMain = true))
-          .text("Generate the code for an executable I/O interface (src/main.rs) in the exported workspace"),
-        checkConfig(_ =>
-          if (config.exportBinary.isEmpty && config.exportWorkspace.isEmpty)
-            failure("You must at least specify one of the following two options: --bin-file, --project-dir")
-          else success
-        )
+          .text("Generate the code for an executable I/O interface (src/main.rs) in the exported workspace")
       )
   }
 

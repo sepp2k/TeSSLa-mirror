@@ -227,6 +227,9 @@ object Main {
             andThen new TesslaCoreToRust(config.additionalSource)
         )
 
+        if (config.exportBinary.isEmpty && config.exportWorkspace.isEmpty)
+          System.err.println("You must at least specify one of the following two options: --bin-file, --project-dir")
+
         config.exportBinary.foreach { exportPath =>
           new RustCompiler(exportPath).translate(sourceCode)
         }
