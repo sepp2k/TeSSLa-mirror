@@ -87,8 +87,8 @@ module String {
   liftable def format[T](formatString: strict String, value: strict T): String = extern("String_format")
 
   ## Formats an integer argument with the given format string
-  liftable def formatInt(formatString: String, value: Int): String = format(formatString, value)
+  liftable def formatInt(formatString: String, value: Int): String = extern("String_format")
 
   ## Formats a float argument with the given format string
-  liftable def formatFloat(formatString: String, value: Float): String = format(formatString, value)
+  liftable def formatFloat(formatString: String, value: Float): String = extern("String_format")
 }
