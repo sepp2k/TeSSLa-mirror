@@ -20,9 +20,9 @@ import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
-  EscapeInvalidIdentifiers,
   ExtractAndWrapFunctions,
-  GenerateStructDefinitions
+  GenerateStructDefinitions,
+  SanitizeIdentifiers
 }
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, RustFiles, TesslaCoreToRust}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
@@ -130,7 +130,7 @@ object TesslacRustTests {
 
     (new ExtractAndWrapFunctions)
       .andThen(FormatStringMangler)
-      .andThen(EscapeInvalidIdentifiers)
+      .andThen(SanitizeIdentifiers)
       .andThen(GenerateStructDefinitions)
       .andThen(UsageAnalysis)
       .andThen(InliningAnalysis)

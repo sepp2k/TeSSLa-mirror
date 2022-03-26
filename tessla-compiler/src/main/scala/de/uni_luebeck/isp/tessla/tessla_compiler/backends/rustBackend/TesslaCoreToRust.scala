@@ -79,8 +79,7 @@ class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSp
         outputMap(id).foreach { annotations =>
           val name = TesslaAST.Core.getOutputName(annotations).getOrElse(id.idOrName.left.getOrElse(id.fullName))
           val raw = annotations.contains("raw")
-          rustStreamCodeGenerator
-            .produceOutputCode(id, getStreamType(id), name, srcSegments, raw, outputNames)
+          rustStreamCodeGenerator.produceOutputCode(id, getStreamType(id), name, srcSegments, raw, outputNames)
         }
       }
     }
@@ -135,17 +134,11 @@ class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSp
           .replace("//STORE", srcSegments.store.mkString("\n"))
           .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
           .replace("//COMPUTATION", srcSegments.computation.mkString("\n"))
-          .replace("//DELAYRESET", srcSegments.delayReset.mkString("\n"))
-          // FIXME Rust does not like $ in names
-          .replace("$", "京")
-          .replace("\\京", "$"),
+          .replace("//DELAYRESET", srcSegments.delayReset.mkString("\n")),
         Source
           .fromResource(mainTemplate)
           .mkString
           .replace("//INPUT", srcSegments.input.mkString("\n"))
-          // FIXME Rust does not like $ in names
-          .replace("$", "京")
-          .replace("\\京", "$")
       )
     }
   }

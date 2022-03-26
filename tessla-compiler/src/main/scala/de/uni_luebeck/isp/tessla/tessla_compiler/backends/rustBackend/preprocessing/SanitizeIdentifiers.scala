@@ -21,7 +21,13 @@ import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 
-object EscapeInvalidIdentifiers extends TranslationPhase[Specification, Specification] {
+/**
+ * This translation step remaps all identifiers contained in the spec to remove the '$' character.
+ * This is necessary because in rust the dollar sign is restricted to use in macros and thus not allowed in identifiers.
+ *
+ * Additionally any additional unicode characters that are not allowed in identifiers by <a href="https://unicode.org/reports/tr31/#R1">UAX31-R1</a> are also mapped out.
+ */
+object SanitizeIdentifiers extends TranslationPhase[Specification, Specification] {
   override def translate(spec: TesslaAST.Core.Specification): TranslationPhase.Result[TesslaAST.Core.Specification] = {
 
     val in = spec.in.map {
@@ -76,15 +82,17 @@ object EscapeInvalidIdentifiers extends TranslationPhase[Specification, Specific
     case _: ExternExpression | _: StringLiteralExpression | _: IntLiteralExpression | _: FloatLiteralExpression => expr
   }
 
-  private def escapeName(name: String): String = {
-    name.flatMap { c => if (c.isUnicodeIdentifierPart) c.toString else f"文${c * 1}%04X" }
+  def escapeName(name: String): String = {
+    name.replace("_", "__").flatMap { c =>
+      if (c.isUnicodeIdentifierPart) s"$c" else f"u${c * 1}%04X_"
+    }
   }
 
   private def escapeIdentifier(id: Identifier): Identifier = {
     id.idOrName match {
-      case Ior.Right(_)        => id
-      case Ior.Left(name)      => Identifier(Ior.Left(escapeName(name)), id.location)
-      case Ior.Both(name, num) => Identifier(Ior.Both(escapeName(name), num), id.location)
+      case Ior.Left(name)      => Identifier(Ior.Left(s"${escapeName(name)}"), id.location)
+      case Ior.Right(num)      => Identifier(Ior.Left(s"${num}_"), id.location)
+      case Ior.Both(name, num) => Identifier(Ior.Left(s"${escapeName(name)}_${num}_"), id.location)
     }
   }
 }

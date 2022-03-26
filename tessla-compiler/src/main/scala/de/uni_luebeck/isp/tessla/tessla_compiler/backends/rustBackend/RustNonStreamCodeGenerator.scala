@@ -251,8 +251,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           defContext
         )
       case StringLiteralExpression(value, _) =>
-        // FIXME: it would be nice to standardise this functionality somewhere...
-        s"""Value(\"${value.replace("\"", "\\\"").replace("$", "\\$")}\".to_string())"""
+        s"""Value(\"${value.replace("\"", "\\\"")}\".to_string())"""
       case IntLiteralExpression(value, _) =>
         s"Value(${value.toLong}_i64)"
       case FloatLiteralExpression(value, _) =>

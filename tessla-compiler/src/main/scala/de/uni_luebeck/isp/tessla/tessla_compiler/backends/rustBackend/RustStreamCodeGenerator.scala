@@ -17,6 +17,7 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.SanitizeIdentifiers
 import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, StreamCodeGeneratorInterface, TypeArgManagement}
 
 import scala.collection.mutable
@@ -466,22 +467,19 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val s = s"var_${id.fullName}"
     val t = RustUtils.convertType(typ)
-    // FIXME: All this replacing of specific chars is probably not exhaustive and kinda not nice to do here
-    val cleanName = RustUtils.NON_ALPHA_PATTERN.replaceAllIn(name, m => s"χ${m.group(0).charAt(0).asInstanceOf[Int]}")
-    val trueName = name.replace("$", "\\$").replace("ø", "")
+    val cleanName = SanitizeIdentifiers.escapeName(name)
 
     // Only add state definitions if they haven't been added before
     if (!outputNames.contains(name)) {
       outputNames.add(name)
 
-      srcSegments.stateDef.append(s"pub out_$cleanName: Option<fn($t, i64)> /* $trueName */")
+      srcSegments.stateDef.append(s"pub out_$cleanName: Option<fn($t, i64)> /* $name */")
 
-      val nameString = trueName
+      val nameString = name
         .replace("\n", "\\n")
         .replace("\r", "\\r")
         .replace("\"", "\\\"")
 
-      // FIXME better to string conversion??
       srcSegments.stateInit.append(
         s"""out_$cleanName: Some(|value, ts| output_var(value, \"$nameString\", ts, $raw))"""
       )

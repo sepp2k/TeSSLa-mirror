@@ -26,8 +26,6 @@ import scala.util.matching.Regex
 
 object RustUtils {
 
-  val NON_ALPHA_PATTERN: Regex = "[^a-zA-Z0-9_\\p{L}\\p{M}\\p{N}]".r
-
   /**
    * Converts TeSSLa type to corresponding rust types
    *
@@ -153,20 +151,16 @@ object RustUtils {
   }
 
   /**
-   * Create a struct name repeatably from the field names and their types
-   * This name, along with the signature is also stored, so that the struct can be generated
+   * Create a struct name repeatably from the field names
+   *
    * @param fields the field names and their types
    * @return the name for that struct datatype
    */
   def getStructName(fields: Map[String, (Type, Location)]): String = {
-    NON_ALPHA_PATTERN.replaceAllIn(
-      s"Structſ${fields.toSeq
-        .map { case (name, (tpe, _)) => (name, tpe) }
-        .sortWith { case ((n1, _), (n2, _)) => structComparison(n1, n2) }
-        .map { case (name, tpe) => s"${name.capitalize}þ$tpe" }
-        .mkString("ſ")}",
-      "ø"
-    )
+    s"Struct_${fields.toSeq
+      .map { case (name, _) => name }
+      .sortWith(structComparison)
+      .mkString("_")}"
   }
 
   /**

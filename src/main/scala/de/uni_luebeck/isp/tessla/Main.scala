@@ -24,9 +24,9 @@ import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, TesslaAST}
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
-  EscapeInvalidIdentifiers,
   ExtractAndWrapFunctions,
-  GenerateStructDefinitions
+  GenerateStructDefinitions,
+  SanitizeIdentifiers
 }
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
@@ -220,7 +220,7 @@ object Main {
           Compiler.compile(config.specSource, config.compilerOptions)
             andThen new ExtractAndWrapFunctions
             andThen FormatStringMangler
-            andThen EscapeInvalidIdentifiers
+            andThen SanitizeIdentifiers
             andThen GenerateStructDefinitions
             andThen UsageAnalysis
             andThen InliningAnalysis
