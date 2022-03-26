@@ -108,8 +108,8 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
         // find all ExpressionRefs that do not refer to something in current+global scope
         val closureArgs = findClosureArgs(e, functionScope, functionOuterScope).filterNot {
           // FIXME I imagine this filter is not exhaustive...
-          // don't include reference to self in arguments to be captured
-          case (id, _, typ) => definitionPath.endsWith(id.fullName) && e.tpe == typ
+          //  don't include reference to self in arguments to be captured
+          case (id, _, typ) => typ.isInstanceOf[FunctionType]
         }.toList
         val functionExpr = FunctionExpression(
           typeParams,
