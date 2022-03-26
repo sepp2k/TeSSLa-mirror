@@ -16,12 +16,12 @@
 
 package de.uni_luebeck.isp.tessla
 
-import java.io.File
-import org.antlr.v4.runtime.{CharStream, CharStreams}
-import scopt.OptionParser
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers}
 import de.uni_luebeck.isp.tessla.tessla_compiler.CompilerStdLibIncludeResolver
+import org.antlr.v4.runtime.{CharStream, CharStreams}
+import scopt.OptionParser
 
+import java.io.File
 import scala.collection.mutable
 import scala.io.{Codec, Source}
 
@@ -71,15 +71,22 @@ object CLIParser {
     compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
-  case class TesslacConfig(
+  case class TesslacScalaConfig(
     specSource: CharStream = null,
     optimise: Boolean = true,
     outFile: Option[File] = None,
-    binFile: Option[File] = None,
+    jarFile: Option[File] = None,
     additionalSource: String = "",
     ioInterface: Boolean = true,
-    compilerOptions: Compiler.Options = Compiler.Options(),
-    targetLanguage: String = "scala"
+    compilerOptions: Compiler.Options = Compiler.Options()
+  ) extends Config
+
+  case class TesslacRustConfig(
+    specSource: CharStream = null,
+    projectPath: Option[File] = None,
+    exportBinary: Option[File] = None,
+    generateMain: Boolean = false,
+    compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
   case class InstrumenterConfig(
@@ -253,10 +260,10 @@ object CLIParser {
       )
   }
 
-  // Extension for the 'compile' command
+  // Extension for the 'compile-scala' command
   {
     import parser._
-    var config = TesslacConfig()
+    var config = TesslacScalaConfig()
 
     def getFileContent(file: File): String = {
       val addIncludeFile = Source.fromFile(file)
@@ -271,8 +278,8 @@ object CLIParser {
         compilerOptions
 
     note("")
-    cmd("compile")
-      .foreach(_ => tasks += (() => Task("compile", config.copy(compilerOptions = compilerOptions))))
+    cmd("compile-scala")
+      .foreach(_ => tasks += (() => Task("compile-scala", config.copy(compilerOptions = compilerOptions))))
       .text("Compile TeSSLa specifications to Scala")
       .children(
         arg[File]("<tessla-file>")
@@ -283,20 +290,44 @@ object CLIParser {
           .text("Additional source file included on top of the generated source"),
         opt[File]('o', "out-file")
           .foreach(f => config = config.copy(outFile = Some(f)))
-          .text("Place the generated source code at this location."),
-        opt[File]('b', "bin-file")
-          .foreach(f => config = config.copy(binFile = Some(f)))
-          .text("Compile TeSSLa specification to an executable binary file which is created at the given location."),
+          .text("Place the generated Scala source code at this location."),
+        opt[File]('j', "jar-file")
+          .foreach(f => config = config.copy(jarFile = Some(f)))
+          .text("Compile TeSSLa specification to an executable jar file which is created at the given location."),
         opt[Unit]('n', "no-io")
           .foreach(_ => config = config.copy(ioInterface = false))
-          .text("Replaces I/O Handling in generated source with simple API interface"),
-        opt[String]('g', "target-language")
-          .foreach(s => config = config.copy(targetLanguage = s))
-          .validate {
-            case "scala" | "rust" => success
-            case _                => failure("Target language must be one of: scala, rust")
-          }
-          .text("Select the target language to compile to: (scala, rust)")
+          .text("Replaces I/O Handling in generated source with simple API interface")
+      )
+  }
+
+  // Extension for the 'compile-rust' command
+  {
+    import parser._
+    var config = TesslacRustConfig()
+
+    compilerOptions =
+      if (!global.userStdLib)
+        compilerOptions.copy(stdlibIncludeResolver = CompilerStdLibIncludeResolver.fromCompilerStdlibResource)
+      else
+        compilerOptions
+
+    note("")
+    cmd("compile-rust")
+      .foreach(_ => tasks += (() => Task("compile-rust", config.copy(compilerOptions = compilerOptions))))
+      .text("Compile TeSSLa specifications to Rust")
+      .children(
+        arg[File]("<tessla-file>")
+          .foreach(f => config = config.copy(specSource = CharStreams.fromFileName(f.getPath)))
+          .text("The file containing the Tessla specification"),
+        opt[File]('p', "project-dir")
+          .foreach(f => config = config.copy(projectPath = Some(f)))
+          .text("The location of the Cargo workspace, if unset it is either ./build-<bin-file> or ./build-monitor"),
+        opt[File]('b', "bin-file")
+          .foreach(f => config = config.copy(exportBinary = Some(f), generateMain = true))
+          .text("Compile a full monitor binary and place it in the given location"),
+        opt[Unit]('m', "io-interface")
+          .foreach(_ => config = config.copy(generateMain = true))
+          .text("Generate the code for an executable I/O interface (src/main.rs)")
       )
   }
 

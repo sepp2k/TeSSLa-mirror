@@ -16,14 +16,11 @@
 
 package de.uni_luebeck.isp.tessla
 
-import java.io.IOException
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
 import de.uni_luebeck.isp.tessla.CLIParser.{Config, DocConfig, Task}
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
 import de.uni_luebeck.isp.tessla.core.util.Lazy
-import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, FlattenCore, IncludeResolvers, TesslaAST}
+import de.uni_luebeck.isp.tessla.core.{AnnotationsToJson, Compiler, TesslaAST}
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
@@ -35,7 +32,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompi
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{FormatStringMangler, TesslaCoreToIntermediate, UnusedVarRemove}
-import de.uni_luebeck.isp.tessla.tessladoc.{DocGenerator, TesslaDoc}
+import de.uni_luebeck.isp.tessla.tessladoc.DocGenerator
 
 import scala.Option.when
 import scala.io.Source
@@ -69,7 +66,8 @@ object Main {
           case Task(_, config: CLIParser.DocConfig)          => runDoc(config)
           case Task(_, config: CLIParser.CoreConfig)         => runCore(config)
           case Task(_, config: CLIParser.InterpreterConfig)  => runInterpreter(config)
-          case Task(_, config: CLIParser.TesslacConfig)      => runTesslaCompiler(config)
+          case Task(_, config: CLIParser.TesslacScalaConfig) => runTesslaScalaCompiler(config)
+          case Task(_, config: CLIParser.TesslacRustConfig)  => runTesslaRustCompiler(config)
           case Task(_, config: CLIParser.InstrumenterConfig) => runInstrumenter(config)
         }
       } catch {
@@ -173,60 +171,33 @@ object Main {
     }
 
     /**
-     * Runs the TeSSLa compiler, which takes a TeSSLa specification and compiles it to a monitor in a target language.
+     * Runs the TeSSLa to Scala compiler, which takes a TeSSLa specification and compiles it to a monitor in Scala.
      */
-    def runTesslaCompiler(config: CLIParser.TesslacConfig): Unit = {
+    def runTesslaScalaCompiler(config: CLIParser.TesslacScalaConfig): Unit = {
       try {
         val sourceStr = unwrapResult(
-          Compiler
-            .compile(config.specSource, config.compilerOptions)
-            .andThen(config.targetLanguage match {
-              case "rust" =>
-                (new ExtractAndWrapFunctions
-                  andThen FormatStringMangler
-                  andThen EscapeInvalidIdentifiers
-                  andThen GenerateStructDefinitions
-                  andThen UsageAnalysis
-                  andThen InliningAnalysis
-                  andThen new TesslaCoreToRust(config.ioInterface)) // , config.additionalSource
-              case "scala" =>
-                (UsageAnalysis
-                  andThen InliningAnalysis
-                  andThen new TesslaCoreToIntermediate(config.ioInterface)
-                  andThen UnusedVarRemove
-                  andThen new ScalaBackend(config.ioInterface, config.additionalSource))
-            })
+          Compiler.compile(config.specSource, config.compilerOptions)
+            andThen UsageAnalysis
+            andThen InliningAnalysis
+            andThen new TesslaCoreToIntermediate(config.ioInterface)
+            andThen UnusedVarRemove
+            andThen new ScalaBackend(config.ioInterface, config.additionalSource)
         )
 
-        val binExt = config.targetLanguage match {
-          case "scala" => "jar"
-          case "rust"  => "out"
-        }
-
-        config.binFile.map { file =>
+        config.jarFile.map { file =>
           val p = Paths.get(file.getAbsolutePath)
           val (dirPath, name) = if (file.isDirectory) {
-            (p, s"monitor.$binExt")
+            (p, "monitor.jar")
           } else {
             val n = file.getName
-            (p.getParent, if (n.contains(".")) n else s"$n.$binExt")
+            (p.getParent, if (n.contains(".")) n else s"$n.jar")
           }
-          config.targetLanguage match {
-            case "scala" =>
-              new ScalaCompiler(dirPath, name, false, config.ioInterface)().translate(sourceStr)
-            case "rust" =>
-              new RustCompiler(dirPath, name, config.ioInterface).translate(sourceStr)
-          }
+          new ScalaCompiler(dirPath, name, false, config.ioInterface)().translate(sourceStr)
         }
 
-        val srcExt = config.targetLanguage match {
-          case "scala" => "scala"
-          case "rust"  => "rs"
-        }
+        val f = config.outFile.getOrElse(new File("out.scala"))
 
-        val f = config.outFile.getOrElse(new File(s"out.$srcExt"))
-
-        if (config.outFile.isDefined || config.binFile.isEmpty) {
+        if (config.outFile.isDefined || config.jarFile.isEmpty) {
           Files.createDirectories(Paths.get(f.getAbsolutePath).getParent)
           Files.write(f.toPath, sourceStr.getBytes(StandardCharsets.UTF_8))
         }
