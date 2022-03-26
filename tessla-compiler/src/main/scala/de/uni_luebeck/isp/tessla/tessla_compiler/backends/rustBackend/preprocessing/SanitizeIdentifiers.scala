@@ -31,11 +31,12 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
   override def translate(spec: TesslaAST.Core.Specification): TranslationPhase.Result[TesslaAST.Core.Specification] = {
 
     val in = spec.in.map {
-      case (id, (typ, annotations)) => (escapeIdentifier(id), (typ, annotations))
+      case (id, (typ, annotations)) => (escapeIdentifier(id), (escapeType(typ), annotations))
     }
 
     val out = spec.out.map {
-      case (expr, annotations) => (expr, annotations)
+      case (ExpressionRef(id, typ, location), annotations) =>
+        (ExpressionRef(escapeIdentifier(id), escapeType(typ), location), annotations)
     }
 
     val definitions = spec.definitions.map {
@@ -50,13 +51,13 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
   }
 
   private def findAndEscapeIdentifiers(expr: ExpressionArg): ExpressionArg = expr match {
-    case ExpressionRef(id, tpe, location) => ExpressionRef(escapeIdentifier(id), tpe, location)
+    case ExpressionRef(id, typ, location) => ExpressionRef(escapeIdentifier(id), escapeType(typ), location)
     case FunctionExpression(typeParams, params, body, result, location) =>
       FunctionExpression(
         typeParams.map(escapeIdentifier),
         params.map {
           case (id, eval, typ) =>
-            (escapeIdentifier(id), eval, typ)
+            (escapeIdentifier(id), eval, escapeType(typ))
         },
         body.map {
           case (id, definition) =>
@@ -68,7 +69,7 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
     case ApplicationExpression(applicable, args, location) =>
       ApplicationExpression(findAndEscapeIdentifiers(applicable), args.map(findAndEscapeIdentifiers), location)
     case TypeApplicationExpression(applicable, typeArgs, location) =>
-      TypeApplicationExpression(findAndEscapeIdentifiers(applicable), typeArgs, location)
+      TypeApplicationExpression(findAndEscapeIdentifiers(applicable), typeArgs.map(escapeType), location)
     case RecordConstructorExpression(entries, location) =>
       RecordConstructorExpression(
         entries.map {
@@ -79,7 +80,9 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
       )
     case RecordAccessorExpression(name, target, nameLocation, location) =>
       RecordAccessorExpression(escapeName(name), findAndEscapeIdentifiers(target), nameLocation, location)
-    case _: ExternExpression | _: StringLiteralExpression | _: IntLiteralExpression | _: FloatLiteralExpression => expr
+    case ExternExpression(externName, typ, location) =>
+      ExternExpression(externName, escapeType(typ), location)
+    case _: StringLiteralExpression | _: IntLiteralExpression | _: FloatLiteralExpression => expr
   }
 
   def escapeName(name: String): String = {
@@ -93,6 +96,27 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
       case Ior.Left(name)      => Identifier(Ior.Left(s"${escapeName(name)}"), id.location)
       case Ior.Right(num)      => Identifier(Ior.Left(s"${num}_"), id.location)
       case Ior.Both(name, num) => Identifier(Ior.Left(s"${escapeName(name)}_${num}_"), id.location)
+    }
+  }
+
+  private def escapeType(typ: Type): Type = {
+    typ match {
+      case InstantiatedType(name, typeArgs, location) =>
+        InstantiatedType(escapeName(name), typeArgs.map(escapeType), location)
+      case TypeParam(name, location) =>
+        TypeParam(escapeIdentifier(name), location)
+      case FunctionType(typeParams, paramTypes, resultType, location) =>
+        FunctionType(
+          typeParams.map(escapeIdentifier),
+          paramTypes.map { case (evaluation, typ) => (evaluation, escapeType(typ)) },
+          escapeType(resultType),
+          location
+        )
+      case RecordType(entries, location) =>
+        RecordType(
+          entries.map { case (name, (typ, location)) => (escapeName(name), (escapeType(typ), location)) },
+          location
+        )
     }
   }
 }
