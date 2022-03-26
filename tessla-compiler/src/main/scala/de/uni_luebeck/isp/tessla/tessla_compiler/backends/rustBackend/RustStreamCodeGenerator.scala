@@ -188,7 +188,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
 
     currSrc.computation.append(s"delay(&mut $output, state.$nextDelay, state.current_ts);")
 
-    currSrc.delayreset.append(s"reset_delay(&$output, &$delay, &$reset, &mut state.$nextDelay, state.current_ts);")
+    currSrc.delayReset.append(s"reset_delay(&$output, &$delay, &$reset, &mut state.$nextDelay, state.current_ts);")
   }
 
   /**
@@ -462,7 +462,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     name: String,
     srcSegments: SourceSegments,
     raw: Boolean,
-    ioInterface: Boolean,
     outputNames: mutable.Set[String]
   ): Unit = {
     val s = s"var_${id.fullName}"
@@ -475,21 +474,17 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     if (!outputNames.contains(name)) {
       outputNames.add(name)
 
-      srcSegments.stateDef.append(s"out_$cleanName: Option<fn($t, i64)> /* $trueName */")
+      srcSegments.stateDef.append(s"pub out_$cleanName: Option<fn($t, i64)> /* $trueName */")
 
-      if (ioInterface) {
-        val nameString = trueName
-          .replace("\n", "\\n")
-          .replace("\r", "\\r")
-          .replace("\"", "\\\"")
+      val nameString = trueName
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\"", "\\\"")
 
-        // FIXME better to string conversion??
-        srcSegments.stateInit.append(
-          s"""out_$cleanName: Some(|value, ts| output_var(value, \"$nameString\", ts, $raw))"""
-        )
-      } else {
-        srcSegments.stateInit.append(s"out_$cleanName: None")
-      }
+      // FIXME better to string conversion??
+      srcSegments.stateInit.append(
+        s"""out_$cleanName: Some(|value, ts| output_var(value, \"$nameString\", ts, $raw))"""
+      )
     }
 
     srcSegments.computation.append(s"state.$s.call_output(state.out_$cleanName, state.current_ts);")
@@ -506,20 +501,17 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   def produceInputCode(
     stream_id: Identifier,
     stream_type: Type,
-    srcSegments: SourceSegments,
-    ioInterface: Boolean
+    srcSegments: SourceSegments
   ): Unit = {
     val stream = createStreamContainer(stream_id, stream_type, "init()", srcSegments)
 
     val t = RustUtils.convertType(stream_type)
 
-    srcSegments.stateDef.append(s"set_$stream_id: fn($t, i64, &mut State)")
+    srcSegments.stateDef.append(s"pub set_$stream_id: fn($t, i64, &mut State)")
 
-    if (ioInterface) {
-      srcSegments.input.append(
-        s"""if input_stream_name == \"$stream_id\" { (state.set_$stream_id)(input_stream_value.as_str().into(), new_input_ts, state); }"""
-      )
-    }
+    srcSegments.input.append(s"""if input_stream_name == \"$stream_id\" {
+                                |(state.set_$stream_id)(input_stream_value.as_str().into(), new_input_ts, state);
+                                |}""".stripMargin)
 
     srcSegments.stateInit.append(s"""set_$stream_id: |value: $t, ts: i64, state: &mut State| {
                                     |$stream.set_event(value);

@@ -180,6 +180,7 @@ object RustUtils {
 }
 
 case class SourceSegments(
+  userIncludes: ListBuffer[String] = new ListBuffer[String], //TODO
   stateDef: ListBuffer[String] = new ListBuffer[String],
   stateInit: ListBuffer[String] = new ListBuffer[String],
   input: ListBuffer[String] = new ListBuffer[String],
@@ -188,5 +189,5 @@ case class SourceSegments(
   lazyStatic: ListBuffer[String] = new ListBuffer[String],
   static: ListBuffer[String] = new ListBuffer[String],
   store: ListBuffer[String] = new ListBuffer[String],
-  delayreset: ListBuffer[String] = new ListBuffer[String]
+  delayReset: ListBuffer[String] = new ListBuffer[String]
 )

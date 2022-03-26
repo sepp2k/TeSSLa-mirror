@@ -16,7 +16,6 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import java.nio.file.{Files, Path}
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
@@ -25,31 +24,35 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocess
   ExtractAndWrapFunctions,
   GenerateStructDefinitions
 }
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, RustFiles, TesslaCoreToRust}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
 import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
 
 import java.lang.ProcessBuilder.Redirect
+import java.nio.file.{Files, Path}
 import scala.concurrent.duration.SECONDS
 import scala.io.Source
 import scala.reflect.io.Directory
 
-class TesslacRustTests extends AbstractTestRunner[String]("Tessla Rust Compiler") with BeforeAndAfterAll {
+class TesslacRustTests extends AbstractTestRunner[RustFiles]("Tessla Rust Compiler") with BeforeAndAfterAll {
 
   val fsPath: Path = Files.createTempDirectory("TesslaRustCompilerTests")
 
   override def roots = Seq("common/", "tesslac/", "tesslac_rust/") // TODO remove tesslac
 
-  override def translation(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, String] =
+  override def translation(
+    testCase: TestConfig,
+    resolver: PathResolver
+  ): TranslationPhase[Core.Specification, RustFiles] =
     TesslacRustTests.pipeline(testCase, resolver)
 
   override def stdlibResolver: String => Option[CharStream] =
     CompilerStdLibIncludeResolver.fromCompilerStdlibResource
 
   override def run(
-    spec: String,
+    spec: RustFiles,
     inputFile: String,
     testCase: TestCase.TestConfig,
     resolver: TestCase.PathResolver
@@ -72,6 +75,10 @@ class TesslacRustTests extends AbstractTestRunner[String]("Tessla Rust Compiler"
          |
          |[dependencies]
          |tessla_stdlib = { path = "./rustlib" }
+         |
+         |[lib]
+         |name = "monitor"
+         |path = "src/monitor.rs"
          |""".stripMargin
     )
   }
@@ -114,7 +121,7 @@ class TesslacRustTests extends AbstractTestRunner[String]("Tessla Rust Compiler"
 }
 
 object TesslacRustTests {
-  def pipeline(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, String] = {
+  def pipeline(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, RustFiles] = {
     val consoleInterface = !testCase.options.contains("no-console")
     // FIXME: any additional source here would be in scala?
     val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
@@ -128,9 +135,9 @@ object TesslacRustTests {
       .andThen(new TesslaCoreToRust(consoleInterface))
   }
 
-  def execute(dirPath: Path, sourceCode: String, inputTrace: java.io.File): (Seq[String], Seq[String]) = {
-    val sourcePath = dirPath.resolve("src/main.rs")
-    Files.writeString(sourcePath, sourceCode)
+  def execute(dirPath: Path, sourceCode: RustFiles, inputTrace: java.io.File): (Seq[String], Seq[String]) = {
+    Files.writeString(dirPath.resolve("src/monitor.rs"), sourceCode.monitor)
+    Files.writeString(dirPath.resolve("src/main.rs"), sourceCode.main)
 
     val cargoRun = new ProcessBuilder(
       "cargo",

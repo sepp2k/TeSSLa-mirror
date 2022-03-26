@@ -25,21 +25,22 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.io.Source
 
+case class RustFiles(monitor: String, main: String) {}
+
 /**
  * Class implementing TranslationPhase for the translation from TeSSLa Core to
  * rust code
  * The translation of stream functions is performed in RustStreamCodeGenerator
  * The translation of other expressions in RustNonStreamCodeGenerator
- * @param ioInterface Indicates whether the generated code shall be able to read/write from/to stdio
  */
-class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSpecification, String] {
+class TesslaCoreToRust() extends TranslationPhase[ExtendedSpecification, RustFiles] {
   private val monitorTemplate: String = "de/uni_luebeck/isp/tessla/rust/templates/monitor_skeleton.rs"
   private val mainTemplate: String = "de/uni_luebeck/isp/tessla/rust/templates/main_skeleton.rs"
 
-  override def translate(extSpec: ExtendedSpecification): Result[String] =
+  override def translate(extSpec: ExtendedSpecification): Result[RustFiles] =
     new Translator(extSpec).translate()
 
-  class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[String] {
+  class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[RustFiles] {
 
     val rustNonStreamCodeGenerator = new RustNonStreamCodeGenerator(extSpec)
     val rustStreamCodeGenerator = new RustStreamCodeGenerator(rustNonStreamCodeGenerator)
@@ -77,12 +78,12 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
           val name = TesslaAST.Core.getOutputName(annotations).getOrElse(id.idOrName.left.getOrElse(id.fullName))
           val raw = annotations.contains("raw")
           rustStreamCodeGenerator
-            .produceOutputCode(id, getStreamType(id), name, srcSegments, raw, ioInterface, outputNames)
+            .produceOutputCode(id, getStreamType(id), name, srcSegments, raw, outputNames)
         }
       }
     }
 
-    override protected def translateSpec(): String = {
+    override protected def translateSpec(): RustFiles = {
       val srcSegments = SourceSegments()
 
       val outputMap = extSpec.spec.out.groupMap { case (expr, _) => expr.id } { case (_, annotations) => annotations }
@@ -112,34 +113,35 @@ class TesslaCoreToRust(ioInterface: Boolean) extends TranslationPhase[ExtendedSp
       // Produce input consumption
       extSpec.spec.in.foreach {
         case (id, (typ, _)) =>
-          rustStreamCodeGenerator.produceInputCode(id, typ, srcSegments, ioInterface)
+          rustStreamCodeGenerator.produceInputCode(id, typ, srcSegments)
           produceOutputCode(outputMap, outputNames, id, srcSegments)
       }
 
       insertSegments(srcSegments)
-      // Rust does not like $ in names
-        .replace("$", "京")
-        .replace("\\京", "$")
+      // FIXME Rust does not like $ in names
+      //  .replace("$", "京")
+      //  .replace("\\京", "$")
     }
 
-    private def insertSegments(srcSegments: SourceSegments): String = {
-      val source = Source.fromResource(monitorTemplate).mkString
-      val rewrittenSource = source
-        .replace("//USERINCLUDES", "") //srcSegments.userIncludes.mkString(",\n)")) //TODO
-        .replace("//STATEDEF", srcSegments.stateDef.mkString(",\n"))
-        .replace("//LAZYSTATIC", srcSegments.lazyStatic.mkString("\n"))
-        .replace("//STATIC", srcSegments.static.mkString("\n"))
-        .replace("//STATEINIT", srcSegments.stateInit.mkString(",\n"))
-        .replace("//STORE", srcSegments.store.mkString("\n"))
-        .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
-        .replace("//COMPUTATION", srcSegments.computation.mkString("\n"))
-        .replace("//INPUT", srcSegments.input.mkString("\n"))
-        .replace("//DELAYRESET", srcSegments.delayreset.mkString("\n"))
-      if (ioInterface) {
-        rewrittenSource.replace("//ENDMAIN", "")
-      } else {
-        "fn main[\\s\\S]+//ENDMAIN".r.replaceFirstIn(rewrittenSource, "")
-      }
+    private def insertSegments(srcSegments: SourceSegments): RustFiles = {
+      RustFiles(
+        Source
+          .fromResource(monitorTemplate)
+          .mkString
+          .replace("//USERINCLUDES", srcSegments.userIncludes.mkString(",\n)"))
+          .replace("//STATEDEF", srcSegments.stateDef.mkString(",\n"))
+          .replace("//LAZYSTATIC", srcSegments.lazyStatic.mkString("\n"))
+          .replace("//STATIC", srcSegments.static.mkString("\n"))
+          .replace("//STATEINIT", srcSegments.stateInit.mkString(",\n"))
+          .replace("//STORE", srcSegments.store.mkString("\n"))
+          .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
+          .replace("//COMPUTATION", srcSegments.computation.mkString("\n"))
+          .replace("//DELAYRESET", srcSegments.delayReset.mkString("\n")),
+        Source
+          .fromResource(mainTemplate)
+          .mkString
+          .replace("//INPUT", srcSegments.input.mkString("\n"))
+      )
     }
   }
 }
