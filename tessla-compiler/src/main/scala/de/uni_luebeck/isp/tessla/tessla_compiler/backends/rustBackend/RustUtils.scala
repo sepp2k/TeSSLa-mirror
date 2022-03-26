@@ -180,7 +180,6 @@ object RustUtils {
 }
 
 case class SourceSegments(
-  userIncludes: ListBuffer[String] = new ListBuffer[String], //TODO
   stateDef: ListBuffer[String] = new ListBuffer[String],
   stateInit: ListBuffer[String] = new ListBuffer[String],
   input: ListBuffer[String] = new ListBuffer[String],

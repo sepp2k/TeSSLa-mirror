@@ -32,15 +32,17 @@ case class RustFiles(monitor: String, main: String) {}
  * rust code
  * The translation of stream functions is performed in RustStreamCodeGenerator
  * The translation of other expressions in RustNonStreamCodeGenerator
+ * @param userIncludes Optional rust code to be inserted at the top of the monitor.rs file
  */
-class TesslaCoreToRust() extends TranslationPhase[ExtendedSpecification, RustFiles] {
+class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSpecification, RustFiles] {
   private val monitorTemplate: String = "de/uni_luebeck/isp/tessla/rust/templates/monitor_skeleton.rs"
   private val mainTemplate: String = "de/uni_luebeck/isp/tessla/rust/templates/main_skeleton.rs"
 
   override def translate(extSpec: ExtendedSpecification): Result[RustFiles] =
-    new Translator(extSpec).translate()
+    new Translator(extSpec, userIncludes).translate()
 
-  class Translator(extSpec: ExtendedSpecification) extends TranslationPhase.Translator[RustFiles] {
+  private class Translator(extSpec: ExtendedSpecification, userIncludes: String)
+      extends TranslationPhase.Translator[RustFiles] {
 
     val rustNonStreamCodeGenerator = new RustNonStreamCodeGenerator(extSpec)
     val rustStreamCodeGenerator = new RustStreamCodeGenerator(rustNonStreamCodeGenerator)
@@ -118,9 +120,6 @@ class TesslaCoreToRust() extends TranslationPhase[ExtendedSpecification, RustFil
       }
 
       insertSegments(srcSegments)
-      // FIXME Rust does not like $ in names
-      //  .replace("$", "京")
-      //  .replace("\\京", "$")
     }
 
     private def insertSegments(srcSegments: SourceSegments): RustFiles = {
@@ -128,7 +127,7 @@ class TesslaCoreToRust() extends TranslationPhase[ExtendedSpecification, RustFil
         Source
           .fromResource(monitorTemplate)
           .mkString
-          .replace("//USERINCLUDES", srcSegments.userIncludes.mkString(",\n)"))
+          .replace("//USERINCLUDES", userIncludes)
           .replace("//STATEDEF", srcSegments.stateDef.mkString(",\n"))
           .replace("//LAZYSTATIC", srcSegments.lazyStatic.mkString("\n"))
           .replace("//STATIC", srcSegments.static.mkString("\n"))
@@ -136,11 +135,17 @@ class TesslaCoreToRust() extends TranslationPhase[ExtendedSpecification, RustFil
           .replace("//STORE", srcSegments.store.mkString("\n"))
           .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
           .replace("//COMPUTATION", srcSegments.computation.mkString("\n"))
-          .replace("//DELAYRESET", srcSegments.delayReset.mkString("\n")),
+          .replace("//DELAYRESET", srcSegments.delayReset.mkString("\n"))
+          // FIXME Rust does not like $ in names
+          .replace("$", "京")
+          .replace("\\京", "$"),
         Source
           .fromResource(mainTemplate)
           .mkString
           .replace("//INPUT", srcSegments.input.mkString("\n"))
+          // FIXME Rust does not like $ in names
+          .replace("$", "京")
+          .replace("\\京", "$")
       )
     }
   }

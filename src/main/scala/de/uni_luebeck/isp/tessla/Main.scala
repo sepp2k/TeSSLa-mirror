@@ -34,9 +34,11 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis
 import de.uni_luebeck.isp.tessla.tessla_compiler.{FormatStringMangler, TesslaCoreToIntermediate, UnusedVarRemove}
 import de.uni_luebeck.isp.tessla.tessladoc.DocGenerator
 
+import java.io.{File, IOException}
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
 import scala.Option.when
 import scala.io.Source
-import java.io.File
 
 /**
  * Entry point of the application.
@@ -202,6 +204,40 @@ object Main {
           Files.write(f.toPath, sourceStr.getBytes(StandardCharsets.UTF_8))
         }
 
+      } catch {
+        case ex: TesslaError =>
+          System.err.println(s"Compilation error: $ex")
+          if (global.debug) ex.printStackTrace()
+      }
+    }
+
+    /**
+     *
+     */
+    def runTesslaRustCompiler(config: CLIParser.TesslacRustConfig): Unit = {
+      try {
+        val sourceCode = unwrapResult(
+          Compiler.compile(config.specSource, config.compilerOptions)
+            andThen new ExtractAndWrapFunctions
+            andThen FormatStringMangler
+            andThen EscapeInvalidIdentifiers
+            andThen GenerateStructDefinitions
+            andThen UsageAnalysis
+            andThen InliningAnalysis
+            andThen new TesslaCoreToRust(config.additionalSource)
+        )
+
+        config.exportBinary.foreach { exportPath =>
+          new RustCompiler(exportPath).translate(sourceCode)
+        }
+
+        config.exportWorkspace.foreach { projectPath =>
+          val artifactName = config.exportBinary match {
+            case Some(binaryPath) => binaryPath.getFileName.toString
+            case None             => "tessla_monitor"
+          }
+          RustCompiler.createCargoWorkspace(projectPath, artifactName, sourceCode, config.generateMain)
+        }
       } catch {
         case ex: TesslaError =>
           System.err.println(s"Compilation error: $ex")

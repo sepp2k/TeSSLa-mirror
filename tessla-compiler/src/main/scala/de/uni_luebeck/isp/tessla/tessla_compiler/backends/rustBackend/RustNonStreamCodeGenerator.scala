@@ -287,7 +287,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val traitBounds = RustUtils.getGenericTraitBounds(fields.map { case (_, typ) => typ })
     val traitAnnotation = traitBounds("")
     val structDef = s"""${if (fields.forall { case (_, tpe) => canBeHashed(tpe) }) "#[derive(std::hash::Hash)]" else ""}
-       |struct $structName$traitAnnotation {
+       |pub struct $structName$traitAnnotation {
        |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
        |}
        |impl${traitBounds("Clone")} Clone for $structName$traitAnnotation {

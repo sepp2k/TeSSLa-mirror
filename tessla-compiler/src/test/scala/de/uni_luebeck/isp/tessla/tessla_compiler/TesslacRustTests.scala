@@ -123,7 +123,9 @@ class TesslacRustTests extends AbstractTestRunner[RustFiles]("Tessla Rust Compil
 object TesslacRustTests {
   def pipeline(testCase: TestConfig, resolver: PathResolver): TranslationPhase[Core.Specification, RustFiles] = {
     val consoleInterface = !testCase.options.contains("no-console")
-    // FIXME: any additional source here would be in scala?
+    if (!consoleInterface) {
+      throw Diagnostics.NotYetImplementedError("Rust tests without the I/O interface are currently not supported")
+    }
     val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
 
     (new ExtractAndWrapFunctions)
@@ -132,7 +134,7 @@ object TesslacRustTests {
       .andThen(GenerateStructDefinitions)
       .andThen(UsageAnalysis)
       .andThen(InliningAnalysis)
-      .andThen(new TesslaCoreToRust(consoleInterface))
+      .andThen(new TesslaCoreToRust(additionalSource))
   }
 
   def execute(dirPath: Path, sourceCode: RustFiles, inputTrace: java.io.File): (Seq[String], Seq[String]) = {

@@ -20,9 +20,8 @@ import de.uni_luebeck.isp.tessla.core.Errors.{mkTesslaError, TesslaError}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file._
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
 import scala.io.Source
 import scala.reflect.io.Directory
@@ -30,74 +29,42 @@ import scala.reflect.io.Directory
 /**
  * Invokes rustc to generate a binary artifact from Rust code.
  *
- * @param outDir The directory where the binary artifact shall be created.
- * @param binaryArtifactName The name of the generated artifact.
- * @param executableCode Indicates whether passed source contains a main method
+ * @param artifactPath  A path where the final monitor binary will be copied to.
  */
-class RustCompiler(outDir: Path, binaryArtifactName: String, executableCode: Boolean)
-    extends TranslationPhase[String, Unit] {
+class RustCompiler(artifactPath: Path) extends TranslationPhase[RustFiles, Unit] {
 
   /**
    * Invokes rustc to translate a Rust source string into a binary artifact.
    * @param sourceCode The source code to compile.
    * @return Unit wrapped in a Result data structure.
    */
-  override def translate(sourceCode: String): TranslationPhase.Result[Unit] = {
-    Files.createDirectories(outDir)
-
-    val cargoDir = outDir.resolve(s"build-$binaryArtifactName")
-    Files.createDirectories(cargoDir)
-    deleteOnExit(cargoDir)
-
-    val libPath = cargoDir.resolve("rustlib")
-    if (!Files.exists(libPath)) {
-      RustCompiler.exportLibrary(libPath)
+  override def translate(sourceCode: RustFiles): TranslationPhase.Result[Unit] = {
+    val (artifactDir, artifactName) = artifactPath match {
+      case path if path.toFile.isDirectory =>
+        (path, "tessla_monitor")
+      case path =>
+        (path.getParent, path.toFile.getName)
     }
 
-    val sourcePath = cargoDir.resolve("src")
-    Files.createDirectories(sourcePath)
+    val workspaceDir = Files.createTempDirectory("build-tessla-rust")
+    deleteOnExit(workspaceDir)
 
-    val targetName = if (executableCode) "main.rs" else "lib.rs"
-    writeCode(sourcePath.resolve(targetName), sourceCode)
+    RustCompiler.createCargoWorkspace(workspaceDir, artifactName, sourceCode, exportMain = true)
 
-    val cargoPath = cargoDir.resolve("Cargo.toml")
-    Files.writeString(
-      cargoPath,
-      s"""[workspace]
-         |
-         |[package]
-         |name = "tessla_monitor"
-         |version = "0.0.0"
-         |
-         |[dependencies]
-         |tessla_stdlib = { path = "./rustlib" }
-         |""".stripMargin
+    val cargoBuild = new ProcessBuilder(
+      "cargo",
+      "build",
+      "--manifest-path",
+      workspaceDir.resolve("Cargo.toml").toAbsolutePath.toString,
+      "--workspace",
+      "--release"
     )
-
-    val cargoManifest = cargoPath.toAbsolutePath.toString
-    val cargoBuild = if (executableCode) {
-      new ProcessBuilder(
-        "cargo",
-        "build",
-        "--manifest-path",
-        cargoManifest,
-        "--release"
-      )
-    } else {
-      new ProcessBuilder(
-        "cargo",
-        "build",
-        "--manifest-path",
-        cargoManifest,
-        "--lib",
-        "--release"
-      )
-    }
 
     cargoBuild.redirectInput()
     cargoBuild.redirectOutput()
     cargoBuild.redirectError()
 
+    // Run cargo build
     try {
       val cargoProcess = cargoBuild.start()
       val returnCode = cargoProcess.waitFor()
@@ -115,10 +82,13 @@ class RustCompiler(outDir: Path, binaryArtifactName: String, executableCode: Boo
         throw error
     }
 
+    // Copy the resulting artifact
     try {
+      // When "cargo build --out-dir <PATH>" is finalized this step can be removed
+      // https://github.com/rust-lang/cargo/issues/6790
       Files.copy(
-        cargoDir.resolve("target/release/tessla_monitor"),
-        outDir.resolve(binaryArtifactName),
+        workspaceDir.resolve(s"target/release/$artifactName"),
+        artifactDir.resolve(artifactName),
         StandardCopyOption.REPLACE_EXISTING
       )
     } catch {
@@ -129,16 +99,6 @@ class RustCompiler(outDir: Path, binaryArtifactName: String, executableCode: Boo
     }
 
     Success((), Seq())
-  }
-
-  /**
-   * Writes the content of a string to a file
-   * @param path The file to be written
-   * @param source The file's content
-   */
-  private def writeCode(path: Path, source: String): Unit = {
-    Files.createDirectories(path.getParent)
-    Files.write(path, source.getBytes(StandardCharsets.UTF_8))
   }
 
   /**
@@ -153,6 +113,70 @@ class RustCompiler(outDir: Path, binaryArtifactName: String, executableCode: Boo
 }
 
 object RustCompiler {
+
+  /**
+   * Creates a complete cargo workspace with all files necessary to expand it with your own code.
+   *
+   * The Cargo.toml only gets written if it doesn't exist.
+   *
+   * @param workspaceDir The directory the workspace is put into.
+   * @param artifactName The name of the project and thus the name of the default src/main.rs binary
+   * @param sourceCode The source code to be exported.
+   * @param exportMain Whether the default main.rs IO interface should be created
+   */
+  def createCargoWorkspace(
+    workspaceDir: Path,
+    artifactName: String,
+    sourceCode: RustFiles,
+    exportMain: Boolean
+  ): Unit = {
+    Files.createDirectories(workspaceDir)
+
+    val libPath = workspaceDir.resolve("lib_tessla")
+    RustCompiler.exportLibrary(libPath)
+
+    val sourcePath = workspaceDir.resolve("src")
+    Files.createDirectories(sourcePath)
+
+    Files.writeString(
+      sourcePath.resolve("monitor.rs"),
+      sourceCode.monitor,
+      StandardOpenOption.TRUNCATE_EXISTING,
+      StandardOpenOption.CREATE
+    )
+
+    if (exportMain) {
+      // This is the default binary path, therefore it is not specifically configured in the Cargo.toml
+      // https://doc.rust-lang.org/cargo/reference/cargo-targets.html#binaries
+
+      Files.writeString(
+        sourcePath.resolve("main.rs"),
+        sourceCode.main,
+        StandardOpenOption.TRUNCATE_EXISTING,
+        StandardOpenOption.CREATE
+      )
+    }
+
+    val manifestPath = workspaceDir.resolve("Cargo.toml")
+    if (!manifestPath.toFile.exists()) {
+      Files.writeString(
+        manifestPath,
+        s"""[workspace]
+           |
+           |[package]
+           |name = "$artifactName"
+           |version = "0.0.0"
+           |
+           |[dependencies]
+           |tessla_stdlib = { path = "./lib_tessla" }
+           |
+           |[lib]
+           |name = "monitor"
+           |path = "src/monitor.rs"
+           |""".stripMargin
+      )
+    }
+  }
 
   /**
    * Exports the rust library crate from resources into an external folder
@@ -196,7 +220,12 @@ object RustCompiler {
     override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
       val check = super.visitFile(file, attrs)
       val destinationFile = destination.resolve(sourceBase.relativize(file).toString)
-      Files.copy(file, destinationFile)
+      Files.copy(
+        file,
+        destinationFile,
+        StandardCopyOption.REPLACE_EXISTING,
+        StandardCopyOption.COPY_ATTRIBUTES
+      )
       check
     }
   }

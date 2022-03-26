@@ -22,6 +22,7 @@ import org.antlr.v4.runtime.{CharStream, CharStreams}
 import scopt.OptionParser
 
 import java.io.File
+import java.nio.file.{Path, Paths}
 import scala.collection.mutable
 import scala.io.{Codec, Source}
 
@@ -83,9 +84,10 @@ object CLIParser {
 
   case class TesslacRustConfig(
     specSource: CharStream = null,
-    projectPath: Option[File] = None,
-    exportBinary: Option[File] = None,
+    exportBinary: Option[Path] = None,
+    exportWorkspace: Option[Path] = None,
     generateMain: Boolean = false,
+    additionalSource: String = "",
     compilerOptions: Compiler.Options = Compiler.Options()
   ) extends Config
 
@@ -260,16 +262,16 @@ object CLIParser {
       )
   }
 
+  private def getFileContent(file: File): String = {
+    val addIncludeFile = Source.fromFile(file)
+    try addIncludeFile.mkString
+    finally addIncludeFile.close
+  }
+
   // Extension for the 'compile-scala' command
   {
     import parser._
     var config = TesslacScalaConfig()
-
-    def getFileContent(file: File): String = {
-      val addIncludeFile = Source.fromFile(file)
-      try addIncludeFile.mkString
-      finally addIncludeFile.close
-    }
 
     compilerOptions =
       if (!global.userStdLib)
@@ -319,15 +321,21 @@ object CLIParser {
         arg[File]("<tessla-file>")
           .foreach(f => config = config.copy(specSource = CharStreams.fromFileName(f.getPath)))
           .text("The file containing the Tessla specification"),
-        opt[File]('p', "project-dir")
-          .foreach(f => config = config.copy(projectPath = Some(f)))
-          .text("The location of the Cargo workspace, if unset it is either ./build-<bin-file> or ./build-monitor"),
         opt[File]('b', "bin-file")
-          .foreach(f => config = config.copy(exportBinary = Some(f), generateMain = true))
+          .foreach(f => config = config.copy(exportBinary = Some(Paths.get(f.getAbsolutePath))))
           .text("Compile a full monitor binary and place it in the given location"),
+        opt[File]('a', "add-source")
+          .foreach(f => config = config.copy(additionalSource = getFileContent(f)))
+          .text("Additional rust file inserted at the top of the monitor library"),
+        opt[File]('p', "project-dir")
+          .foreach {
+            case f if f.isFile => failure("must be a directory")
+            case f             => config = config.copy(exportWorkspace = Some(Paths.get(f.getAbsolutePath)))
+          }
+          .text("Export a Cargo workspace with everything necessary to modify and build the tessla monitor yourself"),
         opt[Unit]('m', "io-interface")
           .foreach(_ => config = config.copy(generateMain = true))
-          .text("Generate the code for an executable I/O interface (src/main.rs)")
+          .text("Generate the code for an executable I/O interface (src/main.rs) in the exported workspace")
       )
   }
 
