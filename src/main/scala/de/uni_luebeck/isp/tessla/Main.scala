@@ -218,9 +218,9 @@ object Main {
       try {
         val sourceCode = unwrapResult(
           Compiler.compile(config.specSource, config.compilerOptions)
+            andThen SanitizeIdentifiers
             andThen new ExtractAndWrapFunctions
             andThen FormatStringMangler
-            andThen SanitizeIdentifiers
             andThen GenerateStructDefinitions
             andThen UsageAnalysis
             andThen InliningAnalysis

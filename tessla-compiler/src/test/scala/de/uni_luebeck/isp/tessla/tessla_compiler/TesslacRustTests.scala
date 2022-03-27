@@ -128,13 +128,13 @@ object TesslacRustTests {
     }
     val additionalSource = testCase.externalSource.map(resolver.string).getOrElse("")
 
-    (new ExtractAndWrapFunctions)
-      .andThen(FormatStringMangler)
-      .andThen(SanitizeIdentifiers)
-      .andThen(GenerateStructDefinitions)
-      .andThen(UsageAnalysis)
-      .andThen(InliningAnalysis)
-      .andThen(new TesslaCoreToRust(additionalSource))
+    (SanitizeIdentifiers
+      andThen new ExtractAndWrapFunctions
+      andThen FormatStringMangler
+      andThen GenerateStructDefinitions
+      andThen UsageAnalysis
+      andThen InliningAnalysis
+      andThen new TesslaCoreToRust(additionalSource))
   }
 
   def execute(dirPath: Path, sourceCode: RustFiles, inputTrace: java.io.File): (Seq[String], Seq[String]) = {

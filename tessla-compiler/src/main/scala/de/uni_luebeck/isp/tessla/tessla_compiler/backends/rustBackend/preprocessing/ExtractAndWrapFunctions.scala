@@ -116,7 +116,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
           params,
           body.flatMap {
             case (id, definition) =>
-              val modifiedPath = s"${definitionPath}λ${id.fullName}"
+              val modifiedPath = s"${definitionPath}_${id.fullName}"
               extractFunctionExpressions(
                 definition,
                 functionScope,
@@ -131,7 +131,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
                   Some(id -> modifiedDefinition.asInstanceOf[DefinitionExpression])
               }
           },
-          extractFunctionExpressions(result, functionScope, functionOuterScope, s"${definitionPath}λreturn"),
+          extractFunctionExpressions(result, functionScope, functionOuterScope, s"${definitionPath}_return"),
           location
         )
         if (isGlobalDef) {
