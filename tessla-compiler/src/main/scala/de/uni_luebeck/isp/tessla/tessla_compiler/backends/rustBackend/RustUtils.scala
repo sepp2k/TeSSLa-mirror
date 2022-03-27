@@ -72,9 +72,12 @@ object RustUtils {
         else
           s"Box<dyn Fn($params) -> $result>"
       case RecordType(entries, _) =>
-        val genericBounds = getGenericTraitBounds(entries.map { case (_, (typ, _)) => typ })("")
-        s"TesslaValue<${RustUtils.getStructName(entries)}$genericBounds>"
-      case TypeParam(name, _) => s"TesslaValue<${if (mask_generics) "_" else name.toString}>"
+        val typeParams = entries.toSeq
+          .sortWith { case ((name1, _), (name2, _)) => structComparison(name1, name2) }
+          .map { case (_, (typ, _)) => convertType(typ) }
+          .mkString(", ")
+        s"TesslaValue<${RustUtils.getStructName(entries)}<$typeParams>>"
+      case TypeParam(name, _) => s"TesslaValue<$name>" // FIXME if (mask_generics) "_"
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
@@ -118,7 +121,6 @@ object RustUtils {
    *
    * - otherwise each type gets that trait bound, eg: &lt;T1: Trait1 + Trait2, T2: Trait1 + Trait2, ...&gt;
    *
-   *
    * @param types a list of types
    * @return a function that takes a string specifying the trait bounds to be applied to all generic type
    */
@@ -147,6 +149,22 @@ object RustUtils {
       else
         ""
     }
+  }
+
+  /**
+   *
+   * @param record
+   * @return
+   */
+  def genericiseRecordType(record: RecordType): RecordType = record match {
+    case RecordType(entries, location) =>
+      RecordType(
+        entries.map {
+          case (field, (typ: TypeParam, location)) => (field, (typ, location))
+          case (field, (_, location))              => (field, (TypeParam(Identifier(s"ST_$field")), location))
+        },
+        location
+      )
   }
 
   /**
