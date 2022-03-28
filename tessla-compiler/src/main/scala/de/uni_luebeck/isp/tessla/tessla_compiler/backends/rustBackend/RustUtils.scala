@@ -194,11 +194,11 @@ object RustUtils {
 
 case class SourceSegments(
   stateDef: ListBuffer[String] = new ListBuffer[String],
+  stateStatic: ListBuffer[String] = new ListBuffer[String],
   stateInit: ListBuffer[String] = new ListBuffer[String],
   input: ListBuffer[String] = new ListBuffer[String],
   timestamp: ListBuffer[String] = new ListBuffer[String],
   computation: ListBuffer[String] = new ListBuffer[String],
-  lazyStatic: ListBuffer[String] = new ListBuffer[String],
   static: ListBuffer[String] = new ListBuffer[String],
   store: ListBuffer[String] = new ListBuffer[String],
   delayReset: ListBuffer[String] = new ListBuffer[String]

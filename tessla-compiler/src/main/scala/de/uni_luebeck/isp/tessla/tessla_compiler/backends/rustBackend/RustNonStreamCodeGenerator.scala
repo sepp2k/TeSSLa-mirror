@@ -93,22 +93,25 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    */
   def translateStaticAssignment(
     id: Identifier,
-    e: ExpressionArg
-  ): String = {
+    e: ExpressionArg,
+    srcSegments: SourceSegments
+  ): Unit = {
     val typ = RustUtils.convertType(e.tpe)
     val lazyVar = extSpec.lazyVars.get.contains(id)
     if (lazyVar) {
       definedIdentifiers += (id -> FinalLazyDeclaration)
       val inlinedExp = inlineVars(e, extSpec.spec.definitions)
       // TODO how exactly do we handle this
-      s"static ref /*lazy*/ var_$id: $typ = ${translateExpressionArg(inlinedExp, TypeArgManagement.empty, extSpec.spec.definitions)};"
+      srcSegments.stateStatic.append(s"let var_$id /* lazy */ = ${translateExpressionArg(inlinedExp, TypeArgManagement.empty, extSpec.spec.definitions)};")
     } else if (finalAssignmentPossible(e)) {
       definedIdentifiers += (id -> FinalDeclaration)
-      s"static ref var_$id: $typ = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};"
+      srcSegments.stateStatic.append(s"let var_$id = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};")
     } else {
       definedIdentifiers += (id -> VariableDeclaration)
-      s"static ref var_$id: $typ = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};"
+      srcSegments.stateStatic.append(s"let var_$id = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};")
     }
+    srcSegments.stateDef.append(s"var_$id: $typ")
+    srcSegments.stateInit.append(s"var_$id")
   }
 
   /**

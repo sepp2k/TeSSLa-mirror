@@ -13,13 +13,10 @@ pub struct State {
 //STATEDEF
 }
 
-lazy_static! {
-//LAZYSTATIC
-}
-
 //STATIC
 
 pub fn get_initial_state() -> State {
+//STATESTATIC
     State {
         current_ts: 0,
         last_processed_ts: 0,

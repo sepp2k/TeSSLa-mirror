@@ -104,10 +104,10 @@ class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSp
               rustStreamCodeGenerator
                 .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
               produceOutputCode(outputMap, outputNames, id, srcSegments)
-            case FunctionType(_, _, _, _) =>
+            case FunctionType(_, _, _, _) if definition.isInstanceOf[FunctionExpression] =>
               srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
             case _ =>
-              srcSegments.lazyStatic.append(rustNonStreamCodeGenerator.translateStaticAssignment(id, definition))
+              rustNonStreamCodeGenerator.translateStaticAssignment(id, definition, srcSegments)
           }
       }
 
@@ -128,8 +128,8 @@ class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSp
           .mkString
           .replace("//USERINCLUDES", userIncludes)
           .replace("//STATEDEF", srcSegments.stateDef.mkString(",\n"))
-          .replace("//LAZYSTATIC", srcSegments.lazyStatic.mkString("\n"))
           .replace("//STATIC", srcSegments.static.mkString("\n"))
+          .replace("//STATESTATIC", srcSegments.stateStatic.mkString("\n"))
           .replace("//STATEINIT", srcSegments.stateInit.mkString(",\n"))
           .replace("//STORE", srcSegments.store.mkString("\n"))
           .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
