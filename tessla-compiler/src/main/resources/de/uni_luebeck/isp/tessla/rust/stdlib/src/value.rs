@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
-use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Deref, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 
 use im::HashMap;
 use im::HashSet;
@@ -91,6 +91,18 @@ impl<T: TesslaParse> From<&str> for TesslaValue<T> {
             (Ok(result), "") => Value(result),
             (Ok(_), _) => Error("Failed to parse value, match not exhaustive"),
             (Err(error), _) => Error(error),
+        }
+    }
+}
+
+// https://users.rust-lang.org/t/callable-struct-on-stable/54689/7
+impl<F> Deref for TesslaValue<Box<F>> {
+    type Target = F;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Value(value) => value,
+            Error(error) => panic!("Tried to deref error: {}", error),
         }
     }
 }

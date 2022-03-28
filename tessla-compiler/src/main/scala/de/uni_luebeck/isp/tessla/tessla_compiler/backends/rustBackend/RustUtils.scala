@@ -60,17 +60,19 @@ object RustUtils {
           .map { t => convertType(t, mask_generics, use_abstract_fn_type) }
           .mkString(", ")}>"
       case FunctionType(_, paramTypes, resultType, _) =>
+        // abstract fn types may not be used for parameter/return types of abstract functions
+        // reverting to [use_abstract_fn_type = false] is deliberate here
         val params = paramTypes
           .map {
             // FIXME case (LazyEvaluation, t) =>
-            case (_, t) => convertType(t, mask_generics, use_abstract_fn_type)
+            case (_, t) => convertType(t, mask_generics)
           }
           .mkString(", ")
-        val result = convertType(resultType, mask_generics, use_abstract_fn_type)
+        val result = convertType(resultType, mask_generics)
         if (use_abstract_fn_type)
           s"impl Fn($params) -> $result"
         else
-          s"Box<dyn Fn($params) -> $result>"
+          s"TesslaValue<Box<dyn Fn($params) -> $result>>"
       case RecordType(entries, _) =>
         val typeParams = entries.toSeq
           .sortWith { case ((name1, _), (name2, _)) => structComparison(name1, name2) }
