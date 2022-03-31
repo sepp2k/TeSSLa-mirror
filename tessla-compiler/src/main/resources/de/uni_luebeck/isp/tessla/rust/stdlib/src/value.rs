@@ -992,13 +992,13 @@ impl<T: Clone> TesslaList<TesslaValue<T>> {
     }
 
     #[inline]
-    pub fn set(&self, index: i64, elem: TesslaValue<T>) -> TesslaList<TesslaValue<T>> {
-        match self {
-            Error(error) => Error(error),
-            Value(list) => {
+    pub fn set(&self, index: TesslaInt, elem: TesslaValue<T>) -> TesslaList<TesslaValue<T>> {
+        match (self, index) {
+            (&Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(list), Value(index)) => {
                 let mut result = list.clone();
                 result.set(index as usize, elem);
-                return Value(result);
+                Value(result)
             }
         }
     }
