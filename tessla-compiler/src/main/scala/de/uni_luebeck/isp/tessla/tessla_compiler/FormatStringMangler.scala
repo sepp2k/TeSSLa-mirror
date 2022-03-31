@@ -164,8 +164,10 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
               case TypeApplicationExpression(_, args, _) => {
                 inputStreamType = args(1)
               }
+              case _ => {  }
             }
           }
+          case _ => { }
         }
 
         val fs_spec = parseFormatString(formatStrings.get(id.fullName).get)
@@ -444,7 +446,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
         )
       ),
       ArraySeq( // Arguments of the if: (exp : bool, then : T, else : T)
-        (fs_spec.isInteger, fs_spec.isFloat) match {
+        (fs_spec.isInteger(), fs_spec.isFloat()) match {
           case (true, false) =>
             ApplicationExpression(
               ExternExpression(
@@ -481,6 +483,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
                 FloatLiteralExpression(0.0)
               )
             )
+          case _ => ???
         },
         ApplicationExpression(
           ExternExpression(
@@ -633,7 +636,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
             } else {
               throw Diagnostics.CommandNotSupportedError("Invalid format string.")
             }
-          case _ => break
+          case _ => break()
         }
 
         i += 1
@@ -803,10 +806,10 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
         "Locale-specific grouping separators aren't supported in Rust format strings."
       )
     }
-    if (fs.isOther && fs.zeroPad) {
+    if (fs.isOther() && fs.zeroPad) {
       throw Diagnostics.CommandNotSupportedError("Strings can be zero-padded.")
     }
-    if (fs.precision > 0 && fs.isInteger) {
+    if (fs.precision > 0 && fs.isInteger()) {
       throw Diagnostics.CommandNotSupportedError("Integer formats can't use a precision")
     }
     if (fs.padSign && fs.plusSign) {
