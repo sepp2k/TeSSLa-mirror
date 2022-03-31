@@ -1,22 +1,21 @@
 #  Tessla compiler Usage
 
-The TeSSLa compiler can be run in the following way:
+## Scala
+
+The TeSSLa Scala compiler can be run in the following way:
 
 ```
-java -jar tessla.jar compile [options] <tessla-file>
+java -jar tessla.jar compile-scala [options] <tessla-file>
 ```
 
 Following options are available:
 
 ```
--a, --add-source <value>         Additional source file included on top of the generated source
--o, --out-file <value>           Place the generated source code at this location.
--b, --bin-file <value>           Compile TeSSLa specification to an executable binary file which is created at the given location.
--n, --no-io                      Replaces I/O Handling in generated source with simple API interface
--g, --target-language <value>    Select the target language to compile to: (scala, rust)
+-a, --add-source <value  Additional source file included on top of the generated source
+-o, --out-file <value>   Place the generated Scala source code at this location.
+-j, --jar-file <value>   Compile TeSSLa specification to an executable jar file which is created at the given location.
+-n, --no-io              Replaces I/O Handling in generated source with simple API interface
 ```
-
-## Scala
 
 ### Stdio monitor generation
 
@@ -86,6 +85,21 @@ Note:
 
 ## Rust
 
+The TeSSLa Scala compiler can be run in the following way:
+
+```
+java -jar tessla.jar compile-rust [options] <tessla-file>
+```
+
+Following options are available:
+
+```
+-b, --bin-file <value>     Compile a full monitor binary and place it in the given location
+-a, --add-source <value>   Additional rust file inserted at the top of the monitor library
+-p, --project-dir <value>  Export a Cargo workspace with everything necessary to modify and build the tessla monitor yourself
+-m, --io-interface         Generate the code for an executable I/O interface (src/main.rs) in the exported workspace
+```
+
 ### Stdio monitor generation
 
 Without further options the TeSSLa compiler generates a file `out.rs`.
@@ -105,4 +119,4 @@ can be found [here](API.md).
 ### Connecting TeSSLa to external functions
 
 This feature is in an experimental state and is disabled in the current version of the TeSSLa compiler
-(see [TesslaCoreToRust.scala](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/TesslaCoreToRust.scala)`: insertSegments()`).
+(see [TesslaCoreToRust.scala](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/TesslaCoreToRust.scala):`insertSegments()`).
