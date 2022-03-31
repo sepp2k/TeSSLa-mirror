@@ -196,7 +196,6 @@ pub fn last<T, U>(output: &mut Events<T>, values: &Events<T>, trigger: &Events<U
     }
 }
 
-// FIXME: I think this does not quite cover all possible specified Error states
 pub fn delay(output: &mut Events<()>, next_delay: i64, timestamp: i64) {
     if next_delay == timestamp {
         output.set_event(Value(()));

@@ -57,7 +57,6 @@ out String.format("%- 10d", s_mynegint)
 out String.format("%-+10d", s_myshortint)
 
 # Test variations on floats
-# TODO: Add negative floats; somehow Scala doesn't like them so you can't test them there :(
 out String.format("%g", s_fancyfloat)
 out String.format("%10g", s_fancyfloat)
 out String.format("%10.2f", s_fancyfloat)

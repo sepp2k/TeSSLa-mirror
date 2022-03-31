@@ -261,7 +261,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case ExpressionRef(id, Core.FunctionType(_, _, _, _), _) =>
         s"var_${id.fullName}"
       case ExpressionRef(id, _, _) =>
-        s"var_${id.fullName}.clone()" // TODO clone or pass by ref????
+        s"var_${id.fullName}.clone()"
       case x: ExternExpression =>
         translateExtern(x, tm, defContext)
       case RecordConstructorExpression(entries, _) if entries.isEmpty =>
@@ -422,7 +422,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   ): String = {
     val args = oArgs.toIndexedSeq
     name match {
-      // TODO some brackets here are superfluous and will produce warnings
 
       case "__[rust]box__" => s"Box::new(move ${args(0)})"
       case "__[rust]format__" =>
