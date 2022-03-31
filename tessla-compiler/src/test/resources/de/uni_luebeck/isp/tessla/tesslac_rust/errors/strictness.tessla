@@ -1,0 +1,3 @@
+in x: Events[Int]
+out const((), 5/x) as y
+out first((), 5/x) as z
