@@ -113,7 +113,7 @@ class TesslacRustTests extends AbstractTestRunner[RustFiles]("Tessla Rust Compil
           expErrMsg.add(spl)
         }
       }
-    });
+    })
 
     assertEqualSets(expErrMsg.toSet, expectedErrors)
     assertEqualSets(output.map(splitOutput), expectedOutput.map(splitOutput), unsplitOutput)
@@ -155,7 +155,7 @@ object TesslacRustTests {
       .environment()
       .put(
         "RUSTFLAGS",
-        "-A unused_parens -A unused_variables -A non_snake_case -A non_camel_case_types -A uncommon_codepoints -A non_upper_case_globals"
+        "-A unused_parens -A unused_variables -A non_snake_case -A non_camel_case_types -A uncommon_codepoints -A non_upper_case_globals -A dead_code"
       )
 
     cargoRun.redirectInput(Redirect.from(inputTrace))

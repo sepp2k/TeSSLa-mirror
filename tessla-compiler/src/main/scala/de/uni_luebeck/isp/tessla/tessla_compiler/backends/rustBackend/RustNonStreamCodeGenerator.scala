@@ -117,7 +117,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       )
     }
     srcSegments.stateDef.append(s"var_$id: $typ")
-    srcSegments.stateInit.append(s"var_$id")
+    srcSegments.stateInit.append(s"var_$id: var_$id.clone()")
   }
 
   /**
