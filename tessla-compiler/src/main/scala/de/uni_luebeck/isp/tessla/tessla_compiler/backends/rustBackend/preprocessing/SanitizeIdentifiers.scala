@@ -78,17 +78,23 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
       RecordConstructorExpression(
         entries.map {
           case (name, (expr, location)) =>
-            (escapeName(name), (findAndEscapeIdentifiers(expr), location))
+            (name, (findAndEscapeIdentifiers(expr), location))
         },
         location
       )
     case RecordAccessorExpression(name, target, nameLocation, location) =>
-      RecordAccessorExpression(escapeName(name), findAndEscapeIdentifiers(target), nameLocation, location)
+      RecordAccessorExpression(name, findAndEscapeIdentifiers(target), nameLocation, location)
     case ExternExpression(externName, typ, location) =>
       ExternExpression(externName, escapeType(typ), location)
     case _: StringLiteralExpression | _: IntLiteralExpression | _: FloatLiteralExpression => expr
   }
 
+  /**
+   * Replace underscores with double underscores, and any non UAX31-R1 characters
+   * with their hex representation as `uXXXX_`
+   * @param name
+   * @return
+   */
   def escapeName(name: String): String = {
     name.replace("_", "__").flatMap { c =>
       if (c.isUnicodeIdentifierPart) s"$c" else f"u${c * 1}%04X_"
@@ -118,7 +124,7 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
         )
       case RecordType(entries, location) =>
         RecordType(
-          entries.map { case (name, (typ, location)) => (escapeName(name), (escapeType(typ), location)) },
+          entries.map { case (name, (typ, location)) => (name, (escapeType(typ), location)) },
           location
         )
     }

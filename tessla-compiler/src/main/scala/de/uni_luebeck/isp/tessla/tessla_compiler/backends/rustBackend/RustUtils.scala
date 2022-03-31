@@ -20,6 +20,7 @@ import de.uni_luebeck.isp.tessla.core.Location
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.structComparison
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.SanitizeIdentifiers
 
 import scala.collection.mutable.ListBuffer
 
@@ -162,6 +163,7 @@ object RustUtils {
     s"Struct_${fields.toSeq
       .map { case (name, _) => name }
       .sortWith(structComparison)
+      .map(SanitizeIdentifiers.escapeName)
       .mkString("_")}"
   }
 
