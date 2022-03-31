@@ -152,7 +152,7 @@ object TesslacTests {
   def compile(dirPath: Path, sourceCode: String): Unit = {
     Files.writeString(dirPath.resolve("out.scala"), sourceCode)
 
-    val settings = ScalaCompiler.defaultSettings(dirPath, false)
+    val settings = ScalaCompiler.defaultSettings(dirPath, debug = false)
     settings.opt.clear()
     settings.usejavacp.value = false
 
@@ -168,7 +168,7 @@ object TesslacTests {
     ScalaCompiler.compileCode(dirPath.resolve("out.scala"), settings, reporter)
 
     val compiler = new Global(settings, reporter)
-    (new compiler.Run) compile List(dirPath.resolve("out.scala").toAbsolutePath.toString)
+    new compiler.Run compile List(dirPath.resolve("out.scala").toAbsolutePath.toString)
     reporter.finish()
   }
 

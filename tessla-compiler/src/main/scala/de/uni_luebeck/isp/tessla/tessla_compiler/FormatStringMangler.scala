@@ -42,10 +42,11 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
     spec.definitions.foreach {
       case (sliftid, definition) =>
         definition match {
-          case ApplicationExpression(TypeApplicationExpression(ExternExpression("slift", _, _), _, _), args, _)
+          case ApplicationExpression(TypeApplicationExpression(ExternExpression("slift", _, loc), _, _), args, _)
               if args.length >= 3 =>
             args(2) match {
-              case TypeApplicationExpression(ExternExpression("String_format", _, loc), _, _) =>
+              case TypeApplicationExpression(ExternExpression("String_format", _, _), _, _)
+                   | ExternExpression("String_format", _, _) =>
                 args(0) match {
                   case ExpressionRef(id, _, _) =>
                     // If we encounter this format string the first time
@@ -76,7 +77,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
                                   _,
                                   _
                                 )
-                              ) => {}
+                              ) =>
                           case _ =>
                             throw Diagnostics.CommandNotSupportedError(
                               "Can't determine format string at compile time.",
@@ -87,7 +88,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
                         // Remove the nil stream
                         removedStreams.add(stream.fullName)
 
-                        var format = args(1) match { // the format string itself
+                        val format = args(1) match { // the format string itself
                           case StringLiteralExpression(value, _) => value
                           case _ =>
                             throw Diagnostics.CommandNotSupportedError(
@@ -114,12 +115,12 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
                       /* we just need to map the slift to the corresponding format string */ {
                         formatStrings.addOne((sliftid.fullName, formatStrings(id.fullName)))
                       }*/
-                  case _ => {}
+                  case _ =>
                 }
-              case _ => {}
+              case _ =>
             }
 
-          case _ => {}
+          case _ =>
         }
     }
 
@@ -151,26 +152,23 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    */
   def modifyFormatStringSlifts(spec: Specification, formatStrings: mutable.HashMap[String, String]): Specification = {
     val definitions = spec.definitions.map {
-      case (id, defi) if formatStrings.contains(id.fullName) => {
-        val location = defi.location
+      case (id, defi) if formatStrings.contains(id.fullName) =>
         var inputStream: ExpressionArg = null
         var inputStreamType: Type = null
 
         defi match {
-          case ApplicationExpression(applicable, args, _) => {
+          case ApplicationExpression(applicable, args, _) =>
             inputStream = args(1)
 
             applicable match {
-              case TypeApplicationExpression(_, args, _) => {
+              case TypeApplicationExpression(_, args, _) =>
                 inputStreamType = args(1)
-              }
-              case _ => {  }
+              case _ =>
             }
-          }
-          case _ => { }
+          case _ =>
         }
 
-        val fs_spec = parseFormatString(formatStrings.get(id.fullName).get)
+        val fs_spec = parseFormatString(formatStrings(id.fullName))
         val fstring = produceRustFormatString(fs_spec)
 
         (
@@ -232,7 +230,6 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
             )
           )
         )
-      }
       case other => other
     }
 
@@ -246,7 +243,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    * @param inputStreamType The type of the input stream.
    * @return The format! call.
    */
-  def generateNoSignNoG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
+  private def generateNoSignNoG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
     val format = ApplicationExpression(
       ExternExpression(
         "[rust]format",
@@ -290,7 +287,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    * @param fs_spec The format string specification.
    * @return The format! call.
    */
-  def generateNoSignG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
+  private def generateNoSignG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
     ApplicationExpression(
       ExternExpression(
         "ite",
@@ -431,7 +428,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    * @param fs_spec The format string specification.
    * @return The format! call.
    */
-  def generateSignPaddingNoG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
+  private def generateSignPaddingNoG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
     ApplicationExpression(
       ExternExpression(
         "ite",
@@ -446,7 +443,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
         )
       ),
       ArraySeq( // Arguments of the if: (exp : bool, then : T, else : T)
-        (fs_spec.isInteger(), fs_spec.isFloat()) match {
+        (fs_spec.isInteger, fs_spec.isFloat) match {
           case (true, false) =>
             ApplicationExpression(
               ExternExpression(
@@ -529,7 +526,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    * @param fs_spec The format string specification.
    * @return The format! call.
    */
-  def generateSignPaddingG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
+  private def generateSignPaddingG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
     ApplicationExpression(
       ExternExpression(
         "ite",
@@ -579,7 +576,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    * @return The extracted format string specification.
    */
   def parseFormatString(fs: String): FormatStringSpecification = {
-    var spec: FormatStringSpecification = new FormatStringSpecification()
+    val spec: FormatStringSpecification = new FormatStringSpecification()
 
     if (fs.length < 2) {
       throw Diagnostics.CommandNotSupportedError("Invalid format string.")
@@ -647,7 +644,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
       var widthFound = false
       // Extract width, don't allow zeroes
       if (fs.charAt(i) != '0' && fs.charAt(i).isDigit) {
-        val j = i;
+        val j = i
 
         while (fs.charAt(i).isDigit) {
           i += 1
@@ -676,7 +673,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
       spec.formatType = fs.charAt(i)
 
       // Set default precision to 6, if floating point format specifier given
-      if (!precisionFound && spec.isFloat()) {
+      if (!precisionFound && spec.isFloat) {
         spec.precision = 6
       }
       if (!widthFound) {
@@ -765,14 +762,14 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
      * Determines whether this format specifier specifies an integer format.
      *
      */
-    def isInteger() = {
+    def isInteger: Boolean = {
       formatType == 'x' || formatType == 'o' || formatType == 'd'
     }
 
     /**
      * Determines whether this format specifier specifies a floating point format.
      */
-    def isFloat() = {
+    def isFloat: Boolean = {
       formatType == 'f' || formatType == 'g' || formatType == 'e' || formatType == 'a'
     }
 
@@ -780,8 +777,8 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
      * Determines whether this format specifies neither an integer nor a floating
      * point format.
      */
-    def isOther() = {
-      !isFloat() && !isInteger()
+    def isOther: Boolean = {
+      !isFloat && !isInteger
     }
   }
 
@@ -806,16 +803,16 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
         "Locale-specific grouping separators aren't supported in Rust format strings."
       )
     }
-    if (fs.isOther() && fs.zeroPad) {
+    if (fs.isOther && fs.zeroPad) {
       throw Diagnostics.CommandNotSupportedError("Strings can be zero-padded.")
     }
-    if (fs.precision > 0 && fs.isInteger()) {
+    if (fs.precision > 0 && fs.isInteger) {
       throw Diagnostics.CommandNotSupportedError("Integer formats can't use a precision")
     }
     if (fs.padSign && fs.plusSign) {
       throw Diagnostics.CommandNotSupportedError("Don't specify + and space.")
     }
-    if (fs.altForm && !fs.isInteger()) {
+    if (fs.altForm && !fs.isInteger) {
       throw Diagnostics.CommandNotSupportedError("Alternate form can't be used with non-integer types.")
     }
 
@@ -838,7 +835,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
       str += '0'
     }
     if (fs.width > 0) {
-      str += fs.width;
+      str += fs.width
     }
     if (fs.precision > 0) {
       str += '.'
