@@ -493,12 +493,14 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    *
    * @param stream_id   The input stream to be handled
    * @param stream_type The input stream's type. Must be Events[...].
+   * @param stream_name This is the original name of the stream from the tessla spec
    * @param srcSegments The source segments the generated block is added to.
    *                    There is code attached to the input, and output section.
    */
   def produceInputCode(
     stream_id: Identifier,
     stream_type: Type,
+    stream_name: String,
     srcSegments: SourceSegments
   ): Unit = {
     val stream = createStreamContainer(stream_id, stream_type, "init()", srcSegments)
@@ -507,7 +509,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
 
     srcSegments.stateDef.append(s"pub set_$stream_id: fn($t, i64, &mut State)")
 
-    srcSegments.input.append(s"""if input_stream_name == \"$stream_id\" {
+    srcSegments.input.append(s"""if input_stream_name == \"$stream_name\" {
                                 |(state.set_$stream_id)(input_stream_value.as_str().into(), new_input_ts, state);
                                 |}""".stripMargin)
 

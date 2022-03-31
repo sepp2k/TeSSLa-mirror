@@ -21,6 +21,8 @@ import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 
+import scala.collection.immutable.ArraySeq
+
 /**
  * This translation step remaps all identifiers contained in the spec to remove the '$' character.
  * This is necessary because in rust the dollar sign is restricted to use in macros and thus not allowed in identifiers.
@@ -31,7 +33,9 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
   override def translate(spec: TesslaAST.Core.Specification): TranslationPhase.Result[TesslaAST.Core.Specification] = {
 
     val in = spec.in.map {
-      case (id, (typ, annotations)) => (escapeIdentifier(id), (escapeType(typ), annotations))
+      case (id, (typ, annotations)) =>
+        val inputAnnotations = annotations ++ Map("$name" -> ArraySeq(StringLiteralExpression(id.toString)))
+        (escapeIdentifier(id), (escapeType(typ), inputAnnotations))
     }
 
     val out = spec.out.map {

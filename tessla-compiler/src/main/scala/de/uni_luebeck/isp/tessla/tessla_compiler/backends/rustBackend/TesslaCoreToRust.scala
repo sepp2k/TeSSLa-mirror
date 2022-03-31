@@ -113,8 +113,9 @@ class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSp
 
       // Produce input consumption
       extSpec.spec.in.foreach {
-        case (id, (typ, _)) =>
-          rustStreamCodeGenerator.produceInputCode(id, typ, srcSegments)
+        case (id, (typ, annotations)) =>
+          val name = annotations("$name")(0).asInstanceOf[StringLiteralExpression].value
+          rustStreamCodeGenerator.produceInputCode(id, typ, name, srcSegments)
           produceOutputCode(outputMap, outputNames, id, srcSegments)
       }
 
