@@ -85,9 +85,6 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
                             )
                         }
 
-                        // Remove the nil stream
-                        removedStreams.add(stream.fullName)
-
                         val format = args(1) match { // the format string itself
                           case StringLiteralExpression(value, _) => value
                           case _ =>
