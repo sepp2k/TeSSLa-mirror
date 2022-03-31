@@ -47,7 +47,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): String = {
     val name = s"var_${stream_id.fullName}"
     currSrc.stateDef.append(s"$name: EventContainer<${RustUtils.convertType(stream_type)}>")
-    currSrc.stateInit.append(s"$name: $init_expr")
+    currSrc.stateInit.append(s"$name: ${init_expr.replace("state.", "")}")
     val stream = s"state.$name"
     currSrc.store.append(s"$stream.update_last();")
     stream
