@@ -218,7 +218,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         val argNames = typ.paramTypes.indices.map(i => s"tLPar_$i")
         val ret = translateFunctionCall(e, argNames, newTm, defContext)
         s"|${argNames.mkString(", ")}|{ return $ret }"
-      // TODO maybe handle native: ?
       case ExternExpression(name, _, location) =>
         throw Diagnostics.CoreASTError(s"""Invalid extern(\"$name\") expression could not be translated""", location)
     }
@@ -516,6 +515,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       //case "__List_set__" if typeHint.retType.isInstanceOf[MutableListType] => s"${args(0)}.insert(${args(1)} as usize, ${args(2)})"
       case "__List_set__"  => s"${args(0)}.set(${args(1)}, ${args(2)})"
       case "__List_fold__" => s"${args(0)}.fold(${args(1)},${args(2)})"
+
+      case s if s.startsWith("__native:") => s"${s.stripPrefix("__native:").stripSuffix("__")}(${args.mkString(", ")})"
 
       case _ => throw Diagnostics.CommandNotSupportedError(s"Unsupported built-in function for Rust backend: $name")
     }
