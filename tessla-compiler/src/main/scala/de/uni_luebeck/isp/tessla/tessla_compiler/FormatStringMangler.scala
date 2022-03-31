@@ -45,8 +45,8 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
           case ApplicationExpression(TypeApplicationExpression(ExternExpression("slift", _, loc), _, _), args, _)
               if args.length >= 3 =>
             args(2) match {
-              case TypeApplicationExpression(ExternExpression("String_format", _, _), _, _)
-                   | ExternExpression("String_format", _, _) =>
+              case TypeApplicationExpression(ExternExpression("String_format", _, _), _, _) |
+                  ExternExpression("String_format", _, _) =>
                 args(0) match {
                   case ExpressionRef(id, _, _) =>
                     // If we encounter this format string the first time
