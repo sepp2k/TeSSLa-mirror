@@ -1,0 +1,5 @@
+{
+  "spec": "io.tessla",
+  "input": "structErr3.input",
+  "expectedOutput": "structErr3.output"
+}

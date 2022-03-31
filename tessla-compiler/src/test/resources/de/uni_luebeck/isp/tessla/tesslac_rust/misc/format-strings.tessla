@@ -1,0 +1,8 @@
+in ints: Events[Int]
+in floats: Events[Float]
+in strings: Events[String]
+
+out f"${Set.empty[Int]}%8s" as x
+out f"$strings%-10s $strings%10s" as y
+out f"$ints%03d $ints%02x $ints%03o ${ints > 50}%-5s $ints" as z
+out f"$floats%.8e $floats%011.6f $floats%.6f" as 💩

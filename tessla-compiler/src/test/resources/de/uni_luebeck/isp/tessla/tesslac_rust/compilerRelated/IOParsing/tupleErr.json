@@ -1,0 +1,6 @@
+{
+  "expectedRuntimeErrors": "tupleErr.errors",
+  "spec": "io.tessla",
+  "input": "tupleErr.input",
+  "expectedOutput": "empty.output"
+}
