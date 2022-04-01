@@ -93,19 +93,20 @@ class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSp
       // Produce computation section
       DefinitionOrdering.order(extSpec.spec.definitions).foreach {
         case (Identifier((None, Some(name), _)), ExternExpression("[rust]Struct", RecordType(entries, _), _)) =>
-          srcSegments.static.append(
-            rustNonStreamCodeGenerator
-              .translateStructDefinition(name, entries.toSeq.map { case (name, (typ, _)) => (name, typ) })
-          )
+          // Generate struct definition
+          rustNonStreamCodeGenerator
+            .translateStructDefinition(name, entries.toSeq.map { case (name, (typ, _)) => (name, typ) }, srcSegments)
 
         case (id, definition) =>
           definition.tpe match {
             case InstantiatedType("Events", _, _) =>
+              // Generate stream computation and output
               rustStreamCodeGenerator
                 .translateStreamDefinitionExpression(id, definition, extSpec.spec.definitions, srcSegments)
               produceOutputCode(outputMap, outputNames, id, srcSegments)
             case FunctionType(_, _, _, _) if definition.isInstanceOf[FunctionExpression] =>
-              srcSegments.static.appendAll(rustNonStreamCodeGenerator.translateStaticFunction(id, definition))
+              // Generate static function
+              rustNonStreamCodeGenerator.translateStaticFunction(id, definition, srcSegments)
             case _ =>
               rustNonStreamCodeGenerator.translateStaticAssignment(id, definition, srcSegments)
           }

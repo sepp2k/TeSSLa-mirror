@@ -26,6 +26,9 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
 import de.uni_luebeck.isp.tessla.tessla_compiler._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustUtils.{canBeHashed, convertType}
 
+/**
+ * Class handling the translation of non-stream expressions
+ */
 class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     extends NonStreamCodeGeneratorInterface[String, String](extSpec) {
 
@@ -89,7 +92,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * Translates a static assignment definition from TeSSLa Core into a static Rust variable
    * @param id The id which is assigned
    * @param e The expression assigned to id
-   * @return The translated assignment
+   * @param srcSegments The expression added in three parts to the sections stateStatic, stateDef and stateInit
    */
   def translateStaticAssignment(
     id: Identifier,
@@ -124,12 +127,13 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * Translates a global function definition from TeSSLa Core into a static Rust function
    * @param id The id which is assigned
    * @param definition The function definition
-   * @return The translated function
+   * @param srcSegments The translated function is defined globally, and a pointer to it is stored in the state as a TesslaValue
    */
   def translateStaticFunction(
     id: Identifier,
-    definition: DefinitionExpression
-  ): Seq[String] = {
+    definition: DefinitionExpression,
+    srcSegments: SourceSegments
+  ): Unit = {
     definition match {
       case FunctionExpression(_, params, body, result, _) =>
         val genericTypes = RustUtils.getGenericTypeNames(params.map { case (_, _, typ) => typ } :+ result.tpe)
@@ -140,11 +144,16 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           .mkString(", ")
         val returnType = RustUtils.convertType(result.tpe, use_abstract_fn_type = true)
 
-        (s"fn var_$id$traitBounds($functionParams) -> $returnType {"
-          +: translateBody(body, result, TypeArgManagement.empty, extSpec.spec.definitions)
-          :+ "}")
+        srcSegments.static.append(s"fn fn_$id$traitBounds($functionParams) -> $returnType {")
+        srcSegments.static.appendAll(translateBody(body, result, TypeArgManagement.empty, extSpec.spec.definitions))
+        srcSegments.static.append("}")
+
+        val functionType = RustUtils.convertType(definition.tpe)
+        srcSegments.stateStatic.append(s"let var_$id = Value(fn_$id);")
+        srcSegments.stateDef.append(s"var_$id: $functionType")
+        srcSegments.stateInit.append(s"var_$id: var_$id.clone()")
       case e =>
-        throw Diagnostics.CoreASTError("Non valid function expression cannot be translated", e.location)
+        throw Diagnostics.CoreASTError("Failed to translate expression as static function", e.location)
     }
   }
 
@@ -234,6 +243,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * Translates an ExpressionArg to a corresponding Rust expression
    * @param e The expression to be translated
    * @param tm The [[TypeArgManagement]] to resolve type parameters
+   * @param defContext Definition context depicting all var names in the current scope to their definition expression
    * @return The translated expression
    */
   override def translateExpressionArg(
@@ -291,39 +301,45 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
 
   /**
    * Generate all the necessary code and implement any Traits needed for a Rust struct
-   * @return The struct definition and its impls
+   * @param structName A reproducible name generated from the struct field names
+   * @param fields An ordered list of all fields with their name and type
+   * @param srcSegments The struct definition and its accompanying impls are put in the static segment
    */
-  def translateStructDefinition(structName: String, fields: Seq[(String, Type)]): String = {
+  def translateStructDefinition(structName: String, fields: Seq[(String, Type)], srcSegments: SourceSegments): Unit = {
     val genericTypes = RustUtils.getGenericTypeNames(fields.map { case (_, typ) => typ })
     val traitBounds = (bound: String) => s"<${genericTypes.map(t => s"$t: $bound").mkString(", ")}>"
     val typeAnnotation = s"<${genericTypes.mkString(", ")}>"
-    val structDef = s"""${if (fields.forall { case (_, tpe) => canBeHashed(tpe) }) "#[derive(std::hash::Hash)]" else ""}
+    if (fields.forall { case (_, tpe) => canBeHashed(tpe) })
+      srcSegments.static.append("#[derive(std::hash::Hash)]")
+    srcSegments.static.append(s"""
        |pub struct $structName$typeAnnotation {
-       |${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
-       |}
+       |    ${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
+       |}""".stripMargin)
+    srcSegments.static.append(s"""
        |impl${traitBounds("Clone")} Clone for $structName$typeAnnotation {
        |    fn clone(&self) -> Self {
        |        $structName {
        |${fields.map { case (name, _) => s"$name: self.$name.clone()" }.mkString(",\n")}
        |        }
        |    }
-       |}
+       |}""".stripMargin)
+    srcSegments.static.append(s"""
        |impl${traitBounds("PartialEq + Clone")} Eq for $structName$typeAnnotation {}
        |impl${traitBounds("PartialEq + Clone")} PartialEq for $structName$typeAnnotation {
        |    fn eq(&self, other: &Self) -> bool {
        |${fields.map { case (name, _) => s"PartialEq::eq(&self.$name, &other.$name)" }.mkString("\n&& ")}
        |    }
        |}
-       |""".stripMargin
+       |""".stripMargin)
     val fieldNames = fields.map { case (name, _) => name }
     val isTuple = RustUtils.isStructTuple(fieldNames)
     val wrappedTypeAnnotation = s"<${genericTypes.map(t => s"TesslaValue<$t>").mkString(", ")}>"
-    val parseImpl = generateStructParser(structName, fieldNames, isTuple, traitBounds, wrappedTypeAnnotation)
     if (isTuple) {
-      structDef + generateTupleDisplay(structName, fieldNames, traitBounds, wrappedTypeAnnotation) + parseImpl
+      srcSegments.static.append(generateTupleDisplay(structName, fieldNames, traitBounds, wrappedTypeAnnotation))
     } else {
-      structDef + generateStructDisplay(structName, fieldNames, traitBounds, wrappedTypeAnnotation) + parseImpl
+      srcSegments.static.append(generateStructDisplay(structName, fieldNames, traitBounds, wrappedTypeAnnotation))
     }
+    srcSegments.static.append(generateStructParser(structName, fieldNames, isTuple, traitBounds, wrappedTypeAnnotation))
   }
 
   private def generateTupleDisplay(
@@ -373,25 +389,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       .map { name => s"""$name: Error("Value not assigned while parsing")""" }
       .mkString(",\n")}};"""
 
-    val tuple_parse = if (isTuple) {
-      s"""
-         |    fn tessla_parse_tuple(s: &str) -> (Result<Self, &'static str>, &str) {
-         |        let mut inner = s.trim_start();
-         |        let mut i = 1_i64;
-         |        $init
-         |        while !inner.starts_with(")") {
-         |            match i {
-         |${fieldNames
-        .map { name => s"""${name.substring(1)} => if !parse_struct_inner(&mut result.$name, &mut inner) { break }""" }
-        .mkString(",\n")},
-         |                _ => return (Err("Tuple index out of bounds while parsing"), inner)
-         |            }
-         |            i += 1;
-         |        }
-         |        (Ok(result), inner)
-         |    }""".stripMargin
-    } else { "" }
-
     s"""impl${traitBounds("TesslaParse + Clone")} TesslaRecordParse for $structName$typeAnnotation {
        |    fn tessla_parse_struct(s: &str) -> (Result<Self, &'static str>, &str) {
        |        let mut inner = s.trim_start();
@@ -411,7 +408,27 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |            }
        |        }
        |        (Ok(result), inner)
-       |    }$tuple_parse
+       |    }${if (!isTuple) ""
+    else {
+      s"""
+         |    fn tessla_parse_tuple(s: &str) -> (Result<Self, &'static str>, &str) {
+         |        let mut inner = s.trim_start();
+         |        let mut i = 1_i64;
+         |        $init
+         |        while !inner.starts_with(")") {
+         |            match i {
+         |${fieldNames
+           .map { name =>
+             s"""${name.substring(1)} => if !parse_struct_inner(&mut result.$name, &mut inner) { break }"""
+           }
+           .mkString(",\n")},
+         |                _ => return (Err("Tuple index out of bounds while parsing"), inner)
+         |            }
+         |            i += 1;
+         |        }
+         |        (Ok(result), inner)
+         |    }""".stripMargin
+    }}
        |}
        |""".stripMargin
   }
