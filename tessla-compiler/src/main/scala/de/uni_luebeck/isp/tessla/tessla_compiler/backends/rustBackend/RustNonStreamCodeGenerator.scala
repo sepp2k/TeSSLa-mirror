@@ -442,15 +442,31 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           s"}"
 
       case "__ite__" | "__staticite__" =>
-        s"tessla_bool! { if (${args(0)}) { ${args(1)} } else { ${args(2)} } }"
+        s"""match /* if */ (${args(0)}) {
+           |    Error(error) => Error(error),
+           |    Value(true) /* then */ => { ${args(1)} },
+           |    Value(false) /* else */ => { ${args(2)} }
+           |}""".stripMargin
       case "__and__" if args.length == 2 =>
-        s"tessla_bool! { (${args(0)}) && (${args(1)}) }"
+        s"""match (${args(0)}) {
+           |    Value(true) /* and */ => { ${args(1)} },
+           |    false_or_error => false_or_error
+           |}""".stripMargin
       case "__and__" =>
-        s"tessla_bool! { (${args(0)}) && (${translateBuiltinFunctionCall(name, args.tail, typeHint, tm)}) }"
+        s"""match (${args(0)}) {
+           |    Value(true) /* and */ => { ${translateBuiltinFunctionCall(name, args.tail, typeHint, tm)} },
+           |    false_or_error => false_or_error
+           |}""".stripMargin
       case "__or__" if args.length == 2 =>
-        s"tessla_bool! { (${args(0)}) || (${args(1)}) }"
+        s"""match (${args(0)}) {
+           |    Value(false) /* or */ => { ${args(1)} },
+           |    true_or_error => true_or_error
+           |}""".stripMargin
       case "__or__" =>
-        s"tessla_bool! { (${args(0)}) || (${translateBuiltinFunctionCall(name, args.tail, typeHint, tm)}) }"
+        s"""match (${args(0)}) {
+           |    Value(false) /* or */ => { ${translateBuiltinFunctionCall(name, args.tail, typeHint, tm)} },
+           |    true_or_error => true_or_error
+           |}""".stripMargin
       case "__not__" | "__bitflip__"    => s"!(${args(0)})"
       case "__negate__" | "__fnegate__" => s"-${args(0)}"
       case "__eq__"                     => s"${args(0)}.eq(&${args(1)})"
