@@ -21,6 +21,7 @@ import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
   ExtractAndWrapFunctions,
+  FormatStringMangler,
   GenerateStructDefinitions,
   SanitizeIdentifiers
 }

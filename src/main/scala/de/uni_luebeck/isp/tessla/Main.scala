@@ -25,13 +25,14 @@ import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentationBridge
 import de.uni_luebeck.isp.tessla.interpreter._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
   ExtractAndWrapFunctions,
+  FormatStringMangler,
   GenerateStructDefinitions,
   SanitizeIdentifiers
 }
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, TesslaCoreToRust}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{ScalaBackend, ScalaCompiler}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
-import de.uni_luebeck.isp.tessla.tessla_compiler.{FormatStringMangler, TesslaCoreToIntermediate, UnusedVarRemove}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{TesslaCoreToIntermediate, UnusedVarRemove}
 import de.uni_luebeck.isp.tessla.tessladoc.DocGenerator
 
 import java.io.{File, IOException}

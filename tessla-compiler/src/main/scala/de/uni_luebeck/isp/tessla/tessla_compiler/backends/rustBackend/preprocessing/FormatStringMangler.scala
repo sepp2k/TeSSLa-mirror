@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package de.uni_luebeck.isp.tessla.tessla_compiler
+package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
+import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
 
 import java.util
 import scala.collection.immutable.ArraySeq
