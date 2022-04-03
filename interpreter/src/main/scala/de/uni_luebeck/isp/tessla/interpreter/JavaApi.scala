@@ -72,21 +72,24 @@ object JavaApi {
     }
 
     def provide(stream: String, value: Int): Boolean =
-      provide(stream, BigInt(value))
+      provideEv(stream, BigInt(value))
 
     def provide(stream: String, value: BigInt): Boolean =
-      provide(stream, value)
+      provideEv(stream, value)
 
     def provide(stream: String, value: Boolean): Boolean =
-      provide(stream, value)
+      provideEv(stream, value)
 
     def provide(stream: String, value: String): Boolean =
-      provide(stream, value)
+      provideEv(stream, value)
 
     def provide(stream: String): Boolean =
-      provide(stream, ConstantEvaluator.Record(Map()))
+      provideEv(stream, ConstantEvaluator.Record(Map()))
 
-    def provide(stream: String, value: Any): Boolean = {
+    def provide(stream: String, value: Any): Boolean =
+      provideEv(stream, value)
+
+    private def provideEv(stream: String, value: Any): Boolean = {
       if (seen.contains(stream)) {
         throw SameTimeStampError(spec.getTime, stream, Location.unknown)
       }
