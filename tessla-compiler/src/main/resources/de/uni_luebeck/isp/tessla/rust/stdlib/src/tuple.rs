@@ -1,4 +1,5 @@
-use crate::{TesslaValue, Error, TesslaDisplay, TesslaParse, TesslaRecordParse, parse_struct_inner};
+use crate::{parse_struct_inner, TesslaDisplay, TesslaParse, TesslaRecordParse, TesslaValue};
+use crate::TesslaValue::*;
 
 macro_rules! unassigned {
     ($val:tt) => {"Value not assigned while parsing"};

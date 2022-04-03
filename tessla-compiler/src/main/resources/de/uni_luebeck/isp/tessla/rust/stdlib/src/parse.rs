@@ -1,7 +1,8 @@
 use std::hash::Hash;
 use std::str::FromStr;
 
-use crate::{TesslaValue, Value, Error, TesslaParse};
+use crate::{TesslaParse, TesslaValue};
+use crate::TesslaValue::*;
 
 fn find_end(string: &str, delim: &str, start: usize) -> usize {
     if (start + delim.len()) <= string.len() && delim == &string[start..(start + delim.len())] {
