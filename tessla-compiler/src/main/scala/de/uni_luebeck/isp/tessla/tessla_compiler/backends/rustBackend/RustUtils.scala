@@ -79,7 +79,10 @@ object RustUtils {
           .sortWith { case ((name1, _), (name2, _)) => structComparison(name1, name2) }
           .map { case (_, (typ, _)) => convertType(typ) }
           .mkString(", ")
-        s"TesslaValue<${RustUtils.getStructName(entries)}<$typeParams>>"
+        if (isStructTuple(entries.toSeq.map { case (name, _) => name }))
+          s"TesslaValue<($typeParams)>"
+        else
+          s"TesslaValue<${getStructName(entries)}<$typeParams>>"
       case TypeParam(name, _) => if (mask_generics) "_" else name.toString
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")

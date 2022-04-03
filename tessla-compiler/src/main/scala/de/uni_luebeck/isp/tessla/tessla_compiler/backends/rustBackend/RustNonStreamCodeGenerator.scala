@@ -19,6 +19,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.{FunctionType => _, _}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{Core, LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
+  structComparison,
   FinalDeclaration,
   FinalLazyDeclaration,
   VariableDeclaration
@@ -284,14 +285,30 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case RecordConstructorExpression(entries, _) if entries.isEmpty =>
         "Value(())" // Unit value
       case RecordConstructorExpression(entries, _) =>
-        val resolvedEntries = entries.map { case (name, (ea, loc)) => (name, (ea.tpe.resolve(tm.resMap), loc)) }
-        val structName = RustUtils.getStructName(resolvedEntries)
+        if (RustUtils.isStructTuple(entries.toSeq.map { case (name, _) => name }))
+          s"Value((${entries.toSeq
+            .sortWith { case ((name1, _), (name2, _)) => structComparison(name1, name2) }
+            .map { case (_, (exprArg, _)) => translateExpressionArg(exprArg, tm, defContext) }
+            .mkString(", ")}))"
+        else {
+          val resolvedEntries = entries.map { case (name, (ea, loc)) => (name, (ea.tpe.resolve(tm.resMap), loc)) }
+          val structName = RustUtils.getStructName(resolvedEntries)
 
-        s"Value($structName { ${entries
-          .map { case (name, (ea, _)) => s"$name: ${translateExpressionArg(ea, tm, defContext)}" }
-          .mkString(", ")} })"
+          s"Value($structName { ${entries
+            .map { case (name, (ea, _)) => s"$name: ${translateExpressionArg(ea, tm, defContext)}" }
+            .mkString(", ")} })"
+        }
       case RecordAccessorExpression(name, target, _, _) =>
-        s"match ${translateExpressionArg(target, tm, defContext)} { Value(value) => value.$name, Error(error) => Error(error) }"
+        val recordNames = target.tpe.asInstanceOf[RecordType].entries.toSeq.map { case (name, _) => name }
+        if (RustUtils.isStructTuple(recordNames)) {
+          val index = name.stripPrefix("_").toInt
+          if (0 < index && index <= recordNames.length)
+            s"match ${translateExpressionArg(target, tm, defContext)} { Value(value) => value.${index - 1}, Error(error) => Error(error) }"
+          else
+            """Error("Invalid tuple index")"""
+        } else
+          s"match ${translateExpressionArg(target, tm, defContext)} { Value(value) => value.$name, Error(error) => Error(error) }"
+
       case _ =>
         throw Diagnostics.CoreASTError("Unexpected ExpressionArg cannot be translated", e.location)
     }

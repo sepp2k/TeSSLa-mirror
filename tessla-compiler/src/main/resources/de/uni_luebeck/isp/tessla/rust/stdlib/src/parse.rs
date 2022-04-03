@@ -1,7 +1,7 @@
 use std::hash::Hash;
 use std::str::FromStr;
 
-use crate::{Error, TesslaParse, TesslaValue, Value};
+use crate::{TesslaValue, Value, Error, TesslaParse};
 
 fn find_end(string: &str, delim: &str, start: usize) -> usize {
     if (start + delim.len()) <= string.len() && delim == &string[start..(start + delim.len())] {
@@ -121,6 +121,24 @@ pub trait TesslaRecordParse where Self: Sized {
     }
 }
 
+pub fn parse_struct_inner<T: TesslaParse>(slot: &mut TesslaValue<T>, string: &mut &str) -> bool {
+    match T::tessla_parse(string) {
+        (Ok(value), rest) => {
+            *slot = Value(value);
+            match rest.trim_start().strip_prefix(",") {
+                Some(next) => *string = next.trim_start(),
+                None => *string = rest.trim_start()
+            }
+            true
+        }
+        (Err(error), rest) => {
+            *slot = Error(error);
+            *string = rest.trim_start();
+            false
+        }
+    }
+}
+
 impl<T: TesslaRecordParse> TesslaParse for T {
     fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) where Self: Sized {
         match s.strip_prefix("{").or_else(|| s.strip_prefix("${")) {
@@ -148,24 +166,6 @@ impl<T: TesslaRecordParse> TesslaParse for T {
                 }
                 None => (Err("Failed to parse Struct/Tuple from String"), s)
             }
-        }
-    }
-}
-
-pub fn parse_struct_inner<T: TesslaParse>(slot: &mut TesslaValue<T>, string: &mut &str) -> bool {
-    match T::tessla_parse(string) {
-        (Ok(value), rest) => {
-            *slot = Value(value);
-            match rest.trim_start().strip_prefix(",") {
-                Some(next) => *string = next.trim_start(),
-                None => *string = rest.trim_start()
-            }
-            true
-        }
-        (Err(error), rest) => {
-            *slot = Error(error);
-            *string = rest.trim_start();
-            false
         }
     }
 }

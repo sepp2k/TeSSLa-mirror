@@ -105,14 +105,17 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
     case RecordType(entries, _) if entries.nonEmpty =>
       entries.foreach { case (_, (typ, _)) => getRecordTypes(typ.resolve(tm.resMap), tm, structDefinitions) }
 
-      // check if this type has already been added
-      val structName = Identifier(RustUtils.getStructName(entries))
-      if (!structDefinitions.contains(structName)) {
-        val genericRecord = RustUtils.genericiseRecordType(typ.resolve(tm.resMap).asInstanceOf[RecordType])
+      // Tuples are handled differently, and pre-generated for one to 12 entries
+      if (!RustUtils.isStructTuple(entries.toSeq.map { case (name, _) => name })) {
+        // check if this type has already been added
+        val structName = Identifier(RustUtils.getStructName(entries))
+        if (!structDefinitions.contains(structName)) {
+          val genericRecord = RustUtils.genericiseRecordType(typ.resolve(tm.resMap).asInstanceOf[RecordType])
 
-        structDefinitions.addOne(
-          structName -> ExternExpression("[rust]Struct", genericRecord).asInstanceOf[DefinitionExpression]
-        )
+          structDefinitions.addOne(
+            structName -> ExternExpression("[rust]Struct", genericRecord).asInstanceOf[DefinitionExpression]
+          )
+        }
       }
 
     case InstantiatedType("Events", Seq(t), _) => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
