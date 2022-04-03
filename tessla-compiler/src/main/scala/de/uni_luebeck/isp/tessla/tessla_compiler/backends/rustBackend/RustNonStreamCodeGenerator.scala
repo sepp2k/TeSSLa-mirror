@@ -277,8 +277,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         s"Value(${value}_f64)"
       case ExpressionRef(id, _, _) if extSpec.spec.definitions.get(id).exists(!_.isInstanceOf[FunctionExpression]) =>
         s"state.var_${id.fullName}.clone()"
-      case ExpressionRef(id, Core.FunctionType(_, _, _, _), _) =>
-        s"var_${id.fullName}"
       case ExpressionRef(id, _, _) =>
         s"var_${id.fullName}.clone()"
       case x: ExternExpression =>

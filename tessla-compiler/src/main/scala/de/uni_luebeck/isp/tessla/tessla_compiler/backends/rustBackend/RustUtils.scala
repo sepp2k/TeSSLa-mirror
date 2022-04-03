@@ -73,7 +73,7 @@ object RustUtils {
         if (use_abstract_fn_type)
           s"impl Fn($params) -> $result"
         else
-          s"TesslaValue<Box<dyn Fn($params) -> $result>>"
+          s"TesslaValue<Rc<dyn Fn($params) -> $result>>"
       case RecordType(entries, _) =>
         val typeParams = entries.toSeq
           .sortWith { case ((name1, _), (name2, _)) => structComparison(name1, name2) }

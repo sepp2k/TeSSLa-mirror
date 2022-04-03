@@ -123,9 +123,9 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
                 functionOuterScope,
                 modifiedPath
               ) match {
-                case functionDefinition: FunctionExpression =>
+                case modifiedFunction: FunctionExpression =>
                   // extract this inner function definition into global scope, mapping id -> modifiedPath
-                  extractedFunctions += id -> (Identifier(modifiedPath), functionDefinition)
+                  extractedFunctions += id -> (Identifier(modifiedPath), modifiedFunction)
                   None
                 case modifiedDefinition =>
                   Some(id -> modifiedDefinition.asInstanceOf[DefinitionExpression])
@@ -134,7 +134,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
           extractFunctionExpressions(result, functionScope, functionOuterScope, s"${definitionPath}_return"),
           location
         )
-        if (isGlobalDef) {
+        if (isGlobalDef || closureArgs.isEmpty) {
           functionExpr
         } else {
           // this function takes all externally scoped arguments, and moves them into a box around the inner function
@@ -199,7 +199,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
    *
    * @param ???
    * @return
-   */ // TODO
+   */
   def remapFunctionApplications(
     e: ExpressionArg,
     outerScope: Set[Identifier]
@@ -207,8 +207,9 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
     e match {
       case ExpressionRef(id, typ: FunctionType, location) =>
         extractedFunctions.get(id) match {
-          case None => ExpressionRef(id, typ, location)
-          case Some((extractedId, FunctionExpression(_, params, _, result, location))) =>
+          case Some((extractedId, FunctionExpression(_, params, body, result, location)))
+              if body.isEmpty && result.tpe.isInstanceOf[FunctionType] =>
+            // If the function body is empty, but it returns a function, it is one of our functions that boxes some scope
             ApplicationExpression(
               ExpressionRef(
                 extractedId,
@@ -221,6 +222,11 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
               ArraySeq.from(params.map { case (id, _, typ) => ExpressionRef(id, typ) }),
               location
             )
+          case Some((extractedId, function)) =>
+            // Otherwise it is just extracted from its original location and can be referred to by reference
+            ExpressionRef(extractedId, function.tpe, function.location)
+          case None =>
+            ExpressionRef(id, typ, location)
         }
 
       case FunctionExpression(typeParams, params, body, result, location) =>
@@ -271,111 +277,6 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
       case string: StringLiteralExpression => string
     }
   }
-
-  /*
-  private def boxScopedDependencies(
-    function: FunctionExpression,
-    isGlobalDefinition: Boolean = false
-  ): ExpressionArg = function match {
-    case FunctionExpression(typeParams, params, body, result, location) =>
-      argumentScopeMap.push(mutable.Map.empty[Identifier, (Identifier, Type)])
-
-      def inCurrentScope(name: Identifier): Boolean = {
-        params.exists { case (id, _, _) => id == name } || body.exists { case (id, _) => id == name }
-      }
-
-      val sanitizedBody = body.map {
-        case (name, definition) =>
-          nameStack.push(name)
-          val expression = extractFunctionExpressions(definition, inCurrentScope)
-          if (nameStack.pop() != name) {
-            System.err.println("Uneven name defs")
-          }
-          name -> expression.asInstanceOf[DefinitionExpression]
-      }
-      val sanitizedResult =
-        extractFunctionExpressions(result, inCurrentScope)
-
-      val remappedScope = argumentScopeMap.pop()
-
-      // TODO:
-      //  fun name_extracted(arg1, arg2, scope1, scope2) { ... }
-      //  fun name_boxing(scope1, scope2) { Box::new(move |arg1, arg2| name_extracted(arg1, arg2, scope1, scope2)) }
-      //
-
-      if (isGlobalDefinition) {
-        // this function is already defined globally
-        FunctionExpression(typeParams, params, sanitizedBody, sanitizedResult, location)
-      } else {
-        // this function is not defined globally
-
-        val remappedParams = remappedScope.toList.map { case (_, (param, typ)) => (param, StrictEvaluation, typ) }
-
-        val name = nameStack.head
-
-        val functionName = appendToIdentifier(name, "$fun")
-        val functionExpr = FunctionExpression(
-          typeParams,
-          params ++ remappedParams,
-          sanitizedBody,
-          sanitizedResult,
-          location
-        )
-
-        if (recursivelyCalledNames.contains(name)) {
-          extractedFunctions.addOne(
-            functionName -> resolveRecursiveCall(
-              name,
-              functionName,
-              functionExpr.tpe,
-              remappedScope.toSeq.map { case (_, (param, typ)) => ExpressionRef(param, typ) },
-              functionExpr
-            ).asInstanceOf[DefinitionExpression]
-          )
-        } else {
-          extractedFunctions.addOne(functionName -> functionExpr)
-        }
-
-        val boxName = appendToIdentifier(name, "$box")
-        val boxExpr = FunctionExpression(
-          typeParams,
-          remappedParams,
-          Map(),
-          boxExpression(
-            FunctionExpression(
-              typeParams,
-              params,
-              Map(),
-              ApplicationExpression(
-                TypeApplicationExpression(
-                  ExpressionRef(functionName, functionExpr.tpe, location),
-                  typeParams.map { typeName => TypeParam(typeName) }
-                ),
-                ArraySeq.from(
-                  params.map { case (id, _, typ) => ExpressionRef(id, typ) }
-                    ++ remappedScope.map { case (_, (param, typ)) => ExpressionRef(param, typ) }
-                ),
-                location
-              ),
-              location
-            )
-          )
-        )
-        extractedFunctions.addOne(boxName -> boxExpr)
-
-        ApplicationExpression(
-          TypeApplicationExpression(
-            ExpressionRef(boxName, boxExpr.tpe, location),
-            typeParams.map { typeName => TypeParam(typeName) }
-          ),
-          ArraySeq.from(remappedScope.map {
-            case (id, (_, typ)) => ExpressionRef(id, typ, location)
-          }),
-          location
-        )
-      }
-  }
-   */
 
   private def boxExpression(expr: ExpressionArg): ApplicationExpression = {
     ApplicationExpression(
