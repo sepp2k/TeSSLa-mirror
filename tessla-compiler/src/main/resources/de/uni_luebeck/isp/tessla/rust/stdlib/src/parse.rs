@@ -76,11 +76,11 @@ impl TesslaParse for String {
         let end = find_end(&string, "\"", 1);
         (if &string[0..1] == "\"" && &string[end..(end + 1)] == "\"" {
             Ok(string[1..end]
-                .replace("\\\\n", "\n")
-                .replace("\\\\r", "\r")
-                .replace("\\\\t", "\t")
-                .replace("\\\\\"", "\"")
-                .replace("\\\\\\\\", "\\"))
+                .replace("\\n", "\n")
+                .replace("\\r", "\r")
+                .replace("\\t", "\t")
+                .replace("\\\"", "\"")
+                .replace("\\\\", "\\"))
         } else {
             Err("Failed to parse String value")
         }, &string[(end + 1)..])
