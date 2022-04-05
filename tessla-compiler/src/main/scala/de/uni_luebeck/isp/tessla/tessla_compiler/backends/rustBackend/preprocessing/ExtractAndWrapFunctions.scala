@@ -29,8 +29,18 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
 
   private val extractedFunctions = mutable.Map.empty[Identifier, (Identifier, FunctionExpression)]
 
+  private val knownNamedFunctions = mutable.Set.empty[Identifier]
+
   override def translate(spec: Specification): TranslationPhase.Result[Specification] = {
     val globalScope = spec.definitions.keySet
+
+    spec.definitions.foreach {
+      case (id, definition) =>
+        if (definition.isInstanceOf[FunctionExpression]) {
+          knownNamedFunctions.addOne(id)
+        }
+        findFunctionNames(definition)
+    }
 
     val definitions = spec.definitions.map {
       case (id, definition) =>
@@ -45,6 +55,33 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
     }
 
     Success(Specification(spec.annotations, spec.in, remappedDefinitions, spec.out, spec.maxIdentifier), Seq())
+  }
+
+  /**
+   * Traverse
+   * @param e
+   * @param currentScope
+   * @param outerScope
+   * @return
+   */
+  private def findFunctionNames(
+    e: ExpressionArg
+  ): Unit = e match {
+    case FunctionExpression(_, _, body, result, _) =>
+      knownNamedFunctions.addAll(body.flatMap{ case (id, definition) => if (definition.isInstanceOf[FunctionExpression]) Some(id) else None })
+      body.foreach { case (_, definition) => findFunctionNames(definition) }
+      findFunctionNames(result)
+    case ApplicationExpression(applicable, args, _) =>
+      findFunctionNames(applicable)
+      args.foreach { e => findFunctionNames(e) }
+    case TypeApplicationExpression(applicable, _, _) =>
+      findFunctionNames(applicable)
+    case RecordConstructorExpression(entries, _) =>
+      entries.foreach { case (_, (expr, _)) => findFunctionNames(expr) }
+    case RecordAccessorExpression(_, target, _, _) =>
+      findFunctionNames(target)
+
+    case _: ExpressionRef | _: ExternExpression | _: StringLiteralExpression | _: IntLiteralExpression | _: FloatLiteralExpression =>
   }
 
   /**
@@ -109,7 +146,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
         val closureArgs = findClosureArgs(e, functionScope, functionOuterScope).filterNot {
           // FIXME I imagine this filter is not exhaustive...
           //  don't include reference to self in arguments to be captured
-          case (id, _, typ) => typ.isInstanceOf[FunctionType]
+          case (id, _, _) => knownNamedFunctions.contains(id)
         }.toList
         val functionExpr = FunctionExpression(
           typeParams,
