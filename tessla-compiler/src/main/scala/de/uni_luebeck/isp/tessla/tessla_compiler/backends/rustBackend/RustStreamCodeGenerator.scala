@@ -224,7 +224,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
-    val function = translateLimitedFunctionExpression(function_expr)
+    val function = rustNonStreamCodeGenerator.translateExpressionArg(
+      function_expr,
+      TypeArgManagement.empty
+    )
     currSrc.computation.append(s"lift${arguments.size}(&mut $output, ${arguments.mkString(", ")}, $function);")
   }
 
@@ -247,10 +250,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
-    // FIXME slift cannot handle TesslaValue<> functions, therefore we limit the possible function expressions
-    //  to only allow direct references, and extern() references, each optionally with a type application.
-    //  At the moment these four cases are the only possible options, but changes in the constant folder may change this
-    val function = translateLimitedFunctionExpression(function_expr)
+    val function = rustNonStreamCodeGenerator.translateExpressionArg(
+      function_expr,
+      TypeArgManagement.empty
+    )
     currSrc.computation.append(s"slift${arguments.size}(&mut $output, ${arguments.mkString(", ")}, $function);")
   }
 
@@ -362,7 +365,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
       rustNonStreamCodeGenerator.translateExpressionArg(init_expr, TypeArgManagement.empty)
     val output = createStreamContainer(output_id, output_type, s"init_with_value($init)", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
-    val function = translateLimitedFunctionExpression(function_expr)
+    val function = rustNonStreamCodeGenerator.translateExpressionArg(
+      function_expr,
+      TypeArgManagement.empty
+    )
     currSrc.computation.append(s"fold(&mut $output, &$stream, $function);")
   }
 
@@ -385,7 +391,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
-    val function = translateLimitedFunctionExpression(function_expr)
+    val function = rustNonStreamCodeGenerator.translateExpressionArg(
+      function_expr,
+      TypeArgManagement.empty
+    )
     currSrc.computation.append(s"reduce(&mut $output, &$stream, $function);")
   }
 
