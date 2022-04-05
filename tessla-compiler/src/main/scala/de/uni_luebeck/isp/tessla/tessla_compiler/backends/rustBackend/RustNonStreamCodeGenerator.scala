@@ -145,14 +145,16 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           .mkString(", ")
         val returnType = RustUtils.convertType(result.tpe, use_abstract_fn_type = true)
 
-        srcSegments.static.append(s"fn fn_$id$traitBounds($functionParams) -> $returnType {")
+        srcSegments.static.append(s"fn var_$id$traitBounds($functionParams) -> $returnType {")
         srcSegments.static.appendAll(translateBody(body, result, TypeArgManagement.empty, extSpec.spec.definitions))
         srcSegments.static.append("}")
 
+      /*
         val functionType = RustUtils.convertType(definition.tpe)
         srcSegments.stateStatic.append(s"let var_$id = Value(fn_$id);")
         srcSegments.stateDef.append(s"var_$id: $functionType")
         srcSegments.stateInit.append(s"var_$id: var_$id.clone()")
+       */
       case e =>
         throw Diagnostics.CoreASTError("Failed to translate expression as static function", e.location)
     }
@@ -277,7 +279,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case FloatLiteralExpression(value, _) =>
         s"Value(${value}_f64)"
       case ExpressionRef(id, _, _) if extSpec.spec.definitions.get(id).exists(!_.isInstanceOf[FunctionExpression]) =>
-        s"state.var_${id.fullName}.clone()"
+        s"Value(var_${id.fullName})"
       case ExpressionRef(id, _, _) =>
         s"var_${id.fullName}.clone()"
       case x: ExternExpression =>
