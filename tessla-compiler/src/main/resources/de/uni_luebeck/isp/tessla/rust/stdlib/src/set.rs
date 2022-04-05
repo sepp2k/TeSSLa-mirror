@@ -101,7 +101,7 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     }
 
     #[inline]
-    pub fn fold<U>(&self, start: TesslaValue<U>, function: impl Fn(TesslaValue<U>, TesslaValue<T>) -> TesslaValue<U>) -> TesslaValue<U> {
+    pub fn fold<U>(&self, start: TesslaValue<U>, function: TesslaValue<Rc<dyn Fn(TesslaValue<U>, TesslaValue<T>) -> TesslaValue<U>>>) -> TesslaValue<U> {
         match self {
             Error(error) => Error(error),
             Value(value) => {

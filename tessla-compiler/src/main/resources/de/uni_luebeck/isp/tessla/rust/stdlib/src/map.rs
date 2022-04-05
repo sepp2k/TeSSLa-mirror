@@ -51,7 +51,7 @@ impl<K: Clone + Eq + Hash, V: Clone + Eq + Hash> TesslaMap<K, V> {
     }
 
     #[inline]
-    pub fn fold<A>(&self, start: TesslaValue<A>, function: impl Fn(TesslaValue<A>, K, V) -> TesslaValue<A>) -> TesslaValue<A> {
+    pub fn fold<A>(&self, start: TesslaValue<A>, function: TesslaValue<Rc<dyn Fn(TesslaValue<A>, K, V) -> TesslaValue<A>>>) -> TesslaValue<A> {
         match self {
             Error(error) => Error(error),
             Value(map) => {

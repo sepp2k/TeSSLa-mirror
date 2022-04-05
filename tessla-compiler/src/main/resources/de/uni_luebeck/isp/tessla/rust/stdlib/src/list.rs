@@ -43,7 +43,7 @@ impl<T: Clone> TesslaList<T> {
     }
 
     #[inline]
-    pub fn fold<A>(&self, start: TesslaValue<A>, function: impl Fn(TesslaValue<A>, T) -> TesslaValue<A>) -> TesslaValue<A> {
+    pub fn fold<A>(&self, start: TesslaValue<A>, function: TesslaValue<Rc<dyn Fn(TesslaValue<A>, T) -> TesslaValue<A>>>) -> TesslaValue<A> {
         match self {
             Error(error) => Error(error),
             Value(value) => {
