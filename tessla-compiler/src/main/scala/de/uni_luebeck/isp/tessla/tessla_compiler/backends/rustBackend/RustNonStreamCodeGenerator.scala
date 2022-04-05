@@ -315,25 +315,10 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     if (fields.forall { case (_, tpe) => canBeHashed(tpe) })
       srcSegments.static.append("#[derive(std::hash::Hash)]")
     srcSegments.static.append(s"""
+       |#[derive(Hash, Clone, PartialEq, Eq)]
        |pub struct $structName$typeAnnotation {
        |    ${fields.map { case (name, tpe) => s"$name: ${convertType(tpe, mask_generics = false)}" }.mkString(",\n")}
        |}""".stripMargin)
-    srcSegments.static.append(s"""
-       |impl${traitBounds("Clone")} Clone for $structName$typeAnnotation {
-       |    fn clone(&self) -> Self {
-       |        $structName {
-       |${fields.map { case (name, _) => s"$name: self.$name.clone()" }.mkString(",\n")}
-       |        }
-       |    }
-       |}""".stripMargin)
-    srcSegments.static.append(s"""
-       |impl${traitBounds("PartialEq + Clone")} Eq for $structName$typeAnnotation {}
-       |impl${traitBounds("PartialEq + Clone")} PartialEq for $structName$typeAnnotation {
-       |    fn eq(&self, other: &Self) -> bool {
-       |${fields.map { case (name, _) => s"PartialEq::eq(&self.$name, &other.$name)" }.mkString("\n&& ")}
-       |    }
-       |}
-       |""".stripMargin)
     val fieldNames = fields.map { case (name, _) => name }
     val isTuple = RustUtils.isStructTuple(fieldNames)
     if (isTuple) {
