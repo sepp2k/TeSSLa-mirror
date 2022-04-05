@@ -131,10 +131,11 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
       paramTypes.foreach { case (_, typ) => getRecordTypes(typ.resolve(tm.resMap), tm, structDefinitions) }
       getRecordTypes(resultType.resolve(tm.resMap), tm, structDefinitions)
 
-    case InstantiatedType("Bool", Seq(), _) |
-         InstantiatedType("Int", Seq(), _) |
-         InstantiatedType("Float", Seq(), _) |
-         InstantiatedType("String", Seq(), _) |
+    case StringType |
+         FloatType |
+         IntType |
+         BoolType |
+         UnitType |
          TypeParam(_, _) => ()
 
     case _ => throw Diagnostics.CommandNotSupportedError(s"Encountered unknown type while looking for record types: $typ", typ.location)

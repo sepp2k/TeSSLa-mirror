@@ -210,7 +210,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         val ret = translateFunctionCall(e, argNames, newTm, defContext)
         val argSignature = typ.paramTypes.zip(argNames)
           .map{ case ((_, typ), name) => s"$name: ${RustUtils.convertType(typ.resolve(newTm.resMap), mask_generics = true)}" }
-        s"TesslaValue::wrap(|${argSignature.mkString(", ")}|{ return $ret })"
+        val fnPointer = s"fn(${typ.paramTypes.map(_ => "_").mkString(", ")}) -> _"
+        s"TesslaValue::wrap((|${argSignature.mkString(", ")}|{ return $ret }) as $fnPointer)"
       case ExternExpression(name, _, location) =>
         throw Diagnostics.CoreASTError(s"""Invalid extern(\"$name\") expression could not be translated""", location)
     }
