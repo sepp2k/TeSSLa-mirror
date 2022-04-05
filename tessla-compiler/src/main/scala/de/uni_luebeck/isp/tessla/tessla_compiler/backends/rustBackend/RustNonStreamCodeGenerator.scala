@@ -352,13 +352,12 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |""".stripMargin)
     val fieldNames = fields.map { case (name, _) => name }
     val isTuple = RustUtils.isStructTuple(fieldNames)
-    val wrappedTypeAnnotation = s"<${genericTypes.map(t => s"TesslaValue<$t>").mkString(", ")}>"
     if (isTuple) {
-      srcSegments.static.append(generateTupleDisplay(structName, fieldNames, traitBounds, wrappedTypeAnnotation))
+      srcSegments.static.append(generateTupleDisplay(structName, fieldNames, traitBounds, typeAnnotation))
     } else {
-      srcSegments.static.append(generateStructDisplay(structName, fieldNames, traitBounds, wrappedTypeAnnotation))
+      srcSegments.static.append(generateStructDisplay(structName, fieldNames, traitBounds, typeAnnotation))
     }
-    srcSegments.static.append(generateStructParser(structName, fieldNames, isTuple, traitBounds, wrappedTypeAnnotation))
+    srcSegments.static.append(generateStructParser(structName, fieldNames, isTuple, traitBounds, typeAnnotation))
   }
 
   private def generateTupleDisplay(
