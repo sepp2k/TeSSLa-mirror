@@ -39,26 +39,30 @@ object RustUtils {
    *                             In places where we cannot use this, we instead use {{{Box<dyn Fn(...) -> ..>}}}
    * @return The converted type
    */
-  def convertType(t: Type, mask_generics: Boolean = false, use_abstract_fn_type: Boolean = false): String = {
-    t match {
-      case InstantiatedType("Events", Seq(t), _)     => convertType(t, mask_generics, use_abstract_fn_type)
-      case RecordType(entries, _) if entries.isEmpty => "TesslaUnit"
-      case InstantiatedType("Bool", Seq(), _)        => "TesslaBool"
-      case InstantiatedType("Int", Seq(), _)         => "TesslaInt"
-      case InstantiatedType("Float", Seq(), _)       => "TesslaFloat"
-      case InstantiatedType("String", Seq(), _)      => "TesslaString"
+  def convertType(
+    t: Type,
+    mask_generics: Boolean = false,
+    wrap_type: Boolean = true
+  ): String = {
+    val typName = t match {
+      case InstantiatedType("Events", Seq(t), _)     => convertType(t, mask_generics, wrap_type = false)
+      case RecordType(entries, _) if entries.isEmpty => "()"
+      case InstantiatedType("Bool", Seq(), _)        => "bool"
+      case InstantiatedType("Int", Seq(), _)         => "i64"
+      case InstantiatedType("Float", Seq(), _)       => "f64"
+      case InstantiatedType("String", Seq(), _)      => "String"
       case InstantiatedType("Option", Seq(t), _) =>
-        s"TesslaOption<${convertType(t, mask_generics, use_abstract_fn_type)}>"
+        s"Option<${convertType(t, mask_generics)}>"
       case InstantiatedType("Set", Seq(t), _) =>
-        s"TesslaSet<${convertType(t, mask_generics, use_abstract_fn_type)}>"
+        s"HashSet<${convertType(t, mask_generics)}>"
       case InstantiatedType("Map", Seq(t1, t2), _) =>
-        s"TesslaMap<${convertType(t1, mask_generics, use_abstract_fn_type)}, ${convertType(t2, mask_generics, use_abstract_fn_type)}>"
+        s"HashMap<${convertType(t1, mask_generics)}, ${convertType(t2, mask_generics)}>"
       case InstantiatedType("List", Seq(t), _) =>
-        s"TesslaList<${convertType(t, mask_generics, use_abstract_fn_type)}>"
+        s"Vector<${convertType(t, mask_generics)}>"
       case InstantiatedType(n, Seq(), _) if n.startsWith("native:") => n.stripPrefix("native:")
       case InstantiatedType(n, tps, _) if n.startsWith("native:") =>
         s"${n.stripPrefix("native:")}<${tps
-          .map { t => convertType(t, mask_generics, use_abstract_fn_type) }
+          .map { t => convertType(t, mask_generics) }
           .mkString(", ")}>"
       case FunctionType(_, paramTypes, resultType, _) =>
         // abstract fn types may not be used for parameter/return types of abstract functions
@@ -70,23 +74,20 @@ object RustUtils {
           }
           .mkString(", ")
         val result = convertType(resultType, mask_generics)
-        if (use_abstract_fn_type)
-          s"impl Fn($params) -> $result"
-        else
-          s"TesslaValue<Rc<dyn Fn($params) -> $result>>"
+        s"Rc<dyn Fn($params) -> $result>"
       case RecordType(entries, _) =>
         val typeParams = entries.toSeq
           .sortWith { case ((name1, _), (name2, _)) => structComparison(name1, name2) }
-          .map { case (_, (typ, _)) => convertType(typ) }
-          .mkString(", ")
+          .map { case (_, (typ, _)) => typ }
         if (isStructTuple(entries.toSeq.map { case (name, _) => name }))
-          s"TesslaValue<($typeParams)>"
+          s"(${typeParams.map(convertType(_, mask_generics)).mkString(", ")},)"
         else
-          s"TesslaValue<${getStructName(entries)}<$typeParams>>"
-      case TypeParam(name, _) => if (mask_generics) "_" else name.toString
+          s"${getStructName(entries)}<${typeParams.map(convertType(_, mask_generics, wrap_type = false)).mkString(", ")}>"
+      case TypeParam(name, _) => if (mask_generics) "_" else name.toString // TODO
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
     }
+    if (wrap_type) s"TesslaValue<$typName>" else typName
   }
 
   /**
