@@ -149,7 +149,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    * @return The modified specification.
    */
   def modifyFormatStringSlifts(spec: Specification, formatStrings: mutable.HashMap[String, String]): Specification = {
-    val definitions = spec.definitions.map {
+    val definitions = spec.definitions.flatMap {
       case (id, defi) if formatStrings.contains(id.fullName) =>
         var inputStream: ExpressionArg = null
         var inputStreamType: Type = null
@@ -169,66 +169,66 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
         val fs_spec = parseFormatString(formatStrings(id.fullName))
         val fstring = produceRustFormatString(fs_spec)
 
-        (
-          id,
-          ApplicationExpression(
-            ExternExpression(
-              "slift",
-              FunctionType(
-                List(), // Identifier
-                List( // Parameter
-                  (StrictEvaluation, inputStreamType),
-                  (
-                    StrictEvaluation,
-                    FunctionType(List(), List((StrictEvaluation, inputStreamType)), InstantiatedType("String", List()))
-                  )
-                ),
-                InstantiatedType("Events", List(InstantiatedType("String", List()))) // Return type
-              )
-            ),
-            ArraySeq( // slift arguments: input stream and lambda that calls format!
-              inputStream,
-              FunctionExpression(
-                List(),
-                List((Identifier("x"), StrictEvaluation, inputStreamType)),
-                Map(),
-                (fs_spec.padSign, fs_spec.formatType == 'g') match {
+        val fn_format = FunctionExpression(
+          List(),
+          List((Identifier("x"), StrictEvaluation, inputStreamType)),
+          Map(),
+          (fs_spec.padSign, fs_spec.formatType == 'g') match {
 
-                  /* The following four methods generate funky format string code because Rusts format! macro supports
-                   * neither sign padding nor the %g format specifier.
-                   */
+            /* The following four methods generate funky format string code because Rusts format! macro supports
+             * neither sign padding nor the %g format specifier.
+             */
 
-                  /* neither sign padding (' ') nor %g
-                   */
-                  case (false, false) => generateNoSignNoG(fstring, inputStreamType, fs_spec)
+            /* neither sign padding (' ') nor %g
+             */
+            case (false, false) => generateNoSignNoG(fstring, inputStreamType, fs_spec)
 
-                  /* %g
+            /* %g
 
-                  if 10e-4_f64 <= fabs(value) && fabs(value) < 10_f64.powi(precision) {
-                    format_to_type_f(modified_spec, value)
-                  } else {
-                    format_to_type_e(modified_spec, value)
-                  }
-                   */
-                  case (false, true) => generateNoSignG(fstring, inputStreamType, fs_spec)
+            if 10e-4_f64 <= fabs(value) && fabs(value) < 10_f64.powi(precision) {
+              format_to_type_f(modified_spec, value)
+            } else {
+              format_to_type_e(modified_spec, value)
+            }
+             */
+            case (false, true) => generateNoSignG(fstring, inputStreamType, fs_spec)
 
-                  /* sign padding (' ')
+            /* sign padding (' ')
 
-                  if value < 0 {
-                    format!("{...}")
-                  } else {
-                    format(" {...}")
-                  }
-                   */
-                  case (true, false) => generateSignPaddingNoG(fstring, inputStreamType, fs_spec)
+            if value < 0 {
+              format!("{...}")
+            } else {
+              format(" {...}")
+            }
+             */
+            case (true, false) => generateSignPaddingNoG(fstring, inputStreamType, fs_spec)
 
-                  case (true, true) => generateSignPaddingG(fstring, inputStreamType, fs_spec)
-                }
-              )
+            case (true, true) => generateSignPaddingG(fstring, inputStreamType, fs_spec)
+          }
+        )
+        val slift_format = ApplicationExpression(
+          ExternExpression(
+            "slift",
+            FunctionType(
+              List(), // Identifier
+              List( // Parameter
+                (StrictEvaluation, inputStreamType),
+                (StrictEvaluation, fn_format.tpe)
+              ),
+              InstantiatedType("Events", List(InstantiatedType("String", List()))) // Return type
             )
+          ),
+          ArraySeq( // slift arguments: input stream and lambda that calls format!
+            inputStream,
+            ExpressionRef(Identifier(s"fmt_${id.fullName}"), fn_format.tpe)
           )
         )
-      case other => other
+
+        Seq(
+          id -> slift_format.asInstanceOf[DefinitionExpression],
+          Identifier(s"fmt_${id.fullName}") -> fn_format.asInstanceOf[DefinitionExpression]
+        )
+      case other => Seq(other)
     }
 
     Specification(spec.annotations, spec.in, definitions, spec.out, spec.maxIdentifier)
