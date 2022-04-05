@@ -103,7 +103,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
       default_expr,
       TypeArgManagement.empty
     )
-    val output = createStreamContainer(output_id, output_type, s"init_with_value(TesslaValue::wrap($default))", currSrc)
+    val output = createStreamContainer(output_id, output_type, s"init_with_value($default)", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
     currSrc.computation.append(s"default(&mut $output, &$stream);")
   }
