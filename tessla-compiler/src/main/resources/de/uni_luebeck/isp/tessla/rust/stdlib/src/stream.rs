@@ -164,6 +164,12 @@ pub trait TesslaFun<Base: ?Sized> {
     fn wrap(f: Base) -> Self;
 }
 
+impl<T> TesslaFun<TesslaValue<T>> for TesslaValue<T> {
+    fn wrap(f: TesslaValue<T>) -> Self {
+        f
+    }
+}
+
 macro_rules! tessla_wrap_fn {
     ($( $arg:ident ),*) => {
         impl<F, R, $($arg),*> TesslaFun<F> for TesslaValue<Rc<dyn Fn($($arg),*) -> R>>

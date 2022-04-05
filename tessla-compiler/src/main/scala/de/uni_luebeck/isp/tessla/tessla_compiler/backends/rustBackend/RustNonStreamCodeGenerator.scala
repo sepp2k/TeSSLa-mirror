@@ -280,8 +280,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         s"Value(${value.toLong}_i64)"
       case FloatLiteralExpression(value, _) =>
         s"Value(${value}_f64)"
-      case ExpressionRef(id, _, _) if extSpec.spec.definitions.get(id).exists(!_.isInstanceOf[FunctionExpression]) =>
-        s"Value(var_${id.fullName})"
+      case ExpressionRef(id, _, _) if extSpec.spec.definitions.get(id).exists(_.isInstanceOf[FunctionExpression]) =>
+        s"var_${id.fullName}"
       case ExpressionRef(id, _, _) =>
         s"var_${id.fullName}.clone()"
       case x: ExternExpression =>
