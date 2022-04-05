@@ -20,11 +20,13 @@ fn find_end(string: &str, delim: &str, start: usize) -> usize {
     }
 }
 
-fn find_num_boundary(s: &str) -> usize {
+fn find_num_boundary(s: &str, allow_decimal_sep: bool) -> usize {
     let mut boundary = 0_usize;
+    let mut decimal_sep = false;
     for char in s.chars() {
         match char {
-            '+' | '-' | '.' => {}
+            '+' | '-' if boundary == 0 => {}
+            '.' if allow_decimal_sep && !decimal_sep => { decimal_sep = true }
             _ if char.is_alphanumeric() => {}
             _ => break
         }
@@ -45,9 +47,10 @@ impl TesslaParse for bool {
     }
 }
 
+// TODO support for hex/octal input parsing
 impl TesslaParse for i64 {
     fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
-        match s.split_at(find_num_boundary(s)) {
+        match s.split_at(find_num_boundary(s, false)) {
             (number, rest) => (match i64::from_str(number) {
                 Ok(value) => Ok(value),
                 Err(_) => Err("Failed to parse Int from String"),
@@ -56,9 +59,10 @@ impl TesslaParse for i64 {
     }
 }
 
+// TODO support scientific notation input parsing
 impl TesslaParse for f64 {
     fn tessla_parse(s: &str) -> (Result<Self, &'static str>, &str) {
-        match s.split_at(find_num_boundary(s)) {
+        match s.split_at(find_num_boundary(s, true)) {
             (number, rest) => (match f64::from_str(number) {
                 Ok(value) => Ok(value),
                 Err(_) => Err("Failed to parse Float from String"),
