@@ -439,11 +439,11 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     name match {
 
       case "__[rust]box__" => s"Value(Rc::new(move ${args(0)}))"
-      case "__[rust]format__" =>
-        s"match ${args(1)} { " +
-          s"Value(val) => Value(format!(${args(0).substring(6, args(0).length - 13)}, val)), " +
-          s"Error(err) => Error(err) " +
-          s"}"
+      case "__[rust]format__" => // FIXME move handling of __[rust] interns one step up, to avoid translating (and then substring extracting) the string literal here
+        s"""match ${args(1)} {
+           |    Error(error) => Error(error),
+           |    Value(value) => Value(format!(${args(0).substring(6, args(0).length - 13)}, value))
+           |}""".stripMargin
 
       case "__ite__" | "__staticite__" =>
         s"""match /* if */ (${args(0)}) {
