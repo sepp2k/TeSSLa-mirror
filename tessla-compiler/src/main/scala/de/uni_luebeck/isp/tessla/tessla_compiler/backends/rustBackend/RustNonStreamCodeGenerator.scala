@@ -138,7 +138,9 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     definition match {
       case FunctionExpression(_, params, body, result, _) =>
         val genericTypes = RustUtils.getGenericTypeNames(params.map { case (_, _, typ) => typ } :+ result.tpe)
-        val traitBounds = s"<${genericTypes.map(t => s"$t: 'static + Clone").mkString(", ")}>"
+        val traitBounds =
+          if (genericTypes.isEmpty) ""
+          else s"<${genericTypes.map(t => s"$t: 'static + Clone").mkString(", ")}>"
 
         val functionParams = params
           .map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe)}" }
