@@ -44,7 +44,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
 
     val definitions = spec.definitions.map {
       case (id, definition) =>
-        val expression = extractFunctionExpressions(definition, globalScope, Set(), id.fullName, isGlobalDef = true)
+        val expression = extractFunctionExpressions(definition, globalScope, Set(), id.fullName)
         id -> expression.asInstanceOf[DefinitionExpression]
     }
 
@@ -68,7 +68,9 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
     e: ExpressionArg
   ): Unit = e match {
     case FunctionExpression(_, _, body, result, _) =>
-      knownNamedFunctions.addAll(body.flatMap{ case (id, definition) => if (definition.isInstanceOf[FunctionExpression]) Some(id) else None })
+      knownNamedFunctions.addAll(body.flatMap {
+        case (id, definition) => if (definition.isInstanceOf[FunctionExpression]) Some(id) else None
+      })
       body.foreach { case (_, definition) => findFunctionNames(definition) }
       findFunctionNames(result)
     case ApplicationExpression(applicable, args, _) =>
@@ -81,7 +83,8 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
     case RecordAccessorExpression(_, target, _, _) =>
       findFunctionNames(target)
 
-    case _: ExpressionRef | _: ExternExpression | _: StringLiteralExpression | _: IntLiteralExpression | _: FloatLiteralExpression =>
+    case _: ExpressionRef | _: ExternExpression | _: StringLiteralExpression | _: IntLiteralExpression |
+        _: FloatLiteralExpression =>
   }
 
   /**
@@ -135,19 +138,12 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
     e: ExpressionArg,
     currentScope: Set[Identifier],
     outerScope: Set[Identifier],
-    definitionPath: String,
-    isGlobalDef: Boolean = false
+    definitionPath: String
   ): ExpressionArg = {
     e match {
       case FunctionExpression(typeParams, params, body, result, location) =>
         val functionScope = (params.map { case (id, _, _) => id } ++ body.map { case (id, _) => id }).toSet
         val functionOuterScope = outerScope ++ currentScope
-        // find all ExpressionRefs that do not refer to something in current+global scope
-        val closureArgs = findClosureArgs(e, functionScope, functionOuterScope).filterNot {
-          // FIXME I imagine this filter is not exhaustive...
-          //  don't include reference to self in arguments to be captured
-          case (id, _, _) => knownNamedFunctions.contains(id)
-        }.toList
         val functionExpr = FunctionExpression(
           typeParams,
           params,
@@ -171,13 +167,17 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
           extractFunctionExpressions(result, functionScope, functionOuterScope, s"${definitionPath}_return"),
           location
         )
-        if (isGlobalDef || closureArgs.isEmpty) {
+        // find all ExpressionRefs that do not refer to something in current+global scope
+        val closureArgs = findClosureArgs(e, functionScope, functionOuterScope).filterNot {
+          case (id, _, _) => knownNamedFunctions.contains(id)
+        }
+        if (closureArgs.isEmpty) {
           functionExpr
         } else {
           // this function takes all externally scoped arguments, and moves them into a box around the inner function
           FunctionExpression(
             List(),
-            closureArgs,
+            closureArgs.toList,
             Map(),
             functionExpr
           )
