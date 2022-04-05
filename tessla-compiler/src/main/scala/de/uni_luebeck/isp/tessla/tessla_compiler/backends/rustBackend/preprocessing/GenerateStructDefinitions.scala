@@ -19,7 +19,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preproces
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
-import de.uni_luebeck.isp.tessla.tessla_compiler.TypeArgManagement
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, TypeArgManagement}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustUtils, TesslaCoreToRust}
 
 import scala.collection.mutable
@@ -120,12 +120,23 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
 
     case InstantiatedType("Events", Seq(t), _) => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
     case InstantiatedType("Option", Seq(t), _) => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
+    case InstantiatedType("Set", Seq(t), _) => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
+    case InstantiatedType("List", Seq(t), _) => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
+    case InstantiatedType("Map", Seq(k, v), _) =>
+      getRecordTypes(k.resolve(tm.resMap), tm, structDefinitions)
+      getRecordTypes(v.resolve(tm.resMap), tm, structDefinitions)
     case InstantiatedType(n, types, _) if n.startsWith("native:") =>
       types.foreach(typ => getRecordTypes(typ.resolve(tm.resMap), tm, structDefinitions))
     case FunctionType(_, paramTypes, resultType, _) =>
       paramTypes.foreach { case (_, typ) => getRecordTypes(typ.resolve(tm.resMap), tm, structDefinitions) }
       getRecordTypes(resultType.resolve(tm.resMap), tm, structDefinitions)
 
-    case _ => ()
+    case InstantiatedType("Bool", Seq(), _) |
+         InstantiatedType("Int", Seq(), _) |
+         InstantiatedType("Float", Seq(), _) |
+         InstantiatedType("String", Seq(), _) |
+         TypeParam(_, _) => ()
+
+    case _ => throw Diagnostics.CommandNotSupportedError(s"Encountered unknown type while looking for record types: $typ", typ.location)
   }
 }
