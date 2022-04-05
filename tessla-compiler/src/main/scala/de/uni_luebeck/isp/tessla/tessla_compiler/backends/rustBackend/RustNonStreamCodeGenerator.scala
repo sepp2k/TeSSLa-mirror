@@ -292,9 +292,14 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * @param srcSegments The struct definition and its accompanying impls are put in the static segment
    */
   def translateStructDefinition(structName: String, fields: Seq[(String, Type)], srcSegments: SourceSegments): Unit = {
-    val genericTypes = RustUtils.getGenericTypeNames(fields.map { case (_, typ) => typ })
-    val traitBounds = (bound: String) => s"<${genericTypes.map(t => s"$t: $bound").mkString(", ")}>"
-    val typeAnnotation = s"<${genericTypes.mkString(", ")}>"
+    val typeParams = fields
+      .sortWith { case ((name1, _), (name2, _)) => structComparison(name1, name2) }
+      .map {
+        case (_, typ: TypeParam) => typ
+        case _ => throw Diagnostics.CommandNotSupportedError("Encountered non genericised Struct")
+      }
+    val traitBounds = (bound: String) => s"<${typeParams.map(t => s"$t: $bound").mkString(", ")}>"
+    val typeAnnotation = s"<${typeParams.mkString(", ")}>"
     if (fields.forall { case (_, tpe) => canBeHashed(tpe) })
       srcSegments.static.append("#[derive(std::hash::Hash)]")
     srcSegments.static.append(s"""
