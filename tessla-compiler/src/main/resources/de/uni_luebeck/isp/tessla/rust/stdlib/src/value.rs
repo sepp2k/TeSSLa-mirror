@@ -531,12 +531,12 @@ impl TesslaDisplay for String {
     }
 }
 
-impl<T: ToString> TesslaValue<T> {
+impl<T: TesslaDisplay> TesslaValue<T> {
     #[inline]
-    pub fn to_string(&self) -> TesslaString {
+    pub fn to_tessla_string(&self) -> TesslaString {
         match self {
             &Error(error) => Error(error),
-            Value(value) => Value(value.to_string()),
+            Value(_) => Value(self.to_string()),
         }
     }
 }

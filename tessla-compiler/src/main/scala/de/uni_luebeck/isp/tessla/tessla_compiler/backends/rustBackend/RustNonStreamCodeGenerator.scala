@@ -539,7 +539,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__isSome__"  => s"${args(0)}.is_some()"
       case "__isNone__"  => s"${args(0)}.is_none()"
 
-      case "__toString__"       => s"${args(0)}.to_string()"
+      case "__toString__"       => s"${args(0)}.to_tessla_string()"
       case "__String_toUpper__" => s"${args(0)}.to_upper()"
       case "__String_toLower__" => s"${args(1)}.to_lower()"
 
