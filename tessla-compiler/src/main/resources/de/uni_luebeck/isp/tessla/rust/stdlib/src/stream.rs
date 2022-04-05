@@ -276,7 +276,7 @@ pub fn reset_delay<T>(output: &Events<()>, delays: &Events<i64>, resets: &Events
     }
 }
 
-pub fn lift1<T, U0, F>(output: &mut Events<T>, arg0: &Events<U0>, function: TesslaValue<fn(TesslaOption<TesslaValue<U0>>) -> TesslaOption<TesslaValue<T>>>)
+pub fn lift1<T, U0>(output: &mut Events<T>, arg0: &Events<U0>, function: TesslaValue<fn(TesslaOption<TesslaValue<U0>>) -> TesslaOption<TesslaValue<T>>>)
     where U0: Clone {
     let any_error = arg0.has_error();
     let any_event = arg0.has_event();
@@ -297,7 +297,7 @@ pub fn lift1<T, U0, F>(output: &mut Events<T>, arg0: &Events<U0>, function: Tess
     }
 }
 
-pub fn lift2<T, U0, U1, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, function: TesslaValue<fn(TesslaOption<TesslaValue<U0>>, TesslaOption<TesslaValue<U1>>) -> TesslaOption<TesslaValue<T>>>)
+pub fn lift2<T, U0, U1>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, function: TesslaValue<fn(TesslaOption<TesslaValue<U0>>, TesslaOption<TesslaValue<U1>>) -> TesslaOption<TesslaValue<T>>>)
     where U0: Clone, U1: Clone {
     let any_error = arg0.has_error() || arg1.has_error();
     let any_event = arg0.has_event() || arg1.has_event();
@@ -339,7 +339,7 @@ pub fn lift3<T, U0, U1, U2>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Ev
     }
 }
 
-pub fn lift4<T, U0, U1, U2, U3, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, function: TesslaValue<fn(TesslaOption<TesslaValue<U0>>, TesslaOption<TesslaValue<U1>>, TesslaOption<TesslaValue<U2>>, TesslaOption<TesslaValue<U3>>) -> TesslaOption<TesslaValue<T>>>)
+pub fn lift4<T, U0, U1, U2, U3>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, function: TesslaValue<fn(TesslaOption<TesslaValue<U0>>, TesslaOption<TesslaValue<U1>>, TesslaOption<TesslaValue<U2>>, TesslaOption<TesslaValue<U3>>) -> TesslaOption<TesslaValue<T>>>)
     where U0: Clone, U1: Clone, U2: Clone, U3: Clone {
     let any_error = arg0.has_error() || arg1.has_error() || arg2.has_error() || arg3.has_error();
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event();
@@ -361,7 +361,7 @@ pub fn lift4<T, U0, U1, U2, U3, F>(output: &mut Events<T>, arg0: &Events<U0>, ar
     }
 }
 
-pub fn lift5<T, U0, U1, U2, U3, U4, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, arg4: &Events<U4>, function: TesslaValue<fn(TesslaOption<TesslaValue<U0>>, TesslaOption<TesslaValue<U1>>, TesslaOption<TesslaValue<U2>>, TesslaOption<TesslaValue<U3>>, TesslaOption<TesslaValue<U4>>) -> TesslaOption<TesslaValue<T>>>)
+pub fn lift5<T, U0, U1, U2, U3, U4>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, arg4: &Events<U4>, function: TesslaValue<fn(TesslaOption<TesslaValue<U0>>, TesslaOption<TesslaValue<U1>>, TesslaOption<TesslaValue<U2>>, TesslaOption<TesslaValue<U3>>, TesslaOption<TesslaValue<U4>>) -> TesslaOption<TesslaValue<T>>>)
     where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone {
     let any_error = arg0.has_error() || arg1.has_error() || arg2.has_error() || arg3.has_error() || arg4.has_error();
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event() || arg4.has_event();
@@ -383,7 +383,7 @@ pub fn lift5<T, U0, U1, U2, U3, U4, F>(output: &mut Events<T>, arg0: &Events<U0>
     }
 }
 
-pub fn slift1<T, U0, F>(output: &mut Events<T>, arg0: &Events<U0>, function: TesslaValue<fn(TesslaValue<U0>) -> TesslaValue<T>>)
+pub fn slift1<T, U0>(output: &mut Events<T>, arg0: &Events<U0>, function: TesslaValue<fn(TesslaValue<U0>) -> TesslaValue<T>>)
     where U0: Clone {
     let any_event = arg0.has_event();
     let all_initialised = arg0.is_initialised();
@@ -397,7 +397,7 @@ pub fn slift1<T, U0, F>(output: &mut Events<T>, arg0: &Events<U0>, function: Tes
     }
 }
 
-pub fn slift2<T, U0, U1, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, function: TesslaValue<fn(TesslaValue<U0>, TesslaValue<U1>) -> TesslaValue<T>>)
+pub fn slift2<T, U0, U1>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, function: TesslaValue<fn(TesslaValue<U0>, TesslaValue<U1>) -> TesslaValue<T>>)
     where U0: Clone, U1: Clone {
     let any_event = arg0.has_event() || arg1.has_event();
     let all_initialised = arg0.is_initialised() && arg1.is_initialised();
@@ -411,7 +411,7 @@ pub fn slift2<T, U0, U1, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Ev
     }
 }
 
-pub fn slift3<T, U0, U1, U2, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, function: TesslaValue<fn(TesslaValue<U0>, TesslaValue<U1>, TesslaValue<U2>) -> TesslaValue<T>>)
+pub fn slift3<T, U0, U1, U2>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, function: TesslaValue<fn(TesslaValue<U0>, TesslaValue<U1>, TesslaValue<U2>) -> TesslaValue<T>>)
     where U0: Clone, U1: Clone, U2: Clone {
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event();
     let all_initialised = arg0.is_initialised() && arg1.is_initialised() && arg2.is_initialised();
@@ -425,7 +425,7 @@ pub fn slift3<T, U0, U1, U2, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1:
     }
 }
 
-pub fn slift4<T, U0, U1, U2, U3, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, function: TesslaValue<fn(TesslaValue<U0>, TesslaValue<U1>, TesslaValue<U2>, TesslaValue<U3>) -> TesslaValue<T>>)
+pub fn slift4<T, U0, U1, U2, U3>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, function: TesslaValue<fn(TesslaValue<U0>, TesslaValue<U1>, TesslaValue<U2>, TesslaValue<U3>) -> TesslaValue<T>>)
     where U0: Clone, U1: Clone, U2: Clone, U3: Clone {
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event();
     let all_initialised = arg0.is_initialised() && arg1.is_initialised() && arg2.is_initialised() && arg3.is_initialised();
@@ -439,7 +439,7 @@ pub fn slift4<T, U0, U1, U2, U3, F>(output: &mut Events<T>, arg0: &Events<U0>, a
     }
 }
 
-pub fn slift5<T, U0, U1, U2, U3, U4, F>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, arg4: &Events<U4>, function: TesslaValue<fn(TesslaValue<U0>, TesslaValue<U1>, TesslaValue<U2>, TesslaValue<U3>, TesslaValue<U4>) -> TesslaValue<T>>)
+pub fn slift5<T, U0, U1, U2, U3, U4>(output: &mut Events<T>, arg0: &Events<U0>, arg1: &Events<U1>, arg2: &Events<U2>, arg3: &Events<U3>, arg4: &Events<U4>, function: TesslaValue<fn(TesslaValue<U0>, TesslaValue<U1>, TesslaValue<U2>, TesslaValue<U3>, TesslaValue<U4>) -> TesslaValue<T>>)
     where U0: Clone, U1: Clone, U2: Clone, U3: Clone, U4: Clone {
     let any_event = arg0.has_event() || arg1.has_event() || arg2.has_event() || arg3.has_event() || arg4.has_event();
     let all_initialised = arg0.is_initialised() && arg1.is_initialised() && arg2.is_initialised() && arg3.is_initialised() && arg4.is_initialised();
