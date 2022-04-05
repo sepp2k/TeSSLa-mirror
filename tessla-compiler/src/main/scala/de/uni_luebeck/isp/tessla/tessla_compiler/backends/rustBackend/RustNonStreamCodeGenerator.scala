@@ -208,8 +208,11 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         val newTm = tm.parsKnown(typ.typeParams)
         val argNames = typ.paramTypes.indices.map(i => s"tLPar_$i")
         val ret = translateFunctionCall(e, argNames, newTm, defContext)
-        val argSignature = typ.paramTypes.zip(argNames)
-          .map{ case ((_, typ), name) => s"$name: ${RustUtils.convertType(typ.resolve(newTm.resMap), mask_generics = true)}" }
+        val argSignature = typ.paramTypes
+          .zip(argNames)
+          .map {
+            case ((_, typ), name) => s"$name: ${RustUtils.convertType(typ.resolve(newTm.resMap), mask_generics = true)}"
+          }
         val fnPointer = s"fn(${typ.paramTypes.map(_ => "_").mkString(", ")}) -> _"
         s"TesslaValue::wrap((|${argSignature.mkString(", ")}|{ return $ret }) as $fnPointer)"
       case ExternExpression(name, _, location) =>
@@ -308,7 +311,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       .sortWith { case ((name1, _), (name2, _)) => structComparison(name1, name2) }
       .map {
         case (_, typ: TypeParam) => typ
-        case _ => throw Diagnostics.CommandNotSupportedError("Encountered non genericised Struct")
+        case _                   => throw Diagnostics.CommandNotSupportedError("Encountered non genericised Struct")
       }
     val traitBounds = (bound: String) => s"<${typeParams.map(t => s"$t: $bound").mkString(", ")}>"
     val typeAnnotation = s"<${typeParams.mkString(", ")}>"
@@ -320,31 +323,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |    ${fields.map { case (name, tpe) => s"$name: ${convertType(tpe, mask_generics = false)}" }.mkString(",\n")}
        |}""".stripMargin)
     val fieldNames = fields.map { case (name, _) => name }
-    val isTuple = RustUtils.isStructTuple(fieldNames)
-    if (isTuple) {
-      srcSegments.static.append(generateTupleDisplay(structName, fieldNames, traitBounds, typeAnnotation))
-    } else {
-      srcSegments.static.append(generateStructDisplay(structName, fieldNames, traitBounds, typeAnnotation))
-    }
-    srcSegments.static.append(generateStructParser(structName, fieldNames, isTuple, traitBounds, typeAnnotation))
-  }
-
-  private def generateTupleDisplay(
-    structName: String,
-    fieldNames: Seq[String],
-    traitBounds: String => String,
-    typeAnnotation: String
-  ): String = {
-    s"""impl${traitBounds("TesslaDisplay + Clone")} TesslaDisplay for $structName$typeAnnotation {
-       |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-       |        f.write_str("(")?;
-       |${fieldNames
-      .map { name => s"""write!(f, \"{}\", self.$name)?;""" }
-      .mkString("\nf.write_str(\", \")?;\n")}
-       |        f.write_str(")")
-       |    }
-       |}
-       |""".stripMargin
+    srcSegments.static.append(generateStructDisplay(structName, fieldNames, traitBounds, typeAnnotation))
+    srcSegments.static.append(generateStructParser(structName, fieldNames, traitBounds, typeAnnotation))
   }
 
   private def generateStructDisplay(
@@ -357,6 +337,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        |        f.write_str("{")?;
        |${fieldNames
+      .sortWith(structComparison)
       .map { name => s"""write!(f, \"$name = {}\", self.$name)?;""" }
       .mkString("\nf.write_str(\", \")?;\n")}
        |        f.write_str("}")
@@ -368,7 +349,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   private def generateStructParser(
     structName: String,
     fieldNames: Seq[String],
-    isTuple: Boolean,
     traitBounds: String => String,
     typeAnnotation: String
   ): String = {
@@ -386,6 +366,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |                    inner = rhs.trim_start();
        |                    match lhs.trim() {
        |${fieldNames
+      .sortWith(structComparison)
       .map { name => s""""$name" => if !parse_struct_inner(&mut result.$name, &mut inner) { break }""" }
       .mkString(",\n")},
        |                        _ => return (Err("Encountered invalid key while parsing Struct"), inner)
@@ -395,27 +376,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |            }
        |        }
        |        (Ok(result), inner)
-       |    }${if (!isTuple) ""
-    else {
-      s"""
-         |    fn tessla_parse_tuple(s: &str) -> (Result<Self, &'static str>, &str) {
-         |        let mut inner = s.trim_start();
-         |        let mut i = 1_i64;
-         |        $init
-         |        while !inner.starts_with(")") {
-         |            match i {
-         |${fieldNames
-           .map { name =>
-             s"""${name.substring(1)} => if !parse_struct_inner(&mut result.$name, &mut inner) { break }"""
-           }
-           .mkString(",\n")},
-         |                _ => return (Err("Tuple index out of bounds while parsing"), inner)
-         |            }
-         |            i += 1;
-         |        }
-         |        (Ok(result), inner)
-         |    }""".stripMargin
-    }}
+       |    }
        |}
        |""".stripMargin
   }
