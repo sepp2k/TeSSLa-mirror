@@ -1,6 +1,7 @@
+use std::fmt::Formatter;
 use std::rc::Rc;
 
-use crate::{TesslaValue, TesslaOption};
+use crate::{TesslaDisplay, TesslaOption, TesslaValue};
 use crate::TesslaValue::*;
 
 // Explanation:
@@ -170,7 +171,7 @@ impl<T> TesslaFun<TesslaValue<T>> for TesslaValue<T> {
     }
 }
 
-macro_rules! tessla_wrap_fn {
+macro_rules! tessla_fn_impl {
     ($( $arg:ident ),*) => {
         impl<F, R, $($arg),*> TesslaFun<F> for TesslaValue<Rc<dyn Fn($($arg),*) -> R>>
             where F: 'static + Fn($($arg),*) -> R {
@@ -187,22 +188,27 @@ macro_rules! tessla_wrap_fn {
                 }
             }
         }
+        impl<R, $($arg),*> TesslaDisplay for Rc<dyn Fn($($arg),*) -> R> {
+            fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "Rc<dyn Fn(?) -> ?, [{:p}]>", self)
+            }
+        }
     }
 }
 
-tessla_wrap_fn!();
-tessla_wrap_fn!(A1);
-tessla_wrap_fn!(A1, A2);
-tessla_wrap_fn!(A1, A2, A3);
-tessla_wrap_fn!(A1, A2, A3, A4);
-tessla_wrap_fn!(A1, A2, A3, A4, A5);
-tessla_wrap_fn!(A1, A2, A3, A4, A5, A6);
-tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7);
-tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7, A8);
-tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9);
-tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
-tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11);
-tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12);
+tessla_fn_impl!();
+tessla_fn_impl!(A1);
+tessla_fn_impl!(A1, A2);
+tessla_fn_impl!(A1, A2, A3);
+tessla_fn_impl!(A1, A2, A3, A4);
+tessla_fn_impl!(A1, A2, A3, A4, A5);
+tessla_fn_impl!(A1, A2, A3, A4, A5, A6);
+tessla_fn_impl!(A1, A2, A3, A4, A5, A6, A7);
+tessla_fn_impl!(A1, A2, A3, A4, A5, A6, A7, A8);
+tessla_fn_impl!(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+tessla_fn_impl!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+tessla_fn_impl!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11);
+tessla_fn_impl!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12);
 
 // -- STEP FUNCTIONS --
 
