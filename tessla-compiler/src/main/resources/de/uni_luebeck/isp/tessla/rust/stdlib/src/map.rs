@@ -26,7 +26,7 @@ impl<T: Display + Hash + Eq, U: Display> TesslaDisplay for HashMap<T, U> {
     }
 }
 
-impl<K: Clone + Eq + Hash, V: Clone + Eq + Hash> TesslaMap<K, V> {
+impl<K: Clone + Eq + Hash, V: Clone> TesslaMap<K, V> {
     #[inline]
     pub fn empty() -> TesslaMap<K, V> {
         Value(HashMap::new())
@@ -117,7 +117,7 @@ impl<K: Clone + Eq + Hash, V: Clone + Eq + Hash> TesslaMap<K, V> {
     }
 }
 
-impl<K: Clone + Eq + Hash, V: Clone + Eq + Hash> TesslaMap<TesslaValue<K>, TesslaValue<V>> {
+impl<K: Clone + Eq + Hash, V: Clone> TesslaMap<TesslaValue<K>, TesslaValue<V>> {
     #[inline]
     pub fn get(&self, key: TesslaValue<K>) -> TesslaValue<V> {
         match self {
