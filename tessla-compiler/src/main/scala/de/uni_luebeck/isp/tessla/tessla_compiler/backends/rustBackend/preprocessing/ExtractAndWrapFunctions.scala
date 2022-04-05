@@ -142,7 +142,7 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
             List(),
             closureArgs,
             Map(),
-            boxExpression(functionExpr)
+            functionExpr
           )
         }
 
@@ -276,90 +276,5 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
       case int: IntLiteralExpression       => int
       case string: StringLiteralExpression => string
     }
-  }
-
-  private def boxExpression(expr: ExpressionArg): ApplicationExpression = {
-    ApplicationExpression(
-      TypeApplicationExpression(
-        ExternExpression(
-          "[rust]box",
-          FunctionType(
-            List(),
-            List((StrictEvaluation, expr.tpe)),
-            expr.tpe
-          )
-        ),
-        List()
-      ),
-      ArraySeq(expr)
-    )
-  }
-
-  private def resolveRecursiveCall(
-    initialName: Identifier,
-    resolvedName: Identifier,
-    resolvedType: Type,
-    additionalArgs: Seq[ExpressionRef],
-    expression: ExpressionArg
-  ): ExpressionArg = expression match {
-    case ApplicationExpression(
-          TypeApplicationExpression(ExpressionRef(id, _: FunctionType, _), typeArgs, _),
-          args,
-          location
-        ) if id == initialName =>
-      ApplicationExpression(
-        TypeApplicationExpression(ExpressionRef(resolvedName, resolvedType), typeArgs),
-        args ++ additionalArgs,
-        location
-      )
-
-    case FunctionExpression(typeParams, params, body, result, location) =>
-      FunctionExpression(
-        typeParams,
-        params,
-        body.map {
-          case (id, expr) =>
-            id -> resolveRecursiveCall(initialName, resolvedName, resolvedType, additionalArgs, expr)
-              .asInstanceOf[DefinitionExpression]
-        },
-        resolveRecursiveCall(initialName, resolvedName, resolvedType, additionalArgs, result),
-        location
-      )
-
-    case ApplicationExpression(applicable, args, location) =>
-      ApplicationExpression(
-        resolveRecursiveCall(initialName, resolvedName, resolvedType, additionalArgs, applicable),
-        args.map { exprArg =>
-          resolveRecursiveCall(initialName, resolvedName, resolvedType, additionalArgs, exprArg)
-        },
-        location
-      )
-    case TypeApplicationExpression(applicable, typeArgs, location) =>
-      TypeApplicationExpression(
-        resolveRecursiveCall(initialName, resolvedName, resolvedType, additionalArgs, applicable),
-        typeArgs,
-        location
-      )
-    case RecordAccessorExpression(name, target, nameLocation, location) =>
-      RecordAccessorExpression(
-        name,
-        resolveRecursiveCall(initialName, resolvedName, resolvedType, additionalArgs, target),
-        nameLocation,
-        location
-      )
-    case RecordConstructorExpression(entries, location) =>
-      RecordConstructorExpression(
-        entries.map {
-          case (name, (exprArg, location)) =>
-            name -> (resolveRecursiveCall(initialName, resolvedName, resolvedType, additionalArgs, exprArg), location)
-        },
-        location
-      )
-
-    case ref: ExpressionRef              => ref
-    case extern: ExternExpression        => extern
-    case float: FloatLiteralExpression   => float
-    case int: IntLiteralExpression       => int
-    case string: StringLiteralExpression => string
   }
 }

@@ -156,9 +156,9 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           if (id.fullName == "_") "_" else s"var_$id /* lazy */: $tpe" // TODO how to handle lazy...
       }
       .mkString(", ")
-    s"|$arguments| {\n" +
+    s"Value(Rc::new(move |$arguments| {\n" +
       s"${translateBody(e.body, e.result, newTm, defContext).mkString("\n")}" +
-      s"\n}"
+      s"\n}))"
   }
 
   /**
