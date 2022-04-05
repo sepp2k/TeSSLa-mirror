@@ -95,7 +95,7 @@ class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSp
               // Generate static function
               rustNonStreamCodeGenerator.translateStaticFunction(id, definition, srcSegments)
             case _ =>
-              rustNonStreamCodeGenerator.translateStaticAssignment(id, definition, srcSegments)
+              // Other non-stream or function static constants, which we inline wherever needed
           }
       }
 

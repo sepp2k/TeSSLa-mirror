@@ -90,41 +90,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
   }
 
   /**
-   * Translates a static assignment definition from TeSSLa Core into a static Rust variable
-   * @param id The id which is assigned
-   * @param e The expression assigned to id
-   * @param srcSegments The expression added in three parts to the sections stateStatic, stateDef and stateInit
-   */
-  def translateStaticAssignment(
-    id: Identifier,
-    e: ExpressionArg,
-    srcSegments: SourceSegments
-  ): Unit = {
-    val typ = RustUtils.convertType(e.tpe)
-    val lazyVar = extSpec.lazyVars.get.contains(id)
-    if (lazyVar) {
-      definedIdentifiers += (id -> FinalLazyDeclaration)
-      val inlinedExp = inlineVars(e, extSpec.spec.definitions)
-      // TODO how exactly do we handle this
-      srcSegments.stateStatic.append(
-        s"let var_$id /* lazy */ = ${translateExpressionArg(inlinedExp, TypeArgManagement.empty, extSpec.spec.definitions)};"
-      )
-    } else if (finalAssignmentPossible(e)) {
-      definedIdentifiers += (id -> FinalDeclaration)
-      srcSegments.stateStatic.append(
-        s"let var_$id = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};"
-      )
-    } else {
-      definedIdentifiers += (id -> VariableDeclaration)
-      srcSegments.stateStatic.append(
-        s"let var_$id = ${translateExpressionArg(e, TypeArgManagement.empty, extSpec.spec.definitions)};"
-      )
-    }
-    srcSegments.stateDef.append(s"var_$id: $typ")
-    srcSegments.stateInit.append(s"var_$id: var_$id.clone()")
-  }
-
-  /**
    * Translates a global function definition from TeSSLa Core into a static Rust function
    * @param id The id which is assigned
    * @param definition The function definition
@@ -282,6 +247,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         s"Value(${value}_f64)"
       case ExpressionRef(id, _, _) if extSpec.spec.definitions.get(id).exists(_.isInstanceOf[FunctionExpression]) =>
         s"var_${id.fullName}"
+      case ExpressionRef(id, _, _) if extSpec.spec.definitions.contains(id) =>
+        translateExpressionArg(extSpec.spec.definitions(id), TypeArgManagement.empty, Map())
       case ExpressionRef(id, _, _) =>
         s"var_${id.fullName}.clone()"
       case x: ExternExpression =>
