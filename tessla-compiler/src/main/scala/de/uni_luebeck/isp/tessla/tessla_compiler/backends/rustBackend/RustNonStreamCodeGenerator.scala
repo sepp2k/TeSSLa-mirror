@@ -100,7 +100,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     e: ExpressionArg,
     srcSegments: SourceSegments
   ): Unit = {
-    val typ = RustUtils.convertType(e.tpe, Set())
+    val typ = RustUtils.convertType(e.tpe)
     val lazyVar = extSpec.lazyVars.get.contains(id)
     if (lazyVar) {
       definedIdentifiers += (id -> FinalLazyDeclaration)
@@ -143,9 +143,9 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
           else s"<${genericTypes.map(t => s"$t: 'static + Clone").mkString(", ")}>"
 
         val functionParams = params
-          .map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe, genericTypes)}" }
+          .map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe)}" }
           .mkString(", ")
-        val returnType = RustUtils.convertType(result.tpe, genericTypes)
+        val returnType = RustUtils.convertType(result.tpe)
 
         srcSegments.static.append(s"fn var_$id$traitBounds($functionParams) -> $returnType {")
         srcSegments.static.appendAll(translateBody(body, result, TypeArgManagement.empty, extSpec.spec.definitions))
@@ -178,7 +178,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val newTm = tm.parsKnown(e.typeParams)
     val arguments = e.params
       .map {
-        case (id, e, tpe) => (id, e, RustUtils.convertType(tpe.resolve(newTm.resMap), Set()))
+        case (id, e, tpe) => (id, e, RustUtils.convertType(tpe.resolve(newTm.resMap)))
       }
       .map {
         case (id, StrictEvaluation, tpe) => if (id.fullName == "_") "_" else s"var_$id: $tpe"
@@ -332,7 +332,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       srcSegments.static.append("#[derive(std::hash::Hash)]")
     srcSegments.static.append(s"""
        |pub struct $structName$typeAnnotation {
-       |    ${fields.map { case (name, tpe) => s"$name: ${convertType(tpe, genericTypes)}" }.mkString(",\n")}
+       |    ${fields.map { case (name, tpe) => s"$name: ${convertType(tpe)}" }.mkString(",\n")}
        |}""".stripMargin)
     srcSegments.static.append(s"""
        |impl${traitBounds("Clone")} Clone for $structName$typeAnnotation {
