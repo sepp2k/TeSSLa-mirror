@@ -53,6 +53,19 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     stream
   }
 
+  private def translateLimitedFunctionExpression(functionExpr: ExpressionArg, tm: TypeArgManagement = TypeArgManagement.empty): String = {
+    // FIXME our stream functions cannot handle TesslaValue<> functions, therefore we limit the possible function expressions
+    //  to only allow direct references, lambdas, and extern() references, each optionally with a type application.
+    //  At the moment these cases are the only possible options, but changes in the constant folder may change this
+    functionExpr match {
+      case TypeApplicationExpression(expr, typeArgs, _) => translateLimitedFunctionExpression(expr, tm.typeApp(typeArgs))
+      case ExpressionRef(id, _, _) => s"var_${id.fullName}"
+      case x: ExternExpression => rustNonStreamCodeGenerator.translateExtern(x, tm, Map())
+      case f: FunctionExpression => rustNonStreamCodeGenerator.translateFunction(f, tm, Map())
+      case _ => throw Diagnostics.CommandNotSupportedError(s"Encountered non-function expression/ref as stream function parameter: $functionExpr", functionExpr.location)
+    }
+  }
+
   /**
    * Produces code for a x = nil expression
    *
@@ -211,10 +224,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
-    val function = rustNonStreamCodeGenerator.translateExpressionArg(
-      function_expr,
-      TypeArgManagement.empty
-    )
+    val function = translateLimitedFunctionExpression(function_expr)
     currSrc.computation.append(s"lift${arguments.size}(&mut $output, ${arguments.mkString(", ")}, $function);")
   }
 
@@ -237,10 +247,10 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val arguments = argument_exprs.map(streamNameFromExpressionArg).map(a => s"&$a")
-    val function = rustNonStreamCodeGenerator.translateExpressionArg(
-      function_expr,
-      TypeArgManagement.empty
-    )
+    // FIXME slift cannot handle TesslaValue<> functions, therefore we limit the possible function expressions
+    //  to only allow direct references, and extern() references, each optionally with a type application.
+    //  At the moment these four cases are the only possible options, but changes in the constant folder may change this
+    val function = translateLimitedFunctionExpression(function_expr)
     currSrc.computation.append(s"slift${arguments.size}(&mut $output, ${arguments.mkString(", ")}, $function);")
   }
 
@@ -352,10 +362,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
       rustNonStreamCodeGenerator.translateExpressionArg(init_expr, TypeArgManagement.empty)
     val output = createStreamContainer(output_id, output_type, s"init_with_value($init)", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
-    val function = rustNonStreamCodeGenerator.translateExpressionArg(
-      function_expr,
-      TypeArgManagement.empty
-    )
+    val function = translateLimitedFunctionExpression(function_expr)
     currSrc.computation.append(s"fold(&mut $output, &$stream, $function);")
   }
 
@@ -378,10 +385,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val output = createStreamContainer(output_id, output_type, "init()", currSrc)
     val stream = streamNameFromExpressionArg(stream_expr)
-    val function = rustNonStreamCodeGenerator.translateExpressionArg(
-      function_expr,
-      TypeArgManagement.empty
-    )
+    val function = translateLimitedFunctionExpression(function_expr)
     currSrc.computation.append(s"reduce(&mut $output, &$stream, $function);")
   }
 

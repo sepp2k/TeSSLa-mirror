@@ -53,8 +53,13 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case ExternExpression(name, typ: Core.FunctionType, _) =>
         translateBuiltinFunctionCall(s"__${name}__", args, typ, tm.parsKnown(typ.typeParams))
       case e: ExternExpression => translateExtern(e, tm, defContext)
+      case ref: ExpressionRef if extSpec.spec.definitions.get(ref.id).exists(_.isInstanceOf[FunctionExpression]) =>
+        s"var_${ref.id.fullName}(${args.mkString(", ")})"
       case _: FunctionExpression | _: ExpressionRef | _: ApplicationExpression | _: RecordAccessorExpression =>
-        s"${translateExpressionArg(e, tm, defContext)}(${args.mkString(", ")})"
+        s"""match ${translateExpressionArg(e, tm, defContext)} {
+           | Error(error) => Error(error),
+           | Value(_function) => _function(${args.mkString(", ")})
+           |}""".stripMargin
       case e =>
         throw Diagnostics.CoreASTError("Function call to expression of wrong type cannot be translated", e.location)
     }
@@ -246,7 +251,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case FloatLiteralExpression(value, _) =>
         s"Value(${value}_f64)"
       case ExpressionRef(id, _, _) if extSpec.spec.definitions.get(id).exists(_.isInstanceOf[FunctionExpression]) =>
-        s"var_${id.fullName}"
+        s"TesslaValue::wrap(var_${id.fullName})"
       case ExpressionRef(id, _, _) if extSpec.spec.definitions.contains(id) =>
         translateExpressionArg(extSpec.spec.definitions(id), TypeArgManagement.empty, Map())
       case ExpressionRef(id, _, _) =>
