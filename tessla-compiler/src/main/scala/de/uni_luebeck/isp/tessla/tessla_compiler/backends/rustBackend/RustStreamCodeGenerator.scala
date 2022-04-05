@@ -53,19 +53,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     stream
   }
 
-  private def translateLimitedFunctionExpression(functionExpr: ExpressionArg, tm: TypeArgManagement = TypeArgManagement.empty): String = {
-    // FIXME our stream functions cannot handle TesslaValue<> functions, therefore we limit the possible function expressions
-    //  to only allow direct references, lambdas, and extern() references, each optionally with a type application.
-    //  At the moment these cases are the only possible options, but changes in the constant folder may change this
-    functionExpr match {
-      case TypeApplicationExpression(expr, typeArgs, _) => translateLimitedFunctionExpression(expr, tm.typeApp(typeArgs))
-      case ExpressionRef(id, _, _) => s"var_${id.fullName}"
-      case x: ExternExpression => rustNonStreamCodeGenerator.translateExtern(x, tm, Map())
-      case f: FunctionExpression => rustNonStreamCodeGenerator.translateFunction(f, tm, Map())
-      case _ => throw Diagnostics.CommandNotSupportedError(s"Encountered non-function expression/ref as stream function parameter: $functionExpr", functionExpr.location)
-    }
-  }
-
   /**
    * Produces code for a x = nil expression
    *
