@@ -44,11 +44,11 @@ impl<T: Clone> TesslaList<T> {
 
     #[inline]
     pub fn fold<A>(&self, start: TesslaValue<A>, function: TesslaValue<Rc<dyn Fn(TesslaValue<A>, T) -> TesslaValue<A>>>) -> TesslaValue<A> {
-        match self {
-            Error(error) => Error(error),
-            Value(value) => {
+        match (self, function) {
+            (&Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(list), Value(function)) => {
                 let mut result = start;
-                for item in value {
+                for item in list {
                     result = function(result, item.clone());
                 }
                 return result;

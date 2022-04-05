@@ -52,9 +52,9 @@ impl<K: Clone + Eq + Hash, V: Clone + Eq + Hash> TesslaMap<K, V> {
 
     #[inline]
     pub fn fold<A>(&self, start: TesslaValue<A>, function: TesslaValue<Rc<dyn Fn(TesslaValue<A>, K, V) -> TesslaValue<A>>>) -> TesslaValue<A> {
-        match self {
-            Error(error) => Error(error),
-            Value(map) => {
+        match (self, function) {
+            (&Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(map), Value(function)) => {
                 let mut result: TesslaValue<A> = start;
                 for (key, value) in map.iter() {
                     result = function(result, key.clone(), value.clone());
@@ -99,7 +99,6 @@ impl<K: Clone + Eq + Hash, V: Clone + Eq + Hash> TesslaMap<K, V> {
         }
     }
 
-    // TODO TesslaTuple<A, B>
     #[inline]
     pub fn map<A: Clone + Eq + Hash, B: Clone>(&self, function: TesslaValue<Rc<dyn Fn(K, V) -> TesslaValue<(A, B)>>>) -> TesslaMap<A, B> {
         match (self, function) {

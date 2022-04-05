@@ -102,11 +102,11 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
 
     #[inline]
     pub fn fold<U>(&self, start: TesslaValue<U>, function: TesslaValue<Rc<dyn Fn(TesslaValue<U>, TesslaValue<T>) -> TesslaValue<U>>>) -> TesslaValue<U> {
-        match self {
-            Error(error) => Error(error),
-            Value(value) => {
+        match (self, function) {
+            (&Error(error), _) | (_, Error(error)) => Error(error),
+            (Value(set), Value(function)) => {
                 let mut result: TesslaValue<U> = start;
-                for item in value.iter() {
+                for item in set.iter() {
                     result = function(result, item.clone());
                 }
                 return result;
