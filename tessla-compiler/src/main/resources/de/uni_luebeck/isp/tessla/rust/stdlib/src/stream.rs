@@ -161,11 +161,11 @@ impl<T: Clone> Events<T> {
 
 // -- FUNCTION WRAPPING --
 
-pub trait TesslaFun<Base: ?Sized> {
+pub trait TesslaFrom<Base: ?Sized> {
     fn wrap(f: Base) -> Self;
 }
 
-impl<T> TesslaFun<TesslaValue<T>> for TesslaValue<T> {
+impl<T> TesslaFrom<TesslaValue<T>> for TesslaValue<T> {
     fn wrap(f: TesslaValue<T>) -> Self {
         f
     }
@@ -173,13 +173,18 @@ impl<T> TesslaFun<TesslaValue<T>> for TesslaValue<T> {
 
 macro_rules! tessla_fn_impl {
     ($( $arg:ident ),*) => {
-        impl<F, R, $($arg),*> TesslaFun<F> for TesslaValue<Rc<dyn Fn($($arg),*) -> R>>
+        impl<R, $($arg),*> TesslaFrom<fn($($arg),*) -> R> for TesslaValue<fn($($arg),*) -> R> {
+            fn wrap(f: fn($($arg),*) -> R) -> Self {
+                Value(f)
+            }
+        }
+        impl<F, R, $($arg),*> TesslaFrom<F> for TesslaValue<Rc<dyn Fn($($arg),*) -> R>>
             where F: 'static + Fn($($arg),*) -> R {
             fn wrap(f: F) -> Self {
                 Value(Rc::new(f))
             }
         }
-        impl<F, R, $($arg),*> TesslaFun<TesslaValue<F>> for TesslaValue<Rc<dyn Fn($($arg),*) -> R>>
+        impl<F, R, $($arg),*> TesslaFrom<TesslaValue<F>> for TesslaValue<Rc<dyn Fn($($arg),*) -> R>>
             where F: 'static + Fn($($arg),*) -> R {
             fn wrap(f: TesslaValue<F>) -> Self {
                 match f {

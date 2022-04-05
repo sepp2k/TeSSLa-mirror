@@ -250,12 +250,16 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         s"Value(${value.toLong}_i64)"
       case FloatLiteralExpression(value, _) =>
         s"Value(${value}_f64)"
-      case ExpressionRef(id, _, _) if extSpec.spec.definitions.get(id).exists(_.isInstanceOf[FunctionExpression]) =>
-        s"TesslaValue::wrap(var_${id.fullName})"
-      case ExpressionRef(id, _, _) if extSpec.spec.definitions.contains(id) =>
-        translateExpressionArg(extSpec.spec.definitions(id), TypeArgManagement.empty, Map())
       case ExpressionRef(id, _, _) =>
-        s"var_${id.fullName}.clone()"
+        extSpec.spec.definitions.get(id) match {
+          case Some(f: FunctionExpression) =>
+            val fnPointer = s"fn(${f.params.map(_ => "_").mkString(", ")}) -> _"
+            s"TesslaValue::wrap(var_${id.fullName} as $fnPointer)"
+          case Some(definition) =>
+            translateExpressionArg(definition, TypeArgManagement.empty, Map())
+          case None =>
+            s"var_${id.fullName}.clone()"
+        }
       case x: ExternExpression =>
         translateExtern(x, tm, defContext)
       case RecordConstructorExpression(entries, _) if entries.isEmpty =>
