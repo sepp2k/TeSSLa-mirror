@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
+use std::rc::Rc;
 
 use im::HashSet;
 use im::Vector;
@@ -114,7 +115,7 @@ impl<T: Clone + Eq + Hash> TesslaSet<TesslaValue<T>> {
     }
 
     #[inline]
-    pub fn map<U: Clone + Eq + Hash>(&self, function: TesslaValue<impl Fn(TesslaValue<T>) -> TesslaValue<U>>) -> TesslaSet<TesslaValue<U>> {
+    pub fn map<U: Clone + Eq + Hash>(&self, function: TesslaValue<Rc<dyn Fn(TesslaValue<T>) -> TesslaValue<U>>>) -> TesslaSet<TesslaValue<U>> {
         match (self, function) {
             (&Error(error), _) | (_, Error(error)) => Error(error),
             (Value(set), Value(function)) => {

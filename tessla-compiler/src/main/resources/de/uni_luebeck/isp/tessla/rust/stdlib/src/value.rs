@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::ops::{Add, BitAnd, BitOr, BitXor, Deref, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
+use std::rc::Rc;
 
 use TesslaValue::*;
 
@@ -92,7 +93,7 @@ impl<T: TesslaParse> From<&str> for TesslaValue<T> {
 }
 
 // https://users.rust-lang.org/t/callable-struct-on-stable/54689/7
-impl<F> Deref for TesslaValue<Box<F>> {
+impl<F> Deref for TesslaValue<Rc<F>> {
     type Target = F;
 
     fn deref(&self) -> &Self::Target {

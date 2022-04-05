@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
 
 use im::Vector;
 
@@ -119,7 +120,7 @@ impl<T: Clone> TesslaList<T> {
     }
 
     #[inline]
-    pub fn map<U: Clone>(&self, function: TesslaValue<impl Fn(T) -> U>) -> TesslaList<U> {
+    pub fn map<U: Clone>(&self, function: TesslaValue<Rc<dyn Fn(T) -> U>>) -> TesslaList<U> {
         match (self, function) {
             (&Error(error), _) | (_, Error(error)) => Error(error),
             (Value(list), Value(function)) => {

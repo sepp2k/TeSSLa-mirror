@@ -1,5 +1,7 @@
 pub use std::rc::Rc;
 
+pub use im::{Vector, HashMap, HashSet};
+
 pub use self::io::*;
 pub use self::list::*;
 pub use self::map::*;
