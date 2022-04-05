@@ -160,71 +160,43 @@ impl<T: Clone> Events<T> {
 
 // -- FUNCTION WRAPPING --
 
-macro_rules! tessla_from_fn {
+pub trait TesslaFun<Base: ?Sized> {
+    fn wrap(f: Base) -> Self;
+}
+
+macro_rules! tessla_wrap_fn {
     ($( $arg:ident ),*) => {
-        impl<$($arg: 'static), *, R: 'static> From<TesslaValue<fn($($arg), *) -> R>> for TesslaValue<Rc<dyn Fn($($arg), *) -> R>> {
-            fn from(fun: TesslaValue<fn($($arg), *) -> R>) -> Self {
-                match fun {
+        impl<F, R, $($arg),*> TesslaFun<F> for TesslaValue<Rc<dyn Fn($($arg),*) -> R>>
+            where F: 'static + Fn($($arg),*) -> R {
+            fn wrap(f: F) -> Self {
+                Value(Rc::new(f))
+            }
+        }
+        impl<F, R, $($arg),*> TesslaFun<TesslaValue<F>> for TesslaValue<Rc<dyn Fn($($arg),*) -> R>>
+            where F: 'static + Fn($($arg),*) -> R {
+            fn wrap(f: TesslaValue<F>) -> Self {
+                match f {
                     Error(error) => Error(error),
                     Value(value) => Value(Rc::new(value))
                 }
             }
         }
-        impl<$($arg: 'static), *, R: 'static> From<fn($($arg), *) -> R> for TesslaValue<Rc<dyn Fn($($arg), *) -> R>> {
-            fn from(fun: fn($($arg), *) -> R) -> Self {
-                Value(Rc::new(fun))
-            }
-        }
     }
 }
 
-impl<R: 'static> From<TesslaValue<fn() -> R>> for TesslaValue<Rc<dyn Fn() -> R>> {
-    fn from(fun: TesslaValue<fn() -> R>) -> Self {
-        match fun {
-            Error(error) => Error(error),
-            Value(value) => Value(Rc::new(value))
-        }
-    }
-}
-
-impl<R: 'static> From<fn() -> R> for TesslaValue<Rc<dyn Fn() -> R>> {
-    fn from(fun: fn() -> R) -> Self {
-        Value(Rc::new(fun))
-    }
-}
-
-pub trait TesslaFun<Base> {
-    fn wrap(f: Base) -> Self;
-}
-
-impl<A1: 'static, A2: 'static, R: 'static> TesslaFun<fn(A1, A2) -> R> for TesslaValue<Rc<dyn Fn(A1, A2) -> R>> {
-    fn wrap(f: fn(A1, A2) -> R) -> Self {
-        Value(Rc::new(f))
-    }
-}
-
-impl<A1: 'static, A2: 'static, R: 'static> TesslaFun<TesslaValue<fn(A1, A2) -> R>> for TesslaValue<Rc<dyn Fn(A1, A2) -> R>> {
-    fn wrap(f: TesslaValue<fn(A1, A2) -> R>) -> Self {
-        match f {
-            Error(error) => Error(error),
-            Value(value) => Value(Rc::new(value))
-        }
-    }
-}
-
-/*
-tessla_from_fn!(A1);
-tessla_from_fn!(A1, A2);
-tessla_from_fn!(A1, A2, A3);
-tessla_from_fn!(A1, A2, A3, A4);
-tessla_from_fn!(A1, A2, A3, A4, A5);
-tessla_from_fn!(A1, A2, A3, A4, A5, A6);
-tessla_from_fn!(A1, A2, A3, A4, A5, A6, A7);
-tessla_from_fn!(A1, A2, A3, A4, A5, A6, A7, A8);
-tessla_from_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9);
-tessla_from_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
-tessla_from_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11);
-tessla_from_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12);*/
+tessla_wrap_fn!();
+tessla_wrap_fn!(A1);
+tessla_wrap_fn!(A1, A2);
+tessla_wrap_fn!(A1, A2, A3);
+tessla_wrap_fn!(A1, A2, A3, A4);
+tessla_wrap_fn!(A1, A2, A3, A4, A5);
+tessla_wrap_fn!(A1, A2, A3, A4, A5, A6);
+tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7);
+tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7, A8);
+tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11);
+tessla_wrap_fn!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12);
 
 // -- STEP FUNCTIONS --
 

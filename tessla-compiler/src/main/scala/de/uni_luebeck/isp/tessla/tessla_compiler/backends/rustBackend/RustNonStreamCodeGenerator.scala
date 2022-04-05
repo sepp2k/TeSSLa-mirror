@@ -468,7 +468,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val args = oArgs.toIndexedSeq
     name match {
 
-      case "__[rust]box__" => s"Box::new(move ${args(0)})"
+      case "__[rust]box__" => s"TesslaValue::wrap(move ${args(0)})"
       case "__[rust]format__" =>
         s"match ${args(1)} { " +
           s"Value(val) => Value(format!(${args(0).substring(6, args(0).length - 13)}, val)), " +
