@@ -30,6 +30,8 @@ object RustUtils {
    * Converts TeSSLa type to corresponding rust types
    *
    * @param t Type to be converted. If type is Events[t] the result is equal to calling the function with t.
+   * @param mask_generics Replace all generic types with _, resulting in them being inferred by rust.
+   *                      This is needed in anonymous functions, where you cannot specify generic types
    * @param wrap_type In some places we need the underlying type without wrapping it in TesslaValue&lt;...&gt;.
    *                  For example in type parameters for structs: this way we can define structs such that
    *                  their fields are guaranteed to be a TesslaValue with their content type as a type parameter.
@@ -37,27 +39,28 @@ object RustUtils {
    */
   def convertType(
     t: Type,
+    mask_generics: Boolean,
     wrap_type: Boolean = true
   ): String = {
     val typName = t match {
-      case InstantiatedType("Events", Seq(t), _)     => convertType(t, wrap_type = false)
+      case InstantiatedType("Events", Seq(t), _)     => convertType(t, mask_generics, wrap_type = false)
       case RecordType(entries, _) if entries.isEmpty => "()"
       case InstantiatedType("Bool", Seq(), _)        => "bool"
       case InstantiatedType("Int", Seq(), _)         => "i64"
       case InstantiatedType("Float", Seq(), _)       => "f64"
       case InstantiatedType("String", Seq(), _)      => "String"
       case InstantiatedType("Option", Seq(t), _) =>
-        s"Option<${convertType(t)}>"
+        s"Option<${convertType(t, mask_generics)}>"
       case InstantiatedType("Set", Seq(t), _) =>
-        s"HashSet<${convertType(t)}>"
+        s"HashSet<${convertType(t, mask_generics)}>"
       case InstantiatedType("Map", Seq(t1, t2), _) =>
-        s"HashMap<${convertType(t1)}, ${convertType(t2)}>"
+        s"HashMap<${convertType(t1, mask_generics)}, ${convertType(t2, mask_generics)}>"
       case InstantiatedType("List", Seq(t), _) =>
-        s"Vector<${convertType(t)}>"
+        s"Vector<${convertType(t, mask_generics)}>"
       case InstantiatedType(n, Seq(), _) if n.startsWith("native:") => n.stripPrefix("native:")
       case InstantiatedType(n, tps, _) if n.startsWith("native:") =>
         s"${n.stripPrefix("native:")}<${tps
-          .map { t => convertType(t) }
+          .map { t => convertType(t, mask_generics) }
           .mkString(", ")}>"
       case FunctionType(_, paramTypes, resultType, _) =>
         // abstract fn types may not be used for parameter/return types of abstract functions
@@ -65,20 +68,20 @@ object RustUtils {
         val params = paramTypes
           .map {
             // FIXME case (LazyEvaluation, t) =>
-            case (_, t) => convertType(t)
+            case (_, t) => convertType(t, mask_generics)
           }
           .mkString(", ")
-        val result = convertType(resultType)
+        val result = convertType(resultType, mask_generics)
         s"Rc<dyn Fn($params) -> $result>"
       case RecordType(entries, _) =>
         val typeParams = entries.toSeq
           .sortWith { case ((name1, _), (name2, _)) => structComparison(name1, name2) }
           .map { case (_, (typ, _)) => typ }
         if (isStructTuple(entries.toSeq.map { case (name, _) => name }))
-          s"(${typeParams.map(convertType(_)).mkString(", ")},)"
+          s"(${typeParams.map(convertType(_, mask_generics)).mkString(", ")},)"
         else
-          s"${getStructName(entries)}<${typeParams.map(convertType(_, wrap_type = false)).mkString(", ")}>"
-      case TypeParam(name, _) => name.toString
+          s"${getStructName(entries)}<${typeParams.map(convertType(_, mask_generics, wrap_type = false)).mkString(", ")}>"
+      case TypeParam(name, _) => if (mask_generics) "_" else name.toString
       case _ =>
         throw Diagnostics.CommandNotSupportedError(s"Type translation for type $t not supported")
     }

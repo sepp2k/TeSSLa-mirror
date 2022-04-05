@@ -46,7 +46,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     currSrc: SourceSegments
   ): String = {
     val name = s"var_${stream_id.fullName}"
-    currSrc.stateDef.append(s"$name: EventContainer<${RustUtils.convertType(stream_type)}>")
+    currSrc.stateDef.append(s"$name: EventContainer<${RustUtils.convertType(stream_type, mask_generics = false)}>")
     currSrc.stateInit.append(s"$name: ${init_expr.replace("state.", "")}")
     val stream = s"state.$name"
     currSrc.store.append(s"$stream.update_last();")
@@ -470,7 +470,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
     outputNames: mutable.Set[String]
   ): Unit = {
     val s = s"var_${id.fullName}"
-    val t = RustUtils.convertType(typ)
+    val t = RustUtils.convertType(typ, mask_generics = false)
     val cleanName = SanitizeIdentifiers.escapeName(name)
 
     // Only add state definitions if they haven't been added before
@@ -509,7 +509,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val stream = createStreamContainer(stream_id, stream_type, "init()", srcSegments)
 
-    val t = RustUtils.convertType(stream_type)
+    val t = RustUtils.convertType(stream_type, mask_generics = false)
 
     srcSegments.stateDef.append(s"pub set_$stream_id: fn($t, i64, &mut State)")
 
