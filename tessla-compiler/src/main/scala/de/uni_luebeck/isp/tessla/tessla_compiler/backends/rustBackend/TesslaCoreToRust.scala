@@ -21,7 +21,6 @@ import de.uni_luebeck.isp.tessla.core.TranslationPhase.Result
 import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Diagnostics, ExtendedSpecification}
 
-import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.io.Source
 
@@ -46,18 +45,6 @@ class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSp
 
     val rustNonStreamCodeGenerator = new RustNonStreamCodeGenerator(extSpec)
     val rustStreamCodeGenerator = new RustStreamCodeGenerator(rustNonStreamCodeGenerator)
-
-    @tailrec
-    final protected def externResolution(e: ExpressionArg): ExternExpression = e match {
-      case e: ExternExpression => e
-      case ExpressionRef(id, _, _) if extSpec.spec.definitions.contains(id) =>
-        externResolution(extSpec.spec.definitions(id))
-      case _ =>
-        throw Diagnostics.CoreASTError(
-          "No extern or reference to extern in function application with stream result",
-          e.location
-        )
-    }
 
     protected def getStreamType(id: Identifier): Type = {
       if (extSpec.spec.definitions.contains(id)) {
