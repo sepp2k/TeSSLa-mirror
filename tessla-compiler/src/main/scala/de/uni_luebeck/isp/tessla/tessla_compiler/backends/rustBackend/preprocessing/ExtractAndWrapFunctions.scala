@@ -25,6 +25,9 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
 import scala.collection.immutable.{ArraySeq, Map}
 import scala.collection.mutable
 
+/**
+ * In this phase, nested functions are unwrapped so that they can call themselves recursively.
+ */
 class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specification] {
 
   private val extractedFunctions = mutable.Map.empty[Identifier, (Identifier, FunctionExpression)]
@@ -58,11 +61,8 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
   }
 
   /**
-   * Traverse
-   * @param e
-   * @param currentScope
-   * @param outerScope
-   * @return
+   * Traverses an expression recursively and stores the names of all named functions in [[knownNamedFunctions]].
+   * @param e The expression to evaluate.
    */
   private def findFunctionNames(
     e: ExpressionArg
@@ -88,11 +88,12 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
   }
 
   /**
-   * Traverse an expression, and collect a list of all [[ExpressionRef]]s, that are not defined in the current scope
-   * @param e
-   * @param currentScope
-   * @param outerScope
-   * @return
+   * Traverses an expression recursively and collects a list of all [[Identifier]]s,
+   * that are not accessible in the current scope.
+   * @param e The expression to evaluate.
+   * @param currentScope Contains all identifier that are accessible in the local and global scope.
+   * @param outerScope Contains all identifier that aren't in currentScope.
+   * @return A list of all [[Identifier]]s and their types that are not accessible in the current scope.
    */
   private def findClosureArgs(
     e: ExpressionArg,
@@ -124,15 +125,17 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
   }
 
   /**
-   * Recursively traverse through a DefinitionExpression and replace all [[FunctionExpression]]s with
-   * a boxed lambda calling an [[ExpressionRef]] pointing to a global function. // TODO box those
-   * If the function in question requires data from the surrounding scope, we add those as parameters to the global
-   * function and box that data within a clojure.
-   * The extracted global functions have all references to variables outside its scope redirected to additional arguments,
-   * which are partially applied in the boxed closure.
+   * Recursively traverse through a DefinitionExpression and extract all [[FunctionExpression]]s into the global scope.
+   * If the function in question requires data from the surrounding scope, we add those as parameters to a function
+   * that then returns a closure with them captured.
+   * The extracted global function name is a concatenation of all names of the extracted functions parents.
+   * The original and the new global name of each extracted function is stored in [[extractedFunctions]].
    *
-   * @param ???
-   * @return
+   * @param e The expression to evaluate.
+   * @param currentScope Contains all identifier that are accessible in the local and global scope.
+   * @param outerScope Contains all identifier that aren't in currentScope.
+   * @param definitionPath The concatenation of all parent function names.
+   * @return The modified [[Expression]].
    */
   def extractFunctionExpressions(
     e: ExpressionArg,
@@ -232,10 +235,13 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
   }
 
   /**
-   * map exprRefs to functions to the respective global extract, with the added closure scope params
+   * Recursively traverses the specified expression and replaces [[ExpressionRef]]s to extracted functions with
+   * either a direct reference to the global function or with a call to the global function that passes in required
+   * scope variables.
    *
-   * @param ???
-   * @return
+   * @param e The expression to evaluate.
+   * @param outerScope Contains all identifier that aren't in currentScope.
+   * @return The modified expression.
    */
   def remapFunctionApplications(
     e: ExpressionArg,

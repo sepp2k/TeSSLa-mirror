@@ -22,6 +22,10 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, StreamCodeGenerat
 
 import scala.collection.mutable
 
+/**
+ * Handles the translation of stream related functions.
+ * @param rustNonStreamCodeGenerator A [[RustNonStreamCodeGenerator]] that handles non-stream related code.
+ */
 class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGenerator)
     extends StreamCodeGeneratorInterface[SourceSegments, Unit] {
 
@@ -59,7 +63,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param output_id    The id nil is assigned to
    * @param output_type  The type of id. Must be Events[...]
    * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceNilStepCode(
     output_id: Identifier,
@@ -77,7 +80,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param stream_expr  The stream parameter of the default
    * @param default_expr The default parameter of the default
    * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceDefaultStepCode(
     output_id: Identifier,
@@ -103,7 +105,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param stream_expr  The stream parameter of the defaultFrom
    * @param default_expr The stream parameter of the defaultFrom
    * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceDefaultFromStepCode(
     output_id: Identifier,
@@ -124,7 +125,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param output_id    The id time is assigned to
    * @param stream_expr  The base-stream parameter of the time
    * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceTimeStepCode(
     output_id: Identifier,
@@ -144,7 +144,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param values_expr  The value-stream parameter of the last
    * @param trigger_expr The trigger/clock-stream parameter of the last
    * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceLastStepCode(
     output_id: Identifier,
@@ -166,7 +165,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param delay_expr   The delay-stream parameter of the delay
    * @param reset_expr   The reset-stream parameter of the delay
    * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceDelayStepCode(
     output_id: Identifier,
@@ -200,7 +198,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param argument_exprs The arguments of the lift except the last one (function)
    * @param function_expr  The lifted function
    * @param currSrc  The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceLiftStepCode(
     output_id: Identifier,
@@ -226,7 +223,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param argument_exprs     The arguments of the lift except the last one (function)
    * @param function_expr The lifted function
    * @param currSrc  The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceSignalLiftStepCode(
     output_id: Identifier,
@@ -251,7 +247,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param output_type      The type of id. Must be Events[...]
    * @param argument_exprs    The stream expressions to be merged
    * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceMergeStepCode(
     output_id: Identifier,
@@ -270,7 +265,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param output_id        The id count is assigned to
    * @param count_stream_expr Expression of the stream to be counted
    * @param currSrc   The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceCountStepCode(
     output_id: Identifier,
@@ -290,7 +284,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param value_expr   Argument expressions for const value
    * @param trigger_expr Argument expression for triggering stream
    * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceConstStepCode(
     output_id: Identifier,
@@ -314,7 +307,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param value_expr     Argument expressions for filter value stream
    * @param condition_expr Argument expressions for filter condition stream
    * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceFilterStepCode(
     output_id: Identifier,
@@ -338,7 +330,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param init_expr     Expression of the initial value for the folding
    * @param function_expr Expression of the function used for folding
    * @param currSrc  The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceFoldStepCode(
     output_id: Identifier,
@@ -367,7 +358,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param stream_expr   Expression of the stream to be reduced
    * @param function_expr Expression of the function used for reducing
    * @param currSrc  The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceReduceStepCode(
     output_id: Identifier,
@@ -391,7 +381,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param output_id      The id unitIf is assigned to
    * @param condition_expr Expression of the stream with the condition for unitIf
    * @param currSrc The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def produceUnitIfStepCode(
     output_id: Identifier,
@@ -410,7 +399,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param output_type Type of the output stream
    * @param stream_expr Stream to be filtered
    * @param currSrc   The source listing the generated block is added to.
-   * @return The modified source listing
    */
   override def producePureStepCode(
     output_id: Identifier,
@@ -432,7 +420,6 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
    * @param argument_exprs The arguments passed to e
    * @param argument_types The type arguments passed to e
    * @param currSource The source listing where the generated code is attached to.
-   * @return The modified source listing
    */
   override def produceNativeFunctionStepCode(
     output_id: Identifier,

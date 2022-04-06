@@ -28,14 +28,14 @@ import scala.io.Source
 import scala.reflect.io.Directory
 
 /**
- * Invokes rustc to generate a binary artifact from Rust code.
+ * Invokes cargo to generate a binary artifact from Rust code.
  *
- * @param artifactPath  A path where the final monitor binary will be copied to.
+ * @param artifactPath A path where the final monitor binary will be copied to.
  */
 class RustCompiler(artifactPath: Path) extends TranslationPhase[RustFiles, Unit] {
 
   /**
-   * Invokes rustc to translate a Rust source string into a binary artifact.
+   * Invokes cargo to translate a collection of [[RustFiles]] into a binary artifact.
    * @param sourceCode The source code to compile.
    * @return Unit wrapped in a Result data structure.
    */

@@ -91,9 +91,9 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
 
   /**
    * Replace underscores with double underscores, and any non UAX31-R1 characters
-   * with their hex representation as `uXXXX_`
-   * @param name
-   * @return
+   * with their hex representation as `uXXXX_`.
+   * @param name The name to escape.
+   * @return The escaped name.
    */
   def escapeName(name: String): String = {
     name.replace("_", "__").flatMap { c =>

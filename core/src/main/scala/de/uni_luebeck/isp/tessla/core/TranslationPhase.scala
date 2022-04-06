@@ -30,6 +30,12 @@ import scala.collection.mutable.ArrayBuffer
  * @tparam U The result of applying this phase
  */
 trait TranslationPhase[-T, +U] extends (T => Result[U]) {
+  /**
+   * Performs the translation of this translation phase.
+   *
+   * @param spec The specification to translate.
+   * @return The translated specification.
+   */
   def translate(spec: T): Result[U]
 
   def apply(spec: T): Result[U] = translate(spec)

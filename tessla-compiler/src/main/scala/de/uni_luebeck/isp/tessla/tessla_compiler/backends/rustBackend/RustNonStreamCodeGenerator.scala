@@ -187,7 +187,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
    * Translates an ExternExpression. If the extern is of function type a lambda expression is wrapped around it.
    * If the extern is directly applied this lambda is most likely unnecessary and this function should not be
    * used for translation of the called extern.
-   * @param e          The[[ExternExpression]]
+   * @param e          The [[ExternExpression]]
    * @param tm         The [[TypeArgManagement]] to resolve type parameters
    * @param defContext Definition context depicting all var names in the current scope to their definition expression
    * @return The translated expression

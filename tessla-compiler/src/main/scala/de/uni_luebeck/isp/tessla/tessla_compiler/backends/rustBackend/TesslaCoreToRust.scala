@@ -24,8 +24,6 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.{DefinitionOrdering, Diagnostic
 import scala.collection.mutable
 import scala.io.Source
 
-case class RustFiles(monitor: String, main: String) {}
-
 /**
  * Class implementing TranslationPhase for the translation from TeSSLa Core to
  * rust code
@@ -95,7 +93,7 @@ class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSp
               // Generate static function
               rustNonStreamCodeGenerator.translateStaticFunction(id, definition, srcSegments)
             case _ =>
-              // Other non-stream or function static constants, which we inline wherever needed
+            // Other non-stream or function static constants, which we inline wherever needed
           }
       }
 
@@ -107,28 +105,7 @@ class TesslaCoreToRust(userIncludes: String) extends TranslationPhase[ExtendedSp
           produceOutputCode(outputMap, outputNames, id, srcSegments)
       }
 
-      insertSegments(srcSegments)
-    }
-
-    private def insertSegments(srcSegments: SourceSegments): RustFiles = {
-      RustFiles(
-        Source
-          .fromResource(monitorTemplate)
-          .mkString
-          .replace("//USERINCLUDES", userIncludes)
-          .replace("//STATEDEF", srcSegments.stateDef.mkString(",\n"))
-          .replace("//STATIC", srcSegments.static.mkString("\n"))
-          .replace("//STATESTATIC", srcSegments.stateStatic.mkString("\n"))
-          .replace("//STATEINIT", srcSegments.stateInit.mkString(",\n"))
-          .replace("//STORE", srcSegments.store.mkString("\n"))
-          .replace("//TIMESTAMP", srcSegments.timestamp.mkString("\n"))
-          .replace("//COMPUTATION", srcSegments.computation.mkString("\n"))
-          .replace("//DELAYRESET", srcSegments.delayReset.mkString("\n")),
-        Source
-          .fromResource(mainTemplate)
-          .mkString
-          .replace("//INPUT", srcSegments.input.mkString("\n"))
-      )
+      srcSegments.insertSegments(monitorTemplate, userIncludes, mainTemplate);
     }
   }
 }

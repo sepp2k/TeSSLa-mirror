@@ -23,6 +23,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.structCom
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.SanitizeIdentifiers
 
 import scala.collection.mutable.ListBuffer
+import scala.io.Source
 
 object RustUtils {
 
@@ -140,9 +141,9 @@ object RustUtils {
   }
 
   /**
-   *
-   * @param record
-   * @return
+   * Replaces the type of all fields of a [[RecordType]] with [[TypeParam]]s.
+   * @param record The [[RecordType]] to modify.
+   * @return The modified [[RecordType]].
    */
   def genericiseRecordType(record: RecordType): RecordType = record match {
     case RecordType(entries, location) =>
@@ -179,6 +180,9 @@ object RustUtils {
   }
 }
 
+/**
+ * Contains buffers for all segments where code should be inserted.
+ */
 case class SourceSegments(
   stateDef: ListBuffer[String] = new ListBuffer[String],
   stateStatic: ListBuffer[String] = new ListBuffer[String],
@@ -189,4 +193,39 @@ case class SourceSegments(
   static: ListBuffer[String] = new ListBuffer[String],
   store: ListBuffer[String] = new ListBuffer[String],
   delayReset: ListBuffer[String] = new ListBuffer[String]
-)
+) {
+  /**
+   * Inserts the specified segments into the template.
+   * @param monitorTemplate Path to the monitor library template.
+   * @param userIncludes The additional user includes.
+   * @param mainTemplate Path to the template for the main file handling IO.
+   * @return A collection of Rust source files.
+   */
+  def insertSegments(monitorTemplate: String, userIncludes: String, mainTemplate: String): RustFiles = {
+    RustFiles(
+      Source
+        .fromResource(monitorTemplate)
+        .mkString
+        .replace("//USERINCLUDES", userIncludes)
+        .replace("//STATEDEF", stateDef.mkString(",\n"))
+        .replace("//STATIC", static.mkString("\n"))
+        .replace("//STATESTATIC", stateStatic.mkString("\n"))
+        .replace("//STATEINIT", stateInit.mkString(",\n"))
+        .replace("//STORE", store.mkString("\n"))
+        .replace("//TIMESTAMP", timestamp.mkString("\n"))
+        .replace("//COMPUTATION", computation.mkString("\n"))
+        .replace("//DELAYRESET", delayReset.mkString("\n")),
+      Source
+        .fromResource(mainTemplate)
+        .mkString
+        .replace("//INPUT", input.mkString("\n"))
+    )
+  }
+}
+
+/**
+ * Contains the content of the translated Rust file.
+ * @param monitor The monitor library.
+ * @param main The main file handling IO.
+ */
+case class RustFiles(monitor: String, main: String)
