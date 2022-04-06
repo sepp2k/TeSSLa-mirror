@@ -1,0 +1,5 @@
+{
+  "spec": "map-zip.tessla",
+  "input": "map-zip.input",
+  "expectedOutput": "map-zip.output"
+}
