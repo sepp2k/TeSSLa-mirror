@@ -1,7 +1,9 @@
 Monitor API Documentation
 ==================================
 
-## Inputs
+## Scala
+
+### Inputs
 
 If a TeSSLa specification is compiled to an API monitor the interaction can be done in the following way:
 
@@ -16,7 +18,7 @@ Note: The `timestamp` parameter may not be decreasing, not even between differen
 
 Further more for every output stream `o` a Lambda-variable
 
-## Outputs
+### Outputs
 
 ```
 out_o(value, timestamp, name, error)
@@ -42,12 +44,59 @@ out o
 
 and the output then be accessed by `out_o`.
 
-## Flushing
+### Flushing
 
 When an event with timestamp `t` arrives, all events up to this timestamp exclusively are calculated.
 One can manually affect a calculation for the current timestamp by calling the function `flush()`
 or to an arbitrary timestamp exclusively by calling `step(timestamp)`.
 
+## Rust
+
+### State
+
+The state of all streams is stored a state struct. You can acquire an initial state using `get_initial_state()`:
+```
+let state = &mut get_initial_state();
+```
+The state struct contains functions to set the value of input streams and optional callback
+functions to receive output values.
+
+### Inputs
+
+For every input stream `i` the `state` struct contains a function
+```
+state.set_i: fn(TesslaValue<T>, i64, &mut State)
+```
+
+which can be called successively when a new data event arrives on the stream.
+Note: The `timestamp` parameter may not be decreasing, not even between different input streams.
+
+### Outputs
+
+Further more for every output stream `o` the `state` struct contains a variable
+```
+state.out_o: Option<fn(TesslaValue<T>, i64)>
+```
+
+When no I/O interface is generated this variable is set to `None`.
+
+Note: For outputs of expressions, e.g. `out time(x)` a new stream with auto-generated name, e.g. `timeu0028_xu0029_`
+is created and the callback is hence `out_timeu0028_xu0029_` and can change between compiler versions and with
+adjustments of the specification. It is therefore advisable to use the out statement only with
+defined streams or aliased streams when using the API monitor. The upper example could e.g. be rewritten to:
+
+```
+out time(x) as o
+```
+
+and the output then be accessed by `out_o` as seen above.
+
+## Flushing
+
+When an event with timestamp `t` arrives, all events up to this timestamp exclusively are calculated.
+One can manually affect a calculation for the current timestamp by calling the function `pub fn flush(state: &mut State)`
+or to an arbitrary timestamp exclusively by calling `pub fn step(state: &mut State, new_input_ts: i64, flush: bool)`.
+
 ## Types
 
-A list how TeSSLa types correspond to Scala types can be found [here](Types.md).
+A list how TeSSLa types correspond to Scala and Rust types can be found [here](Types.md).
