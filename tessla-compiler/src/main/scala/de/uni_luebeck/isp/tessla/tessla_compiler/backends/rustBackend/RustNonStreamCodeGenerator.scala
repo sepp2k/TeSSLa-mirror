@@ -316,7 +316,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val traitBounds = (bound: String) => s"<${typeParams.map(t => s"$t: $bound").mkString(", ")}>"
     val typeAnnotation = s"<${typeParams.mkString(", ")}>"
     if (fields.forall { case (_, tpe) => canBeHashed(tpe) })
-      srcSegments.static.append("#[derive(std::hash::Hash)]")
+      srcSegments.static.append("#[derive(Hash)]")
     srcSegments.static.append(s"""
        |#[derive(Hash, Clone, PartialEq, Eq)]
        |pub struct $structName$typeAnnotation {
