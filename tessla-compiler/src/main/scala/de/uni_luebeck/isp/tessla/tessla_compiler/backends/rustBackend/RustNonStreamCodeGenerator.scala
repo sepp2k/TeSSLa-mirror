@@ -399,7 +399,6 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     val args = oArgs.toIndexedSeq
     name match {
 
-      case "__[rust]box__" => s"Value(Rc::new(move ${args(0)}))"
       case "__[rust]format__" => // FIXME move handling of __[rust] interns one step up, to avoid translating (and then substring extracting) the string literal here
         s"""match ${args(1)} {
            |    Error(error) => Error(error),
@@ -473,8 +472,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__String_toUpper__" => s"${args(0)}.to_upper()"
       case "__String_toLower__" => s"${args(1)}.to_lower()"
 
-      case "__Map_empty__" => "TesslaMap::empty()"
-      //case "__Map_add__" if typeHint.retType.isInstanceOf[MutableMapType] => s"${args(0)}.insert(${args(1)}, ${args(2)})"
+      case "__Map_empty__"    => "TesslaMap::empty()"
       case "__Map_add__"      => s"${args(0)}.add(${args(1)},${args(2)})"
       case "__Map_contains__" => s"${args(0)}.contains(${args(1)})"
       case "__Map_get__"      => s"${args(0)}.get(${args(1)})"
@@ -503,9 +501,8 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__List_init__"    => s"${args(0)}.init()"
       case "__List_get__"     => s"${args(0)}.get(${args(1)})"
       case "__List_map__"     => s"${args(0)}.map(${args(1)})"
-      //case "__List_set__" if typeHint.retType.isInstanceOf[MutableListType] => s"${args(0)}.insert(${args(1)} as usize, ${args(2)})"
-      case "__List_set__"  => s"${args(0)}.set(${args(1)}, ${args(2)})"
-      case "__List_fold__" => s"${args(0)}.fold(${args(1)},${args(2)})"
+      case "__List_set__"     => s"${args(0)}.set(${args(1)}, ${args(2)})"
+      case "__List_fold__"    => s"${args(0)}.fold(${args(1)},${args(2)})"
 
       case s if s.startsWith("__native:") => s"${s.stripPrefix("__native:").stripSuffix("__")}(${args.mkString(", ")})"
 
