@@ -489,7 +489,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case "__Set_size__"         => s"${args(0)}.size()"
       case "__Set_union__"        => s"${args(0)}.union(${args(1)})"
       case "__Set_intersection__" => s"${args(0)}.intersection(${args(1)})"
-      case "__Set_minus__"        => s"${args(0)}.difference(${args(1)})"
+      case "__Set_minus__"        => s"${args(0)}.minus(${args(1)})"
       case "__Set_fold__"         => s"${args(0)}.fold(${args(1)},${args(2)})"
       case "__Set_map__"          => s"${args(0)}.map(${args(1)})"
 
