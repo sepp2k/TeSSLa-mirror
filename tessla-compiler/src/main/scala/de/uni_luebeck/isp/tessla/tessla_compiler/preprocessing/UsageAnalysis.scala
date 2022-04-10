@@ -60,7 +60,7 @@ object UsageAnalysis extends TranslationPhase[Specification, ExtendedSpecificati
 
     findUsagesInDefs(spec.definitions)
 
-    Success(ExtendedSpecification(spec, Some(usages.toMap), None, None), Seq())
+    Success(ExtendedSpecification(spec, Some(usages.toMap), None, None, None), Seq())
   }
 
 }

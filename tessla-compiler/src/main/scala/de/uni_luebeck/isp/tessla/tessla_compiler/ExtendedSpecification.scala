@@ -24,10 +24,12 @@ import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
  * @param usageInfo Map indication which Identifier is used in the definitions of other identifiers
  * @param lazyVars Set of all variables that shall be translated with lazy assignments
  * @param inlining Set of all variables which are not translated as variables but inlined (must be final variables)
+ * @param traitInfo Set of generic types, that need additional traits in Rust
  */
 case class ExtendedSpecification(
   spec: Specification,
   usageInfo: Option[Map[Identifier, Set[Identifier]]],
   lazyVars: Option[Set[Identifier]],
-  inlining: Option[Set[Identifier]]
+  inlining: Option[Set[Identifier]],
+  traitInfo: Option[Map[Identifier, Set[String]]]
 )

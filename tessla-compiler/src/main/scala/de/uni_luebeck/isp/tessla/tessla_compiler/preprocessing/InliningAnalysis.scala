@@ -122,7 +122,16 @@ object InliningAnalysis extends TranslationPhase[ExtendedSpecification, Extended
 
     mapDefinitionsForInlining(spec.definitions, spec.definitions)
 
-    Success(ExtendedSpecification(spec, extSpec.usageInfo, Some(lazyIds.toSet), Some(lazyByInlining.toSet)), Seq())
+    Success(
+      ExtendedSpecification(
+        spec,
+        extSpec.usageInfo,
+        Some(lazyIds.toSet),
+        Some(lazyByInlining.toSet),
+        extSpec.traitInfo
+      ),
+      Seq()
+    )
 
   }
 
