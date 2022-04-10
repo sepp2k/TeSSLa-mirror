@@ -13,9 +13,9 @@ pub type TesslaMap<T, U> = TesslaValue<HashMap<T, U>>;
 impl<T: Display + Hash + Eq, U: Display> TesslaDisplay for HashMap<T, U> {
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("Map(")?;
-        let mut entries = Vector::from_iter(
-            self.iter().map(|(key, value)| format!("{} -> {}", key, value)));
-        entries.sort();
+        let mut entries = Vec::from_iter(self.iter()
+            .map(|(key, value)| format!("{} -> {}", key, value)));
+        entries.sort_unstable();
         for (i, entry) in entries.iter().enumerate() {
             if i > 0 {
                 f.write_str(", ")?;

@@ -3,7 +3,6 @@ use std::hash::Hash;
 use std::rc::Rc;
 
 use im::HashSet;
-use im::Vector;
 
 use crate::{TesslaBool, TesslaDisplay, TesslaInt, TesslaValue};
 use crate::TesslaValue::*;
@@ -13,9 +12,9 @@ pub type TesslaSet<T> = TesslaValue<HashSet<T>>;
 impl<T: Display> TesslaDisplay for HashSet<T> {
     fn tessla_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("Set(")?;
-        let mut entries = Vector::from_iter(
-            self.iter().map(|value| format!("{}", value)));
-        entries.sort();
+        let mut entries = Vec::from_iter(self.iter()
+            .map(|value| format!("{}", value)));
+        entries.sort_unstable();
         for (i, entry) in entries.iter().enumerate() {
             if i > 0 {
                 f.write_str(", ")?;
