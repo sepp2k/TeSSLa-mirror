@@ -250,7 +250,7 @@ object InferGenericTypeTraits extends TranslationPhase[ExtendedSpecification, Ex
         }
       case RecordType(paramEntries, _) =>
         argType match {
-          case RecordType(argEntries, _) if paramEntries == argEntries =>
+          case RecordType(argEntries, _) if paramEntries.keySet.equals(argEntries.keySet) =>
             mergeMaps(argEntries.zip(paramEntries).map {
               case ((_, (argType, _)), (_, (paramType, _))) =>
                 applyTraitsFromFunctionCall(argType, paramType, traitInfo)
