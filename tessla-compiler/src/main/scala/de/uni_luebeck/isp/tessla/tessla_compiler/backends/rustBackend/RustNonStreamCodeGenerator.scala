@@ -94,6 +94,9 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     }
   }
 
+  private def getTraitBounds(generic: Identifier): String =
+    (extSpec.traitInfo.getOrElse(Map.empty).getOrElse(generic, Set.empty) ++ Set("Clone")).mkString(" + ")
+
   /**
    * Translates a global function definition from TeSSLa Core into a static Rust function
    * @param id The id which is assigned
@@ -110,7 +113,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
         val genericTypes = RustUtils.getGenericTypeNames(params.map { case (_, _, typ) => typ } :+ result.tpe)
         val traitBounds =
           if (genericTypes.isEmpty) ""
-          else s"<${genericTypes.map(t => s"$t: 'static + Clone + TesslaDisplay").mkString(", ")}>"
+          else s"<${genericTypes.map(t => s"$t: 'static + ${getTraitBounds(t)}").mkString(", ")}>"
 
         val functionParams = params
           .map { case (id, _, tpe) => s"var_$id: ${RustUtils.convertType(tpe, mask_generics = false)}" }
