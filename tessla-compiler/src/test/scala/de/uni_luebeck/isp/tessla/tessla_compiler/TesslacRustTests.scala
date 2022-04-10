@@ -19,12 +19,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.{
-  ExtractAndWrapFunctions,
-  FormatStringMangler,
-  GenerateStructDefinitions,
-  SanitizeIdentifiers
-}
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustCompiler, RustFiles, TesslaCoreToRust}
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
@@ -135,6 +130,7 @@ object TesslacRustTests {
       andThen GenerateStructDefinitions
       andThen UsageAnalysis
       andThen InliningAnalysis
+      andThen InferGenericTypeTraits
       andThen new TesslaCoreToRust(additionalSource))
   }
 
