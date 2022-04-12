@@ -1,4 +1,4 @@
-12: keys = List(30, 3)
-12: list = List(90, 24)
-17: keys = List(10, 2)
-17: list = List(3000, 4)
+12: keys = Set(3, 30)
+12: list = Set(24, 90)
+17: keys = Set(10, 2)
+17: list = Set(3000, 4)

@@ -1,5 +1,6 @@
 in map: Events[Map[Int, {x: Int, y: Int}]]
 
-def list = Map.fold(map, List.empty[Int], (acc: List[Int], key: Int, value: {x: Int, y: Int}) => List.append(acc, key * value.x * value.y))
+def list = Map.fold(map, Set.empty[Int], (acc: Set[Int], key: Int, value: {x: Int, y: Int}) => Set.add(acc, key * value.x * value.y))
+def keys = List.fold(Map.keys(map), Set.empty[Int], (acc: Set[Int], key: Int) => Set.add(acc, key))
 out list
-out Map.keys(map) as keys
+out keys
