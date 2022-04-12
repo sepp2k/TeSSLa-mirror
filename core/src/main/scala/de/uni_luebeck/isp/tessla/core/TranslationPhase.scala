@@ -30,6 +30,7 @@ import scala.collection.mutable.ArrayBuffer
  * @tparam U The result of applying this phase
  */
 trait TranslationPhase[-T, +U] extends (T => Result[U]) {
+
   /**
    * Performs the translation of this translation phase.
    *

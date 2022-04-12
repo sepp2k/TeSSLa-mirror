@@ -19,8 +19,8 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preproces
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
-import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, TypeArgManagement}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.{RustUtils, TesslaCoreToRust}
+import de.uni_luebeck.isp.tessla.tessla_compiler.{Diagnostics, TypeArgManagement}
 
 import scala.collection.mutable
 
@@ -120,8 +120,8 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
 
     case InstantiatedType("Events", Seq(t), _) => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
     case InstantiatedType("Option", Seq(t), _) => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
-    case InstantiatedType("Set", Seq(t), _) => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
-    case InstantiatedType("List", Seq(t), _) => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
+    case InstantiatedType("Set", Seq(t), _)    => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
+    case InstantiatedType("List", Seq(t), _)   => getRecordTypes(t.resolve(tm.resMap), tm, structDefinitions)
     case InstantiatedType("Map", Seq(k, v), _) =>
       getRecordTypes(k.resolve(tm.resMap), tm, structDefinitions)
       getRecordTypes(v.resolve(tm.resMap), tm, structDefinitions)
@@ -133,13 +133,14 @@ object GenerateStructDefinitions extends TranslationPhase[Specification, Specifi
 
     case RecordType(entries, _) if entries.isEmpty => ()
 
-    case InstantiatedType("Float", Nil, _) |
-         InstantiatedType("Int", Nil, _) |
-         InstantiatedType("String", Nil, _) |
-         InstantiatedType("Bool", Nil, _) |
-         InstantiatedType("Unknown", Nil, _) |
-         TypeParam(_, _) => ()
+    case InstantiatedType("Float", Nil, _) | InstantiatedType("Int", Nil, _) | InstantiatedType("String", Nil, _) |
+        InstantiatedType("Bool", Nil, _) | InstantiatedType("Unknown", Nil, _) | TypeParam(_, _) =>
+      ()
 
-    case _ => throw Diagnostics.CommandNotSupportedError(s"Encountered unknown type while looking for record types: $typ", typ.location)
+    case _ =>
+      throw Diagnostics.CommandNotSupportedError(
+        s"Encountered unknown type while looking for record types: $typ",
+        typ.location
+      )
   }
 }

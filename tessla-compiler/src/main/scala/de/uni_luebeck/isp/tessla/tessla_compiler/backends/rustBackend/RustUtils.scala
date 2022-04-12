@@ -194,6 +194,7 @@ case class SourceSegments(
   store: ListBuffer[String] = new ListBuffer[String],
   delayReset: ListBuffer[String] = new ListBuffer[String]
 ) {
+
   /**
    * Inserts the specified segments into the template.
    * @param monitorTemplate Path to the monitor library template.
