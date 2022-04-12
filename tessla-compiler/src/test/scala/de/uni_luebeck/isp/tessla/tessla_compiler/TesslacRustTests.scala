@@ -165,8 +165,6 @@ object TesslacRustTests {
 
       process.waitFor(60, SECONDS)
 
-      out.markSupported()
-
       val output = Source.fromInputStream(out).getLines().toSeq
       val errors = Source.fromInputStream(err).getLines().toSeq
 
