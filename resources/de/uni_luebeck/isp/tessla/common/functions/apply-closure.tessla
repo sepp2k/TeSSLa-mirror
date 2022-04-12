@@ -1,0 +1,17 @@
+def apply(a: (Int) => Int, b: Int) = {
+    a(b)
+}
+
+def f(a: Int): (Int) => Int = {
+    def g(b: Int): Int = {
+        if b == 0 then a else 1 + apply(g, b - 1)
+    }
+    g
+}
+
+in x1: Events[Int]
+in x2: Events[Int]
+def y := slift2(x1, x2, (a: Int, b: Int) => f(a)(b))
+out y
+
+def ite(c: Bool, a: (Int) => Int, b: (Int) => Int): (Int) => Int = extern("ite")

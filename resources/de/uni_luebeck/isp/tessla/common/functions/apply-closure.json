@@ -1,0 +1,5 @@
+{
+  "input": "apply-closure.input",
+  "expectedOutput": "apply-closure.output",
+  "spec": "apply-closure.tessla"
+}
