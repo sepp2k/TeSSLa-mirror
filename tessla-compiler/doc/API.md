@@ -66,7 +66,7 @@ bits with your own logic.
 
 ### Types
 
-`TesslaValue<T>` is a Rust struct type that can either be an `Error(&str)` or a `Value(T)` depending on the state of the
+`TesslaValue<T>` is a Rust enum type that can either be an `Error(&str)` or a `Value(T)` depending on the state of the
 stream. As such when writing an interface you need to wrap any values passed in with `Value(...)`, and make sure e.g. by
 using a match expression that a result has been computed without error:
 ```rust

@@ -155,7 +155,7 @@ generated monitor.
 
 The compilation starts with the `SanitizeIdentifiers` step, which replaces the $ in identifiers with an underscore,
 any other contained underscores with two, and any other characters that are not allowed to be part of an identifier in
-Rust with `_u` and their four digit hexadecimal unicode representation.
+Rust as `uXXXX_` with their four digit hexadecimal unicode representation.
 
 The second step is `ExtractAndWrapFunctions`. In this phase, nested functions are extracted into global scope and if
 they use variables from any outer (non-global) scope, that data is wrapped in a closure. This makes all contained
