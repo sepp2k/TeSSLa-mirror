@@ -3,7 +3,7 @@
 
 extern crate tessla_stdlib;
 
-use tessla_stdlib::*;
+pub use tessla_stdlib::*;
 
 //USERINCLUDES
 

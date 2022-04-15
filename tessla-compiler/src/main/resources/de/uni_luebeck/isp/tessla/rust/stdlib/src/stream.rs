@@ -14,7 +14,7 @@ pub struct EventContainer<T> {
     last: Result<Option<T>, &'static str>,
 }
 
-type Events<T> = EventContainer<TesslaValue<T>>;
+pub type Events<T> = EventContainer<TesslaValue<T>>;
 
 #[inline]
 pub fn init<T>() -> Events<T> {

@@ -10,7 +10,7 @@ fn main() {
     let state = &mut get_initial_state();
 
     loop {
-        if tessla_stdlib::parse_input(&mut input_stream_name, &mut input_stream_value, &mut new_input_ts) {
+        if parse_input(&mut input_stream_name, &mut input_stream_value, &mut new_input_ts) {
             break; // reached EOF
         }
 
