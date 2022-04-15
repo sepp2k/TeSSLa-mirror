@@ -33,17 +33,17 @@ pub enum TesslaValue<T> {
 
 TesslaValue is specified together with some specializations in `value.rs` in the standard library.
 
-| TeSSLa Type   | Rust  Type                    | Notes                                                     |
-|---            |---                            |---                                                        |
-|  Unit         | TesslaValue<()>               |                                                           |
-|  Bool         | TesslaValue&lt;bool>             |                                                           |
-|  Int          | TesslaValue&lt;i64>              |                                                           |
-|  Float        | TesslaValue&lt;f64>              |                                                           |
-|  String       | TesslaValue&lt;String>           |                                                           |
-|  Set          | TesslaValue<im::HashSet<T>>   |                                                           |
-|  List         | TesslaValue<im::Vector<T>>    |                                                           |
-|  Map          | TesslaValue<im::HashMap<T,U>> |                                                           |
-|  Tuple        | Rust struct                   |                                                           |
-|  Record       | Rust struct                   |                                                           |
+| TeSSLa Type   | Rust  Type                    | Notes                                     |
+|---            |-------------------------------|-------------------------------------------|
+|  Unit         | TesslaValue<()>               |                                           |
+|  Bool         | TesslaValue&lt;bool>          |                                           |
+|  Int          | TesslaValue&lt;i64>           |                                           |
+|  Float        | TesslaValue&lt;f64>           |                                           |
+|  String       | TesslaValue&lt;String>        |                                           |
+|  Set          | TesslaValue<im::HashSet<T>>   |                                           |
+|  List         | TesslaValue<im::Vector<T>>    |                                           |
+|  Map          | TesslaValue<im::HashMap<T,U>> |                                           |
+|  Tuple        | TesslaValue<(T1, T2, ...)>    | Rust tuples wrapped in a TesslaValue. |
+|  Record       | Rust struct                   |                                           |
 
 For the immutable data structures the [im](https://docs.rs/im/15.0.0/im/) crate is used.

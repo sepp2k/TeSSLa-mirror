@@ -85,7 +85,7 @@ Note:
 
 ## Rust
 
-The TeSSLa Scala compiler can be run in the following way:
+The TeSSLa Rust compiler can be run in the following way:
 
 ```
 java -jar tessla.jar compile-rust [options] <tessla-file>
@@ -102,11 +102,18 @@ Following options are available:
 
 ### Stdio monitor generation
 
-Without further options the TeSSLa compiler generates a file `out.rs`.
-You cannot compile this file directly because the TeSSLa standard library is not included. You can
-pass a folder name with the `-b` parameter. Then a complete Cargo project is created and compiled directly into a monitor .
-This monitor accepts events via stdio. More detailed information about the input/output format see [here](../../IO.md).
-Note: If the monitor receives more than one input for the same stream at the same timestamp, the later ones are ignored.
+You must specify at least one of the two options `-p` and `-b`.
+
+If you provide `-p` you must specify a folder name.
+Then a complete Cargo project including the TeSSLa standard library is created into that folder.
+Depending on whether you specify `-m` the generated monitor will contain code to receive events via stdio.
+More detailed information about the input/output format see [here](../../IO.md).
+Note: If the monitor receives more than one input for the same stream at the same timestamp, the last one will be used.
+If you
+*don't* specify `-m` you need to provide your custom `main` function.
+
+If you specify `-b` the compiler will compile a complete runnable binary by invoking cargo. This binary always receives
+input via stdio. You can combine `-p` and `-b` as `-b` as both flags are treated separately.
 
 ### API monitor generation
 

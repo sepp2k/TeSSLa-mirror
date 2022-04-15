@@ -52,6 +52,8 @@ or to an arbitrary timestamp exclusively by calling `step(timestamp)`.
 
 ## Rust
 
+You'll find detailed information about the types used by the Rust backend [here](Types.md).
+
 ### State
 
 The state of all streams is stored a state struct. You can acquire an initial state using `get_initial_state()`:

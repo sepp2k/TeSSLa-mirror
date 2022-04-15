@@ -176,7 +176,7 @@ It loads two [template source files](../src/main/resources/de/uni_luebeck/isp/te
 the
 resources and replaces comments in there with the translations of the statement
 sequences in the generated `SourceListing`. It is a `TranslationPhase` from
-`SourceListing` to String. The generation of the Rust code is handled here by two code generators: 
+`ExtendedSpecification` to `RustFiles`. The generation of the Rust code is handled here by two code generators: 
 The 
 [RustStreamCodeGenerator](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/RustStreamCodeGenerator.scala)
 generates stream-related function calls such as lifts and I/O functions.
