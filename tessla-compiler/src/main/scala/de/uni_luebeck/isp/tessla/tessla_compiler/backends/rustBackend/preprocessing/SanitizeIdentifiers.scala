@@ -78,12 +78,12 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
       RecordConstructorExpression(
         entries.map {
           case (name, (expr, location)) =>
-            (name, (findAndEscapeIdentifiers(expr), location))
+            (escapeName(name), (findAndEscapeIdentifiers(expr), location))
         },
         location
       )
     case RecordAccessorExpression(name, target, nameLocation, location) =>
-      RecordAccessorExpression(name, findAndEscapeIdentifiers(target), nameLocation, location)
+      RecordAccessorExpression(escapeName(name), findAndEscapeIdentifiers(target), nameLocation, location)
     case ExternExpression(externName, typ, location) =>
       ExternExpression(externName, escapeType(typ), location)
     case _: StringLiteralExpression | _: IntLiteralExpression | _: FloatLiteralExpression => expr
@@ -124,7 +124,7 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
         )
       case RecordType(entries, location) =>
         RecordType(
-          entries.map { case (name, (typ, location)) => (name, (escapeType(typ), location)) },
+          entries.map { case (name, (typ, location)) => (escapeName(name), (escapeType(typ), location)) },
           location
         )
     }
