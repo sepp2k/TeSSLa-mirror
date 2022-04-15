@@ -32,19 +32,17 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
 
   private val extractedFunctions = mutable.Map.empty[Identifier, (Identifier, FunctionExpression)]
 
-  private val knownNamedFunctions = mutable.Set.empty[Identifier]
+  private val globalIdentifiers = mutable.Set.empty[Identifier]
 
   override def translate(spec: Specification): TranslationPhase.Result[Specification] = {
-    val globalScope = spec.definitions.keySet
+    globalIdentifiers.addAll(spec.definitions.keySet)
 
     spec.definitions.foreach {
-      case (id, definition) =>
-        if (definition.isInstanceOf[FunctionExpression]) {
-          knownNamedFunctions.addOne(id)
-        }
+      case (_, definition) =>
         findFunctionNames(definition)
     }
 
+    val globalScope = spec.definitions.keySet
     val definitions = spec.definitions.map {
       case (id, definition) =>
         val expression = extractFunctionExpressions(definition, globalScope, Set(), id.fullName)
@@ -61,14 +59,14 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
   }
 
   /**
-   * Traverses an expression recursively and stores the names of all named functions in [[knownNamedFunctions]].
+   * Traverses an expression recursively and stores the names of all named functions in [[globalIdentifiers]], since they will later be put into global scope
    * @param e The expression to evaluate.
    */
   private def findFunctionNames(
     e: ExpressionArg
   ): Unit = e match {
     case FunctionExpression(_, _, body, result, _) =>
-      knownNamedFunctions.addAll(body.flatMap {
+      globalIdentifiers.addAll(body.flatMap {
         case (id, definition) => if (definition.isInstanceOf[FunctionExpression]) Some(id) else None
       })
       body.foreach { case (_, definition) => findFunctionNames(definition) }
@@ -170,9 +168,9 @@ class ExtractAndWrapFunctions extends TranslationPhase[Specification, Specificat
           extractFunctionExpressions(result, functionScope, functionOuterScope, s"${definitionPath}_return"),
           location
         )
-        // find all ExpressionRefs that do not refer to something in current+global scope
+        // find all ExpressionRefs that do not refer to something in current and global scope
         val closureArgs = findClosureArgs(e, functionScope, functionOuterScope).filterNot {
-          case (id, _, _) => knownNamedFunctions.contains(id)
+          case (id, _, _) => globalIdentifiers.contains(id)
         }
         if (closureArgs.isEmpty) {
           functionExpr
