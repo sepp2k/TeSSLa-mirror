@@ -153,16 +153,27 @@ generated monitor.
 
 #### Preprocessing
 
-The compiler starts with the `ExtractAndWrapFunctions` phase. In this phase, nested functions are unwrapped and boxed so
-that they can call themselves recursively. In the next phase, the `FormatStringMangler`, calls to `String.format()` are 
-transformed.
-This has the reason that Rust's format! macro must know the format string parameter at compile time. In the third
-preprocessing phase `EscapeInvalidIdentifiers`, characters that are not allowed to be part of an identifier in Rust are 
-replaced by valid characters. The last phase of _rust specific_ preprocessing `GenerateStructDefinitions` iterates over 
-the core AST,
-filtering out all tuples and records and generating the corresponding Rust structure definitions.
+The compilation starts with the `SanitizeIdentifiers` step, which replaces the $ in identifiers with an underscore,
+any other contained underscores with two, and any other characters that are not allowed to be part of an identifier in
+Rust with `_u` and their four digit hexadecimal unicode representation.
 
-The two preprocessing phases `UsageAnalysis` and `InliningAnalysis` are described in detail above in the Scala section.
+The second step is `ExtractAndWrapFunctions`. In this phase, nested functions are extracted into global scope and if
+they use variables from any outer (non-global) scope, that data is wrapped in a closure. This makes all contained
+functions true static functions in rust, which means they can safely call themselves recursively.
+
+In the next phase, `FormatStringMangler` transforms calls to `String.format()`.
+This is necessary because Rust's format! macro must know the format string parameter at compile time.
+
+The fourth phase in Rust specific preprocessing, `GenerateStructDefinitions` iterates over the core AST, collecting all
+record types and adding a custom definition for each, which will then later be used to generate the corresponding Rust
+structure definitions.
+
+Then the two preprocessing phases `UsageAnalysis` and `InliningAnalysis` which are already described in detail above in
+the Scala section, are used here as well.
+
+And finally the `InferGenericTypeTraits` phase is executed, which analyzes uses of generic types with certain built-in
+functions and data types such as `im::HashMap` and `im::Set` which require specific [trait bounds](https://doc.rust-lang.org/rust-by-example/generics/bounds.html)
+for some of their type parameters in Rust.
 
 #### Translation into Intermediate Code
 
@@ -172,25 +183,24 @@ The intermediate code is neither generated nor used by the Rust backend.
 
 The translation to Rust source code is performed by
 [TesslaCoreToRust](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/TesslaCoreToRust.scala).
-It loads two [template source files](../src/main/resources/de/uni_luebeck/isp/tessla/rust/templates/) from 
-the
-resources and replaces comments in there with the translations of the statement
-sequences in the generated `SourceListing`. It is a `TranslationPhase` from
-`ExtendedSpecification` to `RustFiles`. The generation of the Rust code is handled here by two code generators: 
-The 
-[RustStreamCodeGenerator](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/RustStreamCodeGenerator.scala)
-generates stream-related function calls such as lifts and I/O functions.
-The 
-[RustNonStreamCodeGenerator](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/RustNonStreamCodeGenerator.scala) 
-generates code such as for external and integrated function applications and assignments.
+In there the TeSSLa Core AST and some additional info from `ExtendedSpecification` is directly used to generate Rust code,
+which is collected in a number of different buffers in the `SourceSegments` container.
+It then loads two [template source files](../src/main/resources/de/uni_luebeck/isp/tessla/rust/templates) from resources
+and replaces comments in there with the according Rust code parts from the generated `SourceSegments`.
+The resulting files are put in the `RustFiles` container.
+The generation of the Rust code specifically is handled here by two classes: 
+- The [RustStreamCodeGenerator](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/RustStreamCodeGenerator.scala)
+generates code for all built-in stream functions such as lift, merge, delay, etc.
+- The [RustNonStreamCodeGenerator](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/RustNonStreamCodeGenerator.scala) 
+is responsible for all the remaining code statements and expressions such as functions, literals, applications and assignments.
 
 #### Further translation steps
 
-For Rust there is also the possibility to generate the monitor as a Cargo project.
-This is done by the
-[RustCompiler](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/RustCompiler.scala).
-The Cargo project is generated on the fly. The standard library is copied from the resources and included as a sub
-project.
+For Rust there is also the possibility to generate a stdio monitor binary directly.
+This is done with the
+[RustCompiler](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/RustCompiler.scala)
+which generates a temporary Cargo project on the fly. The tessla standard library is exported from resources and
+included as a submodule.
 
 Further documentation
 ---------------------
