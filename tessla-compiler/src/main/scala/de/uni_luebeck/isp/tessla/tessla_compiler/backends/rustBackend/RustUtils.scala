@@ -174,7 +174,7 @@ object RustUtils {
    * @return Whether given struct is tuple
    */
   def isStructTuple(fieldNames: Seq[String]): Boolean = {
-    fieldNames.indices.forall(i => fieldNames.contains(s"_${i + 1}"))
+    fieldNames.indices.forall(i => fieldNames.contains(s"__${i + 1}"))
   }
 }
 

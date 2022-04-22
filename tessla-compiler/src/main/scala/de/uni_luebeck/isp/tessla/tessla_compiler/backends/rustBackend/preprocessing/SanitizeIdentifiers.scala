@@ -101,6 +101,16 @@ object SanitizeIdentifiers extends TranslationPhase[Specification, Specification
     }
   }
 
+  /**
+   * Reverse [[escapeName]], needed for struct display/parsing
+   * @param name The name to unescape.
+   * @return The original name.
+   */
+  def unescapeName(name: String): String = {
+    val pattern = "u([0-9A-F]{4})_".r
+    pattern.replaceAllIn(name.replace("__", "_"), unicode => Character.toString(Integer.valueOf(unicode.group(1), 16)))
+  }
+
   private def escapeIdentifier(id: Identifier): Identifier = {
     id.idOrName match {
       case Ior.Left(name)      => Identifier(Ior.Left(s"${escapeName(name)}"), id.location)

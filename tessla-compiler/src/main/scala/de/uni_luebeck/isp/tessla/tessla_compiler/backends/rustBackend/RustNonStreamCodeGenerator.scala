@@ -26,6 +26,7 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.{
 }
 import de.uni_luebeck.isp.tessla.tessla_compiler._
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.RustUtils.{canBeHashed, convertType}
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preprocessing.SanitizeIdentifiers
 
 /**
  * Class handling the translation of non-stream expressions
@@ -290,7 +291,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       case RecordAccessorExpression(name, target, _, _) =>
         val recordNames = target.tpe.asInstanceOf[RecordType].entries.toSeq.map { case (name, _) => name }
         if (RustUtils.isStructTuple(recordNames)) {
-          val index = name.stripPrefix("_").toInt
+          val index = name.stripPrefix("__").toInt
           if (0 < index && index <= recordNames.length)
             s"match ${translateExpressionArg(target, tm, defContext)} { Value(value) => value.${index - 1}, Error(error) => Error(error) }"
           else
@@ -325,14 +326,16 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |pub struct $structName$typeAnnotation {
        |    ${fields.map { case (name, tpe) => s"$name: ${convertType(tpe, mask_generics = false)}" }.mkString(",\n")}
        |}""".stripMargin)
-    val fieldNames = fields.map { case (name, _) => name }
+    val fieldNames = fields
+      .map { case (name, _) => (name, SanitizeIdentifiers.unescapeName(name)) }
+      .sortWith { case ((_, unescapedName1), (_, unescapedName2)) => structComparison(unescapedName1, unescapedName2) }
     srcSegments.static.append(generateStructDisplay(structName, fieldNames, traitBounds, typeAnnotation))
     srcSegments.static.append(generateStructParser(structName, fieldNames, traitBounds, typeAnnotation))
   }
 
   private def generateStructDisplay(
     structName: String,
-    fieldNames: Seq[String],
+    fieldNames: Seq[(String, String)],
     traitBounds: String => String,
     typeAnnotation: String
   ): String = {
@@ -340,8 +343,7 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |    fn tessla_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        |        f.write_str("{")?;
        |${fieldNames
-      .sortWith(structComparison)
-      .map { name => s"""write!(f, \"$name = {}\", self.$name)?;""" }
+      .map { case (name, unescapedName) => s"""write!(f, \"$unescapedName = {}\", self.$name)?;""" }
       .mkString("\nf.write_str(\", \")?;\n")}
        |        f.write_str("}")
        |    }
@@ -351,12 +353,12 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
 
   private def generateStructParser(
     structName: String,
-    fieldNames: Seq[String],
+    fieldNames: Seq[(String, String)],
     traitBounds: String => String,
     typeAnnotation: String
   ): String = {
     val init = s"""let mut result = $structName {\n${fieldNames
-      .map { name => s"""$name: Error("Value not assigned while parsing")""" }
+      .map { case (name, _) => s"""$name: Error("Value not assigned while parsing")""" }
       .mkString(",\n")}};"""
 
     s"""impl${traitBounds("TesslaParse + Clone")} TesslaRecordParse for $structName$typeAnnotation {
@@ -369,8 +371,10 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
        |                    inner = rhs.trim_start();
        |                    match lhs.trim() {
        |${fieldNames
-      .sortWith(structComparison)
-      .map { name => s""""$name" => if !parse_struct_inner(&mut result.$name, &mut inner) { break }""" }
+      .map {
+        case (name, unescapedName) =>
+          s""""$unescapedName" => if !parse_struct_inner(&mut result.$name, &mut inner) { break }""".stripMargin
+      }
       .mkString(",\n")},
        |                        _ => return (Err("Encountered invalid key while parsing Struct"), inner)
        |                    }
