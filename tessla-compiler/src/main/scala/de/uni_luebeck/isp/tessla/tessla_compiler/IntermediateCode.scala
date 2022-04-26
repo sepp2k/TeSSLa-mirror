@@ -115,7 +115,7 @@ object IntermediateCode {
     override def toString: String = s"Lazy[$subType]"
   }
 
-  final case object VoidType extends ImpLanType {
+  case object VoidType extends ImpLanType {
     override def toString = "Void"
   }
 
@@ -245,45 +245,45 @@ object IntermediateCode {
       s"(${argsTypes.zip(argNames).map { case (a, b) => s"$b : $a" }.mkString(" x ")}) -> $retType {\n${body.mkString("\n")}\n}"
   }
 
-  final case object GeneralType extends ImpLanType {
+  case object GeneralType extends ImpLanType {
     override def toString: String = "GeneralType"
   }
 
-  final case object LongType extends ImpLanType {
+  case object LongType extends ImpLanType {
     override def toString: String = "Long"
   }
 
-  final case object DoubleType extends ImpLanType {
+  case object DoubleType extends ImpLanType {
     override def toString: String = "Double"
   }
 
   /* Expressions */
 
-  final case object BoolType extends ImpLanType {
+  case object BoolType extends ImpLanType {
     override def toString: String = "Bool"
   }
 
-  final case object UnitType extends ImpLanType {
+  case object UnitType extends ImpLanType {
     override def toString: String = "Unit"
   }
 
-  final case object StringType extends ImpLanType {
+  case object StringType extends ImpLanType {
     override def toString: String = "String"
   }
 
-  final case object ErrorType extends ImpLanType {
+  case object ErrorType extends ImpLanType {
     override def toString: String = "Error"
   }
 
-  final case object UnitValue extends ImpLanVal {
+  case object UnitValue extends ImpLanVal {
     override def toString: String = "()"
   }
 
-  final case object GeneralValue extends ImpLanVal {
+  case object GeneralValue extends ImpLanVal {
     override def toString: String = "GeneralValue"
   }
 
-  final case object NoError extends ImpLanVal {
+  case object NoError extends ImpLanVal {
     override def toString: String = "NoError"
   }
 
