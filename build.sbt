@@ -52,7 +52,7 @@ Global / coverageExcludedPackages := "<empty>;" +
   ".*DocJsonProtocol;"
 
 // ThisBuild scoped settings
-val compilerVersion = "2.13.6"
+val compilerVersion = "3.1.2"
 ThisBuild / organization := "de.uni_luebeck.isp"
 ThisBuild / scalaVersion := compilerVersion
 ThisBuild / version := versionPattern.findFirstMatchIn(IO.read(versionFile)).get.group(1)
@@ -72,16 +72,16 @@ ThisBuild / resolvers ++= Seq(
 )
 
 // Module-specific dependencies
-lazy val clang = "de.uni_luebeck.isp" %% "clang-instrumentation" % "0.9.2"
-lazy val scalac = "org.scala-lang" % "scala-compiler" % compilerVersion
+lazy val clang = "de.uni_luebeck.isp" % "clang-instrumentation_2.13" % "0.9.2"
+lazy val scalac = "org.scala-lang" %% "scala3-compiler" % compilerVersion
 lazy val scopt = "com.github.scopt" %% "scopt" % "4.0.1"
 
 // Shared dependencies and settings for all modules
 lazy val commonDependencies = Seq(
-  "org.scalatest" %% "scalatest" % "3.1.0" % "test",
-  "io.spray" %% "spray-json" % "1.3.5",
+  "org.scalatest" %% "scalatest" % "3.2.12" % "test",
+  "io.spray" %% "spray-json" % "1.3.6",
   "org.eclipse.tracecompass" % "ctfreader" % "0.2.1-SNAPSHOT",
-  "org.typelevel" %% "cats-core" % "2.0.0"
+  "org.typelevel" %% "cats-core" % "2.7.0"
 )
 
 // Need to transform to absolute path first to find all files. Perhaps a bug in sbt?
@@ -97,7 +97,8 @@ lazy val commonSettings = Seq(
     "-deprecation",
     "-Ypatmat-exhaust-depth",
     "off",
-    "-target:jvm-1.8"
+    "-target:jvm-1.8",
+	"-source:3.0-migration"
   ),
   javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
   assembly / assemblyMergeStrategy := {
