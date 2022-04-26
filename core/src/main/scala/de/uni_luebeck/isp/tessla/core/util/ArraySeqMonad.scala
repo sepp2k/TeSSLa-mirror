@@ -20,7 +20,6 @@ import cats.*
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ArraySeq
-import scala.reflect.{ClassTag, classTag}
 
 /**
  * Provides an implicit value for a cats Monad for ArraySeqs.
