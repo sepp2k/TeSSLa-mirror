@@ -20,6 +20,7 @@ import cats._
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ArraySeq
+import scala.reflect.ClassTag
 
 /**
  * Provides an implicit value for a cats Monad for ArraySeqs.
@@ -54,7 +55,7 @@ object ArraySeqMonad {
 
       override def foldLeft[A, B](fa: ArraySeq[A], b: B)(f: (B, A) => B) = fa.foldLeft(b)(f)
 
-      def traverse[G[_], A, B](
+      def traverse[G[_], A, B: ClassTag](
         fa: ArraySeq[A]
       )(f: A => G[B])(implicit G: Applicative[G]): G[ArraySeq[B]] =
         foldRight[A, G[ArraySeq[B]]](fa, Always(G.pure(ArraySeq.empty))) { (a, lglb) =>
