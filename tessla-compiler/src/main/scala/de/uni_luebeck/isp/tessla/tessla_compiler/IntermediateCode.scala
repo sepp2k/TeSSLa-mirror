@@ -120,7 +120,7 @@ object IntermediateCode {
   }
 
   final case class NativeType(name: String, subTypes: Seq[ImpLanType]) extends GenericImpLanType(subTypes) {
-    override def toString = s"native:$name" + (if (subTypes.nonEmpty) s"[${subTypes.mkString(",")}]" else "")
+    override def toString: String = s"native:$name" + (if (subTypes.nonEmpty) s"[${subTypes.mkString(",")}]" else "")
   }
 
   /* Values */
