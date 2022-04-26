@@ -314,7 +314,7 @@ object ConstantEvaluator {
   val callableExterns: Map[String, TypeExtern] = RuntimeExterns
     .commonCallableExterns[TranslatableMonad]
     .view
-    .mapValues { f: Extern => (_: List[Typed.Type]) =>
+    .mapValues { (f: Extern) => (_: List[Typed.Type]) =>
       f
     }
     .toMap
