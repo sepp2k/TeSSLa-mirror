@@ -69,7 +69,7 @@ object Tessla {
     loc: Location,
     isLiftable: Boolean
   ) extends Statement {
-    override def toString = toString(objectNotation = false)
+    override def toString: String = toString(objectNotation = false)
 
     def toString(objectNotation: Boolean) = {
       val liftable = if (isLiftable) "liftable " else ""
