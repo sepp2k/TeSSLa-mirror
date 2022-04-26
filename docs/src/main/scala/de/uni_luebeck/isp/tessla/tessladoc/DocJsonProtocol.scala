@@ -25,23 +25,23 @@ import spray.json._
  * A Json protocol containing all formats required to generate the Tessla documentation in Json format.
  */
 object DocJsonProtocol extends DefaultJsonProtocol {
-  implicit val docsFormat: JsonFormat[Docs] = lazyFormat(jsonFormat2(Docs))
+  implicit val docsFormat: JsonFormat[Docs] = lazyFormat(jsonFormat2(Docs.apply))
 
-  implicit val typeDocFormat: JsonFormat[TypeDoc] = lazyFormat(jsonFormat5(TypeDoc))
-  implicit val annotationDocFormat: JsonFormat[AnnotationDoc] = lazyFormat(jsonFormat6(AnnotationDoc))
-  implicit val moduleDocFormat: JsonFormat[ModuleDoc] = lazyFormat(jsonFormat5(ModuleDoc))
-  implicit val defDocFormat: JsonFormat[DefDoc] = lazyFormat(jsonFormat8(DefDoc))
+  implicit val typeDocFormat: JsonFormat[TypeDoc] = lazyFormat(jsonFormat5(TypeDoc.apply))
+  implicit val annotationDocFormat: JsonFormat[AnnotationDoc] = lazyFormat(jsonFormat6(AnnotationDoc.apply))
+  implicit val moduleDocFormat: JsonFormat[ModuleDoc] = lazyFormat(jsonFormat5(ModuleDoc.apply))
+  implicit val defDocFormat: JsonFormat[DefDoc] = lazyFormat(jsonFormat8(DefDoc.apply))
 
-  implicit val paramFormat: JsonFormat[Param] = lazyFormat(jsonFormat2(Param))
+  implicit val paramFormat: JsonFormat[Param] = lazyFormat(jsonFormat2(Param.apply))
 
-  implicit val simpleTypeFormat: JsonFormat[SimpleType] = jsonFormat1(SimpleType)
-  implicit val typeApplicationFormat: JsonFormat[TypeApplication] = lazyFormat(jsonFormat2(TypeApplication))
-  implicit val functionTypeFormat: JsonFormat[FunctionType] = lazyFormat(jsonFormat2(FunctionType))
-  implicit val objectTypeFormat: JsonFormat[ObjectType] = lazyFormat(jsonFormat1(ObjectType))
-  implicit val tupleTypeFormat: JsonFormat[TupleType] = lazyFormat(jsonFormat1(TupleType))
+  implicit val simpleTypeFormat: JsonFormat[SimpleType] = jsonFormat1(SimpleType.apply)
+  implicit val typeApplicationFormat: JsonFormat[TypeApplication] = lazyFormat(jsonFormat2(TypeApplication.apply))
+  implicit val functionTypeFormat: JsonFormat[FunctionType] = lazyFormat(jsonFormat2(FunctionType.apply))
+  implicit val objectTypeFormat: JsonFormat[ObjectType] = lazyFormat(jsonFormat1(ObjectType.apply))
+  implicit val tupleTypeFormat: JsonFormat[TupleType] = lazyFormat(jsonFormat1(TupleType.apply))
 
-  implicit val evalTypeFormat: JsonFormat[EvalType] = lazyFormat(jsonFormat2(EvalType))
-  implicit val importDocFormat: JsonFormat[Import] = jsonFormat1(Import)
+  implicit val evalTypeFormat: JsonFormat[EvalType] = lazyFormat(jsonFormat2(EvalType.apply))
+  implicit val importDocFormat: JsonFormat[Import] = jsonFormat1(Import.apply)
 
   // Enrich Json Values by a 'kind' field to distinguish different case classes
   implicit class RichJsValue(json: JsValue) {
@@ -88,8 +88,8 @@ object DocJsonProtocol extends DefaultJsonProtocol {
 
   implicit val locationFormat: JsonFormat[Location] = new JsonFormat[Location] {
     private case class Loc(path: String, range: Option[Location.SourceRange])
-    implicit val sourceRangeFormat: JsonFormat[SourceRange] = jsonFormat4(Location.SourceRange)
-    implicit val locFormat: JsonFormat[Loc] = jsonFormat2(Loc)
+    implicit val sourceRangeFormat: JsonFormat[SourceRange] = jsonFormat4(Location.SourceRange.apply)
+    implicit val locFormat: JsonFormat[Loc] = jsonFormat2(Loc.apply)
     private val Opt = """option '(.*)'""".r
 
     override def write(loc: Location): JsValue = Loc(loc.path, loc.range).toJson

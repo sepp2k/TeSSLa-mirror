@@ -181,7 +181,7 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
             case (t, StrictEvaluation) => t
             case (t, LazyEvaluation)   => LazyContainer(t)
           }
-        val ret = translateFunctionCall(e, argNames.map(Variable), newTm, defContext)
+        val ret = translateFunctionCall(e, argNames.map(Variable.apply), newTm, defContext)
         LambdaExpression(argNames, argTypes, typ.resultType.resolve(newTm.resMap), Seq(ReturnStatement(ret)))
     }
   }

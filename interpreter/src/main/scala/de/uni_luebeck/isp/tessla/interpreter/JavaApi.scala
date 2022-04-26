@@ -171,12 +171,12 @@ object JavaApi {
     Compiler.compile(specSource, compilerOptions) match {
       case Success(spec, warnings) =>
         CompilationResult(
-          Result(warnings.map(Diagnostic).asJava, List().asJava),
+          Result(warnings.map(Diagnostic.apply).asJava, List().asJava),
           Engine(new Interpreter(spec))
         )
       case Failure(errors, warnings) =>
         CompilationResult(
-          Result(warnings.map(Diagnostic).asJava, errors.map(Diagnostic).asJava),
+          Result(warnings.map(Diagnostic.apply).asJava, errors.map(Diagnostic.apply).asJava),
           null
         )
     }
