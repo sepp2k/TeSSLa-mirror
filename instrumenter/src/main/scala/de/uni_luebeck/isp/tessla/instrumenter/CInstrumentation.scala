@@ -301,7 +301,7 @@ object CInstrumentation {
 
       convert.applyOrElse(
         argument,
-        { arg: Core.ExpressionArg =>
+        { (arg: Core.ExpressionArg) =>
           val tpe = implicitly[ClassTag[T]].runtimeClass.getSimpleName
           throw InternalError(s"Failed to convert argument $argumentName to $tpe.", arg.location)
         }
