@@ -146,7 +146,7 @@ class TesslaSyntaxToTessla(spec: Seq[TesslaParser.ParseResult])
         Tessla.NamedArgument(mkID(arg.name), a)
       } else {
         Tessla.PositionalArgument(a)
-      }
+      }.asInstanceOf[Tessla.Argument[Tessla.Expression]]
     }
     Tessla.Annotation(mkID(inner.ID), args.toSeq, Location.fromNode(parent))
   }
