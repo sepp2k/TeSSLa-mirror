@@ -48,7 +48,7 @@ class Flattener(spec: Tessla.Specification)
   type AnnotationIdMap = Map[(String, Boolean), FlatTessla.Identifier]
   type Imports = Map[String, FlatTessla.Identifier]
 
-  private case class Env(variables: IdMap, types: IdMap, annotations: AnnotationIdMap) {
+  case class Env(variables: IdMap, types: IdMap, annotations: AnnotationIdMap) {
     def ++(other: Env): Env = Env(
       variables ++ other.variables,
       types ++ other.types,
