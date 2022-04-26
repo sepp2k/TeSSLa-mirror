@@ -87,7 +87,7 @@ object DocJsonProtocol extends DefaultJsonProtocol {
   }
 
   implicit val locationFormat: JsonFormat[Location] = new JsonFormat[Location] {
-    private case class Loc(path: String, range: Option[Location.SourceRange])
+    case class Loc(path: String, range: Option[Location.SourceRange])
     implicit val sourceRangeFormat: JsonFormat[SourceRange] = jsonFormat4(Location.SourceRange.apply)
     implicit val locFormat: JsonFormat[Loc] = jsonFormat2(Loc.apply)
     private val Opt = """option '(.*)'""".r
