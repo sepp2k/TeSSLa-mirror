@@ -16,11 +16,11 @@
 
 package de.uni_luebeck.isp.tessla.core.util
 
-import cats._
+import cats.*
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ArraySeq
-import scala.reflect.ClassTag
+import scala.reflect.{ClassTag, classTag}
 
 /**
  * Provides an implicit value for a cats Monad for ArraySeqs.
@@ -55,10 +55,10 @@ object ArraySeqMonad {
 
       override def foldLeft[A, B](fa: ArraySeq[A], b: B)(f: (B, A) => B) = fa.foldLeft(b)(f)
 
-      def traverse[G[_], A, B: ClassTag](
+      def traverse[G[_], A, B](
         fa: ArraySeq[A]
       )(f: A => G[B])(implicit G: Applicative[G]): G[ArraySeq[B]] =
-        foldRight[A, G[ArraySeq[B]]](fa, Always(G.pure(ArraySeq.empty))) { (a, lglb) =>
+        foldRight[A, G[ArraySeq[B]]](fa, Always(G.pure(ArraySeq.untagged.empty))) { (a, lglb) =>
           G.map2Eval(f(a), lglb)(_ +: _)
         }.value
 
