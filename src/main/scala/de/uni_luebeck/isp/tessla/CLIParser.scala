@@ -262,16 +262,16 @@ object CLIParser {
       try addIncludeFile.mkString
       finally addIncludeFile.close
     }
-
-    compilerOptions =
-      if (!global.userStdLib)
-        compilerOptions.copy(stdlibIncludeResolver = CompilerStdLibIncludeResolver.fromCompilerStdlibResource)
-      else
-        compilerOptions
-
     note("")
     cmd("compile")
-      .foreach(_ => tasks += (() => Task("compile", config.copy(compilerOptions = compilerOptions))))
+      .foreach(_ => {
+        compilerOptions =
+          if (!global.userStdLib)
+            compilerOptions.copy(stdlibIncludeResolver = CompilerStdLibIncludeResolver.fromCompilerStdlibResource)
+          else
+            compilerOptions
+        tasks += (() => Task("compile", config.copy(compilerOptions = compilerOptions)))
+      })
       .text("Compile TeSSLa specifications to Scala")
       .children(
         arg[File]("<tessla-file>")
