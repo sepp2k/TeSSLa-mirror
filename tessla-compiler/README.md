@@ -4,7 +4,8 @@ TeSSLa Compiler is the sub-module for the translation of TeSSLa specifications t
 Currently the translation to Scala and to Rust is implemented.
 
 The translation to *Scala* supports generation of a `.scala` source code file, or generation of a fully ready to use 
-`.jar` file. The translation to *Rust* always generates a complete Cargo project.
+`.jar` file. The translation to *Rust* can create a cargo project, but can also translate the code directly into a
+read to use binary.
 
 ##  Usage
 
