@@ -110,17 +110,16 @@ Depending on whether you specify `-m` the generated monitor will contain code to
 More detailed information about the input/output format see [here](../../IO.md).
 Note: If the monitor receives more than one input for the same stream at the same timestamp, the last one will be used.
 If you
-*don't* specify `-m` you need to provide your custom `main` function.
+*don't* specify `-m` you need to provide your custom `main` function (API monitor generation).
 
 If you specify `-b` the compiler will compile a complete runnable binary by invoking cargo. This binary always receives
-input via stdio. You can combine `-p` and `-b` as `-b` as both flags are treated separately.
+input via stdio. You can combine `-p` and `-b` as both flags are treated separately.
 
 ### API monitor generation
 
 It is also possible to generate a monitor with an API interface and without I/O handling. This may especially be useful if one wants
 to access the monitor from another application written in any language that can interface to Rust.
-The compilation to API code can be achieved with the `-n` flag.
-The API monitor can be generated as Rust code and as (non-executable) library as well. Details about how the API can be accessed
+The API is always generated when a cargo project is created with `-p`. Details about how the API can be accessed
 can be found [here](API.md).
 
 ### Connecting TeSSLa to external functions
