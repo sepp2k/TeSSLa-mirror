@@ -273,15 +273,16 @@ object CLIParser {
     import parser._
     var config = TesslacScalaConfig()
 
-    compilerOptions =
-      if (!global.userStdLib)
-        compilerOptions.copy(stdlibIncludeResolver = CompilerStdLibIncludeResolver.fromCompilerStdlibResource)
-      else
-        compilerOptions
-
     note("")
     cmd("compile-scala")
-      .foreach(_ => tasks += (() => Task("compile-scala", config.copy(compilerOptions = compilerOptions))))
+      .foreach(_ => {
+        compilerOptions =
+          if (!global.userStdLib)
+            compilerOptions.copy(stdlibIncludeResolver = CompilerStdLibIncludeResolver.fromCompilerStdlibResource)
+          else
+            compilerOptions
+        tasks += (() => Task("compile-scala", config.copy(compilerOptions = compilerOptions)))
+      })
       .text("Compile TeSSLa specifications to Scala")
       .children(
         arg[File]("<tessla-file>")
@@ -307,15 +308,16 @@ object CLIParser {
     import parser._
     var config = TesslacRustConfig()
 
-    compilerOptions =
-      if (!global.userStdLib)
-        compilerOptions.copy(stdlibIncludeResolver = CompilerStdLibIncludeResolver.fromCompilerStdlibResource)
-      else
-        compilerOptions
-
     note("")
     cmd("compile-rust")
-      .foreach(_ => tasks += (() => Task("compile-rust", config.copy(compilerOptions = compilerOptions))))
+      .foreach(_ => {
+        compilerOptions =
+          if (!global.userStdLib)
+            compilerOptions.copy(stdlibIncludeResolver = CompilerStdLibIncludeResolver.fromCompilerStdlibResource)
+          else
+            compilerOptions
+        tasks += (() => Task("compile-rust", config.copy(compilerOptions = compilerOptions)))
+      })
       .text("Compile TeSSLa specifications to Rust")
       .children(
         arg[File]("<tessla-file>")
