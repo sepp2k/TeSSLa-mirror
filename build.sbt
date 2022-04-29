@@ -260,7 +260,8 @@ lazy val tesslac = (project in file("tessla-compiler"))
     buildInfoPackage := s"$rootPackage.tessla_compiler",
     Compile / resourceGenerators += libCopy.taskValue,
     libraryDependencies ++= Seq(
-      scalac
+      scalac,
+      ("org.scala-lang" % "scala-compiler" % "2.13.8") //.cross(CrossVersion.for3Use2_13)
     ),
     headerResources / excludeFilter := HiddenFileFilter || "*ScalaSkeleton*.scala"
   )
