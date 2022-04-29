@@ -219,9 +219,10 @@ class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean, executeableCo
    * @param path Path of the file to be deleted
    */
   private def deleteOnExit(path: Path): Unit = {
-    Runtime.getRuntime.addShutdownHook(new Thread((() => {
+    val runnable: Runnable = () => {
       Directory(path.toFile).deleteRecursively()
-    }).asInstanceOf[Runnable]))
+    }
+    Runtime.getRuntime.addShutdownHook(new Thread(runnable))
   }
 
 }
