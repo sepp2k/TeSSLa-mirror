@@ -90,8 +90,9 @@ abstract class AbstractTestRunner[T](runnerName: String) extends AnyFunSuite {
   testCases().zipWithIndex.foreach({
     case ((root, (path, name)), index) =>
       val testCase = parseTestCase(s"$root$path$name")
-      val mode = if (testCase.skip || shouldIgnoreTest((root, (path, name)))) ignore _ else test _
-      mode(s"($runnerName) $root$path$name", Seq()) {
+      def mode(testName: String) =
+        if (testCase.skip || shouldIgnoreTest((root, (path, name)))) ignore(testName)(_) else test(testName)(_)
+      mode(s"($runnerName) $root$path$name") {
         val pathResolver = new PathResolver(root, path, name)
         import pathResolver._
 
