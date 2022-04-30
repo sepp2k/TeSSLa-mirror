@@ -98,7 +98,7 @@ lazy val commonSettings = Seq(
     "-Ypatmat-exhaust-depth",
     "off",
     "-target:jvm-1.8",
-	"-source:3.0-migration"
+    "-source:3.0-migration"
   ),
   javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
   assembly / assemblyMergeStrategy := {
@@ -261,7 +261,7 @@ lazy val tesslac = (project in file("tessla-compiler"))
     Compile / resourceGenerators += libCopy.taskValue,
     libraryDependencies ++= Seq(
       scalac,
-      ("org.scala-lang" % "scala-compiler" % "2.13.8") //.cross(CrossVersion.for3Use2_13)
+      "org.scala-lang" % "scala-compiler" % "2.13.8" // FIXME: needed for scala compilation & tests
     ),
     headerResources / excludeFilter := HiddenFileFilter || "*ScalaSkeleton*.scala"
   )
