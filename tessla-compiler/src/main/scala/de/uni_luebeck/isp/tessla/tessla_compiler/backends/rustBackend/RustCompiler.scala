@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
-import de.uni_luebeck.isp.tessla.core.Errors.{TesslaError, mkTesslaError}
+import de.uni_luebeck.isp.tessla.core.Errors.{mkTesslaError, TesslaError}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 
