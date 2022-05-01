@@ -18,7 +18,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preproces
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{LazyEvaluation, StrictEvaluation}
-import de.uni_luebeck.isp.tessla.core.TranslationPhase
+import de.uni_luebeck.isp.tessla.core.{Location, TranslationPhase}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
 
@@ -37,7 +37,7 @@ import scala.util.control.Breaks._
 object FormatStringMangler extends TranslationPhase[Specification, Specification] {
   override def translate(spec: Specification): TranslationPhase.Result[Specification] = {
     val removedStreams = new util.ArrayList[String]()
-    val formatStrings = new mutable.HashMap[String, String]()
+    val formatStrings = new mutable.HashMap[String, (String, Location)]()
 
     // Find every slift that uses extern("String_format")
     spec.definitions.foreach {
@@ -96,7 +96,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
                         }
 
                         // Add the format string to the map
-                        formatStrings.addOne((sliftid.fullName, format))
+                        formatStrings.addOne((sliftid.fullName, (format, loc)))
 
                         // Remove the format string stream
                         removedStreams.add(id.fullName)
@@ -148,7 +148,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    * @param formatStrings The format string streams and their corresponding format strings.
    * @return The modified specification.
    */
-  def modifyFormatStringSlifts(spec: Specification, formatStrings: mutable.HashMap[String, String]): Specification = {
+  def modifyFormatStringSlifts(spec: Specification, formatStrings: mutable.HashMap[String, (String, Location)]): Specification = {
     val definitions = spec.definitions.flatMap {
       case (id, defi) if formatStrings.contains(id.fullName) =>
         var inputStream: ExpressionArg = null
@@ -166,8 +166,8 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
           case _ =>
         }
 
-        val fs_spec = parseFormatString(formatStrings(id.fullName))
-        val fstring = produceRustFormatString(fs_spec)
+        val fs_spec = parseFormatString(formatStrings(id.fullName)._1, formatStrings(id.fullName)._2)
+        val fstring = produceRustFormatString(fs_spec, formatStrings(id.fullName)._1, formatStrings(id.fullName)._2)
 
         val fn_format = FunctionExpression(
           List(),
@@ -571,16 +571,17 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    * Parses the specified TeSSLa format string.
    *
    * @param fs The format string to parse.
+   * @param loc The source location of the format string.
    * @return The extracted format string specification.
    */
-  def parseFormatString(fs: String): FormatStringSpecification = {
+  def parseFormatString(fs: String, loc: Location): FormatStringSpecification = {
     val spec: FormatStringSpecification = new FormatStringSpecification()
 
     if (fs.length < 2) {
-      throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+      throw Diagnostics.CommandNotSupportedError("Invalid format string: '" + fs + "'", loc)
     }
     if (fs.charAt(0) != '%') {
-      throw Diagnostics.CommandNotSupportedError("Format string does not start with '%'.")
+      throw Diagnostics.CommandNotSupportedError("Format string does not start with '%': '" + fs + "'", loc)
     }
 
     var i = 1
@@ -593,43 +594,43 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
             if (!spec.leftJustify) {
               spec.leftJustify = true
             } else {
-              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+              throw Diagnostics.CommandNotSupportedError("Invalid format string: '" + fs + "'", loc)
             }
           case '+' =>
             if (!spec.plusSign) {
               spec.plusSign = true
             } else {
-              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+              throw Diagnostics.CommandNotSupportedError("Invalid format string: '" + fs + "'", loc)
             }
           case ' ' =>
             if (!spec.padSign) {
               spec.padSign = true
             } else {
-              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+              throw Diagnostics.CommandNotSupportedError("Invalid format string: '" + fs + "'", loc)
             }
           case '#' =>
             if (!spec.altForm) {
               spec.altForm = true
             } else {
-              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+              throw Diagnostics.CommandNotSupportedError("Invalid format string: '" + fs + "'", loc)
             }
           case '0' =>
             if (!spec.zeroPad) {
               spec.zeroPad = true
             } else {
-              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+              throw Diagnostics.CommandNotSupportedError("Invalid format string: '" + fs + "'", loc)
             }
           case ',' =>
             if (!spec.localeSeparators) {
               spec.localeSeparators = true
             } else {
-              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+              throw Diagnostics.CommandNotSupportedError("Invalid format string: '" + fs + "'", loc)
             }
           case '(' =>
             if (!spec.encloseNegatives) {
               spec.encloseNegatives = true
             } else {
-              throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+              throw Diagnostics.CommandNotSupportedError("Invalid format string: '" + fs + "'", loc)
             }
           case _ => break()
         }
@@ -684,11 +685,11 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
         spec.formatType = spec.formatType.toLower
       }
     } catch {
-      case e: Exception => throw Diagnostics.CommandNotSupportedError("Invalid format string: " + e.getMessage)
+      case e: Exception => throw Diagnostics.CommandNotSupportedError("Invalid format string: " + e.getMessage, loc)
     }
 
     if (i + 1 != fs.length) {
-      throw Diagnostics.CommandNotSupportedError("Invalid format string.")
+      throw Diagnostics.CommandNotSupportedError("Invalid format string: '" + fs + "'", loc)
     }
 
     spec
@@ -785,33 +786,35 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    * that can be fed into Rusts format!-macro.
    *
    * @param fs The format string to translate.
+   * @param loc The source location of the format string.
    * @return A format string for Rusts format!-macro.
    */
-  def produceRustFormatString(fs: FormatStringSpecification): String = {
+  def produceRustFormatString(fs: FormatStringSpecification, formatString : String,  loc: Location): String = {
     if (fs.formatType == 'a') {
       throw Diagnostics.CommandNotSupportedError(
-        "Hexadecimal floating point literals aren't supported in Rust format strings."
+        "Hexadecimal floating point literals aren't supported in Rust format strings: " + formatString, loc
       )
     }
     if (fs.encloseNegatives) {
-      throw Diagnostics.CommandNotSupportedError("Enclosing negative numbers is not supported in Rust format strings.")
+      throw Diagnostics.CommandNotSupportedError(
+        "Enclosing negative numbers is not supported in Rust format strings: " + formatString, loc)
     }
     if (fs.localeSeparators) {
       throw Diagnostics.CommandNotSupportedError(
-        "Locale-specific grouping separators aren't supported in Rust format strings."
+        "Locale-specific grouping separators aren't supported in Rust format strings: " + formatString, loc
       )
     }
     if (fs.isOther && fs.zeroPad) {
-      throw Diagnostics.CommandNotSupportedError("Strings can be zero-padded.")
+      throw Diagnostics.CommandNotSupportedError("Strings can't be zero-padded: " + formatString, loc)
     }
     if (fs.precision > 0 && fs.isInteger) {
-      throw Diagnostics.CommandNotSupportedError("Integer formats can't use a precision")
+      throw Diagnostics.CommandNotSupportedError("Integer formats can't use a precision: " + formatString, loc)
     }
     if (fs.padSign && fs.plusSign) {
-      throw Diagnostics.CommandNotSupportedError("Don't specify + and space.")
+      throw Diagnostics.CommandNotSupportedError("Don't specify + and space: " + formatString, loc)
     }
     if (fs.altForm && !fs.isInteger) {
-      throw Diagnostics.CommandNotSupportedError("Alternate form can't be used with non-integer types.")
+      throw Diagnostics.CommandNotSupportedError("Alternate form can't be used with non-integer types: " + formatString, loc)
     }
 
     // Apply format flags
