@@ -18,8 +18,8 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend.preproces
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{LazyEvaluation, StrictEvaluation}
-import de.uni_luebeck.isp.tessla.core.{Location, TranslationPhase}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
+import de.uni_luebeck.isp.tessla.core.{Location, TranslationPhase}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics
 
 import java.util
@@ -148,7 +148,10 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
    * @param formatStrings The format string streams and their corresponding format strings.
    * @return The modified specification.
    */
-  def modifyFormatStringSlifts(spec: Specification, formatStrings: mutable.HashMap[String, (String, Location)]): Specification = {
+  def modifyFormatStringSlifts(
+    spec: Specification,
+    formatStrings: mutable.HashMap[String, (String, Location)]
+  ): Specification = {
     val definitions = spec.definitions.flatMap {
       case (id, defi) if formatStrings.contains(id.fullName) =>
         var inputStream: ExpressionArg = null
@@ -275,147 +278,6 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
     } else {
       format
     }
-  }
-
-  /**
-   * Generates a format! call for a format string that doesn't specify sign paddig but %g.
-   *
-   * @param fstring The format string.
-   * @param inputStreamType The type of the input stream.
-   * @param fs_spec The format string specification.
-   * @return The format! call.
-   */
-  private def generateNoSignG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
-    ApplicationExpression(
-      ExternExpression(
-        "ite",
-        FunctionType( // The if
-          List(), // Identifier
-          List( // Parameter
-            (StrictEvaluation, InstantiatedType("Bool", List())),
-            (LazyEvaluation, InstantiatedType("String", List())),
-            (LazyEvaluation, InstantiatedType("String", List()))
-          ),
-          InstantiatedType("String", List()) // Return type
-        )
-      ),
-      ArraySeq( // Arguments of the if: (exp : bool, then : T, else : T)
-        ApplicationExpression(
-          ExternExpression(
-            "and", // &&
-            FunctionType(
-              List(), // Identifier
-              List( // Parameter
-                (LazyEvaluation, InstantiatedType("Bool", List())),
-                (LazyEvaluation, InstantiatedType("Bool", List()))
-              ),
-              InstantiatedType("Bool", List()) // Return type
-            )
-          ),
-          ArraySeq( // Arguments of the &&: (op1 : bool, op2 : bool)
-            ApplicationExpression(
-              ExternExpression(
-                "fleq", // 10e-4_f64 <= value
-                FunctionType(
-                  List(),
-                  List(
-                    (StrictEvaluation, InstantiatedType("Float", List())),
-                    (StrictEvaluation, InstantiatedType("Float", List()))
-                  ),
-                  InstantiatedType("Bool", List())
-                )
-              ),
-              ArraySeq( // Arguments of fleq (<=)
-                FloatLiteralExpression(10e-4),
-                ApplicationExpression(
-                  ExternExpression(
-                    "fabs", // abs(value)
-                    FunctionType(
-                      List(),
-                      List(
-                        (StrictEvaluation, InstantiatedType("Float", List()))
-                      ),
-                      InstantiatedType("Float", List())
-                    )
-                  ),
-                  ArraySeq(
-                    ExpressionRef(Identifier("x"), inputStreamType)
-                  )
-                ) // end of abs(value)
-              )
-            ),
-            ApplicationExpression(
-              ExternExpression(
-                "flt", // value < 10_f64.powi(precision)
-                FunctionType(
-                  List(),
-                  List(
-                    (StrictEvaluation, InstantiatedType("Float", List())),
-                    (StrictEvaluation, InstantiatedType("Float", List()))
-                  ),
-                  InstantiatedType("Bool", List())
-                )
-              ),
-              ArraySeq( // Arguments of flt (<)
-                ApplicationExpression(
-                  ExternExpression(
-                    "fabs", // abs(value)
-                    FunctionType(
-                      List(),
-                      List(
-                        (StrictEvaluation, InstantiatedType("Float", List()))
-                      ),
-                      InstantiatedType("Float", List())
-                    )
-                  ),
-                  ArraySeq(
-                    ExpressionRef(Identifier("x"), inputStreamType)
-                  )
-                ), // end of abs(value)
-                FloatLiteralExpression(Math.pow(10, fs_spec.precision))
-              )
-            )
-          ) // end of && arguments
-        ),
-        ApplicationExpression(
-          ExternExpression(
-            "[rust]format", // format_to_type_f
-            FunctionType( // The lambda
-              List(), // Identifier
-              List( // Parameter
-                (StrictEvaluation, InstantiatedType("String", List())),
-                (StrictEvaluation, inputStreamType)
-              ),
-              InstantiatedType("String", List()) // Return type
-            )
-          ),
-          ArraySeq(StringLiteralExpression(fstring), ExpressionRef(Identifier("x"), inputStreamType))
-        ),
-        ApplicationExpression(
-          ExternExpression(
-            "[rust]format", // format_to_type_e
-            FunctionType( // The lambda
-              List(), // Identifier
-              List( // Parameter
-                (StrictEvaluation, InstantiatedType("String", List())),
-                (StrictEvaluation, inputStreamType)
-              ),
-              InstantiatedType("String", List()) // Return type
-            )
-          ),
-          ArraySeq(
-            StringLiteralExpression(
-              fstring.replace(
-                "}",
-                if (fs_spec.uppercase) { "E}" }
-                else { "e}" }
-              )
-            ),
-            ExpressionRef(Identifier("x"), inputStreamType)
-          )
-        )
-      )
-    )
   }
 
   /**
@@ -568,6 +430,147 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
   }
 
   /**
+   * Generates a format! call for a format string that doesn't specify sign paddig but %g.
+   *
+   * @param fstring The format string.
+   * @param inputStreamType The type of the input stream.
+   * @param fs_spec The format string specification.
+   * @return The format! call.
+   */
+  private def generateNoSignG(fstring: String, inputStreamType: Type, fs_spec: FormatStringSpecification) = {
+    ApplicationExpression(
+      ExternExpression(
+        "ite",
+        FunctionType( // The if
+          List(), // Identifier
+          List( // Parameter
+            (StrictEvaluation, InstantiatedType("Bool", List())),
+            (LazyEvaluation, InstantiatedType("String", List())),
+            (LazyEvaluation, InstantiatedType("String", List()))
+          ),
+          InstantiatedType("String", List()) // Return type
+        )
+      ),
+      ArraySeq( // Arguments of the if: (exp : bool, then : T, else : T)
+        ApplicationExpression(
+          ExternExpression(
+            "and", // &&
+            FunctionType(
+              List(), // Identifier
+              List( // Parameter
+                (LazyEvaluation, InstantiatedType("Bool", List())),
+                (LazyEvaluation, InstantiatedType("Bool", List()))
+              ),
+              InstantiatedType("Bool", List()) // Return type
+            )
+          ),
+          ArraySeq( // Arguments of the &&: (op1 : bool, op2 : bool)
+            ApplicationExpression(
+              ExternExpression(
+                "fleq", // 10e-4_f64 <= value
+                FunctionType(
+                  List(),
+                  List(
+                    (StrictEvaluation, InstantiatedType("Float", List())),
+                    (StrictEvaluation, InstantiatedType("Float", List()))
+                  ),
+                  InstantiatedType("Bool", List())
+                )
+              ),
+              ArraySeq( // Arguments of fleq (<=)
+                FloatLiteralExpression(10e-4),
+                ApplicationExpression(
+                  ExternExpression(
+                    "fabs", // abs(value)
+                    FunctionType(
+                      List(),
+                      List(
+                        (StrictEvaluation, InstantiatedType("Float", List()))
+                      ),
+                      InstantiatedType("Float", List())
+                    )
+                  ),
+                  ArraySeq(
+                    ExpressionRef(Identifier("x"), inputStreamType)
+                  )
+                ) // end of abs(value)
+              )
+            ),
+            ApplicationExpression(
+              ExternExpression(
+                "flt", // value < 10_f64.powi(precision)
+                FunctionType(
+                  List(),
+                  List(
+                    (StrictEvaluation, InstantiatedType("Float", List())),
+                    (StrictEvaluation, InstantiatedType("Float", List()))
+                  ),
+                  InstantiatedType("Bool", List())
+                )
+              ),
+              ArraySeq( // Arguments of flt (<)
+                ApplicationExpression(
+                  ExternExpression(
+                    "fabs", // abs(value)
+                    FunctionType(
+                      List(),
+                      List(
+                        (StrictEvaluation, InstantiatedType("Float", List()))
+                      ),
+                      InstantiatedType("Float", List())
+                    )
+                  ),
+                  ArraySeq(
+                    ExpressionRef(Identifier("x"), inputStreamType)
+                  )
+                ), // end of abs(value)
+                FloatLiteralExpression(Math.pow(10, fs_spec.precision))
+              )
+            )
+          ) // end of && arguments
+        ),
+        ApplicationExpression(
+          ExternExpression(
+            "[rust]format", // format_to_type_f
+            FunctionType( // The lambda
+              List(), // Identifier
+              List( // Parameter
+                (StrictEvaluation, InstantiatedType("String", List())),
+                (StrictEvaluation, inputStreamType)
+              ),
+              InstantiatedType("String", List()) // Return type
+            )
+          ),
+          ArraySeq(StringLiteralExpression(fstring), ExpressionRef(Identifier("x"), inputStreamType))
+        ),
+        ApplicationExpression(
+          ExternExpression(
+            "[rust]format", // format_to_type_e
+            FunctionType( // The lambda
+              List(), // Identifier
+              List( // Parameter
+                (StrictEvaluation, InstantiatedType("String", List())),
+                (StrictEvaluation, inputStreamType)
+              ),
+              InstantiatedType("String", List()) // Return type
+            )
+          ),
+          ArraySeq(
+            StringLiteralExpression(
+              fstring.replace(
+                "}",
+                if (fs_spec.uppercase) { "E}" }
+                else { "e}" }
+              )
+            ),
+            ExpressionRef(Identifier("x"), inputStreamType)
+          )
+        )
+      )
+    )
+  }
+
+  /**
    * Parses the specified TeSSLa format string.
    *
    * @param fs The format string to parse.
@@ -696,6 +699,94 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
   }
 
   /**
+   * Translates the specified format string into a format string
+   * that can be fed into Rusts format!-macro.
+   *
+   * @param fs The format string to translate.
+   * @param loc The source location of the format string.
+   * @return A format string for Rusts format!-macro.
+   */
+  def produceRustFormatString(fs: FormatStringSpecification, formatString: String, loc: Location): String = {
+    if (fs.formatType == 'a') {
+      throw Diagnostics.CommandNotSupportedError(
+        "Hexadecimal floating point literals aren't supported in Rust format strings: " + formatString,
+        loc
+      )
+    }
+    if (fs.encloseNegatives) {
+      throw Diagnostics.CommandNotSupportedError(
+        "Enclosing negative numbers is not supported in Rust format strings: " + formatString,
+        loc
+      )
+    }
+    if (fs.localeSeparators) {
+      throw Diagnostics.CommandNotSupportedError(
+        "Locale-specific grouping separators aren't supported in Rust format strings: " + formatString,
+        loc
+      )
+    }
+    if (fs.isOther && fs.zeroPad) {
+      throw Diagnostics.CommandNotSupportedError("Strings can't be zero-padded: " + formatString, loc)
+    }
+    if (fs.precision > 0 && fs.isInteger) {
+      throw Diagnostics.CommandNotSupportedError("Integer formats can't use a precision: " + formatString, loc)
+    }
+    if (fs.padSign && fs.plusSign) {
+      throw Diagnostics.CommandNotSupportedError("Don't specify + and space: " + formatString, loc)
+    }
+    if (fs.altForm && !fs.isInteger) {
+      throw Diagnostics.CommandNotSupportedError(
+        "Alternate form can't be used with non-integer types: " + formatString,
+        loc
+      )
+    }
+
+    // Apply format flags
+    var str = "{:"
+    if (fs.width > 0) {
+      if (fs.leftJustify) {
+        str += '<'
+      } else {
+        str += '>'
+      }
+    }
+    if (fs.altForm) {
+      str += '#'
+    }
+    if (fs.plusSign) {
+      str += '+'
+    }
+    if (fs.zeroPad) {
+      str += '0'
+    }
+    if (fs.width > 0) {
+      str += fs.width
+    }
+    if (fs.precision > 0) {
+      str += '.'
+      str += fs.precision
+    }
+
+    // Add format specifier
+    if (fs.formatType == 'x') {
+      str += (if (fs.uppercase) { 'X' }
+              else { 'x' })
+    }
+    if (fs.formatType == 's' || fs.formatType == 'd' || fs.formatType == 'f' || fs.formatType == 'g') {
+      // Add nothing
+    }
+    if (fs.formatType == 'o') {
+      str += 'o'
+    }
+    if (fs.formatType == 'e') {
+      str += 'e'
+    }
+
+    str += '}'
+    str
+  }
+
+  /**
    * Specifies a format string.
    */
   class FormatStringSpecification {
@@ -758,6 +849,14 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
     var formatType = '?'
 
     /**
+     * Determines whether this format specifies neither an integer nor a floating
+     * point format.
+     */
+    def isOther: Boolean = {
+      !isFloat && !isInteger
+    }
+
+    /**
      * Determines whether this format specifier specifies an integer format.
      *
      */
@@ -771,94 +870,5 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
     def isFloat: Boolean = {
       formatType == 'f' || formatType == 'g' || formatType == 'e' || formatType == 'a'
     }
-
-    /**
-     * Determines whether this format specifies neither an integer nor a floating
-     * point format.
-     */
-    def isOther: Boolean = {
-      !isFloat && !isInteger
-    }
-  }
-
-  /**
-   * Translates the specified format string into a format string
-   * that can be fed into Rusts format!-macro.
-   *
-   * @param fs The format string to translate.
-   * @param loc The source location of the format string.
-   * @return A format string for Rusts format!-macro.
-   */
-  def produceRustFormatString(fs: FormatStringSpecification, formatString : String,  loc: Location): String = {
-    if (fs.formatType == 'a') {
-      throw Diagnostics.CommandNotSupportedError(
-        "Hexadecimal floating point literals aren't supported in Rust format strings: " + formatString, loc
-      )
-    }
-    if (fs.encloseNegatives) {
-      throw Diagnostics.CommandNotSupportedError(
-        "Enclosing negative numbers is not supported in Rust format strings: " + formatString, loc)
-    }
-    if (fs.localeSeparators) {
-      throw Diagnostics.CommandNotSupportedError(
-        "Locale-specific grouping separators aren't supported in Rust format strings: " + formatString, loc
-      )
-    }
-    if (fs.isOther && fs.zeroPad) {
-      throw Diagnostics.CommandNotSupportedError("Strings can't be zero-padded: " + formatString, loc)
-    }
-    if (fs.precision > 0 && fs.isInteger) {
-      throw Diagnostics.CommandNotSupportedError("Integer formats can't use a precision: " + formatString, loc)
-    }
-    if (fs.padSign && fs.plusSign) {
-      throw Diagnostics.CommandNotSupportedError("Don't specify + and space: " + formatString, loc)
-    }
-    if (fs.altForm && !fs.isInteger) {
-      throw Diagnostics.CommandNotSupportedError("Alternate form can't be used with non-integer types: " + formatString, loc)
-    }
-
-    // Apply format flags
-    var str = "{:"
-    if (fs.width > 0) {
-      if (fs.leftJustify) {
-        str += '<'
-      } else {
-        str += '>'
-      }
-    }
-    if (fs.altForm) {
-      str += '#'
-    }
-    if (fs.plusSign) {
-      str += '+'
-    }
-    if (fs.zeroPad) {
-      str += '0'
-    }
-    if (fs.width > 0) {
-      str += fs.width
-    }
-    if (fs.precision > 0) {
-      str += '.'
-      str += fs.precision
-    }
-
-    // Add format specifier
-    if (fs.formatType == 'x') {
-      str += (if (fs.uppercase) { 'X' }
-              else { 'x' })
-    }
-    if (fs.formatType == 's' || fs.formatType == 'd' || fs.formatType == 'f' || fs.formatType == 'g') {
-      // Add nothing
-    }
-    if (fs.formatType == 'o') {
-      str += 'o'
-    }
-    if (fs.formatType == 'e') {
-      str += 'e'
-    }
-
-    str += '}'
-    str
   }
 }
