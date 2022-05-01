@@ -16,11 +16,12 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.rustBackend
 
-import de.uni_luebeck.isp.tessla.core.Errors.{mkTesslaError, TesslaError}
+import de.uni_luebeck.isp.tessla.core.Errors.{TesslaError, mkTesslaError}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 
 import java.io.IOException
+import java.lang.ProcessBuilder.Redirect
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
@@ -61,9 +62,8 @@ class RustCompiler(artifactPath: Path) extends TranslationPhase[RustFiles, Unit]
       "--release"
     )
 
-    cargoBuild.redirectInput()
-    cargoBuild.redirectOutput()
-    cargoBuild.redirectError()
+    cargoBuild.redirectOutput(Redirect.DISCARD)
+    cargoBuild.redirectError(Redirect.DISCARD)
 
     // Run cargo build
     try {
