@@ -454,7 +454,7 @@ class RustStreamCodeGenerator(rustNonStreamCodeGenerator: RustNonStreamCodeGener
   ): Unit = {
     val s = s"var_${id.fullName}"
     val t = RustUtils.convertType(typ, mask_generics = false)
-    val cleanName = SanitizeIdentifiers.escapeName(name)
+    val cleanName = SanitizeIdentifiers.escapeName(name, id.location)
 
     // Only add state definitions if they haven't been added before
     if (!outputNames.contains(name)) {
