@@ -124,5 +124,33 @@ can be found [here](API.md).
 
 ### Connecting TeSSLa to external functions
 
-This feature is in an experimental state and is disabled in the current version of the TeSSLa compiler
-(see [TesslaCoreToRust.scala](../src/main/scala/de/uni_luebeck/isp/tessla/tessla_compiler/backends/rustBackend/TesslaCoreToRust.scala):`insertSegments()`).
+It is possible to insert your own rust code into the monitor with the `-a include.rs` argument.
+The contents of this file will be placed at the top of the generated `monitor.rs`.
+The corresponding Rust functions and types can be accessed from a TeSSLa specification via the `extern` keyword
+with the `native:` prefix in front of the desired name.
+
+For example, this Rust function:
+```rust
+fn bar(x: TesslaInt) -> TesslaFloat {
+  match TesslaFloat::from(x) {
+    Error(error) => Error(error),
+    Value(value) => Value(value.to_degrees())
+  }
+}
+```
+can be imported to TeSSLa as:
+```
+def bar(x: Float): Float = extern("native:bar")
+```
+
+You can find more information on how to deal with the `TesslaValue` container, and how the TeSSLa types correspond to Rust types [here](./Types.md#Rust).
+
+#### Notes:
+- All values going in, and coming out of imported native externs, must be of Type `TesslaValue<T>`, where `T` may be a
+custom type you defined yourself, if it implements the necessary Traits as specified [here](./Types.md#Types).
+- Expressions using externs cannot be evaluated at compile time. This may in some cases avoid macro expansion.
+If a macro (function) which is receiving or returning a stream variable cannot be evaluated at compilation time due to
+a non evaluateable extern, compilation will refuse according to TeSSLa language specification.
+- As a consequence of the previous point: Extern Rust functions cannot directly receive streams, but can be made liftable, and applied to streams.
+
+
