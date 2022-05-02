@@ -63,7 +63,7 @@ class RustCompiler(artifactPath: Path) extends TranslationPhase[RustFiles, Unit]
     )
 
     cargoBuild.redirectOutput(Redirect.DISCARD)
-    cargoBuild.redirectError(Redirect.DISCARD)
+    cargoBuild.redirectError(Redirect.PIPE)
 
     // Run cargo build
     try {
