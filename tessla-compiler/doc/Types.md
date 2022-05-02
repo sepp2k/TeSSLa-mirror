@@ -29,24 +29,46 @@ pub enum TesslaValue<T> {
     Value(T),
 }
 ```
+To instantiate for example an integer value, simply "call":
+```rust
+let int = TesslaValue::Value(42_i64);
+```
+or shorter, if you import the enum variants into scope:
+```rust
+use TesslaValue::*;
+
+let foo: TesslaBool = Value(true);
+let bar: TesslaInt = Error("Something is wrong with this value");
+```
+
+#### Note:
+- The `TesslaValue` variants are imported by default, if you include `monitor.rs` or the `tessla_stdlib` crate.
+- Do not mix up `TesslaValue::Error` with Rust's `Result::Err` which can be shortened to `Err` by default.
+- Instantiating a `TesslaValue` (especially an `Error`) may in some contexts require specifying the type `T`,
+because the compiler is unable to infer it automatically. Do this either by assigning it to a variable with explicit type,
+or by using `TesslaValue::<T>::Value(...)` or `Error::<T>("...")` (known as turbofish `::<>`).
+- Instead of the turbofish annotation you can also use a [type alias](https://doc.rust-lang.org/reference/items/type-aliases.html)
+to access the enum variants: `TesslaUnit::Error("...")`. There's a type alias for most TeSSLa types, as defined in the table below.
 
 ### Types
 
-| TeSSLa Type | Rust  Type                                              | Notes                                                                |
-|-------------|---------------------------------------------------------|----------------------------------------------------------------------|
-| Unit        | `type TesslaUnit = TesslaValue<()>`                     |                                                                      |
-| Bool        | `type TesslaBool = TesslaValue<bool>`                   |                                                                      |
-| Int         | `type TesslaInt = TesslaValue<i64>`                     |                                                                      |
-| Float       | `type TesslaFloat = TesslaValue<f64>`                   |                                                                      |
-| String      | `type TesslaString = TesslaValue<String>`               |                                                                      |
-| Option      | `type TesslaOption<T> = TesslaValue<Option<T>>`         | Uses the Rust Option type.                                           |
-| List        | `type TesslaList<T> = TesslaValue<im::Vector<T>>`       |                                                                      |
-| Set         | `type TesslaSet<T> = TesslaValue<im::HashSet<T>>`       | The value type must implement `Hash + Eq`                            |
-| Map         | `type TesslaMap<K, V> = TesslaValue<im::HashMap<K, V>>` | The key type must implement `Hash + Eq`                              |
-| Tuple       | `TesslaValue<(T1, T2, ...)>`                            | Rust tuples wrapped in a TesslaValue. Supported for up to 12 values. |
-| Record      | Rust struct                                             | Generated in `monitor.rs` as needed.                                 |
+| TeSSLa Type | Rust Type and Alias                                     | Notes                                                                                     |
+|-------------|---------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| Unit        | `type TesslaUnit = TesslaValue<()>`                     |                                                                                           |
+| Bool        | `type TesslaBool = TesslaValue<bool>`                   |                                                                                           |
+| Int         | `type TesslaInt = TesslaValue<i64>`                     |                                                                                           |
+| Float       | `type TesslaFloat = TesslaValue<f64>`                   |                                                                                           |
+| String      | `type TesslaString = TesslaValue<String>`               |                                                                                           |
+| Option      | `type TesslaOption<T> = TesslaValue<Option<T>>`         | Uses the Rust Option type.                                                                |
+| List        | `type TesslaList<T> = TesslaValue<im::Vector<T>>`       |                                                                                           |
+| Set         | `type TesslaSet<T> = TesslaValue<im::HashSet<T>>`       | The value type must implement `Hash + Eq`                                                 |
+| Map         | `type TesslaMap<K, V> = TesslaValue<im::HashMap<K, V>>` | The key type must implement `Hash + Eq`                                                   |
+| Tuple       | `TesslaValue<(T1, T2, ...)>`                            | Rust tuples wrapped in a TesslaValue, these have no alias. Supported for up to 12 values. |
+| Record      | Rust struct                                             | Generated in `monitor.rs` as needed, also have no alias.                                  |
 
-For the immutable data structures (List, Set, Map) the [im](https://docs.rs/im/15.0.0/im/) crate is used.
+For the immutable data structures (List, Set, Map) the [im crate](https://docs.rs/im/15.0.0/im/) is used.
+
+Any custom types you want to use must implement the `Clone` Trait.
 
 ### Records
 
