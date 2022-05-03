@@ -22,7 +22,7 @@ import java.nio.file.Paths
 
 import de.uni_luebeck.isp.clang_instrumentation.CPPBridge
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import de.uni_luebeck.isp.tessla.core._
+import de.uni_luebeck.isp.tessla.core.*
 import de.uni_luebeck.isp.tessla.instrumenter.CInstrumentation.{IFullFunDesc, IFunDesc}
 
 /**

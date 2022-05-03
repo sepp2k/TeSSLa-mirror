@@ -17,7 +17,7 @@
 package de.uni_luebeck.isp.tessla.core
 
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError
-import de.uni_luebeck.isp.tessla.core.TranslationPhase._
+import de.uni_luebeck.isp.tessla.core.TranslationPhase.*
 import org.scalatest.funsuite.AnyFunSuite
 
 class TranslationPhaseTests extends AnyFunSuite {

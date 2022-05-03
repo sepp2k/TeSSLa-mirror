@@ -18,7 +18,7 @@ package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.*
 
 /**
  * This class is used for removing unused variable declarations from the code. Therefore it first creates a map

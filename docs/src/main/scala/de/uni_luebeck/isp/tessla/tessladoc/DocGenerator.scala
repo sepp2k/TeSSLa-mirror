@@ -42,14 +42,14 @@ import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc.{
 }
 
 import de.uni_luebeck.isp.tessla.core.Errors.InternalError
-import de.uni_luebeck.isp.tessla.tessladoc.DocJsonProtocol._
+import de.uni_luebeck.isp.tessla.tessladoc.DocJsonProtocol.*
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
-import de.uni_luebeck.isp.tessla.core._
+import de.uni_luebeck.isp.tessla.core.*
 import org.antlr.v4.runtime.misc.Interval
 import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.{CharStream, ParserRuleContext, Token}
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 /**
  * Extracts the documentation from a parsed specification.

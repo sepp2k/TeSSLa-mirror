@@ -16,14 +16,14 @@
 
 package de.uni_luebeck.isp.tessla.core
 
-import cats._
+import cats.*
 import cats.data.Ior
-import cats.implicits._
+import cats.implicits.*
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 import scala.util.Try
-import de.uni_luebeck.isp.tessla.core.util._
+import de.uni_luebeck.isp.tessla.core.util.*
 
 /**
  * A parametrized data structure for Tessla ASTs. This allows to define different ASTs used in the translation pipeline

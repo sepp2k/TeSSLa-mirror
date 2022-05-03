@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.core.Errors._
+import de.uni_luebeck.isp.tessla.core.Errors.*
 import de.uni_luebeck.isp.tessla.core.Location
 
 import scala.annotation.tailrec
@@ -26,7 +26,7 @@ object StreamEngine {
   type Time = BigInt
 }
 
-import de.uni_luebeck.isp.tessla.interpreter.StreamEngine._
+import de.uni_luebeck.isp.tessla.interpreter.StreamEngine.*
 
 /**
  * Evaluates a stream graph synchronously.

@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.core.util
 
-import cats._
+import cats.*
 
 /**
  * Defers a computation until `get` is invoked.

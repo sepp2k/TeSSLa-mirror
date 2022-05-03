@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.*
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.DefinitionExpression
 
 import scala.annotation.tailrec

@@ -17,7 +17,7 @@
 package de.uni_luebeck.isp.tessla.core
 
 import de.uni_luebeck.isp.tessla.core
-import de.uni_luebeck.isp.tessla.core.Errors._
+import de.uni_luebeck.isp.tessla.core.Errors.*
 import de.uni_luebeck.isp.tessla.core.FlatTessla.AnnotationEntry
 import de.uni_luebeck.isp.tessla.core.Warnings.ConflictingOut
 

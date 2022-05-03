@@ -16,10 +16,10 @@
 
 package de.uni_luebeck.isp.tessla.interpreter
 
-import de.uni_luebeck.isp.tessla.core.Errors._
+import de.uni_luebeck.isp.tessla.core.Errors.*
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import de.uni_luebeck.isp.tessla.core.util._
-import de.uni_luebeck.isp.tessla.core._
+import de.uni_luebeck.isp.tessla.core.util.*
+import de.uni_luebeck.isp.tessla.core.*
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable

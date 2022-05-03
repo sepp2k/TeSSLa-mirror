@@ -17,14 +17,14 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.core.Errors.{InternalError, InvalidEscapeSequence}
-import de.uni_luebeck.isp.tessla.core.InputTraceParser._
+import de.uni_luebeck.isp.tessla.core.InputTraceParser.*
 import de.uni_luebeck.isp.tessla.core.util.Lazy
-import de.uni_luebeck.isp.tessla.core._
+import de.uni_luebeck.isp.tessla.core.*
 import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.RuleNode
 
 import scala.collection.immutable.ArraySeq
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 /**
  * Evaluates expressions used in traces.

@@ -20,11 +20,11 @@ import java.nio.file.{Files, Paths}
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Result, Success}
-import spray.json._
+import spray.json.*
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TranslationPhase}
 import org.scalatest.funsuite.AnyFunSuite
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import java.nio.file.FileSystems
 import java.nio.file.PathMatcher
 import de.uni_luebeck.isp.tessla.core.Errors.TesslaError

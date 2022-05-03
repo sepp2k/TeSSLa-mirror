@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.core
 
-import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.*
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
 
 /**

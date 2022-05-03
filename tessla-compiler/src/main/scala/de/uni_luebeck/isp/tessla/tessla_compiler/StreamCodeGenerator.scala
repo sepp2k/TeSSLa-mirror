@@ -17,10 +17,10 @@
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
-import de.uni_luebeck.isp.tessla._
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.*
+import de.uni_luebeck.isp.tessla.*
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.*
 
 import scala.language.{implicitConversions, postfixOps}
 

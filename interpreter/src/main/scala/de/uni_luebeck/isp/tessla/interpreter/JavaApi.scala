@@ -17,13 +17,13 @@
 package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.core
-import de.uni_luebeck.isp.tessla.core.Errors._
+import de.uni_luebeck.isp.tessla.core.Errors.*
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Failure, Success}
 import de.uni_luebeck.isp.tessla.core.{Compiler, ConstantEvaluator, IncludeResolvers, Location, TesslaAST}
 import org.antlr.v4.runtime.{CharStream, CharStreams}
 
 import scala.collection.mutable
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 object JavaApi {
 

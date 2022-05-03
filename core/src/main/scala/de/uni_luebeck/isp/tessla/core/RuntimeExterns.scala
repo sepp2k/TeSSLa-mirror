@@ -21,9 +21,9 @@ import cats.{CommutativeMonad, Monad}
 import de.uni_luebeck.isp.tessla.core.util.Lazy
 
 import scala.collection.immutable.ArraySeq
-import cats.implicits._
+import cats.implicits.*
 import de.uni_luebeck.isp.tessla.core.ConstantEvaluator.{Record, RuntimeError}
-import de.uni_luebeck.isp.tessla.core.util.ArraySeqMonad._
+import de.uni_luebeck.isp.tessla.core.util.ArraySeqMonad.*
 import org.eclipse.tracecompass.ctf.core.event.IEventDefinition
 
 /**

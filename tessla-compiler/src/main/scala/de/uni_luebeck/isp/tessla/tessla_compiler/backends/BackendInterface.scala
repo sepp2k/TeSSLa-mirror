@@ -18,8 +18,8 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends
 
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.*
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.*
 import de.uni_luebeck.isp.tessla.tessla_compiler.{
   IntermediateCode,
   IntermediateCodeTypeInference,

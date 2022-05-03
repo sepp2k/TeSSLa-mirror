@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing
 
-import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.*
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
 import de.uni_luebeck.isp.tessla.tessla_compiler.ExtendedSpecification

@@ -16,12 +16,12 @@
 
 package de.uni_luebeck.isp.tessla.core
 
-import de.uni_luebeck.isp.tessla.core.Errors._
+import de.uni_luebeck.isp.tessla.core.Errors.*
 import org.antlr.v4.runtime.tree.{RuleNode, TerminalNode}
-import org.antlr.v4.runtime._
-import cats.implicits._
+import org.antlr.v4.runtime.*
+import cats.implicits.*
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.collection.mutable.ArrayBuffer
 
 object TesslaSyntaxToTessla extends TranslationPhase[Seq[TesslaParser.ParseResult], Tessla.Specification] {

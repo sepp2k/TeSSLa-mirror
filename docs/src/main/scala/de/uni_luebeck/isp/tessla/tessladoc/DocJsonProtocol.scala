@@ -18,8 +18,8 @@ package de.uni_luebeck.isp.tessla.tessladoc
 
 import de.uni_luebeck.isp.tessla.core.Location
 import de.uni_luebeck.isp.tessla.core.Location.SourceRange
-import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc._
-import spray.json._
+import de.uni_luebeck.isp.tessla.tessladoc.TesslaDoc.*
+import spray.json.*
 
 /**
  * A Json protocol containing all formats required to generate the Tessla documentation in Json format.

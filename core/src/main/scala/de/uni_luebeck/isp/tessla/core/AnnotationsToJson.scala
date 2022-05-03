@@ -17,7 +17,7 @@
 package de.uni_luebeck.isp.tessla.core
 
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
-import spray.json._
+import spray.json.*
 
 /**
  * Contains functionality to transform annotations of a specification into a Json format.

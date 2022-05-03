@@ -19,7 +19,7 @@ package de.uni_luebeck.isp.tessla.core
 import cats.data.Ior
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
-import de.uni_luebeck.isp.tessla.core.util._
+import de.uni_luebeck.isp.tessla.core.util.*
 
 import scala.collection.mutable
 

@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.instrumenter
 
-import de.uni_luebeck.isp.tessla.core.util._
+import de.uni_luebeck.isp.tessla.core.util.*
 import de.uni_luebeck.isp.tessla.core.CPatternParser.{
   ArrayAccessContext,
   DereferenceContext,

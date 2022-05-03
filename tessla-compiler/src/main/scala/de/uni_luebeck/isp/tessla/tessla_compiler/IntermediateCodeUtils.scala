@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.*
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{Core, LazyEvaluation, StrictEvaluation}
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.{BoolType, StringType, UnitType, _}
 

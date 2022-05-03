@@ -21,7 +21,7 @@ import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 import org.scalactic.Prettifier
-import spray.json._
+import spray.json.*
 
 class AnnotationJsonTests extends AbstractTestRunner[String]("Annotations-Json") {
   override def roots: Seq[String] = Seq("annotations-json/")

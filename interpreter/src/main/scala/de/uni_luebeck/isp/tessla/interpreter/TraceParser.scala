@@ -18,8 +18,8 @@ package de.uni_luebeck.isp.tessla.interpreter
 
 import de.uni_luebeck.isp.tessla.core.Errors.ParserError
 import de.uni_luebeck.isp.tessla.core.{InputTraceLexer, InputTraceParser, Location}
-import org.antlr.v4.runtime._
-import scala.jdk.CollectionConverters._
+import org.antlr.v4.runtime.*
+import scala.jdk.CollectionConverters.*
 
 /**
  * Provides parsing for traces in csv or standard format.

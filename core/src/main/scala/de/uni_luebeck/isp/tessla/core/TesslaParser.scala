@@ -19,11 +19,11 @@ package de.uni_luebeck.isp.tessla.core
 import java.nio.file.Paths
 import java.util.{IllegalFormatException, MissingFormatArgumentException}
 
-import de.uni_luebeck.isp.tessla.core.Errors._
-import de.uni_luebeck.isp.tessla.core.TranslationPhase._
-import org.antlr.v4.runtime._
+import de.uni_luebeck.isp.tessla.core.Errors.*
+import de.uni_luebeck.isp.tessla.core.TranslationPhase.*
+import org.antlr.v4.runtime.*
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import scala.collection.mutable
 

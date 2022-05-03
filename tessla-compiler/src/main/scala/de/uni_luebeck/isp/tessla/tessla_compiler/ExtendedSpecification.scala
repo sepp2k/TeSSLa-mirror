@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import de.uni_luebeck.isp.tessla.core.TesslaAST.Core._
+import de.uni_luebeck.isp.tessla.core.TesslaAST.Core.*
 
 /**
  * TeSSLa Core AST with additional information from the preprocessing

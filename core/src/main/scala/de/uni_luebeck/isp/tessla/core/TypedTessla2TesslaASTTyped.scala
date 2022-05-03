@@ -20,11 +20,11 @@ import cats.data.Ior
 import de.uni_luebeck.isp.tessla.core.Errors.UndefinedBaseTime
 import de.uni_luebeck.isp.tessla.core.Tessla.{FloatLiteral, IntLiteral, StringLiteral, TimeLiteral}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Typed
-import de.uni_luebeck.isp.tessla.core.TranslationPhase._
+import de.uni_luebeck.isp.tessla.core.TranslationPhase.*
 
 import scala.collection.mutable
-import de.uni_luebeck.isp.tessla.core.TypedTessla._
-import de.uni_luebeck.isp.tessla.core.util._
+import de.uni_luebeck.isp.tessla.core.TypedTessla.*
+import de.uni_luebeck.isp.tessla.core.util.*
 
 import scala.collection.immutable.ArraySeq
 

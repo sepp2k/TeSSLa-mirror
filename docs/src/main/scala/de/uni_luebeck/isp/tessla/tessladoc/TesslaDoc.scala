@@ -16,9 +16,9 @@
 
 package de.uni_luebeck.isp.tessla.tessladoc
 
-import de.uni_luebeck.isp.tessla.tessladoc.DocJsonProtocol._
-import de.uni_luebeck.isp.tessla.core._
-import spray.json._
+import de.uni_luebeck.isp.tessla.tessladoc.DocJsonProtocol.*
+import de.uni_luebeck.isp.tessla.core.*
+import spray.json.*
 
 sealed trait Statement
 

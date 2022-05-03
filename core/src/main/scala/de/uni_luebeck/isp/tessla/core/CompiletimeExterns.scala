@@ -20,7 +20,7 @@ import de.uni_luebeck.isp.tessla.core.TesslaAST.{Core, LazyEvaluation, StrictEva
 import Core.Identifier
 
 import scala.collection.immutable.ArraySeq
-import cats.implicits._
+import cats.implicits.*
 import de.uni_luebeck.isp.tessla.core
 import de.uni_luebeck.isp.tessla.core.ConstantEvaluator.errorExtern
 import de.uni_luebeck.isp.tessla.core.Errors.InternalError

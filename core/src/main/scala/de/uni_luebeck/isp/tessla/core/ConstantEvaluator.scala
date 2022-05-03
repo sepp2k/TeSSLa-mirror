@@ -16,14 +16,14 @@
 
 package de.uni_luebeck.isp.tessla.core
 
-import cats._
+import cats.*
 import cats.data.Ior
-import cats.implicits._
+import cats.implicits.*
 import de.uni_luebeck.isp.tessla.core.ConstantEvaluator.lazyWithStack
 import de.uni_luebeck.isp.tessla.core.Errors.{InfiniteRecursion, InternalError, WithStackTrace}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.{Core, Typed}
 import de.uni_luebeck.isp.tessla.core.util.LazyWithStack
-import de.uni_luebeck.isp.tessla.core.util._
+import de.uni_luebeck.isp.tessla.core.util.*
 
 import scala.collection.mutable
 import scala.collection.immutable.ArraySeq

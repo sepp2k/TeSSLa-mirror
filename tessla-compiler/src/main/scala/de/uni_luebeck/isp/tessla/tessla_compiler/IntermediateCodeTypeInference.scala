@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.*
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.VariableDeclaration
 
 /**

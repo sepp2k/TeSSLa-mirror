@@ -16,7 +16,7 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend
 
-import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode._
+import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCode.*
 import de.uni_luebeck.isp.tessla.tessla_compiler.IntermediateCodeUtils.DeclarationType
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.BackendInterface
 import de.uni_luebeck.isp.tessla.tessla_compiler.{

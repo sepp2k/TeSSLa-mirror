@@ -24,8 +24,8 @@ import org.scalatest.funsuite.AnyFunSuite
 
 import scala.io.Source
 import scala.util.Using
-import spray.json._
-import DocJsonProtocol._
+import spray.json.*
+import DocJsonProtocol.*
 import org.antlr.v4.runtime.CharStreams
 import de.uni_luebeck.isp.tessla.core.{Compiler, IncludeResolvers, TranslationPhase}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success

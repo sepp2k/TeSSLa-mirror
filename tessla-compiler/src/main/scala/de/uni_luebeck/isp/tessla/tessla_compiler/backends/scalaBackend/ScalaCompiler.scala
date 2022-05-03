@@ -25,11 +25,11 @@ import java.util.jar.{Attributes, JarEntry, JarInputStream, JarOutputStream}
 import de.uni_luebeck.isp.tessla.core.{Errors, TranslationPhase}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.tools.nsc.reporters.{ConsoleReporter, Reporter}
 import scala.tools.nsc.{Global, Settings}
 import scala.util.Using
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaCompiler._
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaCompiler.*
 
 import scala.reflect.io.Directory
 

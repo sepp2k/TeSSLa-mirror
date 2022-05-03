@@ -18,8 +18,8 @@ package de.uni_luebeck.isp.tessla
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 
-import spray.json._
-import DefaultJsonProtocol._
+import spray.json.*
+import DefaultJsonProtocol.*
 import de.uni_luebeck.isp.tessla.core.IncludeResolvers
 import org.antlr.v4.runtime.CharStream
 
