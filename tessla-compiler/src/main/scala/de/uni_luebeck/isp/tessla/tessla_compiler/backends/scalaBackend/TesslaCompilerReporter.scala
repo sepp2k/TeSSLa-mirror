@@ -42,10 +42,6 @@ class TesslaCompilerReporter(val settings: Settings) extends FilteringReporter {
       case reflect.internal.Reporter.WARNING => warnings += CompilationWarning(combMsg, "scalac", "warning")
       case reflect.internal.Reporter.ERROR =>
         throw Errors.InternalError(s"Scala Compilation raised error, compilation aborted:\n$combMsg")
-      case _ =>
-        throw Errors.InternalError(
-          s"Scala Compilation raised error of unknown Severity, compilation aborted:\n$combMsg"
-        )
     }
   }
 }

@@ -224,10 +224,10 @@ class StreamEngine(unitValue: Any) {
 
   def merge(streams: ArraySeq[Stream]): Stream = {
     @tailrec
-    def firstSome(values: ArraySeq[Option[Any]]): Option[Any] = values match {
-      case Some(value1) +: _ => Some(value1)
-      case _ +: tail         => firstSome(tail)
-      case ArraySeq()        => None
+    def firstSome(values: Seq[Option[Any]]): Option[Any] = values match {
+      case ArraySeq(Some(value1), _: _*) => Some(value1)
+      case ArraySeq(None, tail: _*)      => firstSome(tail)
+      case ArraySeq()                    => None
     }
     lift(streams)(firstSome)
   }

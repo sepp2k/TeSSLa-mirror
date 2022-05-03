@@ -70,7 +70,7 @@ object TestCase {
       case None => Some(JsArray())
       case e    => e
     })
-    jsonFormat12(TestConfig).read(withOptions)
+    jsonFormat12(TestConfig.apply).read(withOptions)
   }
 
   def fromString(s: String): TestConfig = s.parseJson.convertTo[TestConfig]

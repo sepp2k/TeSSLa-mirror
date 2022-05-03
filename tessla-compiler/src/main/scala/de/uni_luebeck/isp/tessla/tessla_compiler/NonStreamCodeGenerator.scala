@@ -226,8 +226,6 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
         MkStruct(entries.toSeq.map { case (n, (ea, _)) => (n.name, translateExpressionArg(ea, tm, defContext)) }, e.tpe)
       case RecordAccessorExpression(name, target, _, _) =>
         GetStruct(translateExpressionArg(target, tm, defContext), name.name, target.tpe)
-      case _ =>
-        throw Diagnostics.CoreASTError("Unexpected ExpressionArg cannot be translated", e.location)
     }
   }
 
@@ -300,7 +298,6 @@ class NonStreamCodeGenerator(extSpec: ExtendedSpecification) {
             RecordAccessorExpression(name, inlineVars(target, defContext), nameLoc, location)
           case _ => e
         }
-      case _ => e
     }
   }
 

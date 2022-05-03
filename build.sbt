@@ -95,9 +95,6 @@ lazy val commonSettings = Seq(
     "-feature",
     "-unchecked",
     "-deprecation",
-    "-Ypatmat-exhaust-depth",
-    "off",
-    "-target:jvm-1.8",
     "-source:3.0-migration"
   ),
   javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
@@ -260,7 +257,7 @@ lazy val tesslac = (project in file("tessla-compiler"))
     buildInfoPackage := s"$rootPackage.tessla_compiler",
     Compile / resourceGenerators += libCopy.taskValue,
     libraryDependencies ++= Seq(
-      scalac,
+      //scalac,
       "org.scala-lang" % "scala-compiler" % "2.13.8" // FIXME: needed for scala compilation & tests
     ),
     headerResources / excludeFilter := HiddenFileFilter || "*ScalaSkeleton*.scala"
