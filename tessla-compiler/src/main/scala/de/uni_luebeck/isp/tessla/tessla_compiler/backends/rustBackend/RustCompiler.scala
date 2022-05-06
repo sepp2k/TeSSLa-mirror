@@ -20,13 +20,12 @@ import de.uni_luebeck.isp.tessla.core.Errors.{mkTesslaError, TesslaError}
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
 import de.uni_luebeck.isp.tessla.core.TranslationPhase.Success
 
-import java.io.IOException
+import java.io.{File, IOException}
 import java.lang.ProcessBuilder.Redirect
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
 import scala.io.Source
-import scala.reflect.io.Directory
 
 /**
  * Invokes cargo to generate a binary artifact from Rust code.
@@ -49,7 +48,6 @@ class RustCompiler(artifactPath: Path) extends TranslationPhase[RustFiles, Unit]
     }
 
     val workspaceDir = Files.createTempDirectory("build-tessla-rust")
-    deleteOnExit(workspaceDir)
 
     RustCompiler.createCargoWorkspace(workspaceDir, artifactName, sourceCode, exportMain = true)
 
@@ -62,7 +60,11 @@ class RustCompiler(artifactPath: Path) extends TranslationPhase[RustFiles, Unit]
       "--release"
     )
 
-    cargoBuild.redirectOutput(Redirect.DISCARD)
+    // Which warnings we want to allow, to de-clutter the cargo output
+    cargoBuild.environment().put("RUSTFLAGS", RustCompiler.ALLOWED_WARNINGS)
+
+    // this is equivalent to Redirect.DISCARD, available from from Java 9+
+    cargoBuild.redirectOutput(Redirect.to(RustCompiler.NULL_FILE))
     cargoBuild.redirectError(Redirect.PIPE)
 
     // Run cargo build
@@ -99,21 +101,26 @@ class RustCompiler(artifactPath: Path) extends TranslationPhase[RustFiles, Unit]
         throw error
     }
 
-    Success((), Seq())
-  }
+    // delete the workspace dir, if no errors occurred
+    Files.walkFileTree(workspaceDir, RustCompiler.DeleteFileVisitor)
 
-  /**
-   * Deletes a file on program shutdown.
-   * @param path Path of the file to be deleted
-   */
-  private def deleteOnExit(path: Path): Unit = {
-    Runtime.getRuntime.addShutdownHook(new Thread(() => {
-      Directory(path.toFile).deleteRecursively()
-    }))
+    Success((), Seq())
   }
 }
 
 object RustCompiler {
+
+  /**
+   * A set of warnings that we know are present in the generated output
+   * Some of these are merely stylistic (variable names) and some are more interesting,
+   * but very hard to eliminate (too many parentheses, unused variables, dead code)
+   */
+  final var ALLOWED_WARNINGS: String =
+    "-A unused_parens -A unused_variables -A non_snake_case -A non_camel_case_types -A uncommon_codepoints -A non_upper_case_globals -A dead_code"
+
+  final private val NULL_FILE: File = new File(
+    if (System.getProperty("os.name").startsWith("Windows")) "NUL" else "/dev/null"
+  )
 
   /**
    * Creates a complete cargo workspace with all files necessary to expand it with your own code.

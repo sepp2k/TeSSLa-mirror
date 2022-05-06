@@ -148,12 +148,7 @@ object TesslacRustTests {
     )
 
     // Which warnings we want to allow, any not specified here, will result in a failed test
-    cargoRun
-      .environment()
-      .put(
-        "RUSTFLAGS",
-        "-A unused_parens -A unused_variables -A non_snake_case -A non_camel_case_types -A uncommon_codepoints -A non_upper_case_globals -A dead_code"
-      )
+    cargoRun.environment().put("RUSTFLAGS", RustCompiler.ALLOWED_WARNINGS)
 
     cargoRun.redirectInput(Redirect.from(inputTrace))
 
