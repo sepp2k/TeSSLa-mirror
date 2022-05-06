@@ -116,7 +116,7 @@ object RustCompiler {
    * but very hard to eliminate (too many parentheses, unused variables, dead code)
    */
   final var ALLOWED_WARNINGS: String =
-    "-A unused_parens -A unused_variables -A non_snake_case -A non_camel_case_types -A uncommon_codepoints -A non_upper_case_globals -A dead_code"
+    "-A non_snake_case -A non_camel_case_types -A unused_parens -A unused_variables"
 
   final private val NULL_FILE: File = new File(
     if (System.getProperty("os.name").startsWith("Windows")) "NUL" else "/dev/null"
