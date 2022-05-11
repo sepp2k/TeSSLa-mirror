@@ -58,92 +58,21 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
     )
   }
 
+  /**
+   * Traverses recursively through the specified definitions and
+   *   1. modifies direct calls to extern("String_format").
+   *   2. gather data from calls to String.format which are wrapped in a slift2 in order to modify those in the following
+   *      steps.
+   * @param definitions The definitions to traverse.
+   * @param removedStreams The name of the streams to remove.
+   * @param formatStrings The format strings to translate.
+   * @return The modified definition expressions.
+   */
   def traverseRecursively(
     definitions: Map[Identifier, DefinitionExpression],
     removedStreams: util.ArrayList[String],
     formatStrings: mutable.HashMap[String, (String, Location)]
   ): Map[Identifier, DefinitionExpression] = {
-
-    /*definitions.foreach {
-      case (expid, definition) =>
-        definition match {
-          case ApplicationExpression(TypeApplicationExpression(ExternExpression("slift", _, loc), _, _), args, _)
-              if args.length >= 3 =>
-            args(2) match {
-              case TypeApplicationExpression(ExternExpression("String_format", _, _), _, _) |
-                  ExternExpression("String_format", _, _) =>
-                args(0) match {
-                  case ExpressionRef(id, _, _) =>
-                    // If we encounter this format string the first time
-                    //if (!removedStreams.contains(id.fullName)) {
-                    definitions.get(id) match {
-                      // Ensure that the format string is stored on a nil stream using default
-                      case Some(
-                            ApplicationExpression(
-                              TypeApplicationExpression(ExternExpression("default", _, _), _, _),
-                              args,
-                              _
-                            )
-                          ) =>
-                        val stream = args(0) match { // the stream the format string is based on
-                          case ExpressionRef(id, _, _) => id
-                          case _ =>
-                            throw Diagnostics.CommandNotSupportedError(
-                              "Can't determine format string at compile time.",
-                              loc
-                            )
-                        }
-
-                        // Do nothing if the format string is based on a nil stream
-                        definitions.get(stream) match {
-                          case Some(
-                                ApplicationExpression(
-                                  TypeApplicationExpression(ExternExpression("nil", _, _), _, _),
-                                  _,
-                                  _
-                                )
-                              ) =>
-                          case _ =>
-                            throw Diagnostics.CommandNotSupportedError(
-                              "Can't determine format string at compile time.",
-                              loc
-                            )
-                        }
-
-                        val format = args(1) match { // the format string itself
-                          case StringLiteralExpression(value, _) => value
-                          case _ =>
-                            throw Diagnostics.CommandNotSupportedError(
-                              "Can't determine format string at compile time.",
-                              loc
-                            )
-                        }
-
-                        // Add the format string to the map
-                        formatStrings.addOne((expid.fullName, (format, loc)))
-
-                        // Remove the format string stream
-                        removedStreams.add(id.fullName)
-                      case _ =>
-                        throw Diagnostics.CommandNotSupportedError(
-                          "Can't determine format string at compile time.",
-                          loc
-                        )
-                    }
-                  //}
-
-                  // We encountered the format string already and removed the streams
-                  /*else
-                      /* we just need to map the slift to the corresponding format string */ {
-                        formatStrings.addOne((sliftid.fullName, formatStrings(id.fullName)))
-                      }*/
-                  case _ =>
-                }
-              case _ =>
-            }
-          case _ =>
-        }
-    }*/
 
     definitions.map {
       case (expid, defn) =>
@@ -276,10 +205,7 @@ object FormatStringMangler extends TranslationPhase[Specification, Specification
               case _ => expid -> defn
             }
           }
-          case _ => {
-            System.out.println(defn)
-            expid -> defn
-          }
+          case _ => expid -> defn
         }
     }
   }
