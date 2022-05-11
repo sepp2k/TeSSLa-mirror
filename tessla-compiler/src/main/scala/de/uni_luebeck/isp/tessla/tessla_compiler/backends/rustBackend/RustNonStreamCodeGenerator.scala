@@ -84,8 +84,10 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
     if (lazyVar) {
       definedIdentifiers += (id -> FinalLazyDeclaration)
       val inlinedExp = inlineVars(e, defContext)
-      // TODO how exactly do we handle this
-      s"let /*lazy*/ var_$id = ${translateExpressionArg(inlinedExp, tm, defContext)};"
+      System.err.println(
+        s"WARNING: Lazy assignment (at ${id.location}) not supported by Rust backend, will be evaluated eagerly"
+      );
+      s"let var_$id = /*lazy*/ ${translateExpressionArg(inlinedExp, tm, defContext)};" // TODO support lazy assignment
     } else if (finalAssignmentPossible(e)) {
       definedIdentifiers += (id -> FinalDeclaration)
       s"let var_$id = ${translateExpressionArg(e, tm, defContext)};"
@@ -157,7 +159,10 @@ class RustNonStreamCodeGenerator(extSpec: ExtendedSpecification)
       .map {
         case (id, StrictEvaluation, tpe) => if (id.fullName == "_") "_" else s"var_$id: $tpe"
         case (id, LazyEvaluation, tpe) =>
-          if (id.fullName == "_") "_" else s"var_$id /* lazy */: $tpe" // TODO how to handle lazy...
+          System.err.println(
+            s"WARNING: Lazy function argument (at ${id.location}) not supported by Rust backend, will be evaluated eagerly"
+          )
+          if (id.fullName == "_") "_" else s"var_$id /* lazy */: $tpe" // TODO support lazy function arguments...
       }
       .mkString(", ")
     s"Value(Rc::new(move |$arguments| {\n" +
