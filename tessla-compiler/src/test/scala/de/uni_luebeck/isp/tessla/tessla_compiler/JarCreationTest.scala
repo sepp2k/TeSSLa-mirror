@@ -39,8 +39,8 @@ class JarCreationTest extends AbstractTestRunner[Unit]("Jar") with BeforeAndAfte
     TesslacTests
       .pipeline(testCase, resolver)
       .andThen(new ScalaCompiler(fsPath, "monitor.jar", false, true)(s => {
-        s.usejavacp.value = false
-        s.classpath.value = Predef.getClass.getProtectionDomain.getCodeSource.getLocation.getPath
+        s -= "-usejavacp"
+        s ++= Seq("-classpath", Predef.getClass.getProtectionDomain.getCodeSource.getLocation.getPath)
       }))
 
   override def run(

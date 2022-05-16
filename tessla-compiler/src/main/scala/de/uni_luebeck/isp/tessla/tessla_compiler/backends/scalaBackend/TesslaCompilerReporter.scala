@@ -16,32 +16,28 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend
 
-import de.uni_luebeck.isp.tessla.core.{Diagnostic, Errors}
+import de.uni_luebeck.isp.tessla.core.{Errors, Diagnostic as CoreDiagnostic}
 import de.uni_luebeck.isp.tessla.tessla_compiler.Diagnostics.CompilationWarning
-
-import scala.reflect.internal.util.Position
-import scala.reflect.internal.util.Position.formatMessage
-import scala.tools.nsc.Settings
-import scala.tools.nsc.reporters.FilteringReporter
+import dotty.tools.dotc.core.Contexts.Context
+import dotty.tools.dotc.interfaces.Diagnostic.{ERROR, INFO, WARNING}
+import dotty.tools.dotc.reporting.{AbstractReporter, Diagnostic}
+import dotty.tools.dotc.util.SourcePosition
 
 /**
  * A reporter implementation raising TeSSLa compiler errors if the supervised Scala compiler raises an error
  * and collects TeSSLa warnings if it raises warnings or information
- *
- * @param settings Settings passed to the reporter
  */
-class TesslaCompilerReporter(val settings: Settings) extends FilteringReporter {
+class TesslaCompilerReporter extends AbstractReporter {
 
-  val warnings: collection.mutable.ArrayBuffer[Diagnostic] = collection.mutable.ArrayBuffer()
+  val warnings: collection.mutable.ArrayBuffer[CoreDiagnostic] = collection.mutable.ArrayBuffer()
 
-  override def doReport(pos: Position, msg: String, severity: Severity): Unit = {
-    val combMsg = formatMessage(pos, msg, shortenFile = false)
+  override def doReport(dia: Diagnostic)(using Context): Unit = {
+    val combMsg = dia.pos.toString + dia.message
     println(combMsg)
-    severity match {
-      case reflect.internal.Reporter.INFO    => warnings += CompilationWarning(combMsg, "scalac", "info")
-      case reflect.internal.Reporter.WARNING => warnings += CompilationWarning(combMsg, "scalac", "warning")
-      case reflect.internal.Reporter.ERROR =>
-        throw Errors.InternalError(s"Scala Compilation raised error, compilation aborted:\n$combMsg")
+    dia.level match {
+      case INFO    => warnings += CompilationWarning(combMsg, "scalac", "info")
+      case WARNING => warnings += CompilationWarning(combMsg, "scalac", "warning")
+      case ERROR   => throw Errors.InternalError(s"Scala Compilation raised error, compilation aborted:\n$combMsg")
     }
   }
 }

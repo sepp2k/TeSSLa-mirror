@@ -16,23 +16,24 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend
 
-import java.io.{FileOutputStream, InputStream, OutputStream}
+import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
+import de.uni_luebeck.isp.tessla.core.{Errors, TranslationPhase}
+import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaCompiler.*
+import de.uni_luebeck.isp.tessla.tessla_compiler.util.PathHelper
+import dotty.tools.dotc.Driver
+import dotty.tools.dotc.config.ScalaSettings
+import dotty.tools.dotc.core.Contexts.ContextBase
+import dotty.tools.dotc.reporting.{ConsoleReporter, Reporter}
+
+import java.io.{FileOutputStream, IOException, InputStream, OutputStream}
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.*
 import java.util.jar.{Attributes, JarEntry, JarInputStream, JarOutputStream}
-
-import de.uni_luebeck.isp.tessla.core.{Errors, TranslationPhase}
-import de.uni_luebeck.isp.tessla.core.TranslationPhase.{Result, Success}
-
+import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
-import scala.tools.nsc.reporters.{ConsoleReporter, Reporter}
-import scala.tools.nsc.{Global, Settings}
 import scala.util.Using
-import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaCompiler.*
-
-import scala.reflect.io.Directory
 
 object ScalaCompiler {
 
@@ -41,17 +42,14 @@ object ScalaCompiler {
    * @param compileDir The working directory of the compilation
    * @return Settings to be used for the compilation
    */
-  def defaultSettings(compileDir: Path, debug: Boolean): Settings = {
-    val settings = new Settings()
-    settings.usejavacp.value = true
-    settings.outputDirs.setSingleOutput(compileDir.toAbsolutePath.toString)
-    settings.opt.enable(settings.optChoices.lDefault)
-    settings.opt.enable(settings.optChoices.lMethod)
+  def defaultSettings(compileDir: Path, debug: Boolean): mutable.ArrayBuffer[String] = {
+    val settings = new mutable.ArrayBuffer[String]()
+    settings += "-usejavacp"
+    settings ++= Seq("-d", compileDir.toAbsolutePath.toString)
     if (debug) {
-      settings.verbose.value = true
-      settings.Ylogcp.value = true
+      settings += "-verbose"
+      settings += "-Ylog-classpath"
     }
-
     settings
   }
 
@@ -61,10 +59,13 @@ object ScalaCompiler {
    * @param settings The compilation settings
    * @param reporter The reporter getting attached to the compiler
    */
-  def compileCode(source: Path, settings: Settings, reporter: Reporter): Unit = {
-    val compiler = new Global(settings, reporter)
-    (new compiler.Run) compile List(source.toAbsolutePath.toString)
-    reporter.finish()
+  def compileCode(source: Path, settings: mutable.ArrayBuffer[String], reporter: Reporter): Unit = {
+    val sourcePath = source.toAbsolutePath.toString
+    val compiler = new Driver
+    val compileCtx = (new ContextBase).initialCtx.fresh
+    compileCtx.setReporter(reporter)
+    compiler.process(settings.toArray :+ sourcePath, compileCtx)
+    reporter.flush()(using compileCtx)
   }
 
   /**
@@ -163,7 +164,7 @@ object ScalaCompiler {
  * @param settingsModifier Function adjusting the settings for compilation
  */
 class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean, executeableCode: Boolean)(
-  settingsModifier: Settings => Unit = _ => ()
+  settingsModifier: mutable.ArrayBuffer[String] => Unit = _ => ()
 ) extends TranslationPhase[String, Unit] {
 
   /**
@@ -186,7 +187,7 @@ class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean, executeableCo
 
     val settings = defaultSettings(compileDir, debug)
     settingsModifier(settings)
-    val reporter = new ConsoleReporter(settings)
+    val reporter = new ConsoleReporter()
 
     val sourcePath = Path.of(URI.create(outDir.toUri.toString + "Main.scala"))
     PathHelper.deleteOnExit(sourcePath)

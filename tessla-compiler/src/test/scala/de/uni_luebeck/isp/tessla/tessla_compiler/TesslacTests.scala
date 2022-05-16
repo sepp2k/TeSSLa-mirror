@@ -28,6 +28,8 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
 import de.uni_luebeck.isp.tessla.tessla_compiler.util.PathHelper
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
+import dotty.tools.repl.ReplDriver
+import dotty.tools.runner.ScalaClassLoader
 import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
 
@@ -102,18 +104,9 @@ object TesslacTests {
 
   // Search for Main$ in the provided path and execute Main$.main with the input trace.
   def execute(path: Path, inputTrace: InputStream): (Seq[String], Seq[String]) = {
-    import scala.reflect.runtime.universe._
-    val cl = new URLClassLoader(Seq(path.toUri.toURL), this.getClass.getClassLoader)
+    import dotty.tools.runner.RichClassLoader
 
-    // Load the generated Main$.class and look for the main method.
-    val main = cl.loadClass("Main$")
-    val method = main.getDeclaredMethod("main", classOf[Array[String]])
-
-    // Create reflection mirror from the newly created class loader, to then load the module 'Main' to execute the main
-    // method on
-    val mirror = runtimeMirror(cl)
-    val module = mirror.staticModule("Main")
-    val obj = mirror.reflectModule(module)
+    val rcl = new RichClassLoader(new URLClassLoader(Array(path.toUri.toURL), this.getClass.getClassLoader))
 
     // Set a custom security manager to forbid system.exit calls, and override all IO (in, out, err)
     val secMan = System.getSecurityManager
@@ -123,9 +116,9 @@ object TesslacTests {
     val uncaughtRuntimeErrors =
       try {
         System.setSecurityManager(new NoExitSecurityManager())
-        withRedirectedIO(inputTrace, new PrintStream(out), new PrintStream(err))(
-          method.invoke(obj.instance, Array.empty[String])
-        )
+
+        // Load the generated Main$.class and run its main method.
+        withRedirectedIO(inputTrace, new PrintStream(out), new PrintStream(err))(rcl.run("Main$", Seq.empty))
         Seq()
       } catch {
         case e: InvocationTargetException =>
@@ -153,8 +146,7 @@ object TesslacTests {
     Files.writeString(dirPath.resolve("out.scala"), sourceCode)
 
     val settings = ScalaCompiler.defaultSettings(dirPath, false)
-    settings.opt.clear()
-    settings.usejavacp.value = false
+    settings -= "-usejavacp"
 
     // IMPORTANT
     // This is a somewhat unstable workaround. When running the tests from sbt, the java.class.path is
@@ -162,14 +154,13 @@ object TesslacTests {
     // however fetches java.class.path, this causes it to fail since none of the scala libraries can be found
     // This line takes the location of Predef and adds this to the classpath (so the scala-library) to prevent this.
     // However I don't know if that's always sufficient. Also, there's probably a cleaner solution for it.
-    settings.classpath.value = Predef.getClass.getProtectionDomain.getCodeSource.getLocation.getPath
+    settings ++= Seq(
+      "-classpath",
+      scala.runtime.stdLibPatches.Predef.getClass.getProtectionDomain.getCodeSource.getLocation.getPath
+    )
 
-    val reporter = new TesslaCompilerReporter(settings)
+    val reporter = new TesslaCompilerReporter
     ScalaCompiler.compileCode(dirPath.resolve("out.scala"), settings, reporter)
-
-    val compiler = new Global(settings, reporter)
-    (new compiler.Run) compile List(dirPath.resolve("out.scala").toAbsolutePath.toString)
-    reporter.finish()
   }
 
 }
