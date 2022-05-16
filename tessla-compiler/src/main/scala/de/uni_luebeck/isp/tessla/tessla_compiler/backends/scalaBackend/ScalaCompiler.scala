@@ -19,7 +19,8 @@ package de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend
 import java.io.{FileOutputStream, InputStream, OutputStream}
 import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.*
 import java.util.jar.{Attributes, JarEntry, JarInputStream, JarOutputStream}
 
 import de.uni_luebeck.isp.tessla.core.{Errors, TranslationPhase}
@@ -74,9 +75,9 @@ object ScalaCompiler {
    */
   def unzipScalaLibrary(dir: Path): Unit = {
     // Fetch the scala-library.jar location
-    val source = getClass.getClassLoader.getResource("scala-library.jar")
+    val source = getClass.getClassLoader.getResource("scala3-library.jar")
     if (source == null) {
-      throw Errors.InternalError("Resource scala-library.jar could not be loaded. Monitor generation failed.")
+      throw Errors.InternalError("Resource scala3-library.jar could not be loaded. Monitor generation failed.")
     }
     Using(source.openStream)(unzipJar(dir, _))
   }
@@ -180,15 +181,15 @@ class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean, executeableCo
     // Compiled and unzipped .class files go here
     val compileDir = Files.createTempDirectory(outDir, "compile")
 
-    deleteOnExit(compileDir)
-    deleteOnExit(sourceDir)
+    PathHelper.deleteOnExit(compileDir)
+    PathHelper.deleteOnExit(sourceDir)
 
     val settings = defaultSettings(compileDir, debug)
     settingsModifier(settings)
     val reporter = new ConsoleReporter(settings)
 
     val sourcePath = Path.of(URI.create(outDir.toUri.toString + "Main.scala"))
-    deleteOnExit(sourcePath)
+    PathHelper.deleteOnExit(sourcePath)
 
     //println(s"Write code to $sourcePath ...")
     writeCode(sourcePath, sourceCode)
@@ -212,17 +213,6 @@ class ScalaCompiler(outDir: Path, jarName: String, debug: Boolean, executeableCo
   private def writeCode(path: Path, source: String): Unit = {
     Files.createDirectories(path.getParent)
     Files.write(path, source.getBytes(StandardCharsets.UTF_8))
-  }
-
-  /**
-   * Deletes a file on program shutdown.
-   * @param path Path of the file to be deleted
-   */
-  private def deleteOnExit(path: Path): Unit = {
-    val runnable: Runnable = () => {
-      Directory(path.toFile).deleteRecursively()
-    }
-    Runtime.getRuntime.addShutdownHook(new Thread(runnable))
   }
 
 }

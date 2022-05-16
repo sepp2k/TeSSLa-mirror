@@ -16,16 +16,15 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import java.nio.file.{Files, Path}
-
 import de.uni_luebeck.isp.tessla.AbstractTestRunner
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.{TesslaAST, TranslationPhase}
 import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.ScalaCompiler
+import de.uni_luebeck.isp.tessla.tessla_compiler.util.PathHelper
 import org.scalatest.BeforeAndAfterAll
 
-import scala.reflect.io.Directory
+import java.nio.file.{Files, Path}
 
 /**
  * Tests the generation of an executable jar from Scala code
@@ -57,6 +56,6 @@ class JarCreationTest extends AbstractTestRunner[Unit]("Jar") with BeforeAndAfte
   }
 
   override def afterAll(): Unit = {
-    Directory(fsPath.toFile).deleteRecursively()
+    PathHelper.deleteRecursively(fsPath)
   }
 }

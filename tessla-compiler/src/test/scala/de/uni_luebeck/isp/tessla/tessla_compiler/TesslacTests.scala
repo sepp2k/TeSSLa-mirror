@@ -16,10 +16,6 @@
 
 package de.uni_luebeck.isp.tessla.tessla_compiler
 
-import java.io.{ByteArrayOutputStream, InputStream, PrintStream}
-import java.lang.reflect.InvocationTargetException
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
 import de.uni_luebeck.isp.tessla.TestCase.{PathResolver, TestConfig}
 import de.uni_luebeck.isp.tessla.core.TesslaAST.Core
 import de.uni_luebeck.isp.tessla.core.TranslationPhase
@@ -30,13 +26,17 @@ import de.uni_luebeck.isp.tessla.tessla_compiler.backends.scalaBackend.{
   TesslaCompilerReporter
 }
 import de.uni_luebeck.isp.tessla.tessla_compiler.preprocessing.{InliningAnalysis, UsageAnalysis}
+import de.uni_luebeck.isp.tessla.tessla_compiler.util.PathHelper
 import de.uni_luebeck.isp.tessla.{AbstractTestRunner, TestCase}
 import org.antlr.v4.runtime.CharStream
 import org.scalatest.BeforeAndAfterAll
 
-import scala.reflect.internal.util.ScalaClassLoader.URLClassLoader
-import scala.reflect.io.Directory
-import scala.tools.nsc.Global
+import java.io.{ByteArrayOutputStream, InputStream, PrintStream}
+import java.lang.reflect.{InvocationTargetException, Modifier}
+import java.net.URLClassLoader
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Path}
+import scala.runtime.stdLibPatches.Predef
 
 class TesslacTests extends AbstractTestRunner[String]("Tessla Compiler") with BeforeAndAfterAll {
 
@@ -62,7 +62,7 @@ class TesslacTests extends AbstractTestRunner[String]("Tessla Compiler") with Be
   }
 
   override def afterAll(): Unit = {
-    Directory(fsPath.toFile).deleteRecursively()
+    PathHelper.deleteRecursively(fsPath)
   }
 
 }
