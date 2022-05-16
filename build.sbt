@@ -116,7 +116,7 @@ lazy val antlrSettings = Seq(
   Antlr4 / antlr4GenVisitor := true
 )
 
-// Task to copy the scala-library as managed dependency
+// Task to copy the scala3-library as managed dependency
 // This allows to have it as resource in the final artifact, without having to manually manage it.
 // Required by the compilation from tessla to scala
 val libCopy = Def
@@ -125,18 +125,18 @@ val libCopy = Def
 
     val source = (Compile / dependencyClasspath).value
       .find(file =>
-        file.get(artifact.key).exists(artifact => artifact.name == "scala-library" && artifact.`type` == "jar")
+        file.get(artifact.key).exists(artifact => artifact.name == "scala3-library_3" && artifact.`type` == "jar")
       )
       .getOrElse {
-        log.error("Artifact 'scala-library.jar' could not be found")
-        throw new sbt.MessageOnlyException("Failed to copy scala-library")
+        log.error("Artifact 'scala3-library.jar' could not be found")
+        throw new sbt.MessageOnlyException("Failed to copy scala3-library")
       }
       .data
 
-    val target = (Compile / resourceManaged).value / "scala-library.jar"
+    val target = (Compile / resourceManaged).value / "scala3-library.jar"
 
     val cached = FileFunction.cached(
-      cacheBaseDirectory = streams.value.cacheDirectory / "scala-library",
+      cacheBaseDirectory = streams.value.cacheDirectory / "scala3-library",
       inStyle = FilesInfo.hash,
       outStyle = FilesInfo.exists
     ) { (inputs: Set[File]) =>
