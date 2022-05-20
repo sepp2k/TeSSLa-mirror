@@ -25,7 +25,7 @@ This project consists of several submodules:
 
 - [Core](core/README.md):                    Sub-folder `core/`                Common Compiler Frontend, translating TeSSLa to TeSSLa Core
 - [Interpreter](interpreter/README.md):      Sub-folder `interpreter/`         Interactive Shell for evaluation of TeSSLa specifications
-- [Compiler](tessla-compiler/README.md):     Sub-folder `tessla-compiler/`     Efficient compilation of TeSSLa Core to a Scala monitor
+- [Compiler](tessla-compiler/README.md):     Sub-folder `tessla-compiler/`     Efficient compilation of TeSSLa Core to a Scala/Rust monitor
 - [Doc](docs/README.md):                     Sub-folder `docs/`                Generation of documentation from comments in a TeSSLa specification (Tessladoc)
 - [Instrumenter](instrumenter/README.md):    Sub-folder `instrumenter/`        Instrumentation of C code to generate traces for a TeSSLa specification (linux-amd64 only)
 
@@ -46,14 +46,14 @@ The CLI of TeSSLa follows a command based structure. The following commands are 
 | interpreter  | Evaluate a specification with a given trace (file or stdin) |
 | compile-core | Compile TeSSLa to TeSSLa Core and print the result          |
 | doc          | Generate documentation for TeSSLa code in JSON format       |
-| compile      | Generate a Scala monitor from a specification               |
+| compile      | Generate a Scala/Rust monitor from a specification          |
 | instrumenter | Instrument C code based on the provided annotations         |
 
 
 For detailed usage information, take a look at the following help text.
 ```
 tessla 1.2.3
-Usage: tessla [interpreter|compile-core|doc|compile|instrumenter] [options] <args>...
+Usage: tessla [interpreter|compile-core|doc|compile-scala|compile-rust|instrumenter] [options] <args>...
 
 Compile Tessla specifications and evaluate them on provided input streams.
   -t, --base-time <value>  Use the given time constant (including a unit) as the reference time for time literals
@@ -97,22 +97,31 @@ Generate documentation for Tessla code
   -o, --outfile <value>    Write the generated docs to the given file instead of stdout
   <files>                  The TeSSLa files for which to generate documentation
 
-Command: compile [options] <tessla-file>
+Command: compile-scala [options] <tessla-file>
 Compile TeSSLa specifications to Scala
   <tessla-file>            The file containing the Tessla specification
   -a, --add-source <value>
                            Additional source file included on top of the generated source
-  -o, --out-file <value>   Place the generated source code at this location.
-  -b, --bin-file <value>   Compile TeSSLa specification to an executable jar file which is created at the given location.
+  -o, --out-file <value>   Place the generated Scala source code at this location.
+  -j, --jar-file <value>   Compile TeSSLa specification to an executable jar file which is created at the given location.
   -n, --no-io              Replaces I/O Handling in generated source with simple API interface
-  -g, --target-language <value>
-                           Select the target language to compile to: (scala, rust)
+
+Command: compile-rust [options] <tessla-file>
+Compile TeSSLa specifications to Rust
+  <tessla-file>            The file containing the Tessla specification
+  -b, --bin-file <value>   Compile a full monitor binary and place it in the given location
+  -a, --add-source <value>
+                           Additional rust file inserted at the top of the monitor library
+  -p, --project-dir <value>
+                           Export a Cargo workspace with everything necessary to modify and build the tessla monitor yourself
+  -m, --io-interface       Generate the code for an executable I/O interface (src/main.rs) in the exported workspace
 
 Command: instrumenter <tessla-file> <c-file> [<include-path>...]
 Instrument C code based on the provided annotations (linux-amd64, windows-x64 only)
   <tessla-file>            The file containing the Tessla specification, with annotations for the instrumentation.
   <c-file>                 Instrument the provided C file according to the specification
   <include-path>...        Include paths for the C compiler
+
 ```
 
 ## Examples
