@@ -25,7 +25,7 @@ test:
     - development
     - /^mr-.*$/
     - /^issue-.*$/
-    - rust-dev2
+    - rust-compiler
   tags:
     - docker
   script:
@@ -43,7 +43,7 @@ deploy:
     - development
     - /^mr-.*$/
     - /^issue-.*$/
-    - rust-dev2
+    - rust-compiler
   tags:
     - docker
   script:
